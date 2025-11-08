@@ -6,26 +6,11 @@
 import axios from 'axios'
 import { parse as parseSync } from 'csv-parse/sync'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { mapZillowRegionToGeoCode } from '../utils/geo-mapping'
 
-// Debug import issues
-console.log('[zillow-simple.ts] Starting imports...')
-
-let mapZillowRegionToGeoCode: any
-
-try {
-  // Use require for synchronous import with error handling
-  const geoMapping = require('../utils/geo-mapping')
-  console.log('[zillow-simple.ts] geo-mapping exports:', Object.keys(geoMapping))
-  mapZillowRegionToGeoCode = geoMapping.mapZillowRegionToGeoCode
-  console.log('[zillow-simple.ts] Successfully imported mapZillowRegionToGeoCode:', typeof mapZillowRegionToGeoCode)
-} catch (error) {
-  console.error('[zillow-simple.ts] Failed to import from geo-mapping:', error)
-  // Fallback function if import fails
-  mapZillowRegionToGeoCode = async (regionName: string, stateCode: string, geoType: string) => {
-    console.warn('[zillow-simple.ts] Using fallback geo mapping')
-    return null
-  }
-}
+// Debug logging
+console.log('[zillow-simple.ts] Module loaded successfully')
+console.log('[zillow-simple.ts] mapZillowRegionToGeoCode type:', typeof mapZillowRegionToGeoCode)
 
 // Direct Zillow CSV URLs (these are public and stable)
 const ZILLOW_URLS: Record<string, string> = {
