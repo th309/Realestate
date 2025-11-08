@@ -91,7 +91,7 @@ CREATE TABLE market_time_series (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
     -- Unique constraint to prevent duplicates
-    UNIQUE(region_id, date, metric_name, data_source, property_type, tier),
+    UNIQUE(region_id, date, metric_name, data_source, property_type, tier)
     
     -- Indexes will be created separately after table creation
     -- due to PostgreSQL syntax requirements
