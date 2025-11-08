@@ -76,7 +76,7 @@ CREATE INDEX idx_metadata_type ON market_metadata (metadata_type);
 
 -- Market time series data (all metrics over time)
 CREATE TABLE market_time_series (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGSERIAL,
     region_id VARCHAR(50) REFERENCES markets(region_id),
     date DATE NOT NULL,                 -- Month-end date from Zillow
     metric_name VARCHAR(100) NOT NULL,  -- 'zhvi', 'zori', 'inventory', etc.
@@ -90,11 +90,11 @@ CREATE TABLE market_time_series (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
+    -- For partitioned tables, primary key must include partition column
+    PRIMARY KEY (id, date),
+    
     -- Unique constraint to prevent duplicates
     UNIQUE(region_id, date, metric_name, data_source, property_type, tier)
-    
-    -- Indexes will be created separately after table creation
-    -- due to PostgreSQL syntax requirements
 ) PARTITION BY RANGE (date);
 
 -- Create partitions for time series data (by year)
