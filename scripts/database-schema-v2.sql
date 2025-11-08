@@ -44,14 +44,14 @@ CREATE TABLE markets (
     longitude DECIMAL(11, 8),           -- Center point longitude
     geometry GEOMETRY(MultiPolygon, 4326), -- Geographic boundaries
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    -- Indexes for common queries
-    INDEX idx_markets_region_type (region_type),
-    INDEX idx_markets_state (state_code),
-    INDEX idx_markets_metro (metro_name),
-    INDEX idx_markets_name (region_name)
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create indexes for markets table
+CREATE INDEX idx_markets_region_type ON markets (region_type);
+CREATE INDEX idx_markets_state ON markets (state_code);
+CREATE INDEX idx_markets_metro ON markets (metro_name);
+CREATE INDEX idx_markets_name ON markets (region_name);
 
 -- Market metadata (additional info not in time series)
 CREATE TABLE market_metadata (
@@ -64,9 +64,11 @@ CREATE TABLE market_metadata (
     source VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
-    PRIMARY KEY (region_id, metadata_type, metadata_key),
-    INDEX idx_metadata_type (metadata_type)
+    PRIMARY KEY (region_id, metadata_type, metadata_key)
 );
+
+-- Create index for metadata table
+CREATE INDEX idx_metadata_type ON market_metadata (metadata_type);
 
 -- ============================================================================
 -- TIME SERIES DATA (Matches Zillow's structure)
@@ -91,11 +93,8 @@ CREATE TABLE market_time_series (
     -- Unique constraint to prevent duplicates
     UNIQUE(region_id, date, metric_name, data_source, property_type, tier),
     
-    -- Indexes for performance
-    INDEX idx_time_series_region_date (region_id, date DESC),
-    INDEX idx_time_series_metric (metric_name),
-    INDEX idx_time_series_source (data_source),
-    INDEX idx_time_series_date (date DESC)
+    -- Indexes will be created separately after table creation
+    -- due to PostgreSQL syntax requirements
 ) PARTITION BY RANGE (date);
 
 -- Create partitions for time series data (by year)
@@ -117,6 +116,12 @@ CREATE TABLE market_time_series_2024 PARTITION OF market_time_series
 CREATE TABLE market_time_series_2025 PARTITION OF market_time_series
     FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 
+-- Create indexes on the time series table (after table creation)
+CREATE INDEX idx_time_series_region_date ON market_time_series (region_id, date DESC);
+CREATE INDEX idx_time_series_metric ON market_time_series (metric_name);
+CREATE INDEX idx_time_series_source ON market_time_series (data_source);
+CREATE INDEX idx_time_series_date ON market_time_series (date DESC);
+
 -- ============================================================================
 -- CALCULATED METRICS & SCORES
 -- ============================================================================
@@ -130,10 +135,12 @@ CREATE TABLE current_scores (
     calculated_date DATE NOT NULL,
     confidence_level DECIMAL(3, 2),     -- 0-1 confidence in score
     
-    PRIMARY KEY (region_id, score_type),
-    INDEX idx_scores_type (score_type),
-    INDEX idx_scores_value (score_value DESC)
+    PRIMARY KEY (region_id, score_type)
 );
+
+-- Create indexes for scores table
+CREATE INDEX idx_scores_type ON current_scores (score_type);
+CREATE INDEX idx_scores_value ON current_scores (score_value DESC);
 
 -- ============================================================================
 -- USER-RELATED TABLES
@@ -164,10 +171,7 @@ CREATE TABLE user_subscriptions (
     stripe_subscription_id VARCHAR(255),
     stripe_customer_id VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    INDEX idx_subs_user (user_id),
-    INDEX idx_subs_status (status)
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- User favorites/watchlist
