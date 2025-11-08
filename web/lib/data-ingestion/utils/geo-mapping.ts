@@ -75,6 +75,11 @@ export async function mapZillowRegionToGeoCode(
 }
 
 /**
+ * Alias for backwards compatibility
+ */
+export const mapRegionToGeoCode = mapZillowRegionToGeoCode
+
+/**
  * Generate a temporary geo_code for unmapped regions
  * Format: US-MSA-{sanitized-name}-{state}
  */
