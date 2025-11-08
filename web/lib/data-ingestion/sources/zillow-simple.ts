@@ -66,7 +66,7 @@ export async function fetchZillowDataSimple(
       
       // Parse CSV
       console.log('Parsing CSV data...')
-      const records = parseSync(response.data, {
+      const records: any[] = parseSync(response.data, {
         columns: true,
         skip_empty_lines: true
       })
@@ -82,8 +82,8 @@ export async function fetchZillowDataSimple(
         }
         
         // Extract region info
-        const regionName = record.RegionName || record.Metro || ''
-        const regionType = record.RegionType || 'metro'
+        const regionName = (record as any).RegionName || (record as any).Metro || ''
+        const regionType = (record as any).RegionType || 'metro'
         console.log(`[fetchZillowDataSimple] Record ${index}: region=${regionName}, type=${regionType}`)
         
         // Map to actual geo_code or generate temporary one
@@ -99,7 +99,7 @@ export async function fetchZillowDataSimple(
         }
         
         // Get date columns (all columns that look like dates: YYYY-MM-DD)
-        const dateColumns = Object.keys(record).filter(key => 
+        const dateColumns = Object.keys(record as any).filter(key => 
           /^\d{4}-\d{2}-\d{2}$/.test(key)
         )
         
@@ -107,7 +107,7 @@ export async function fetchZillowDataSimple(
         const recentDates = dateColumns.slice(-12)
         
         for (const dateCol of recentDates) {
-          const value = parseFloat(record[dateCol])
+          const value = parseFloat((record as any)[dateCol])
           if (!isNaN(value)) {
             allData.push({
               geo_code,
