@@ -182,8 +182,7 @@ CREATE TABLE user_favorites (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     
-    UNIQUE(user_id, region_id),
-    INDEX idx_fav_user (user_id)
+    UNIQUE(user_id, region_id)
 );
 
 -- Price alerts
@@ -196,10 +195,7 @@ CREATE TABLE price_alerts (
     threshold_value DECIMAL(15, 2),
     is_active BOOLEAN DEFAULT true,
     last_triggered TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    INDEX idx_alerts_user (user_id),
-    INDEX idx_alerts_active (is_active)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================================
@@ -217,11 +213,7 @@ CREATE TABLE ai_cache (
     tokens_used INTEGER,
     cost_usd DECIMAL(10, 4),
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    expires_at TIMESTAMPTZ,
-    
-    INDEX idx_ai_cache_region (region_id),
-    INDEX idx_ai_cache_hash (prompt_hash),
-    INDEX idx_ai_cache_expires (expires_at)
+    expires_at TIMESTAMPTZ
 );
 
 -- ============================================================================
@@ -246,11 +238,7 @@ CREATE TABLE user_activity_logs (
     details JSONB,
     ip_address INET,
     user_agent TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    INDEX idx_activity_user (user_id),
-    INDEX idx_activity_action (action),
-    INDEX idx_activity_time (created_at DESC)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Data ingestion logs
@@ -264,11 +252,7 @@ CREATE TABLE data_ingestion_logs (
     records_updated INTEGER,
     error_message TEXT,
     started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-    
-    INDEX idx_ingestion_source (source),
-    INDEX idx_ingestion_status (status),
-    INDEX idx_ingestion_time (started_at DESC)
+    completed_at TIMESTAMPTZ
 );
 
 -- ============================================================================
