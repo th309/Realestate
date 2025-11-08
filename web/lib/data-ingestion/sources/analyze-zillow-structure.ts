@@ -19,7 +19,7 @@ export async function analyzeZillowStructure() {
   })
   
   // Parse CSV
-  const records = parseSync(response.data, {
+  const records: any[] = parseSync(response.data, {
     columns: true,
     skip_empty_lines: true
   })
@@ -32,7 +32,7 @@ export async function analyzeZillowStructure() {
   const metadataColumns: string[] = []
   const dateColumns: string[] = []
   
-  for (const [key, value] of Object.entries(firstRecord)) {
+  for (const [key, value] of Object.entries(firstRecord as Record<string, any>)) {
     // Check if it's a date column (YYYY-MM-DD format)
     if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
       dateColumns.push(key)
@@ -45,18 +45,18 @@ export async function analyzeZillowStructure() {
   console.log(`\nDATE COLUMNS: ${dateColumns.length} columns`)
   console.log(`  First date: ${dateColumns[0]}`)
   console.log(`  Last date: ${dateColumns[dateColumns.length - 1]}`)
-  console.log(`  Sample values: ${dateColumns.slice(0, 3).map(d => `${d}: ${firstRecord[d]}`).join(', ')}`)
+  console.log(`  Sample values: ${dateColumns.slice(0, 3).map(d => `${d}: ${(firstRecord as any)[d]}`).join(', ')}`)
   
   console.log('\n=== SAMPLE RECORDS ===')
   for (let i = 0; i < Math.min(5, records.length); i++) {
     const record = records[i]
     console.log(`\nRecord ${i + 1}:`)
     for (const col of metadataColumns) {
-      console.log(`  ${col}: ${record[col]}`)
+      console.log(`  ${col}: ${(record as any)[col]}`)
     }
     // Show last 3 months of data
     const recentDates = dateColumns.slice(-3)
-    console.log(`  Recent values: ${recentDates.map(d => `${d}: ${record[d]}`).join(', ')}`)
+    console.log(`  Recent values: ${recentDates.map(d => `${d}: ${(record as any)[d]}`).join(', ')}`)
   }
   
   console.log('\n=== UNIQUE VALUES IN KEY COLUMNS ===')
@@ -72,7 +72,7 @@ export async function analyzeZillowStructure() {
   // Analyze RegionName format
   console.log('\nRegionName format samples:')
   for (let i = 0; i < 5; i++) {
-    console.log(`  ${records[i].RegionName}`)
+    console.log(`  ${(records[i] as any).RegionName}`)
   }
   
   return {
