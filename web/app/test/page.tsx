@@ -254,6 +254,22 @@ export default function TestPage() {
             {result.details && (
               <div className="space-y-2">
                 <h3 className="font-semibold text-gray-800">Details:</h3>
+                
+                {/* Show error details if present */}
+                {result.details.errorDetails && result.details.errorDetails.length > 0 && (
+                  <div className="mt-4 p-3 bg-red-100 rounded">
+                    <h4 className="font-semibold text-red-800 mb-2">Error Details:</h4>
+                    {result.details.errorDetails.slice(0, 3).map((err: any, idx: number) => (
+                      <div key={idx} className="mb-2 text-sm">
+                        <p className="font-medium">Region {err.region}:</p>
+                        <p className="text-red-700">{err.error}</p>
+                        {err.hint && <p className="text-red-600">Hint: {err.hint}</p>}
+                        {err.code && <p className="text-red-600">Code: {err.code}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 {result.details.tierConfigsFound !== undefined && (
                   <ul className="list-disc list-inside space-y-1 text-gray-700">
                     <li>Tier Configs Found: {result.details.tierConfigsFound}</li>

@@ -77,6 +77,7 @@ export async function importZillowData(
   let marketsUpdated = 0
   let timeSeriesInserted = 0
   let errors = 0
+  const errorDetails: any[] = []
   
   for (const [index, record] of recordsToProcess.entries()) {
     try {
@@ -181,6 +182,16 @@ export async function importZillowData(
               console.error(`Full error object:`, JSON.stringify(tsError, null, 2))
               console.error(`Region: ${regionId}, Batch size: ${batch.length}`)
               
+              // Store error details
+              errorDetails.push({
+                region: regionId,
+                error: tsError.message || tsError,
+                code: tsError.code,
+                hint: tsError.hint,
+                details: tsError.details,
+                sampleRecord: batch[0]
+              })
+              
               // Check if it's a unique constraint violation
               if (tsError.code === '23505') {
                 console.log('Note: Data already exists, skipping...')
@@ -238,6 +249,7 @@ export async function importZillowData(
     marketsCreated,
     timeSeriesInserted,
     errors,
+    errorDetails,
     message: `Imported ${metricName} data: ${marketsCreated} markets, ${timeSeriesInserted} time series records`
   }
 }
