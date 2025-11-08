@@ -102,9 +102,9 @@ export async function importZillowData(
         region_id: regionId,
         region_name: regionName,
         region_type: regionType,
-        state_name: stateName,
-        state_code: stateName ? stateName.substring(0, 2).toUpperCase() : null,
-        size_rank: sizeRank
+        state_name: stateName || undefined,
+        state_code: stateName ? stateName.substring(0, 2).toUpperCase() : undefined,
+        size_rank: sizeRank || undefined
       }
       
       const { error: marketError } = await supabase
