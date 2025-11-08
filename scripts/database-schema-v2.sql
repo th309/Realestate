@@ -174,6 +174,10 @@ CREATE TABLE user_subscriptions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create indexes for user subscriptions
+CREATE INDEX idx_subs_user ON user_subscriptions (user_id);
+CREATE INDEX idx_subs_status ON user_subscriptions (status);
+
 -- User favorites/watchlist
 CREATE TABLE user_favorites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -184,6 +188,9 @@ CREATE TABLE user_favorites (
     
     UNIQUE(user_id, region_id)
 );
+
+-- Create index for user favorites
+CREATE INDEX idx_fav_user ON user_favorites (user_id);
 
 -- Price alerts
 CREATE TABLE price_alerts (
@@ -197,6 +204,10 @@ CREATE TABLE price_alerts (
     last_triggered TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Create indexes for price alerts
+CREATE INDEX idx_alerts_user ON price_alerts (user_id);
+CREATE INDEX idx_alerts_active ON price_alerts (is_active);
 
 -- ============================================================================
 -- AI & CACHING
@@ -215,6 +226,11 @@ CREATE TABLE ai_cache (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at TIMESTAMPTZ
 );
+
+-- Create indexes for AI cache
+CREATE INDEX idx_ai_cache_region ON ai_cache (region_id);
+CREATE INDEX idx_ai_cache_hash ON ai_cache (prompt_hash);
+CREATE INDEX idx_ai_cache_expires ON ai_cache (expires_at);
 
 -- ============================================================================
 -- ADMIN & LOGGING
@@ -241,6 +257,11 @@ CREATE TABLE user_activity_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create indexes for user activity logs
+CREATE INDEX idx_activity_user ON user_activity_logs (user_id);
+CREATE INDEX idx_activity_action ON user_activity_logs (action);
+CREATE INDEX idx_activity_time ON user_activity_logs (created_at DESC);
+
 -- Data ingestion logs
 CREATE TABLE data_ingestion_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -254,6 +275,11 @@ CREATE TABLE data_ingestion_logs (
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
 );
+
+-- Create indexes for data ingestion logs
+CREATE INDEX idx_ingestion_source ON data_ingestion_logs (source);
+CREATE INDEX idx_ingestion_status ON data_ingestion_logs (status);
+CREATE INDEX idx_ingestion_time ON data_ingestion_logs (started_at DESC);
 
 -- ============================================================================
 -- INITIAL DATA
