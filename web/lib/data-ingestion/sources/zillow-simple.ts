@@ -10,15 +10,18 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 // Debug import issues
 console.log('[zillow-simple.ts] Starting imports...')
 
+let mapZillowRegionToGeoCode: any
+
 try {
-  const geoMapping = await import('../utils/geo-mapping')
+  // Use require for synchronous import with error handling
+  const geoMapping = require('../utils/geo-mapping')
   console.log('[zillow-simple.ts] geo-mapping exports:', Object.keys(geoMapping))
-  var { mapZillowRegionToGeoCode } = geoMapping
-  console.log('[zillow-simple.ts] Successfully imported mapZillowRegionToGeoCode')
+  mapZillowRegionToGeoCode = geoMapping.mapZillowRegionToGeoCode
+  console.log('[zillow-simple.ts] Successfully imported mapZillowRegionToGeoCode:', typeof mapZillowRegionToGeoCode)
 } catch (error) {
   console.error('[zillow-simple.ts] Failed to import from geo-mapping:', error)
   // Fallback function if import fails
-  var mapZillowRegionToGeoCode = async (regionName: string, stateCode: string, geoType: string) => {
+  mapZillowRegionToGeoCode = async (regionName: string, stateCode: string, geoType: string) => {
     console.warn('[zillow-simple.ts] Using fallback geo mapping')
     return null
   }
