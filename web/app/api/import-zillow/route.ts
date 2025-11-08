@@ -32,7 +32,8 @@ export async function GET(request: Request) {
       details: {
         marketsCreated: result.marketsCreated,
         timeSeriesInserted: result.timeSeriesInserted,
-        errors: result.errors
+        errors: result.errors,
+        errorDetails: result.errorDetails || []
       }
     })
     
