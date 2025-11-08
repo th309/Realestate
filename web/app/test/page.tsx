@@ -67,7 +67,8 @@ export default function TestPage() {
     try {
       const datasets = zillowDatasets.split(',').map(d => d.trim()).join(',')
       const storeParam = storeData ? 'true' : 'false'
-      const response = await fetch(`/api/test-zillow?datasets=${datasets}&store=${storeParam}`)
+      // Use simplified version for now
+      const response = await fetch(`/api/test-zillow-simple?datasets=${datasets}&store=${storeParam}`)
       const data = await response.json()
       setResult(data)
     } catch (error: any) {
@@ -117,7 +118,7 @@ export default function TestPage() {
 
         {/* Zillow Fetcher Tests */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Zillow Data Fetcher Test (Phase 2.1)</h2>
+          <h2 className="text-xl font-semibold mb-4">Zillow Data Fetcher Test (Phase 2.1) - Simplified</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
