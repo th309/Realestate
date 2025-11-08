@@ -116,6 +116,50 @@ export default function TestPage() {
           </div>
         </div>
 
+        {/* Zillow Import Test */}
+        <div className="mb-8 p-6 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Zillow Data Import (New Schema)</h2>
+          <div className="space-y-4">
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-zillow?test=true')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Importing...' : 'Test Import (5 regions)'}
+            </button>
+            
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-zillow?metric=zhvi&limit=50')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed ml-4"
+            >
+              {loading ? 'Importing...' : 'Import 50 Regions'}
+            </button>
+          </div>
+        </div>
+        
         {/* Zillow Structure Analysis */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Zillow Data Structure Analysis</h2>
