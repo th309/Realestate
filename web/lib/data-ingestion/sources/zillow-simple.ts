@@ -6,6 +6,7 @@
 import axios from 'axios'
 import { parse as parseSync } from 'csv-parse/sync'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { mapRegionToGeoCode } from '../utils/geo-mapping'
 
 // Direct Zillow CSV URLs (these are public and stable)
 const ZILLOW_URLS: Record<string, string> = {
@@ -22,6 +23,19 @@ interface TimeSeriesData {
   metric_name: string
   value: number
   source: string
+}
+
+async function mapToGeoCode(regionName: string, regionType: string): Promise<string> {
+  try {
+    // Try to map to existing geo_code
+    const mapped = await mapRegionToGeoCode(regionName, regionType)
+    if (mapped) return mapped
+  } catch (error) {
+    // Ignore mapping errors
+  }
+  
+  // Generate temporary geo_code if mapping fails
+  return `temp_${regionType}_${regionName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
 }
 
 export async function fetchZillowDataSimple(
@@ -55,24 +69,25 @@ export async function fetchZillowDataSimple(
       
       console.log(`📊 Parsed ${records.length} records from ${dataset}`)
       
-      // Process only first 10 records for testing
-      const testRecords = records.slice(0, 10)
+      // Process all records (or limit for testing)
+      const LIMIT_RECORDS = 50 // Increase from 10 to 50 for more thorough testing
+      const testRecords = records.slice(0, LIMIT_RECORDS)
       
       for (const record of testRecords) {
         // Extract region info
         const regionName = record.RegionName || record.Metro || ''
         const regionType = record.RegionType || 'metro'
         
-        // Generate a temporary geo_code for testing
-        const geo_code = `temp_${regionType}_${regionName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        // Map to actual geo_code or generate temporary one
+        const geo_code = await mapToGeoCode(regionName, regionType)
         
         // Get date columns (all columns that look like dates: YYYY-MM-DD)
         const dateColumns = Object.keys(record).filter(key => 
           /^\d{4}-\d{2}-\d{2}$/.test(key)
         )
         
-        // Process only last 3 months for testing
-        const recentDates = dateColumns.slice(-3)
+        // Process last 12 months for better data coverage
+        const recentDates = dateColumns.slice(-12)
         
         for (const dateCol of recentDates) {
           const value = parseFloat(record[dateCol])
