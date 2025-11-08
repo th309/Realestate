@@ -116,6 +116,29 @@ export default function TestPage() {
           </div>
         </div>
 
+        {/* Zillow Structure Analysis */}
+        <div className="mb-8 p-6 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Zillow Data Structure Analysis</h2>
+          <button
+            onClick={async () => {
+              setLoading(true)
+              try {
+                const response = await fetch('/api/analyze-zillow')
+                const data = await response.json()
+                setResult(data)
+              } catch (error: any) {
+                setResult({ success: false, error: error.message })
+              } finally {
+                setLoading(false)
+              }
+            }}
+            disabled={loading}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+          >
+            {loading ? 'Analyzing...' : 'Analyze Zillow CSV Structure'}
+          </button>
+        </div>
+        
         {/* Zillow Fetcher Tests */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Zillow Data Fetcher Test (Phase 2.1) - Simplified</h2>
