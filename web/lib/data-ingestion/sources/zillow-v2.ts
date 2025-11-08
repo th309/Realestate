@@ -132,12 +132,18 @@ export async function importZillowData(
         /^\d{4}-\d{2}-\d{2}$/.test(key)
       )
       
+      // Log date columns found
+      if (index === 0) {
+        console.log(`Found ${dateColumns.length} date columns`)
+        console.log(`First few dates: ${dateColumns.slice(0, 3).join(', ')}`)
+      }
+      
       // Process each date column
       for (const dateCol of dateColumns) {
         const value = parseFloat(record[dateCol])
         
         // Skip null/empty values
-        if (!isNaN(value) && value !== null) {
+        if (!isNaN(value) && value !== null && value !== 0) {
           timeSeriesData.push({
             region_id: regionId,
             date: dateCol,
@@ -150,30 +156,45 @@ export async function importZillowData(
         }
       }
       
+      console.log(`Region ${regionId}: Found ${timeSeriesData.length} data points to insert`)
+      
       // Insert time series data in batches
       if (timeSeriesData.length > 0) {
         const batchSize = 100
         for (let i = 0; i < timeSeriesData.length; i += batchSize) {
           const batch = timeSeriesData.slice(i, i + batchSize)
           
-          const { data: tsResult, error: tsError } = await supabase
-            .from('market_time_series')
-            .insert(batch)
-            .select()
+          // Log what we're trying to insert
+          console.log(`Inserting batch of ${batch.length} records for region ${regionId}`)
+          if (batch.length > 0) {
+            console.log('Sample record:', JSON.stringify(batch[0], null, 2))
+          }
           
-          if (tsError) {
-            console.error(`❌ Error inserting time series batch:`, tsError)
-            console.error(`Region: ${regionId}, Batch size: ${batch.length}`)
-            console.error('First record in batch:', batch[0])
+          try {
+            const { data: tsResult, error: tsError } = await supabase
+              .from('market_time_series')
+              .insert(batch)
+              .select()
             
-            // Check if it's a unique constraint violation
-            if (tsError.code === '23505') {
-              console.log('Note: Data already exists, skipping...')
+            if (tsError) {
+              console.error(`❌ Error inserting time series batch:`, tsError)
+              console.error(`Full error object:`, JSON.stringify(tsError, null, 2))
+              console.error(`Region: ${regionId}, Batch size: ${batch.length}`)
+              
+              // Check if it's a unique constraint violation
+              if (tsError.code === '23505') {
+                console.log('Note: Data already exists, skipping...')
+                // Don't count as error if it's just duplicate data
+              } else {
+                errors++
+              }
             } else {
-              errors++
+              console.log(`✅ Successfully inserted ${batch.length} records`)
+              timeSeriesInserted += batch.length
             }
-          } else {
-            timeSeriesInserted += batch.length
+          } catch (err: any) {
+            console.error('Exception during insert:', err)
+            errors++
           }
         }
       }
