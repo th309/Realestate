@@ -42,6 +42,23 @@ export default function TestPage() {
     }
   }
 
+  const verifyTestData = async () => {
+    setLoading(true)
+    setResult(null)
+    try {
+      const response = await fetch('/api/verify-test-data')
+      const data = await response.json()
+      setResult(data)
+    } catch (error: any) {
+      setResult({
+        success: false,
+        error: error.message
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-2xl mx-auto">
@@ -62,6 +79,14 @@ export default function TestPage() {
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Setting up...' : 'Insert Test Data (10 Markets)'}
+          </button>
+          
+          <button
+            onClick={verifyTestData}
+            disabled={loading}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Verifying...' : 'Verify Test Data'}
           </button>
         </div>
 
