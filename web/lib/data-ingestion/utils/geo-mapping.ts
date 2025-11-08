@@ -53,7 +53,7 @@ export async function mapZillowRegionToGeoCode(
   // Try reverse - check if our name contains their name
   const { data: reverseMatch } = await supabase
     .from('geo_data')
-    .select('geo_code')
+    .select('geo_code, geo_name')
     .eq('state_code', stateCode)
     .eq('geo_type', geoType)
     .limit(100)

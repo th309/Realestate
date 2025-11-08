@@ -54,7 +54,7 @@ async function findZillowCSVUrls(): Promise<Record<string, string>> {
     await page.goto(ZILLOW_BASE_URL, { waitUntil: 'networkidle2', timeout: 30000 })
 
     // Wait for page to load
-    await page.waitForTimeout(3000)
+    await new Promise(resolve => setTimeout(resolve, 3000))
 
     // Extract CSV download links
     const csvUrls = await page.evaluate(() => {
@@ -120,16 +120,14 @@ async function downloadCSV(url: string): Promise<string> {
  */
 async function parseZillowCSV(csvText: string, datasetType: string): Promise<ZillowDataPoint[]> {
   try {
-    const records = await new Promise<any[]>((resolve, reject) => {
-      parse(csvText, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true
-      }, (err, data) => {
-        if (err) reject(err)
-        else resolve(data)
-      })
-    })
+    // Use csv-parse sync API for simplicity
+    const { parse: parseSync } = await import('csv-parse/sync')
+    const records = parseSync(csvText, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+      cast: true
+    }) as any[]
 
     const dataPoints: ZillowDataPoint[] = []
 
