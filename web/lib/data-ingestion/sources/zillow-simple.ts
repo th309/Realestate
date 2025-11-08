@@ -27,8 +27,20 @@ interface TimeSeriesData {
 
 async function mapToGeoCode(regionName: string, regionType: string): Promise<string> {
   try {
+    // Extract state code from region name if possible (e.g., "Phoenix, AZ" -> "AZ")
+    let stateCode = ''
+    if (regionName.includes(',')) {
+      const parts = regionName.split(',')
+      stateCode = parts[parts.length - 1].trim()
+    }
+    
+    // Map region type to our geo type
+    const geoType = regionType.toLowerCase() === 'state' ? 'state' : 
+                    regionType.toLowerCase() === 'city' ? 'city' : 
+                    regionType.toLowerCase() === 'zip' ? 'zipcode' : 'metro'
+    
     // Try to map to existing geo_code
-    const mapped = await mapZillowRegionToGeoCode(regionName, regionType)
+    const mapped = await mapZillowRegionToGeoCode(regionName, stateCode, geoType as any)
     if (mapped) return mapped
   } catch (error) {
     // Ignore mapping errors
