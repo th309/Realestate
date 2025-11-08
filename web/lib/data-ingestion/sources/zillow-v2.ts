@@ -107,15 +107,17 @@ export async function importZillowData(
         size_rank: sizeRank || undefined
       }
       
-      const { error: marketError } = await supabase
+      const { data: marketResult, error: marketError } = await supabase
         .from('markets')
         .upsert(marketData, {
           onConflict: 'region_id',
           ignoreDuplicates: false
         })
+        .select()
       
       if (marketError) {
-        console.error(`❌ Error upserting market ${regionId}:`, marketError.message)
+        console.error(`❌ Error upserting market ${regionId}:`, marketError)
+        console.error('Market data:', marketData)
         errors++
         continue
       }
@@ -154,16 +156,22 @@ export async function importZillowData(
         for (let i = 0; i < timeSeriesData.length; i += batchSize) {
           const batch = timeSeriesData.slice(i, i + batchSize)
           
-          const { error: tsError } = await supabase
+          const { data: tsResult, error: tsError } = await supabase
             .from('market_time_series')
-            .upsert(batch, {
-              onConflict: 'region_id,date,metric_name,data_source,property_type,tier',
-              ignoreDuplicates: true
-            })
+            .insert(batch)
+            .select()
           
           if (tsError) {
-            console.error(`❌ Error inserting time series batch:`, tsError.message)
-            errors++
+            console.error(`❌ Error inserting time series batch:`, tsError)
+            console.error(`Region: ${regionId}, Batch size: ${batch.length}`)
+            console.error('First record in batch:', batch[0])
+            
+            // Check if it's a unique constraint violation
+            if (tsError.code === '23505') {
+              console.log('Note: Data already exists, skipping...')
+            } else {
+              errors++
+            }
           } else {
             timeSeriesInserted += batch.length
           }
@@ -186,7 +194,7 @@ export async function importZillowData(
   }
   
   // Log to data_ingestion_logs
-  await supabase
+  const { error: logError } = await supabase
     .from('data_ingestion_logs')
     .insert({
       source: 'zillow',
@@ -199,6 +207,10 @@ export async function importZillowData(
       started_at: new Date().toISOString(),
       completed_at: new Date().toISOString()
     })
+  
+  if (logError) {
+    console.error('Error logging to data_ingestion_logs:', logError)
+  }
   
   return {
     success: errors === 0,
