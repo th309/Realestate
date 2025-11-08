@@ -14,7 +14,10 @@ export async function mapZillowRegionToGeoCode(
   stateCode: string,
   geoType: 'metro' | 'state' | 'city' | 'zipcode' = 'metro'
 ): Promise<string | null> {
+  console.log('[geo-mapping] mapZillowRegionToGeoCode called with:', { regionName, stateCode, geoType })
+  
   const supabase = createSupabaseAdminClient()
+  console.log('[geo-mapping] Supabase client created')
 
   // Clean region name for matching
   const cleanName = regionName
@@ -23,7 +26,8 @@ export async function mapZillowRegionToGeoCode(
     .trim()
 
   // Try exact match first
-  const { data: exactMatch } = await supabase
+  console.log('[geo-mapping] Trying exact match for:', { cleanName, stateCode, geoType })
+  const { data: exactMatch, error: exactError } = await supabase
     .from('geo_data')
     .select('geo_code')
     .eq('geo_name', cleanName)
@@ -32,7 +36,12 @@ export async function mapZillowRegionToGeoCode(
     .limit(1)
     .single()
 
+  if (exactError && exactError.code !== 'PGRST116') {
+    console.error('[geo-mapping] Exact match query error:', exactError)
+  }
+
   if (exactMatch) {
+    console.log('[geo-mapping] Found exact match:', exactMatch.geo_code)
     return exactMatch.geo_code
   }
 
@@ -70,7 +79,7 @@ export async function mapZillowRegionToGeoCode(
   }
 
   // No match found
-  console.warn(`⚠️ No geo_code found for: ${cleanName}, ${stateCode}`)
+  console.warn(`⚠️ [geo-mapping] No geo_code found for: ${cleanName}, ${stateCode}, ${geoType}`)
   return null
 }
 

@@ -6,7 +6,23 @@
 import axios from 'axios'
 import { parse as parseSync } from 'csv-parse/sync'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { mapZillowRegionToGeoCode } from '../utils/geo-mapping'
+
+// Debug import issues
+console.log('[zillow-simple.ts] Starting imports...')
+
+try {
+  const geoMapping = await import('../utils/geo-mapping')
+  console.log('[zillow-simple.ts] geo-mapping exports:', Object.keys(geoMapping))
+  var { mapZillowRegionToGeoCode } = geoMapping
+  console.log('[zillow-simple.ts] Successfully imported mapZillowRegionToGeoCode')
+} catch (error) {
+  console.error('[zillow-simple.ts] Failed to import from geo-mapping:', error)
+  // Fallback function if import fails
+  var mapZillowRegionToGeoCode = async (regionName: string, stateCode: string, geoType: string) => {
+    console.warn('[zillow-simple.ts] Using fallback geo mapping')
+    return null
+  }
+}
 
 // Direct Zillow CSV URLs (these are public and stable)
 const ZILLOW_URLS: Record<string, string> = {
@@ -26,6 +42,8 @@ interface TimeSeriesData {
 }
 
 async function mapToGeoCode(regionName: string, regionType: string): Promise<string> {
+  console.log(`[mapToGeoCode] Called with: regionName=${regionName}, regionType=${regionType}`)
+  
   try {
     // Extract state code from region name if possible (e.g., "Phoenix, AZ" -> "AZ")
     let stateCode = ''
@@ -40,10 +58,23 @@ async function mapToGeoCode(regionName: string, regionType: string): Promise<str
                     regionType.toLowerCase() === 'zip' ? 'zipcode' : 'metro'
     
     // Try to map to existing geo_code
+    console.log(`[mapToGeoCode] Calling mapZillowRegionToGeoCode with:`, { regionName, stateCode, geoType })
+    
+    if (typeof mapZillowRegionToGeoCode !== 'function') {
+      console.error('[mapToGeoCode] mapZillowRegionToGeoCode is not a function!', typeof mapZillowRegionToGeoCode)
+      throw new Error('mapZillowRegionToGeoCode is not available')
+    }
+    
     const mapped = await mapZillowRegionToGeoCode(regionName, stateCode, geoType as any)
-    if (mapped) return mapped
-  } catch (error) {
-    // Ignore mapping errors
+    console.log(`[mapToGeoCode] Mapping result:`, mapped)
+    
+    if (mapped) {
+      console.log(`[mapToGeoCode] Successfully mapped to: ${mapped}`)
+      return mapped
+    }
+  } catch (error: any) {
+    console.error('[mapToGeoCode] Error during mapping:', error.message)
+    console.error('[mapToGeoCode] Full error:', error)
   }
   
   // Generate temporary geo_code if mapping fails
@@ -53,11 +84,18 @@ async function mapToGeoCode(regionName: string, regionType: string): Promise<str
 export async function fetchZillowDataSimple(
   datasets: string[] = ['zhvi']
 ): Promise<TimeSeriesData[]> {
+  console.log('[fetchZillowDataSimple] Starting with datasets:', datasets)
+  console.log('[fetchZillowDataSimple] Available functions:', {
+    mapZillowRegionToGeoCode: typeof mapZillowRegionToGeoCode,
+    mapToGeoCode: typeof mapToGeoCode
+  })
+  
   const allData: TimeSeriesData[] = []
   
   for (const dataset of datasets) {
     try {
       console.log(`📥 Fetching ${dataset}...`)
+      console.log(`[fetchZillowDataSimple] Processing dataset: ${dataset}`)
       
       const url = ZILLOW_URLS[dataset]
       if (!url) {
@@ -66,9 +104,14 @@ export async function fetchZillowDataSimple(
       }
       
       // Download CSV with timeout
+      console.log(`[fetchZillowDataSimple] Downloading from URL: ${url}`)
       const response = await axios.get(url, {
         timeout: 30000, // 30 seconds
-        maxContentLength: 50 * 1024 * 1024 // 50MB max
+        maxContentLength: 50 * 1024 * 1024, // 50MB max
+        onDownloadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+          console.log(`[fetchZillowDataSimple] Download progress: ${percentCompleted}%`)
+        }
       })
       
       console.log(`✅ Downloaded ${dataset}, size: ${response.data.length} bytes`)
@@ -85,13 +128,27 @@ export async function fetchZillowDataSimple(
       const LIMIT_RECORDS = 50 // Increase from 10 to 50 for more thorough testing
       const testRecords = records.slice(0, LIMIT_RECORDS)
       
-      for (const record of testRecords) {
+      for (const [index, record] of testRecords.entries()) {
+        if (index % 10 === 0) {
+          console.log(`[fetchZillowDataSimple] Processing record ${index + 1}/${testRecords.length}`)
+        }
+        
         // Extract region info
         const regionName = record.RegionName || record.Metro || ''
         const regionType = record.RegionType || 'metro'
+        console.log(`[fetchZillowDataSimple] Record ${index}: region=${regionName}, type=${regionType}`)
         
         // Map to actual geo_code or generate temporary one
-        const geo_code = await mapToGeoCode(regionName, regionType)
+        let geo_code
+        try {
+          console.log(`[fetchZillowDataSimple] Attempting to map: ${regionName}, ${regionType}`)
+          geo_code = await mapToGeoCode(regionName, regionType)
+          console.log(`[fetchZillowDataSimple] Mapped to geo_code: ${geo_code}`)
+        } catch (mapError) {
+          console.error(`[fetchZillowDataSimple] Mapping error for ${regionName}:`, mapError)
+          geo_code = `temp_${regionType}_${regionName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+          console.log(`[fetchZillowDataSimple] Using fallback geo_code: ${geo_code}`)
+        }
         
         // Get date columns (all columns that look like dates: YYYY-MM-DD)
         const dateColumns = Object.keys(record).filter(key => 
@@ -119,6 +176,8 @@ export async function fetchZillowDataSimple(
       
     } catch (error: any) {
       console.error(`❌ Error fetching ${dataset}:`, error.message)
+      console.error(`[fetchZillowDataSimple] Full error for ${dataset}:`, error)
+      console.error(`[fetchZillowDataSimple] Stack trace:`, error.stack)
       // Continue with other datasets
     }
   }
