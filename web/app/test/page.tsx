@@ -23,18 +23,47 @@ export default function TestPage() {
     }
   }
 
+  const setupTestData = async () => {
+    setLoading(true)
+    setResult(null)
+    try {
+      const response = await fetch('/api/setup-test-data', {
+        method: 'POST'
+      })
+      const data = await response.json()
+      setResult(data)
+    } catch (error: any) {
+      setResult({
+        success: false,
+        error: error.message
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Database Connection Test</h1>
         
-        <button
-          onClick={testConnection}
-          disabled={loading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mb-6"
-        >
-          {loading ? 'Testing...' : 'Test Database Connection'}
-        </button>
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={testConnection}
+            disabled={loading}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Testing...' : 'Test Database Connection'}
+          </button>
+          
+          <button
+            onClick={setupTestData}
+            disabled={loading}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Setting up...' : 'Insert Test Data (10 Markets)'}
+          </button>
+        </div>
 
         {result && (
           <div className={`p-6 rounded-lg ${
