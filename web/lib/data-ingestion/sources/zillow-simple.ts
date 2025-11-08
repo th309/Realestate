@@ -6,7 +6,7 @@
 import axios from 'axios'
 import { parse as parseSync } from 'csv-parse/sync'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { mapRegionToGeoCode } from '../utils/geo-mapping'
+import { mapZillowRegionToGeoCode } from '../utils/geo-mapping'
 
 // Direct Zillow CSV URLs (these are public and stable)
 const ZILLOW_URLS: Record<string, string> = {
@@ -28,7 +28,7 @@ interface TimeSeriesData {
 async function mapToGeoCode(regionName: string, regionType: string): Promise<string> {
   try {
     // Try to map to existing geo_code
-    const mapped = await mapRegionToGeoCode(regionName, regionType)
+    const mapped = await mapZillowRegionToGeoCode(regionName, regionType)
     if (mapped) return mapped
   } catch (error) {
     // Ignore mapping errors
