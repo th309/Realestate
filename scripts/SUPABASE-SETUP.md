@@ -33,10 +33,23 @@
 
 ## Step 4: Enable PostGIS Extension
 
-1. In SQL Editor, run:
+**Option A: Using SQL Editor (Recommended)**
+1. In Supabase dashboard, click **"SQL Editor"** in the left sidebar
+2. Click **"New query"** button (top right)
+3. In the SQL editor text area, paste this command:
 ```sql
 CREATE EXTENSION IF NOT EXISTS "postgis";
 ```
+4. Click the **"Run"** button (or press `Ctrl+Enter`)
+5. You should see: "Success. No rows returned"
+
+**Option B: Using Extensions UI**
+1. In Supabase dashboard, click **"Database"** in left sidebar
+2. Click **"Extensions"** submenu
+3. Find **"postgis"** in the list
+4. Click the toggle switch to enable it
+
+**Note:** The SQL command includes `IF NOT EXISTS`, so it's safe to run even if PostGIS is already enabled.
 
 ## Step 5: Verify Tables Created
 
@@ -73,15 +86,29 @@ SELECT COUNT(*) FROM geo_data; -- Should return 0 (empty)
 SELECT COUNT(*) FROM tier_configs; -- Should return 4 (default tiers)
 ```
 
-## Step 8: Create First Admin User
+## Step 8: Create First Admin User ⏭️ (DO THIS LATER)
 
-After you create your first user account in the app, run:
+**⚠️ SKIP THIS STEP FOR NOW - Do this after Phase 5 (Authentication) is complete**
+
+This step requires:
+1. Authentication system built (Phase 5)
+2. User sign-up functionality working
+3. You've created your first account in the app
+
+**When ready (after Phase 5):**
+1. Sign up for an account using the app's registration page
+2. Note your email address
+3. In Supabase SQL Editor, run:
 ```sql
--- Replace 'your-email@example.com' with your actual email
+-- Replace 'your-email@example.com' with the email you used to sign up
 INSERT INTO admin_users (user_id, email, role)
 SELECT id, email, 'super_admin'
 FROM auth.users
 WHERE email = 'your-email@example.com';
+```
+4. Verify admin access by checking:
+```sql
+SELECT * FROM admin_users WHERE email = 'your-email@example.com';
 ```
 
 ## Troubleshooting
