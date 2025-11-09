@@ -19,8 +19,10 @@ Successfully implemented and tested Zillow data import functionality with full h
 
 ### 3. Testing & Verification
 - ✅ Successfully imported test data:
-  - 5 markets (United States, New York, Los Angeles, Miami-Fort Lauderdale, Austin)
-  - 1,500 time series records (300 months per market)
+  - **5 markets** (United States, New York, Los Angeles, Miami-Fort Lauderdale, Austin)
+    - 1,500 time series records (300 months per market)
+  - **50 markets** (full test)
+    - 13,860 time series records (~277 months per market average)
   - Full historical data from 2000 to present
 
 ### 4. Issues Resolved
