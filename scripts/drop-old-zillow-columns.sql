@@ -1,11 +1,3 @@
--- ============================================================================
--- Migration: Drop old Zillow-specific columns (property_type, tier)
--- Purpose: Clean up after JSONB migration is verified
--- Date: 2025-01-09
--- WARNING: Only run this after verifying the JSONB migration works correctly!
--- ============================================================================
-
--- Step 1: Verify all data has been migrated
 DO $$
 DECLARE
     unmigrated_count INTEGER;
@@ -22,7 +14,6 @@ BEGIN
     END IF;
 END $$;
 
--- Step 2: Drop property_type column
 DO $$
 BEGIN
     IF EXISTS (
@@ -37,7 +28,6 @@ BEGIN
     END IF;
 END $$;
 
--- Step 3: Drop tier column
 DO $$
 BEGIN
     IF EXISTS (
@@ -51,6 +41,3 @@ BEGIN
         RAISE NOTICE 'tier column does not exist';
     END IF;
 END $$;
-
-RAISE NOTICE 'Migration complete! Old Zillow-specific columns removed.';
-
