@@ -203,6 +203,50 @@ export default function TestPage() {
             </button>
           </div>
         </div>
+
+        {/* Census Import Test */}
+        <div className="mb-8 p-6 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Census Data Import (Phase 2.2)</h2>
+          <div className="space-y-4">
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-census?variables=population,median_household_income&year=2022&geo_level=metropolitan statistical area/micropolitan statistical area')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Importing...' : 'Import Metro Demographics (2022)'}
+            </button>
+            
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-census?variables=population&year=2022&geo_level=state')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed ml-4"
+            >
+              {loading ? 'Importing...' : 'Import State Population (2022)'}
+            </button>
+          </div>
+        </div>
         
         {/* Zillow Structure Analysis */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
