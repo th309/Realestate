@@ -277,6 +277,6 @@ export async function importAllZillowData(limitRows?: number) {
  * Test import with limited data
  */
 export async function testZillowImport() {
-  console.log('🧪 Running test import with 5 regions...')
-  return await importZillowData('zhvi', 5)
+  console.log('🧪 Running test import with 50 regions...')
+  return await importZillowData('zhvi', 50)
 }
