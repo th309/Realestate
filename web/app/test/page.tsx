@@ -159,6 +159,50 @@ export default function TestPage() {
             </button>
           </div>
         </div>
+
+        {/* FRED Import Test */}
+        <div className="mb-8 p-6 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">FRED Data Import (Phase 2.2)</h2>
+          <div className="space-y-4">
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-fred?series=mortgage_rate_30yr')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Importing...' : 'Import 30-Year Mortgage Rates'}
+            </button>
+            
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/import-fred?series=mortgage_rate_30yr,mortgage_rate_15yr')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed ml-4"
+            >
+              {loading ? 'Importing...' : 'Import All Mortgage Rates'}
+            </button>
+          </div>
+        </div>
         
         {/* Zillow Structure Analysis */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
