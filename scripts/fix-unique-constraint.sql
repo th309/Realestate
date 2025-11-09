@@ -1,40 +1,19 @@
 DO $$
 DECLARE
-    constraint_name TEXT;
+    constraint_record RECORD;
 BEGIN
-    SELECT DISTINCT conname INTO constraint_name
-    FROM pg_constraint
-    WHERE conrelid = 'market_time_series'::regclass
-    AND contype = 'u'
-    AND (conname LIKE '%region_id_date_metric_name%' OR conname LIKE '%property_type%' OR conname LIKE '%tier%')
-    LIMIT 1;
-    
-    IF constraint_name IS NOT NULL THEN
-        ALTER TABLE market_time_series DROP CONSTRAINT IF EXISTS market_time_series_region_id_date_metric_name_data_sou_key CASCADE;
-        ALTER TABLE market_time_series DROP CONSTRAINT IF EXISTS market_time_series_unique CASCADE;
-        EXECUTE format('ALTER TABLE market_time_series DROP CONSTRAINT IF EXISTS %I CASCADE', constraint_name);
-        RAISE NOTICE 'Dropped constraint: %', constraint_name;
-    ELSE
-        RAISE NOTICE 'No old constraint found on parent table';
-    END IF;
-    
-    FOR constraint_name IN
-        SELECT DISTINCT conname
+    FOR constraint_record IN
+        SELECT conname
         FROM pg_constraint
-        WHERE conrelid IN (
-            SELECT oid FROM pg_class 
-            WHERE relname LIKE 'market_time_series_%'
-            AND relkind = 'r'
-            AND relname != 'market_time_series'
-        )
+        WHERE conrelid = 'market_time_series'::regclass
         AND contype = 'u'
         AND (conname LIKE '%region_id_date_metric_name%' OR conname LIKE '%property_type%' OR conname LIKE '%tier%')
     LOOP
         BEGIN
-            EXECUTE format('ALTER TABLE market_time_series DROP CONSTRAINT IF EXISTS %I CASCADE', constraint_name);
-            RAISE NOTICE 'Attempted to drop constraint: %', constraint_name;
+            EXECUTE format('ALTER TABLE market_time_series DROP CONSTRAINT %I CASCADE', constraint_record.conname);
+            RAISE NOTICE 'Dropped constraint: %', constraint_record.conname;
         EXCEPTION WHEN OTHERS THEN
-            RAISE NOTICE 'Could not drop % (may be inherited): %', constraint_name, SQLERRM;
+            RAISE NOTICE 'Error dropping %: %', constraint_record.conname, SQLERRM;
         END;
     END LOOP;
 END $$;
