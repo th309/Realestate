@@ -63,10 +63,7 @@ export async function importCensusData(
     .map(v => v.variable)
     .join(',')
 
-  const nameVariable = geoLevel === 'state' ? 'NAME' : 
-                       geoLevel === 'metropolitan statistical area/micropolitan statistical area' ? 'NAME' :
-                       geoLevel === 'place' ? 'NAME' :
-                       'NAME'
+  const nameVariable = 'NAME'
 
   const geoVariable = geoLevel === 'state' ? 'state' :
                       geoLevel === 'metropolitan statistical area/micropolitan statistical area' ? 'metropolitan statistical area/micropolitan statistical area' :
