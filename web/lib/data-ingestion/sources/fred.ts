@@ -57,6 +57,24 @@ export async function importFREDData(
   console.log(`\n📊 Starting FRED import for: ${seriesKeys.join(', ')}`)
   console.log('================================================')
 
+  // Ensure United States region exists
+  const { error: marketError } = await supabase
+    .from('markets')
+    .upsert({
+      region_id: UNITED_STATES_REGION_ID,
+      region_name: 'United States',
+      region_type: 'country'
+    }, {
+      onConflict: 'region_id',
+      ignoreDuplicates: false
+    })
+
+  if (marketError) {
+    console.warn(`⚠️ Warning: Could not ensure United States region exists: ${marketError.message}`)
+  } else {
+    console.log('✅ United States region verified')
+  }
+
   let totalRecordsInserted = 0
   const errors: any[] = []
 
