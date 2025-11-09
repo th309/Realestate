@@ -175,11 +175,14 @@ export async function importZillowData(
           try {
             const { data: tsResult, error: tsError } = await supabase
               .from('market_time_series')
-              .insert(batch)
+              .upsert(batch, {
+                onConflict: 'region_id,date,metric_name,data_source,attributes',
+                ignoreDuplicates: false
+              })
               .select()
             
             if (tsError) {
-              console.error(`❌ Error inserting time series batch:`, tsError)
+              console.error(`❌ Error upserting time series batch:`, tsError)
               console.error(`Full error object:`, JSON.stringify(tsError, null, 2))
               console.error(`Region: ${regionId}, Batch size: ${batch.length}`)
               
@@ -193,19 +196,14 @@ export async function importZillowData(
                 sampleRecord: batch[0]
               })
               
-              // Check if it's a unique constraint violation
-              if (tsError.code === '23505') {
-                console.log('Note: Data already exists, skipping...')
-                // Don't count as error if it's just duplicate data
-              } else {
-                errors++
-              }
+              errors++
             } else {
-              console.log(`✅ Successfully inserted ${batch.length} records`)
-              timeSeriesInserted += batch.length
+              const insertedCount = tsResult?.length || batch.length
+              console.log(`✅ Successfully upserted ${insertedCount} records`)
+              timeSeriesInserted += insertedCount
             }
           } catch (err: any) {
-            console.error('Exception during insert:', err)
+            console.error('Exception during upsert:', err)
             errors++
           }
         }
