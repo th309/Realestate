@@ -14,7 +14,7 @@ LIMIT 10;
 SELECT 
     COUNT(*) as total_records,
     COUNT(CASE WHEN attributes->>'property_type' IS NOT NULL THEN 1 END) as with_property_type,
-    COUNT(CASE WHEN attributes->>'tier IS NOT NULL THEN 1 END) as with_tier
+    COUNT(CASE WHEN attributes->>'tier' IS NOT NULL THEN 1 END) as with_tier
 FROM market_time_series
 WHERE data_source = 'zillow';
 
