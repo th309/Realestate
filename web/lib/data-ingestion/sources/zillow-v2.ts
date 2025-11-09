@@ -31,8 +31,7 @@ interface TimeSeriesRecord {
   metric_name: string
   metric_value: number
   data_source: string
-  property_type?: string
-  tier?: string
+  attributes?: Record<string, any> // JSONB attributes for source-specific fields
 }
 
 /**
@@ -151,8 +150,10 @@ export async function importZillowData(
             metric_name: metricName,
             metric_value: value,
             data_source: 'zillow',
-            property_type: 'sfrcondo', // From the filename
-            tier: 'middle' // 0.33_0.67 tier
+            attributes: {
+              property_type: 'sfrcondo', // From the filename
+              tier: 'middle' // 0.33_0.67 tier
+            }
           })
         }
       }
