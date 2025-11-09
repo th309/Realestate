@@ -136,7 +136,7 @@ export default function TestPage() {
               disabled={loading}
               className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Importing...' : 'Test Import (5 regions)'}
+              {loading ? 'Importing...' : 'Test Import (50 regions)'}
             </button>
             
             <button
