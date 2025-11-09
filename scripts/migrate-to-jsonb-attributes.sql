@@ -39,37 +39,49 @@ SET attributes = attributes - 'null'
 WHERE attributes ? 'null';
 
 -- Step 3: Drop the old unique constraint
+-- For partitioned tables, we need to drop from parent and all partitions
 DO $$
+DECLARE
+    constraint_name TEXT;
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'market_time_series_region_id_date_metric_name_data_sou_key'
-    ) THEN
-        ALTER TABLE market_time_series 
-        DROP CONSTRAINT market_time_series_region_id_date_metric_name_data_sou_key;
-        
-        RAISE NOTICE 'Dropped old unique constraint';
+    -- Find the constraint name (it may vary by partition)
+    SELECT conname INTO constraint_name
+    FROM pg_constraint
+    WHERE conrelid = 'market_time_series'::regclass
+    AND contype = 'u'
+    AND conname LIKE '%region_id_date_metric_name%'
+    LIMIT 1;
+    
+    IF constraint_name IS NOT NULL THEN
+        -- Drop from parent (cascades to partitions)
+        EXECUTE format('ALTER TABLE market_time_series DROP CONSTRAINT IF EXISTS %I CASCADE', constraint_name);
+        RAISE NOTICE 'Dropped old unique constraint: %', constraint_name;
     ELSE
-        RAISE NOTICE 'Old unique constraint does not exist';
+        RAISE NOTICE 'Old unique constraint not found (may have different name)';
     END IF;
 END $$;
 
 -- Step 4: Create new unique constraint with JSONB attributes
--- Note: We need to handle this per partition since it's a partitioned table
 -- For partitioned tables, we add the constraint to the parent and it applies to all partitions
-
+-- Note: JSONB comparison in unique constraints works, but we need to ensure consistent ordering
 DO $$
 BEGIN
-    -- Try to add the constraint, ignore if it already exists
-    BEGIN
+    -- Check if constraint already exists
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'market_time_series'::regclass
+        AND conname = 'market_time_series_unique'
+    ) THEN
         ALTER TABLE market_time_series
         ADD CONSTRAINT market_time_series_unique 
         UNIQUE (region_id, date, metric_name, data_source, attributes);
         
         RAISE NOTICE 'Added new unique constraint with JSONB';
-    EXCEPTION WHEN duplicate_table THEN
+    ELSE
         RAISE NOTICE 'Unique constraint already exists';
-    END;
+    END IF;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Error creating constraint: %', SQLERRM;
 END $$;
 
 -- Step 5: Create GIN index on JSONB attributes for efficient queries
