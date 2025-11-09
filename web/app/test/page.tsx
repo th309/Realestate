@@ -212,6 +212,25 @@ export default function TestPage() {
               onClick={async () => {
                 setLoading(true)
                 try {
+                  const response = await fetch('/api/count-census-metros?year=2022')
+                  const data = await response.json()
+                  setResult(data)
+                } catch (error: any) {
+                  setResult({ success: false, error: error.message })
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Counting...' : 'Count Metro Areas in Census Data'}
+            </button>
+            
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
                   const response = await fetch('/api/import-census?variables=population,median_household_income&year=2022&geo_level=metropolitan statistical area/micropolitan statistical area')
                   const data = await response.json()
                   setResult(data)
@@ -222,7 +241,7 @@ export default function TestPage() {
                 }
               }}
               disabled={loading}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed ml-4"
             >
               {loading ? 'Importing...' : 'Import Metro Demographics (2022)'}
             </button>
