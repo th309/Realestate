@@ -1,0 +1,60 @@
+State Abbreviation,State Name,Population,State Name Fragment,FIPS code
+AL,Alabama,5157699,alabama,01
+AK,Alaska,740133,alaska,02
+AZ,Arizona,7582384,arizona,04
+AR,Arkansas,3088354,arkansas,05
+CA,California,39431263,california,06
+CO,Colorado,5957493,colorado,08
+CT,Connecticut,3675069,connecticut,09
+DE,Delaware,1051917,delaware,10
+DC,District Of Columbia,702250,district-of-columbia,11
+FL,Florida,23372215,florida,12
+GA,Georgia,11180878,georgia,13
+HI,Hawaii,1446146,hawaii,15
+ID,Idaho,2001619,idaho,16
+IL,Illinois,12710158,illinois,17
+IN,Indiana,6924275,indiana,18
+IA,Iowa,3241488,iowa,19
+KS,Kansas,2970606,kansas,20
+KY,Kentucky,4588372,kentucky,21
+LA,Louisiana,4597740,louisiana,22
+ME,Maine,1405012,maine,23
+MD,Maryland,6263220,maryland,24
+MA,Massachusetts,7136171,massachusetts,25
+MI,Michigan,10140459,michigan,26
+MN,Minnesota,5793151,minnesota,27
+MS,Mississippi,2943045,mississippi,28
+MO,Missouri,6245466,missouri,29
+MT,Montana,1137233,montana,30
+NE,Nebraska,2005465,nebraska,31
+NV,Nevada,3267467,nevada,32
+NH,New Hampshire,1409032,new-hampshire,33
+NJ,New Jersey,9500851,new-jersey,34
+NM,New Mexico,2130256,new-mexico,35
+NY,New York,19867248,new-york,36
+NC,North Carolina,11046024,north-carolina,37
+ND,North Dakota,796568,north-dakota,38
+OH,Ohio,11883304,ohio,39
+OK,Oklahoma,4095393,oklahoma,40
+OR,Oregon,4272371,oregon,41
+PA,Pennsylvania,13078751,pennsylvania,42
+RI,Rhode Island,1112308,rhode-island,44
+SC,South Carolina,5478831,south-carolina,45
+SD,South Dakota,924669,south-dakota,46
+TN,Tennessee,7227750,tennessee,47
+TX,Texas,31290831,texas,48
+UT,Utah,3503613,utah,49
+VT,Vermont,648493,vermont,50
+VA,Virginia,8811195,virginia,51
+WA,Washington,7958180,washington,53
+WV,West Virginia,1769979,west-virginia,54
+WI,Wisconsin,5960975,wisconsin,55
+WY,Wyoming,587618,wyoming,56
+PR,Puerto Rico,3203295,,72
+VI,Virgin Islands,,,78
+GU,Guam,,,66
+AS,American Samoa,,,
+FM,Federated States of Micronesia,,,
+MH,Marshall Islands,,,
+MP,Northern Mariana Islands,,,
+PW,Palau,,,
