@@ -138,7 +138,7 @@ function calculatePercentage(part: number | null, total: number | null): number 
   return (part / total) * 100
 }
 
-function processDemo graphicsRecord(record: any, geoid: string, year: number): any {
+function processDemographicsRecord(record: any, geoid: string, year: number): any {
   const totalPop = parseValue(record['B01001_001E'])
   const under5Male = parseValue(record['B01001_003E'])
   const under5Female = parseValue(record['B01001_027E'])
