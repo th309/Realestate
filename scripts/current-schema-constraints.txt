@@ -1,0 +1,233 @@
+         table_name          |                         constraint_name                         | constraint_type |       column_name       
+-----------------------------+-----------------------------------------------------------------+-----------------+-------------------------
+ admin_users                 | admin_users_pkey                                                | PRIMARY KEY     | id
+ admin_users                 | admin_users_email_key                                           | UNIQUE          | email
+ census_demographics         | census_demographics_geoid_fkey                                  | FOREIGN KEY     | geoid
+ census_demographics         | census_demographics_pkey                                        | PRIMARY KEY     | vintage_year
+ census_demographics         | census_demographics_pkey                                        | PRIMARY KEY     | geoid
+ census_economics            | census_economics_geoid_fkey                                     | FOREIGN KEY     | geoid
+ census_economics            | census_economics_pkey                                           | PRIMARY KEY     | vintage_year
+ census_economics            | census_economics_pkey                                           | PRIMARY KEY     | geoid
+ census_housing              | census_housing_geoid_fkey                                       | FOREIGN KEY     | geoid
+ census_housing              | census_housing_pkey                                             | PRIMARY KEY     | vintage_year
+ census_housing              | census_housing_pkey                                             | PRIMARY KEY     | geoid
+ data_processors             | data_processors_pkey                                            | PRIMARY KEY     | processor_id
+ data_sources                | data_sources_organization_id_fkey                               | FOREIGN KEY     | organization_id
+ data_sources                | data_sources_source_type_fkey                                   | FOREIGN KEY     | source_type
+ data_sources                | data_sources_pkey                                               | PRIMARY KEY     | id
+ data_sources                | data_sources_source_name_key                                    | UNIQUE          | source_name
+ field_definitions           | field_definitions_pkey                                          | PRIMARY KEY     | field_code
+ fred_economic_data          | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data          | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data          | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data          | fred_economic_data_pkey                                         | PRIMARY KEY     | series_id
+ fred_economic_data          | fred_economic_data_pkey                                         | PRIMARY KEY     | geoid
+ fred_economic_data          | fred_economic_data_pkey                                         | PRIMARY KEY     | metric_date
+ fred_economic_data_2024     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2024     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2024     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2024     | fred_economic_data_2024_pkey                                    | PRIMARY KEY     | series_id
+ fred_economic_data_2024     | fred_economic_data_2024_pkey                                    | PRIMARY KEY     | metric_date
+ fred_economic_data_2024     | fred_economic_data_2024_pkey                                    | PRIMARY KEY     | geoid
+ fred_economic_data_2025     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2025     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2025     | fred_economic_data_geoid_fkey                                   | FOREIGN KEY     | geoid
+ fred_economic_data_2025     | fred_economic_data_2025_pkey                                    | PRIMARY KEY     | series_id
+ fred_economic_data_2025     | fred_economic_data_2025_pkey                                    | PRIMARY KEY     | geoid
+ fred_economic_data_2025     | fred_economic_data_2025_pkey                                    | PRIMARY KEY     | metric_date
+ geo_county_cbsa             | geo_county_cbsa_pkey                                            | PRIMARY KEY     | county_geoid
+ geo_county_cbsa             | geo_county_cbsa_pkey                                            | PRIMARY KEY     | cbsa_geoid
+ geo_county_state            | geo_county_state_pkey                                           | PRIMARY KEY     | county_geoid
+ geo_county_state            | geo_county_state_pkey                                           | PRIMARY KEY     | state_geoid
+ geo_place_county            | geo_place_county_pkey                                           | PRIMARY KEY     | county_geoid
+ geo_place_county            | geo_place_county_pkey                                           | PRIMARY KEY     | place_geoid
+ geo_zip_cbsa                | geo_zip_cbsa_pkey                                               | PRIMARY KEY     | cbsa_geoid
+ geo_zip_cbsa                | geo_zip_cbsa_pkey                                               | PRIMARY KEY     | zip_geoid
+ geo_zip_county              | geo_zip_county_pkey                                             | PRIMARY KEY     | county_geoid
+ geo_zip_county              | geo_zip_county_pkey                                             | PRIMARY KEY     | zip_geoid
+ geo_zip_place               | geo_zip_place_pkey                                              | PRIMARY KEY     | place_geoid
+ geo_zip_place               | geo_zip_place_pkey                                              | PRIMARY KEY     | zip_geoid
+ geographic_aliases          | geographic_aliases_variant_type_fkey                            | FOREIGN KEY     | variant_type
+ geographic_aliases          | geographic_aliases_geoid_fkey                                   | FOREIGN KEY     | geoid
+ geographic_aliases          | geographic_aliases_pkey                                         | PRIMARY KEY     | id
+ geographic_level_types      | geographic_level_types_parent_level_fkey                        | FOREIGN KEY     | parent_level
+ geographic_level_types      | geographic_level_types_pkey                                     | PRIMARY KEY     | level_code
+ geographic_units            | geographic_units_level_fkey                                     | FOREIGN KEY     | level
+ geographic_units            | geographic_units_organization_id_fkey                           | FOREIGN KEY     | organization_id
+ geographic_units            | geographic_units_parent_geoid_fkey                              | FOREIGN KEY     | parent_geoid
+ geographic_units            | geographic_units_pkey                                           | PRIMARY KEY     | geoid
+ geographic_vectors          | geographic_vectors_geoid_fkey                                   | FOREIGN KEY     | geoid
+ geographic_vectors          | geographic_vectors_pkey                                         | PRIMARY KEY     | geoid
+ gui_events                  | gui_events_pkey                                                 | PRIMARY KEY     | id
+ map_layers                  | map_layers_geographic_level_fkey                                | FOREIGN KEY     | geographic_level
+ map_layers                  | map_layers_pkey                                                 | PRIMARY KEY     | id
+ map_layers                  | map_layers_layer_name_key                                       | UNIQUE          | layer_name
+ map_tile_cache              | map_tile_cache_pkey                                             | PRIMARY KEY     | tile_y
+ map_tile_cache              | map_tile_cache_pkey                                             | PRIMARY KEY     | tile_x
+ map_tile_cache              | map_tile_cache_pkey                                             | PRIMARY KEY     | zoom_level
+ map_tile_cache              | map_tile_cache_pkey                                             | PRIMARY KEY     | geographic_level
+ mapping_patterns            | mapping_patterns_pkey                                           | PRIMARY KEY     | id
+ market_signals              | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals              | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals              | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals              | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals              | market_signals_pkey                                             | PRIMARY KEY     | detected_at
+ market_signals              | market_signals_pkey                                             | PRIMARY KEY     | id
+ market_signals_2024_q4      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2024_q4      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2024_q4      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2024_q4      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2024_q4      | market_signals_2024_q4_pkey                                     | PRIMARY KEY     | detected_at
+ market_signals_2024_q4      | market_signals_2024_q4_pkey                                     | PRIMARY KEY     | id
+ market_signals_2025_q1      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q1      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q1      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q1      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q1      | market_signals_2025_q1_pkey                                     | PRIMARY KEY     | id
+ market_signals_2025_q1      | market_signals_2025_q1_pkey                                     | PRIMARY KEY     | detected_at
+ market_signals_2025_q2      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q2      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q2      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q2      | market_signals_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ market_signals_2025_q2      | market_signals_2025_q2_pkey                                     | PRIMARY KEY     | id
+ market_signals_2025_q2      | market_signals_2025_q2_pkey                                     | PRIMARY KEY     | detected_at
+ markets                     | markets_pkey                                                    | PRIMARY KEY     | region_id
+ markets_hierarchy           | markets_hierarchy_market_region_id_fkey                         | FOREIGN KEY     | market_region_id
+ markets_hierarchy           | markets_hierarchy_parent_market_region_id_fkey                  | FOREIGN KEY     | parent_market_region_id
+ markets_hierarchy           | markets_hierarchy_pkey                                          | PRIMARY KEY     | parent_market_region_id
+ markets_hierarchy           | markets_hierarchy_pkey                                          | PRIMARY KEY     | market_region_id
+ markets_tiger_mapping       | markets_tiger_mapping_market_region_id_fkey                     | FOREIGN KEY     | market_region_id
+ markets_tiger_mapping       | markets_tiger_mapping_pkey                                      | PRIMARY KEY     | tiger_type
+ markets_tiger_mapping       | markets_tiger_mapping_pkey                                      | PRIMARY KEY     | tiger_geoid
+ markets_tiger_mapping       | markets_tiger_mapping_pkey                                      | PRIMARY KEY     | market_region_id
+ master_market_intelligence  | master_market_intelligence_geoid_fkey                           | FOREIGN KEY     | geoid
+ master_market_intelligence  | master_market_intelligence_pkey                                 | PRIMARY KEY     | analysis_month
+ master_market_intelligence  | master_market_intelligence_pkey                                 | PRIMARY KEY     | geoid
+ normalization_feedback      | normalization_feedback_suggested_geoid_fkey                     | FOREIGN KEY     | suggested_geoid
+ normalization_feedback      | normalization_feedback_history_id_fkey                          | FOREIGN KEY     | history_id
+ normalization_feedback      | normalization_feedback_pkey                                     | PRIMARY KEY     | id
+ normalization_history       | normalization_history_organization_id_fkey                      | FOREIGN KEY     | organization_id
+ normalization_history       | normalization_history_normalized_geoid_fkey                     | FOREIGN KEY     | normalized_geoid
+ normalization_history       | normalization_history_user_correction_geoid_fkey                | FOREIGN KEY     | user_correction_geoid
+ normalization_history       | normalization_history_pkey                                      | PRIMARY KEY     | id
+ normalization_strategies    | normalization_strategies_pkey                                   | PRIMARY KEY     | id
+ normalization_strategies    | normalization_strategies_strategy_name_key                      | UNIQUE          | strategy_name
+ normalization_tasks         | normalization_tasks_assigned_to_fkey                            | FOREIGN KEY     | assigned_to
+ normalization_tasks         | normalization_tasks_staging_id_fkey                             | FOREIGN KEY     | staging_id
+ normalization_tasks         | normalization_tasks_pkey                                        | PRIMARY KEY     | id
+ notifications               | notifications_user_id_fkey                                      | FOREIGN KEY     | user_id
+ notifications               | notifications_pkey                                              | PRIMARY KEY     | id
+ organization_members        | organization_members_organization_id_fkey                       | FOREIGN KEY     | organization_id
+ organization_members        | organization_members_user_id_fkey                               | FOREIGN KEY     | user_id
+ organization_members        | organization_members_pkey                                       | PRIMARY KEY     | id
+ organization_members        | organization_members_organization_id_user_id_key                | UNIQUE          | user_id
+ organization_members        | organization_members_organization_id_user_id_key                | UNIQUE          | organization_id
+ organizations               | organizations_pkey                                              | PRIMARY KEY     | id
+ organizations               | organizations_slug_key                                          | UNIQUE          | slug
+ organizations               | organizations_stripe_customer_id_key                            | UNIQUE          | stripe_customer_id
+ redfin_metrics              | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics              | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics              | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics              | redfin_metrics_pkey                                             | PRIMARY KEY     | metric_date
+ redfin_metrics              | redfin_metrics_pkey                                             | PRIMARY KEY     | geoid
+ redfin_metrics_2024         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2024         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2024         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2024         | redfin_metrics_2024_pkey                                        | PRIMARY KEY     | metric_date
+ redfin_metrics_2024         | redfin_metrics_2024_pkey                                        | PRIMARY KEY     | geoid
+ redfin_metrics_2025         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2025         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2025         | redfin_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ redfin_metrics_2025         | redfin_metrics_2025_pkey                                        | PRIMARY KEY     | metric_date
+ redfin_metrics_2025         | redfin_metrics_2025_pkey                                        | PRIMARY KEY     | geoid
+ report_folders              | report_folders_user_id_fkey                                     | FOREIGN KEY     | user_id
+ report_folders              | report_folders_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ report_folders              | report_folders_parent_folder_id_fkey                            | FOREIGN KEY     | parent_folder_id
+ report_folders              | report_folders_pkey                                             | PRIMARY KEY     | id
+ report_folders              | report_folders_organization_id_parent_folder_id_folder_name_key | UNIQUE          | folder_name
+ report_folders              | report_folders_organization_id_parent_folder_id_folder_name_key | UNIQUE          | parent_folder_id
+ report_folders              | report_folders_organization_id_parent_folder_id_folder_name_key | UNIQUE          | organization_id
+ shapefile_configs           | shapefile_configs_geographic_level_fkey                         | FOREIGN KEY     | geographic_level
+ shapefile_configs           | shapefile_configs_pkey                                          | PRIMARY KEY     | config_name
+ source_fields               | source_fields_source_id_fkey                                    | FOREIGN KEY     | source_id
+ source_fields               | source_fields_field_code_fkey                                   | FOREIGN KEY     | field_code
+ source_fields               | source_fields_pkey                                              | PRIMARY KEY     | field_code
+ source_fields               | source_fields_pkey                                              | PRIMARY KEY     | source_id
+ source_types                | source_types_pkey                                               | PRIMARY KEY     | type_code
+ spatial_staging             | spatial_staging_upload_id_fkey                                  | FOREIGN KEY     | upload_id
+ spatial_staging             | spatial_staging_matched_geoid_fkey                              | FOREIGN KEY     | matched_geoid
+ spatial_staging             | spatial_staging_pkey                                            | PRIMARY KEY     | id
+ spatial_uploads             | spatial_uploads_uploaded_by_fkey                                | FOREIGN KEY     | uploaded_by
+ spatial_uploads             | spatial_uploads_organization_id_fkey                            | FOREIGN KEY     | organization_id
+ spatial_uploads             | spatial_uploads_pkey                                            | PRIMARY KEY     | id
+ staging_data                | staging_data_organization_id_fkey                               | FOREIGN KEY     | organization_id
+ staging_data                | staging_data_source_id_fkey                                     | FOREIGN KEY     | source_id
+ staging_data                | staging_data_pkey                                               | PRIMARY KEY     | id
+ subscriber_profiles         | subscriber_profiles_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_profiles         | subscriber_profiles_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_profiles         | subscriber_profiles_pkey                                        | PRIMARY KEY     | id
+ subscriber_reports          | subscriber_reports_request_id_request_created_at_fkey1          | FOREIGN KEY     | request_id
+ subscriber_reports          | subscriber_reports_request_id_request_created_at_fkey           | FOREIGN KEY     | request_created_at
+ subscriber_reports          | subscriber_reports_request_id_request_created_at_fkey           | FOREIGN KEY     | request_id
+ subscriber_reports          | subscriber_reports_request_fk                                   | FOREIGN KEY     | request_created_at
+ subscriber_reports          | subscriber_reports_request_fk                                   | FOREIGN KEY     | request_id
+ subscriber_reports          | subscriber_reports_organization_id_fkey                         | FOREIGN KEY     | organization_id
+ subscriber_reports          | subscriber_reports_user_id_fkey                                 | FOREIGN KEY     | user_id
+ subscriber_reports          | subscriber_reports_request_id_request_created_at_fkey1          | FOREIGN KEY     | request_created_at
+ subscriber_reports          | subscriber_reports_folder_id_fkey                               | FOREIGN KEY     | folder_id
+ subscriber_reports          | subscriber_reports_pkey                                         | PRIMARY KEY     | id
+ subscriber_requests         | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests         | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests         | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests         | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests         | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests         | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests         | subscriber_requests_pkey                                        | PRIMARY KEY     | id
+ subscriber_requests         | subscriber_requests_pkey                                        | PRIMARY KEY     | created_at
+ subscriber_requests_2024_q4 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2024_q4 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2024_q4 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2024_q4 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2024_q4 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2024_q4 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2024_q4 | subscriber_requests_2024_q4_pkey                                | PRIMARY KEY     | created_at
+ subscriber_requests_2024_q4 | subscriber_requests_2024_q4_pkey                                | PRIMARY KEY     | id
+ subscriber_requests_2025_q1 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2025_q1 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2025_q1 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2025_q1 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2025_q1 | subscriber_requests_user_id_fkey                                | FOREIGN KEY     | user_id
+ subscriber_requests_2025_q1 | subscriber_requests_organization_id_fkey                        | FOREIGN KEY     | organization_id
+ subscriber_requests_2025_q1 | subscriber_requests_2025_q1_pkey                                | PRIMARY KEY     | created_at
+ subscriber_requests_2025_q1 | subscriber_requests_2025_q1_pkey                                | PRIMARY KEY     | id
+ subscription_plans          | subscription_plans_pkey                                         | PRIMARY KEY     | id
+ subscription_plans          | subscription_plans_slug_key                                     | UNIQUE          | slug
+ subscription_plans          | subscription_plans_name_key                                     | UNIQUE          | name
+ subscriptions               | subscriptions_organization_id_fkey                              | FOREIGN KEY     | organization_id
+ subscriptions               | subscriptions_plan_id_fkey                                      | FOREIGN KEY     | plan_id
+ subscriptions               | subscriptions_pkey                                              | PRIMARY KEY     | id
+ subscriptions               | subscriptions_stripe_subscription_id_key                        | UNIQUE          | stripe_subscription_id
+ tiger_cbsa                  | tiger_cbsa_pkey                                                 | PRIMARY KEY     | geoid
+ tiger_counties              | tiger_counties_pkey                                             | PRIMARY KEY     | geoid
+ tiger_csa                   | tiger_csa_pkey                                                  | PRIMARY KEY     | geoid
+ tiger_metdiv                | tiger_metdiv_pkey                                               | PRIMARY KEY     | geoid
+ tiger_nation                | tiger_nation_pkey                                               | PRIMARY KEY     | geoid
+ tiger_places                | tiger_places_pkey                                               | PRIMARY KEY     | geoid
+ tiger_states                | tiger_states_pkey                                               | PRIMARY KEY     | geoid
+ tiger_urban_areas           | tiger_urban_areas_pkey                                          | PRIMARY KEY     | geoid
+ tiger_zcta                  | tiger_zcta_pkey                                                 | PRIMARY KEY     | geoid
+ ui_sessions                 | ui_sessions_user_id_fkey                                        | FOREIGN KEY     | user_id
+ ui_sessions                 | ui_sessions_pkey                                                | PRIMARY KEY     | id
+ usage_tracking              | usage_tracking_organization_id_fkey                             | FOREIGN KEY     | organization_id
+ usage_tracking              | usage_tracking_pkey                                             | PRIMARY KEY     | id
+ usage_tracking              | usage_tracking_organization_id_metric_name_period_start_key     | UNIQUE          | period_start
+ usage_tracking              | usage_tracking_organization_id_metric_name_period_start_key     | UNIQUE          | organization_id
+ usage_tracking              | usage_tracking_organization_id_metric_name_period_start_key     | UNIQUE          | metric_name
+ variant_types               | variant_types_pkey                                              | PRIMARY KEY     | type_code
+ workflow_templates          | workflow_templates_pkey                                         | PRIMARY KEY     | id
+ workflow_templates          | workflow_templates_template_name_key                            | UNIQUE          | template_name
+ zillow_metrics              | zillow_metrics_geoid_fkey                                       | FOREIGN KEY     | geoid
+ zillow_metrics              | zillow_metrics_pkey                                             | PRIMARY KEY     | metric_date
+ zillow_metrics              | zillow_metrics_pkey                                             | PRIMARY KEY     | geoid
+(229 rows)
+

@@ -1,0 +1,10 @@
+========================================
+COMPLETE SUPABASE DATABASE SCHEMA
+Generated: 11/16/2025 08:52:09
+========================================
+
+=== TABLES ===
+
+         table_name           -----------------------------  admin_users  census_demographics  census_economics  census_housing  data_processors  data_sources  field_definitions  fred_economic_data  fred_economic_data_2024  fred_economic_data_2025  geo_county_cbsa  geo_county_state  geo_place_county  geo_zip_cbsa  geo_zip_county  geo_zip_place  geographic_aliases  geographic_level_types  geographic_units  geographic_vectors  gui_events  map_layers  map_tile_cache  mapping_patterns  market_signals  market_signals_2024_q4  market_signals_2025_q1  market_signals_2025_q2  markets  markets_hierarchy  markets_tiger_mapping  master_market_intelligence  normalization_feedback  normalization_history  normalization_strategies  normalization_tasks  notifications  organization_members  organizations  redfin_metrics  redfin_metrics_2024  redfin_metrics_2025  report_folders  shapefile_configs  source_fields  source_types  spatial_ref_sys  spatial_staging  spatial_uploads  staging_data  subscriber_profiles  subscriber_reports  subscriber_requests  subscriber_requests_2024_q4  subscriber_requests_2025_q1  subscription_plans  subscriptions  tiger_cbsa  tiger_counties  tiger_csa  tiger_metdiv  tiger_nation  tiger_places  tiger_states  tiger_urban_areas  tiger_zcta  ui_sessions  usage_tracking  variant_types  workflow_templates  zillow_metrics (71 rows) 
+
+

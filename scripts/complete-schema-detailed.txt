@@ -1,0 +1,815 @@
+         table_name          |           column_name           |        data_type         | character_maximum_length | is_nullable 
+-----------------------------+---------------------------------+--------------------------+--------------------------+-------------
+ admin_users                 | id                              | uuid                     |                          | NO
+ admin_users                 | email                           | text                     |                          | NO
+ admin_users                 | full_name                       | text                     |                          | YES
+ admin_users                 | role                            | text                     |                          | YES
+ admin_users                 | permissions                     | jsonb                    |                          | YES
+ admin_users                 | preferences                     | jsonb                    |                          | YES
+ admin_users                 | last_active                     | timestamp with time zone |                          | YES
+ admin_users                 | created_at                      | timestamp with time zone |                          | YES
+ census_demographics         | geoid                           | text                     |                          | NO
+ census_demographics         | vintage_year                    | integer                  |                          | NO
+ census_demographics         | survey_type                     | text                     |                          | YES
+ census_demographics         | total_population                | integer                  |                          | YES
+ census_demographics         | median_age                      | numeric                  |                          | YES
+ census_demographics         | total_households                | integer                  |                          | YES
+ census_demographics         | avg_household_size              | numeric                  |                          | YES
+ census_demographics         | population_under_18_pct         | numeric                  |                          | YES
+ census_demographics         | population_18_34_pct            | numeric                  |                          | YES
+ census_demographics         | population_35_54_pct            | numeric                  |                          | YES
+ census_demographics         | population_65_plus_pct          | numeric                  |                          | YES
+ census_demographics         | bachelors_degree_pct            | numeric                  |                          | YES
+ census_demographics         | graduate_degree_pct             | numeric                  |                          | YES
+ census_demographics         | created_at                      | timestamp with time zone |                          | YES
+ census_economics            | geoid                           | text                     |                          | NO
+ census_economics            | vintage_year                    | integer                  |                          | NO
+ census_economics            | median_household_income         | numeric                  |                          | YES
+ census_economics            | per_capita_income               | numeric                  |                          | YES
+ census_economics            | poverty_rate_all                | numeric                  |                          | YES
+ census_economics            | unemployment_rate               | numeric                  |                          | YES
+ census_economics            | gini_index                      | numeric                  |                          | YES
+ census_economics            | created_at                      | timestamp with time zone |                          | YES
+ census_housing              | geoid                           | text                     |                          | NO
+ census_housing              | vintage_year                    | integer                  |                          | NO
+ census_housing              | total_housing_units             | integer                  |                          | YES
+ census_housing              | occupied_units                  | integer                  |                          | YES
+ census_housing              | vacancy_rate                    | numeric                  |                          | YES
+ census_housing              | homeownership_rate              | numeric                  |                          | YES
+ census_housing              | median_home_value               | numeric                  |                          | YES
+ census_housing              | median_gross_rent               | numeric                  |                          | YES
+ census_housing              | median_year_built               | integer                  |                          | YES
+ census_housing              | created_at                      | timestamp with time zone |                          | YES
+ data_processors             | processor_id                    | text                     |                          | NO
+ data_processors             | processor_name                  | text                     |                          | NO
+ data_processors             | processor_type                  | text                     |                          | YES
+ data_processors             | processor_config                | jsonb                    |                          | NO
+ data_processors             | supported_formats               | jsonb                    |                          | YES
+ data_processors             | is_active                       | boolean                  |                          | YES
+ data_processors             | created_at                      | timestamp with time zone |                          | YES
+ data_sources                | id                              | uuid                     |                          | NO
+ data_sources                | source_name                     | text                     |                          | NO
+ data_sources                | source_type                     | text                     |                          | YES
+ data_sources                | connection_config               | jsonb                    |                          | YES
+ data_sources                | schema_definition               | jsonb                    |                          | YES
+ data_sources                | transform_pipeline              | jsonb                    |                          | YES
+ data_sources                | field_mappings                  | jsonb                    |                          | YES
+ data_sources                | refresh_schedule                | jsonb                    |                          | YES
+ data_sources                | last_sync                       | timestamp with time zone |                          | YES
+ data_sources                | sync_status                     | jsonb                    |                          | YES
+ data_sources                | organization_id                 | uuid                     |                          | YES
+ data_sources                | is_active                       | boolean                  |                          | YES
+ data_sources                | created_at                      | timestamp with time zone |                          | YES
+ field_definitions           | field_code                      | text                     |                          | NO
+ field_definitions           | field_name                      | text                     |                          | NO
+ field_definitions           | data_type                       | text                     |                          | NO
+ field_definitions           | validation_rules                | jsonb                    |                          | YES
+ field_definitions           | transformations                 | jsonb                    |                          | YES
+ field_definitions           | description                     | text                     |                          | YES
+ field_definitions           | created_at                      | timestamp with time zone |                          | YES
+ fred_economic_data          | geoid                           | text                     |                          | NO
+ fred_economic_data          | series_id                       | text                     |                          | NO
+ fred_economic_data          | metric_date                     | date                     |                          | NO
+ fred_economic_data          | unemployment_rate               | numeric                  |                          | YES
+ fred_economic_data          | employment_total                | integer                  |                          | YES
+ fred_economic_data          | employment_yoy_change           | numeric                  |                          | YES
+ fred_economic_data          | median_household_income         | numeric                  |                          | YES
+ fred_economic_data          | per_capita_income               | numeric                  |                          | YES
+ fred_economic_data          | population                      | integer                  |                          | YES
+ fred_economic_data          | population_yoy_change           | numeric                  |                          | YES
+ fred_economic_data          | housing_permits                 | integer                  |                          | YES
+ fred_economic_data          | housing_starts                  | integer                  |                          | YES
+ fred_economic_data          | gdp_millions                    | numeric                  |                          | YES
+ fred_economic_data          | gdp_per_capita                  | numeric                  |                          | YES
+ fred_economic_data          | mortgage_rate_30yr              | numeric                  |                          | YES
+ fred_economic_data          | data_vintage                    | date                     |                          | YES
+ fred_economic_data          | created_at                      | timestamp with time zone |                          | YES
+ fred_economic_data_2024     | geoid                           | text                     |                          | NO
+ fred_economic_data_2024     | series_id                       | text                     |                          | NO
+ fred_economic_data_2024     | metric_date                     | date                     |                          | NO
+ fred_economic_data_2024     | unemployment_rate               | numeric                  |                          | YES
+ fred_economic_data_2024     | employment_total                | integer                  |                          | YES
+ fred_economic_data_2024     | employment_yoy_change           | numeric                  |                          | YES
+ fred_economic_data_2024     | median_household_income         | numeric                  |                          | YES
+ fred_economic_data_2024     | per_capita_income               | numeric                  |                          | YES
+ fred_economic_data_2024     | population                      | integer                  |                          | YES
+ fred_economic_data_2024     | population_yoy_change           | numeric                  |                          | YES
+ fred_economic_data_2024     | housing_permits                 | integer                  |                          | YES
+ fred_economic_data_2024     | housing_starts                  | integer                  |                          | YES
+ fred_economic_data_2024     | gdp_millions                    | numeric                  |                          | YES
+ fred_economic_data_2024     | gdp_per_capita                  | numeric                  |                          | YES
+ fred_economic_data_2024     | mortgage_rate_30yr              | numeric                  |                          | YES
+ fred_economic_data_2024     | data_vintage                    | date                     |                          | YES
+ fred_economic_data_2024     | created_at                      | timestamp with time zone |                          | YES
+ fred_economic_data_2025     | geoid                           | text                     |                          | NO
+ fred_economic_data_2025     | series_id                       | text                     |                          | NO
+ fred_economic_data_2025     | metric_date                     | date                     |                          | NO
+ fred_economic_data_2025     | unemployment_rate               | numeric                  |                          | YES
+ fred_economic_data_2025     | employment_total                | integer                  |                          | YES
+ fred_economic_data_2025     | employment_yoy_change           | numeric                  |                          | YES
+ fred_economic_data_2025     | median_household_income         | numeric                  |                          | YES
+ fred_economic_data_2025     | per_capita_income               | numeric                  |                          | YES
+ fred_economic_data_2025     | population                      | integer                  |                          | YES
+ fred_economic_data_2025     | population_yoy_change           | numeric                  |                          | YES
+ fred_economic_data_2025     | housing_permits                 | integer                  |                          | YES
+ fred_economic_data_2025     | housing_starts                  | integer                  |                          | YES
+ fred_economic_data_2025     | gdp_millions                    | numeric                  |                          | YES
+ fred_economic_data_2025     | gdp_per_capita                  | numeric                  |                          | YES
+ fred_economic_data_2025     | mortgage_rate_30yr              | numeric                  |                          | YES
+ fred_economic_data_2025     | data_vintage                    | date                     |                          | YES
+ fred_economic_data_2025     | created_at                      | timestamp with time zone |                          | YES
+ geo_county_cbsa             | county_geoid                    | character varying        |                        5 | NO
+ geo_county_cbsa             | cbsa_geoid                      | character varying        |                        5 | NO
+ geo_county_cbsa             | overlap_percentage              | numeric                  |                          | NO
+ geo_county_cbsa             | overlap_area_sqkm               | numeric                  |                          | YES
+ geo_county_cbsa             | is_primary                      | boolean                  |                          | YES
+ geo_county_cbsa             | created_at                      | timestamp with time zone |                          | YES
+ geo_county_state            | county_geoid                    | character varying        |                        5 | NO
+ geo_county_state            | state_geoid                     | character varying        |                        2 | NO
+ geo_county_state            | created_at                      | timestamp with time zone |                          | YES
+ geo_place_county            | place_geoid                     | character varying        |                        7 | NO
+ geo_place_county            | county_geoid                    | character varying        |                        5 | NO
+ geo_place_county            | overlap_percentage              | numeric                  |                          | NO
+ geo_place_county            | overlap_area_sqkm               | numeric                  |                          | YES
+ geo_place_county            | is_primary                      | boolean                  |                          | YES
+ geo_place_county            | created_at                      | timestamp with time zone |                          | YES
+ geo_zip_cbsa                | zip_geoid                       | character varying        |                        5 | NO
+ geo_zip_cbsa                | cbsa_geoid                      | character varying        |                        5 | NO
+ geo_zip_cbsa                | overlap_percentage              | numeric                  |                          | NO
+ geo_zip_cbsa                | overlap_area_sqkm               | numeric                  |                          | YES
+ geo_zip_cbsa                | is_primary                      | boolean                  |                          | YES
+ geo_zip_cbsa                | created_at                      | timestamp with time zone |                          | YES
+ geo_zip_county              | zip_geoid                       | character varying        |                        5 | NO
+ geo_zip_county              | county_geoid                    | character varying        |                        5 | NO
+ geo_zip_county              | overlap_percentage              | numeric                  |                          | NO
+ geo_zip_county              | overlap_area_sqkm               | numeric                  |                          | YES
+ geo_zip_county              | is_primary                      | boolean                  |                          | YES
+ geo_zip_county              | created_at                      | timestamp with time zone |                          | YES
+ geo_zip_place               | zip_geoid                       | character varying        |                        5 | NO
+ geo_zip_place               | place_geoid                     | character varying        |                        7 | NO
+ geo_zip_place               | overlap_percentage              | numeric                  |                          | NO
+ geo_zip_place               | overlap_area_sqkm               | numeric                  |                          | YES
+ geo_zip_place               | is_primary                      | boolean                  |                          | YES
+ geo_zip_place               | created_at                      | timestamp with time zone |                          | YES
+ geographic_aliases          | id                              | uuid                     |                          | NO
+ geographic_aliases          | geoid                           | text                     |                          | NO
+ geographic_aliases          | variant_name                    | text                     |                          | NO
+ geographic_aliases          | variant_type                    | text                     |                          | YES
+ geographic_aliases          | variant_metadata                | jsonb                    |                          | YES
+ geographic_aliases          | confidence_score                | numeric                  |                          | YES
+ geographic_aliases          | source                          | text                     |                          | YES
+ geographic_aliases          | notes                           | text                     |                          | YES
+ geographic_aliases          | is_active                       | boolean                  |                          | YES
+ geographic_aliases          | created_at                      | timestamp with time zone |                          | YES
+ geographic_hierarchy        | geoid                           | text                     |                          | YES
+ geographic_hierarchy        | name                            | text                     |                          | YES
+ geographic_hierarchy        | level                           | text                     |                          | YES
+ geographic_hierarchy        | parent_geoid                    | text                     |                          | YES
+ geographic_hierarchy        | depth                           | integer                  |                          | YES
+ geographic_hierarchy        | path                            | ARRAY                    |                          | YES
+ geographic_level_types      | level_code                      | text                     |                          | NO
+ geographic_level_types      | level_name                      | text                     |                          | NO
+ geographic_level_types      | hierarchy_order                 | integer                  |                          | YES
+ geographic_level_types      | parent_level                    | text                     |                          | YES
+ geographic_level_types      | validation_rules                | jsonb                    |                          | YES
+ geographic_level_types      | created_at                      | timestamp with time zone |                          | YES
+ geographic_units            | geoid                           | text                     |                          | NO
+ geographic_units            | level                           | text                     |                          | NO
+ geographic_units            | parent_geoid                    | text                     |                          | YES
+ geographic_units            | name                            | text                     |                          | NO
+ geographic_units            | geometry                        | USER-DEFINED             |                          | YES
+ geographic_units            | geometry_simplified             | USER-DEFINED             |                          | YES
+ geographic_units            | geometry_collection             | jsonb                    |                          | YES
+ geographic_units            | centroid                        | USER-DEFINED             |                          | YES
+ geographic_units            | area_sqm                        | numeric                  |                          | YES
+ geographic_units            | perimeter_m                     | numeric                  |                          | YES
+ geographic_units            | bbox                            | USER-DEFINED             |                          | YES
+ geographic_units            | attributes                      | jsonb                    |                          | YES
+ geographic_units            | valid_from                      | date                     |                          | YES
+ geographic_units            | valid_to                        | date                     |                          | YES
+ geographic_units            | source_upload_id                | uuid                     |                          | YES
+ geographic_units            | metadata                        | jsonb                    |                          | YES
+ geographic_units            | organization_id                 | uuid                     |                          | YES
+ geographic_units            | created_at                      | timestamp with time zone |                          | YES
+ geographic_units            | updated_at                      | timestamp with time zone |                          | YES
+ geographic_vectors          | geoid                           | text                     |                          | NO
+ geographic_vectors          | demographic_vector              | USER-DEFINED             |                          | YES
+ geographic_vectors          | economic_vector                 | USER-DEFINED             |                          | YES
+ geographic_vectors          | infrastructure_vector           | USER-DEFINED             |                          | YES
+ geographic_vectors          | market_vector                   | USER-DEFINED             |                          | YES
+ geographic_vectors          | composite_vector                | USER-DEFINED             |                          | YES
+ geographic_vectors          | trend_vector_30d                | USER-DEFINED             |                          | YES
+ geographic_vectors          | trend_vector_90d                | USER-DEFINED             |                          | YES
+ geographic_vectors          | trend_vector_1y                 | USER-DEFINED             |                          | YES
+ geographic_vectors          | last_updated                    | timestamp with time zone |                          | YES
+ geographic_vectors          | update_frequency                | interval                 |                          | YES
+ geography_columns           | f_table_catalog                 | name                     |                          | YES
+ geography_columns           | f_table_schema                  | name                     |                          | YES
+ geography_columns           | f_table_name                    | name                     |                          | YES
+ geography_columns           | f_geography_column              | name                     |                          | YES
+ geography_columns           | coord_dimension                 | integer                  |                          | YES
+ geography_columns           | srid                            | integer                  |                          | YES
+ geography_columns           | type                            | text                     |                          | YES
+ geometry_columns            | f_table_catalog                 | character varying        |                      256 | YES
+ geometry_columns            | f_table_schema                  | name                     |                          | YES
+ geometry_columns            | f_table_name                    | name                     |                          | YES
+ geometry_columns            | f_geometry_column               | name                     |                          | YES
+ geometry_columns            | coord_dimension                 | integer                  |                          | YES
+ geometry_columns            | srid                            | integer                  |                          | YES
+ geometry_columns            | type                            | character varying        |                       30 | YES
+ gui_events                  | id                              | uuid                     |                          | NO
+ gui_events                  | event_type                      | text                     |                          | NO
+ gui_events                  | event_data                      | jsonb                    |                          | YES
+ gui_events                  | target_users                    | jsonb                    |                          | YES
+ gui_events                  | created_at                      | timestamp with time zone |                          | YES
+ investment_opportunities    | geoid                           | text                     |                          | YES
+ investment_opportunities    | name                            | text                     |                          | YES
+ investment_opportunities    | level                           | text                     |                          | YES
+ investment_opportunities    | home_value                      | numeric                  |                          | YES
+ investment_opportunities    | monthly_rent                    | numeric                  |                          | YES
+ investment_opportunities    | gross_yield                     | numeric                  |                          | YES
+ investment_opportunities    | months_of_supply                | numeric                  |                          | YES
+ investment_opportunities    | compete_score                   | integer                  |                          | YES
+ investment_opportunities    | median_age                      | numeric                  |                          | YES
+ investment_opportunities    | median_household_income         | numeric                  |                          | YES
+ map_layers                  | id                              | uuid                     |                          | NO
+ map_layers                  | layer_name                      | text                     |                          | NO
+ map_layers                  | geographic_level                | text                     |                          | YES
+ map_layers                  | style_config                    | jsonb                    |                          | YES
+ map_layers                  | min_zoom                        | integer                  |                          | YES
+ map_layers                  | max_zoom                        | integer                  |                          | YES
+ map_layers                  | is_visible                      | boolean                  |                          | YES
+ map_layers                  | display_order                   | integer                  |                          | YES
+ map_layers                  | created_at                      | timestamp with time zone |                          | YES
+ map_tile_cache              | zoom_level                      | integer                  |                          | NO
+ map_tile_cache              | tile_x                          | integer                  |                          | NO
+ map_tile_cache              | tile_y                          | integer                  |                          | NO
+ map_tile_cache              | geographic_level                | text                     |                          | NO
+ map_tile_cache              | tile_data                       | jsonb                    |                          | YES
+ map_tile_cache              | last_updated                    | timestamp with time zone |                          | YES
+ mapping_patterns            | id                              | uuid                     |                          | NO
+ mapping_patterns            | source_pattern                  | text                     |                          | YES
+ mapping_patterns            | target_field                    | text                     |                          | YES
+ mapping_patterns            | confidence_score                | numeric                  |                          | YES
+ mapping_patterns            | usage_count                     | integer                  |                          | YES
+ mapping_patterns            | last_used                       | timestamp with time zone |                          | YES
+ mapping_patterns            | created_at                      | timestamp with time zone |                          | YES
+ market_momentum             | geoid                           | text                     |                          | YES
+ market_momentum             | name                            | text                     |                          | YES
+ market_momentum             | metric_date                     | date                     |                          | YES
+ market_momentum             | home_value                      | numeric                  |                          | YES
+ market_momentum             | zhvi_yoy_change                 | numeric                  |                          | YES
+ market_momentum             | rent                            | numeric                  |                          | YES
+ market_momentum             | zori_yoy_change                 | numeric                  |                          | YES
+ market_momentum             | market_temperature              | text                     |                          | YES
+ market_signals              | id                              | uuid                     |                          | NO
+ market_signals              | signal_type                     | text                     |                          | YES
+ market_signals              | affected_geoids                 | ARRAY                    |                          | YES
+ market_signals              | geographic_level                | text                     |                          | YES
+ market_signals              | title                           | text                     |                          | YES
+ market_signals              | content                         | text                     |                          | YES
+ market_signals              | source_url                      | text                     |                          | YES
+ market_signals              | source_credibility              | numeric                  |                          | YES
+ market_signals              | content_vector                  | USER-DEFINED             |                          | YES
+ market_signals              | sentiment                       | numeric                  |                          | YES
+ market_signals              | impact_magnitude                | text                     |                          | YES
+ market_signals              | impact_timeframe                | text                     |                          | YES
+ market_signals              | impact_categories               | jsonb                    |                          | YES
+ market_signals              | event_date                      | timestamp with time zone |                          | YES
+ market_signals              | organization_id                 | uuid                     |                          | YES
+ market_signals              | detected_at                     | timestamp with time zone |                          | NO
+ market_signals              | expires_at                      | timestamp with time zone |                          | YES
+ market_signals              | processed_by_ai                 | boolean                  |                          | YES
+ market_signals              | ai_analysis                     | jsonb                    |                          | YES
+ market_signals_2024_q4      | id                              | uuid                     |                          | NO
+ market_signals_2024_q4      | signal_type                     | text                     |                          | YES
+ market_signals_2024_q4      | affected_geoids                 | ARRAY                    |                          | YES
+ market_signals_2024_q4      | geographic_level                | text                     |                          | YES
+ market_signals_2024_q4      | title                           | text                     |                          | YES
+ market_signals_2024_q4      | content                         | text                     |                          | YES
+ market_signals_2024_q4      | source_url                      | text                     |                          | YES
+ market_signals_2024_q4      | source_credibility              | numeric                  |                          | YES
+ market_signals_2024_q4      | content_vector                  | USER-DEFINED             |                          | YES
+ market_signals_2024_q4      | sentiment                       | numeric                  |                          | YES
+ market_signals_2024_q4      | impact_magnitude                | text                     |                          | YES
+ market_signals_2024_q4      | impact_timeframe                | text                     |                          | YES
+ market_signals_2024_q4      | impact_categories               | jsonb                    |                          | YES
+ market_signals_2024_q4      | event_date                      | timestamp with time zone |                          | YES
+ market_signals_2024_q4      | organization_id                 | uuid                     |                          | YES
+ market_signals_2024_q4      | detected_at                     | timestamp with time zone |                          | NO
+ market_signals_2024_q4      | expires_at                      | timestamp with time zone |                          | YES
+ market_signals_2024_q4      | processed_by_ai                 | boolean                  |                          | YES
+ market_signals_2024_q4      | ai_analysis                     | jsonb                    |                          | YES
+ market_signals_2025_q1      | id                              | uuid                     |                          | NO
+ market_signals_2025_q1      | signal_type                     | text                     |                          | YES
+ market_signals_2025_q1      | affected_geoids                 | ARRAY                    |                          | YES
+ market_signals_2025_q1      | geographic_level                | text                     |                          | YES
+ market_signals_2025_q1      | title                           | text                     |                          | YES
+ market_signals_2025_q1      | content                         | text                     |                          | YES
+ market_signals_2025_q1      | source_url                      | text                     |                          | YES
+ market_signals_2025_q1      | source_credibility              | numeric                  |                          | YES
+ market_signals_2025_q1      | content_vector                  | USER-DEFINED             |                          | YES
+ market_signals_2025_q1      | sentiment                       | numeric                  |                          | YES
+ market_signals_2025_q1      | impact_magnitude                | text                     |                          | YES
+ market_signals_2025_q1      | impact_timeframe                | text                     |                          | YES
+ market_signals_2025_q1      | impact_categories               | jsonb                    |                          | YES
+ market_signals_2025_q1      | event_date                      | timestamp with time zone |                          | YES
+ market_signals_2025_q1      | organization_id                 | uuid                     |                          | YES
+ market_signals_2025_q1      | detected_at                     | timestamp with time zone |                          | NO
+ market_signals_2025_q1      | expires_at                      | timestamp with time zone |                          | YES
+ market_signals_2025_q1      | processed_by_ai                 | boolean                  |                          | YES
+ market_signals_2025_q1      | ai_analysis                     | jsonb                    |                          | YES
+ market_signals_2025_q2      | id                              | uuid                     |                          | NO
+ market_signals_2025_q2      | signal_type                     | text                     |                          | YES
+ market_signals_2025_q2      | affected_geoids                 | ARRAY                    |                          | YES
+ market_signals_2025_q2      | geographic_level                | text                     |                          | YES
+ market_signals_2025_q2      | title                           | text                     |                          | YES
+ market_signals_2025_q2      | content                         | text                     |                          | YES
+ market_signals_2025_q2      | source_url                      | text                     |                          | YES
+ market_signals_2025_q2      | source_credibility              | numeric                  |                          | YES
+ market_signals_2025_q2      | content_vector                  | USER-DEFINED             |                          | YES
+ market_signals_2025_q2      | sentiment                       | numeric                  |                          | YES
+ market_signals_2025_q2      | impact_magnitude                | text                     |                          | YES
+ market_signals_2025_q2      | impact_timeframe                | text                     |                          | YES
+ market_signals_2025_q2      | impact_categories               | jsonb                    |                          | YES
+ market_signals_2025_q2      | event_date                      | timestamp with time zone |                          | YES
+ market_signals_2025_q2      | organization_id                 | uuid                     |                          | YES
+ market_signals_2025_q2      | detected_at                     | timestamp with time zone |                          | NO
+ market_signals_2025_q2      | expires_at                      | timestamp with time zone |                          | YES
+ market_signals_2025_q2      | processed_by_ai                 | boolean                  |                          | YES
+ market_signals_2025_q2      | ai_analysis                     | jsonb                    |                          | YES
+ markets                     | region_id                       | character varying        |                       50 | NO
+ markets                     | region_name                     | character varying        |                      255 | NO
+ markets                     | region_type                     | character varying        |                       50 | NO
+ markets                     | state_code                      | character varying        |                        2 | YES
+ markets                     | state_name                      | character varying        |                      100 | YES
+ markets                     | metro_id                        | character varying        |                       50 | YES
+ markets                     | metro_name                      | character varying        |                      255 | YES
+ markets                     | county_fips                     | character varying        |                        5 | YES
+ markets                     | external_ids                    | jsonb                    |                          | YES
+ markets                     | latitude                        | numeric                  |                          | YES
+ markets                     | longitude                       | numeric                  |                          | YES
+ markets                     | geometry                        | USER-DEFINED             |                          | YES
+ markets                     | bounds                          | jsonb                    |                          | YES
+ markets                     | population                      | bigint                   |                          | YES
+ markets                     | households                      | integer                  |                          | YES
+ markets                     | size_rank                       | integer                  |                          | YES
+ markets                     | created_at                      | timestamp with time zone |                          | YES
+ markets                     | updated_at                      | timestamp with time zone |                          | YES
+ markets                     | geoid                           | character varying        |                       20 | YES
+ markets_hierarchy           | market_region_id                | character varying        |                       50 | NO
+ markets_hierarchy           | parent_market_region_id         | character varying        |                       50 | NO
+ markets_hierarchy           | relationship_type               | character varying        |                       20 | NO
+ markets_hierarchy           | hierarchy_level                 | integer                  |                          | NO
+ markets_hierarchy           | is_primary                      | boolean                  |                          | YES
+ markets_hierarchy           | overlap_percentage              | numeric                  |                          | YES
+ markets_hierarchy           | created_at                      | timestamp with time zone |                          | YES
+ markets_hierarchy_path      | region_id                       | character varying        |                       50 | YES
+ markets_hierarchy_path      | region_name                     | character varying        |                      255 | YES
+ markets_hierarchy_path      | region_type                     | character varying        |                       50 | YES
+ markets_hierarchy_path      | root_id                         | character varying        |                       50 | YES
+ markets_hierarchy_path      | path                            | ARRAY                    |                          | YES
+ markets_hierarchy_path      | depth                           | integer                  |                          | YES
+ markets_hierarchy_path      | path_names                      | text                     |                          | YES
+ markets_tiger_mapping       | market_region_id                | character varying        |                       50 | NO
+ markets_tiger_mapping       | tiger_geoid                     | character varying        |                       20 | NO
+ markets_tiger_mapping       | tiger_type                      | character varying        |                       20 | NO
+ markets_tiger_mapping       | is_primary                      | boolean                  |                          | YES
+ markets_tiger_mapping       | overlap_percentage              | numeric                  |                          | YES
+ markets_tiger_mapping       | created_at                      | timestamp with time zone |                          | YES
+ markets_with_tiger_geoids   | region_id                       | character varying        |                       50 | YES
+ markets_with_tiger_geoids   | region_name                     | character varying        |                      255 | YES
+ markets_with_tiger_geoids   | region_type                     | character varying        |                       50 | YES
+ markets_with_tiger_geoids   | state_code                      | character varying        |                        2 | YES
+ markets_with_tiger_geoids   | external_ids                    | jsonb                    |                          | YES
+ markets_with_tiger_geoids   | tiger_state_geoid               | text                     |                          | YES
+ markets_with_tiger_geoids   | tiger_county_geoid              | text                     |                          | YES
+ markets_with_tiger_geoids   | tiger_cbsa_geoid                | text                     |                          | YES
+ markets_with_tiger_geoids   | tiger_place_geoid               | text                     |                          | YES
+ markets_with_tiger_geoids   | tiger_zcta_geoid                | text                     |                          | YES
+ markets_with_tiger_geoids   | market_geometry                 | USER-DEFINED             |                          | YES
+ markets_with_tiger_geoids   | tiger_geometry                  | USER-DEFINED             |                          | YES
+ markets_with_tiger_geoids   | created_at                      | timestamp with time zone |                          | YES
+ markets_with_tiger_geoids   | updated_at                      | timestamp with time zone |                          | YES
+ master_market_intelligence  | geoid                           | text                     |                          | NO
+ master_market_intelligence  | analysis_month                  | date                     |                          | NO
+ master_market_intelligence  | home_value_estimate             | numeric                  |                          | YES
+ master_market_intelligence  | home_value_yoy                  | numeric                  |                          | YES
+ master_market_intelligence  | rent_estimate                   | numeric                  |                          | YES
+ master_market_intelligence  | rent_yoy                        | numeric                  |                          | YES
+ master_market_intelligence  | price_to_rent_ratio             | numeric                  |                          | YES
+ master_market_intelligence  | months_of_supply                | numeric                  |                          | YES
+ master_market_intelligence  | days_on_market                  | integer                  |                          | YES
+ master_market_intelligence  | market_temperature              | text                     |                          | YES
+ master_market_intelligence  | unemployment_rate               | numeric                  |                          | YES
+ master_market_intelligence  | job_growth_yoy                  | numeric                  |                          | YES
+ master_market_intelligence  | median_household_income         | numeric                  |                          | YES
+ master_market_intelligence  | median_age                      | numeric                  |                          | YES
+ master_market_intelligence  | bachelors_plus_pct              | numeric                  |                          | YES
+ master_market_intelligence  | homeownership_rate              | numeric                  |                          | YES
+ master_market_intelligence  | cap_rate_estimate               | numeric                  |                          | YES
+ master_market_intelligence  | gross_yield                     | numeric                  |                          | YES
+ master_market_intelligence  | affordability_index             | numeric                  |                          | YES
+ master_market_intelligence  | overall_market_score            | integer                  |                          | YES
+ master_market_intelligence  | investment_attractiveness_score | integer                  |                          | YES
+ master_market_intelligence  | growth_potential_score          | integer                  |                          | YES
+ master_market_intelligence  | risk_score                      | integer                  |                          | YES
+ master_market_intelligence  | market_summary                  | text                     |                          | YES
+ master_market_intelligence  | key_strengths                   | jsonb                    |                          | YES
+ master_market_intelligence  | opportunities                   | jsonb                    |                          | YES
+ master_market_intelligence  | data_coverage_score             | integer                  |                          | YES
+ master_market_intelligence  | created_at                      | timestamp with time zone |                          | YES
+ normalization_feedback      | id                              | uuid                     |                          | NO
+ normalization_feedback      | history_id                      | uuid                     |                          | YES
+ normalization_feedback      | feedback_type                   | text                     |                          | YES
+ normalization_feedback      | suggested_geoid                 | text                     |                          | YES
+ normalization_feedback      | comments                        | text                     |                          | YES
+ normalization_feedback      | created_by                      | text                     |                          | YES
+ normalization_feedback      | created_at                      | timestamp with time zone |                          | YES
+ normalization_history       | id                              | uuid                     |                          | NO
+ normalization_history       | input_text                      | text                     |                          | NO
+ normalization_history       | normalized_geoid                | text                     |                          | YES
+ normalization_history       | confidence_score                | numeric                  |                          | NO
+ normalization_history       | rules_applied                   | jsonb                    |                          | YES
+ normalization_history       | user_verified                   | boolean                  |                          | YES
+ normalization_history       | user_correction_geoid           | text                     |                          | YES
+ normalization_history       | source_dataset                  | text                     |                          | YES
+ normalization_history       | organization_id                 | uuid                     |                          | YES
+ normalization_history       | created_at                      | timestamp with time zone |                          | YES
+ normalization_strategies    | id                              | uuid                     |                          | NO
+ normalization_strategies    | strategy_name                   | text                     |                          | NO
+ normalization_strategies    | strategy_type                   | text                     |                          | YES
+ normalization_strategies    | rules                           | jsonb                    |                          | NO
+ normalization_strategies    | applicability_conditions        | jsonb                    |                          | YES
+ normalization_strategies    | priority                        | integer                  |                          | YES
+ normalization_strategies    | is_active                       | boolean                  |                          | YES
+ normalization_strategies    | created_at                      | timestamp with time zone |                          | YES
+ normalization_tasks         | id                              | uuid                     |                          | NO
+ normalization_tasks         | staging_id                      | uuid                     |                          | YES
+ normalization_tasks         | ui_status                       | text                     |                          | YES
+ normalization_tasks         | suggested_matches               | jsonb                    |                          | YES
+ normalization_tasks         | assigned_to                     | uuid                     |                          | YES
+ normalization_tasks         | interaction_log                 | jsonb                    |                          | YES
+ normalization_tasks         | created_at                      | timestamp with time zone |                          | YES
+ notifications               | id                              | uuid                     |                          | NO
+ notifications               | user_id                         | uuid                     |                          | YES
+ notifications               | notification_type               | text                     |                          | YES
+ notifications               | title                           | text                     |                          | YES
+ notifications               | message                         | text                     |                          | YES
+ notifications               | actions                         | jsonb                    |                          | YES
+ notifications               | is_read                         | boolean                  |                          | YES
+ notifications               | created_at                      | timestamp with time zone |                          | YES
+ organization_members        | id                              | uuid                     |                          | NO
+ organization_members        | organization_id                 | uuid                     |                          | NO
+ organization_members        | user_id                         | uuid                     |                          | NO
+ organization_members        | role                            | text                     |                          | NO
+ organization_members        | permissions                     | jsonb                    |                          | YES
+ organization_members        | status                          | text                     |                          | YES
+ organization_members        | created_at                      | timestamp with time zone |                          | YES
+ organizations               | id                              | uuid                     |                          | NO
+ organizations               | name                            | text                     |                          | NO
+ organizations               | slug                            | text                     |                          | NO
+ organizations               | logo_url                        | text                     |                          | YES
+ organizations               | website                         | text                     |                          | YES
+ organizations               | industry                        | text                     |                          | YES
+ organizations               | size_category                   | text                     |                          | YES
+ organizations               | billing_email                   | text                     |                          | YES
+ organizations               | billing_address                 | jsonb                    |                          | YES
+ organizations               | tax_id                          | text                     |                          | YES
+ organizations               | payment_method_id               | text                     |                          | YES
+ organizations               | stripe_customer_id              | text                     |                          | YES
+ organizations               | status                          | text                     |                          | YES
+ organizations               | trial_ends_at                   | timestamp with time zone |                          | YES
+ organizations               | settings                        | jsonb                    |                          | YES
+ organizations               | created_at                      | timestamp with time zone |                          | YES
+ organizations               | updated_at                      | timestamp with time zone |                          | YES
+ redfin_metrics              | geoid                           | text                     |                          | NO
+ redfin_metrics              | metric_date                     | date                     |                          | NO
+ redfin_metrics              | median_sale_price               | numeric                  |                          | YES
+ redfin_metrics              | median_list_price               | numeric                  |                          | YES
+ redfin_metrics              | median_ppsf                     | numeric                  |                          | YES
+ redfin_metrics              | homes_sold                      | integer                  |                          | YES
+ redfin_metrics              | new_listings                    | integer                  |                          | YES
+ redfin_metrics              | inventory                       | integer                  |                          | YES
+ redfin_metrics              | months_of_supply                | numeric                  |                          | YES
+ redfin_metrics              | median_days_on_market           | integer                  |                          | YES
+ redfin_metrics              | average_sale_to_list            | numeric                  |                          | YES
+ redfin_metrics              | compete_score                   | integer                  |                          | YES
+ redfin_metrics              | bidding_war_percentage          | numeric                  |                          | YES
+ redfin_metrics              | price_drops_percentage          | numeric                  |                          | YES
+ redfin_metrics              | median_sale_price_yoy           | numeric                  |                          | YES
+ redfin_metrics              | homes_sold_yoy                  | numeric                  |                          | YES
+ redfin_metrics              | data_freshness                  | date                     |                          | YES
+ redfin_metrics              | created_at                      | timestamp with time zone |                          | YES
+ redfin_metrics_2024         | geoid                           | text                     |                          | NO
+ redfin_metrics_2024         | metric_date                     | date                     |                          | NO
+ redfin_metrics_2024         | median_sale_price               | numeric                  |                          | YES
+ redfin_metrics_2024         | median_list_price               | numeric                  |                          | YES
+ redfin_metrics_2024         | median_ppsf                     | numeric                  |                          | YES
+ redfin_metrics_2024         | homes_sold                      | integer                  |                          | YES
+ redfin_metrics_2024         | new_listings                    | integer                  |                          | YES
+ redfin_metrics_2024         | inventory                       | integer                  |                          | YES
+ redfin_metrics_2024         | months_of_supply                | numeric                  |                          | YES
+ redfin_metrics_2024         | median_days_on_market           | integer                  |                          | YES
+ redfin_metrics_2024         | average_sale_to_list            | numeric                  |                          | YES
+ redfin_metrics_2024         | compete_score                   | integer                  |                          | YES
+ redfin_metrics_2024         | bidding_war_percentage          | numeric                  |                          | YES
+ redfin_metrics_2024         | price_drops_percentage          | numeric                  |                          | YES
+ redfin_metrics_2024         | median_sale_price_yoy           | numeric                  |                          | YES
+ redfin_metrics_2024         | homes_sold_yoy                  | numeric                  |                          | YES
+ redfin_metrics_2024         | data_freshness                  | date                     |                          | YES
+ redfin_metrics_2024         | created_at                      | timestamp with time zone |                          | YES
+ redfin_metrics_2025         | geoid                           | text                     |                          | NO
+ redfin_metrics_2025         | metric_date                     | date                     |                          | NO
+ redfin_metrics_2025         | median_sale_price               | numeric                  |                          | YES
+ redfin_metrics_2025         | median_list_price               | numeric                  |                          | YES
+ redfin_metrics_2025         | median_ppsf                     | numeric                  |                          | YES
+ redfin_metrics_2025         | homes_sold                      | integer                  |                          | YES
+ redfin_metrics_2025         | new_listings                    | integer                  |                          | YES
+ redfin_metrics_2025         | inventory                       | integer                  |                          | YES
+ redfin_metrics_2025         | months_of_supply                | numeric                  |                          | YES
+ redfin_metrics_2025         | median_days_on_market           | integer                  |                          | YES
+ redfin_metrics_2025         | average_sale_to_list            | numeric                  |                          | YES
+ redfin_metrics_2025         | compete_score                   | integer                  |                          | YES
+ redfin_metrics_2025         | bidding_war_percentage          | numeric                  |                          | YES
+ redfin_metrics_2025         | price_drops_percentage          | numeric                  |                          | YES
+ redfin_metrics_2025         | median_sale_price_yoy           | numeric                  |                          | YES
+ redfin_metrics_2025         | homes_sold_yoy                  | numeric                  |                          | YES
+ redfin_metrics_2025         | data_freshness                  | date                     |                          | YES
+ redfin_metrics_2025         | created_at                      | timestamp with time zone |                          | YES
+ report_folders              | id                              | uuid                     |                          | NO
+ report_folders              | organization_id                 | uuid                     |                          | NO
+ report_folders              | user_id                         | uuid                     |                          | YES
+ report_folders              | parent_folder_id                | uuid                     |                          | YES
+ report_folders              | folder_name                     | text                     |                          | NO
+ report_folders              | folder_description              | text                     |                          | YES
+ report_folders              | sort_order                      | integer                  |                          | YES
+ report_folders              | created_at                      | timestamp with time zone |                          | YES
+ shapefile_configs           | config_name                     | text                     |                          | NO
+ shapefile_configs           | file_pattern                    | text                     |                          | YES
+ shapefile_configs           | geographic_level                | text                     |                          | YES
+ shapefile_configs           | field_mappings                  | jsonb                    |                          | NO
+ shapefile_configs           | processing_rules                | jsonb                    |                          | YES
+ shapefile_configs           | created_at                      | timestamp with time zone |                          | YES
+ source_fields               | source_id                       | uuid                     |                          | NO
+ source_fields               | field_code                      | text                     |                          | NO
+ source_fields               | source_field_name               | text                     |                          | YES
+ source_fields               | field_metadata                  | jsonb                    |                          | YES
+ source_types                | type_code                       | text                     |                          | NO
+ source_types                | type_name                       | text                     |                          | NO
+ source_types                | handler_config                  | jsonb                    |                          | YES
+ source_types                | created_at                      | timestamp with time zone |                          | YES
+ spatial_ref_sys             | srid                            | integer                  |                          | NO
+ spatial_ref_sys             | auth_name                       | character varying        |                      256 | YES
+ spatial_ref_sys             | auth_srid                       | integer                  |                          | YES
+ spatial_ref_sys             | srtext                          | character varying        |                     2048 | YES
+ spatial_ref_sys             | proj4text                       | character varying        |                     2048 | YES
+ spatial_staging             | id                              | uuid                     |                          | NO
+ spatial_staging             | upload_id                       | uuid                     |                          | YES
+ spatial_staging             | geometry                        | USER-DEFINED             |                          | YES
+ spatial_staging             | geometry_wgs84                  | USER-DEFINED             |                          | YES
+ spatial_staging             | properties                      | jsonb                    |                          | YES
+ spatial_staging             | extracted_geoid                 | text                     |                          | YES
+ spatial_staging             | extracted_name                  | text                     |                          | YES
+ spatial_staging             | extracted_level                 | text                     |                          | YES
+ spatial_staging             | is_valid                        | boolean                  |                          | YES
+ spatial_staging             | validation_errors               | ARRAY                    |                          | YES
+ spatial_staging             | area_sqm                        | numeric                  |                          | YES
+ spatial_staging             | perimeter_m                     | numeric                  |                          | YES
+ spatial_staging             | processing_status               | text                     |                          | YES
+ spatial_staging             | matched_geoid                   | text                     |                          | YES
+ spatial_staging             | match_confidence                | numeric                  |                          | YES
+ spatial_staging             | created_at                      | timestamp with time zone |                          | YES
+ spatial_uploads             | id                              | uuid                     |                          | NO
+ spatial_uploads             | upload_name                     | text                     |                          | NO
+ spatial_uploads             | file_type                       | text                     |                          | YES
+ spatial_uploads             | files                           | jsonb                    |                          | NO
+ spatial_uploads             | file_size_bytes                 | bigint                   |                          | YES
+ spatial_uploads             | original_srid                   | integer                  |                          | YES
+ spatial_uploads             | detected_crs                    | text                     |                          | YES
+ spatial_uploads             | processing_status               | text                     |                          | YES
+ spatial_uploads             | validation_results              | jsonb                    |                          | YES
+ spatial_uploads             | error_log                       | jsonb                    |                          | YES
+ spatial_uploads             | feature_count                   | integer                  |                          | YES
+ spatial_uploads             | geometry_type                   | text                     |                          | YES
+ spatial_uploads             | extent_bbox                     | USER-DEFINED             |                          | YES
+ spatial_uploads             | attributes_schema               | jsonb                    |                          | YES
+ spatial_uploads             | uploaded_by                     | uuid                     |                          | YES
+ spatial_uploads             | organization_id                 | uuid                     |                          | YES
+ spatial_uploads             | processed_at                    | timestamp with time zone |                          | YES
+ spatial_uploads             | created_at                      | timestamp with time zone |                          | YES
+ staging_data                | id                              | uuid                     |                          | NO
+ staging_data                | source_id                       | uuid                     |                          | YES
+ staging_data                | raw_data                        | jsonb                    |                          | NO
+ staging_data                | extracted_locations             | jsonb                    |                          | YES
+ staging_data                | normalization_results           | jsonb                    |                          | YES
+ staging_data                | processing_status               | text                     |                          | YES
+ staging_data                | processing_metadata             | jsonb                    |                          | YES
+ staging_data                | organization_id                 | uuid                     |                          | YES
+ staging_data                | ingested_at                     | timestamp with time zone |                          | YES
+ staging_data                | processed_at                    | timestamp with time zone |                          | YES
+ subscriber_profiles         | id                              | uuid                     |                          | NO
+ subscriber_profiles         | user_id                         | uuid                     |                          | NO
+ subscriber_profiles         | organization_id                 | uuid                     |                          | YES
+ subscriber_profiles         | display_name                    | text                     |                          | YES
+ subscriber_profiles         | avatar_url                      | text                     |                          | YES
+ subscriber_profiles         | bio                             | text                     |                          | YES
+ subscriber_profiles         | company_role                    | text                     |                          | YES
+ subscriber_profiles         | phone                           | text                     |                          | YES
+ subscriber_profiles         | timezone                        | text                     |                          | YES
+ subscriber_profiles         | notification_preferences        | jsonb                    |                          | YES
+ subscriber_profiles         | dashboard_config                | jsonb                    |                          | YES
+ subscriber_profiles         | default_geographic_scope        | jsonb                    |                          | YES
+ subscriber_profiles         | last_login                      | timestamp with time zone |                          | YES
+ subscriber_profiles         | last_activity                   | timestamp with time zone |                          | YES
+ subscriber_profiles         | is_active                       | boolean                  |                          | YES
+ subscriber_profiles         | created_at                      | timestamp with time zone |                          | YES
+ subscriber_profiles         | updated_at                      | timestamp with time zone |                          | YES
+ subscriber_reports          | id                              | uuid                     |                          | NO
+ subscriber_reports          | user_id                         | uuid                     |                          | NO
+ subscriber_reports          | organization_id                 | uuid                     |                          | NO
+ subscriber_reports          | request_id                      | uuid                     |                          | NO
+ subscriber_reports          | request_created_at              | timestamp with time zone |                          | NO
+ subscriber_reports          | report_type                     | text                     |                          | YES
+ subscriber_reports          | report_name                     | text                     |                          | NO
+ subscriber_reports          | report_description              | text                     |                          | YES
+ subscriber_reports          | file_url                        | text                     |                          | YES
+ subscriber_reports          | file_size_bytes                 | bigint                   |                          | YES
+ subscriber_reports          | file_format                     | text                     |                          | YES
+ subscriber_reports          | preview_data                    | jsonb                    |                          | YES
+ subscriber_reports          | full_data                       | jsonb                    |                          | YES
+ subscriber_reports          | folder_id                       | uuid                     |                          | YES
+ subscriber_reports          | tags                            | ARRAY                    |                          | YES
+ subscriber_reports          | is_favorite                     | boolean                  |                          | YES
+ subscriber_reports          | created_at                      | timestamp with time zone |                          | YES
+ subscriber_reports          | updated_at                      | timestamp with time zone |                          | YES
+ subscriber_requests         | id                              | uuid                     |                          | NO
+ subscriber_requests         | user_id                         | uuid                     |                          | NO
+ subscriber_requests         | organization_id                 | uuid                     |                          | NO
+ subscriber_requests         | request_type                    | text                     |                          | YES
+ subscriber_requests         | request_name                    | text                     |                          | YES
+ subscriber_requests         | request_description             | text                     |                          | YES
+ subscriber_requests         | input_data                      | jsonb                    |                          | YES
+ subscriber_requests         | status                          | text                     |                          | YES
+ subscriber_requests         | result_summary                  | jsonb                    |                          | YES
+ subscriber_requests         | result_count                    | integer                  |                          | YES
+ subscriber_requests         | confidence_score                | numeric                  |                          | YES
+ subscriber_requests         | created_at                      | timestamp with time zone |                          | NO
+ subscriber_requests         | completed_at                    | timestamp with time zone |                          | YES
+ subscriber_requests_2024_q4 | id                              | uuid                     |                          | NO
+ subscriber_requests_2024_q4 | user_id                         | uuid                     |                          | NO
+ subscriber_requests_2024_q4 | organization_id                 | uuid                     |                          | NO
+ subscriber_requests_2024_q4 | request_type                    | text                     |                          | YES
+ subscriber_requests_2024_q4 | request_name                    | text                     |                          | YES
+ subscriber_requests_2024_q4 | request_description             | text                     |                          | YES
+ subscriber_requests_2024_q4 | input_data                      | jsonb                    |                          | YES
+ subscriber_requests_2024_q4 | status                          | text                     |                          | YES
+ subscriber_requests_2024_q4 | result_summary                  | jsonb                    |                          | YES
+ subscriber_requests_2024_q4 | result_count                    | integer                  |                          | YES
+ subscriber_requests_2024_q4 | confidence_score                | numeric                  |                          | YES
+ subscriber_requests_2024_q4 | created_at                      | timestamp with time zone |                          | NO
+ subscriber_requests_2024_q4 | completed_at                    | timestamp with time zone |                          | YES
+ subscriber_requests_2025_q1 | id                              | uuid                     |                          | NO
+ subscriber_requests_2025_q1 | user_id                         | uuid                     |                          | NO
+ subscriber_requests_2025_q1 | organization_id                 | uuid                     |                          | NO
+ subscriber_requests_2025_q1 | request_type                    | text                     |                          | YES
+ subscriber_requests_2025_q1 | request_name                    | text                     |                          | YES
+ subscriber_requests_2025_q1 | request_description             | text                     |                          | YES
+ subscriber_requests_2025_q1 | input_data                      | jsonb                    |                          | YES
+ subscriber_requests_2025_q1 | status                          | text                     |                          | YES
+ subscriber_requests_2025_q1 | result_summary                  | jsonb                    |                          | YES
+ subscriber_requests_2025_q1 | result_count                    | integer                  |                          | YES
+ subscriber_requests_2025_q1 | confidence_score                | numeric                  |                          | YES
+ subscriber_requests_2025_q1 | created_at                      | timestamp with time zone |                          | NO
+ subscriber_requests_2025_q1 | completed_at                    | timestamp with time zone |                          | YES
+ subscription_plans          | id                              | uuid                     |                          | NO
+ subscription_plans          | name                            | text                     |                          | NO
+ subscription_plans          | slug                            | text                     |                          | NO
+ subscription_plans          | description                     | text                     |                          | YES
+ subscription_plans          | price_monthly                   | numeric                  |                          | YES
+ subscription_plans          | price_yearly                    | numeric                  |                          | YES
+ subscription_plans          | currency                        | text                     |                          | YES
+ subscription_plans          | stripe_price_id_monthly         | text                     |                          | YES
+ subscription_plans          | stripe_price_id_yearly          | text                     |                          | YES
+ subscription_plans          | features                        | jsonb                    |                          | NO
+ subscription_plans          | limits                          | jsonb                    |                          | NO
+ subscription_plans          | is_public                       | boolean                  |                          | YES
+ subscription_plans          | is_featured                     | boolean                  |                          | YES
+ subscription_plans          | display_order                   | integer                  |                          | YES
+ subscription_plans          | is_free_tier                    | boolean                  |                          | YES
+ subscription_plans          | is_enterprise                   | boolean                  |                          | YES
+ subscription_plans          | requires_approval               | boolean                  |                          | YES
+ subscription_plans          | status                          | text                     |                          | YES
+ subscription_plans          | created_at                      | timestamp with time zone |                          | YES
+ subscription_plans          | updated_at                      | timestamp with time zone |                          | YES
+ subscription_status         | organization_id                 | uuid                     |                          | YES
+ subscription_status         | organization_name               | text                     |                          | YES
+ subscription_status         | plan_name                       | text                     |                          | YES
+ subscription_status         | status                          | text                     |                          | YES
+ subscription_status         | current_period_end              | timestamp with time zone |                          | YES
+ subscription_status         | limits                          | jsonb                    |                          | YES
+ subscription_status         | features                        | jsonb                    |                          | YES
+ subscriptions               | id                              | uuid                     |                          | NO
+ subscriptions               | organization_id                 | uuid                     |                          | NO
+ subscriptions               | plan_id                         | uuid                     |                          | NO
+ subscriptions               | billing_cycle                   | text                     |                          | YES
+ subscriptions               | stripe_subscription_id          | text                     |                          | YES
+ subscriptions               | stripe_status                   | text                     |                          | YES
+ subscriptions               | price_per_cycle                 | numeric                  |                          | YES
+ subscriptions               | currency                        | text                     |                          | YES
+ subscriptions               | trial_start                     | timestamp with time zone |                          | YES
+ subscriptions               | trial_end                       | timestamp with time zone |                          | YES
+ subscriptions               | current_period_start            | timestamp with time zone |                          | YES
+ subscriptions               | current_period_end              | timestamp with time zone |                          | YES
+ subscriptions               | status                          | text                     |                          | YES
+ subscriptions               | custom_limits                   | jsonb                    |                          | YES
+ subscriptions               | custom_features                 | jsonb                    |                          | YES
+ subscriptions               | metadata                        | jsonb                    |                          | YES
+ subscriptions               | created_at                      | timestamp with time zone |                          | YES
+ subscriptions               | updated_at                      | timestamp with time zone |                          | YES
+ tiger_cbsa                  | geoid                           | character varying        |                        5 | NO
+ tiger_cbsa                  | name                            | character varying        |                      255 | YES
+ tiger_cbsa                  | lsad                            | character varying        |                       50 | YES
+ tiger_cbsa                  | geometry                        | USER-DEFINED             |                          | YES
+ tiger_cbsa                  | created_at                      | timestamp with time zone |                          | YES
+ tiger_counties              | geoid                           | character varying        |                        5 | NO
+ tiger_counties              | name                            | character varying        |                      100 | YES
+ tiger_counties              | state_fips                      | character varying        |                        2 | YES
+ tiger_counties              | geometry                        | USER-DEFINED             |                          | YES
+ tiger_counties              | created_at                      | timestamp with time zone |                          | YES
+ tiger_csa                   | geoid                           | character varying        |                        3 | NO
+ tiger_csa                   | name                            | character varying        |                      255 | YES
+ tiger_csa                   | geometry                        | USER-DEFINED             |                          | NO
+ tiger_metdiv                | geoid                           | character varying        |                       10 | NO
+ tiger_metdiv                | name                            | character varying        |                      255 | YES
+ tiger_metdiv                | geometry                        | USER-DEFINED             |                          | NO
+ tiger_nation                | geoid                           | character varying        |                        2 | NO
+ tiger_nation                | name                            | character varying        |                      255 | YES
+ tiger_nation                | geometry                        | USER-DEFINED             |                          | NO
+ tiger_places                | geoid                           | character varying        |                        7 | NO
+ tiger_places                | name                            | character varying        |                      255 | YES
+ tiger_places                | state_fips                      | character varying        |                        2 | YES
+ tiger_places                | geometry                        | USER-DEFINED             |                          | YES
+ tiger_places                | created_at                      | timestamp with time zone |                          | YES
+ tiger_states                | geoid                           | character varying        |                        2 | NO
+ tiger_states                | name                            | character varying        |                      100 | YES
+ tiger_states                | geometry                        | USER-DEFINED             |                          | YES
+ tiger_states                | created_at                      | timestamp with time zone |                          | YES
+ tiger_urban_areas           | geoid                           | character varying        |                        5 | NO
+ tiger_urban_areas           | name                            | character varying        |                      255 | YES
+ tiger_urban_areas           | geometry                        | USER-DEFINED             |                          | NO
+ tiger_zcta                  | geoid                           | character varying        |                        5 | NO
+ tiger_zcta                  | geometry                        | USER-DEFINED             |                          | YES
+ tiger_zcta                  | created_at                      | timestamp with time zone |                          | YES
+ ui_sessions                 | id                              | uuid                     |                          | NO
+ ui_sessions                 | user_id                         | uuid                     |                          | YES
+ ui_sessions                 | session_type                    | text                     |                          | YES
+ ui_sessions                 | session_state                   | jsonb                    |                          | YES
+ ui_sessions                 | expires_at                      | timestamp with time zone |                          | YES
+ ui_sessions                 | created_at                      | timestamp with time zone |                          | YES
+ ui_sessions                 | updated_at                      | timestamp with time zone |                          | YES
+ usage_tracking              | id                              | uuid                     |                          | NO
+ usage_tracking              | organization_id                 | uuid                     |                          | NO
+ usage_tracking              | metric_name                     | text                     |                          | NO
+ usage_tracking              | period_start                    | date                     |                          | NO
+ usage_tracking              | period_end                      | date                     |                          | NO
+ usage_tracking              | usage_count                     | bigint                   |                          | YES
+ usage_tracking              | usage_limit                     | bigint                   |                          | YES
+ usage_tracking              | usage_breakdown                 | jsonb                    |                          | YES
+ usage_tracking              | overage_count                   | bigint                   |                          | YES
+ usage_tracking              | overage_charges                 | numeric                  |                          | YES
+ usage_tracking              | last_updated                    | timestamp with time zone |                          | YES
+ usage_tracking              | created_at                      | timestamp with time zone |                          | YES
+ variant_types               | type_code                       | text                     |                          | NO
+ variant_types               | type_name                       | text                     |                          | NO
+ variant_types               | priority                        | integer                  |                          | YES
+ workflow_templates          | id                              | uuid                     |                          | NO
+ workflow_templates          | template_name                   | text                     |                          | NO
+ workflow_templates          | template_type                   | text                     |                          | YES
+ workflow_templates          | wizard_steps                    | jsonb                    |                          | NO
+ workflow_templates          | validation_schema               | jsonb                    |                          | YES
+ workflow_templates          | help_content                    | jsonb                    |                          | YES
+ workflow_templates          | is_active                       | boolean                  |                          | YES
+ workflow_templates          | created_at                      | timestamp with time zone |                          | YES
+ zillow_metrics              | geoid                           | text                     |                          | NO
+ zillow_metrics              | metric_date                     | date                     |                          | NO
+ zillow_metrics              | zhvi_single_family              | numeric                  |                          | YES
+ zillow_metrics              | zhvi_condo                      | numeric                  |                          | YES
+ zillow_metrics              | zhvi_all_homes                  | numeric                  |                          | YES
+ zillow_metrics              | zhvi_bottom_tier                | numeric                  |                          | YES
+ zillow_metrics              | zhvi_middle_tier                | numeric                  |                          | YES
+ zillow_metrics              | zhvi_top_tier                   | numeric                  |                          | YES
+ zillow_metrics              | zori_all_rentals                | numeric                  |                          | YES
+ zillow_metrics              | zori_single_family              | numeric                  |                          | YES
+ zillow_metrics              | zori_multifamily                | numeric                  |                          | YES
+ zillow_metrics              | inventory_for_sale              | integer                  |                          | YES
+ zillow_metrics              | inventory_for_rent              | integer                  |                          | YES
+ zillow_metrics              | median_days_on_market           | integer                  |                          | YES
+ zillow_metrics              | price_cut_percentage            | numeric                  |                          | YES
+ zillow_metrics              | zhvi_yoy_change                 | numeric                  |                          | YES
+ zillow_metrics              | zori_yoy_change                 | numeric                  |                          | YES
+ zillow_metrics              | zhvi_forecast_1yr               | numeric                  |                          | YES
+ zillow_metrics              | data_freshness                  | date                     |                          | YES
+ zillow_metrics              | created_at                      | timestamp with time zone |                          | YES
+(811 rows)
+
