@@ -2,7 +2,7 @@
 # This script sets environment variables and runs the loader
 
 # Use service role key for admin operations (INSERT permissions)
-$env:SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5c2ZsYmhwbnF3b2N6eXVhYWlmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjYxMzczNSwiZXhwIjoyMDc4MTg5NzM1fQ.8KBZl3TrOXaA4czqaRd65KC_MXr4hI3jTnQdr_l7d3I"
+$env:SUPABASE_SERVICE_ROLE_KEY = 
 
 # Also set anon key as fallback
 $env:NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5c2ZsYmhwbnF3b2N6eXVhYWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTM3MzUsImV4cCI6MjA3ODE4OTczNX0.txaMHdCFyL_X1fi3-_gzcaMENjxGFHASGsBS_RnCLWc"
