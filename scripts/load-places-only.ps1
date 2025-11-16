@@ -1,7 +1,7 @@
 # Load all place (city) files to Supabase
 # This loads all state-specific place files into the tiger_places table
 
-$env:SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5c2ZsYmhwbnF3b2N6eXVhYWlmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjYxMzczNSwiZXhwIjoyMDc4MTg5NzM1fQ.8KBZl3TrOXaA4czqaRd65KC_MXr4hI3jTnQdr_l7d3I"
+$env:SUPABASE_SERVICE_ROLE_KEY = 
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
