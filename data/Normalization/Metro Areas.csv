@@ -1,0 +1,936 @@
+Name (CSBA),CBSA Code,Metropolitan/Micropolitan Statistical Area,Population
+"New York-Newark-Jersey City, NY-NJ",35620,Metropolitan Statistical Area,19498249
+"Los Angeles-Long Beach-Anaheim, CA",31080,Metropolitan Statistical Area,12799100
+"Chicago-Naperville-Elgin, IL-IN",16980,Metropolitan Statistical Area,9262825
+"Dallas-Fort Worth-Arlington, TX",19100,Metropolitan Statistical Area,8100037
+"Houston-Pasadena-The Woodlands, TX",26420,Metropolitan Statistical Area,7510253
+"Atlanta-Sandy Springs-Roswell, GA",12060,Metropolitan Statistical Area,6307261
+"Washington-Arlington-Alexandria, DC-VA-MD-WV",47900,Metropolitan Statistical Area,6304975
+"Philadelphia-Camden-Wilmington, PA-NJ-DE-MD",37980,Metropolitan Statistical Area,6246160
+"Miami-Fort Lauderdale-West Palm Beach, FL",33100,Metropolitan Statistical Area,6183199
+"Phoenix-Mesa-Chandler, AZ",38060,Metropolitan Statistical Area,5070110
+"Boston-Cambridge-Newton, MA-NH",14460,Metropolitan Statistical Area,4919179
+"Riverside-San Bernardino-Ontario, CA",40140,Metropolitan Statistical Area,4688053
+"San Francisco-Oakland-Fremont, CA",41860,Metropolitan Statistical Area,4566961
+"Detroit-Warren-Dearborn, MI",19820,Metropolitan Statistical Area,4342304
+"Seattle-Tacoma-Bellevue, WA",42660,Metropolitan Statistical Area,4044837
+"Minneapolis-St. Paul-Bloomington, MN-WI",33460,Metropolitan Statistical Area,3712020
+"Tampa-St. Petersburg-Clearwater, FL",45300,Metropolitan Statistical Area,3342963
+"San Diego-Chula Vista-Carlsbad, CA",41740,Metropolitan Statistical Area,3269973
+"Denver-Aurora-Centennial, CO",19740,Metropolitan Statistical Area,3005131
+"Baltimore-Columbia-Towson, MD",12580,Metropolitan Statistical Area,2834316
+"Orlando-Kissimmee-Sanford, FL",36740,Metropolitan Statistical Area,2817933
+"Charlotte-Concord-Gastonia, NC-SC",16740,Metropolitan Statistical Area,2805115
+"St. Louis, MO-IL",41180,Metropolitan Statistical Area,2796999
+"San Antonio-New Braunfels, TX",41700,Metropolitan Statistical Area,2703999
+"Portland-Vancouver-Hillsboro, OR-WA",38900,Metropolitan Statistical Area,2508050
+"Austin-Round Rock-San Marcos, TX",12420,Metropolitan Statistical Area,2473275
+"Pittsburgh, PA",38300,Metropolitan Statistical Area,2422725
+"Sacramento-Roseville-Folsom, CA",40900,Metropolitan Statistical Area,2420608
+"Las Vegas-Henderson-North Las Vegas, NV",29820,Metropolitan Statistical Area,2336573
+"Cincinnati, OH-KY-IN",17140,Metropolitan Statistical Area,2271479
+"Kansas City, MO-KS",28140,Metropolitan Statistical Area,2221343
+"Columbus, OH",18140,Metropolitan Statistical Area,2180271
+"Cleveland, OH",17410,Metropolitan Statistical Area,2158932
+"Indianapolis-Carmel-Greenwood, IN",26900,Metropolitan Statistical Area,2138468
+"Nashville-Davidson--Murfreesboro--Franklin, TN",34980,Metropolitan Statistical Area,2102573
+"San Jose-Sunnyvale-Santa Clara, CA",41940,Metropolitan Statistical Area,1945767
+"Virginia Beach-Chesapeake-Norfolk, VA-NC",47260,Metropolitan Statistical Area,1787169
+"Jacksonville, FL",27260,Metropolitan Statistical Area,1713240
+"Providence-Warwick, RI-MA",39300,Metropolitan Statistical Area,1677803
+"Milwaukee-Waukesha, WI",33340,Metropolitan Statistical Area,1560424
+"Raleigh-Cary, NC",39580,Metropolitan Statistical Area,1509231
+"Oklahoma City, OK",36420,Metropolitan Statistical Area,1477926
+"Louisville/Jefferson County, KY-IN",31140,Metropolitan Statistical Area,1365557
+"Richmond, VA",40060,Metropolitan Statistical Area,1349732
+"Memphis, TN-MS-AR",32820,Metropolitan Statistical Area,1335674
+"Salt Lake City-Murray, UT",41620,Metropolitan Statistical Area,1267864
+"Birmingham, AL",13820,Metropolitan Statistical Area,1184290
+"Fresno, CA",23420,Metropolitan Statistical Area,1180020
+"Grand Rapids-Wyoming-Kentwood, MI",24340,Metropolitan Statistical Area,1162950
+"Buffalo-Cheektowaga, NY",15380,Metropolitan Statistical Area,1155604
+"Hartford-West Hartford-East Hartford, CT",25540,Metropolitan Statistical Area,1151543
+"Tucson, AZ",46060,Metropolitan Statistical Area,1063162
+"Rochester, NY",40380,Metropolitan Statistical Area,1052087
+"Tulsa, OK",46140,Metropolitan Statistical Area,1044757
+"Urban Honolulu, HI",46520,Metropolitan Statistical Area,989408
+"Omaha, NE-IA",36540,Metropolitan Statistical Area,983969
+"Greenville-Anderson-Greer, SC",24860,Metropolitan Statistical Area,975480
+"New Orleans-Metairie, LA",35380,Metropolitan Statistical Area,962165
+"Bridgeport-Stamford-Danbury, CT",14860,Metropolitan Statistical Area,951558
+"Knoxville, TN",28940,Metropolitan Statistical Area,946264
+"Albuquerque, NM",10740,Metropolitan Statistical Area,922296
+"Bakersfield-Delano, CA",12540,Metropolitan Statistical Area,913820
+"North Port-Bradenton-Sarasota, FL",35840,Metropolitan Statistical Area,910108
+"Albany-Schenectady-Troy, NY",10580,Metropolitan Statistical Area,904682
+"McAllen-Edinburg-Mission, TX",32580,Metropolitan Statistical Area,898471
+"Baton Rouge, LA",12940,Metropolitan Statistical Area,873661
+"Allentown-Bethlehem-Easton, PA-NJ",10900,Metropolitan Statistical Area,873555
+"El Paso, TX",21340,Metropolitan Statistical Area,873331
+"Worcester, MA",49340,Metropolitan Statistical Area,866866
+"Columbia, SC",17900,Metropolitan Statistical Area,858302
+"Charleston-North Charleston, SC",16700,Metropolitan Statistical Area,849417
+"Cape Coral-Fort Myers, FL",15980,Metropolitan Statistical Area,834573
+"Oxnard-Thousand Oaks-Ventura, CA",37100,Metropolitan Statistical Area,829590
+"Boise City, ID",14260,Metropolitan Statistical Area,824657
+"Lakeland-Winter Haven, FL",29460,Metropolitan Statistical Area,818330
+"Dayton-Kettering-Beavercreek, OH",19430,Metropolitan Statistical Area,814363
+"Stockton-Lodi, CA",44700,Metropolitan Statistical Area,800965
+"Greensboro-High Point, NC",24660,Metropolitan Statistical Area,789842
+"Colorado Springs, CO",17820,Metropolitan Statistical Area,768832
+"Little Rock-North Little Rock-Conway, AR",30780,Metropolitan Statistical Area,764045
+"Des Moines-West Des Moines, IA",19780,Metropolitan Statistical Area,737164
+"Provo-Orem-Lehi, UT",39340,Metropolitan Statistical Area,732197
+"Deltona-Daytona Beach-Ormond Beach, FL",19660,Metropolitan Statistical Area,721796
+"Kiryas Joel-Poughkeepsie-Newburgh, NY",28880,Metropolitan Statistical Area,704620
+"Akron, OH",10420,Metropolitan Statistical Area,698398
+"Winston-Salem, NC",49180,Metropolitan Statistical Area,695630
+"Madison, WI",31540,Metropolitan Statistical Area,694345
+"Ogden, UT",36260,Metropolitan Statistical Area,658133
+"Syracuse, NY",45060,Metropolitan Statistical Area,652956
+"Wichita, KS",48620,Metropolitan Statistical Area,652939
+"Palm Bay-Melbourne-Titusville, FL",37340,Metropolitan Statistical Area,643979
+"Augusta-Richmond County, GA-SC",12260,Metropolitan Statistical Area,629429
+"Jackson, MS",27140,Metropolitan Statistical Area,610257
+"Durham-Chapel Hill, NC",20500,Metropolitan Statistical Area,608879
+"Harrisburg-Carlisle, PA",25420,Metropolitan Statistical Area,606055
+"Spokane-Spokane Valley, WA",44060,Metropolitan Statistical Area,600292
+"Toledo, OH",45780,Metropolitan Statistical Area,600141
+"Fayetteville-Springdale-Rogers, AR",22220,Metropolitan Statistical Area,590337
+"Chattanooga, TN-GA",16860,Metropolitan Statistical Area,580971
+"Scranton--Wilkes-Barre, PA",42540,Metropolitan Statistical Area,569413
+"New Haven, CT",35300,Metropolitan Statistical Area,568158
+"Portland-South Portland, ME",38860,Metropolitan Statistical Area,566329
+"Reno, NV",39900,Metropolitan Statistical Area,564782
+"Lancaster, PA",29540,Metropolitan Statistical Area,558589
+"Modesto, CA",33700,Metropolitan Statistical Area,551430
+"Port St. Lucie, FL",38940,Metropolitan Statistical Area,536901
+"Pensacola-Ferry Pass-Brent, FL",37860,Metropolitan Statistical Area,530090
+"Huntsville, AL",26620,Metropolitan Statistical Area,527254
+"Lexington-Fayette, KY",30460,Metropolitan Statistical Area,520045
+"Killeen-Temple, TX",28660,Metropolitan Statistical Area,501333
+"Springfield, MO",44180,Metropolitan Statistical Area,491053
+"Santa Rosa-Petaluma, CA",42220,Metropolitan Statistical Area,481812
+"Visalia, CA",47300,Metropolitan Statistical Area,479468
+"Lansing-East Lansing, MI",29620,Metropolitan Statistical Area,473177
+"Wilmington, NC",48900,Metropolitan Statistical Area,467337
+"York-Hanover, PA",49620,Metropolitan Statistical Area,464640
+"Springfield, MA",44140,Metropolitan Statistical Area,460291
+"Fort Wayne, IN",23060,Metropolitan Statistical Area,457842
+"Waterbury-Shelton, CT",47930,Metropolitan Statistical Area,456128
+"Vallejo, CA",46700,Metropolitan Statistical Area,449218
+"Corpus Christi, TX",18580,Metropolitan Statistical Area,448323
+"Santa Maria-Santa Barbara, CA",42200,Metropolitan Statistical Area,441257
+"Salem, OR",41420,Metropolitan Statistical Area,436546
+"Reading, PA",39740,Metropolitan Statistical Area,432821
+"Salinas, CA",41500,Metropolitan Statistical Area,430723
+"Manchester-Nashua, NH",31700,Metropolitan Statistical Area,427354
+"Brownsville-Harlingen, TX",15180,Metropolitan Statistical Area,426710
+"Youngstown-Warren, OH",49660,Metropolitan Statistical Area,425969
+"Savannah, GA",42340,Metropolitan Statistical Area,424935
+"Gulfport-Biloxi, MS",25060,Metropolitan Statistical Area,421916
+"Asheville, NC",11700,Metropolitan Statistical Area,417202
+"Lafayette, LA",29180,Metropolitan Statistical Area,414288
+"Mobile, AL",33660,Metropolitan Statistical Area,411640
+"Ocala, FL",36100,Metropolitan Statistical Area,409959
+"Naples-Marco Island, FL",34940,Metropolitan Statistical Area,404310
+"Flint, MI",22420,Metropolitan Statistical Area,401522
+"Anchorage, AK",11260,Metropolitan Statistical Area,401314
+"Canton-Massillon, OH",15940,Metropolitan Statistical Area,399474
+"Myrtle Beach-Conway-North Myrtle Beach, SC",34820,Metropolitan Statistical Area,397478
+"Beaumont-Port Arthur, TX",13140,Metropolitan Statistical Area,395479
+"Tallahassee, FL",45220,Metropolitan Statistical Area,392645
+"Fayetteville, NC",22180,Metropolitan Statistical Area,392336
+"Montgomery, AL",33860,Metropolitan Statistical Area,385480
+"Spartanburg, SC",43900,Metropolitan Statistical Area,383327
+"Shreveport-Bossier City, LA",43340,Metropolitan Statistical Area,383295
+"Trenton-Princeton, NJ",45940,Metropolitan Statistical Area,381671
+"Eugene-Springfield, OR",21660,Metropolitan Statistical Area,381181
+"Davenport-Moline-Rock Island, IA-IL",19340,Metropolitan Statistical Area,379441
+"Fort Collins-Loveland, CO",22660,Metropolitan Statistical Area,370771
+"Hickory-Lenoir-Morganton, NC",25860,Metropolitan Statistical Area,370030
+"Atlantic City-Hammonton, NJ",12100,Metropolitan Statistical Area,369823
+"Huntington-Ashland, WV-KY-OH",26580,Metropolitan Statistical Area,368261
+"Ann Arbor, MI",11460,Metropolitan Statistical Area,365536
+"Peoria, IL",37900,Metropolitan Statistical Area,362240
+"Lubbock, TX",31180,Metropolitan Statistical Area,360104
+"Greeley, CO",24540,Metropolitan Statistical Area,359442
+"Gainesville, FL",23540,Metropolitan Statistical Area,352126
+"Lincoln, NE",30700,Metropolitan Statistical Area,344387
+"Clarksville, TN-KY",17300,Metropolitan Statistical Area,340495
+"Rockford, IL",40420,Metropolitan Statistical Area,334124
+"Green Bay, WI",24580,Metropolitan Statistical Area,331882
+"Boulder, CO",14500,Metropolitan Statistical Area,326831
+"South Bend-Mishawaka, IN-MI",43780,Metropolitan Statistical Area,324490
+"Columbus, GA-AL",17980,Metropolitan Statistical Area,323768
+"Roanoke, VA",40220,Metropolitan Statistical Area,314314
+"Kennewick-Richland, WA",28420,Metropolitan Statistical Area,314253
+"Kingsport-Bristol, TN-VA",28700,Metropolitan Statistical Area,313025
+"Hagerstown-Martinsburg, MD-WV",25180,Metropolitan Statistical Area,305902
+"Waco, TX",47380,Metropolitan Statistical Area,304865
+"Crestview-Fort Walton Beach-Destin, FL",18880,Metropolitan Statistical Area,304818
+"Sioux Falls, SD-MN",43620,Metropolitan Statistical Area,304555
+"Olympia-Lacey-Tumwater, WA",36500,Metropolitan Statistical Area,299003
+"Longview, TX",30980,Metropolitan Statistical Area,293498
+"Merced, CA",32900,Metropolitan Statistical Area,291920
+"Utica-Rome, NY",46540,Metropolitan Statistical Area,287039
+"San Luis Obispo-Paso Robles, CA",42020,Metropolitan Statistical Area,281639
+"Duluth, MN-WI",20260,Metropolitan Statistical Area,281603
+"College Station-Bryan, TX",17780,Metropolitan Statistical Area,281445
+"Norwich-New London-Willimantic, CT",35980,Metropolitan Statistical Area,279634
+"Tuscaloosa, AL",46220,Metropolitan Statistical Area,278290
+"Bremerton-Silverdale-Port Orchard, WA",14740,Metropolitan Statistical Area,277658
+"Cedar Rapids, IA",16300,Metropolitan Statistical Area,275668
+"Slidell-Mandeville-Covington, LA",43640,Metropolitan Statistical Area,275583
+"Amarillo, TX",11100,Metropolitan Statistical Area,272395
+"Evansville, IN",21780,Metropolitan Statistical Area,270717
+"Laredo, TX",29700,Metropolitan Statistical Area,269148
+"Erie, PA",21500,Metropolitan Statistical Area,267571
+"Lynchburg, VA",31340,Metropolitan Statistical Area,264590
+"Seaford, DE",42580,Micropolitan Statistical Area,263509
+"Fargo, ND-MN",22020,Metropolitan Statistical Area,262620
+"Kalamazoo-Portage, MI",28020,Metropolitan Statistical Area,262215
+"Santa Cruz-Watsonville, CA",42100,Metropolitan Statistical Area,261547
+"Bend, OR",13460,Metropolitan Statistical Area,260919
+"Yakima, WA",49420,Metropolitan Statistical Area,256643
+"Daphne-Fairhope-Foley, AL",19300,Metropolitan Statistical Area,253507
+"Prescott Valley-Prescott, AZ",39150,Metropolitan Statistical Area,249081
+"Appleton, WI",11540,Metropolitan Statistical Area,246433
+"Tyler, TX",46340,Metropolitan Statistical Area,245209
+"Binghamton, NY",13780,Metropolitan Statistical Area,243792
+"Lake Charles, LA",29340,Metropolitan Statistical Area,240082
+"Macon-Bibb County, GA",31420,Metropolitan Statistical Area,236074
+"Champaign-Urbana, IL",16580,Metropolitan Statistical Area,235608
+"Hilton Head Island-Bluffton-Port Royal, SC",25940,Metropolitan Statistical Area,232523
+"Topeka, KS",45820,Metropolitan Statistical Area,232322
+"Bellingham, WA",13380,Metropolitan Statistical Area,231919
+"Barnstable Town, MA",12700,Metropolitan Statistical Area,231735
+"Fort Smith, AR-OK",22900,Metropolitan Statistical Area,231280
+"Rochester, MN",40340,Metropolitan Statistical Area,229077
+"Burlington-South Burlington, VT",15540,Metropolitan Statistical Area,227942
+"Lafayette-West Lafayette, IN",29200,Metropolitan Statistical Area,226564
+"Las Cruces, NM",29740,Metropolitan Statistical Area,225210
+"Lebanon-Claremont, NH-VT",30150,Micropolitan Statistical Area,225159
+"Charlottesville, VA",16820,Metropolitan Statistical Area,225127
+"Lake Havasu City-Kingman, AZ",29420,Metropolitan Statistical Area,223682
+"Athens-Clarke County, GA",12020,Metropolitan Statistical Area,222060
+"Monroe, LA",33740,Metropolitan Statistical Area,221885
+"Medford, OR",32780,Metropolitan Statistical Area,220768
+"Gainesville, GA",23580,Metropolitan Statistical Area,217267
+"Columbia, MO",17860,Metropolitan Statistical Area,216511
+"Panama City-Panama City Beach, FL",37460,Metropolitan Statistical Area,216371
+"Jacksonville, NC",27340,Metropolitan Statistical Area,213676
+"Yuma, AZ",49740,Metropolitan Statistical Area,213221
+"Johnson City, TN",27740,Metropolitan Statistical Area,213198
+"Lexington Park, MD",30500,Metropolitan Statistical Area,210009
+"Hilo-Kailua, HI",25900,Micropolitan Statistical Area,207615
+"Chico, CA",17020,Metropolitan Statistical Area,207172
+"Elkhart-Goshen, IN",21140,Metropolitan Statistical Area,206409
+"Punta Gorda, FL",39460,Metropolitan Statistical Area,206134
+"Springfield, IL",44100,Metropolitan Statistical Area,205445
+"Joplin, MO-KS",27900,Metropolitan Statistical Area,204787
+"Charleston, WV",16620,Metropolitan Statistical Area,203164
+"St. Cloud, MN",41060,Metropolitan Statistical Area,202577
+"St. George, UT",41100,Metropolitan Statistical Area,202452
+"Auburn-Opelika, AL",12220,Metropolitan Statistical Area,201585
+"Warner Robins, GA",47580,Metropolitan Statistical Area,200779
+"Florence, SC",22500,Metropolitan Statistical Area,199630
+"Houma-Bayou Cane-Thibodaux, LA",26380,Metropolitan Statistical Area,198672
+"Racine-Mount Pleasant, WI",39540,Metropolitan Statistical Area,196613
+"Billings, MT",13740,Metropolitan Statistical Area,191435
+"Dover, DE",20100,Metropolitan Statistical Area,189789
+"Bowling Green, KY",14540,Metropolitan Statistical Area,188840
+"Saginaw, MI",40980,Metropolitan Statistical Area,187782
+"Coeur d'Alene, ID",17660,Metropolitan Statistical Area,185010
+"Yuba City, CA",49700,Metropolitan Statistical Area,183670
+"Kingston, NY",28740,Metropolitan Statistical Area,182333
+"Midland, TX",33260,Metropolitan Statistical Area,182324
+"Jackson, TN",27180,Metropolitan Statistical Area,181826
+"Abilene, TX",10180,Metropolitan Statistical Area,181591
+"Blacksburg-Christiansburg-Radford, VA",13980,Metropolitan Statistical Area,181428
+"Redding, CA",39820,Metropolitan Statistical Area,180366
+"Iowa City, IA",26980,Metropolitan Statistical Area,180088
+"Burlington, NC",15500,Metropolitan Statistical Area,179165
+"El Centro, CA",20940,Metropolitan Statistical Area,179057
+"Muskegon-Norton Shores, MI",34740,Metropolitan Statistical Area,176564
+"Greenville, NC",24780,Metropolitan Statistical Area,175119
+"Eau Claire, WI",20740,Metropolitan Statistical Area,174873
+"Oshkosh-Neenah, WI",36780,Metropolitan Statistical Area,171735
+"Bloomington, IL",14010,Metropolitan Statistical Area,170441
+"La Crosse-Onalaska, WI-MN",29100,Metropolitan Statistical Area,170238
+"Sebastian-Vero Beach-West Vero Corridor, FL",42680,Metropolitan Statistical Area,169795
+"Pueblo, CO",39380,Metropolitan Statistical Area,169422
+"Terre Haute, IN",45460,Metropolitan Statistical Area,168787
+"Idaho Falls, ID",26820,Metropolitan Statistical Area,168322
+"Waterloo-Cedar Falls, IA",47940,Metropolitan Statistical Area,168162
+"Kenosha, WI",28450,Metropolitan Statistical Area,167488
+"Homosassa Springs, FL",26140,Metropolitan Statistical Area,166696
+"East Stroudsburg, PA",20700,Micropolitan Statistical Area,166053
+"Odessa, TX",36220,Metropolitan Statistical Area,164494
+"Janesville-Beloit, WI",27500,Metropolitan Statistical Area,164278
+"Kahului-Wailuku, HI",27980,Metropolitan Statistical Area,164264
+"Amherst Town-Northampton, MA",11200,Metropolitan Statistical Area,162502
+"Bloomington, IN",14020,Metropolitan Statistical Area,160874
+"Grand Junction, CO",24300,Metropolitan Statistical Area,159681
+"Jackson, MI",27100,Metropolitan Statistical Area,159424
+"Decatur, AL",19460,Metropolitan Statistical Area,158635
+"Logan, UT-ID",30860,Metropolitan Statistical Area,157887
+"Chambersburg, PA",16540,Metropolitan Statistical Area,157854
+"State College, PA",44300,Metropolitan Statistical Area,157795
+"Concord, NH",18180,Micropolitan Statistical Area,157103
+"Traverse City, MI",45900,Metropolitan Statistical Area,156371
+"Rapid City, SD",39660,Metropolitan Statistical Area,155974
+"Santa Fe, NM",42140,Metropolitan Statistical Area,155956
+"Hattiesburg, MS",25620,Metropolitan Statistical Area,155740
+"Bangor, ME",12620,Metropolitan Statistical Area,155312
+"Florence-Muscle Shoals, AL",22520,Metropolitan Statistical Area,155175
+"Monroe, MI",33780,Metropolitan Statistical Area,155045
+"Dothan, AL",20020,Metropolitan Statistical Area,153349
+"Hanford-Corcoran, CA",25260,Metropolitan Statistical Area,152682
+"Vineland, NJ",47220,Metropolitan Statistical Area,152326
+"Niles, MI",35660,Metropolitan Statistical Area,152261
+"Wildwood-The Villages, FL",48680,Metropolitan Statistical Area,151565
+"Valdosta, GA",46660,Metropolitan Statistical Area,151118
+"Jefferson City, MO",27620,Metropolitan Statistical Area,150733
+"Wichita Falls, TX",48660,Metropolitan Statistical Area,149947
+"Corbin, KY",18340,Micropolitan Statistical Area,149563
+"Cookeville, TN",18260,Micropolitan Statistical Area,148226
+"Alexandria, LA",10780,Metropolitan Statistical Area,148171
+"Winchester, VA-WV",49020,Metropolitan Statistical Area,147260
+"Sherman-Denison, TX",43300,Metropolitan Statistical Area,146907
+"Ottawa, IL",36837,Micropolitan Statistical Area,146599
+"Texarkana, TX-AR",45500,Metropolitan Statistical Area,145907
+"Albany, GA",10500,Metropolitan Statistical Area,145508
+"Rocky Mount, NC",40580,Metropolitan Statistical Area,145383
+"Dalton, GA",19140,Metropolitan Statistical Area,144722
+"Flagstaff, AZ",22380,Metropolitan Statistical Area,144472
+"Sioux City, IA-NE-SD",43580,Metropolitan Statistical Area,144402
+"Lebanon, PA",30140,Metropolitan Statistical Area,144252
+"Pottsville, PA",39060,Micropolitan Statistical Area,143786
+"Morgantown, WV",34060,Metropolitan Statistical Area,141817
+"Anderson Creek, NC",11360,Micropolitan Statistical Area,141477
+"Wausau, WI",48140,Metropolitan Statistical Area,138612
+"Hammond, LA",25220,Metropolitan Statistical Area,138064
+"Harrisonburg, VA",25500,Metropolitan Statistical Area,137650
+"Jonesboro, AR",27860,Metropolitan Statistical Area,136390
+"Bismarck, ND",13900,Metropolitan Statistical Area,135786
+"Wheeling, WV-OH",48540,Metropolitan Statistical Area,135517
+"Springfield, OH",44220,Metropolitan Statistical Area,134610
+"Eureka-Arcata, CA",21700,Micropolitan Statistical Area,133985
+"Battle Creek, MI",12980,Metropolitan Statistical Area,133366
+"Napa, CA",34900,Metropolitan Statistical Area,133216
+"Manhattan, KS",31740,Metropolitan Statistical Area,132831
+"Tupelo, MS",46180,Micropolitan Statistical Area,132027
+"Albany, OR",10540,Metropolitan Statistical Area,131496
+"Mount Vernon-Anacortes, WA",34580,Metropolitan Statistical Area,131417
+"Johnstown, PA",27780,Metropolitan Statistical Area,130668
+"Salisbury, MD",41540,Metropolitan Statistical Area,129710
+"Cleveland, TN",17420,Metropolitan Statistical Area,129612
+"Elizabethtown, KY",21060,Metropolitan Statistical Area,127576
+"Staunton-Stuarts Draft, VA",44420,Metropolitan Statistical Area,127344
+"Augusta-Waterville, ME",12300,Micropolitan Statistical Area,127259
+"Lawton, OK",30020,Metropolitan Statistical Area,127001
+"Missoula, MT",33540,Metropolitan Statistical Area,126939
+"Richmond-Berea, KY",40080,Micropolitan Statistical Area,126861
+"Pittsfield, MA",38340,Metropolitan Statistical Area,126818
+"Bozeman, MT",14580,Metropolitan Statistical Area,126409
+"Glens Falls, NY",24020,Metropolitan Statistical Area,125427
+"Ames, IA",11180,Metropolitan Statistical Area,125156
+"Mansfield, OH",31900,Metropolitan Statistical Area,125064
+"Jamestown-Dunkirk, NY",27460,Micropolitan Statistical Area,124891
+"Wenatchee-East Wenatchee, WA",48300,Metropolitan Statistical Area,124795
+"Sierra Vista-Douglas, AZ",43420,Metropolitan Statistical Area,124640
+"New Bern, NC",35100,Micropolitan Statistical Area,124215
+"Morristown, TN",34100,Metropolitan Statistical Area,124054
+"Holland, MI",26090,Micropolitan Statistical Area,121939
+"Farmington, NM",22140,Metropolitan Statistical Area,120675
+"Twin Falls, ID",46300,Metropolitan Statistical Area,120635
+"San Angelo, TX",41660,Metropolitan Statistical Area,120606
+"Lawrence, KS",29940,Metropolitan Statistical Area,120553
+"Altoona, PA",11020,Metropolitan Statistical Area,120273
+"Goldsboro, NC",24140,Metropolitan Statistical Area,118686
+"St. Joseph, MO-KS",41140,Metropolitan Statistical Area,118475
+"Sheboygan, WI",43100,Metropolitan Statistical Area,117752
+"Lumberton, NC",31300,Micropolitan Statistical Area,117365
+"Wooster, OH",49300,Micropolitan Statistical Area,116510
+"Anniston-Oxford, AL",11500,Metropolitan Statistical Area,116429
+"Brunswick-St. Simons, GA",15260,Metropolitan Statistical Area,116074
+"Watertown-Fort Drum, NY",48060,Metropolitan Statistical Area,114787
+"Sandusky, OH",41780,Metropolitan Statistical Area,113838
+"Lewiston-Auburn, ME",30340,Metropolitan Statistical Area,113765
+"Kalispell, MT",28060,Micropolitan Statistical Area,113679
+"Weirton-Steubenville, WV-OH",48260,Metropolitan Statistical Area,113544
+"Torrington, CT",45860,Micropolitan Statistical Area,113463
+"Longview-Kelso, WA",31020,Metropolitan Statistical Area,112864
+"Williamsport, PA",48700,Metropolitan Statistical Area,112724
+"Owensboro, KY",36980,Metropolitan Statistical Area,112512
+"Roseburg, OR",40700,Micropolitan Statistical Area,112435
+"Muncie, IN",34620,Metropolitan Statistical Area,112321
+"Michigan City-La Porte, IN",33140,Metropolitan Statistical Area,111706
+"Beckley, WV",13220,Metropolitan Statistical Area,111428
+"Show Low, AZ",43320,Micropolitan Statistical Area,109175
+"Hermitage, PA",25850,Micropolitan Statistical Area,108503
+"Sunbury, PA",44980,Micropolitan Statistical Area,107980
+"Sebring, FL",42700,Metropolitan Statistical Area,107614
+"Massena-Ogdensburg, NY",32390,Micropolitan Statistical Area,106940
+"Pinehurst-Southern Pines, NC",38240,Metropolitan Statistical Area,106898
+"Gettysburg, PA",23900,Metropolitan Statistical Area,106748
+"Kankakee, IL",28100,Metropolitan Statistical Area,105940
+"Whitewater-Elkhorn, WI",48580,Micropolitan Statistical Area,105822
+"LaGrange, GA-AL",29300,Micropolitan Statistical Area,104821
+"Mankato, MN",31860,Metropolitan Statistical Area,104248
+"Sumter, SC",44940,Metropolitan Statistical Area,104165
+"Fond du Lac, WI",22540,Metropolitan Statistical Area,103948
+"Ithaca, NY",27060,Metropolitan Statistical Area,103558
+"Gadsden, AL",23460,Metropolitan Statistical Area,103241
+"Grand Forks, ND-MN",24220,Metropolitan Statistical Area,103120
+"Moses Lake, WA",34180,Micropolitan Statistical Area,102678
+"Bay City, MI",13020,Metropolitan Statistical Area,102500
+"Paducah, KY-IL",37140,Metropolitan Statistical Area,102267
+"Truckee-Grass Valley, CA",46020,Micropolitan Statistical Area,102037
+"Danville, VA",19260,Micropolitan Statistical Area,101408
+"Shelby-Kings Mountain, NC",43140,Micropolitan Statistical Area,101378
+"Cheyenne, WY",16940,Metropolitan Statistical Area,100984
+"Lima, OH",30620,Metropolitan Statistical Area,100838
+"Albertville, AL",10700,Micropolitan Statistical Area,100756
+"Decatur, IL",19500,Metropolitan Statistical Area,100591
+"Salem, OH",41400,Micropolitan Statistical Area,100182
+"Rome, GA",40660,Metropolitan Statistical Area,100113
+"Hot Springs, AR",26300,Metropolitan Statistical Area,99784
+"Brainerd, MN",14660,Micropolitan Statistical Area,99750
+"Sevierville, TN",42940,Micropolitan Statistical Area,99415
+"Dubuque, IA",20220,Metropolitan Statistical Area,98887
+"Victoria, TX",47020,Metropolitan Statistical Area,98808
+"Cape Girardeau, MO-IL",16020,Metropolitan Statistical Area,98223
+"Corvallis, OR",18700,Metropolitan Statistical Area,97713
+"Adrian, MI",10300,Micropolitan Statistical Area,97520
+"Bluefield, WV-VA",14140,Micropolitan Statistical Area,97177
+"Putnam, CT",39480,Micropolitan Statistical Area,96692
+"Helena, MT",25740,Metropolitan Statistical Area,96091
+"Statesboro, GA",44340,Micropolitan Statistical Area,95081
+"Fairbanks-College, AK",21820,Metropolitan Statistical Area,94840
+"Cumberland, MD-WV",19060,Micropolitan Statistical Area,94140
+"Greenwood, SC",24940,Micropolitan Statistical Area,93894
+"Hermiston-Pendleton, OR",25840,Micropolitan Statistical Area,92355
+"Corning, NY",18500,Micropolitan Statistical Area,92162
+"Cullman, AL",18980,Micropolitan Statistical Area,92016
+"New Philadelphia-Dover, OH",35420,Micropolitan Statistical Area,91874
+"Talladega-Sylacauga, AL",45180,Micropolitan Statistical Area,91400
+"Pocatello, ID",38540,Metropolitan Statistical Area,90400
+"Pikeville, KY",38210,Micropolitan Statistical Area,90396
+"Ukiah, CA",46380,Micropolitan Statistical Area,89108
+"Hinesville, GA",25980,Metropolitan Statistical Area,88804
+"Clarksburg, WV",17220,Micropolitan Statistical Area,88707
+"Jefferson, GA",27600,Micropolitan Statistical Area,88615
+"Beaver Dam, WI",13180,Micropolitan Statistical Area,88231
+"Parkersburg-Vienna, WV",37620,Metropolitan Statistical Area,88052
+"Grants Pass, OR",24420,Metropolitan Statistical Area,87821
+"Lufkin, TX",31260,Micropolitan Statistical Area,87319
+"Zanesville, OH",49780,Micropolitan Statistical Area,86305
+"Oak Harbor, WA",36020,Micropolitan Statistical Area,86267
+"Athens, TX",11980,Micropolitan Statistical Area,86158
+"Centralia, WA",16500,Micropolitan Statistical Area,86154
+"Meridian, MS",32940,Micropolitan Statistical Area,85755
+"Watertown-Fort Atkinson, WI",48020,Micropolitan Statistical Area,85743
+"Great Falls, MT",24500,Metropolitan Statistical Area,84900
+"Russellville, AR",40780,Micropolitan Statistical Area,84637
+"Midland, MI",33220,Metropolitan Statistical Area,84039
+"Columbus, IN",18020,Metropolitan Statistical Area,84003
+"Kokomo, IN",29020,Metropolitan Statistical Area,83831
+"Stillwater, OK",44660,Micropolitan Statistical Area,83352
+"Indiana, PA",26860,Micropolitan Statistical Area,83094
+"Orangeburg, SC",36700,Micropolitan Statistical Area,82820
+"Laurel, MS",29860,Micropolitan Statistical Area,82263
+"Meadville, PA",32740,Micropolitan Statistical Area,82001
+"Opelousas, LA",36660,Micropolitan Statistical Area,81464
+"Manitowoc, WI",31820,Micropolitan Statistical Area,81331
+"Elmira, NY",21300,Metropolitan Statistical Area,81325
+"Huntsville, TX",26660,Micropolitan Statistical Area,81268
+"Seneca, SC",42860,Micropolitan Statistical Area,81221
+"Key West-Key Largo, FL",28580,Micropolitan Statistical Area,80614
+"Warsaw, IN",47700,Micropolitan Statistical Area,80364
+"Casper, WY",16220,Metropolitan Statistical Area,79941
+"Monticello, NY",33910,Micropolitan Statistical Area,79920
+"Heber, UT",25720,Micropolitan Statistical Area,79903
+"Rifle, CO",40090,Micropolitan Statistical Area,79347
+"Wilson, NC",48980,Micropolitan Statistical Area,78970
+"Searcy, AR",42620,Micropolitan Statistical Area,78452
+"Plattsburgh, NY",38460,Micropolitan Statistical Area,78115
+"Keene, NH",28300,Micropolitan Statistical Area,77703
+"Port Angeles, WA",38820,Micropolitan Statistical Area,77616
+"Aberdeen, WA",10140,Micropolitan Statistical Area,77290
+"DuBois, PA",20180,Micropolitan Statistical Area,77090
+"Chillicothe, OH",17060,Micropolitan Statistical Area,76501
+"Grand Island, NE",24260,Metropolitan Statistical Area,76479
+"Frankfort, KY",23180,Micropolitan Statistical Area,76257
+"Palatka, FL",37260,Micropolitan Statistical Area,75955
+"Minot, ND",33500,Metropolitan Statistical Area,75742
+"Olean, NY",36460,Micropolitan Statistical Area,75600
+"Findlay, OH",22300,Micropolitan Statistical Area,74704
+"Auburn, NY",12180,Micropolitan Statistical Area,74485
+"Quincy, IL-MO",39500,Micropolitan Statistical Area,74259
+"Wisconsin Rapids-Marshfield, WI",49220,Micropolitan Statistical Area,73939
+"Kapaa, HI",28180,Micropolitan Statistical Area,73851
+"Shawnee, OK",43060,Micropolitan Statistical Area,73791
+"Lake City, FL",29380,Micropolitan Statistical Area,73063
+"Greeneville, TN",24620,Micropolitan Statistical Area,72577
+"Fort Payne, AL",22840,Micropolitan Statistical Area,72569
+"Somerset, PA",43740,Micropolitan Statistical Area,72197
+"Hobbs, NM",26020,Micropolitan Statistical Area,72101
+"Portsmouth, OH",39020,Micropolitan Statistical Area,71969
+"Thomasville, GA",45620,Micropolitan Statistical Area,71715
+"Danville, IL",19180,Micropolitan Statistical Area,71652
+"Mount Airy, NC",34340,Micropolitan Statistical Area,71462
+"Pine Bluff, AR",38220,Micropolitan Statistical Area,71039
+"Stevens Point-Plover, WI",44620,Micropolitan Statistical Area,71024
+"Oxford, MS",37060,Micropolitan Statistical Area,70853
+"Greenfield, MA",24640,Micropolitan Statistical Area,70836
+"Klamath Falls, OR",28900,Micropolitan Statistical Area,70003
+"Morehead City, NC",33980,Micropolitan Statistical Area,69615
+"Athens, TN",11940,Micropolitan Statistical Area,69369
+"Alamogordo, NM",10460,Micropolitan Statistical Area,68835
+"Gallup, NM",23700,Micropolitan Statistical Area,68797
+"Rexburg, ID",39940,Micropolitan Statistical Area,68743
+"Shelton, WA",43220,Micropolitan Statistical Area,68389
+"Owosso, MI",37020,Micropolitan Statistical Area,68025
+"Faribault-Northfield, MN",22060,Micropolitan Statistical Area,67948
+"Clearlake, CA",17340,Micropolitan Statistical Area,67878
+"Granbury, TX",24180,Micropolitan Statistical Area,67774
+"New Iberia, LA",35340,Micropolitan Statistical Area,67659
+"Brigham City, UT-ID",14940,Micropolitan Statistical Area,67637
+"Tullahoma-Manchester, TN",46100,Micropolitan Statistical Area,67381
+"Columbus, MS",18060,Micropolitan Statistical Area,67197
+"Sanford, NC",41820,Micropolitan Statistical Area,67059
+"Farmington, MO",22100,Micropolitan Statistical Area,67058
+"Marquette, MI",32100,Micropolitan Statistical Area,66999
+"Marion-Herrin, IL",32060,Micropolitan Statistical Area,66706
+"Muskogee, OK",34780,Micropolitan Statistical Area,66677
+"Marion, IN",31980,Micropolitan Statistical Area,66200
+"Somerset, KY",43700,Micropolitan Statistical Area,66191
+"Richmond, IN",39980,Micropolitan Statistical Area,66127
+"North Wilkesboro, NC",35900,Micropolitan Statistical Area,66013
+"Clovis, NM",17580,Micropolitan Statistical Area,66009
+"Rio Grande City-Roma, TX",40100,Micropolitan Statistical Area,65934
+"Baraboo, WI",12660,Micropolitan Statistical Area,65920
+"Murrells Inlet, SC",34680,Micropolitan Statistical Area,65731
+"Albemarle, NC",10620,Micropolitan Statistical Area,65699
+"Lewiston, ID-WA",30300,Metropolitan Statistical Area,65536
+"Forest City, NC",22580,Micropolitan Statistical Area,65507
+"Bloomsburg-Berwick, PA",14100,Micropolitan Statistical Area,65439
+"Nacogdoches, TX",34860,Micropolitan Statistical Area,65375
+"Marinette, WI-MI",31940,Micropolitan Statistical Area,65051
+"Laconia, NH",29060,Micropolitan Statistical Area,65027
+"Red Bluff, CA",39780,Micropolitan Statistical Area,64896
+"Marion, OH",32020,Micropolitan Statistical Area,64851
+"Crossville, TN",18900,Micropolitan Statistical Area,64760
+"Coos Bay-North Bend, OR",18300,Micropolitan Statistical Area,64212
+"Cedar City, UT",16260,Micropolitan Statistical Area,64211
+"Mount Pleasant, MI",34380,Micropolitan Statistical Area,64118
+"Roanoke Rapids, NC",40260,Micropolitan Statistical Area,64013
+"Roswell, NM",40740,Micropolitan Statistical Area,63561
+"Martinsville, VA",32300,Micropolitan Statistical Area,63465
+"Mount Vernon, OH",34540,Micropolitan Statistical Area,63320
+"Waynesville, NC",48200,Micropolitan Statistical Area,62969
+"Paris, TX",37580,Micropolitan Statistical Area,62805
+"Athens, OH",11900,Micropolitan Statistical Area,62706
+"Enid, OK",21420,Metropolitan Statistical Area,62023
+"Walla Walla, WA",47460,Metropolitan Statistical Area,61568
+"Hutchinson, KS",26740,Micropolitan Statistical Area,61497
+"Hemlock Farms, PA",25770,Micropolitan Statistical Area,61247
+"Starkville, MS",44260,Micropolitan Statistical Area,61191
+"Sturgis, MI",44780,Micropolitan Statistical Area,60878
+"Fergus Falls, MN",22260,Micropolitan Statistical Area,60626
+"Hudson, NY",26460,Micropolitan Statistical Area,60470
+"Carlsbad-Artesia, NM",16100,Micropolitan Statistical Area,60275
+"Rutland, VT",40860,Micropolitan Statistical Area,60271
+"Barre, VT",12740,Micropolitan Statistical Area,60142
+"Oneonta, NY",36580,Micropolitan Statistical Area,60126
+"Calhoun, GA",15660,Micropolitan Statistical Area,59757
+"Sayre, PA",42380,Micropolitan Statistical Area,59695
+"Ontario, OR-ID",36620,Micropolitan Statistical Area,59323
+"Dublin, GA",20140,Micropolitan Statistical Area,59223
+"Salina, KS",41460,Micropolitan Statistical Area,58916
+"Fremont, OH",23380,Micropolitan Statistical Area,58709
+"Marietta, OH",31930,Micropolitan Statistical Area,58577
+"Norwalk, OH",35940,Micropolitan Statistical Area,58199
+"Kingsland, GA",28680,Micropolitan Statistical Area,58118
+"Carson City, NV",16180,Metropolitan Statistical Area,58036
+"Picayune, MS",38100,Micropolitan Statistical Area,57978
+"Eagle Pass, TX",20580,Metropolitan Statistical Area,57762
+"Palestine, TX",37300,Micropolitan Statistical Area,57736
+"Batavia, NY",12860,Micropolitan Statistical Area,57529
+"Kearney, NE",28260,Micropolitan Statistical Area,57467
+"Henderson, KY",25775,Micropolitan Statistical Area,56845
+"Branson, MO",14700,Micropolitan Statistical Area,56775
+"Gaffney, SC",23500,Micropolitan Statistical Area,56714
+"Waycross, GA",48180,Micropolitan Statistical Area,56668
+"Mount Pleasant, TX",34420,Micropolitan Statistical Area,56423
+"Durango, CO",20420,Micropolitan Statistical Area,56407
+"Elko, NV",21220,Micropolitan Statistical Area,56210
+"Clewiston, FL",17500,Micropolitan Statistical Area,56119
+"Fairmont, WV",21900,Micropolitan Statistical Area,55807
+"Danville, KY",19220,Micropolitan Statistical Area,55764
+"Pahrump, NV",37220,Micropolitan Statistical Area,55720
+"Enterprise, AL",21460,Micropolitan Statistical Area,55643
+"Corsicana, TX",18620,Micropolitan Statistical Area,55635
+"Glasgow, KY",23980,Micropolitan Statistical Area,55490
+"Warrensburg, MO",47660,Micropolitan Statistical Area,54962
+"Kinston, NC",28820,Micropolitan Statistical Area,54895
+"Boone, NC",14380,Micropolitan Statistical Area,54748
+"Tiffin, OH",45660,Micropolitan Statistical Area,54527
+"Sterling, IL",44580,Micropolitan Statistical Area,54498
+"Edwards, CO",20780,Micropolitan Statistical Area,54381
+"Sonora, CA",43760,Micropolitan Statistical Area,54204
+"Ocean Pines, MD",36180,Micropolitan Statistical Area,54171
+"Payson, AZ",37740,Micropolitan Statistical Area,54003
+"Kerrville, TX",28500,Micropolitan Statistical Area,53915
+"Fort Leonard Wood, MO",22780,Micropolitan Statistical Area,53812
+"Bartlesville, OK",12780,Micropolitan Statistical Area,53706
+"Scottsboro, AL",42460,Micropolitan Statistical Area,53467
+"Natchez, MS-LA",35020,Micropolitan Statistical Area,53375
+"McComb, MS",32620,Micropolitan Statistical Area,53257
+"Shelbyville, TN",43180,Micropolitan Statistical Area,53055
+"Sandpoint, ID",41760,Micropolitan Statistical Area,52547
+"Gloversville, NY",24100,Micropolitan Statistical Area,52234
+"Jacksonville, TX",27380,Micropolitan Statistical Area,52217
+"Ashland, OH",11740,Micropolitan Statistical Area,52190
+"Carbondale, IL",16060,Micropolitan Statistical Area,52141
+"Douglas, GA",20060,Micropolitan Statistical Area,51610
+"Greenville, OH",24820,Micropolitan Statistical Area,51415
+"Platteville, WI",38420,Micropolitan Statistical Area,51409
+"Rochelle, IL",40300,Micropolitan Statistical Area,51265
+"Newport, OR",35440,Micropolitan Statistical Area,50821
+"Gardnerville Ranchos, NV-CA",23820,Micropolitan Statistical Area,50686
+"Tifton, GA",45700,Micropolitan Statistical Area,50463
+"Blackfoot, ID",13940,Micropolitan Statistical Area,50395
+"Ca�on City, CO",15860,Micropolitan Statistical Area,50318
+"Ozark, AL",37120,Micropolitan Statistical Area,49871
+"Winona, MN",49100,Micropolitan Statistical Area,49721
+"Sikeston, MO",43460,Micropolitan Statistical Area,49711
+"Mason City, IA",32380,Micropolitan Statistical Area,49703
+"Cadillac, MI",15620,Micropolitan Statistical Area,49433
+"Oil City, PA",36340,Micropolitan Statistical Area,49431
+"Amsterdam, NY",11220,Micropolitan Statistical Area,49368
+"Nogales, AZ",35700,Micropolitan Statistical Area,49158
+"Durant, OK",20460,Micropolitan Statistical Area,48967
+"New Castle, IN",35220,Micropolitan Statistical Area,48929
+"Norfolk, NE",35740,Micropolitan Statistical Area,48782
+"Cornelia, GA",18460,Micropolitan Statistical Area,48757
+"Ardmore, OK",11620,Micropolitan Statistical Area,48596
+"Galesburg, IL",23660,Micropolitan Statistical Area,48411
+"Tahlequah, OK",45140,Micropolitan Statistical Area,48185
+"Burley, ID",15420,Micropolitan Statistical Area,48176
+"Red Wing, MN",39860,Micropolitan Statistical Area,48035
+"Pullman, WA",39420,Micropolitan Statistical Area,48012
+"Ruston, LA",40820,Micropolitan Statistical Area,47962
+"Mount Sterling, KY",34460,Micropolitan Statistical Area,47788
+"Sidney, OH",43380,Micropolitan Statistical Area,47765
+"Del Rio, TX",19620,Micropolitan Statistical Area,47720
+"Gillette, WY",23940,Micropolitan Statistical Area,47498
+"Kendallville, IN",28340,Micropolitan Statistical Area,47430
+"Morgan City, LA",34020,Micropolitan Statistical Area,47055
+"Rice Lake, WI",39960,Micropolitan Statistical Area,46833
+"Paragould, AR",37500,Micropolitan Statistical Area,46743
+"Bemidji, MN",13420,Micropolitan Statistical Area,46718
+"Seymour, IN",42980,Micropolitan Statistical Area,46460
+"Plymouth, IN",38500,Micropolitan Statistical Area,46352
+"Moultrie, GA",34220,Micropolitan Statistical Area,46167
+"Clinton, IA",17540,Micropolitan Statistical Area,46158
+"Sparta, WI",43890,Micropolitan Statistical Area,46151
+"Lawrenceburg, TN",29980,Micropolitan Statistical Area,46114
+"Charleston-Mattoon, IL",16660,Micropolitan Statistical Area,46060
+"Bellefontaine, OH",13340,Micropolitan Statistical Area,46057
+"Wapakoneta, OH",47540,Micropolitan Statistical Area,46050
+"Brattleboro, VT",14710,Micropolitan Statistical Area,45966
+"Lewistown, PA",30380,Micropolitan Statistical Area,45922
+"Menomonie, WI",32860,Micropolitan Statistical Area,45794
+"Cortland, NY",18660,Micropolitan Statistical Area,45752
+"Harrison, AR",25460,Micropolitan Statistical Area,45601
+"Hillsdale, MI",25880,Micropolitan Statistical Area,45587
+"Alice, TX",10860,Micropolitan Statistical Area,45510
+"Ellensburg, WA",21260,Micropolitan Statistical Area,45508
+"Grand Rapids, MN",24330,Micropolitan Statistical Area,45365
+"Shawano, WI",43020,Micropolitan Statistical Area,45335
+"Rolla, MO",40620,Micropolitan Statistical Area,45284
+"Coldwater, MI",17740,Micropolitan Statistical Area,45215
+"Columbus, NE",18100,Micropolitan Statistical Area,45175
+"Bedford, IN",13260,Micropolitan Statistical Area,45084
+"Madisonville, KY",31580,Micropolitan Statistical Area,44929
+"Marion, NC",32000,Micropolitan Statistical Area,44893
+"Bogalusa, LA",14220,Micropolitan Statistical Area,44865
+"Winchester, TN",49010,Micropolitan Statistical Area,44654
+"Effingham, IL",20820,Micropolitan Statistical Area,44592
+"Washington, NC",47820,Micropolitan Statistical Area,44481
+"Burlington, IA-IL",15460,Micropolitan Statistical Area,44341
+"Cedartown, GA",16340,Micropolitan Statistical Area,44223
+"Auburn, IN",12140,Micropolitan Statistical Area,44198
+"Stephenville, TX",44500,Micropolitan Statistical Area,44195
+"Montrose, CO",33940,Micropolitan Statistical Area,44156
+"Duncan, OK",20340,Micropolitan Statistical Area,44014
+"Willmar, MN",48820,Micropolitan Statistical Area,43813
+"Gainesville, TX",23620,Micropolitan Statistical Area,43782
+"Ponca City, OK",38620,Micropolitan Statistical Area,43641
+"Jasper, IN",27540,Micropolitan Statistical Area,43546
+"Sedalia, MO",42740,Micropolitan Statistical Area,43530
+"Huntingdon, PA",26500,Micropolitan Statistical Area,43514
+"McAlester, OK",32540,Micropolitan Statistical Area,43479
+"Milledgeville, GA",33300,Micropolitan Statistical Area,43396
+"Freeport, IL",23300,Micropolitan Statistical Area,43105
+"Mountain Home, AR",34260,Micropolitan Statistical Area,42875
+"McMinnville, TN",32660,Micropolitan Statistical Area,42638
+"Celina, OH",16380,Micropolitan Statistical Area,42439
+"Rockingham, NC",40460,Micropolitan Statistical Area,42324
+"Henderson, NC",25780,Micropolitan Statistical Area,42301
+"Vicksburg, MS",46980,Micropolitan Statistical Area,42298
+"Muscatine, IA",34700,Micropolitan Statistical Area,42218
+"Lewisburg, PA",30260,Micropolitan Statistical Area,42042
+"Poplar Bluff, MO",38740,Micropolitan Statistical Area,41948
+"Greenville, MS",24740,Micropolitan Statistical Area,41946
+"Wilmington, OH",48940,Micropolitan Statistical Area,41938
+"Aberdeen, SD",10100,Micropolitan Statistical Area,41790
+"El Campo, TX",20900,Micropolitan Statistical Area,41739
+"Bucyrus, OH",15340,Micropolitan Statistical Area,41529
+"Elizabeth City, NC",21020,Micropolitan Statistical Area,41444
+"Okeechobee, FL",36380,Micropolitan Statistical Area,41427
+"Alma, MI",10940,Micropolitan Statistical Area,41368
+"Moscow, ID",34140,Micropolitan Statistical Area,41301
+"Rock Springs, WY",40540,Micropolitan Statistical Area,41249
+"Astoria, OR",11820,Micropolitan Statistical Area,41102
+"Big Rapids, MI",13660,Micropolitan Statistical Area,41099
+"West Plains, MO",48460,Micropolitan Statistical Area,40735
+"Alexander City, AL",10760,Micropolitan Statistical Area,40677
+"Hastings, NE",25580,Micropolitan Statistical Area,40366
+"Austin, MN",12380,Micropolitan Statistical Area,40058
+"Marshalltown, IA",32260,Micropolitan Statistical Area,40014
+"Alexandria, MN",10820,Micropolitan Statistical Area,39953
+"Espa�ola, NM",21580,Micropolitan Statistical Area,39876
+"Riverton, WY",40180,Micropolitan Statistical Area,39815
+"Houghton, MI",26340,Micropolitan Statistical Area,39771
+"Selinsgrove, PA",42780,Micropolitan Statistical Area,39717
+"Safford, AZ",40940,Micropolitan Statistical Area,39525
+"Bradford, PA",14620,Micropolitan Statistical Area,39519
+"Williston, ND",48780,Micropolitan Statistical Area,39113
+"Weatherford, OK",48220,Micropolitan Statistical Area,39002
+"Urbana, OH",46500,Micropolitan Statistical Area,38845
+"Hannibal, MO",25300,Micropolitan Statistical Area,38825
+"Newberry, SC",35140,Micropolitan Statistical Area,38825
+"Pittsburg, KS",38260,Micropolitan Statistical Area,38764
+"Brownwood, TX",15220,Micropolitan Statistical Area,38709
+"Blytheville, AR",14180,Micropolitan Statistical Area,38663
+"Lake of the Woods, VA",29470,Micropolitan Statistical Area,38574
+"Crawfordsville, IN",18820,Micropolitan Statistical Area,38573
+"Ada, OK",10220,Micropolitan Statistical Area,38396
+"Steamboat Springs, CO",44460,Micropolitan Statistical Area,38391
+"Batesville, AR",12900,Micropolitan Statistical Area,38320
+"Defiance, OH",19580,Micropolitan Statistical Area,38315
+"Murray, KY",34660,Micropolitan Statistical Area,38280
+"Laramie, WY",29660,Micropolitan Statistical Area,38257
+"Sulphur Springs, TX",44860,Micropolitan Statistical Area,38172
+"Kill Devil Hills, NC",28620,Micropolitan Statistical Area,38110
+"Cambridge, OH",15740,Micropolitan Statistical Area,38089
+"Dickinson, ND",19860,Micropolitan Statistical Area,38054
+"Campbellsville, KY",15820,Micropolitan Statistical Area,37911
+"Breckenridge, CO",14720,Micropolitan Statistical Area,37830
+"Easton, MD",20660,Micropolitan Statistical Area,37823
+"Vernal, UT",46860,Micropolitan Statistical Area,37747
+"Logansport, IN",30900,Micropolitan Statistical Area,37666
+"Lock Haven, PA",30820,Micropolitan Statistical Area,37607
+"Warren, PA",47620,Micropolitan Statistical Area,37572
+"Bonham, TX",14300,Micropolitan Statistical Area,37571
+"Greencastle, IN",24600,Micropolitan Statistical Area,37567
+"Garden City, KS",23780,Micropolitan Statistical Area,37466
+"Owatonna, MN",36940,Micropolitan Statistical Area,37421
+"Newport, TN",35460,Micropolitan Statistical Area,37404
+"El Dorado, AR",20980,Micropolitan Statistical Area,37397
+"Fremont, NE",23340,Micropolitan Statistical Area,37187
+"Bennington, VT",13540,Micropolitan Statistical Area,37183
+"Brenham, TX",14780,Micropolitan Statistical Area,37007
+"Lewisburg, TN",30280,Micropolitan Statistical Area,36961
+"Coshocton, OH",18740,Micropolitan Statistical Area,36869
+"Plainview, TX",38380,Micropolitan Statistical Area,36851
+"Jacksonville, IL",27300,Micropolitan Statistical Area,36850
+"DeRidder, LA",19760,Micropolitan Statistical Area,36827
+"Escanaba, MI",21540,Micropolitan Statistical Area,36790
+"Hutchinson, MN",26780,Micropolitan Statistical Area,36785
+"Huntington, IN",26540,Micropolitan Statistical Area,36781
+"Lebanon, MO",30060,Micropolitan Statistical Area,36680
+"Centralia, IL",16460,Micropolitan Statistical Area,36673
+"Dyersburg, TN",20540,Micropolitan Statistical Area,36498
+"Fort Dodge, IA",22700,Micropolitan Statistical Area,36485
+"Mayfield, KY",32460,Micropolitan Statistical Area,36461
+"Scottsbluff, NE",42420,Micropolitan Statistical Area,36373
+"Butte-Silver Bow, MT",15580,Micropolitan Statistical Area,36360
+"Bay City, TX",13060,Micropolitan Statistical Area,36359
+"Mount Vernon, IL",34500,Micropolitan Statistical Area,36320
+"Natchitoches, LA",35060,Micropolitan Statistical Area,36291
+"Decatur, IN",19540,Micropolitan Statistical Area,36288
+"Sault Ste. Marie, MI",42300,Micropolitan Statistical Area,36264
+"Fayetteville, TN",22190,Micropolitan Statistical Area,36169
+"Selma, AL",42820,Micropolitan Statistical Area,36165
+"Vincennes, IN",47180,Micropolitan Statistical Area,36070
+"Brookings, SD",15100,Micropolitan Statistical Area,35980
+"Arcadia, FL",11580,Micropolitan Statistical Area,35979
+"Greenwood, MS",24900,Micropolitan Statistical Area,35913
+"Vidalia, GA",47080,Micropolitan Statistical Area,35801
+"Jackson, WY-ID",27220,Micropolitan Statistical Area,35781
+"Peru, IN",37940,Micropolitan Statistical Area,35402
+"Pontiac, IL",38700,Micropolitan Statistical Area,35320
+"Detroit Lakes, MN",19810,Micropolitan Statistical Area,35283
+"Minden, LA",33380,Micropolitan Statistical Area,35238
+"Ottumwa, IA",36900,Micropolitan Statistical Area,35166
+"Angola, IN",11420,Micropolitan Statistical Area,34917
+"Emporia, KS",21380,Micropolitan Statistical Area,34751
+"Brookhaven, MS",15020,Micropolitan Statistical Area,34702
+"Taos, NM",45340,Micropolitan Statistical Area,34405
+"Laurinburg, NC",29900,Micropolitan Statistical Area,34376
+"Arkansas City-Winfield, KS",11680,Micropolitan Statistical Area,34157
+"Corinth, MS",18420,Micropolitan Statistical Area,34135
+"Petoskey, MI",37950,Micropolitan Statistical Area,34123
+"North Platte, NE",35820,Micropolitan Statistical Area,34020
+"Dodge City, KS",19980,Micropolitan Statistical Area,33980
+"Pella, IA",37800,Micropolitan Statistical Area,33770
+"Port Townsend, WA",39040,Micropolitan Statistical Area,33714
+"Washington, IN",47780,Micropolitan Statistical Area,33656
+"Dixon, IL",19940,Micropolitan Statistical Area,33654
+"Brevard, NC",14820,Micropolitan Statistical Area,33549
+"Americus, GA",11140,Micropolitan Statistical Area,33416
+"Malvern, AR",31680,Micropolitan Statistical Area,33258
+"Taylorville, IL",45380,Micropolitan Statistical Area,33228
+"Troy, AL",45980,Micropolitan Statistical Area,33137
+"Martin, TN",32280,Micropolitan Statistical Area,33084
+"Madison, IN",31500,Micropolitan Statistical Area,33056
+"Cambridge, MD",15700,Micropolitan Statistical Area,32879
+"Frankfort, IN",23140,Micropolitan Statistical Area,32730
+"Fort Madison, IA",22800,Micropolitan Statistical Area,32565
+"Paris, TN",37540,Micropolitan Statistical Area,32554
+"Canton, IL",15900,Micropolitan Statistical Area,32541
+"Sheridan, WY",43260,Micropolitan Statistical Area,32519
+"Seneca Falls, NY",42900,Micropolitan Statistical Area,32349
+"Russellville, AL",40770,Micropolitan Statistical Area,31802
+"Hailey, ID",25200,Micropolitan Statistical Area,31723
+"Juneau, AK",27940,Micropolitan Statistical Area,31555
+"Jesup, GA",27700,Micropolitan Statistical Area,31373
+"Beeville, TX",13300,Micropolitan Statistical Area,30850
+"Las Vegas, NM",29780,Micropolitan Statistical Area,30791
+"Cody, WY",17650,Micropolitan Statistical Area,30735
+"Wabash, IN",47340,Micropolitan Statistical Area,30670
+"Grenada, MS",24980,Micropolitan Statistical Area,30665
+"Iron Mountain, MI-WI",27020,Micropolitan Statistical Area,30664
+"Big Spring, TX",13700,Micropolitan Statistical Area,30554
+"Albert Lea, MN",10660,Micropolitan Statistical Area,30515
+"Union City, TN",46460,Micropolitan Statistical Area,30411
+"Miami, OK",33060,Micropolitan Statistical Area,30287
+"St. Marys, PA",41260,Micropolitan Statistical Area,30198
+"McPherson, KS",32700,Micropolitan Statistical Area,30091
+"Kingsville, TX",28780,Micropolitan Statistical Area,30069
+"Mineral Wells, TX",33420,Micropolitan Statistical Area,29747
+"Mountain Home, ID",34300,Micropolitan Statistical Area,29724
+"Fort Morgan, CO",22820,Micropolitan Statistical Area,29524
+"Kirksville, MO",28860,Micropolitan Statistical Area,29175
+"Ludington, MI",31220,Micropolitan Statistical Area,29159
+"Bainbridge, GA",12460,Micropolitan Statistical Area,29087
+"Gallipolis, OH",23680,Micropolitan Statistical Area,28986
+"Watertown, SD",47980,Micropolitan Statistical Area,28971
+"Cleveland, MS",17380,Micropolitan Statistical Area,28968
+"Alpena, MI",10980,Micropolitan Statistical Area,28904
+"Susanville, CA",45000,Micropolitan Statistical Area,28861
+"Washington Court House, OH",47920,Micropolitan Statistical Area,28817
+"Hays, KS",25700,Micropolitan Statistical Area,28810
+"Van Wert, OH",46780,Micropolitan Statistical Area,28704
+"Thomaston, GA",45580,Micropolitan Statistical Area,28263
+"Spearfish, SD",43940,Micropolitan Statistical Area,28053
+"Alamosa, CO",10480,Micropolitan Statistical Area,27804
+"Fredericksburg, TX",23240,Micropolitan Statistical Area,27733
+"Lincoln, IL",30660,Micropolitan Statistical Area,27590
+"Silver City, NM",43500,Micropolitan Statistical Area,27472
+"Elkins, WV",21180,Micropolitan Statistical Area,27350
+"Toccoa, GA",45740,Micropolitan Statistical Area,27228
+"Kennett, MO",28380,Micropolitan Statistical Area,27032
+"Eufaula, AL-GA",21640,Micropolitan Statistical Area,26865
+"Macomb, IL",31380,Micropolitan Statistical Area,26839
+"Crescent City, CA",18860,Micropolitan Statistical Area,26589
+"Camden, AR",15780,Micropolitan Statistical Area,26434
+"Greensburg, IN",24700,Micropolitan Statistical Area,26399
+"The Dalles, OR",45520,Micropolitan Statistical Area,26333
+"Ottawa, KS",36840,Micropolitan Statistical Area,26125
+"La Grande, OR",29260,Micropolitan Statistical Area,25944
+"Lexington, NE",30420,Micropolitan Statistical Area,25932
+"Fallon, NV",21980,Micropolitan Statistical Area,25803
+"Mitchell, SD",33580,Micropolitan Statistical Area,25792
+"Le Mars, IA",30180,Micropolitan Statistical Area,25722
+"New Ulm, MN",35580,Micropolitan Statistical Area,25628
+"Marshall, MN",32140,Micropolitan Statistical Area,25427
+"Deming, NM",19700,Micropolitan Statistical Area,25316
+"Summerville, GA",44900,Micropolitan Statistical Area,25222
+"Uvalde, TX",46620,Micropolitan Statistical Area,24960
+"Monticello, IN",33900,Micropolitan Statistical Area,24917
+"Great Bend, KS",24460,Micropolitan Statistical Area,24899
+"Altus, OK",11060,Micropolitan Statistical Area,24669
+"Mexico, MO",33020,Micropolitan Statistical Area,24394
+"Moberly, MO",33620,Micropolitan Statistical Area,24109
+"Hood River, OR",26220,Micropolitan Statistical Area,23745
+"Yankton, SD",49460,Micropolitan Statistical Area,23517
+"Evanston, WY-UT",21740,Micropolitan Statistical Area,23415
+"Connersville, IN",18220,Micropolitan Statistical Area,23362
+"Middlesborough, KY",33180,Micropolitan Statistical Area,23317
+"Brookings, OR",15060,Micropolitan Statistical Area,23296
+"Marshall, MO",32180,Micropolitan Statistical Area,23049
+"Wahpeton, ND-MN",47420,Micropolitan Statistical Area,22864
+"Magnolia, AR",31620,Micropolitan Statistical Area,22150
+"Forrest City, AR",22620,Micropolitan Statistical Area,22101
+"Elk City, OK",21120,Micropolitan Statistical Area,22042
+"Oskaloosa, IA",36820,Micropolitan Statistical Area,21874
+"Pampa, TX",37420,Micropolitan Statistical Area,21756
+"Worthington, MN",49380,Micropolitan Statistical Area,21727
+"Beatrice, NE",13100,Micropolitan Statistical Area,21634
+"Jamestown, ND",27420,Micropolitan Statistical Area,21392
+"Arkadelphia, AR",11660,Micropolitan Statistical Area,21274
+"Dumas, TX",20300,Micropolitan Statistical Area,21190
+"Liberal, KS",30580,Micropolitan Statistical Area,21067
+"Othello, WA",36830,Micropolitan Statistical Area,20820
+"Vineyard Haven, MA",47240,Micropolitan Statistical Area,20819
+"Maryville, MO",32340,Micropolitan Statistical Area,20695
+"Pierre, SD",38180,Micropolitan Statistical Area,20667
+"Sterling, CO",44540,Micropolitan Statistical Area,20619
+"Price, UT",39220,Micropolitan Statistical Area,20609
+"Storm Lake, IA",44740,Micropolitan Statistical Area,20567
+"Carroll, IA",16140,Micropolitan Statistical Area,20522
+"Guymon, OK",25100,Micropolitan Statistical Area,20371
+"Franklin, KY",23190,Micropolitan Statistical Area,20195
+"Clarksdale, MS",17260,Micropolitan Statistical Area,20077
+"Raymondville, TX",39700,Micropolitan Statistical Area,20037
+"Borger, TX",14420,Micropolitan Statistical Area,20033
+"Ruidoso, NM",40760,Micropolitan Statistical Area,20029
+"Woodward, OK",49260,Micropolitan Statistical Area,19947
+"Port Lavaca, TX",38920,Micropolitan Statistical Area,19696
+"Fairmont, MN",21860,Micropolitan Statistical Area,19657
+"Cordele, GA",18380,Micropolitan Statistical Area,19631
+"Huron, SD",26700,Micropolitan Statistical Area,19591
+"Los Alamos, NM",31060,Micropolitan Statistical Area,19444
+"Andrews, TX",11380,Micropolitan Statistical Area,18664
+"Bishop, CA",13860,Micropolitan Statistical Area,18527
+"Hereford, TX",25820,Micropolitan Statistical Area,18347
+"Spirit Lake, IA",44020,Micropolitan Statistical Area,18056
+"Winnemucca, NV",49080,Micropolitan Statistical Area,17136
+"Fitzgerald, GA",22340,Micropolitan Statistical Area,17128
+"Baker City, OR",12520,Micropolitan Statistical Area,16912
+"Spencer, IA",43980,Micropolitan Statistical Area,16511
+"Snyder, TX",43660,Micropolitan Statistical Area,16212
+"Atchison, KS",11860,Micropolitan Statistical Area,16016
+"Vermillion, SD",46820,Micropolitan Statistical Area,15431
+"Nantucket, MA",34880,Micropolitan Statistical Area,14444
+"Sweetwater, TX",45020,Micropolitan Statistical Area,14306
+"Ketchikan, AK",28540,Micropolitan Statistical Area,13738
+"Zapata, TX",49820,Micropolitan Statistical Area,13736
+"Vernon, TX",46900,Micropolitan Statistical Area,12522
+"Town of Pecos, TX",45880,Micropolitan Statistical Area,11770
+"Aguadilla, PR",10380,Metropolitan Statistical Area,
+"Arecibo, PR",11640,Metropolitan Statistical Area,
+"Guayama, PR",25020,Metropolitan Statistical Area,
+"Mayagüez, PR",32420,Metropolitan Statistical Area,
+"Ponce, PR",38660,Metropolitan Statistical Area,
+"San Juan-Bayamón-Caguas, PR",41980,Metropolitan Statistical Area,
+"Coamo, PR",17620,Micropolitan Statistical Area,
+"Coco, PR",17640,Micropolitan Statistical Area,
+"Lares, PR",29720,Micropolitan Statistical Area,
+"Utuado, PR",46580,Micropolitan Statistical Area,
