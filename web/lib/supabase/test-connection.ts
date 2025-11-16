@@ -22,16 +22,16 @@ export async function testDatabaseConnection() {
       }
     }
     
-    // Test 2: Check geo_data table exists (should be empty initially)
+    // Test 2: Check markets table exists (should be empty initially)
     const { data: geoData, error: geoError } = await supabase
-      .from('geo_data')
-      .select('geo_code')
+      .from('markets')
+      .select('region_id')
       .limit(1)
     
     if (geoError) {
       return {
         success: false,
-        error: `Failed to query geo_data: ${geoError.message}`
+        error: `Failed to query markets: ${geoError.message}`
       }
     }
     

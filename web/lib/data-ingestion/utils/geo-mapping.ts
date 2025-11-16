@@ -1,13 +1,13 @@
 /**
  * Geographic Code Mapping Utilities
- * Maps Zillow region names to our geo_code format
+ * Maps Zillow region names to our region_id format (markets table)
  */
 
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 /**
- * Map Zillow region name to geo_code
- * Tries to match against existing geo_data table
+ * Map Zillow region name to region_id
+ * Tries to match against existing markets table
  */
 export async function mapZillowRegionToGeoCode(
   regionName: string,
@@ -25,14 +25,17 @@ export async function mapZillowRegionToGeoCode(
     .replace(/\s+/g, ' ')
     .trim()
 
+  // Map geoType to region_type
+  const regionType = geoType === 'metro' ? 'msa' : geoType
+
   // Try exact match first
-  console.log('[geo-mapping] Trying exact match for:', { cleanName, stateCode, geoType })
+  console.log('[geo-mapping] Trying exact match for:', { cleanName, stateCode, regionType })
   const { data: exactMatch, error: exactError } = await supabase
-    .from('geo_data')
-    .select('geo_code')
-    .eq('geo_name', cleanName)
+    .from('markets')
+    .select('region_id')
+    .eq('region_name', cleanName)
     .eq('state_code', stateCode)
-    .eq('geo_type', geoType)
+    .eq('region_type', regionType)
     .limit(1)
     .single()
 
@@ -41,45 +44,45 @@ export async function mapZillowRegionToGeoCode(
   }
 
   if (exactMatch) {
-    console.log('[geo-mapping] Found exact match:', exactMatch.geo_code)
-    return exactMatch.geo_code
+    console.log('[geo-mapping] Found exact match:', exactMatch.region_id)
+    return exactMatch.region_id
   }
 
   // Try partial match (contains)
   const { data: partialMatch } = await supabase
-    .from('geo_data')
-    .select('geo_code')
-    .ilike('geo_name', `%${cleanName}%`)
+    .from('markets')
+    .select('region_id')
+    .ilike('region_name', `%${cleanName}%`)
     .eq('state_code', stateCode)
-    .eq('geo_type', geoType)
+    .eq('region_type', regionType)
     .limit(1)
     .single()
 
   if (partialMatch) {
-    return partialMatch.geo_code
+    return partialMatch.region_id
   }
 
   // Try reverse - check if our name contains their name
   const { data: reverseMatch } = await supabase
-    .from('geo_data')
-    .select('geo_code, geo_name')
+    .from('markets')
+    .select('region_id, region_name')
     .eq('state_code', stateCode)
-    .eq('geo_type', geoType)
+    .eq('region_type', regionType)
     .limit(100)
 
   if (reverseMatch) {
-    for (const geo of reverseMatch) {
-      if (geo.geo_name && cleanName.includes(geo.geo_name)) {
-        return geo.geo_code
+    for (const market of reverseMatch) {
+      if (market.region_name && cleanName.includes(market.region_name)) {
+        return market.region_id
       }
-      if (geo.geo_name && geo.geo_name.includes(cleanName)) {
-        return geo.geo_code
+      if (market.region_name && market.region_name.includes(cleanName)) {
+        return market.region_id
       }
     }
   }
 
   // No match found
-  console.warn(`⚠️ [geo-mapping] No geo_code found for: ${cleanName}, ${stateCode}, ${geoType}`)
+  console.warn(`⚠️ [geo-mapping] No region_id found for: ${cleanName}, ${stateCode}, ${regionType}`)
   return null
 }
 

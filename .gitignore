@@ -58,3 +58,19 @@ temp/
 # Build artifacts
 *.tsbuildinfo
 
+# Large geographic data files (excluded from git)
+scripts/shapefiles/*.shp
+scripts/shapefiles/*.dbf
+scripts/shapefiles/*.shx
+scripts/shapefiles/*.prj
+scripts/shapefiles/*.cpg
+scripts/shapefiles/*.zip
+scripts/shapefiles/*.geojson
+scripts/geojson/*.geojson
+data/tiger/*.shp
+data/tiger/*.dbf
+data/tiger/*.shx
+data/tiger/*.prj
+data/tiger/*.cpg
+data/tiger/*.zip
+

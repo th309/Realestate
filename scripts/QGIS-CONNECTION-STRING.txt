@@ -1,0 +1,19 @@
+QGIS Supabase Connection Details
+=================================
+
+Use these exact values when setting up the PostGIS connection in QGIS:
+
+Host: db.pysflbhpnqwoczyuaaif.supabase.co
+Port: 6543 (Connection Pooling - IMPORTANT: Use 6543, not 5432)
+Database: postgres
+Username: postgres
+Password: Ihatedoingpt12
+SSL Mode: require
+
+Steps in QGIS:
+1. Layer → Add Layer → Add PostgreSQL Layer... (or press Ctrl+Shift+D)
+2. In the dialog, click "New" to create a new connection
+3. Enter the details above
+4. Click "Test Connection" to verify
+5. Click "OK" to save
+
