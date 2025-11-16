@@ -9,15 +9,15 @@ export async function GET() {
   try {
     const supabase = createSupabaseAdminClient()
 
-    // Count by geo_type
+    // Count by region_type
     const { data: geoData, error: geoError } = await supabase
-      .from('geo_data')
-      .select('geo_code, geo_name, geo_type')
-      .order('geo_type, geo_name')
+      .from('markets')
+      .select('region_id, region_name, region_type')
+      .order('region_type, region_name')
 
     if (geoError) {
       return NextResponse.json(
-        { success: false, error: `Failed to query geo_data: ${geoError.message}` },
+        { success: false, error: `Failed to query markets: ${geoError.message}` },
         { status: 500 }
       )
     }
@@ -50,7 +50,7 @@ export async function GET() {
 
     // Group by type
     const byType = geoData?.reduce((acc: any, item) => {
-      acc[item.geo_type] = (acc[item.geo_type] || 0) + 1
+      acc[item.region_type] = (acc[item.region_type] || 0) + 1
       return acc
     }, {}) || {}
 

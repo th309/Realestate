@@ -41,17 +41,17 @@ export async function GET() {
       )
     }
 
-    // Test 2: Query geo_data (should be empty initially)
+    // Test 2: Query markets (should be empty initially)
     const { data: geoData, error: geoError } = await supabase
-      .from('geo_data')
-      .select('geo_code')
+      .from('markets')
+      .select('region_id')
       .limit(1)
 
     if (geoError) {
       return NextResponse.json(
         {
           success: false,
-          error: `Failed to query geo_data: ${geoError.message}`,
+          error: `Failed to query markets: ${geoError.message}`,
           details: geoError
         },
         { status: 500 }
@@ -61,7 +61,7 @@ export async function GET() {
     // Test 3: Verify current_scores table exists
     const { data: scores, error: scoresError } = await supabase
       .from('current_scores')
-      .select('geo_code')
+      .select('geo_code')  // Note: current_scores still uses geo_code column name
       .limit(1)
 
     if (scoresError) {
@@ -85,7 +85,8 @@ export async function GET() {
         environment: {
           supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set ✓' : 'Missing ✗',
           anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set ✓' : 'Missing ✗',
-          serviceKey: process.env.SUPABASE_SERVICE_KEY ? 'Set ✓' : 'Missing ✗'
+          serviceKey: (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY) ? 'Set ✓' : 'Missing ✗',
+          serviceKeyName: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : (process.env.SUPABASE_SERVICE_KEY ? 'SUPABASE_SERVICE_KEY' : 'Neither set')
         }
       }
     })

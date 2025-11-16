@@ -57,7 +57,8 @@ export async function importFREDData(
   console.log(`\n📊 Starting FRED import for: ${seriesKeys.join(', ')}`)
   console.log('================================================')
 
-  // Ensure United States region exists
+  // Ensure United States region exists (creates if doesn't exist, updates if it does)
+  // This ensures the national-level region is available for FRED data
   const { error: marketError } = await supabase
     .from('markets')
     .upsert({
@@ -66,7 +67,7 @@ export async function importFREDData(
       region_type: 'country'
     }, {
       onConflict: 'region_id',
-      ignoreDuplicates: false
+      ignoreDuplicates: false  // Creates new market if region_id doesn't exist
     })
 
   if (marketError) {

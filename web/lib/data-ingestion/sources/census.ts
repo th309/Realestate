@@ -99,7 +99,7 @@ export async function importCensusData(
     for (const row of rows) {
       try {
         const record: Record<string, string> = {}
-        headers.forEach((header, index) => {
+        headers.forEach((header: string, index: number) => {
           record[header] = row[index]
         })
 
@@ -110,9 +110,13 @@ export async function importCensusData(
           continue
         }
 
+        // Try to map to existing market first (to avoid duplicates)
+        // If no match found, create a new market record
+        // This ensures ALL Census geographies are in the database, not just those matching existing markets
         let regionId = await mapCensusGeoToRegionId(name, geoCode, geoLevel, record)
 
         if (!regionId) {
+          // Create new market record - this ensures we capture all Census data
           regionId = await createMarketFromCensusGeo(name, geoCode, geoLevel, record)
           
           if (!regionId) {
@@ -290,11 +294,13 @@ async function createMarketFromCensusGeo(
       metro_name: metroName
     }
 
+    // Upsert creates the market if it doesn't exist, updates if it does
+    // This ensures all Census metros are in the database
     const { error } = await supabase
       .from('markets')
       .upsert(marketData, {
         onConflict: 'region_id',
-        ignoreDuplicates: false
+        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
       })
 
     if (error) {
@@ -319,11 +325,13 @@ async function createMarketFromCensusGeo(
       state_code: stateCode
     }
 
+    // Upsert creates the market if it doesn't exist, updates if it does
+    // This ensures all Census metros are in the database
     const { error } = await supabase
       .from('markets')
       .upsert(marketData, {
         onConflict: 'region_id',
-        ignoreDuplicates: false
+        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
       })
 
     if (error) {
@@ -348,11 +356,13 @@ async function createMarketFromCensusGeo(
       state_code: stateCode || undefined
     }
 
+    // Upsert creates the market if it doesn't exist, updates if it does
+    // This ensures all Census metros are in the database
     const { error } = await supabase
       .from('markets')
       .upsert(marketData, {
         onConflict: 'region_id',
-        ignoreDuplicates: false
+        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
       })
 
     if (error) {
@@ -374,11 +384,13 @@ async function createMarketFromCensusGeo(
       state_code: record['state'] ? getStateCodeFromFIPS(record['state']) : undefined
     }
 
+    // Upsert creates the market if it doesn't exist, updates if it does
+    // This ensures all Census metros are in the database
     const { error } = await supabase
       .from('markets')
       .upsert(marketData, {
         onConflict: 'region_id',
-        ignoreDuplicates: false
+        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
       })
 
     if (error) {

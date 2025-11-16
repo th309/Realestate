@@ -97,7 +97,8 @@ export async function importZillowData(
         console.log(`  Processing region ${index + 1}/${recordsToProcess.length}: ${regionName}`)
       }
       
-      // Step 1: Upsert market record
+      // Step 1: Upsert market record (creates if doesn't exist, updates if it does)
+      // This ensures all Zillow regions are in the database, even if not previously imported
       const marketData: MarketRecord = {
         region_id: regionId,
         region_name: regionName,
@@ -111,7 +112,7 @@ export async function importZillowData(
         .from('markets')
         .upsert(marketData, {
           onConflict: 'region_id',
-          ignoreDuplicates: false
+          ignoreDuplicates: false  // Creates new market if region_id doesn't exist
         })
         .select()
       

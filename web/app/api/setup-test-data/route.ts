@@ -11,91 +11,101 @@ export async function POST() {
   try {
     const supabase = createSupabaseAdminClient()
 
-    // Insert test markets into geo_data
+    // Insert test markets into markets table
     const { error: geoError } = await supabase
-      .from('geo_data')
+      .from('markets')
       .upsert([
         // States
         {
-          geo_code: 'US-CA',
-          geo_name: 'California',
+          region_id: 'US-CA',
+          region_name: 'California',
           state_code: 'CA',
-          geo_type: 'state',
+          state_name: 'California',
+          region_type: 'state',
           bounds: { north: 42.0095, south: 32.5288, east: -114.1315, west: -124.4096 }
         },
         {
-          geo_code: 'US-TX',
-          geo_name: 'Texas',
+          region_id: 'US-TX',
+          region_name: 'Texas',
           state_code: 'TX',
-          geo_type: 'state',
+          state_name: 'Texas',
+          region_type: 'state',
           bounds: { north: 36.5007, south: 25.8371, east: -93.5083, west: -106.6456 }
         },
         // Metros
         {
-          geo_code: 'US-MSA-31080',
-          geo_name: 'Los Angeles-Long Beach-Anaheim, CA',
+          region_id: 'US-MSA-31080',
+          region_name: 'Los Angeles-Long Beach-Anaheim, CA',
           state_code: 'CA',
-          geo_type: 'metro',
+          state_name: 'California',
+          region_type: 'msa',
           bounds: { north: 34.8233, south: 33.3487, east: -117.6464, west: -118.6682 }
         },
         {
-          geo_code: 'US-MSA-26420',
-          geo_name: 'Houston-The Woodlands-Sugar Land, TX',
+          region_id: 'US-MSA-26420',
+          region_name: 'Houston-The Woodlands-Sugar Land, TX',
           state_code: 'TX',
-          geo_type: 'metro',
+          state_name: 'Texas',
+          region_type: 'msa',
           bounds: { north: 30.3072, south: 29.4241, east: -94.9777, west: -95.8099 }
         },
         {
-          geo_code: 'US-MSA-12420',
-          geo_name: 'Austin-Round Rock, TX',
+          region_id: 'US-MSA-12420',
+          region_name: 'Austin-Round Rock, TX',
           state_code: 'TX',
-          geo_type: 'metro',
+          state_name: 'Texas',
+          region_type: 'msa',
           bounds: { north: 30.5169, south: 30.0987, east: -97.5625, west: -98.1039 }
         },
         {
-          geo_code: 'US-MSA-19100',
-          geo_name: 'Dallas-Fort Worth-Arlington, TX',
+          region_id: 'US-MSA-19100',
+          region_name: 'Dallas-Fort Worth-Arlington, TX',
           state_code: 'TX',
-          geo_type: 'metro',
+          state_name: 'Texas',
+          region_type: 'msa',
           bounds: { north: 33.3475, south: 32.6171, east: -96.4636, west: -97.5144 }
         },
         {
-          geo_code: 'US-MSA-14460',
-          geo_name: 'Boston-Cambridge-Newton, MA-NH',
+          region_id: 'US-MSA-14460',
+          region_name: 'Boston-Cambridge-Newton, MA-NH',
           state_code: 'MA',
-          geo_type: 'metro',
+          state_name: 'Massachusetts',
+          region_type: 'msa',
           bounds: { north: 42.8864, south: 42.0629, east: -70.6109, west: -71.1912 }
         },
         // Cities
         {
-          geo_code: 'US-CITY-06037',
-          geo_name: 'Los Angeles, CA',
+          region_id: 'US-CITY-06037',
+          region_name: 'Los Angeles, CA',
           state_code: 'CA',
-          geo_type: 'city',
+          state_name: 'California',
+          region_type: 'city',
           bounds: { north: 34.3373, south: 33.7037, east: -118.1553, west: -118.6682 }
         },
         {
-          geo_code: 'US-CITY-48201',
-          geo_name: 'Houston, TX',
+          region_id: 'US-CITY-48201',
+          region_name: 'Houston, TX',
           state_code: 'TX',
-          geo_type: 'city',
+          state_name: 'Texas',
+          region_type: 'city',
           bounds: { north: 30.1104, south: 29.5213, east: -95.0908, west: -95.8099 }
         },
         // Zip Code
         {
-          geo_code: 'US-ZIP-78701',
-          geo_name: 'Austin, TX 78701',
+          region_id: 'US-ZIP-78701',
+          region_name: 'Austin, TX 78701',
           state_code: 'TX',
-          geo_type: 'zipcode',
+          state_name: 'Texas',
+          region_type: 'zip',
           bounds: { north: 30.2747, south: 30.2682, east: -97.7392, west: -97.7476 }
         }
       ], {
-        onConflict: 'geo_code'
+        onConflict: 'region_id'
       })
 
     if (geoError) {
       return NextResponse.json(
-        { success: false, error: `Failed to insert geo_data: ${geoError.message}` },
+        { success: false, error: `Failed to insert markets: ${geoError.message}` },
         { status: 500 }
       )
     }
@@ -159,9 +169,9 @@ export async function POST() {
 
     // Verify inserts
     const { data: geoData } = await supabase
-      .from('geo_data')
-      .select('geo_code, geo_name, geo_type')
-      .order('geo_type')
+      .from('markets')
+      .select('region_id, region_name, region_type')
+      .order('region_type')
 
     const { data: timeSeries } = await supabase
       .from('time_series_data')

@@ -1,0 +1,33 @@
+{
+  "name": "real-estate",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "load-shapefiles": "tsx scripts/load-shapefiles-to-supabase.ts",
+    "convert-shapefiles": "tsx scripts/convert-shapefiles-to-geojson.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/th309/Realestate.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/th309/Realestate/issues"
+  },
+  "homepage": "https://github.com/th309/Realestate#readme",
+  "dependencies": {
+    "shapefile": "^0.6.6",
+    "@supabase/supabase-js": "^2.80.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
