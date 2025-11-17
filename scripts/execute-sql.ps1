@@ -23,7 +23,7 @@ if (Test-Path $envPath) {
 }
 
 $supabaseUrl = $env:NEXT_PUBLIC_SUPABASE_URL
-$supabaseKey = $env:SUPABASE_SERVICE_ROLE_KEY
+$supabaseKey = $env:SUPABASE_SERVICE_ROLE_KEY -or $env:SUPABASE_SERVICE_KEY
 
 if ([string]::IsNullOrEmpty($supabaseUrl)) {
     $supabaseUrl = "https://${ProjectRef}.supabase.co"

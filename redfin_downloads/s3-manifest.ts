@@ -1,0 +1,94 @@
+// Auto-generated Redfin S3 Dataset Manifest
+// Generated at: 2025-11-16T19:12:26.823Z
+
+export interface RedfinS3Dataset {
+  name: string
+  description: string
+  url: string
+  category: string
+  geographic_level: string
+  format: 'tsv' | 'csv'
+  compressed: boolean
+}
+
+export const REDFIN_S3_DATASETS: RedfinS3Dataset[] = [
+  {
+    "name": "housing_market_national",
+    "description": "National Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/us_national_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "national",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_metro",
+    "description": "Metro Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/redfin_metro_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "metro",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_state",
+    "description": "State Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/state_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "state",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_county",
+    "description": "County Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/county_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "county",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_city",
+    "description": "City Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/city_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "city",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_zip",
+    "description": "Zip Code Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/zip_code_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "zip",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "housing_market_neighborhood",
+    "description": "Neighborhood Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_market_tracker/neighborhood_market_tracker.tsv000.gz",
+    "category": "housing_market",
+    "geographic_level": "neighborhood",
+    "format": "tsv",
+    "compressed": true
+  },
+  {
+    "name": "weekly_multiple",
+    "description": "Weekly Housing Market Data Market Tracker",
+    "url": "https://redfin-public-data.s3.us-west-2.amazonaws.com/redfin_covid19/weekly_housing_market_data_most_recent.tsv000.gz",
+    "category": "weekly",
+    "geographic_level": "multiple",
+    "format": "tsv",
+    "compressed": true
+  }
+] as RedfinS3Dataset[]
+
+export const REDFIN_S3_MANIFEST = {
+  version: '2.0',
+  discovered_at: '2025-11-16T19:12:26.822Z',
+  total_datasets: 8,
+  datasets: REDFIN_S3_DATASETS
+}
