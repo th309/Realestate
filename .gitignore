@@ -74,3 +74,8 @@ data/tiger/*.prj
 data/tiger/*.cpg
 data/tiger/*.zip
 
+# Large Redfin data files (exceed GitHub's 100MB limit)
+redfin_downloads/raw_files/housing_market_county.tsv
+redfin_downloads/raw_files/housing_market_metro.tsv
+redfin_downloads/raw_files/*.tmp.gz
+

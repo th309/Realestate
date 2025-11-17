@@ -6,7 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "load-shapefiles": "tsx scripts/load-shapefiles-to-supabase.ts",
-    "convert-shapefiles": "tsx scripts/convert-shapefiles-to-geojson.ts"
+    "convert-shapefiles": "tsx scripts/convert-shapefiles-to-geojson.ts",
+    "discover-redfin-s3": "tsx scripts/discover-redfin-s3-datasets.ts",
+    "download-redfin-s3": "tsx scripts/download-redfin-s3-files.ts",
+    "import-redfin-s3": "tsx scripts/download-and-import-redfin-s3.ts"
   },
   "repository": {
     "type": "git",
@@ -21,9 +24,12 @@
   },
   "homepage": "https://github.com/th309/Realestate#readme",
   "dependencies": {
-    "shapefile": "^0.6.6",
     "@supabase/supabase-js": "^2.80.0",
-    "dotenv": "^17.2.3"
+    "axios": "^1.13.2",
+    "csv-parse": "^6.1.0",
+    "dotenv": "^17.2.3",
+    "puppeteer": "^24.29.1",
+    "shapefile": "^0.6.6"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
