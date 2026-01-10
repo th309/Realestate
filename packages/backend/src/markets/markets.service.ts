@@ -77,7 +77,7 @@ export class MarketsService {
 
   async getStateHomeValues() {
     try {
-      // Get states with their names
+      // Get states with their names (geoid is 2-digit state FIPS)
       const { data: states, error: statesError } = await this.supabase
         .from('tiger_states')
         .select('geoid, name');
@@ -93,54 +93,32 @@ export class MarketsService {
         stateNameMap.set(state.geoid, state.name);
       }
 
-      // Get latest Zillow metrics - county geoids are 5 digits (state 2 + county 3)
+      // Get most recent ZHVI for each state (2-digit geoids)
+      // ZHVI is already calculated by Zillow - no aggregation needed
+      const stateGeoids = states?.map((s) => s.geoid) || [];
       const { data: zillowData, error: zillowError } = await this.supabase
         .from('zillow_metrics')
         .select('geoid, zhvi_all_homes, metric_date')
+        .in('geoid', stateGeoids)
         .not('zhvi_all_homes', 'is', null)
-        .order('metric_date', { ascending: false })
-        .limit(5000);
+        .order('metric_date', { ascending: false });
 
       if (zillowError) {
         console.error('Error fetching zillow data:', zillowError);
         throw zillowError;
       }
 
-      // Aggregate county values to state level
-      // County geoid format: first 2 digits = state FIPS code
-      const stateValues = new Map<string, number[]>();
-      const seenCounties = new Set<string>(); // Only use most recent per county
+      // Build result - only use most recent value per state
+      const result: Record<string, number> = {};
+      const seenStates = new Set<string>();
 
       for (const record of zillowData || []) {
-        if (!record.geoid || record.geoid.length < 2) continue;
-        if (seenCounties.has(record.geoid)) continue; // Skip older records for same county
+        if (seenStates.has(record.geoid)) continue;
+        seenStates.add(record.geoid);
 
-        seenCounties.add(record.geoid);
-        const stateGeoid = record.geoid.substring(0, 2); // Extract state FIPS
-
-        if (record.zhvi_all_homes && stateNameMap.has(stateGeoid)) {
-          if (!stateValues.has(stateGeoid)) {
-            stateValues.set(stateGeoid, []);
-          }
-          stateValues.get(stateGeoid)?.push(Number(record.zhvi_all_homes));
-        }
-      }
-
-      // Calculate median for each state (more accurate than average)
-      const result: Record<string, number> = {};
-      for (const [stateGeoid, values] of stateValues) {
-        if (values.length > 0) {
-          // Sort and get median
-          values.sort((a, b) => a - b);
-          const mid = Math.floor(values.length / 2);
-          const median = values.length % 2 !== 0
-            ? values[mid]
-            : Math.round((values[mid - 1] + values[mid]) / 2);
-
-          const stateName = stateNameMap.get(stateGeoid);
-          if (stateName) {
-            result[stateName] = median;
-          }
+        const stateName = stateNameMap.get(record.geoid);
+        if (stateName && record.zhvi_all_homes) {
+          result[stateName] = Math.round(Number(record.zhvi_all_homes));
         }
       }
 
