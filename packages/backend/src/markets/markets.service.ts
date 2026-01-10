@@ -168,13 +168,13 @@ export class MarketsService {
 
   async getCountyHomeValues() {
     try {
-      // Get most recent ZHVI for counties
+      // Get most recent ZHVI for counties (need enough rows for all ~3000 counties)
       const { data: zhviData, error: zhviError } = await this.supabase
         .from('zillow_zhvi')
         .select('region_id, value, date')
         .eq('geography', 'County')
         .order('date', { ascending: false })
-        .limit(10000);
+        .limit(50000);
 
       if (zhviError) {
         console.error('Error fetching County ZHVI data:', zhviError);

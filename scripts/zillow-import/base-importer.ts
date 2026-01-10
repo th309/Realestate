@@ -2,12 +2,18 @@
  * Base Zillow ZHVI Importer
  *
  * Shared logic for importing Zillow Home Value Index data
+ * Uses standardized geographic codes:
+ * - State: State name (matches GeoJSON properties.name)
+ * - Metro: CBSA code (from Zillow crosswalk file)
+ * - County: FIPS code (StateCodeFIPS + MunicipalCodeFIPS)
+ * - Zip: ZIP code (from RegionName)
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
+import { loadMetroMapping, ZILLOW_STATE_MAP } from './geo-mappings';
 
 // Load environment variables
 config({ path: join(__dirname, '../../packages/backend/.env') });
@@ -46,6 +52,7 @@ export class ZhviImporter {
   private supabase: SupabaseClient;
   private geography: GeographyLevel;
   private batchSize: number;
+  private metroMapping: Map<string, string> | null = null;
 
   constructor(geography: GeographyLevel, batchSize = 1000) {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -61,6 +68,12 @@ export class ZhviImporter {
 
     this.geography = geography;
     this.batchSize = batchSize;
+  }
+
+  async loadMappings(): Promise<void> {
+    if (this.geography === 'Metro') {
+      this.metroMapping = await loadMetroMapping();
+    }
   }
 
   async downloadCsv(): Promise<string> {
@@ -96,10 +109,40 @@ export class ZhviImporter {
   }
 
   getRegionId(record: any): string {
-    // Different geography levels use different ID columns
-    if (record.RegionID) return String(record.RegionID);
-    if (record.RegionName && this.geography === 'Zip') return String(record.RegionName);
-    return '';
+    // Use standardized geographic codes for each level
+
+    // State: Use state name (matches GeoJSON properties.name)
+    if (this.geography === 'State') {
+      return record.RegionName || '';
+    }
+
+    // Metro: Use CBSA code from crosswalk mapping
+    if (this.geography === 'Metro') {
+      const zillowId = String(record.RegionID);
+      if (this.metroMapping && this.metroMapping.has(zillowId)) {
+        return this.metroMapping.get(zillowId)!;
+      }
+      // Skip metros without CBSA mapping
+      return '';
+    }
+
+    // County: Use FIPS code (StateCodeFIPS + MunicipalCodeFIPS)
+    if (this.geography === 'County') {
+      const stateCode = record.StateCodeFIPS;
+      const countyCode = record.MunicipalCodeFIPS;
+      if (stateCode && countyCode) {
+        return String(stateCode).padStart(2, '0') + String(countyCode).padStart(3, '0');
+      }
+      return '';
+    }
+
+    // Zip: Use ZIP code from RegionName
+    if (this.geography === 'Zip') {
+      return String(record.RegionName || '');
+    }
+
+    // City: Keep using Zillow RegionID (no standard mapping)
+    return String(record.RegionID || '');
   }
 
   getRegionName(record: any): string {
@@ -191,10 +234,10 @@ export class ZhviImporter {
     const errors: string[] = [];
     let inserted = 0;
 
-    // Use plain INSERT
+    // Use UPSERT with onConflict to handle duplicates
     const { error } = await this.supabase
       .from('zillow_zhvi')
-      .insert(
+      .upsert(
         records.map(r => ({
           region_id: r.region_id,
           date: r.date,
@@ -202,7 +245,11 @@ export class ZhviImporter {
           geography: r.geography,
           property_type: r.property_type,
           tier: r.tier,
-        }))
+        })),
+        {
+          onConflict: 'region_id,date,property_type,tier',
+          ignoreDuplicates: false,
+        }
       );
 
     if (error) {
@@ -238,6 +285,9 @@ export class ZhviImporter {
     };
 
     try {
+      // Load any required mappings (e.g., metro CBSA codes)
+      await this.loadMappings();
+
       // Download and parse
       const csvText = await this.downloadCsv();
       const rawRecords = this.parseCsv(csvText);
@@ -262,14 +312,9 @@ export class ZhviImporter {
         return result;
       }
 
-      // Delete existing data for new dates to avoid duplicates
-      const newDates = [...new Set(recordsToInsert.map(r => r.date))];
-      console.log(`Clearing ${newDates.length} date(s) before insert...`);
-      for (const date of newDates) {
-        await this.deleteExistingForDate(date);
-      }
+      // Using upsert, no need to delete before insert
 
-      // Insert in batches
+      // Insert/Update in batches
       console.log(`Inserting ${recordsToInsert.length} records in batches of ${this.batchSize}...`);
 
       for (let i = 0; i < recordsToInsert.length; i += this.batchSize) {
