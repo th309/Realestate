@@ -854,11 +854,6 @@ export default function MapPage() {
                             }`}
                           >
                             <span className="flex items-center gap-1.5 min-w-0">
-                              <span className={`w-2.5 h-2.5 rounded-full border-2 flex-shrink-0 ${
-                                selectedMetric === metric.id
-                                  ? 'border-purple-600 bg-purple-600'
-                                  : 'border-gray-300'
-                              }`} />
                               <span className="truncate">{metric.name}</span>
                               {metric.isNew && (
                                 <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>
