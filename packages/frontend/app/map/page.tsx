@@ -1,17 +1,23 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { api, MarketStats, StateHomeValues } from '@/lib/api/client';
+import { api, MarketStats } from '@/lib/api/client';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 
-const US_STATES_GEOJSON = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
+// GeoJSON sources for different geography levels
+const GEOJSON_SOURCES = {
+  state: 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
+  county: 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json',
+  // ZIP codes use Mapbox's built-in tileset
+};
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
+type HomeValues = Record<string, number>;
 
 interface NavItem {
   id: string;
@@ -119,15 +125,31 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
+// FIPS code to state name mapping for counties
+const FIPS_TO_STATE: Record<string, string> = {
+  '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
+  '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
+  '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
+  '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
+  '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
+  '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
+  '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
+  '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
+  '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
+  '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
+  '56': 'WY',
+};
+
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const popup = useRef<mapboxgl.Popup | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedMetric, setSelectedMetric] = useState('home_value');
   const [stats, setStats] = useState<MarketStats | null>(null);
-  const [homeValues, setHomeValues] = useState<StateHomeValues>({});
+  const [homeValues, setHomeValues] = useState<HomeValues>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['home_value']);
   const pathname = usePathname();
@@ -158,23 +180,6 @@ export default function MapPage() {
       metrics: [
         { id: 'inventory', name: 'Active Listings' },
         { id: 'new_listings', name: 'New Listings' },
-      ],
-    },
-    {
-      id: 'home_value_2',
-      name: 'Home Value',
-      icon: <HomeValueIcon />,
-      metrics: [
-        { id: 'median_sale', name: 'Median Sale Price' },
-        { id: 'price_growth', name: 'Price Growth (YoY)' },
-      ],
-    },
-    {
-      id: 'inventory_2',
-      name: 'For Sale Inventory',
-      icon: <InventoryIcon />,
-      metrics: [
-        { id: 'months_supply', name: 'Months of Supply' },
       ],
     },
     {
@@ -211,100 +216,165 @@ export default function MapPage() {
     );
   };
 
-  // Load stats and home values
-  useEffect(() => {
-    Promise.all([
-      api.getStats(),
-      api.getStateHomeValues(),
-    ]).then(([statsData, homeValuesData]) => {
-      setStats(statsData);
-      setHomeValues(homeValuesData);
+  // Fetch home values based on geo level
+  const fetchHomeValues = useCallback(async (level: GeoLevel) => {
+    setDataLoading(true);
+    try {
+      let data: HomeValues = {};
+      switch (level) {
+        case 'state':
+        case 'national':
+          data = await api.getStateHomeValues();
+          break;
+        case 'metro':
+          data = await api.getMetroHomeValues();
+          break;
+        case 'county':
+          data = await api.getCountyHomeValues();
+          break;
+        case 'zip':
+          data = await api.getZipHomeValues();
+          break;
+      }
+      setHomeValues(data);
+    } catch (err) {
+      console.error('Error loading home values:', err);
+    } finally {
       setDataLoading(false);
-    }).catch((err) => {
-      console.error('Error loading data:', err);
-      setDataLoading(false);
-    });
+    }
   }, []);
 
-  // Initialize map
+  // Load initial data
   useEffect(() => {
-    if (map.current) return;
-    if (!mapContainer.current) return;
-    if (dataLoading) return; // Wait for data to load
+    api.getStats().then(setStats).catch(console.error);
+    fetchHomeValues(geoLevel);
+  }, []);
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      center: [-96, 37.8],
-      zoom: 3.5,
+  // Reload data when geo level changes
+  useEffect(() => {
+    if (mapLoaded) {
+      fetchHomeValues(geoLevel);
+    }
+  }, [geoLevel, fetchHomeValues, mapLoaded]);
+
+  // Color scale function
+  const getColorScale = (level: GeoLevel) => {
+    // Adjust scale based on geography level
+    if (level === 'zip' || level === 'county') {
+      return [
+        'interpolate', ['linear'], ['get', 'value'],
+        0, '#f3f4f6',
+        100000, '#dbeafe',
+        200000, '#93c5fd',
+        350000, '#3b82f6',
+        500000, '#1d4ed8',
+        750000, '#1e3a8a',
+      ];
+    }
+    return [
+      'interpolate', ['linear'], ['get', 'value'],
+      100000, '#dbeafe',
+      250000, '#93c5fd',
+      400000, '#3b82f6',
+      600000, '#1d4ed8',
+      800000, '#1e3a8a',
+    ];
+  };
+
+  // Update map layers when data changes
+  const updateMapLayers = useCallback(async () => {
+    if (!map.current || !mapLoaded) return;
+
+    // Remove existing layers and sources
+    const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels'];
+    layersToRemove.forEach(layerId => {
+      if (map.current!.getLayer(layerId)) {
+        map.current!.removeLayer(layerId);
+      }
     });
+    if (map.current.getSource('geo-data')) {
+      map.current.removeSource('geo-data');
+    }
 
-    map.current.on('load', async () => {
-      setMapLoaded(true);
+    // Load appropriate GeoJSON
+    let geojsonUrl: string | null = null;
 
-      try {
-        const response = await fetch(US_STATES_GEOJSON);
-        const geojson = await response.json();
+    if (geoLevel === 'state' || geoLevel === 'national') {
+      geojsonUrl = GEOJSON_SOURCES.state;
+    } else if (geoLevel === 'county') {
+      geojsonUrl = GEOJSON_SOURCES.county;
+    }
 
-        // Add values to properties from API data
+    if (!geojsonUrl) {
+      // For metro/zip, show a message (would need proper GeoJSON)
+      console.log(`${geoLevel} level requires additional GeoJSON setup`);
+      return;
+    }
+
+    try {
+      const response = await fetch(geojsonUrl);
+      const geojson = await response.json();
+
+      // Add values to features
+      if (geoLevel === 'state' || geoLevel === 'national') {
         geojson.features.forEach((feature: any) => {
-          const stateName = feature.properties.name;
-          feature.properties.value = homeValues[stateName] || 0;
+          const name = feature.properties.name;
+          feature.properties.value = homeValues[name] || 0;
         });
-
-        map.current!.addSource('states', {
-          type: 'geojson',
-          data: geojson,
+      } else if (geoLevel === 'county') {
+        geojson.features.forEach((feature: any) => {
+          const fips = feature.id || feature.properties.id;
+          // Try to match with Zillow region_id format
+          const value = homeValues[fips] || homeValues[String(parseInt(fips, 10))] || 0;
+          feature.properties.value = value;
+          feature.properties.id = fips;
+          // Add county name for display
+          const stateFips = fips?.substring(0, 2);
+          const stateAbbr = FIPS_TO_STATE[stateFips] || '';
+          feature.properties.displayName = `${feature.properties.NAME || 'County'}, ${stateAbbr}`;
         });
+      }
 
-        // Blue sequential color scale (darker = higher value)
+      map.current!.addSource('geo-data', {
+        type: 'geojson',
+        data: geojson,
+      });
+
+      // Fill layer
+      map.current!.addLayer({
+        id: 'geo-fills',
+        type: 'fill',
+        source: 'geo-data',
+        paint: {
+          'fill-color': getColorScale(geoLevel) as any,
+          'fill-opacity': 0.6,
+        },
+      });
+
+      // Border layer
+      map.current!.addLayer({
+        id: 'geo-borders',
+        type: 'line',
+        source: 'geo-data',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': geoLevel === 'county' ? 0.5 : 1.5,
+        },
+      });
+
+      // Labels only for state level (too many for county)
+      if (geoLevel === 'state' || geoLevel === 'national') {
         map.current!.addLayer({
-          id: 'state-fills',
-          type: 'fill',
-          source: 'states',
-          paint: {
-            'fill-color': [
-              'interpolate',
-              ['linear'],
-              ['get', 'value'],
-              100000, '#dbeafe',  // Very light blue - lowest
-              250000, '#93c5fd',  // Light blue
-              400000, '#3b82f6',  // Blue
-              600000, '#1d4ed8',  // Medium blue
-              800000, '#1e3a8a',  // Dark navy - highest
-            ],
-            'fill-opacity': 0.5,
-          },
-        });
-
-        // White borders between states
-        map.current!.addLayer({
-          id: 'state-borders',
-          type: 'line',
-          source: 'states',
-          paint: {
-            'line-color': '#ffffff',
-            'line-width': 1.5,
-          },
-        });
-
-        // State labels with values
-        map.current!.addLayer({
-          id: 'state-labels',
+          id: 'geo-labels',
           type: 'symbol',
-          source: 'states',
+          source: 'geo-data',
           layout: {
             'text-field': [
               'format',
               ['get', 'name'],
               { 'font-scale': 0.85, 'text-font': ['literal', ['DIN Pro Medium', 'Arial Unicode MS Regular']] },
-              '\n',
-              {},
-              [
-                'concat',
-                '$',
-                ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]
-              ],
+              '\n', {},
+              ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]],
               { 'font-scale': 0.75, 'text-font': ['literal', ['DIN Pro Regular', 'Arial Unicode MS Regular']] },
             ],
             'text-size': 11,
@@ -317,44 +387,71 @@ export default function MapPage() {
             'text-halo-width': 1.5,
           },
         });
-
-        // Hover popup
-        const popup = new mapboxgl.Popup({
-          closeButton: false,
-          closeOnClick: false,
-        });
-
-        map.current!.on('mouseenter', 'state-fills', () => {
-          map.current!.getCanvas().style.cursor = 'pointer';
-        });
-
-        map.current!.on('mouseleave', 'state-fills', () => {
-          map.current!.getCanvas().style.cursor = '';
-          popup.remove();
-        });
-
-        map.current!.on('mousemove', 'state-fills', (e) => {
-          if (e.features && e.features.length > 0) {
-            const feature = e.features[0];
-            const name = feature.properties?.name;
-            const value = feature.properties?.value;
-
-            popup
-              .setLngLat(e.lngLat)
-              .setHTML(`
-                <div style="font-family: 'Google Sans', Roboto, sans-serif; padding: 8px 12px;">
-                  <div style="font-weight: 500; font-size: 14px; color: #1a1a2e;">${name}</div>
-                  <div style="font-size: 20px; font-weight: 600; color: #6750a4;">$${value?.toLocaleString()}</div>
-                </div>
-              `)
-              .addTo(map.current!);
-          }
-        });
-
-      } catch (err) {
-        console.error('Error loading GeoJSON:', err);
-        setMapError('Failed to load map data');
       }
+
+      // Setup hover interactions
+      map.current!.on('mouseenter', 'geo-fills', () => {
+        map.current!.getCanvas().style.cursor = 'pointer';
+      });
+
+      map.current!.on('mouseleave', 'geo-fills', () => {
+        map.current!.getCanvas().style.cursor = '';
+        popup.current?.remove();
+      });
+
+      map.current!.on('mousemove', 'geo-fills', (e) => {
+        if (e.features && e.features.length > 0) {
+          const feature = e.features[0];
+          let name = feature.properties?.name || feature.properties?.displayName || feature.properties?.NAME || 'Unknown';
+          const value = feature.properties?.value || 0;
+
+          if (!popup.current) {
+            popup.current = new mapboxgl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+            });
+          }
+
+          popup.current
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family: 'Google Sans', Roboto, sans-serif; padding: 8px 12px;">
+                <div style="font-weight: 500; font-size: 14px; color: #1a1a2e;">${name}</div>
+                <div style="font-size: 20px; font-weight: 600; color: #6750a4;">
+                  ${value > 0 ? '$' + value.toLocaleString() : 'No data'}
+                </div>
+              </div>
+            `)
+            .addTo(map.current!);
+        }
+      });
+
+    } catch (err) {
+      console.error('Error loading GeoJSON:', err);
+    }
+  }, [geoLevel, homeValues, mapLoaded]);
+
+  // Update layers when homeValues or geoLevel changes
+  useEffect(() => {
+    if (mapLoaded && Object.keys(homeValues).length > 0) {
+      updateMapLayers();
+    }
+  }, [homeValues, geoLevel, mapLoaded, updateMapLayers]);
+
+  // Initialize map
+  useEffect(() => {
+    if (map.current) return;
+    if (!mapContainer.current) return;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      center: [-96, 37.8],
+      zoom: 3.5,
+    });
+
+    map.current.on('load', () => {
+      setMapLoaded(true);
     });
 
     map.current.on('error', (e) => {
@@ -368,11 +465,31 @@ export default function MapPage() {
         map.current = null;
       }
     };
-  }, [dataLoading, homeValues]);
+  }, []);
+
+  // Adjust zoom for different geo levels
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const zoomLevels: Record<GeoLevel, number> = {
+      national: 3.5,
+      state: 3.5,
+      metro: 4,
+      county: 4.5,
+      zip: 5,
+    };
+
+    map.current.flyTo({
+      zoom: zoomLevels[geoLevel],
+      duration: 500,
+    });
+  }, [geoLevel, mapLoaded]);
+
+  const recordCount = Object.keys(homeValues).length;
 
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: '#f7f2fa', fontFamily: "'Google Sans', Roboto, sans-serif" }}>
-      {/* Header - Material 3 style */}
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -381,7 +498,6 @@ export default function MapPage() {
           <h1 className="text-xl font-medium text-gray-900">PropertyIQ</h1>
         </div>
 
-        {/* Search - Material 3 style */}
         <div className="flex-1 max-w-2xl mx-8">
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
@@ -395,20 +511,25 @@ export default function MapPage() {
           </div>
         </div>
 
-        {/* Geo Level Pills - Material 3 style */}
+        {/* Geo Level Pills */}
         <div className="flex gap-2">
           {(['National', 'State', 'Metro', 'County', 'Zip'] as const).map((level) => {
             const levelKey = level.toLowerCase() as GeoLevel;
             const isActive = geoLevel === levelKey;
+            const isDisabled = level === 'Metro' || level === 'Zip'; // These need GeoJSON setup
             return (
               <button
                 key={level}
-                onClick={() => setGeoLevel(levelKey)}
+                onClick={() => !isDisabled && setGeoLevel(levelKey)}
+                disabled={isDisabled}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-gray-900 text-white shadow-md'
+                    : isDisabled
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
+                title={isDisabled ? 'Coming soon' : undefined}
               >
                 {level}
               </button>
@@ -418,9 +539,8 @@ export default function MapPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Material 3 Navigation Rail + Panel */}
+        {/* Sidebar */}
         <aside className="flex bg-white shadow-lg">
-          {/* Navigation Rail */}
           <div className="w-20 border-r border-gray-200 flex flex-col items-center py-4 gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -443,9 +563,15 @@ export default function MapPage() {
             })}
           </div>
 
-          {/* Metrics Panel */}
           <div className="w-64 overflow-y-auto p-4">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Market Trends</h2>
+
+            {/* Data summary */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'county' ? 'counties' : 'areas'}
+              </div>
+            </div>
 
             <div className="space-y-1">
               {metricCategories.map((category) => {
@@ -496,17 +622,32 @@ export default function MapPage() {
               <p className="text-red-600 font-medium">{mapError}</p>
             </div>
           )}
-          {(dataLoading || !mapLoaded) && !mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+          {dataLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                <p className="text-gray-600">{dataLoading ? 'Loading market data...' : 'Loading map...'}</p>
+                <p className="text-gray-600">Loading {geoLevel} data...</p>
               </div>
             </div>
           )}
           <div ref={mapContainer} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
 
-          {/* Table View FAB - Material 3 style */}
+          {/* Legend */}
+          <div className="absolute bottom-6 left-6 bg-white rounded-xl shadow-lg p-4 z-10">
+            <div className="text-sm font-medium text-gray-700 mb-2">Home Value</div>
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
+              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
+              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
+              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>$100K</span>
+              <span>$800K+</span>
+            </div>
+          </div>
+
           <button className="absolute bottom-6 right-6 bg-white shadow-lg rounded-2xl px-5 py-3 flex items-center gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
             <TableIcon />
             <span className="font-medium text-gray-800">Table View</span>
