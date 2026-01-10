@@ -140,61 +140,79 @@ export class ZillowService {
   async getCountyHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
     const targetDate = date || await this.getLatestDate('County');
 
-    // Build map keyed by FIPS code (since zillow_zhvi uses FIPS for counties)
-    let query = this.supabase
-      .from('geography_crosswalk')
-      .select('county_fips, county_name, state_abbrev, state_name')
-      .not('county_fips', 'is', null);
-
-    if (stateFilter) {
-      query = query.eq('state_abbrev', stateFilter);
-    }
-
-    const { data: crosswalk } = await query.limit(10000);
-
+    // Build map keyed by FIPS code using pagination (Supabase has 1000 row default limit)
     const countyMap = new Map<string, { fips: string; name: string; state_abbrev: string; state_name: string }>();
-    crosswalk?.forEach(row => {
-      if (row.county_fips && !countyMap.has(row.county_fips)) {
-        countyMap.set(row.county_fips, {
-          fips: row.county_fips,
-          name: row.county_name,
-          state_abbrev: row.state_abbrev,
-          state_name: row.state_name
-        });
+    let page = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      let query = this.supabase
+        .from('geography_crosswalk')
+        .select('county_fips, county_name, state_abbrev, state_name')
+        .not('county_fips', 'is', null);
+
+      if (stateFilter) {
+        query = query.eq('state_abbrev', stateFilter);
       }
-    });
+
+      const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        if (row.county_fips && !countyMap.has(row.county_fips)) {
+          countyMap.set(row.county_fips, {
+            fips: row.county_fips,
+            name: row.county_name,
+            state_abbrev: row.state_abbrev,
+            state_name: row.state_name
+          });
+        }
+      });
+
+      page++;
+      if (crosswalk.length < pageSize) break;
+    }
 
     const fipsCodes = [...countyMap.keys()];
     if (fipsCodes.length === 0) return [];
 
-    // Query zillow_zhvi using FIPS codes as region_id
-    const { data: zillow, error } = await this.supabase
-      .from('zillow_zhvi')
-      .select('region_id, value, date, property_type, geography')
-      .eq('geography', 'County')
-      .eq('date', targetDate)
-      .eq('property_type', 'sfrcondo')
-      .eq('tier', '0.33_0.67')
-      .in('region_id', fipsCodes)
-      .limit(5000);
+    // Query zillow_zhvi using FIPS codes - also paginate for large result sets
+    const results: HomeValueData[] = [];
 
-    if (error) throw new Error(error.message);
-    if (!zillow) return [];
+    // Split fipsCodes into chunks to avoid query size limits
+    const chunkSize = 500;
+    for (let i = 0; i < fipsCodes.length; i += chunkSize) {
+      const chunk = fipsCodes.slice(i, i + chunkSize);
 
-    return zillow.map(z => {
-      const county = countyMap.get(z.region_id);
-      return {
-        region_id: z.region_id,
-        region_name: county?.name || 'Unknown',
-        county_fips: z.region_id,
-        state_abbrev: county?.state_abbrev || null,
-        state_name: county?.state_name || null,
-        value: z.value,
-        date: z.date,
-        property_type: z.property_type,
-        geography: 'County',
-      };
-    }).sort((a, b) => b.value - a.value);
+      const { data: zillow, error } = await this.supabase
+        .from('zillow_zhvi')
+        .select('region_id, value, date, property_type, geography')
+        .eq('geography', 'County')
+        .eq('date', targetDate)
+        .eq('property_type', 'sfrcondo')
+        .eq('tier', '0.33_0.67')
+        .in('region_id', chunk);
+
+      if (error) throw new Error(error.message);
+
+      zillow?.forEach(z => {
+        const county = countyMap.get(z.region_id);
+        results.push({
+          region_id: z.region_id,
+          region_name: county?.name || 'Unknown',
+          county_fips: z.region_id,
+          state_abbrev: county?.state_abbrev || null,
+          state_name: county?.state_name || null,
+          value: z.value,
+          date: z.date,
+          property_type: z.property_type,
+          geography: 'County',
+        });
+      });
+    }
+
+    return results.sort((a, b) => b.value - a.value);
   }
 
   async getZipHomeValues(stateFilter: string, countyFilter?: string, date?: string): Promise<HomeValueData[]> {
