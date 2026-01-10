@@ -1,6 +1,4 @@
-create an updated map page that closely matches the Reventure design with Material 3 styling, proper icons, and a red-to-green color scheme.
-Replace the entire content of packages/frontend/app/map/page.tsx with this:
-typescript'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
@@ -217,7 +215,7 @@ export default function MapPage() {
   ];
 
   const toggleCategory = (id: string) => {
-    setExpandedCategories(prev => 
+    setExpandedCategories(prev =>
       prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
     );
   };
@@ -258,27 +256,27 @@ export default function MapPage() {
         });
 
         // Red to Green color scale (green = affordable, red = expensive)
-map.current!.addLayer({
-  id: 'state-fills',
-  type: 'fill',
-  source: 'states',
-  paint: {
-    'fill-color': [
-      'interpolate',
-      ['linear'],
-      ['get', 'value'],
-      100000, '#22c55e',  // Green - most affordable
-      200000, '#4ade80',
-      300000, '#86efac',
-      400000, '#fde047',  // Yellow - middle
-      500000, '#facc15',
-      600000, '#f97316',  // Orange
-      700000, '#ef4444',  // Red
-      800000, '#dc2626',  // Dark red - most expensive
-    ],
-    'fill-opacity': 0.85,
-  },
-});
+        map.current!.addLayer({
+          id: 'state-fills',
+          type: 'fill',
+          source: 'states',
+          paint: {
+            'fill-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'value'],
+              100000, '#22c55e',  // Green - most affordable
+              200000, '#4ade80',
+              300000, '#86efac',
+              400000, '#fde047',  // Yellow - middle
+              500000, '#facc15',
+              600000, '#f97316',  // Orange
+              700000, '#ef4444',  // Red
+              800000, '#dc2626',  // Dark red - most expensive
+            ],
+            'fill-opacity': 0.85,
+          },
+        });
 
         // White borders between states
         map.current!.addLayer({
@@ -383,7 +381,7 @@ map.current!.addLayer({
           </button>
           <h1 className="text-xl font-medium text-gray-900">REI Platform</h1>
         </div>
-        
+
         {/* Search - Material 3 style */}
         <div className="flex-1 max-w-2xl mx-8">
           <div className="relative">
@@ -432,8 +430,8 @@ map.current!.addLayer({
                   key={item.id}
                   onClick={() => setActiveNav(item.id)}
                   className={`w-16 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
-                    isActive 
-                      ? 'bg-purple-100 text-purple-700' 
+                    isActive
+                      ? 'bg-purple-100 text-purple-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -449,7 +447,7 @@ map.current!.addLayer({
           {/* Metrics Panel */}
           <div className="w-64 overflow-y-auto p-4">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Market Trends</h2>
-            
+
             <div className="space-y-1">
               {metricCategories.map((category) => {
                 const isExpanded = expandedCategories.includes(category.id);
@@ -467,7 +465,7 @@ map.current!.addLayer({
                         <ChevronDownIcon />
                       </span>
                     </button>
-                    
+
                     {isExpanded && category.metrics && (
                       <div className="ml-10 mt-1 mb-2 space-y-1">
                         {category.metrics.map((metric) => (
