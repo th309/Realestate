@@ -199,3 +199,4 @@ ALTER TABLE zillow_days_to_close DISABLE ROW LEVEL SECURITY;
 ALTER TABLE zillow_price_cuts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE zillow_total_transaction_value DISABLE ROW LEVEL SECURITY;
 
+

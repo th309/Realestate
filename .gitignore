@@ -16,9 +16,12 @@ dist/
 # Environment variables
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
+packages/backend/.env
+packages/frontend/.env.local
 
 # Debug
 npm-debug.log*
@@ -73,6 +76,13 @@ data/tiger/*.shx
 data/tiger/*.prj
 data/tiger/*.cpg
 data/tiger/*.zip
+redfin_downloads/raw_files/*.tsv
+redfin_downloads/raw_files/*.csv
+*.geojson
+*.shp
+*.dbf
+*.shx
+*.prj
 
 # Large Redfin data files (exceed GitHub's 100MB limit)
 redfin_downloads/raw_files/housing_market_county.tsv

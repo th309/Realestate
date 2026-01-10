@@ -8,6 +8,7 @@ import * as zlib from 'zlib'
 import * as fs from 'fs'
 import * as path from 'path'
 import { promisify } from 'util'
+import { pipeline } from 'stream/promises'
 
 const gunzip = promisify(zlib.gunzip)
 
@@ -22,59 +23,123 @@ interface RedfinDataset {
 }
 
 /**
- * Download and save a file from S3
+ * Download and save a file from S3 using streaming for large files
  */
 async function downloadFile(dataset: RedfinDataset, outputDir: string): Promise<void> {
   const outputPath = path.join(outputDir, `${dataset.name}.${dataset.format}`)
+  const tempGzPath = dataset.compressed ? path.join(outputDir, `${dataset.name}.tmp.gz`) : null
   
   console.log(`\n📥 Downloading: ${dataset.description}`)
   console.log(`   URL: ${dataset.url}`)
   console.log(`   Size: ${dataset.compressed ? 'Compressed' : 'Uncompressed'}`)
   
   try {
+    // For large files, use streaming to avoid memory issues
     const response = await axios.get(dataset.url, {
-      timeout: 600000, // 10 minutes for large files
-      maxContentLength: 3000 * 1024 * 1024, // 3GB max
-      responseType: 'arraybuffer',
+      timeout: 1800000, // 30 minutes for very large files
+      maxContentLength: Infinity,
+      responseType: 'stream',
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; RealEstateDataImporter/1.0)',
         'Accept-Encoding': 'gzip, deflate'
-      },
-      onDownloadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const percent = ((progressEvent.loaded / progressEvent.total) * 100).toFixed(1)
-          const loadedMB = (progressEvent.loaded / 1024 / 1024).toFixed(2)
-          const totalMB = (progressEvent.total / 1024 / 1024).toFixed(2)
-          process.stdout.write(`\r   Progress: ${percent}% (${loadedMB} MB / ${totalMB} MB)`)
-        }
       }
     })
 
-    const buffer = Buffer.from(response.data)
-    console.log(`\n   ✅ Downloaded ${(buffer.length / 1024 / 1024).toFixed(2)} MB`)
+    const totalSize = parseInt(response.headers['content-length'] || '0')
+    let downloadedSize = 0
     
-    // Decompress if needed
-    let finalContent: Buffer
-    if (dataset.compressed || dataset.url.endsWith('.gz') || (buffer[0] === 0x1f && buffer[1] === 0x8b)) {
+    // Track download progress
+    response.data.on('data', (chunk: Buffer) => {
+      downloadedSize += chunk.length
+      if (totalSize > 0) {
+        const percent = ((downloadedSize / totalSize) * 100).toFixed(1)
+        const loadedMB = (downloadedSize / 1024 / 1024).toFixed(2)
+        const totalMB = (totalSize / 1024 / 1024).toFixed(2)
+        process.stdout.write(`\r   Progress: ${percent}% (${loadedMB} MB / ${totalMB} MB)`)
+      }
+    })
+
+    // Stream to file
+    if (dataset.compressed || dataset.url.endsWith('.gz')) {
+      // Save compressed file first, then decompress
+      const writeStream = fs.createWriteStream(tempGzPath!)
+      await pipeline(response.data, writeStream)
+      console.log(`\n   ✅ Downloaded ${(downloadedSize / 1024 / 1024).toFixed(2)} MB`)
+      
+      // Now decompress using streaming
       console.log(`   🔓 Decompressing...`)
-      finalContent = await gunzip(buffer)
-      console.log(`   ✅ Decompressed to ${(finalContent.length / 1024 / 1024).toFixed(2)} MB`)
+      const readStream = fs.createReadStream(tempGzPath!)
+      const gunzipStream = zlib.createGunzip()
+      const writeDecompressed = fs.createWriteStream(outputPath)
+      
+      let decompressedSize = 0
+      gunzipStream.on('data', (chunk: Buffer) => {
+        decompressedSize += chunk.length
+        if (decompressedSize % (100 * 1024 * 1024) === 0) { // Log every 100MB
+          process.stdout.write(`\r   Decompressing: ${(decompressedSize / 1024 / 1024).toFixed(2)} MB`)
+        }
+      })
+      
+      await pipeline(readStream, gunzipStream, writeDecompressed)
+      console.log(`\n   ✅ Decompressed to ${(decompressedSize / 1024 / 1024).toFixed(2)} MB`)
+      
+      // Clean up temp file
+      fs.unlinkSync(tempGzPath!)
     } else {
-      finalContent = buffer
+      // Not compressed, write directly
+      const writeStream = fs.createWriteStream(outputPath)
+      await pipeline(response.data, writeStream)
+      console.log(`\n   ✅ Downloaded ${(downloadedSize / 1024 / 1024).toFixed(2)} MB`)
     }
     
-    // Save to file
-    fs.writeFileSync(outputPath, finalContent)
     console.log(`   💾 Saved to: ${outputPath}`)
     
-    // Also save a sample (first 1000 lines) for quick inspection
+    // Create a sample file (first 1000 lines) for quick inspection
+    console.log(`   📄 Creating sample file...`)
     const samplePath = path.join(outputDir, `${dataset.name}.sample.txt`)
-    const contentStr = finalContent.toString('utf-8')
-    const lines = contentStr.split('\n').slice(0, 1000)
-    fs.writeFileSync(samplePath, lines.join('\n'))
-    console.log(`   📄 Sample saved to: ${samplePath}`)
+    const readStream = fs.createReadStream(outputPath, { encoding: 'utf-8' })
+    const writeSample = fs.createWriteStream(samplePath, { encoding: 'utf-8' })
+    
+    let lineCount = 0
+    let buffer = ''
+    
+    readStream.on('data', (chunk: string) => {
+      buffer += chunk
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || '' // Keep incomplete line in buffer
+      
+      for (const line of lines) {
+        if (lineCount < 1000) {
+          writeSample.write(line + '\n')
+          lineCount++
+        } else {
+          readStream.destroy()
+          writeSample.end()
+          return
+        }
+      }
+    })
+    
+    readStream.on('end', () => {
+      if (lineCount < 1000 && buffer) {
+        writeSample.write(buffer)
+      }
+      writeSample.end()
+    })
+    
+    await new Promise<void>((resolve, reject) => {
+      writeSample.on('finish', () => {
+        console.log(`   ✅ Sample saved to: ${samplePath}`)
+        resolve()
+      })
+      writeSample.on('error', reject)
+    })
     
   } catch (error: any) {
+    // Clean up temp file if it exists
+    if (tempGzPath && fs.existsSync(tempGzPath)) {
+      fs.unlinkSync(tempGzPath)
+    }
     console.error(`   ❌ Error: ${error.message}`)
     throw error
   }
@@ -100,9 +165,16 @@ async function main() {
   }
   
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-  const datasets: RedfinDataset[] = manifest.datasets || []
+  let datasets: RedfinDataset[] = manifest.datasets || []
   
-  console.log(`\n📦 Downloading ${datasets.length} Redfin datasets`)
+  // Filter: Only monthly data (exclude weekly), and only county, city, zip code
+  datasets = datasets.filter(d => {
+    const isMonthly = d.category === 'housing_market' // Exclude 'weekly' category
+    const isTargetLevel = ['county', 'city', 'zip'].includes(d.geographic_level)
+    return isMonthly && isTargetLevel
+  })
+  
+  console.log(`\n📦 Downloading ${datasets.length} Redfin monthly datasets (county, city, zip code only)`)
   console.log(`   Output directory: ${outputDir}`)
   console.log('='.repeat(60))
   

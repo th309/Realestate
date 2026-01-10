@@ -107,3 +107,4 @@ ALTER TABLE zillow_new_construction_sales_count DISABLE ROW LEVEL SECURITY;
 ALTER TABLE zillow_new_construction_sale_price DISABLE ROW LEVEL SECURITY;
 ALTER TABLE zillow_affordability DISABLE ROW LEVEL SECURITY;
 
+

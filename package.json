@@ -1,39 +1,27 @@
 {
-  "name": "real-estate",
+  "name": "rei-platform",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Real Estate Investment Analysis Platform",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "load-shapefiles": "tsx scripts/load-shapefiles-to-supabase.ts",
-    "convert-shapefiles": "tsx scripts/convert-shapefiles-to-geojson.ts",
-    "discover-redfin-s3": "tsx scripts/discover-redfin-s3-datasets.ts",
-    "download-redfin-s3": "tsx scripts/download-redfin-s3-files.ts",
-    "import-redfin-s3": "tsx scripts/download-and-import-redfin-s3.ts"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/th309/Realestate.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/th309/Realestate/issues"
-  },
-  "homepage": "https://github.com/th309/Realestate#readme",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.80.0",
-    "axios": "^1.13.2",
-    "csv-parse": "^6.1.0",
-    "dotenv": "^17.2.3",
-    "puppeteer": "^24.29.1",
-    "shapefile": "^0.6.6"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "test": "npm run test -w backend",
+    "clean": "rimraf node_modules packages/*/node_modules packages/*/dist packages/*/.next"
   },
   "devDependencies": {
-    "@types/node": "^24.10.0",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

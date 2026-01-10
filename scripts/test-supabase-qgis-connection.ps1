@@ -62,3 +62,4 @@ Write-Host "4. Verify password in Supabase Dashboard → Settings → Database" 
 
 
 
+
