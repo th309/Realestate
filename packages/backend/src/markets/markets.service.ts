@@ -77,48 +77,48 @@ export class MarketsService {
 
   async getStateHomeValues() {
     try {
-      // Get states with their names (geoid is 2-digit state FIPS)
-      const { data: states, error: statesError } = await this.supabase
-        .from('tiger_states')
-        .select('geoid, name');
+      // Get state markets with their ZHVI values
+      // Join markets (states) with zillow_zhvi to get home values
+      const { data: stateMarkets, error: marketsError } = await this.supabase
+        .from('markets')
+        .select('region_id, region_name')
+        .eq('region_type', 'state');
 
-      if (statesError) {
-        console.error('Error fetching states:', statesError);
-        throw statesError;
+      if (marketsError) {
+        console.error('Error fetching state markets:', marketsError);
+        throw marketsError;
       }
 
-      // Create state geoid to name mapping
-      const stateNameMap = new Map<string, string>();
-      for (const state of states || []) {
-        stateNameMap.set(state.geoid, state.name);
+      // Get most recent ZHVI for states
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_zhvi')
+        .select('region_id, value, date')
+        .eq('geography', 'state')
+        .eq('property_type', 'all_homes')
+        .order('date', { ascending: false });
+
+      if (zhviError) {
+        console.error('Error fetching ZHVI data:', zhviError);
+        throw zhviError;
       }
 
-      // Get most recent ZHVI for each state (2-digit geoids)
-      // ZHVI is already calculated by Zillow - no aggregation needed
-      const stateGeoids = states?.map((s) => s.geoid) || [];
-      const { data: zillowData, error: zillowError } = await this.supabase
-        .from('zillow_metrics')
-        .select('geoid, zhvi_all_homes, metric_date')
-        .in('geoid', stateGeoids)
-        .not('zhvi_all_homes', 'is', null)
-        .order('metric_date', { ascending: false });
-
-      if (zillowError) {
-        console.error('Error fetching zillow data:', zillowError);
-        throw zillowError;
+      // Create region_id to state name mapping
+      const regionNameMap = new Map<string, string>();
+      for (const market of stateMarkets || []) {
+        regionNameMap.set(market.region_id, market.region_name);
       }
 
       // Build result - only use most recent value per state
       const result: Record<string, number> = {};
       const seenStates = new Set<string>();
 
-      for (const record of zillowData || []) {
-        if (seenStates.has(record.geoid)) continue;
-        seenStates.add(record.geoid);
+      for (const record of zhviData || []) {
+        if (seenStates.has(record.region_id)) continue;
+        seenStates.add(record.region_id);
 
-        const stateName = stateNameMap.get(record.geoid);
-        if (stateName && record.zhvi_all_homes) {
-          result[stateName] = Math.round(Number(record.zhvi_all_homes));
+        const stateName = regionNameMap.get(record.region_id);
+        if (stateName && record.value) {
+          result[stateName] = Math.round(Number(record.value));
         }
       }
 
