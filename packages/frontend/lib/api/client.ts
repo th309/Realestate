@@ -1,8 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = 'https://backend-production-ee4d.up.railway.app';
 
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  console.log('Fetching:', url);  // Add this for debugging
+  console.log('Fetching:', url);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
