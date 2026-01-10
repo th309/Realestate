@@ -17,15 +17,18 @@
     "csv-parse": "^6.1.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
+    "mapbox-gl": "^3.17.0",
     "next": "^16.1.1",
     "puppeteer": "^24.29.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-map-gl": "^8.1.0",
     "shapefile": "^0.6.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/adm-zip": "^0.5.7",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20.19.28",
     "@types/react": "^19",
     "@types/react-dom": "^19",
