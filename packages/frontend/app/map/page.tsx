@@ -141,6 +141,36 @@ const FIPS_TO_STATE: Record<string, string> = {
   '56': 'WY',
 };
 
+// US States list for dropdown
+const US_STATES = [
+  { abbrev: 'AL', name: 'Alabama' }, { abbrev: 'AK', name: 'Alaska' },
+  { abbrev: 'AZ', name: 'Arizona' }, { abbrev: 'AR', name: 'Arkansas' },
+  { abbrev: 'CA', name: 'California' }, { abbrev: 'CO', name: 'Colorado' },
+  { abbrev: 'CT', name: 'Connecticut' }, { abbrev: 'DE', name: 'Delaware' },
+  { abbrev: 'DC', name: 'District of Columbia' }, { abbrev: 'FL', name: 'Florida' },
+  { abbrev: 'GA', name: 'Georgia' }, { abbrev: 'HI', name: 'Hawaii' },
+  { abbrev: 'ID', name: 'Idaho' }, { abbrev: 'IL', name: 'Illinois' },
+  { abbrev: 'IN', name: 'Indiana' }, { abbrev: 'IA', name: 'Iowa' },
+  { abbrev: 'KS', name: 'Kansas' }, { abbrev: 'KY', name: 'Kentucky' },
+  { abbrev: 'LA', name: 'Louisiana' }, { abbrev: 'ME', name: 'Maine' },
+  { abbrev: 'MD', name: 'Maryland' }, { abbrev: 'MA', name: 'Massachusetts' },
+  { abbrev: 'MI', name: 'Michigan' }, { abbrev: 'MN', name: 'Minnesota' },
+  { abbrev: 'MS', name: 'Mississippi' }, { abbrev: 'MO', name: 'Missouri' },
+  { abbrev: 'MT', name: 'Montana' }, { abbrev: 'NE', name: 'Nebraska' },
+  { abbrev: 'NV', name: 'Nevada' }, { abbrev: 'NH', name: 'New Hampshire' },
+  { abbrev: 'NJ', name: 'New Jersey' }, { abbrev: 'NM', name: 'New Mexico' },
+  { abbrev: 'NY', name: 'New York' }, { abbrev: 'NC', name: 'North Carolina' },
+  { abbrev: 'ND', name: 'North Dakota' }, { abbrev: 'OH', name: 'Ohio' },
+  { abbrev: 'OK', name: 'Oklahoma' }, { abbrev: 'OR', name: 'Oregon' },
+  { abbrev: 'PA', name: 'Pennsylvania' }, { abbrev: 'RI', name: 'Rhode Island' },
+  { abbrev: 'SC', name: 'South Carolina' }, { abbrev: 'SD', name: 'South Dakota' },
+  { abbrev: 'TN', name: 'Tennessee' }, { abbrev: 'TX', name: 'Texas' },
+  { abbrev: 'UT', name: 'Utah' }, { abbrev: 'VT', name: 'Vermont' },
+  { abbrev: 'VA', name: 'Virginia' }, { abbrev: 'WA', name: 'Washington' },
+  { abbrev: 'WV', name: 'West Virginia' }, { abbrev: 'WI', name: 'Wisconsin' },
+  { abbrev: 'WY', name: 'Wyoming' },
+];
+
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -148,6 +178,7 @@ export default function MapPage() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
+  const [selectedState, setSelectedState] = useState<string>('');
   const [selectedMetric, setSelectedMetric] = useState('home_value');
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [homeValues, setHomeValues] = useState<HomeValues>({});
@@ -218,7 +249,7 @@ export default function MapPage() {
   };
 
   // Fetch home values based on geo level
-  const fetchHomeValues = useCallback(async (level: GeoLevel) => {
+  const fetchHomeValues = useCallback(async (level: GeoLevel, state?: string) => {
     setDataLoading(true);
     try {
       let data: HomeValues = {};
@@ -234,7 +265,9 @@ export default function MapPage() {
           data = await api.getCountyHomeValues();
           break;
         case 'zip':
-          data = await api.getZipHomeValues();
+          if (state) {
+            data = await api.getZipHomeValues(state);
+          }
           break;
       }
       setHomeValues(data);
@@ -251,12 +284,22 @@ export default function MapPage() {
     fetchHomeValues(geoLevel);
   }, []);
 
-  // Reload data when geo level changes
+  // Reload data when geo level or selected state changes
   useEffect(() => {
     if (mapLoaded) {
-      fetchHomeValues(geoLevel);
+      if (geoLevel === 'zip') {
+        if (selectedState) {
+          fetchHomeValues(geoLevel, selectedState);
+        } else {
+          // Clear data when ZIP selected but no state chosen
+          setHomeValues({});
+          setDataLoading(false);
+        }
+      } else {
+        fetchHomeValues(geoLevel);
+      }
     }
-  }, [geoLevel, fetchHomeValues, mapLoaded]);
+  }, [geoLevel, selectedState, fetchHomeValues, mapLoaded]);
 
   // Color scale function
   const getColorScale = (level: GeoLevel) => {
@@ -306,11 +349,16 @@ export default function MapPage() {
       geojsonUrl = GEOJSON_SOURCES.county;
     } else if (geoLevel === 'metro') {
       geojsonUrl = GEOJSON_SOURCES.metro;
+    } else if (geoLevel === 'zip' && selectedState) {
+      // Load state-specific ZCTA GeoJSON
+      geojsonUrl = `/geojson/zcta/${selectedState.toLowerCase()}.json`;
     }
 
     if (!geojsonUrl) {
-      // For zip, show a message (would need proper GeoJSON)
-      console.log(`${geoLevel} level requires additional GeoJSON setup`);
+      // For zip without state, show message
+      if (geoLevel === 'zip' && !selectedState) {
+        console.log('Please select a state to view ZIP codes');
+      }
       return;
     }
 
@@ -346,6 +394,15 @@ export default function MapPage() {
           // Use NAME property for display (e.g., "San Jose-Sunnyvale-Santa Clara, CA")
           feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
         });
+      } else if (geoLevel === 'zip') {
+        geojson.features.forEach((feature: any) => {
+          // ZCTA GeoJSON uses ZCTA5CE20 or GEOID20 for ZIP code
+          const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
+          const value = homeValues[zipCode] || 0;
+          feature.properties.value = value;
+          feature.properties.id = zipCode;
+          feature.properties.displayName = zipCode;
+        });
       }
 
       map.current!.addSource('geo-data', {
@@ -371,7 +428,7 @@ export default function MapPage() {
         source: 'geo-data',
         paint: {
           'line-color': '#ffffff',
-          'line-width': geoLevel === 'county' ? 0.5 : geoLevel === 'metro' ? 0.8 : 1.5,
+          'line-width': geoLevel === 'zip' ? 0.3 : geoLevel === 'county' ? 0.5 : geoLevel === 'metro' ? 0.8 : 1.5,
         },
       });
 
@@ -442,7 +499,7 @@ export default function MapPage() {
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, homeValues, mapLoaded]);
+  }, [geoLevel, homeValues, mapLoaded, selectedState]);
 
   // Update layers when homeValues or geoLevel changes
   useEffect(() => {
@@ -480,9 +537,50 @@ export default function MapPage() {
     };
   }, []);
 
+  // State center coordinates for zoom behavior
+  const STATE_CENTERS: Record<string, { lng: number; lat: number; zoom: number }> = {
+    AL: { lng: -86.9, lat: 32.8, zoom: 6 }, AK: { lng: -153.5, lat: 64.2, zoom: 4 },
+    AZ: { lng: -111.4, lat: 34.0, zoom: 6 }, AR: { lng: -92.3, lat: 34.8, zoom: 6.5 },
+    CA: { lng: -119.4, lat: 36.8, zoom: 5.5 }, CO: { lng: -105.5, lat: 39.0, zoom: 6 },
+    CT: { lng: -72.8, lat: 41.6, zoom: 8 }, DE: { lng: -75.5, lat: 39.0, zoom: 8 },
+    DC: { lng: -77.0, lat: 38.9, zoom: 10 }, FL: { lng: -81.5, lat: 27.7, zoom: 6 },
+    GA: { lng: -83.5, lat: 32.7, zoom: 6.5 }, HI: { lng: -155.5, lat: 19.9, zoom: 6.5 },
+    ID: { lng: -114.5, lat: 44.1, zoom: 5.5 }, IL: { lng: -89.4, lat: 40.0, zoom: 6 },
+    IN: { lng: -86.1, lat: 39.8, zoom: 6.5 }, IA: { lng: -93.2, lat: 41.9, zoom: 6 },
+    KS: { lng: -98.5, lat: 38.5, zoom: 6 }, KY: { lng: -84.9, lat: 37.8, zoom: 6.5 },
+    LA: { lng: -92.1, lat: 30.9, zoom: 6.5 }, ME: { lng: -69.4, lat: 45.3, zoom: 6 },
+    MD: { lng: -76.6, lat: 39.0, zoom: 7 }, MA: { lng: -71.5, lat: 42.2, zoom: 7.5 },
+    MI: { lng: -84.5, lat: 44.3, zoom: 6 }, MN: { lng: -94.6, lat: 46.4, zoom: 5.5 },
+    MS: { lng: -89.7, lat: 32.7, zoom: 6.5 }, MO: { lng: -92.6, lat: 38.5, zoom: 6 },
+    MT: { lng: -110.4, lat: 47.0, zoom: 5.5 }, NE: { lng: -99.9, lat: 41.5, zoom: 6 },
+    NV: { lng: -117.1, lat: 38.8, zoom: 5.5 }, NH: { lng: -71.6, lat: 43.2, zoom: 7 },
+    NJ: { lng: -74.4, lat: 40.1, zoom: 7.5 }, NM: { lng: -106.2, lat: 34.5, zoom: 6 },
+    NY: { lng: -75.5, lat: 43.0, zoom: 6 }, NC: { lng: -79.4, lat: 35.5, zoom: 6 },
+    ND: { lng: -100.5, lat: 47.5, zoom: 6 }, OH: { lng: -82.8, lat: 40.4, zoom: 6.5 },
+    OK: { lng: -97.5, lat: 35.5, zoom: 6 }, OR: { lng: -120.6, lat: 44.0, zoom: 6 },
+    PA: { lng: -77.2, lat: 41.2, zoom: 6.5 }, RI: { lng: -71.5, lat: 41.7, zoom: 9 },
+    SC: { lng: -81.0, lat: 33.8, zoom: 7 }, SD: { lng: -100.0, lat: 44.5, zoom: 6 },
+    TN: { lng: -86.5, lat: 35.8, zoom: 6.5 }, TX: { lng: -99.9, lat: 31.5, zoom: 5.5 },
+    UT: { lng: -111.5, lat: 39.3, zoom: 6 }, VT: { lng: -72.6, lat: 44.0, zoom: 7 },
+    VA: { lng: -79.4, lat: 37.5, zoom: 6.5 }, WA: { lng: -120.5, lat: 47.4, zoom: 6 },
+    WV: { lng: -80.5, lat: 38.9, zoom: 7 }, WI: { lng: -89.6, lat: 44.5, zoom: 6 },
+    WY: { lng: -107.5, lat: 43.0, zoom: 6 },
+  };
+
   // Adjust zoom for different geo levels
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
+
+    // For ZIP level with a selected state, fly to that state
+    if (geoLevel === 'zip' && selectedState && STATE_CENTERS[selectedState]) {
+      const center = STATE_CENTERS[selectedState];
+      map.current.flyTo({
+        center: [center.lng, center.lat],
+        zoom: center.zoom,
+        duration: 800,
+      });
+      return;
+    }
 
     const zoomLevels: Record<GeoLevel, number> = {
       national: 3.5,
@@ -493,10 +591,11 @@ export default function MapPage() {
     };
 
     map.current.flyTo({
+      center: [-96, 37.8],
       zoom: zoomLevels[geoLevel],
       duration: 500,
     });
-  }, [geoLevel, mapLoaded]);
+  }, [geoLevel, selectedState, mapLoaded]);
 
   const recordCount = Object.keys(homeValues).length;
 
@@ -525,29 +624,40 @@ export default function MapPage() {
         </div>
 
         {/* Geo Level Pills */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {(['National', 'State', 'Metro', 'County', 'Zip'] as const).map((level) => {
             const levelKey = level.toLowerCase() as GeoLevel;
             const isActive = geoLevel === levelKey;
-            const isDisabled = level === 'Zip'; // Zip still needs GeoJSON setup
             return (
               <button
                 key={level}
-                onClick={() => !isDisabled && setGeoLevel(levelKey)}
-                disabled={isDisabled}
+                onClick={() => setGeoLevel(levelKey)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-gray-900 text-white shadow-md'
-                    : isDisabled
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
-                title={isDisabled ? 'Coming soon' : undefined}
               >
                 {level}
               </button>
             );
           })}
+
+          {/* State selector for ZIP level */}
+          {geoLevel === 'zip' && (
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              className="ml-2 px-4 py-2 rounded-full text-sm font-medium border border-gray-300 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">Select State...</option>
+              {US_STATES.map((state) => (
+                <option key={state.abbrev} value={state.abbrev}>
+                  {state.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </header>
 
@@ -582,7 +692,7 @@ export default function MapPage() {
             {/* Data summary */}
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600">
-                Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'metro' ? 'metros' : geoLevel === 'county' ? 'counties' : 'areas'}
+                Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'metro' ? 'metros' : geoLevel === 'county' ? 'counties' : geoLevel === 'zip' ? 'ZIP codes' : 'areas'}
               </div>
             </div>
 

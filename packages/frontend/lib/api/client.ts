@@ -94,8 +94,9 @@ export const api = {
     return transformZillowResponse(response, 'county_fips');
   },
 
-  getZipHomeValues: async (): Promise<ZipHomeValues> => {
-    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/zips');
+  getZipHomeValues: async (state: string): Promise<ZipHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/zips?state=${state}`);
+    // ZIP codes use region_id (the ZIP code itself) as key
     return transformZillowResponse(response, 'region_id');
   },
 };
