@@ -694,6 +694,16 @@ export default function MapPage() {
               <div className="text-sm text-gray-600">
                 Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'metro' ? 'metros' : geoLevel === 'county' ? 'counties' : geoLevel === 'zip' ? 'ZIP codes' : 'areas'}
               </div>
+              {geoLevel === 'county' && (
+                <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                  ~58% of US counties have Zillow home value data. Rural counties with limited housing transactions may show "No data."
+                </div>
+              )}
+              {geoLevel === 'zip' && !selectedState && (
+                <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-amber-600">
+                  Select a state to view ZIP code data
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -768,6 +778,11 @@ export default function MapPage() {
             <div className="flex justify-between text-xs text-gray-500 mt-1">
               <span>$100K</span>
               <span>$800K+</span>
+            </div>
+            {/* No data indicator */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+              <div className="w-6 h-4 rounded border border-gray-300" style={{ backgroundColor: '#f3f4f6' }}></div>
+              <span className="text-xs text-gray-500">No data available</span>
             </div>
           </div>
 
