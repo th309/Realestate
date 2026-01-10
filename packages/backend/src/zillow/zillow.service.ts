@@ -138,12 +138,13 @@ export class ZillowService {
   }
 
   async getCountyHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    const targetDate = date || await this.getLatestDate('City');
+    const targetDate = date || await this.getLatestDate('County');
 
+    // Build map keyed by FIPS code (since zillow_zhvi uses FIPS for counties)
     let query = this.supabase
       .from('geography_crosswalk')
-      .select('county_fips, county_name, zillow_county_region_id, state_abbrev, state_name')
-      .not('zillow_county_region_id', 'is', null);
+      .select('county_fips, county_name, state_abbrev, state_name')
+      .not('county_fips', 'is', null);
 
     if (stateFilter) {
       query = query.eq('state_abbrev', stateFilter);
@@ -153,8 +154,8 @@ export class ZillowService {
 
     const countyMap = new Map<string, { fips: string; name: string; state_abbrev: string; state_name: string }>();
     crosswalk?.forEach(row => {
-      if (row.zillow_county_region_id && !countyMap.has(String(row.zillow_county_region_id))) {
-        countyMap.set(String(row.zillow_county_region_id), {
+      if (row.county_fips && !countyMap.has(row.county_fips)) {
+        countyMap.set(row.county_fips, {
           fips: row.county_fips,
           name: row.county_name,
           state_abbrev: row.state_abbrev,
@@ -163,16 +164,18 @@ export class ZillowService {
       }
     });
 
-    const countyIds = [...countyMap.keys()];
-    if (countyIds.length === 0) return [];
+    const fipsCodes = [...countyMap.keys()];
+    if (fipsCodes.length === 0) return [];
 
+    // Query zillow_zhvi using FIPS codes as region_id
     const { data: zillow, error } = await this.supabase
       .from('zillow_zhvi')
       .select('region_id, value, date, property_type, geography')
+      .eq('geography', 'County')
       .eq('date', targetDate)
       .eq('property_type', 'sfrcondo')
       .eq('tier', '0.33_0.67')
-      .in('region_id', countyIds)
+      .in('region_id', fipsCodes)
       .limit(5000);
 
     if (error) throw new Error(error.message);
@@ -183,7 +186,7 @@ export class ZillowService {
       return {
         region_id: z.region_id,
         region_name: county?.name || 'Unknown',
-        county_fips: county?.fips || null,
+        county_fips: z.region_id,
         state_abbrev: county?.state_abbrev || null,
         state_name: county?.state_name || null,
         value: z.value,
