@@ -19,6 +19,12 @@ export class MarketsController {
     return this.marketsService.getStates();
   }
 
+  @Get('states/home-values')
+  @ApiOperation({ summary: 'Get median home values by state' })
+  async getStateHomeValues() {
+    return this.marketsService.getStateHomeValues();
+  }
+
   @Get('states/:stateFp/counties')
   @ApiOperation({ summary: 'Get counties by state FIPS code' })
   @ApiParam({ name: 'stateFp', description: 'State FIPS code (e.g., 17 for Illinois)' })

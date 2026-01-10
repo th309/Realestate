@@ -24,7 +24,10 @@ export interface State {
   population: number;
 }
 
+export type StateHomeValues = Record<string, number>;
+
 export const api = {
   getStats: () => fetchAPI<MarketStats>('/markets/stats'),
   getStates: () => fetchAPI<State[]>('/markets/states'),
+  getStateHomeValues: () => fetchAPI<StateHomeValues>('/markets/states/home-values'),
 };

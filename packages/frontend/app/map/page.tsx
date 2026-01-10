@@ -5,25 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { api, MarketStats } from '@/lib/api/client';
+import { api, MarketStats, StateHomeValues } from '@/lib/api/client';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 
 const US_STATES_GEOJSON = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
-
-// Home values by state (sample data - we'll connect to real data later)
-const stateHomeValues: Record<string, number> = {
-  'Alabama': 147393, 'Alaska': 293334, 'Arizona': 338334, 'Arkansas': 148030, 'California': 754304,
-  'Colorado': 724321, 'Connecticut': 798254, 'Delaware': 273899, 'Florida': 274058, 'Georgia': 211738,
-  'Hawaii': 17036, 'Idaho': 773078, 'Illinois': 139228, 'Indiana': 236332, 'Iowa': 120303,
-  'Kansas': 174818, 'Kentucky': 193339, 'Louisiana': 114833, 'Maine': 73899, 'Maryland': 284038,
-  'Massachusetts': 727955, 'Michigan': 196044, 'Minnesota': 774878, 'Mississippi': 145044, 'Missouri': 174033,
-  'Montana': 176373, 'Nebraska': 126038, 'Nevada': 777333, 'New Hampshire': 169206, 'New Jersey': 798254,
-  'New Mexico': 777070, 'New York': 727955, 'North Carolina': 199038, 'North Dakota': 143036, 'Ohio': 192665,
-  'Oklahoma': 137004, 'Oregon': 773864, 'Pennsylvania': 175332, 'Rhode Island': 173273, 'South Carolina': 199038,
-  'South Dakota': 178034, 'Tennessee': 176161, 'Texas': 296038, 'Utah': 173385, 'Vermont': 169206,
-  'Virginia': 717238, 'Washington': 754304, 'West Virginia': 113096, 'Wisconsin': 169031, 'Wyoming': 173147,
-};
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
 
@@ -141,6 +127,8 @@ export default function MapPage() {
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedMetric, setSelectedMetric] = useState('home_value');
   const [stats, setStats] = useState<MarketStats | null>(null);
+  const [homeValues, setHomeValues] = useState<StateHomeValues>({});
+  const [dataLoading, setDataLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['home_value']);
   const pathname = usePathname();
 
@@ -223,15 +211,26 @@ export default function MapPage() {
     );
   };
 
-  // Load stats
+  // Load stats and home values
   useEffect(() => {
-    api.getStats().then(setStats).catch(console.error);
+    Promise.all([
+      api.getStats(),
+      api.getStateHomeValues(),
+    ]).then(([statsData, homeValuesData]) => {
+      setStats(statsData);
+      setHomeValues(homeValuesData);
+      setDataLoading(false);
+    }).catch((err) => {
+      console.error('Error loading data:', err);
+      setDataLoading(false);
+    });
   }, []);
 
   // Initialize map
   useEffect(() => {
     if (map.current) return;
     if (!mapContainer.current) return;
+    if (dataLoading) return; // Wait for data to load
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -247,10 +246,10 @@ export default function MapPage() {
         const response = await fetch(US_STATES_GEOJSON);
         const geojson = await response.json();
 
-        // Add values to properties
+        // Add values to properties from API data
         geojson.features.forEach((feature: any) => {
           const stateName = feature.properties.name;
-          feature.properties.value = stateHomeValues[stateName] || 0;
+          feature.properties.value = homeValues[stateName] || 0;
         });
 
         map.current!.addSource('states', {
@@ -369,7 +368,7 @@ export default function MapPage() {
         map.current = null;
       }
     };
-  }, []);
+  }, [dataLoading, homeValues]);
 
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: '#f7f2fa', fontFamily: "'Google Sans', Roboto, sans-serif" }}>
@@ -497,11 +496,11 @@ export default function MapPage() {
               <p className="text-red-600 font-medium">{mapError}</p>
             </div>
           )}
-          {!mapLoaded && !mapError && (
+          {(dataLoading || !mapLoaded) && !mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                <p className="text-gray-600">Loading map...</p>
+                <p className="text-gray-600">{dataLoading ? 'Loading market data...' : 'Loading map...'}</p>
               </div>
             </div>
           )}

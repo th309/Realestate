@@ -74,4 +74,86 @@ export class MarketsService {
       totalZips,
     };
   }
+
+  async getStateHomeValues() {
+    // Get states with their abbreviations
+    const { data: states, error: statesError } = await this.supabase
+      .from('tiger_states')
+      .select('geoid, name, state_abbreviation');
+
+    if (statesError) throw statesError;
+
+    // Get latest home values from census_housing for state-level geoids (2-digit)
+    const { data: housingData, error: housingError } = await this.supabase
+      .from('census_housing')
+      .select('geoid, median_home_value, vintage_year')
+      .in('geoid', states.map((s) => s.geoid))
+      .order('vintage_year', { ascending: false });
+
+    if (housingError) throw housingError;
+
+    // Create a map of geoid to latest home value
+    const homeValueMap = new Map<string, number>();
+    for (const record of housingData || []) {
+      if (!homeValueMap.has(record.geoid) && record.median_home_value) {
+        homeValueMap.set(record.geoid, Number(record.median_home_value));
+      }
+    }
+
+    // If no state-level census data, try aggregating from county-level zillow_metrics
+    if (homeValueMap.size === 0) {
+      // Get county-to-state mapping
+      const { data: countyMapping, error: mappingError } = await this.supabase
+        .from('geo_county_state')
+        .select('county_geoid, state_geoid');
+
+      if (mappingError) throw mappingError;
+
+      // Get latest zillow metrics for counties
+      const { data: zillowData, error: zillowError } = await this.supabase
+        .from('zillow_metrics')
+        .select('geoid, zhvi_all_homes, metric_date')
+        .not('zhvi_all_homes', 'is', null)
+        .order('metric_date', { ascending: false });
+
+      if (zillowError) throw zillowError;
+
+      // Create county to state mapping
+      const countyToState = new Map<string, string>();
+      for (const mapping of countyMapping || []) {
+        countyToState.set(mapping.county_geoid, mapping.state_geoid);
+      }
+
+      // Aggregate county values to state level
+      const stateValues = new Map<string, number[]>();
+      for (const record of zillowData || []) {
+        const stateGeoid = countyToState.get(record.geoid);
+        if (stateGeoid && record.zhvi_all_homes) {
+          if (!stateValues.has(stateGeoid)) {
+            stateValues.set(stateGeoid, []);
+          }
+          stateValues.get(stateGeoid)?.push(Number(record.zhvi_all_homes));
+        }
+      }
+
+      // Calculate average for each state
+      for (const [stateGeoid, values] of stateValues) {
+        if (values.length > 0) {
+          const avg = values.reduce((a, b) => a + b, 0) / values.length;
+          homeValueMap.set(stateGeoid, Math.round(avg));
+        }
+      }
+    }
+
+    // Build result with state name as key (for GeoJSON mapping)
+    const result: Record<string, number> = {};
+    for (const state of states || []) {
+      const value = homeValueMap.get(state.geoid);
+      if (value && state.name) {
+        result[state.name] = value;
+      }
+    }
+
+    return result;
+  }
 }
