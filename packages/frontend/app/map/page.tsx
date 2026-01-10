@@ -5,36 +5,23 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { api, State, MarketStats } from '@/lib/api/client';
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 
-// Color scale for choropleth (blue to purple gradient like Reventure)
-const getColorForValue = (value: number, min: number, max: number): string => {
-  const normalized = (value - min) / (max - min);
-  const colors = [
-    '#e8f4f8', // lightest
-    '#b8d4e3',
-    '#8bb8d0',
-    '#5e9aba',
-    '#3d7a9e',
-    '#2d5a7b',
-    '#1d3d5c', // darkest
-  ];
-  const index = Math.min(Math.floor(normalized * colors.length), colors.length - 1);
-  return colors[index];
-};
+// US States GeoJSON URL (free, public)
+const US_STATES_GEOJSON = 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json';
 
 // Mock home values by state (we'll replace with real data later)
 const stateHomeValues: Record<string, number> = {
-  'AL': 147393, 'AK': 293334, 'AZ': 738334, 'AR': 148030, 'CA': 754304,
-  'CO': 724321, 'CT': 798254, 'DE': 273899, 'FL': 274058, 'GA': 211738,
-  'HI': 17036, 'ID': 773078, 'IL': 139228, 'IN': 236332, 'IA': 120303,
-  'KS': 174818, 'KY': 193339, 'LA': 114833, 'ME': 73899, 'MD': 284038,
-  'MA': 727955, 'MI': 196044, 'MN': 774878, 'MS': 145044, 'MO': 174033,
-  'MT': 176373, 'NE': 126038, 'NV': 777333, 'NH': 169206, 'NJ': 798254,
-  'NM': 777070, 'NY': 727955, 'NC': 199038, 'ND': 143036, 'OH': 192665,
-  'OK': 137004, 'OR': 773864, 'PA': 175332, 'RI': 173273, 'SC': 199038,
-  'SD': 178034, 'TN': 176161, 'TX': 296038, 'UT': 173385, 'VT': 169206,
-  'VA': 717238, 'WA': 754304, 'WV': 113096, 'WI': 169031, 'WY': 173147,
+  'Alabama': 147393, 'Alaska': 293334, 'Arizona': 738334, 'Arkansas': 148030, 'California': 754304,
+  'Colorado': 724321, 'Connecticut': 798254, 'Delaware': 273899, 'Florida': 274058, 'Georgia': 211738,
+  'Hawaii': 817036, 'Idaho': 373078, 'Illinois': 239228, 'Indiana': 236332, 'Iowa': 220303,
+  'Kansas': 174818, 'Kentucky': 193339, 'Louisiana': 214833, 'Maine': 373899, 'Maryland': 384038,
+  'Massachusetts': 527955, 'Michigan': 196044, 'Minnesota': 274878, 'Mississippi': 145044, 'Missouri': 174033,
+  'Montana': 376373, 'Nebraska': 226038, 'Nevada': 377333, 'New Hampshire': 369206, 'New Jersey': 498254,
+  'New Mexico': 277070, 'New York': 427955, 'North Carolina': 299038, 'North Dakota': 243036, 'Ohio': 192665,
+  'Oklahoma': 137004, 'Oregon': 473864, 'Pennsylvania': 275332, 'Rhode Island': 373273, 'South Carolina': 299038,
+  'South Dakota': 278034, 'Tennessee': 276161, 'Texas': 296038, 'Utah': 473385, 'Vermont': 369206,
+  'Virginia': 417238, 'Washington': 554304, 'West Virginia': 113096, 'Wisconsin': 269031, 'Wyoming': 273147,
 };
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
@@ -74,23 +61,18 @@ const metricCategories: MetricCategory[] = [
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const popup = useRef<mapboxgl.Popup | null>(null);
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('home_value');
   const [stats, setStats] = useState<MarketStats | null>(null);
-  const [states, setStates] = useState<State[]>([]);
-  const [hoveredState, setHoveredState] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string>('Home Value');
 
   // Load initial data
   useEffect(() => {
     async function loadData() {
       try {
-        const [statsData, statesData] = await Promise.all([
-          api.getStats(),
-          api.getStates(),
-        ]);
+        const statsData = await api.getStats();
         setStats(statsData);
-        setStates(statesData);
       } catch (err) {
         console.error('Failed to load data:', err);
       }
@@ -107,34 +89,53 @@ export default function MapPage() {
       style: 'mapbox://styles/mapbox/light-v11',
       center: [-98.5795, 39.8283],
       zoom: 3.5,
-      projection: 'mercator',
     });
 
-    map.current.on('load', () => {
+    popup.current = new mapboxgl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+    });
+
+    map.current.on('load', async () => {
       if (!map.current) return;
 
-      // Add state boundaries source
-      map.current.addSource('states', {
-        type: 'vector',
-        url: 'mapbox://mapbox.boundaries-adm1-v4',
+      // Fetch GeoJSON
+      const response = await fetch(US_STATES_GEOJSON);
+      const geojson = await response.json();
+
+      // Add values to GeoJSON properties
+      geojson.features.forEach((feature: any) => {
+        const stateName = feature.properties.name;
+        feature.properties.value = stateHomeValues[stateName] || 0;
       });
+
+      // Add source
+      map.current.addSource('states', {
+        type: 'geojson',
+        data: geojson,
+      });
+
+      // Calculate min/max for color scale
+      const values = Object.values(stateHomeValues);
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
 
       // Add choropleth fill layer
       map.current.addLayer({
         id: 'state-fills',
         type: 'fill',
         source: 'states',
-        'source-layer': 'boundaries_admin_1',
-        filter: ['==', ['get', 'iso_3166_1'], 'US'],
         paint: {
           'fill-color': [
-            'match',
-            ['get', 'iso_3166_1_alpha_2'],
-            ...Object.entries(stateHomeValues).flatMap(([state, value]) => [
-              `US-${state}`,
-              getColorForValue(value, 100000, 800000),
-            ]),
-            '#e8f4f8', // default
+            'interpolate',
+            ['linear'],
+            ['get', 'value'],
+            minValue, '#e8f4f8',
+            minValue + (maxValue - minValue) * 0.2, '#b8d4e3',
+            minValue + (maxValue - minValue) * 0.4, '#7eb8da',
+            minValue + (maxValue - minValue) * 0.6, '#4a9cc7',
+            minValue + (maxValue - minValue) * 0.8, '#2d7a9e',
+            maxValue, '#1a5276',
           ],
           'fill-opacity': 0.8,
         },
@@ -145,25 +146,66 @@ export default function MapPage() {
         id: 'state-borders',
         type: 'line',
         source: 'states',
-        'source-layer': 'boundaries_admin_1',
-        filter: ['==', ['get', 'iso_3166_1'], 'US'],
         paint: {
           'line-color': '#627BC1',
           'line-width': 1,
         },
       });
 
-      // Add hover effect
+      // Add state labels
+      map.current.addLayer({
+        id: 'state-labels',
+        type: 'symbol',
+        source: 'states',
+        layout: {
+          'text-field': [
+            'format',
+            ['get', 'name'],
+            { 'font-scale': 0.8 },
+            '\n',
+            {},
+            ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]],
+            { 'font-scale': 0.7 },
+          ],
+          'text-size': 11,
+          'text-anchor': 'center',
+        },
+        paint: {
+          'text-color': '#1a1a2e',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 1.5,
+        },
+      });
+
+      // Hover effects
       map.current.on('mousemove', 'state-fills', (e) => {
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
-          const stateCode = feature.properties?.iso_3166_1_alpha_2?.replace('US-', '');
-          setHoveredState(stateCode);
+        if (!map.current || !e.features || e.features.length === 0) return;
+        
+        map.current.getCanvas().style.cursor = 'pointer';
+        
+        const feature = e.features[0];
+        const stateName = feature.properties?.name;
+        const value = feature.properties?.value;
+
+        if (popup.current && stateName) {
+          popup.current
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="padding: 8px;">
+                <strong>${stateName}</strong><br/>
+                <span style="font-size: 18px; font-weight: bold; color: #1a5276;">
+                  $${value?.toLocaleString()}
+                </span>
+              </div>
+            `)
+            .addTo(map.current);
         }
       });
 
       map.current.on('mouseleave', 'state-fills', () => {
-        setHoveredState(null);
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = '';
+        popup.current?.remove();
       });
     });
 
@@ -172,13 +214,6 @@ export default function MapPage() {
       map.current = null;
     };
   }, []);
-
-  const formatValue = (value: number, metric: MetricType): string => {
-    if (metric === 'home_value') {
-      return `$${value.toLocaleString()}`;
-    }
-    return value.toLocaleString();
-  };
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -192,7 +227,7 @@ export default function MapPage() {
           </button>
           <h1 className="text-xl font-semibold">REI Platform</h1>
         </div>
-
+        
         {/* Search */}
         <div className="flex-1 max-w-xl mx-8">
           <div className="relative">
@@ -254,7 +289,7 @@ export default function MapPage() {
             {/* Metric Selector */}
             <div className="flex-1 p-4">
               <h2 className="text-xl font-semibold mb-4">Market Trends</h2>
-
+              
               {metricCategories.map((category) => (
                 <div key={category.name} className="mb-2">
                   <button
@@ -274,7 +309,7 @@ export default function MapPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-
+                  
                   {expandedCategory === category.name && (
                     <div className="ml-10 mt-1 space-y-1">
                       {category.metrics.map((metric) => (
@@ -322,16 +357,6 @@ export default function MapPage() {
         {/* Map Container */}
         <main className="flex-1 relative">
           <div ref={mapContainer} className="absolute inset-0" />
-
-          {/* Hover Tooltip */}
-          {hoveredState && stateHomeValues[hoveredState] && (
-            <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4">
-              <div className="font-semibold">{hoveredState}</div>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatValue(stateHomeValues[hoveredState], selectedMetric)}
-              </div>
-            </div>
-          )}
 
           {/* Table View Toggle */}
           <button className="absolute bottom-6 right-6 bg-white shadow-lg rounded-lg px-4 py-3 flex items-center gap-2 hover:bg-gray-50">
