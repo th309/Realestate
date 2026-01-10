@@ -75,37 +75,39 @@ export class MarketsService {
     };
   }
 
+  // Zillow RegionID to State Name mapping
+  private readonly ZILLOW_STATE_MAP: Record<string, string> = {
+    '3': 'Alaska', '4': 'Alabama', '6': 'Arkansas', '8': 'Arizona',
+    '9': 'California', '10': 'Colorado', '11': 'Connecticut',
+    '12': 'District of Columbia', '13': 'Delaware', '14': 'Florida',
+    '16': 'Georgia', '18': 'Hawaii', '19': 'Iowa', '20': 'Idaho',
+    '21': 'Illinois', '22': 'Indiana', '23': 'Kansas', '24': 'Kentucky',
+    '25': 'Louisiana', '26': 'Massachusetts', '27': 'Maryland', '28': 'Maine',
+    '30': 'Michigan', '31': 'Minnesota', '32': 'Missouri', '34': 'Mississippi',
+    '35': 'Montana', '36': 'North Carolina', '37': 'North Dakota',
+    '38': 'Nebraska', '39': 'New Hampshire', '40': 'New Jersey',
+    '41': 'New Mexico', '42': 'Nevada', '43': 'New York', '44': 'Ohio',
+    '45': 'Oklahoma', '46': 'Oregon', '47': 'Pennsylvania', '50': 'Rhode Island',
+    '51': 'South Carolina', '52': 'South Dakota', '53': 'Tennessee',
+    '54': 'Texas', '55': 'Utah', '56': 'Virginia', '58': 'Vermont',
+    '59': 'Washington', '60': 'Wisconsin', '61': 'West Virginia', '62': 'Wyoming',
+  };
+
   async getStateHomeValues() {
     try {
-      // Get state markets with their ZHVI values
-      // Join markets (states) with zillow_zhvi to get home values
-      const { data: stateMarkets, error: marketsError } = await this.supabase
-        .from('markets')
-        .select('region_id, region_name')
-        .eq('region_type', 'state');
+      // Get ZHVI data for specific state region_ids (efficient IN query)
+      const stateRegionIds = Object.keys(this.ZILLOW_STATE_MAP);
 
-      if (marketsError) {
-        console.error('Error fetching state markets:', marketsError);
-        throw marketsError;
-      }
-
-      // Get most recent ZHVI for states
       const { data: zhviData, error: zhviError } = await this.supabase
         .from('zillow_zhvi')
         .select('region_id, value, date')
-        .eq('geography', 'state')
-        .eq('property_type', 'all_homes')
-        .order('date', { ascending: false });
+        .in('region_id', stateRegionIds)
+        .order('date', { ascending: false })
+        .limit(500);
 
       if (zhviError) {
         console.error('Error fetching ZHVI data:', zhviError);
         throw zhviError;
-      }
-
-      // Create region_id to state name mapping
-      const regionNameMap = new Map<string, string>();
-      for (const market of stateMarkets || []) {
-        regionNameMap.set(market.region_id, market.region_name);
       }
 
       // Build result - only use most recent value per state
@@ -116,7 +118,7 @@ export class MarketsService {
         if (seenStates.has(record.region_id)) continue;
         seenStates.add(record.region_id);
 
-        const stateName = regionNameMap.get(record.region_id);
+        const stateName = this.ZILLOW_STATE_MAP[record.region_id];
         if (stateName && record.value) {
           result[stateName] = Math.round(Number(record.value));
         }
