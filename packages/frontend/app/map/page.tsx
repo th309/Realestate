@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { api, MarketStats } from '@/lib/api/client';
@@ -29,6 +31,7 @@ interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
+  href: string;
 }
 
 interface MetricCategory {
@@ -139,15 +142,15 @@ export default function MapPage() {
   const [selectedMetric, setSelectedMetric] = useState('home_value');
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['home_value']);
-  const [activeNav, setActiveNav] = useState('maps');
+  const pathname = usePathname();
 
   const navItems: NavItem[] = [
-    { id: 'home', label: 'Home', icon: <HomeIcon /> },
-    { id: 'maps', label: 'Maps', icon: <MapIcon /> },
-    { id: 'graphs', label: 'Graphs', icon: <GraphIcon /> },
-    { id: 'reports', label: 'Reports', icon: <ReportIcon /> },
-    { id: 'about', label: 'About Us', icon: <InfoIcon /> },
-    { id: 'pricing', label: 'Pricing', icon: <PricingIcon /> },
+    { id: 'home', label: 'Home', icon: <HomeIcon />, href: '/' },
+    { id: 'maps', label: 'Maps', icon: <MapIcon />, href: '/map' },
+    { id: 'graphs', label: 'Graphs', icon: <GraphIcon />, href: '/graphs' },
+    { id: 'reports', label: 'Reports', icon: <ReportIcon />, href: '/reports' },
+    { id: 'about', label: 'About Us', icon: <InfoIcon />, href: '/about' },
+    { id: 'pricing', label: 'Pricing', icon: <PricingIcon />, href: '/pricing' },
   ];
 
   const metricCategories: MetricCategory[] = [
@@ -421,11 +424,11 @@ export default function MapPage() {
           {/* Navigation Rail */}
           <div className="w-20 border-r border-gray-200 flex flex-col items-center py-4 gap-1">
             {navItems.map((item) => {
-              const isActive = activeNav === item.id;
+              const isActive = pathname === item.href;
               return (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => setActiveNav(item.id)}
+                  href={item.href}
                   className={`w-16 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
                     isActive
                       ? 'bg-purple-100 text-purple-700'
@@ -436,7 +439,7 @@ export default function MapPage() {
                     {item.icon}
                   </span>
                   <span className="text-xs font-medium">{item.label}</span>
-                </button>
+                </Link>
               );
             })}
           </div>
