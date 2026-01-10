@@ -76,59 +76,49 @@ export class MarketsService {
   }
 
   async getStateHomeValues() {
-    // Get states with their abbreviations
-    const { data: states, error: statesError } = await this.supabase
-      .from('tiger_states')
-      .select('geoid, name, state_abbreviation');
+    try {
+      // Get states with their names
+      const { data: states, error: statesError } = await this.supabase
+        .from('tiger_states')
+        .select('geoid, name');
 
-    if (statesError) throw statesError;
-
-    // Get latest home values from census_housing for state-level geoids (2-digit)
-    const { data: housingData, error: housingError } = await this.supabase
-      .from('census_housing')
-      .select('geoid, median_home_value, vintage_year')
-      .in('geoid', states.map((s) => s.geoid))
-      .order('vintage_year', { ascending: false });
-
-    if (housingError) throw housingError;
-
-    // Create a map of geoid to latest home value
-    const homeValueMap = new Map<string, number>();
-    for (const record of housingData || []) {
-      if (!homeValueMap.has(record.geoid) && record.median_home_value) {
-        homeValueMap.set(record.geoid, Number(record.median_home_value));
+      if (statesError) {
+        console.error('Error fetching states:', statesError);
+        throw statesError;
       }
-    }
 
-    // If no state-level census data, try aggregating from county-level zillow_metrics
-    if (homeValueMap.size === 0) {
-      // Get county-to-state mapping
-      const { data: countyMapping, error: mappingError } = await this.supabase
-        .from('geo_county_state')
-        .select('county_geoid, state_geoid');
+      // Create state geoid to name mapping
+      const stateNameMap = new Map<string, string>();
+      for (const state of states || []) {
+        stateNameMap.set(state.geoid, state.name);
+      }
 
-      if (mappingError) throw mappingError;
-
-      // Get latest zillow metrics for counties
+      // Get latest Zillow metrics - county geoids are 5 digits (state 2 + county 3)
       const { data: zillowData, error: zillowError } = await this.supabase
         .from('zillow_metrics')
         .select('geoid, zhvi_all_homes, metric_date')
         .not('zhvi_all_homes', 'is', null)
-        .order('metric_date', { ascending: false });
+        .order('metric_date', { ascending: false })
+        .limit(5000);
 
-      if (zillowError) throw zillowError;
-
-      // Create county to state mapping
-      const countyToState = new Map<string, string>();
-      for (const mapping of countyMapping || []) {
-        countyToState.set(mapping.county_geoid, mapping.state_geoid);
+      if (zillowError) {
+        console.error('Error fetching zillow data:', zillowError);
+        throw zillowError;
       }
 
       // Aggregate county values to state level
+      // County geoid format: first 2 digits = state FIPS code
       const stateValues = new Map<string, number[]>();
+      const seenCounties = new Set<string>(); // Only use most recent per county
+
       for (const record of zillowData || []) {
-        const stateGeoid = countyToState.get(record.geoid);
-        if (stateGeoid && record.zhvi_all_homes) {
+        if (!record.geoid || record.geoid.length < 2) continue;
+        if (seenCounties.has(record.geoid)) continue; // Skip older records for same county
+
+        seenCounties.add(record.geoid);
+        const stateGeoid = record.geoid.substring(0, 2); // Extract state FIPS
+
+        if (record.zhvi_all_homes && stateNameMap.has(stateGeoid)) {
           if (!stateValues.has(stateGeoid)) {
             stateValues.set(stateGeoid, []);
           }
@@ -136,24 +126,28 @@ export class MarketsService {
         }
       }
 
-      // Calculate average for each state
+      // Calculate median for each state (more accurate than average)
+      const result: Record<string, number> = {};
       for (const [stateGeoid, values] of stateValues) {
         if (values.length > 0) {
-          const avg = values.reduce((a, b) => a + b, 0) / values.length;
-          homeValueMap.set(stateGeoid, Math.round(avg));
+          // Sort and get median
+          values.sort((a, b) => a - b);
+          const mid = Math.floor(values.length / 2);
+          const median = values.length % 2 !== 0
+            ? values[mid]
+            : Math.round((values[mid - 1] + values[mid]) / 2);
+
+          const stateName = stateNameMap.get(stateGeoid);
+          if (stateName) {
+            result[stateName] = median;
+          }
         }
       }
-    }
 
-    // Build result with state name as key (for GeoJSON mapping)
-    const result: Record<string, number> = {};
-    for (const state of states || []) {
-      const value = homeValueMap.get(state.geoid);
-      if (value && state.name) {
-        result[state.name] = value;
-      }
+      return result;
+    } catch (error) {
+      console.error('getStateHomeValues error:', error);
+      throw error;
     }
-
-    return result;
   }
 }
