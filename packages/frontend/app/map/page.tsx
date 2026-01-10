@@ -13,6 +13,7 @@ mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqc
 const GEOJSON_SOURCES = {
   state: 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
   county: 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json',
+  metro: '/geojson/cbsa_2023.json', // 2023 Census CBSA boundaries (converted from shapefile)
   // ZIP codes use Mapbox's built-in tileset
 };
 
@@ -303,10 +304,12 @@ export default function MapPage() {
       geojsonUrl = GEOJSON_SOURCES.state;
     } else if (geoLevel === 'county') {
       geojsonUrl = GEOJSON_SOURCES.county;
+    } else if (geoLevel === 'metro') {
+      geojsonUrl = GEOJSON_SOURCES.metro;
     }
 
     if (!geojsonUrl) {
-      // For metro/zip, show a message (would need proper GeoJSON)
+      // For zip, show a message (would need proper GeoJSON)
       console.log(`${geoLevel} level requires additional GeoJSON setup`);
       return;
     }
@@ -333,6 +336,16 @@ export default function MapPage() {
           const stateAbbr = FIPS_TO_STATE[stateFips] || '';
           feature.properties.displayName = `${feature.properties.NAME || 'County'}, ${stateAbbr}`;
         });
+      } else if (geoLevel === 'metro') {
+        geojson.features.forEach((feature: any) => {
+          // Metro GeoJSON uses CBSAFP or GEOID for CBSA code
+          const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
+          const value = homeValues[cbsaCode] || 0;
+          feature.properties.value = value;
+          feature.properties.id = cbsaCode;
+          // Use NAME property for display (e.g., "San Jose-Sunnyvale-Santa Clara, CA")
+          feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
+        });
       }
 
       map.current!.addSource('geo-data', {
@@ -358,7 +371,7 @@ export default function MapPage() {
         source: 'geo-data',
         paint: {
           'line-color': '#ffffff',
-          'line-width': geoLevel === 'county' ? 0.5 : 1.5,
+          'line-width': geoLevel === 'county' ? 0.5 : geoLevel === 'metro' ? 0.8 : 1.5,
         },
       });
 
@@ -516,7 +529,7 @@ export default function MapPage() {
           {(['National', 'State', 'Metro', 'County', 'Zip'] as const).map((level) => {
             const levelKey = level.toLowerCase() as GeoLevel;
             const isActive = geoLevel === levelKey;
-            const isDisabled = level === 'Metro' || level === 'Zip'; // These need GeoJSON setup
+            const isDisabled = level === 'Zip'; // Zip still needs GeoJSON setup
             return (
               <button
                 key={level}
@@ -569,7 +582,7 @@ export default function MapPage() {
             {/* Data summary */}
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="text-sm text-gray-600">
-                Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'county' ? 'counties' : 'areas'}
+                Showing <span className="font-medium text-gray-900">{recordCount.toLocaleString()}</span> {geoLevel === 'state' ? 'states' : geoLevel === 'metro' ? 'metros' : geoLevel === 'county' ? 'counties' : 'areas'}
               </div>
             </div>
 

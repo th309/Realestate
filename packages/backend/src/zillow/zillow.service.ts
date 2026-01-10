@@ -8,6 +8,7 @@ export interface HomeValueData {
   state_abbrev?: string | null;
   state_name?: string | null;
   county_fips?: string | null;
+  cbsa_code?: string | null;
   zip_code?: string | null;
   city?: string | null;
   county_name?: string | null;
@@ -83,51 +84,94 @@ export class ZillowService {
   }
 
   async getMetroHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    const targetDate = date || await this.getLatestDate('City');
+    const targetDate = date || await this.getLatestDate('Metro');
 
-    let query = this.supabase
-      .from('geography_crosswalk')
-      .select('cbsa_code, cbsa_name, zillow_metro_region_id, state_abbrev')
-      .not('zillow_metro_region_id', 'is', null);
-
-    if (stateFilter) {
-      query = query.eq('state_abbrev', stateFilter);
-    }
-
-    const { data: crosswalk } = await query.limit(10000);
-
-    const metroMap = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
-    crosswalk?.forEach(row => {
-      if (row.zillow_metro_region_id && !metroMap.has(String(row.zillow_metro_region_id))) {
-        metroMap.set(String(row.zillow_metro_region_id), {
-          cbsa_code: row.cbsa_code,
-          cbsa_name: row.cbsa_name,
-          state: row.state_abbrev
-        });
-      }
-    });
-
-    const metroIds = [...metroMap.keys()];
-    if (metroIds.length === 0) return [];
-
+    // Get all metro data from zillow_zhvi
     const { data: zillow, error } = await this.supabase
       .from('zillow_zhvi')
       .select('region_id, value, date, property_type, geography')
-      .eq('geography', 'City')
+      .eq('geography', 'Metro')
       .eq('date', targetDate)
       .eq('property_type', 'sfrcondo')
-      .eq('tier', '0.33_0.67')
-      .in('region_id', metroIds)
-      .limit(1000);
+      .eq('tier', '0.33_0.67');
 
     if (error) throw new Error(error.message);
     if (!zillow) return [];
 
+    // Build crosswalk maps for metro lookup with pagination
+    // Map 1: zillow_metro_region_id -> first matching cbsa info
+    // Map 2: cbsa_code -> cbsa info (for direct CBSA code matches)
+    const zillowIdToMetro = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
+    const cbsaCodeToMetro = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
+
+    // Paginate through crosswalk to get all unique CBSAs
+    let page = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      let query = this.supabase
+        .from('geography_crosswalk')
+        .select('cbsa_code, cbsa_name, zillow_metro_region_id, state_abbrev')
+        .not('cbsa_code', 'is', null);
+
+      if (stateFilter) {
+        query = query.eq('state_abbrev', stateFilter);
+      }
+
+      const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        // Map by Zillow metro ID
+        if (row.zillow_metro_region_id && !zillowIdToMetro.has(String(row.zillow_metro_region_id))) {
+          zillowIdToMetro.set(String(row.zillow_metro_region_id), {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+        // Map by CBSA code for direct lookups
+        if (row.cbsa_code && !cbsaCodeToMetro.has(row.cbsa_code)) {
+          cbsaCodeToMetro.set(row.cbsa_code, {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+      });
+
+      page++;
+      if (crosswalk.length < pageSize) break;
+    }
+
     return zillow.map(z => {
-      const metro = metroMap.get(z.region_id);
+      // Check if region_id is a 5-digit CBSA code (Zillow uses both CBSA codes and their own IDs)
+      const is5DigitCode = /^\d{5}$/.test(z.region_id);
+
+      let metro;
+      let cbsaCode = null;
+
+      if (is5DigitCode) {
+        // Try direct CBSA match first
+        metro = cbsaCodeToMetro.get(z.region_id);
+        if (metro) {
+          cbsaCode = z.region_id;
+        }
+      }
+
+      if (!metro) {
+        // Try Zillow metro ID lookup
+        metro = zillowIdToMetro.get(z.region_id);
+        if (metro) {
+          cbsaCode = metro.cbsa_code;
+        }
+      }
+
       return {
         region_id: z.region_id,
         region_name: metro?.cbsa_name || 'Unknown',
+        cbsa_code: cbsaCode,
         state_abbrev: metro?.state || null,
         value: z.value,
         date: z.date,

@@ -32,6 +32,7 @@ interface ZillowHomeValue {
   value: number;
   state_abbrev?: string;
   county_fips?: string;
+  cbsa_code?: string;
 }
 
 interface ZillowApiResponse {
@@ -46,11 +47,23 @@ export type CountyHomeValues = Record<string, number>;
 export type ZipHomeValues = Record<string, number>;
 
 // Transform Zillow API response to Record<region_id, value> format
-function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_id' | 'region_name' | 'county_fips' = 'region_id'): Record<string, number> {
+function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_id' | 'region_name' | 'county_fips' | 'cbsa_code' = 'region_id'): Record<string, number> {
   const result: Record<string, number> = {};
   response.data?.forEach(item => {
-    const key = keyField === 'county_fips' ? (item.county_fips || item.region_id) :
-                keyField === 'region_name' ? item.region_name : item.region_id;
+    let key: string | undefined;
+    switch (keyField) {
+      case 'county_fips':
+        key = item.county_fips || item.region_id;
+        break;
+      case 'region_name':
+        key = item.region_name;
+        break;
+      case 'cbsa_code':
+        key = item.cbsa_code || item.region_id;
+        break;
+      default:
+        key = item.region_id;
+    }
     if (key && item.value) {
       result[key] = item.value;
     }
@@ -71,7 +84,8 @@ export const api = {
 
   getMetroHomeValues: async (): Promise<MetroHomeValues> => {
     const response = await fetchAPI<ZillowApiResponse>('/api/zillow/metros');
-    return transformZillowResponse(response, 'region_id');
+    // Use CBSA code to match GeoJSON CBSAFP property
+    return transformZillowResponse(response, 'cbsa_code');
   },
 
   getCountyHomeValues: async (): Promise<CountyHomeValues> => {
