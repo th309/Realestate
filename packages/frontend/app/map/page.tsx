@@ -255,7 +255,7 @@ export default function MapPage() {
           data: geojson,
         });
 
-        // Red to Green color scale (green = affordable, red = expensive)
+        // Blue sequential color scale (darker = higher value)
         map.current!.addLayer({
           id: 'state-fills',
           type: 'fill',
@@ -265,16 +265,13 @@ export default function MapPage() {
               'interpolate',
               ['linear'],
               ['get', 'value'],
-              100000, '#22c55e',  // Green - most affordable
-              200000, '#4ade80',
-              300000, '#86efac',
-              400000, '#fde047',  // Yellow - middle
-              500000, '#facc15',
-              600000, '#f97316',  // Orange
-              700000, '#ef4444',  // Red
-              800000, '#dc2626',  // Dark red - most expensive
+              100000, '#dbeafe',  // Very light blue - lowest
+              250000, '#93c5fd',  // Light blue
+              400000, '#3b82f6',  // Blue
+              600000, '#1d4ed8',  // Medium blue
+              800000, '#1e3a8a',  // Dark navy - highest
             ],
-            'fill-opacity': 0.85,
+            'fill-opacity': 0.5,
           },
         });
 
