@@ -827,18 +827,20 @@ export default function MapPage() {
                   <div key={category.id}>
                     <button
                       onClick={() => toggleCategory(category.id)}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-100 rounded-xl transition-colors"
+                      className="w-full flex items-center justify-between p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-600">{category.icon}</span>
-                        <span className="font-medium text-sm text-gray-800">{category.name}</span>
-                        {category.isNew && (
-                          <span className="text-xs text-rose-500 font-medium">New</span>
-                        )}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-gray-600 flex-shrink-0">{category.icon}</span>
+                        <span className="font-medium text-xs text-gray-800 truncate">{category.name}</span>
                       </div>
-                      <span className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                        <ChevronDownIcon />
-                      </span>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {category.isNew && (
+                          <span className="text-[10px] text-rose-500 font-medium">New</span>
+                        )}
+                        <span className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                          <ChevronDownIcon />
+                        </span>
+                      </div>
                     </button>
 
                     {isExpanded && category.metrics && (
