@@ -32,7 +32,8 @@ interface MetricCategory {
   name: string;
   icon: React.ReactNode;
   expanded?: boolean;
-  metrics?: { id: string; name: string }[];
+  isNew?: boolean;
+  metrics?: { id: string; name: string; isPremium?: boolean; isNew?: boolean }[];
 }
 
 // Material 3 Icons as SVG components
@@ -72,23 +73,6 @@ const PricingIcon = () => (
   </svg>
 );
 
-const HomeValueIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-    <path d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/>
-  </svg>
-);
-
-const InventoryIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-    <path d="M200-80q-33 0-56.5-23.5T120-160v-480q0-33 23.5-56.5T200-720h80v-80q0-33 23.5-56.5T360-880h240q33 0 56.5 23.5T680-800v80h80q33 0 56.5 23.5T840-640v480q0 33-23.5 56.5T760-80H200Zm160-640h240v-80H360v80ZM200-160h560v-480H200v480Zm280-240Z"/>
-  </svg>
-);
-
-const CalendarIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-    <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/>
-  </svg>
-);
 
 const TrendingIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
@@ -123,6 +107,42 @@ const SearchIcon = () => (
 const ChevronDownIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
     <path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/>
+  </svg>
+);
+
+const StarIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="m354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z"/>
+  </svg>
+);
+
+const AttachMoneyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M441-120v-86q-53-12-91.5-46T293-348l74-30q15 48 44.5 73t77.5 25q41 0 69.5-18.5T587-356q0-35-22-55.5T463-458q-86-27-118-64.5T313-614q0-65 42-101t86-41v-84h80v84q50 8 82.5 36.5T651-650l-74 32q-12-32-34-48t-60-16q-44 0-67 19.5T393-614q0 33 30 52t104 40q69 20 104.5 63.5T667-358q0 71-42 108t-104 46v84h-80Z"/>
+  </svg>
+);
+
+const ShowChartIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="m136-240-56-56 296-298 160 160 208-206h-64v-80h200v200h-80v-66L536-320 376-480 136-240Z"/>
+  </svg>
+);
+
+const AnalyticsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M280-280h80v-280h-80v280Zm160 0h80v-400h-80v400Zm160 0h80v-160h-80v160ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/>
+  </svg>
+);
+
+const PremiumIcon = () => (
+  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+    PRO
+  </span>
+);
+
+const InfoSmallIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="opacity-40">
+    <path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
   </svg>
 );
 
@@ -183,7 +203,7 @@ export default function MapPage() {
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [homeValues, setHomeValues] = useState<HomeValues>({});
   const [dataLoading, setDataLoading] = useState(true);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['home_value']);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
@@ -197,29 +217,99 @@ export default function MapPage() {
 
   const metricCategories: MetricCategory[] = [
     {
-      id: 'home_value',
-      name: 'Home Value',
-      icon: <HomeValueIcon />,
+      id: 'popular',
+      name: 'Popular Data',
+      icon: <StarIcon />,
       metrics: [
         { id: 'home_value', name: 'Home Value' },
-        { id: 'price_sqft', name: 'Price per Sq Ft' },
+        { id: 'home_value_yoy', name: 'Home Value Growth (YoY)' },
+        { id: 'for_sale_inventory', name: 'For Sale Inventory' },
+        { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true },
+        { id: 'home_value_5yr', name: 'Home Value Growth (5-Year)', isPremium: true },
+        { id: 'home_value_mom', name: 'Home Value Growth (MoM)', isPremium: true },
+        { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true },
+        { id: 'days_on_market', name: 'Days on Market' },
+        { id: 'home_sales', name: 'Home Sales', isPremium: true },
+        { id: 'cap_rate', name: 'Cap Rate' },
+        { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true },
       ],
     },
     {
-      id: 'inventory',
-      name: 'For Sale Inventory',
-      icon: <InventoryIcon />,
+      id: 'home_price_affordability',
+      name: 'Home Price & Affordability',
+      icon: <AttachMoneyIcon />,
       metrics: [
-        { id: 'inventory', name: 'Active Listings' },
-        { id: 'new_listings', name: 'New Listings' },
+        { id: 'home_value', name: 'Home Value' },
+        { id: 'home_value_yoy', name: 'Home Value Growth (YoY)' },
+        { id: 'home_value_5yr', name: 'Home Value Growth (5-Year)', isPremium: true },
+        { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true },
+        { id: 'sfh_value', name: 'Single Family Value', isPremium: true },
+        { id: 'sfh_value_yoy', name: 'Single Family Value Growth (YoY)', isPremium: true },
+        { id: 'condo_value', name: 'Condo Value', isPremium: true },
+        { id: 'condo_value_yoy', name: 'Condo Value Growth (YoY)', isPremium: true },
+        { id: 'value_income_ratio', name: 'Value / Income Ratio', isPremium: true },
+        { id: 'mortgage_payment', name: 'Mortgage Payment', isPremium: true },
+        { id: 'salary_to_afford', name: 'Salary to Afford a House', isPremium: true },
+        { id: 'mtg_pct_income', name: 'Mtg Payment as % of Income', isPremium: true },
+        { id: 'property_tax_annual', name: 'Property Tax Annual', isPremium: true },
+        { id: 'property_tax_rate', name: 'Property Tax Rate', isPremium: true },
+        { id: 'insurance_annual', name: 'Insurance Premium Annual', isPremium: true },
+        { id: 'insurance_pct', name: 'Insurance Premium %', isPremium: true },
+        { id: 'buy_v_rent', name: 'Buy v Rent Differential', isPremium: true },
+        { id: 'change_from_peak', name: '% Change from 2022 Peak', isPremium: true },
+        { id: 'crash_2007', name: '% Crash from 2007-12', isPremium: true },
+        { id: 'home_value_mom', name: 'Home Value Growth (MoM)', isPremium: true },
       ],
     },
     {
-      id: 'days_on_market',
-      name: 'Days on Market',
-      icon: <CalendarIcon />,
+      id: 'market_trends',
+      name: 'Market Trends',
+      icon: <ShowChartIcon />,
       metrics: [
-        { id: 'dom', name: 'Median Days on Market' },
+        { id: 'for_sale_inventory', name: 'For Sale Inventory' },
+        { id: 'inventory_yoy', name: 'Sale Inventory Growth (YoY)' },
+        { id: 'inventory_surplus', name: 'Inventory Surplus/Deficit', isPremium: true },
+        { id: 'home_sales', name: 'Home Sales', isPremium: true },
+        { id: 'home_sales_yoy', name: 'Home Sales Growth (YoY)', isPremium: true },
+        { id: 'sales_surplus', name: 'Home Sales Surplus/Deficit', isPremium: true },
+        { id: 'price_cut_pct', name: 'Price Cut %', isPremium: true },
+        { id: 'days_on_market', name: 'Days on Market' },
+        { id: 'dom_yoy', name: 'Days on Market Growth (YoY)', isPremium: true },
+        { id: 'inventory_pct_houses', name: 'Inventory as % of Houses', isPremium: true },
+        { id: 'median_listing_price', name: 'Median Listing Price', isPremium: true },
+        { id: 'listing_price_yoy', name: 'Median Listing Price (YoY)', isPremium: true },
+        { id: 'new_listing_count', name: 'New Listing Count', isPremium: true },
+        { id: 'new_listing_yoy', name: 'New Listing Count (YoY)', isPremium: true },
+        { id: 'inventory_mom', name: 'Sale Inventory Growth (MoM)', isPremium: true },
+      ],
+    },
+    {
+      id: 'demographic',
+      name: 'Demographic',
+      icon: <PeopleIcon />,
+      metrics: [
+        { id: 'population', name: 'Population' },
+        { id: 'median_income', name: 'Median Household Income' },
+        { id: 'population_growth', name: 'Population Growth', isPremium: true },
+        { id: 'income_growth', name: 'Income Growth', isPremium: true },
+        { id: 'population_density', name: 'Population Density', isPremium: true },
+        { id: 'avg_temperature', name: 'Weather (Avg Temperature)', isPremium: true },
+        { id: 'remote_work_pct', name: 'Remote Work %', isPremium: true },
+        { id: 'college_degree_rate', name: 'College Degree Rate', isPremium: true },
+        { id: 'homeownership_rate', name: 'Homeownership Rate', isPremium: true },
+        { id: 'homeowners_25_44', name: 'Homeowners 25-44 %', isPremium: true },
+        { id: 'homeowners_75_plus', name: 'Homeowners 75+ %', isPremium: true },
+        { id: 'mortgaged_home_pct', name: 'Mortgaged Home %', isPremium: true },
+        { id: 'median_age', name: 'Median Age', isPremium: true },
+        { id: 'poverty_rate', name: 'Poverty Rate', isPremium: true },
+        { id: 'family_households_pct', name: 'Family Households %', isPremium: true },
+        { id: 'single_households_pct', name: 'Single Households %', isPremium: true },
+        { id: 'housing_units', name: 'Housing Units', isPremium: true },
+        { id: 'housing_unit_growth', name: 'Housing Unit Growth Rate', isPremium: true },
+        { id: 'building_permits', name: 'Building Permits', isPremium: true },
+        { id: 'birth_death_ratio', name: 'Birth / Death Ratio', isPremium: true },
+        { id: 'vote_republican', name: 'Vote Republican %', isPremium: true },
+        { id: 'vote_democrat', name: 'Vote Democrat %', isPremium: true },
       ],
     },
     {
@@ -227,17 +317,25 @@ export default function MapPage() {
       name: 'Investor Metrics',
       icon: <TrendingIcon />,
       metrics: [
-        { id: 'cap_rate', name: 'Cap Rate' },
-        { id: 'rent_yield', name: 'Rent Yield' },
+        { id: 'rental_rate', name: 'Rental Rate' },
+        { id: 'rent_for_houses', name: 'Rent For Houses' },
+        { id: 'cap_rate', name: 'Cap Rate', isPremium: true },
+        { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true },
+        { id: 'domestic_migration', name: 'Domestic Migration', isPremium: true },
+        { id: 'domestic_migration_pct', name: 'Domestic Migration %', isPremium: true },
+        { id: 'value_to_rent_ratio', name: 'Home Value to Rent Ratio', isPremium: true },
+        { id: 'rent_pct_income', name: 'Rent as % of Income', isPremium: true },
+        { id: 'shadow_inventory', name: 'Shadow Inventory %', isPremium: true },
       ],
     },
     {
-      id: 'demographics',
-      name: 'Demographics',
-      icon: <PeopleIcon />,
+      id: 'scores',
+      name: 'PropertyIQ Scores',
+      icon: <AnalyticsIcon />,
+      isNew: true,
       metrics: [
-        { id: 'population', name: 'Population' },
-        { id: 'income', name: 'Median Income' },
+        { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true },
+        { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true },
       ],
     },
   ];
@@ -706,6 +804,22 @@ export default function MapPage() {
               )}
             </div>
 
+            {/* Search box */}
+            <div className="mb-4">
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+                    <path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search data points"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1">
               {metricCategories.map((category) => {
                 const isExpanded = expandedCategories.includes(category.id);
@@ -718,6 +832,9 @@ export default function MapPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-gray-600">{category.icon}</span>
                         <span className="font-medium text-sm text-gray-800">{category.name}</span>
+                        {category.isNew && (
+                          <span className="text-xs text-rose-500 font-medium">New</span>
+                        )}
                       </div>
                       <span className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                         <ChevronDownIcon />
@@ -725,18 +842,32 @@ export default function MapPage() {
                     </button>
 
                     {isExpanded && category.metrics && (
-                      <div className="ml-10 mt-1 mb-2 space-y-1">
+                      <div className="ml-8 mt-1 mb-2 space-y-0.5">
                         {category.metrics.map((metric) => (
                           <button
                             key={metric.id}
                             onClick={() => setSelectedMetric(metric.id)}
-                            className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-colors ${
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                               selectedMetric === metric.id
                                 ? 'bg-purple-100 text-purple-700 font-medium'
                                 : 'text-gray-600 hover:bg-gray-50'
                             }`}
                           >
-                            {metric.name}
+                            <span className="flex items-center gap-2">
+                              <span className={`w-3 h-3 rounded-full border-2 ${
+                                selectedMetric === metric.id
+                                  ? 'border-purple-600 bg-purple-600'
+                                  : 'border-gray-300'
+                              }`} />
+                              <span>{metric.name}</span>
+                              {metric.isNew && (
+                                <span className="text-xs text-rose-500 font-medium">New</span>
+                              )}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              {metric.isPremium && <PremiumIcon />}
+                              <InfoSmallIcon />
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -744,6 +875,16 @@ export default function MapPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Explore link */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <a href="#" className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
+                Explore Data Points
+                <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+                  <path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/>
+                </svg>
+              </a>
             </div>
           </div>
         </aside>
