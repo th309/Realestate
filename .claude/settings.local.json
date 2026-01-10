@@ -4,7 +4,23 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git -C \"D:/Projects/rei-platform\" status)",
+      "Bash(git -C \"D:/Projects/rei-platform\" diff --stat)",
+      "Bash(git -C \"D:/Projects/rei-platform\" log --oneline -5)",
+      "Bash(git -C \"D:/Projects/rei-platform\" add packages/backend/src/markets/markets.controller.ts packages/backend/src/markets/markets.service.ts packages/frontend/app/map/page.tsx packages/frontend/lib/api/client.ts)",
+      "Bash(git -C \"D:/Projects/rei-platform\" commit -m \"$\\(cat <<''EOF''\nConnect map to real database data for state home values\n\n- Add getStateHomeValues endpoint to backend API\n- Fetch median home values from census_housing table\n- Fall back to aggregated zillow_metrics if state-level data unavailable\n- Update frontend to fetch and display real data instead of sample values\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"D:/Projects/rei-platform\" push)",
+      "Bash(git -C \"D:/Projects/rei-platform\" add packages/backend/src/markets/markets.service.ts)",
+      "Bash(git -C \"D:/Projects/rei-platform\" commit -m \"$\\(cat <<''EOF''\nFix state home values endpoint to properly aggregate Zillow data\n\n- Extract state FIPS from county geoid \\(first 2 digits\\)\n- Use median instead of average for more accurate state values\n- Add better error handling and logging\n- Only use most recent data per county\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"D:/Projects/rei-platform\" commit -m \"$\\(cat <<''EOF''\nSimplify state home values to use ZHVI directly\n\nZHVI is already a calculated typical home value index from Zillow.\nQuery state-level records directly without aggregation.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx tsx:*)",
+      "Bash(git -C \"D:/Projects/rei-platform\" add packages/backend/src/markets/markets.service.ts scripts/import-zillow-state-zhvi.ts scripts/migrations/020-grant-zillow-metrics-permissions.sql)",
+      "Bash(git -C \"D:/Projects/rei-platform\" commit -m \"$\\(cat <<''EOF''\nUpdate backend to use zillow_zhvi table for state home values\n\n- Import Zillow ZHVI data into zillow_zhvi table\n- Query markets table for state names, join with zillow_zhvi\n- Add import script for state-level ZHVI data\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(curl:*)",
+      "Bash(npm run zillow:import:metro:*)",
+      "Bash(npm run zillow:import:county:*)",
+      "Bash(npm run zillow:import:zip:*)"
     ]
   }
 }

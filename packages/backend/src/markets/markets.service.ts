@@ -130,4 +130,109 @@ export class MarketsService {
       throw error;
     }
   }
+
+  async getMetroHomeValues() {
+    try {
+      // Get most recent ZHVI for metros
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_zhvi')
+        .select('region_id, value, date')
+        .eq('geography', 'Metro')
+        .order('date', { ascending: false })
+        .limit(2000);
+
+      if (zhviError) {
+        console.error('Error fetching Metro ZHVI data:', zhviError);
+        throw zhviError;
+      }
+
+      // Build result - only use most recent value per metro
+      const result: Record<string, number> = {};
+      const seenMetros = new Set<string>();
+
+      for (const record of zhviData || []) {
+        if (seenMetros.has(record.region_id)) continue;
+        seenMetros.add(record.region_id);
+
+        if (record.value) {
+          result[record.region_id] = Math.round(Number(record.value));
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('getMetroHomeValues error:', error);
+      throw error;
+    }
+  }
+
+  async getCountyHomeValues() {
+    try {
+      // Get most recent ZHVI for counties
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_zhvi')
+        .select('region_id, value, date')
+        .eq('geography', 'County')
+        .order('date', { ascending: false })
+        .limit(10000);
+
+      if (zhviError) {
+        console.error('Error fetching County ZHVI data:', zhviError);
+        throw zhviError;
+      }
+
+      // Build result - only use most recent value per county
+      const result: Record<string, number> = {};
+      const seenCounties = new Set<string>();
+
+      for (const record of zhviData || []) {
+        if (seenCounties.has(record.region_id)) continue;
+        seenCounties.add(record.region_id);
+
+        if (record.value) {
+          result[record.region_id] = Math.round(Number(record.value));
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('getCountyHomeValues error:', error);
+      throw error;
+    }
+  }
+
+  async getZipHomeValues() {
+    try {
+      // Get most recent ZHVI for ZIP codes
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_zhvi')
+        .select('region_id, value, date')
+        .eq('geography', 'Zip')
+        .order('date', { ascending: false })
+        .limit(50000);
+
+      if (zhviError) {
+        console.error('Error fetching Zip ZHVI data:', zhviError);
+        throw zhviError;
+      }
+
+      // Build result - only use most recent value per ZIP
+      const result: Record<string, number> = {};
+      const seenZips = new Set<string>();
+
+      for (const record of zhviData || []) {
+        if (seenZips.has(record.region_id)) continue;
+        seenZips.add(record.region_id);
+
+        if (record.value) {
+          result[record.region_id] = Math.round(Number(record.value));
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('getZipHomeValues error:', error);
+      throw error;
+    }
+  }
 }

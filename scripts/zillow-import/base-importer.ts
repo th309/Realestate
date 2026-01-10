@@ -1,0 +1,307 @@
+/**
+ * Base Zillow ZHVI Importer
+ *
+ * Shared logic for importing Zillow Home Value Index data
+ */
+
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+import { join } from 'path';
+import { parse } from 'csv-parse/sync';
+
+// Load environment variables
+config({ path: join(__dirname, '../../packages/backend/.env') });
+
+export interface ZhviRecord {
+  region_id: string;
+  region_name: string;
+  date: string;
+  value: number;
+  geography: string;
+  property_type: string;
+  tier: string;
+}
+
+export interface ImportResult {
+  geography: string;
+  recordsProcessed: number;
+  recordsInserted: number;
+  recordsUpdated: number;
+  errors: string[];
+  duration: number;
+}
+
+export type GeographyLevel = 'State' | 'Metro' | 'County' | 'Zip' | 'City';
+
+// Zillow data URLs
+export const ZILLOW_ZHVI_URLS: Record<GeographyLevel, string> = {
+  State: 'https://files.zillowstatic.com/research/public_csvs/zhvi/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+  Metro: 'https://files.zillowstatic.com/research/public_csvs/zhvi/Metro_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+  County: 'https://files.zillowstatic.com/research/public_csvs/zhvi/County_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+  Zip: 'https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+  City: 'https://files.zillowstatic.com/research/public_csvs/zhvi/City_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+};
+
+export class ZhviImporter {
+  private supabase: SupabaseClient;
+  private geography: GeographyLevel;
+  private batchSize: number;
+
+  constructor(geography: GeographyLevel, batchSize = 1000) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase credentials in environment');
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    this.geography = geography;
+    this.batchSize = batchSize;
+  }
+
+  async downloadCsv(): Promise<string> {
+    const url = ZILLOW_ZHVI_URLS[this.geography];
+    console.log(`Downloading ${this.geography} ZHVI data from Zillow...`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+    }
+
+    const text = await response.text();
+    console.log(`Downloaded ${(text.length / 1024 / 1024).toFixed(2)} MB`);
+    return text;
+  }
+
+  parseCsv(csvText: string): any[] {
+    console.log('Parsing CSV...');
+    const records = parse(csvText, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_column_count: true,
+    });
+    console.log(`Parsed ${records.length} rows`);
+    return records;
+  }
+
+  extractDateColumns(record: any): string[] {
+    // Date columns are in format YYYY-MM-DD or MM/DD/YYYY
+    return Object.keys(record).filter(key => {
+      return /^\d{4}-\d{2}-\d{2}$/.test(key) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(key);
+    });
+  }
+
+  getRegionId(record: any): string {
+    // Different geography levels use different ID columns
+    if (record.RegionID) return String(record.RegionID);
+    if (record.RegionName && this.geography === 'Zip') return String(record.RegionName);
+    return '';
+  }
+
+  getRegionName(record: any): string {
+    if (this.geography === 'State') {
+      return record.RegionName || record.StateName || '';
+    }
+    if (this.geography === 'Metro') {
+      return record.RegionName || '';
+    }
+    if (this.geography === 'County') {
+      const county = record.RegionName || '';
+      const state = record.StateName || record.State || '';
+      return state ? `${county}, ${state}` : county;
+    }
+    if (this.geography === 'Zip') {
+      return record.RegionName || '';
+    }
+    if (this.geography === 'City') {
+      const city = record.RegionName || '';
+      const state = record.StateName || record.State || '';
+      return state ? `${city}, ${state}` : city;
+    }
+    return record.RegionName || '';
+  }
+
+  transformRecords(rawRecords: any[]): ZhviRecord[] {
+    console.log('Transforming records...');
+    const zhviRecords: ZhviRecord[] = [];
+
+    // Get the most recent 12 months of data only
+    const sampleRecord = rawRecords[0];
+    const dateColumns = this.extractDateColumns(sampleRecord);
+    const recentDates = dateColumns.slice(-12); // Last 12 months
+
+    console.log(`Processing ${recentDates.length} date columns (most recent months)`);
+
+    for (const record of rawRecords) {
+      const regionId = this.getRegionId(record);
+      const regionName = this.getRegionName(record);
+
+      if (!regionId) continue;
+
+      for (const dateCol of recentDates) {
+        const value = parseFloat(record[dateCol]);
+        if (isNaN(value) || value <= 0) continue;
+
+        // Normalize date format to YYYY-MM-DD
+        let date = dateCol;
+        if (dateCol.includes('/')) {
+          const [month, day, year] = dateCol.split('/');
+          date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+
+        zhviRecords.push({
+          region_id: regionId,
+          region_name: regionName,
+          date,
+          value,
+          geography: this.geography,
+          property_type: 'sfrcondo',
+          tier: '0.33_0.67',
+        });
+      }
+    }
+
+    console.log(`Transformed ${zhviRecords.length} ZHVI records`);
+    return zhviRecords;
+  }
+
+  async getExistingDates(): Promise<Set<string>> {
+    console.log('Checking existing data...');
+    const { data, error } = await this.supabase
+      .from('zillow_zhvi')
+      .select('date')
+      .eq('geography', this.geography)
+      .limit(1000);
+
+    if (error) {
+      console.warn('Error checking existing dates:', error.message);
+      return new Set();
+    }
+
+    const dates = new Set(data?.map(d => d.date) || []);
+    console.log(`Found ${dates.size} existing date(s) for ${this.geography}`);
+    return dates;
+  }
+
+  async insertBatch(records: ZhviRecord[]): Promise<{ inserted: number; errors: string[] }> {
+    const errors: string[] = [];
+    let inserted = 0;
+
+    // Use plain INSERT
+    const { error } = await this.supabase
+      .from('zillow_zhvi')
+      .insert(
+        records.map(r => ({
+          region_id: r.region_id,
+          date: r.date,
+          value: r.value,
+          geography: r.geography,
+          property_type: r.property_type,
+          tier: r.tier,
+        }))
+      );
+
+    if (error) {
+      errors.push(`Batch error: ${error.message}`);
+    } else {
+      inserted = records.length;
+    }
+
+    return { inserted, errors };
+  }
+
+  async deleteExistingForDate(date: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('zillow_zhvi')
+      .delete()
+      .eq('geography', this.geography)
+      .eq('date', date);
+
+    if (error) {
+      console.warn(`Error deleting existing data for ${date}:`, error.message);
+    }
+  }
+
+  async import(forceFullImport = false): Promise<ImportResult> {
+    const startTime = Date.now();
+    const result: ImportResult = {
+      geography: this.geography,
+      recordsProcessed: 0,
+      recordsInserted: 0,
+      recordsUpdated: 0,
+      errors: [],
+      duration: 0,
+    };
+
+    try {
+      // Download and parse
+      const csvText = await this.downloadCsv();
+      const rawRecords = this.parseCsv(csvText);
+      const zhviRecords = this.transformRecords(rawRecords);
+      result.recordsProcessed = zhviRecords.length;
+
+      // Filter to only new data unless force full import
+      let recordsToInsert = zhviRecords;
+      if (!forceFullImport) {
+        const existingDates = await this.getExistingDates();
+        const latestExisting = [...existingDates].sort().pop();
+
+        if (latestExisting) {
+          recordsToInsert = zhviRecords.filter(r => r.date > latestExisting);
+          console.log(`Filtering to ${recordsToInsert.length} new records (after ${latestExisting})`);
+        }
+      }
+
+      if (recordsToInsert.length === 0) {
+        console.log('No new records to import');
+        result.duration = Date.now() - startTime;
+        return result;
+      }
+
+      // Delete existing data for new dates to avoid duplicates
+      const newDates = [...new Set(recordsToInsert.map(r => r.date))];
+      console.log(`Clearing ${newDates.length} date(s) before insert...`);
+      for (const date of newDates) {
+        await this.deleteExistingForDate(date);
+      }
+
+      // Insert in batches
+      console.log(`Inserting ${recordsToInsert.length} records in batches of ${this.batchSize}...`);
+
+      for (let i = 0; i < recordsToInsert.length; i += this.batchSize) {
+        const batch = recordsToInsert.slice(i, i + this.batchSize);
+        const { inserted, errors } = await this.insertBatch(batch);
+        result.recordsInserted += inserted;
+        result.errors.push(...errors);
+
+        // Progress update
+        const progress = Math.round(((i + batch.length) / recordsToInsert.length) * 100);
+        process.stdout.write(`\rProgress: ${progress}% (${i + batch.length}/${recordsToInsert.length})`);
+      }
+      console.log(); // New line after progress
+
+    } catch (error: any) {
+      result.errors.push(error.message);
+    }
+
+    result.duration = Date.now() - startTime;
+    return result;
+  }
+}
+
+export function printResult(result: ImportResult) {
+  console.log('\n=== Import Result ===');
+  console.log(`Geography: ${result.geography}`);
+  console.log(`Records Processed: ${result.recordsProcessed.toLocaleString()}`);
+  console.log(`Records Inserted: ${result.recordsInserted.toLocaleString()}`);
+  console.log(`Duration: ${(result.duration / 1000).toFixed(1)}s`);
+
+  if (result.errors.length > 0) {
+    console.log(`Errors: ${result.errors.length}`);
+    result.errors.slice(0, 5).forEach(e => console.log(`  - ${e}`));
+  }
+}

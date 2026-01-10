@@ -1,0 +1,83 @@
+name: Zillow ZHVI Monthly Import
+
+on:
+  # Run on the 5th of every month at 6:00 AM UTC
+  # Zillow typically updates data early in the month
+  schedule:
+    - cron: '0 6 5 * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      force_full_import:
+        description: 'Force full reimport (not incremental)'
+        required: false
+        default: 'false'
+        type: boolean
+      levels:
+        description: 'Geography levels to import (comma-separated: state,metro,county,zip,city)'
+        required: false
+        default: 'state,metro,county,zip'
+        type: string
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+jobs:
+  import-zillow-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Zillow ZHVI Import
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force_full_import }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+
+          LEVELS="${{ github.event.inputs.levels || 'state,metro,county,zip' }}"
+
+          echo "Importing Zillow ZHVI data..."
+          echo "Levels: $LEVELS"
+          echo "Force: $FORCE_FLAG"
+
+          npx tsx scripts/zillow-import/import-all.ts --level=$LEVELS $FORCE_FLAG
+
+      - name: Report Results
+        if: always()
+        run: |
+          echo "Import completed at $(date)"
+          echo "Check Supabase dashboard for data verification"
+
+  notify-on-failure:
+    needs: import-zillow-data
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Zillow ZHVI Import Failed - ${date}`,
+              body: `The monthly Zillow ZHVI data import failed.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nPlease investigate and re-run manually if needed.`,
+              labels: ['bug', 'data-import']
+            });

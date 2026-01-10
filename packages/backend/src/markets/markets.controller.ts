@@ -25,6 +25,24 @@ export class MarketsController {
     return this.marketsService.getStateHomeValues();
   }
 
+  @Get('metros/home-values')
+  @ApiOperation({ summary: 'Get median home values by metro area (MSA)' })
+  async getMetroHomeValues() {
+    return this.marketsService.getMetroHomeValues();
+  }
+
+  @Get('counties/home-values')
+  @ApiOperation({ summary: 'Get median home values by county' })
+  async getCountyHomeValues() {
+    return this.marketsService.getCountyHomeValues();
+  }
+
+  @Get('zips/home-values')
+  @ApiOperation({ summary: 'Get median home values by ZIP code' })
+  async getZipHomeValues() {
+    return this.marketsService.getZipHomeValues();
+  }
+
   @Get('states/:stateFp/counties')
   @ApiOperation({ summary: 'Get counties by state FIPS code' })
   @ApiParam({ name: 'stateFp', description: 'State FIPS code (e.g., 17 for Illinois)' })

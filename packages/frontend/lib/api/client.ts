@@ -25,9 +25,15 @@ export interface State {
 }
 
 export type StateHomeValues = Record<string, number>;
+export type MetroHomeValues = Record<string, number>;
+export type CountyHomeValues = Record<string, number>;
+export type ZipHomeValues = Record<string, number>;
 
 export const api = {
   getStats: () => fetchAPI<MarketStats>('/markets/stats'),
   getStates: () => fetchAPI<State[]>('/markets/states'),
   getStateHomeValues: () => fetchAPI<StateHomeValues>('/markets/states/home-values'),
+  getMetroHomeValues: () => fetchAPI<MetroHomeValues>('/markets/metros/home-values'),
+  getCountyHomeValues: () => fetchAPI<CountyHomeValues>('/markets/counties/home-values'),
+  getZipHomeValues: () => fetchAPI<ZipHomeValues>('/markets/zips/home-values'),
 };

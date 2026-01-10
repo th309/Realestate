@@ -15,7 +15,16 @@
     "build:frontend": "npm run build -w frontend",
     "lint": "npm run lint -w backend && npm run lint -w frontend",
     "test": "npm run test -w backend",
-    "clean": "rimraf node_modules packages/*/node_modules packages/*/dist packages/*/.next"
+    "clean": "rimraf node_modules packages/*/node_modules packages/*/dist packages/*/.next",
+    "zillow:import": "npx tsx scripts/zillow-import/import-all.ts",
+    "zillow:import:state": "npx tsx scripts/zillow-import/import-state.ts",
+    "zillow:import:metro": "npx tsx scripts/zillow-import/import-metro.ts",
+    "zillow:import:county": "npx tsx scripts/zillow-import/import-county.ts",
+    "zillow:import:zip": "npx tsx scripts/zillow-import/import-zip.ts",
+    "zillow:import:city": "npx tsx scripts/zillow-import/import-city.ts"
+  },
+  "dependencies": {
+    "csv-parse": "^5.6.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
