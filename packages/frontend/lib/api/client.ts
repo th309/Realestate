@@ -1,7 +1,9 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`);
+  const url = `${API_URL}${endpoint}`;
+  console.log('Fetching:', url);  // Add this for debugging
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
   }
