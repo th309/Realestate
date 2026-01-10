@@ -491,7 +491,7 @@ export default function MapPage() {
         </aside>
 
         {/* Map */}
-        <main className="flex-1 relative">
+        <main className="flex-1 relative" style={{ minHeight: '100%' }}>
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
               <p className="text-red-600 font-medium">{mapError}</p>
@@ -505,7 +505,7 @@ export default function MapPage() {
               </div>
             </div>
           )}
-          <div ref={mapContainer} className="absolute inset-0" />
+          <div ref={mapContainer} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
 
           {/* Table View FAB - Material 3 style */}
           <button className="absolute bottom-6 right-6 bg-white shadow-lg rounded-2xl px-5 py-3 flex items-center gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
