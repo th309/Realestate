@@ -379,7 +379,7 @@ export default function MapPage() {
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <MenuIcon />
           </button>
-          <h1 className="text-xl font-medium text-gray-900">REI Platform</h1>
+          <h1 className="text-xl font-medium text-gray-900">PropertyIQ</h1>
         </div>
 
         {/* Search - Material 3 style */}

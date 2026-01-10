@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E test configuration for REI Platform
+ * Playwright E2E test configuration for PropertyIQ
  */
 export default defineConfig({
   testDir: './e2e',

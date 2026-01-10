@@ -14,7 +14,7 @@ async function bootstrap() {
 
   // Swagger API documentation
   const config = new DocumentBuilder()
-    .setTitle('REI Platform API')
+    .setTitle('PropertyIQ API')
     .setDescription('Real Estate Investment Analysis Platform API')
     .setVersion('1.0')
     .addTag('markets', 'Market data endpoints')

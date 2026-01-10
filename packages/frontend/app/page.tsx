@@ -45,7 +45,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen p-8">
-      <h1 className="text-4xl font-bold mb-8">REI Platform</h1>
+      <h1 className="text-4xl font-bold mb-8">PropertyIQ</h1>
       
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
