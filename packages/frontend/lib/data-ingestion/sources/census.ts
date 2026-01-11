@@ -1,50 +1,26 @@
+/**
+ * Census Data Import
+ *
+ * Imports Census ACS data into market_time_series table.
+ * Refactored to use modular components from ./census/
+ */
+
 import axios from 'axios'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import type { TimeSeriesRecord, CensusResponse, CensusGeoLevel, ImportResult } from './census/types'
+import { CENSUS_API_BASE, CENSUS_VARIABLES } from './census/types'
+import { mapCensusGeoToRegionId, createMarketFromCensusGeo } from './census/geo-mapping'
 
-const CENSUS_API_BASE = 'https://api.census.gov/data'
-
-interface TimeSeriesRecord {
-  region_id: string
-  date: string
-  metric_name: string
-  metric_value: number
-  data_source: string
-  attributes?: Record<string, any>
-}
-
-interface CensusResponse {
-  [index: number]: string[]
-}
-
-const CENSUS_VARIABLES = {
-  population: {
-    variable: 'B01001_001E',
-    metric_name: 'population',
-    description: 'Total Population'
-  },
-  median_household_income: {
-    variable: 'B19013_001E',
-    metric_name: 'median_household_income',
-    description: 'Median Household Income'
-  },
-  poverty_population: {
-    variable: 'B17001_002E',
-    metric_name: 'poverty_population',
-    description: 'Population Below Poverty Level'
-  },
-  median_gross_rent: {
-    variable: 'B25064_001E',
-    metric_name: 'median_gross_rent',
-    description: 'Median Gross Rent'
-  }
-}
+// Re-export for backward compatibility
+export * from './census/types'
+export * from './census/geo-mapping'
 
 export async function importCensusData(
   variables: string[] = ['population', 'median_household_income'],
   year: number = 2022,
-  geoLevel: 'state' | 'metropolitan statistical area/micropolitan statistical area' | 'place' | 'zip code tabulation area' = 'metropolitan statistical area/micropolitan statistical area',
+  geoLevel: CensusGeoLevel = 'metropolitan statistical area/micropolitan statistical area',
   apiKey?: string
-) {
+): Promise<ImportResult> {
   const supabase = createSupabaseAdminClient()
   const censusApiKey = apiKey || process.env.CENSUS_API_KEY
 
@@ -64,18 +40,14 @@ export async function importCensusData(
     .join(',')
 
   const nameVariable = 'NAME'
-
-  const geoVariable = geoLevel === 'state' ? 'state' :
-                      geoLevel === 'metropolitan statistical area/micropolitan statistical area' ? 'metropolitan statistical area/micropolitan statistical area' :
-                      geoLevel === 'place' ? 'place' :
-                      'zip code tabulation area'
+  const geoVariable = geoLevel
 
   let totalRecordsInserted = 0
   const errors: any[] = []
 
   try {
     const url = `${CENSUS_API_BASE}/${year}/${dataset}?get=${variablesList},${nameVariable}&for=${geoVariable}:*&key=${censusApiKey}`
-    
+
     console.log(`📥 Fetching Census data from: ${url.substring(0, 100)}...`)
 
     const response = await axios.get<CensusResponse>(url, {
@@ -110,15 +82,11 @@ export async function importCensusData(
           continue
         }
 
-        // Try to map to existing market first (to avoid duplicates)
-        // If no match found, create a new market record
-        // This ensures ALL Census geographies are in the database, not just those matching existing markets
         let regionId = await mapCensusGeoToRegionId(name, geoCode, geoLevel, record)
 
         if (!regionId) {
-          // Create new market record - this ensures we capture all Census data
           regionId = await createMarketFromCensusGeo(name, geoCode, geoLevel, record)
-          
+
           if (!regionId) {
             console.warn(`⚠️ Could not create or map Census geography: ${name} (${geoCode})`)
             continue
@@ -127,7 +95,7 @@ export async function importCensusData(
 
         for (const metric of variableMetrics) {
           const value = parseFloat(record[metric.variable])
-          
+
           if (!isNaN(value) && value > 0) {
             const timeSeriesRecord: TimeSeriesRecord = {
               region_id: regionId,
@@ -190,232 +158,3 @@ export async function importCensusData(
     throw error
   }
 }
-
-async function mapCensusGeoToRegionId(
-  name: string,
-  geoCode: string,
-  geoLevel: string,
-  record: Record<string, string>
-): Promise<string | null> {
-  const supabase = createSupabaseAdminClient()
-
-  if (geoLevel === 'state') {
-    const stateCode = geoCode.padStart(2, '0')
-    const stateName = name.replace(' State', '').trim()
-
-    const { data } = await supabase
-      .from('markets')
-      .select('region_id')
-      .eq('region_type', 'state')
-      .or(`region_name.ilike.%${stateName}%,state_code.eq.${stateCode}`)
-      .limit(1)
-      .single()
-
-    return data?.region_id || null
-  }
-
-  if (geoLevel === 'metropolitan statistical area/micropolitan statistical area') {
-    const metroName = name.split(',')[0].trim()
-    const stateCode = record['state'] ? record['state'].padStart(2, '0') : null
-
-    const query = supabase
-      .from('markets')
-      .select('region_id')
-      .eq('region_type', 'msa')
-      .ilike('region_name', `%${metroName}%`)
-
-    if (stateCode) {
-      query.eq('state_code', stateCode)
-    }
-
-    const { data } = await query.limit(1).single()
-
-    return data?.region_id || null
-  }
-
-  if (geoLevel === 'place') {
-    const cityName = name.split(',')[0].trim()
-    const stateCode = record['state'] ? record['state'].padStart(2, '0') : null
-
-    const query = supabase
-      .from('markets')
-      .select('region_id')
-      .eq('region_type', 'city')
-      .ilike('region_name', `%${cityName}%`)
-
-    if (stateCode) {
-      query.eq('state_code', stateCode)
-    }
-
-    const { data } = await query.limit(1).single()
-
-    return data?.region_id || null
-  }
-
-  if (geoLevel === 'zip code tabulation area') {
-    const zipCode = geoCode.padStart(5, '0')
-
-    const { data } = await supabase
-      .from('markets')
-      .select('region_id')
-      .eq('region_type', 'zip')
-      .ilike('region_name', `%${zipCode}%`)
-      .limit(1)
-      .single()
-
-    return data?.region_id || null
-  }
-
-  return null
-}
-
-async function createMarketFromCensusGeo(
-  name: string,
-  geoCode: string,
-  geoLevel: string,
-  record: Record<string, string>
-): Promise<string | null> {
-  const supabase = createSupabaseAdminClient()
-
-  if (geoLevel === 'metropolitan statistical area/micropolitan statistical area') {
-    const metroName = name.split(',')[0].trim()
-    const stateParts = name.split(',')
-    const stateName = stateParts.length > 1 ? stateParts[1].trim() : null
-    const stateCode = record['state'] ? getStateCodeFromFIPS(record['state']) : null
-
-    const regionId = `CENSUS-MSA-${geoCode.padStart(5, '0')}`
-
-    const marketData = {
-      region_id: regionId,
-      region_name: name,
-      region_type: 'msa',
-      state_name: stateName || undefined,
-      state_code: stateCode || undefined,
-      metro_name: metroName
-    }
-
-    // Upsert creates the market if it doesn't exist, updates if it does
-    // This ensures all Census metros are in the database
-    const { error } = await supabase
-      .from('markets')
-      .upsert(marketData, {
-        onConflict: 'region_id',
-        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
-      })
-
-    if (error) {
-      console.error(`❌ Error creating market for ${name}:`, error.message)
-      return null
-    }
-
-    console.log(`✅ Created market: ${name} (${regionId})`)
-    return regionId
-  }
-
-  if (geoLevel === 'state') {
-    const stateCode = getStateCodeFromFIPS(geoCode)
-    const stateName = name.replace(' State', '').trim()
-    const regionId = `CENSUS-STATE-${geoCode.padStart(2, '0')}`
-
-    const marketData = {
-      region_id: regionId,
-      region_name: stateName,
-      region_type: 'state',
-      state_name: stateName,
-      state_code: stateCode
-    }
-
-    // Upsert creates the market if it doesn't exist, updates if it does
-    // This ensures all Census metros are in the database
-    const { error } = await supabase
-      .from('markets')
-      .upsert(marketData, {
-        onConflict: 'region_id',
-        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
-      })
-
-    if (error) {
-      console.error(`❌ Error creating market for ${name}:`, error.message)
-      return null
-    }
-
-    return regionId
-  }
-
-  if (geoLevel === 'place') {
-    const cityName = name.split(',')[0].trim()
-    const stateName = name.split(',')[1]?.trim() || null
-    const stateCode = record['state'] ? getStateCodeFromFIPS(record['state']) : null
-    const regionId = `CENSUS-PLACE-${geoCode.padStart(7, '0')}`
-
-    const marketData = {
-      region_id: regionId,
-      region_name: name,
-      region_type: 'city',
-      state_name: stateName || undefined,
-      state_code: stateCode || undefined
-    }
-
-    // Upsert creates the market if it doesn't exist, updates if it does
-    // This ensures all Census metros are in the database
-    const { error } = await supabase
-      .from('markets')
-      .upsert(marketData, {
-        onConflict: 'region_id',
-        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
-      })
-
-    if (error) {
-      console.error(`❌ Error creating market for ${name}:`, error.message)
-      return null
-    }
-
-    return regionId
-  }
-
-  if (geoLevel === 'zip code tabulation area') {
-    const zipCode = geoCode.padStart(5, '0')
-    const regionId = `CENSUS-ZIP-${zipCode}`
-
-    const marketData = {
-      region_id: regionId,
-      region_name: `ZIP Code ${zipCode}`,
-      region_type: 'zip',
-      state_code: record['state'] ? getStateCodeFromFIPS(record['state']) : undefined
-    }
-
-    // Upsert creates the market if it doesn't exist, updates if it does
-    // This ensures all Census metros are in the database
-    const { error } = await supabase
-      .from('markets')
-      .upsert(marketData, {
-        onConflict: 'region_id',
-        ignoreDuplicates: false  // Creates new market if region_id doesn't exist
-      })
-
-    if (error) {
-      console.error(`❌ Error creating market for ZIP ${zipCode}:`, error.message)
-      return null
-    }
-
-    return regionId
-  }
-
-  return null
-}
-
-function getStateCodeFromFIPS(fipsCode: string): string | null {
-  const stateFipsToCode: Record<string, string> = {
-    '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA', '08': 'CO', '09': 'CT', '10': 'DE',
-    '11': 'DC', '12': 'FL', '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN', '19': 'IA',
-    '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME', '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN',
-    '28': 'MS', '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH', '34': 'NJ', '35': 'NM',
-    '36': 'NY', '37': 'NC', '38': 'ND', '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
-    '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT', '50': 'VT', '51': 'VA', '53': 'WA',
-    '54': 'WV', '55': 'WI', '56': 'WY'
-  }
-
-  const fips = fipsCode.padStart(2, '0')
-  return stateFipsToCode[fips] || null
-}
-
