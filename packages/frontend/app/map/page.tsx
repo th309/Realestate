@@ -508,15 +508,17 @@ export default function MapPage() {
       ];
     }
 
-    // ZORDI (Renter Demand) - scale from 0 to 200, centered at baseline 100
+    // ZORDI (Renter Demand) - 7-color scale from 0 to 200, yellow at baseline 100
     if (isRenterDemand) {
-      // 0 = no demand, 100 = baseline, >100 = high demand
-      // Fixed scale from 0 to 200 to ensure valid interpolation
+      // 0 = no demand, 100 = baseline (yellow), >100 = high demand
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        0, '#fecaca',          // Light red (no demand)
-        50, '#fef3c7',         // Yellow (low demand)
-        100, '#bbf7d0',        // Light green (baseline)
+        0, '#dc2626',          // Dark red (no demand)
+        33, '#f87171',         // Red
+        67, '#fb923c',         // Orange
+        100, '#fbbf24',        // Yellow (baseline)
+        133, '#a3e635',        // Light green
+        167, '#4ade80',        // Green
         200, '#16a34a',        // Dark green (high demand)
       ];
     }
@@ -1277,15 +1279,18 @@ export default function MapPage() {
                 );
               }
 
-              // ZORDI (Renter Demand) - index with floor of 0, baseline at 100
+              // ZORDI (Renter Demand) - 7-color scale with yellow at baseline 100
               if (isRenterDemand) {
                 return (
                   <>
                     <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
                     <div className="flex items-center gap-1">
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fecaca' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fef3c7' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#bbf7d0' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dc2626' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f87171' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fb923c' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#a3e635' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#4ade80' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#16a34a' }}></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
