@@ -148,4 +148,24 @@ export const api = {
     });
     return result;
   },
+
+  // ZORI Rent Index endpoints
+  // propertyType: 'all' | 'sfr' | 'mfr' (matches ZillowService.mapRentPropertyType)
+  getMetroRent: async (propertyType: string = 'all'): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/rent/metros?propertyType=${propertyType}`);
+    // Use CBSA code to match GeoJSON
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  getCountyRent: async (propertyType: string = 'all'): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/rent/counties?propertyType=${propertyType}`);
+    // Use FIPS code to match GeoJSON
+    return transformZillowResponse(response, 'county_fips');
+  },
+
+  getZipRent: async (state: string, propertyType: string = 'all'): Promise<ZipHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/rent/zips?state=${state}&propertyType=${propertyType}`);
+    // Use ZIP code as key
+    return transformZillowResponse(response, 'region_id');
+  },
 };

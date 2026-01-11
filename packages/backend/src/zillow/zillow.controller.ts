@@ -3,7 +3,7 @@ import { ZillowService } from './zillow.service';
 
 @Controller('api/zillow')
 export class ZillowController {
-  constructor(private readonly zillowService: ZillowService) {}
+  constructor(private readonly zillowService: ZillowService) { }
 
   @Get('states')
   async getStateHomeValues(@Query('date') date?: string) {
@@ -117,6 +117,63 @@ export class ZillowController {
       count: data.length,
       geography: 'Zip',
       horizon,
+      data,
+    };
+  }
+
+  // ============================================================================
+  // ZORI (Rent Index) Endpoints
+  // ============================================================================
+
+  @Get('rent/metros')
+  async getMetroRent(
+    @Query('date') date?: string,
+    @Query('propertyType') propertyType: string = 'all',
+  ) {
+    const data = await this.zillowService.getMetroRent(date, propertyType);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      propertyType,
+      data,
+    };
+  }
+
+  @Get('rent/counties')
+  async getCountyRent(
+    @Query('date') date?: string,
+    @Query('state') state?: string,
+    @Query('propertyType') propertyType: string = 'all',
+  ) {
+    const data = await this.zillowService.getCountyRent(date, propertyType, state);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'County',
+      propertyType,
+      data,
+    };
+  }
+
+  @Get('rent/zips')
+  async getZipRent(
+    @Query('state') state: string,
+    @Query('date') date?: string,
+    @Query('propertyType') propertyType: string = 'all',
+  ) {
+    if (!state) {
+      return {
+        success: false,
+        error: 'State parameter is required for ZIP-level data',
+      };
+    }
+    const data = await this.zillowService.getZipRent(state, propertyType, date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'ZIP',
+      propertyType,
       data,
     };
   }

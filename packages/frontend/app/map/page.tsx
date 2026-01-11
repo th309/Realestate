@@ -397,23 +397,54 @@ export default function MapPage() {
 
       // Check if we're fetching forecast data
       const isForecast = metric === 'home_price_forecast';
+      // Check if we're fetching rent index data - utilizing the new Renter Demand Index metric ID
+      const isRentIndex = metric === 'rent_for_houses';
 
       switch (level) {
         case 'state':
         case 'national':
-          // Forecast data not available for states - show regular home values
-          data = await api.getStateHomeValues();
+          if (isRentIndex) {
+            // Rent data not available for states in this dataset implementation, or fallback to something else if needed
+            // For now, consistent with forecast, we might not show anything or show metro data if applicable.
+            // But let's stick to what's available. Zillow ZORI often has US/Metro.
+            // If the user wants US data, we could potentially add a getNationalRent endpoint, 
+            // but for now let's assume Metro is the highest aggregation level commonly used or mapped to 'national' view if we wanted.
+            // However, the prompt asked for "metro & US". My getMetroRent handles 'US' geography.
+            // If level is national/state, we might not have a direct endpoint for state rent in the new code, 
+            // but we do for Metro (which includes US).
+            // Let's leave state empty for rent for now unless requested.
+            data = {};
+          } else {
+            // Forecast data not available for states - show regular home values
+            data = await api.getStateHomeValues();
+          }
           break;
         case 'metro':
-          data = isForecast ? await api.getMetroForecast(horizon) : await api.getMetroHomeValues();
+          if (isForecast) {
+            data = await api.getMetroForecast(horizon);
+          } else if (isRentIndex) {
+            data = await api.getMetroRent(renterDemandType);
+          } else {
+            data = await api.getMetroHomeValues();
+          }
           break;
         case 'county':
-          // Forecast data not available for counties - show regular home values
-          data = await api.getCountyHomeValues();
+          if (isRentIndex) {
+            data = await api.getCountyRent(renterDemandType);
+          } else {
+            // Forecast data not available for counties - show regular home values
+            data = await api.getCountyHomeValues();
+          }
           break;
         case 'zip':
           if (state) {
-            data = isForecast ? await api.getZipForecast(state, horizon) : await api.getZipHomeValues(state);
+            if (isForecast) {
+              data = await api.getZipForecast(state, horizon);
+            } else if (isRentIndex) {
+              data = await api.getZipRent(state, renterDemandType);
+            } else {
+              data = await api.getZipHomeValues(state);
+            }
           }
           break;
       }
@@ -423,7 +454,7 @@ export default function MapPage() {
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [renterDemandType]);
 
   // Load stats on mount
   useEffect(() => {
@@ -817,10 +848,10 @@ export default function MapPage() {
                 disabled={isDisabledForForecast}
                 title={isDisabledForForecast ? 'Forecast data not available for this geography level' : undefined}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${isDisabledForForecast
-                    ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                    : isActive
-                      ? 'bg-gray-900 text-white shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                  : isActive
+                    ? 'bg-gray-900 text-white shadow-md'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
               >
                 {level}
@@ -857,8 +888,8 @@ export default function MapPage() {
                   key={item.id}
                   href={item.href}
                   className={`w-16 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${isActive
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'text-gray-600 hover:bg-gray-100'
                     }`}
                 >
                   <span className={isActive ? 'text-purple-700' : 'text-gray-600'}>
@@ -942,8 +973,8 @@ export default function MapPage() {
                                 }
                               }}
                               className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${selectedMetric === metric.id
-                                  ? 'bg-purple-100 text-purple-700 font-medium'
-                                  : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-purple-100 text-purple-700 font-medium'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
                               <span className="flex items-center gap-1.5 min-w-0">
@@ -974,8 +1005,8 @@ export default function MapPage() {
                                         setForecastHorizon(option.value);
                                       }}
                                       className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${forecastHorizon === option.value
-                                          ? 'bg-purple-600 text-white shadow-sm'
-                                          : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                                        ? 'bg-purple-600 text-white shadow-sm'
+                                        : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
                                         }`}
                                     >
                                       {option.label}
@@ -1001,8 +1032,8 @@ export default function MapPage() {
                                         setRentIndexType(option.value);
                                       }}
                                       className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${rentIndexType === option.value
-                                          ? 'bg-green-600 text-white shadow-sm'
-                                          : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                                        ? 'bg-green-600 text-white shadow-sm'
+                                        : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
                                         }`}
                                     >
                                       {option.label}
@@ -1028,8 +1059,8 @@ export default function MapPage() {
                                         setRenterDemandType(option.value);
                                       }}
                                       className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${renterDemandType === option.value
-                                          ? 'bg-green-600 text-white shadow-sm'
-                                          : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                                        ? 'bg-green-600 text-white shadow-sm'
+                                        : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
                                         }`}
                                     >
                                       {option.label}
