@@ -624,10 +624,13 @@ export default function MapPage() {
       let minVal, maxVal;
 
       if (isRentIndex) {
-        const values = Object.values(homeValues).filter(v => v > 0);
+        const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
         if (values.length > 0) {
-          minVal = Math.min(...values);
-          maxVal = Math.max(...values);
+          minVal = values[0];
+          // Use 95th percentile for max to avoid skew from outliers (like extreme luxury rentals)
+          // valid indices are 0 to length-1.
+          const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
+          maxVal = values[p95Index];
         }
       }
 
@@ -1249,16 +1252,19 @@ export default function MapPage() {
 
               if (isRentIndex) {
                 // Calculate min/max from loaded data
-                const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0);
+                const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
                 if (values.length > 0) {
-                  const minVal = Math.min(...values);
-                  const maxVal = Math.max(...values);
+                  const minVal = values[0];
+                  // Use 95th percentile for max to avoid skew
+                  const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
+                  const maxVal = values[p95Index];
+
                   // Format logic
                   const formatMoney = (val: number) => {
                     return val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
                   };
                   minLabel = formatMoney(minVal);
-                  maxLabel = formatMoney(maxVal);
+                  maxLabel = formatMoney(maxVal) + '+';
                 } else {
                   minLabel = '$0';
                   maxLabel = 'N/A';
