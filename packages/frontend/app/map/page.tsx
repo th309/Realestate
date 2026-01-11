@@ -508,17 +508,18 @@ export default function MapPage() {
       ];
     }
 
-    // ZORDI (Renter Demand) - green scale for index values
+    // ZORDI (Renter Demand) - diverging scale centered at 100
     if (isRenterDemand && min !== undefined && max !== undefined) {
-      const step = (max - min) / 5;
+      // Use diverging color scale: red (low) -> yellow (100) -> green (high)
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        min, '#f3f4f6',        // Lightest (lowest demand)
-        min + step, '#bbf7d0',
-        min + step * 2, '#86efac',
-        min + step * 3, '#4ade80',
-        min + step * 4, '#22c55e',
-        max, '#16a34a',        // Darkest green (highest demand)
+        min, '#fecaca',        // Light red (lowest demand)
+        80, '#fecaca',         // Red zone
+        90, '#fef3c7',         // Yellow zone
+        100, '#d1fae5',        // Light green (baseline)
+        110, '#86efac',        // Green
+        120, '#22c55e',        // Brighter green
+        max, '#16a34a',        // Dark green (highest demand)
       ];
     }
 
@@ -1278,11 +1279,11 @@ export default function MapPage() {
                 );
               }
 
-              // ZORDI (Renter Demand) - index values 0-100
+              // ZORDI (Renter Demand) - index centered at 100 baseline
               if (isRenterDemand) {
                 const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
-                let minVal = 0;
-                let maxVal = 100;
+                let minVal = 50;
+                let maxVal = 150;
                 if (values.length > 0) {
                   minVal = Math.floor(values[0]);
                   const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
@@ -1293,19 +1294,20 @@ export default function MapPage() {
                   <>
                     <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
                     <div className="flex items-center gap-1">
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f3f4f6' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#bbf7d0' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fecaca' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fef3c7' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#d1fae5' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#86efac' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#4ade80' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#16a34a' }}></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>{minVal}</span>
+                      <span className="font-medium">100</span>
                       <span>{maxVal}+</span>
                     </div>
                     <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
-                      Higher = stronger renter demand
+                      100 = baseline · &gt;100 = higher demand
                     </div>
                   </>
                 );
