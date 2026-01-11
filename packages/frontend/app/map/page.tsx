@@ -94,7 +94,9 @@ export default function MapPage() {
 
   // Fetch data immediately on mount and when parameters change (don't wait for map)
   useEffect(() => {
-    if (geoLevel === 'zip') {
+    // City, ZIP, and Tract levels require a state selection
+    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    if (requiresState) {
       if (selectedState) {
         fetchHomeValues(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
       }
@@ -104,11 +106,16 @@ export default function MapPage() {
   }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchHomeValues]);
 
   // Update layers when homeValues or geoLevel changes
+  // For city/tract levels, we show boundaries even without data
   useEffect(() => {
-    if (mapLoaded && Object.keys(homeValues).length > 0) {
+    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    const hasData = Object.keys(homeValues).length > 0;
+    const hasBoundariesOnly = ['city', 'tract'].includes(geoLevel) && selectedState;
+
+    if (mapLoaded && (hasData || hasBoundariesOnly)) {
       updateMapLayers();
     }
-  }, [homeValues, geoLevel, mapLoaded, updateMapLayers]);
+  }, [homeValues, geoLevel, selectedState, mapLoaded, updateMapLayers]);
 
   // Initialize map
   useEffect(() => {
@@ -146,7 +153,9 @@ export default function MapPage() {
       return;
     }
 
-    if (geoLevel === 'zip' && selectedState && STATE_CENTERS[selectedState]) {
+    // City, ZIP, and Tract levels zoom to the selected state
+    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    if (requiresState && selectedState && STATE_CENTERS[selectedState]) {
       const center = STATE_CENTERS[selectedState];
       map.current.flyTo({ center: [center.lng, center.lat], zoom: center.zoom, duration: 800 });
       return;

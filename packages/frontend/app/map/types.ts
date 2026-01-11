@@ -1,6 +1,6 @@
 // Map page types and constants
 
-export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
+export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
@@ -144,5 +144,7 @@ export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
   state: 3.5,
   metro: 4,
   county: 4.5,
+  city: 5,
   zip: 5,
+  tract: 6,
 };

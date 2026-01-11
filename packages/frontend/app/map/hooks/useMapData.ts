@@ -69,6 +69,10 @@ export function useMapData(): UseMapDataReturn {
             data = await api.getCountyHomeValues();
           }
           break;
+        case 'city':
+          // City-level data not yet available - boundaries only
+          data = {};
+          break;
         case 'zip':
           if (state) {
             if (isForecast) {
@@ -81,6 +85,10 @@ export function useMapData(): UseMapDataReturn {
               data = await api.getZipHomeValues(state);
             }
           }
+          break;
+        case 'tract':
+          // Tract-level data not yet available - boundaries only
+          data = {};
           break;
       }
       setHomeValues(data);

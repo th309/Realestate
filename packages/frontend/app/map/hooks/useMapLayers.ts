@@ -93,8 +93,12 @@ function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null
     return GEOJSON_SOURCES.county;
   } else if (geoLevel === 'metro') {
     return GEOJSON_SOURCES.metro;
+  } else if (geoLevel === 'city' && selectedState) {
+    return `/geojson/place/${selectedState.toLowerCase()}.json`;
   } else if (geoLevel === 'zip' && selectedState) {
     return `/geojson/zcta/${selectedState.toLowerCase()}.json`;
+  } else if (geoLevel === 'tract' && selectedState) {
+    return `/geojson/tract/${selectedState.toLowerCase()}.json`;
   }
   return null;
 }
@@ -121,12 +125,36 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       feature.properties.id = cbsaCode;
       feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
     });
+  } else if (geoLevel === 'city') {
+    geojson.features.forEach((feature: any) => {
+      // TIGER Place files use GEOID (state FIPS + place FIPS) and NAME
+      const placeId = feature.properties.GEOID || feature.properties.PLACEFP;
+      const placeName = feature.properties.NAME || feature.properties.NAMELSAD || 'Unknown City';
+      const stateFips = feature.properties.STATEFP;
+      const stateAbbr = FIPS_TO_STATE[stateFips] || '';
+      feature.properties.value = homeValues[placeId] || 0;
+      feature.properties.id = placeId;
+      feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
+    });
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
       const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
       feature.properties.value = homeValues[zipCode] || 0;
       feature.properties.id = zipCode;
       feature.properties.displayName = zipCode;
+    });
+  } else if (geoLevel === 'tract') {
+    geojson.features.forEach((feature: any) => {
+      // TIGER Tract files use GEOID (state FIPS + county FIPS + tract code)
+      const tractId = feature.properties.GEOID || feature.properties.TRACTCE;
+      const tractName = feature.properties.NAMELSAD || feature.properties.NAME || `Tract ${tractId}`;
+      const stateFips = feature.properties.STATEFP;
+      const countyFips = feature.properties.COUNTYFP;
+      const stateAbbr = FIPS_TO_STATE[stateFips] || '';
+      feature.properties.value = homeValues[tractId] || 0;
+      feature.properties.id = tractId;
+      feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ''}`;
+      feature.properties.countyFips = stateFips + countyFips;
     });
   }
 }
@@ -164,13 +192,18 @@ function addMapLayers(
   });
 
   // Border layer
+  const lineWidth = geoLevel === 'tract' ? 0.2 :
+                    geoLevel === 'zip' ? 0.3 :
+                    geoLevel === 'city' ? 0.4 :
+                    geoLevel === 'county' ? 0.5 :
+                    geoLevel === 'metro' ? 0.8 : 1.5;
   map.addLayer({
     id: 'geo-borders',
     type: 'line',
     source: 'geo-data',
     paint: {
       'line-color': '#ffffff',
-      'line-width': geoLevel === 'zip' ? 0.3 : geoLevel === 'county' ? 0.5 : geoLevel === 'metro' ? 0.8 : 1.5,
+      'line-width': lineWidth,
     },
   });
 
