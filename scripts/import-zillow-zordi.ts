@@ -42,18 +42,18 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 // ZORDI CSV URLs from Zillow Research
-// URL pattern: https://files.zillowstatic.com/research/public_csvs/zordi/{Geo}_zordi_{type}_sm_sa_month.csv
-// Types: uc_sfrcondo (all homes), uc_sfr (single family), uc_mf (multifamily)
+// URL pattern: https://files.zillowstatic.com/research/public_csvs/zordi/{Geo}_zordi_{type}_month.csv
+// Types: uc_sfrcondomfr (all homes), uc_sfr (single family), uc_mfr (multifamily)
 const ZORDI_URLS: Record<string, Record<string, string>> = {
   metro: {
-    all: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfrcondo_sm_sa_month.csv',
-    sfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfr_sm_sa_month.csv',
-    mfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_mf_sm_sa_month.csv',
+    all: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfrcondomfr_month.csv',
+    sfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfr_month.csv',
+    mfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_mfr_month.csv',
   },
   zip: {
-    all: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_sfrcondo_sm_sa_month.csv',
-    sfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_sfr_sm_sa_month.csv',
-    mfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_mf_sm_sa_month.csv',
+    all: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_sfrcondomfr_month.csv',
+    sfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_sfr_month.csv',
+    mfr: 'https://files.zillowstatic.com/research/public_csvs/zordi/Zip_zordi_uc_mfr_month.csv',
   },
 };
 

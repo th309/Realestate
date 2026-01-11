@@ -230,8 +230,8 @@ export default function MapPage() {
     if (isRentIndexMode && ['national', 'state'].includes(geoLevel)) {
       setGeoLevel('metro');
     }
-    // ZORDI (Renter Demand) only available for Metro and Zip
-    if (isRenterDemandMode && ['national', 'state', 'county'].includes(geoLevel)) {
+    // ZORDI (Renter Demand) only available for Metro
+    if (isRenterDemandMode && geoLevel !== 'metro') {
       setGeoLevel('metro');
     }
   }, [selectedMetric, geoLevel]);
@@ -894,9 +894,9 @@ export default function MapPage() {
             const isRentIndexMode = selectedMetric === 'rent_index';
             const isDisabledForRentIndex = isRentIndexMode && ['national', 'state'].includes(levelKey);
 
-            // Renter Demand (ZORDI) data only available for Metro and Zip
+            // Renter Demand (ZORDI) data only available for Metro (Zillow doesn't provide ZIP level)
             const isRenterDemandMode = selectedMetric === 'rent_for_houses';
-            const isDisabledForRenterDemand = isRenterDemandMode && ['national', 'state', 'county'].includes(levelKey);
+            const isDisabledForRenterDemand = isRenterDemandMode && ['national', 'state', 'county', 'zip'].includes(levelKey);
 
             const isDisabled = isDisabledForForecast || isDisabledForRentIndex || isDisabledForRenterDemand;
             const disabledTitle = isDisabledForForecast
@@ -904,7 +904,7 @@ export default function MapPage() {
               : isDisabledForRentIndex
                 ? 'Rent Index data available for Metro, County, and Zip levels only'
                 : isDisabledForRenterDemand
-                  ? 'Renter Demand Index data available for Metro and Zip levels only'
+                  ? 'Renter Demand Index data available for Metro level only'
                   : undefined;
 
             return (
