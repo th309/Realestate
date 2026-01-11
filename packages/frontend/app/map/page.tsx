@@ -206,7 +206,44 @@ export default function MapPage() {
   const [homeValues, setHomeValues] = useState<HomeValues>({});
   const [dataLoading, setDataLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
+  const [sidebarWidth, setSidebarWidth] = useState(256); // 256px = w-64
+  const isResizing = useRef(false);
   const pathname = usePathname();
+
+  // Sidebar resize handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      // Calculate new width (accounting for 80px nav bar)
+      const newWidth = e.clientX - 80;
+      // Clamp between min and max
+      const clampedWidth = Math.min(Math.max(newWidth, 200), 500);
+      setSidebarWidth(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing.current) {
+        isResizing.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: <HomeIcon />, href: '/' },
@@ -831,7 +868,7 @@ export default function MapPage() {
             })}
           </div>
 
-          <div className="w-64 overflow-y-auto p-4">
+          <div className="overflow-y-auto p-4" style={{ width: sidebarWidth }}>
             <h2 className="text-lg font-medium text-gray-900 mb-4">Market Trends</h2>
 
             {/* Data summary */}
@@ -964,6 +1001,17 @@ export default function MapPage() {
                   <path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/>
                 </svg>
               </a>
+            </div>
+          </div>
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className="w-1 hover:w-1.5 bg-transparent hover:bg-purple-300 cursor-col-resize transition-all flex-shrink-0 group"
+            title="Drag to resize sidebar"
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-0.5 h-8 bg-gray-300 group-hover:bg-purple-500 rounded-full transition-colors" />
             </div>
           </div>
         </aside>
