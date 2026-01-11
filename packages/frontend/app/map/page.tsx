@@ -188,8 +188,6 @@ export default function MapPage() {
     setExpandedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
   };
 
-  const recordCount = Object.keys(homeValues).length;
-
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: '#f7f2fa', fontFamily: "'Google Sans', Roboto, sans-serif" }}>
       {/* Header */}
@@ -232,8 +230,6 @@ export default function MapPage() {
           forecastHorizon={forecastHorizon}
           rentIndexType={rentIndexType}
           renterDemandType={renterDemandType}
-          recordCount={recordCount}
-          selectedState={selectedState}
           sidebarWidth={sidebarWidth}
           viewMode={viewMode}
           onToggleCategory={toggleCategory}
