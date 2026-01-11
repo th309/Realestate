@@ -214,6 +214,19 @@ export default function MapPage() {
   const isResizing = useRef(false);
   const pathname = usePathname();
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    name: string;
+    type: 'state' | 'metro' | 'county' | 'zip' | 'city';
+    center?: [number, number];
+    state?: string;
+  }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   // Sidebar resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -261,6 +274,106 @@ export default function MapPage() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
+  }, []);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Search function using Mapbox Geocoding API
+  const handleSearch = useCallback(async (query: string) => {
+    setSearchQuery(query);
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    setShowSearchResults(true);
+
+    try {
+      // Use Mapbox Geocoding API to search for places in the US
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+        `access_token=${mapboxgl.accessToken}&` +
+        `country=US&` +
+        `types=region,place,postcode,district&` +
+        `limit=8`
+      );
+      const data = await response.json();
+
+      const results = data.features?.map((feature: any) => {
+        // Determine the type based on place_type
+        let type: 'state' | 'metro' | 'county' | 'zip' | 'city' = 'city';
+        if (feature.place_type.includes('region')) type = 'state';
+        else if (feature.place_type.includes('postcode')) type = 'zip';
+        else if (feature.place_type.includes('district')) type = 'county';
+        else if (feature.place_type.includes('place')) type = 'city';
+
+        // Extract state from context
+        const stateContext = feature.context?.find((c: any) => c.id.startsWith('region'));
+        const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
+
+        return {
+          id: feature.id,
+          name: feature.place_name,
+          type,
+          center: feature.center as [number, number],
+          state: stateAbbrev,
+        };
+      }) || [];
+
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error:', err);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Handle search result selection
+  const handleSelectSearchResult = useCallback((result: typeof searchResults[0]) => {
+    if (!map.current || !result.center) return;
+
+    // Fly to the location
+    const zoomLevel = result.type === 'state' ? 5.5 :
+                      result.type === 'zip' ? 12 :
+                      result.type === 'county' ? 8 :
+                      result.type === 'city' ? 10 : 8;
+
+    map.current.flyTo({
+      center: result.center,
+      zoom: zoomLevel,
+      duration: 1000,
+    });
+
+    // Update geo level and state based on result type
+    if (result.type === 'state') {
+      setGeoLevel('state');
+    } else if (result.type === 'zip' && result.state) {
+      setGeoLevel('zip');
+      setSelectedState(result.state);
+    } else if (result.type === 'county') {
+      setGeoLevel('county');
+    } else if (result.type === 'city') {
+      // For cities, show metro level if available, otherwise county
+      setGeoLevel('metro');
+    }
+
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
   }, []);
 
   const navItems: NavItem[] = [
@@ -903,16 +1016,63 @@ export default function MapPage() {
           <h1 className="text-xl font-medium text-gray-900">PropertyIQ</h1>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-8">
+        <div className="flex-1 max-w-2xl mx-8" ref={searchRef}>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
               <SearchIcon />
             </div>
             <input
               type="text"
-              placeholder="Search city, zip, or address"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+              placeholder="Search city, zip, or county"
               className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
             />
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+                {searchLoading ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <ul>
+                    {searchResults.map((result) => (
+                      <li key={result.id}>
+                        <button
+                          onClick={() => handleSelectSearchResult(result)}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        >
+                          <span className="text-gray-400">
+                            {result.type === 'state' ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                                <path d="M480-480q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480Zm0 400Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Z"/>
+                              </svg>
+                            ) : result.type === 'zip' ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                                <path d="M160-160v-440 440-15 15Zm0 80q-33 0-56.5-23.5T80-160v-440q0-33 23.5-56.5T160-680h200v-120q0-33 23.5-56.5T440-880h80q33 0 56.5 23.5T600-800v120h200q33 0 56.5 23.5T880-600v440q0 33-23.5 56.5T800-80H160Zm280-600h80v-120h-80v120ZM160-160h640v-440H160v440Zm320-220Z"/>
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+                                <path d="M120-120v-560h200v-200h320v360h200v400H520v-200h-80v200H120Zm80-80h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 320h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 480h80v-80h-80v80Zm0-160h80v-80h-80v80Z"/>
+                              </svg>
+                            )}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{result.name}</div>
+                            <div className="text-xs text-gray-500 capitalize">{result.type}</div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : searchQuery.length >= 2 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">No results found</div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
 
