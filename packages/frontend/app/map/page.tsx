@@ -92,18 +92,16 @@ export default function MapPage() {
     };
   }, []);
 
-  // Reload data when geo level, selected state, metric, or forecast horizon changes
+  // Fetch data immediately on mount and when parameters change (don't wait for map)
   useEffect(() => {
-    if (mapLoaded) {
-      if (geoLevel === 'zip') {
-        if (selectedState) {
-          fetchHomeValues(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
-        }
-      } else {
-        fetchHomeValues(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
+    if (geoLevel === 'zip') {
+      if (selectedState) {
+        fetchHomeValues(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
       }
+    } else {
+      fetchHomeValues(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
     }
-  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchHomeValues, mapLoaded]);
+  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchHomeValues]);
 
   // Update layers when homeValues or geoLevel changes
   useEffect(() => {
