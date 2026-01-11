@@ -1045,27 +1045,45 @@ export default function MapPage() {
                             {/* Renter Demand Index Type Selector */}
                             {metric.id === 'rent_for_houses' && selectedMetric === 'rent_for_houses' && (
                               <div className="mt-1 ml-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                                <div className="text-[10px] font-medium text-green-800 mb-1.5">Property Type</div>
+                                <div className="text-[10px] font-medium text-green-800 mb-1.5 min-h-[15px] flex items-center justify-between">
+                                  <span>Property Type</span>
+                                  {/* Show simplified warning if restricted */}
+                                  {(geoLevel === 'county' || geoLevel === 'zip') && (
+                                    <span className="text-[8px] text-orange-600 font-normal">Metro/US only</span>
+                                  )}
+                                </div>
                                 <div className="flex gap-1">
                                   {([
                                     { value: 'all', label: 'All Homes' },
                                     { value: 'sfr', label: 'Single Family' },
                                     { value: 'mfr', label: 'Multi-Family' },
-                                  ] as const).map((option) => (
-                                    <button
-                                      key={option.value}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setRenterDemandType(option.value);
-                                      }}
-                                      className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${renterDemandType === option.value
-                                        ? 'bg-green-600 text-white shadow-sm'
-                                        : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
-                                        }`}
-                                    >
-                                      {option.label}
-                                    </button>
-                                  ))}
+                                  ] as const).map((option) => {
+                                    // Disable SFR and MFR for County and Zip levels
+                                    const isDisabled = (option.value === 'sfr' || option.value === 'mfr') && (geoLevel === 'county' || geoLevel === 'zip');
+
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!isDisabled) {
+                                            setRenterDemandType(option.value);
+                                          }
+                                        }}
+                                        disabled={isDisabled}
+                                        title={isDisabled ? "Not available for County/Zip level" : ""}
+                                        className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all 
+                                        ${isDisabled
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            : renterDemandType === option.value
+                                              ? 'bg-green-600 text-white shadow-sm'
+                                              : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                                          }`}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
