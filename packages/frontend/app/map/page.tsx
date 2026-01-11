@@ -397,8 +397,10 @@ export default function MapPage() {
 
       // Check if we're fetching forecast data
       const isForecast = metric === 'home_price_forecast';
-      // Check if we're fetching rent index data - utilizing the new Renter Demand Index metric ID
-      const isRentIndex = metric === 'rent_for_houses';
+      // Check if we're fetching rent index data - utilizing the new Renter Demand Index metric ID OR the standard Rent Index
+      const isRentIndex = metric === 'rent_for_houses' || metric === 'rent_index';
+      // Determine which state variable to track for property type
+      const rentPropType = metric === 'rent_for_houses' ? renterDemandType : rentIndexType;
 
       switch (level) {
         case 'state':
@@ -406,13 +408,6 @@ export default function MapPage() {
           if (isRentIndex) {
             // Rent data not available for states in this dataset implementation, or fallback to something else if needed
             // For now, consistent with forecast, we might not show anything or show metro data if applicable.
-            // But let's stick to what's available. Zillow ZORI often has US/Metro.
-            // If the user wants US data, we could potentially add a getNationalRent endpoint, 
-            // but for now let's assume Metro is the highest aggregation level commonly used or mapped to 'national' view if we wanted.
-            // However, the prompt asked for "metro & US". My getMetroRent handles 'US' geography.
-            // If level is national/state, we might not have a direct endpoint for state rent in the new code, 
-            // but we do for Metro (which includes US).
-            // Let's leave state empty for rent for now unless requested.
             data = {};
           } else {
             // Forecast data not available for states - show regular home values
@@ -423,14 +418,14 @@ export default function MapPage() {
           if (isForecast) {
             data = await api.getMetroForecast(horizon);
           } else if (isRentIndex) {
-            data = await api.getMetroRent(renterDemandType);
+            data = await api.getMetroRent(rentPropType);
           } else {
             data = await api.getMetroHomeValues();
           }
           break;
         case 'county':
           if (isRentIndex) {
-            data = await api.getCountyRent(renterDemandType);
+            data = await api.getCountyRent(rentPropType);
           } else {
             // Forecast data not available for counties - show regular home values
             data = await api.getCountyHomeValues();
@@ -441,7 +436,7 @@ export default function MapPage() {
             if (isForecast) {
               data = await api.getZipForecast(state, horizon);
             } else if (isRentIndex) {
-              data = await api.getZipRent(state, renterDemandType);
+              data = await api.getZipRent(state, rentPropType);
             } else {
               data = await api.getZipHomeValues(state);
             }
@@ -454,7 +449,7 @@ export default function MapPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [renterDemandType]);
+  }, [renterDemandType, rentIndexType]);
 
   // Load stats on mount
   useEffect(() => {
@@ -1018,27 +1013,45 @@ export default function MapPage() {
                             {/* Rent Index Type Selector - show below the rent index metric when selected */}
                             {metric.id === 'rent_index' && selectedMetric === 'rent_index' && (
                               <div className="mt-1 ml-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                                <div className="text-[10px] font-medium text-green-800 mb-1.5">Property Type</div>
+                                <div className="text-[10px] font-medium text-green-800 mb-1.5 min-h-[15px] flex items-center justify-between">
+                                  <span>Property Type</span>
+                                  {/* Show simplified warning if restricted */}
+                                  {(geoLevel === 'county' || geoLevel === 'zip') && (
+                                    <span className="text-[8px] text-orange-600 font-normal">Metro/US only</span>
+                                  )}
+                                </div>
                                 <div className="flex gap-1">
                                   {([
                                     { value: 'all', label: 'All Homes' },
                                     { value: 'sfr', label: 'Single Family' },
                                     { value: 'mfr', label: 'Multi-Family' },
-                                  ] as const).map((option) => (
-                                    <button
-                                      key={option.value}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setRentIndexType(option.value);
-                                      }}
-                                      className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${rentIndexType === option.value
-                                        ? 'bg-green-600 text-white shadow-sm'
-                                        : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
-                                        }`}
-                                    >
-                                      {option.label}
-                                    </button>
-                                  ))}
+                                  ] as const).map((option) => {
+                                    // Disable SFR and MFR for County and Zip levels
+                                    const isDisabled = (option.value === 'sfr' || option.value === 'mfr') && (geoLevel === 'county' || geoLevel === 'zip');
+
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (!isDisabled) {
+                                            setRentIndexType(option.value);
+                                          }
+                                        }}
+                                        disabled={isDisabled}
+                                        title={isDisabled ? "Not available for County/Zip level" : ""}
+                                        className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all 
+                                      ${isDisabled
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            : rentIndexType === option.value
+                                              ? 'bg-green-600 text-white shadow-sm'
+                                              : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                                          }`}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
