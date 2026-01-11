@@ -1,33 +1,36 @@
-name: Zillow ZHVI Monthly Import
+name: Zillow Data Monthly Import
 
 on:
-  # Run on the 5th of every month at 6:00 AM UTC
-  # Zillow typically updates data early in the month
+  # Run on the 18th of every month at 6:00 AM UTC
+  # Zillow publishes new data around the 15th-16th, import on 18th for safety
   schedule:
-    - cron: '0 6 5 * *'
+    - cron: '0 6 18 * *'
 
   # Allow manual trigger
   workflow_dispatch:
     inputs:
-      force_full_import:
-        description: 'Force full reimport (not incremental)'
+      datasets:
+        description: 'Which datasets to import'
         required: false
-        default: 'false'
-        type: boolean
-      levels:
-        description: 'Geography levels to import (comma-separated: state,metro,county,zip,city)'
-        required: false
-        default: 'state,metro,county,zip'
-        type: string
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - zhvi-only
+          - zori-only
+          - market-indicators
+          - affordability
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
   SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
 jobs:
   import-zillow-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180  # 3 hours for large datasets
 
     steps:
       - name: Checkout repository
@@ -42,31 +45,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Zillow ZHVI Import
+      - name: Run Zillow Data Import
+        id: import
         run: |
-          FORCE_FLAG=""
-          if [ "${{ github.event.inputs.force_full_import }}" = "true" ]; then
-            FORCE_FLAG="--force"
+          echo "=============================================="
+          echo "Zillow Data Import - $(date)"
+          echo "=============================================="
+          npx tsx scripts/import-all-zillow-datasets.ts 2>&1 | tee import-output.txt
+
+          # Check for failures in output
+          if grep -q "Failed: [1-9]" import-output.txt; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+            echo "::warning::Some datasets failed to import"
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
           fi
 
-          LEVELS="${{ github.event.inputs.levels || 'state,metro,county,zip' }}"
-
-          echo "Importing Zillow ZHVI data..."
-          echo "Levels: $LEVELS"
-          echo "Force: $FORCE_FLAG"
-
-          npx tsx scripts/zillow-import/import-all.ts --level=$LEVELS $FORCE_FLAG
-
-      - name: Report Results
-        if: always()
+      - name: Verify Data Import
         run: |
-          echo "Import completed at $(date)"
-          echo "Check Supabase dashboard for data verification"
+          echo "=============================================="
+          echo "Verifying imported data..."
+          echo "=============================================="
+          npx tsx scripts/verify-and-import-zillow.ts --check-only
+
+      - name: Upload Import Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: import-log-${{ github.run_id }}
+          path: import-output.txt
+          retention-days: 30
+
+    outputs:
+      has_failures: ${{ steps.import.outputs.has_failures }}
 
   notify-on-failure:
     needs: import-zillow-data
     runs-on: ubuntu-latest
-    if: failure()
+    if: failure() || needs.import-zillow-data.outputs.has_failures == 'true'
 
     steps:
       - name: Create Issue on Failure
@@ -74,10 +90,79 @@ jobs:
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];
-            await github.rest.issues.create({
+            const isPartialFailure = '${{ needs.import-zillow-data.outputs.has_failures }}' === 'true';
+
+            const title = isPartialFailure
+              ? `Zillow Data Import Partial Failure - ${date}`
+              : `Zillow Data Import Failed - ${date}`;
+
+            const body = [
+              isPartialFailure ? '## Zillow Data Import Partial Failure' : '## Zillow Data Import Failure',
+              '',
+              isPartialFailure
+                ? 'Some Zillow datasets failed to import. The workflow completed but with errors.'
+                : 'The monthly Zillow data import workflow failed completely.',
+              '',
+              `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              `**Date:** ${date}`,
+              '',
+              '### Tables That Should Have Data',
+              '- zillow_zhvi (Home Values)',
+              '- zillow_zori (Rent Index)',
+              '- zillow_zhvf (Forecasts)',
+              '- zillow_new_listings',
+              '- zillow_pending_listings',
+              '- zillow_median_list_price',
+              '- zillow_sale_to_list',
+              '- zillow_days_to_close',
+              '- zillow_price_cut_share/amt/pct',
+              '- And more...',
+              '',
+              '### Action Required',
+              '1. Check the workflow logs and downloaded artifact for detailed errors',
+              '2. Verify Supabase credentials are valid',
+              '3. Check if Zillow CSV URLs have changed',
+              '4. Run `npx tsx scripts/verify-and-import-zillow.ts` locally to diagnose',
+              '5. Re-run the workflow manually once fixed'
+            ].join('\n');
+
+            // Check for existing open issue to avoid duplicates
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `Zillow ZHVI Import Failed - ${date}`,
-              body: `The monthly Zillow ZHVI data import failed.\n\nWorkflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nPlease investigate and re-run manually if needed.`,
-              labels: ['bug', 'data-import']
+              labels: 'data-import,automated',
+              state: 'open'
             });
+
+            const hasExisting = existingIssues.some(issue =>
+              issue.title.includes('Zillow Data Import') && issue.title.includes(date)
+            );
+
+            if (!hasExisting) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['bug', 'data-import', 'automated']
+              });
+              console.log('Created failure notification issue');
+            } else {
+              console.log('Issue already exists for today, skipping creation');
+            }
+
+  notify-on-success:
+    needs: import-zillow-data
+    runs-on: ubuntu-latest
+    if: success() && needs.import-zillow-data.outputs.has_failures != 'true'
+
+    steps:
+      - name: Log Success
+        run: |
+          echo "=============================================="
+          echo "Zillow Data Import Completed Successfully"
+          echo "Date: $(date)"
+          echo "=============================================="
+          echo "All 20 Zillow tables should now have updated data."
+          echo "Check Supabase dashboard to verify."

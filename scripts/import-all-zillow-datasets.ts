@@ -24,11 +24,18 @@ if (!existsSync(DATA_DIR)) {
 // Import dataset configuration
 let ZILLOW_DATASETS: DatasetConfig[];
 try {
-  const zillowDatasets = require('../web/lib/data-ingestion/sources/zillow-datasets');
+  // Try packages/frontend first
+  const zillowDatasets = require('../packages/frontend/lib/data-ingestion/sources/zillow-datasets');
   ZILLOW_DATASETS = zillowDatasets.ZILLOW_DATASETS;
 } catch (error) {
-  console.error('❌ Could not import zillow-datasets');
-  process.exit(1);
+  try {
+    // Fallback to web (older structure)
+    const zillowDatasets = require('../web/lib/data-ingestion/sources/zillow-datasets');
+    ZILLOW_DATASETS = zillowDatasets.ZILLOW_DATASETS;
+  } catch (innerError) {
+    console.error('❌ Could not import zillow-datasets from packages/frontend or web');
+    process.exit(1);
+  }
 }
 
 /**
@@ -78,8 +85,13 @@ async function processDataset(supabase: any, dataset: DatasetConfig): Promise<Im
 
 /**
  * Print summary of import results
+ * Returns true if all datasets succeeded, false if any failed
  */
-function printSummary(results: ImportResult[]): void {
+function printSummary(results: ImportResult[], startTime: number): boolean {
+  const endTime = Date.now();
+  const durationMs = endTime - startTime;
+  const durationMin = Math.round(durationMs / 60000);
+
   console.log('\n' + '='.repeat(60));
   console.log('📊 IMPORT SUMMARY');
   console.log('='.repeat(60));
@@ -98,8 +110,9 @@ function printSummary(results: ImportResult[]): void {
     totalTimeSeries += r.timeSeriesInserted;
   });
 
-  console.log(`📊 Total markets created/updated: ${totalMarkets}`);
+  console.log(`📊 Total markets created/updated: ${totalMarkets.toLocaleString()}`);
   console.log(`📊 Total time series records: ${totalTimeSeries.toLocaleString()}`);
+  console.log(`⏱️  Duration: ${durationMin} minutes`);
 
   if (failed.length > 0) {
     console.log('\n❌ Failed datasets:');
@@ -108,23 +121,60 @@ function printSummary(results: ImportResult[]): void {
     });
   }
 
-  console.log('\n✅ Process complete!');
+  if (successful.length > 0) {
+    console.log('\n✅ Successful datasets:');
+    successful.forEach(r => {
+      console.log(`  - ${r.datasetId}: ${r.timeSeriesInserted.toLocaleString()} records`);
+    });
+  }
+
+  console.log('\n' + '='.repeat(60));
+  if (failed.length === 0) {
+    console.log('✅ ALL DATASETS IMPORTED SUCCESSFULLY');
+  } else {
+    console.log(`⚠️  ${failed.length} DATASET(S) FAILED - CHECK LOGS ABOVE`);
+  }
+  console.log('='.repeat(60));
+
+  return failed.length === 0;
 }
 
 /**
  * Main function
  */
 async function main() {
+  const startTime = Date.now();
+
   console.log('🚀 Starting Zillow Dataset Import Process');
   console.log('='.repeat(60));
-  console.log(`Total datasets: ${ZILLOW_DATASETS.length}\n`);
+  console.log(`Date: ${new Date().toISOString()}`);
+  console.log(`Total datasets configured: ${ZILLOW_DATASETS.length}\n`);
 
   const supabase = createZillowImportClient();
 
-  // Skip the one we already imported
-  const datasetsToProcess = ZILLOW_DATASETS.filter(d => d.id !== 'zhvi-metro-all-homes-sm-sa');
+  // Skip datasets - only skip truly problematic ones (US aggregate duplicates)
+  const skipDatasets = [
+    'zhvi-us-all-homes-sm-sa',      // US aggregate is in metro file
+    'zori-us-all-homes-sm',         // US aggregate is in metro file
+  ];
 
-  console.log(`Processing ${datasetsToProcess.length} datasets...\n`);
+  // Sort by estimated size (smallest first): state < metro < county < city < zip
+  const getSizePriority = (id: string): number => {
+    if (id.includes('-us-')) return 0;      // US aggregate (tiny)
+    if (id.includes('-state-')) return 1;   // State (~300KB)
+    if (id.includes('-metro-')) return 2;   // Metro (~1-4MB)
+    if (id.includes('-county-')) return 3;  // County (~1.7-12MB)
+    if (id.includes('-city-')) return 4;    // City (~4-88MB)
+    if (id.includes('-zip-')) return 5;     // ZIP (~116MB)
+    return 3; // Default to middle
+  };
+
+  const datasetsToProcess = ZILLOW_DATASETS
+    .filter(d => !skipDatasets.includes(d.id))
+    .sort((a, b) => getSizePriority(a.id) - getSizePriority(b.id));
+
+  console.log(`Processing ${datasetsToProcess.length} datasets (sorted smallest to largest)...`);
+  console.log(`Skipping ${skipDatasets.length} duplicate datasets\n`);
 
   const results: ImportResult[] = [];
 
@@ -135,7 +185,7 @@ async function main() {
       const result = await processDataset(supabase, dataset);
       results.push(result);
 
-      // Add delay between datasets
+      // Add delay between datasets to avoid rate limiting
       if (index < datasetsToProcess.length - 1) {
         console.log('  ⏳ Waiting 2 seconds before next dataset...');
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -147,13 +197,18 @@ async function main() {
         success: false,
         marketsCreated: 0,
         timeSeriesInserted: 0,
-        errors: 0,
+        errors: 1,
         errorMessage: error.message
       });
     }
   }
 
-  printSummary(results);
+  const allSuccess = printSummary(results, startTime);
+
+  // Exit with error code if any failures occurred
+  if (!allSuccess) {
+    process.exit(1);
+  }
 }
 
 main().catch(error => {
