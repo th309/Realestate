@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { MetricConfig } from '@/config/metric-registry';
+import type { MetricConfig } from '@/src/config/metric-registry';
 
 interface RegionCompareProps {
     metricId: string;

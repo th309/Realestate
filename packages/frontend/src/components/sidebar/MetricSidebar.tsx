@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState } from 'react';
-import { METRIC_REGISTRY, MetricConfig } from '@/config/metric-registry';
+import { METRIC_REGISTRY, MetricConfig } from '@/src/config/metric-registry';
 import {
     StarIcon,
     HomeIcon,
@@ -15,7 +14,7 @@ import {
     ChevronLeftIcon,
     ChevronRightIcon,
     ChevronIcon,
-} from '@/components/common/Icons';
+} from '@/src/components/common/Icons';
 
 interface MetricSidebarProps {
     selectedMetric: string;
@@ -106,8 +105,8 @@ export const MetricSidebar: React.FC<MetricSidebarProps> = ({
                                             <button
                                                 onClick={() => setUserMode('homebuyer')}
                                                 className={`flex-1 py-1.5 text-sm rounded-md transition-colors ${userMode === 'homebuyer'
-                                                        ? 'bg-white text-gray-900 shadow-sm'
-                                                        : 'text-gray-600'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-600'
                                                     }`}
                                             >
                                                 Homebuyer
@@ -115,8 +114,8 @@ export const MetricSidebar: React.FC<MetricSidebarProps> = ({
                                             <button
                                                 onClick={() => setUserMode('investor')}
                                                 className={`flex-1 py-1.5 text-sm rounded-md transition-colors ${userMode === 'investor'
-                                                        ? 'bg-white text-gray-900 shadow-sm'
-                                                        : 'text-gray-600'
+                                                    ? 'bg-white text-gray-900 shadow-sm'
+                                                    : 'text-gray-600'
                                                     }`}
                                             >
                                                 Investor
@@ -201,8 +200,8 @@ const MetricItem: React.FC<{
     <button
         onClick={onClick}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${isSelected
-                ? 'bg-blue-50 text-blue-700 font-medium'
-                : 'text-gray-700 hover:bg-gray-50'
+            ? 'bg-blue-50 text-blue-700 font-medium'
+            : 'text-gray-700 hover:bg-gray-50'
             }`}
     >
         {metric.shortName}

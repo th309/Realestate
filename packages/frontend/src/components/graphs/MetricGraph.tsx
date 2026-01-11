@@ -17,7 +17,7 @@ import {
     ResponsiveContainer,
     ReferenceLine,
 } from 'recharts';
-import { METRIC_REGISTRY, MetricConfig } from '@/config/metric-registry';
+import { METRIC_REGISTRY, MetricConfig } from '@/src/config/metric-registry';
 
 interface MetricGraphProps {
     metricId: string;
@@ -221,7 +221,7 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
                         width={100}
                     />
                     <Tooltip
-                        formatter={(value: number) => [formatValue(value), metric.shortName]}
+                        formatter={(value: any) => [formatValue(Number(value)), metric.shortName]}
                         labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', {
                             month: 'long',
                             year: 'numeric',
@@ -328,9 +328,9 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
                         </span>
                         {stats.yoyChange !== null && (
                             <span className={`text-lg font-medium ${(metric.colorScale === 'red-green' && stats.yoyChange > 0) ||
-                                    (metric.colorScale === 'green-red' && stats.yoyChange < 0)
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
+                                (metric.colorScale === 'green-red' && stats.yoyChange < 0)
+                                ? 'text-green-600'
+                                : 'text-red-600'
                                 }`}>
                                 {stats.yoyChange > 0 ? '▲' : '▼'} {Math.abs(stats.yoyChange).toFixed(1)}% YoY
                             </span>
@@ -351,8 +351,8 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-3 py-1 text-sm rounded-md transition-colors ${timeRange === range
-                                    ? 'bg-blue-100 text-blue-700 font-medium'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-blue-100 text-blue-700 font-medium'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             {range}
@@ -371,8 +371,8 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
                             key={key}
                             onClick={() => setInterval(key)}
                             className={`px-3 py-1 text-sm rounded-md transition-colors ${interval === key
-                                    ? 'bg-blue-100 text-blue-700 font-medium'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-blue-100 text-blue-700 font-medium'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             {label}

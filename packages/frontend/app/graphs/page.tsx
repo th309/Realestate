@@ -3,11 +3,11 @@
 
 import React, { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MetricGraph } from '@/components/graphs/MetricGraph';
-import { METRIC_REGISTRY } from '@/config/metric-registry';
-import { MetricSidebar } from '@/components/sidebar/MetricSidebar';
-import { GeographySelector } from '@/components/selectors/GeographySelector';
-import { RegionCompare } from '@/components/graphs/RegionCompare';
+import { MetricGraph } from '@/src/components/graphs/MetricGraph';
+import { METRIC_REGISTRY } from '@/src/config/metric-registry';
+import { MetricSidebar } from '@/src/components/sidebar/MetricSidebar';
+import { GeographySelector } from '@/src/components/selectors/GeographySelector';
+import { RegionCompare } from '@/src/components/graphs/RegionCompare';
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip' | 'city';
 

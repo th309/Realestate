@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import type { MetricConfig } from '@/config/metric-registry';
+import type { MetricConfig } from '@/src/config/metric-registry';
 
 interface GeographySelectorProps {
     currentLevel: 'national' | 'state' | 'metro' | 'county' | 'zip' | 'city';
@@ -38,8 +38,8 @@ export const GeographySelector: React.FC<GeographySelectorProps> = ({
                         key={level}
                         onClick={() => handleLevelChange(level)}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${currentLevel === level
-                                ? 'bg-white text-gray-900 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-900'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900'
                             }`}
                     >
                         {level}
