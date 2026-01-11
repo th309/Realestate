@@ -474,7 +474,7 @@ export default function MapPage() {
   }, [geoLevel, selectedState, selectedMetric, forecastHorizon, fetchHomeValues, mapLoaded]);
 
   // Color scale function
-  const getColorScale = (level: GeoLevel, isForecast: boolean = false) => {
+  const getColorScale = (level: GeoLevel, isForecast: boolean = false, min?: number, max?: number) => {
     // Forecast uses percentage scale (typically -5% to +10%)
     if (isForecast) {
       return [
@@ -485,6 +485,20 @@ export default function MapPage() {
         2, '#84cc16',     // Light green
         5, '#22c55e',     // Green for positive growth
         10, '#059669',    // Dark green for strong growth
+      ];
+    }
+
+    // Dynamic scale if min/max provided (used for Rent Index)
+    if (min !== undefined && max !== undefined) {
+      const step = (max - min) / 5;
+      return [
+        'interpolate', ['linear'], ['get', 'value'],
+        min, '#f3f4f6',      // Lightest (lowest rent)
+        min + step, '#dbeafe',
+        min + step * 2, '#93c5fd',
+        min + step * 3, '#3b82f6',
+        min + step * 4, '#1d4ed8',
+        max, '#1e3a8a',      // Darkest (highest rent)
       ];
     }
 
@@ -597,12 +611,24 @@ export default function MapPage() {
 
       // Fill layer
       const isForecast = selectedMetric === 'home_price_forecast';
+      // Determine dynamic scale for Rent Index or Renter Demand
+      const isRentIndex = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+      let minVal, maxVal;
+
+      if (isRentIndex) {
+        const values = Object.values(homeValues).filter(v => v > 0);
+        if (values.length > 0) {
+          minVal = Math.min(...values);
+          maxVal = Math.max(...values);
+        }
+      }
+
       map.current!.addLayer({
         id: 'geo-fills',
         type: 'fill',
         source: 'geo-data',
         paint: {
-          'fill-color': getColorScale(geoLevel, isForecast) as any,
+          'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal) as any,
           'fill-opacity': 0.6,
         },
       });
