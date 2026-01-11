@@ -41,7 +41,7 @@ export default function MapPage() {
   // Use extracted hooks
   const { homeValues, dataLoading, fetchHomeValues } = useMapData();
   const {
-    searchQuery, searchResults, searchLoading, showSearchResults, searchRef,
+    searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
     handleSearch, handleSelectSearchResult, setShowSearchResults
   } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
   const { updateMapLayers } = useMapLayers({
@@ -138,9 +138,15 @@ export default function MapPage() {
     };
   }, []);
 
-  // Adjust zoom for different geo levels
+  // Adjust zoom for different geo levels (skip if search already handled navigation)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
+
+    // Skip if search just navigated (it already set the zoom via fitBounds)
+    if (searchNavigatedRef.current) {
+      searchNavigatedRef.current = false;
+      return;
+    }
 
     if (geoLevel === 'zip' && selectedState && STATE_CENTERS[selectedState]) {
       const center = STATE_CENTERS[selectedState];
@@ -149,7 +155,7 @@ export default function MapPage() {
     }
 
     map.current.flyTo({ center: [-96, 37.8], zoom: GEO_ZOOM_LEVELS[geoLevel], duration: 500 });
-  }, [geoLevel, selectedState, mapLoaded]);
+  }, [geoLevel, selectedState, mapLoaded, searchNavigatedRef]);
 
   const toggleCategory = (id: string) => {
     setExpandedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);

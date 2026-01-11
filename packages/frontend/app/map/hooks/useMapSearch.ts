@@ -16,6 +16,7 @@ interface UseMapSearchReturn {
   searchLoading: boolean;
   showSearchResults: boolean;
   searchRef: React.RefObject<HTMLDivElement>;
+  searchNavigatedRef: React.MutableRefObject<boolean>;
   handleSearch: (query: string) => Promise<void>;
   handleSelectSearchResult: (result: SearchResult) => void;
   setShowSearchResults: (show: boolean) => void;
@@ -31,6 +32,7 @@ export function useMapSearch({
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchNavigatedRef = useRef(false);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -129,6 +131,9 @@ export function useMapSearch({
       return;
     }
 
+    // Mark that search initiated this navigation (so geo level effect skips its zoom)
+    searchNavigatedRef.current = true;
+
     // Update geo level and state based on result type
     if (result.type === 'state') {
       onGeoLevelChange('state');
@@ -153,6 +158,7 @@ export function useMapSearch({
     searchLoading,
     showSearchResults,
     searchRef,
+    searchNavigatedRef,
     handleSearch,
     handleSelectSearchResult,
     setShowSearchResults,
