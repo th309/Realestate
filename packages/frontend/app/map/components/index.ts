@@ -2,3 +2,4 @@
 export * from './Icons';
 export * from './SearchBar';
 export * from './GeoLevelPills';
+export * from './Legend';
