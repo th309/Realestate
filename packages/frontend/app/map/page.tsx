@@ -19,6 +19,7 @@ const GEOJSON_SOURCES = {
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
 type ForecastHorizon = '1m' | '3m' | '12m';
+type RentIndexType = 'all' | 'sfr' | 'mfr';
 type HomeValues = Record<string, number>;
 
 interface NavItem {
@@ -202,6 +203,7 @@ export default function MapPage() {
   const [selectedState, setSelectedState] = useState<string>('');
   const [selectedMetric, setSelectedMetric] = useState('home_value');
   const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>('12m');
+  const [rentIndexType, setRentIndexType] = useState<RentIndexType>('all');
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [homeValues, setHomeValues] = useState<HomeValues>({});
   const [dataLoading, setDataLoading] = useState(true);
@@ -356,7 +358,7 @@ export default function MapPage() {
       name: 'Investor Metrics',
       icon: <TrendingIcon />,
       metrics: [
-        { id: 'rental_rate', name: 'Rental Rate' },
+        { id: 'rent_index', name: 'Rent Index' },
         { id: 'rent_for_houses', name: 'Rent For Houses' },
         { id: 'cap_rate', name: 'Cap Rate', isPremium: true },
         { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true },
@@ -976,6 +978,34 @@ export default function MapPage() {
                                         forecastHorizon === option.value
                                           ? 'bg-purple-600 text-white shadow-sm'
                                           : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                                      }`}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {/* Rent Index Type Selector - show below the rent index metric when selected */}
+                            {metric.id === 'rent_index' && selectedMetric === 'rent_index' && (
+                              <div className="mt-1 ml-2 p-2 bg-green-50 rounded-lg border border-green-200">
+                                <div className="text-[10px] font-medium text-green-800 mb-1.5">Property Type</div>
+                                <div className="flex gap-1">
+                                  {([
+                                    { value: 'all', label: 'All Homes' },
+                                    { value: 'sfr', label: 'Single Family' },
+                                    { value: 'mfr', label: 'Multi-Family' },
+                                  ] as const).map((option) => (
+                                    <button
+                                      key={option.value}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRentIndexType(option.value);
+                                      }}
+                                      className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${
+                                        rentIndexType === option.value
+                                          ? 'bg-green-600 text-white shadow-sm'
+                                          : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
                                       }`}
                                     >
                                       {option.label}
