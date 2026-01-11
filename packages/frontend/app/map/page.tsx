@@ -766,14 +766,21 @@ export default function MapPage() {
           {(['National', 'State', 'Metro', 'County', 'Zip'] as const).map((level) => {
             const levelKey = level.toLowerCase() as GeoLevel;
             const isActive = geoLevel === levelKey;
+            // Forecast data only available for Metro and ZIP
+            const isForecastMode = selectedMetric === 'home_price_forecast';
+            const isDisabledForForecast = isForecastMode && ['national', 'state', 'county'].includes(levelKey);
             return (
               <button
                 key={level}
-                onClick={() => setGeoLevel(levelKey)}
+                onClick={() => !isDisabledForForecast && setGeoLevel(levelKey)}
+                disabled={isDisabledForForecast}
+                title={isDisabledForForecast ? 'Forecast data not available for this geography level' : undefined}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-gray-900 text-white shadow-md'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  isDisabledForForecast
+                    ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                    : isActive
+                      ? 'bg-gray-900 text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 {level}
@@ -844,32 +851,6 @@ export default function MapPage() {
               )}
             </div>
 
-            {/* Forecast Horizon Selector - only show when forecast metric is selected */}
-            {selectedMetric === 'home_price_forecast' && (
-              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-xs font-medium text-purple-800 mb-2">Forecast Horizon</div>
-                <div className="flex gap-1">
-                  {([
-                    { value: '1m', label: '1 Month' },
-                    { value: '3m', label: '3 Month' },
-                    { value: '12m', label: '12 Month' },
-                  ] as const).map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setForecastHorizon(option.value)}
-                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                        forecastHorizon === option.value
-                          ? 'bg-purple-600 text-white shadow-sm'
-                          : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Search box */}
             <div className="mb-4">
               <div className="relative">
@@ -912,26 +893,61 @@ export default function MapPage() {
                     {isExpanded && category.metrics && (
                       <div className="ml-6 mt-1 mb-2 space-y-0.5">
                         {category.metrics.map((metric) => (
-                          <button
-                            key={metric.id}
-                            onClick={() => setSelectedMetric(metric.id)}
-                            className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${
-                              selectedMetric === metric.id
-                                ? 'bg-purple-100 text-purple-700 font-medium'
-                                : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                          >
-                            <span className="flex items-center gap-1.5 min-w-0">
-                              <span className="truncate">{metric.name}</span>
-                              {metric.isNew && (
-                                <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>
-                              )}
-                            </span>
-                            <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-                              {metric.isPremium && <PremiumIcon />}
-                              <InfoSmallIcon />
-                            </span>
-                          </button>
+                          <div key={metric.id}>
+                            <button
+                              onClick={() => {
+                                setSelectedMetric(metric.id);
+                                // Auto-switch to Metro when forecast is selected (forecast data only available for Metro/ZIP)
+                                if (metric.id === 'home_price_forecast' && !['metro', 'zip'].includes(geoLevel)) {
+                                  setGeoLevel('metro');
+                                }
+                              }}
+                              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${
+                                selectedMetric === metric.id
+                                  ? 'bg-purple-100 text-purple-700 font-medium'
+                                  : 'text-gray-600 hover:bg-gray-50'
+                              }`}
+                            >
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <span className="truncate">{metric.name}</span>
+                                {metric.isNew && (
+                                  <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>
+                                )}
+                              </span>
+                              <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+                                {metric.isPremium && <PremiumIcon />}
+                                <InfoSmallIcon />
+                              </span>
+                            </button>
+                            {/* Forecast Horizon Selector - show below the forecast metric when selected */}
+                            {metric.id === 'home_price_forecast' && selectedMetric === 'home_price_forecast' && (
+                              <div className="mt-1 ml-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                                <div className="text-[10px] font-medium text-purple-800 mb-1.5">Forecast Horizon</div>
+                                <div className="flex gap-1">
+                                  {([
+                                    { value: '1m', label: '1M' },
+                                    { value: '3m', label: '3M' },
+                                    { value: '12m', label: '12M' },
+                                  ] as const).map((option) => (
+                                    <button
+                                      key={option.value}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setForecastHorizon(option.value);
+                                      }}
+                                      className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${
+                                        forecastHorizon === option.value
+                                          ? 'bg-purple-600 text-white shadow-sm'
+                                          : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                                      }`}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
