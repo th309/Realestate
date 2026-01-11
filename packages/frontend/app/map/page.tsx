@@ -494,7 +494,7 @@ export default function MapPage() {
   }, [geoLevel, selectedState, selectedMetric, forecastHorizon, fetchHomeValues, mapLoaded]);
 
   // Color scale function
-  const getColorScale = (level: GeoLevel, isForecast: boolean = false, min?: number, max?: number) => {
+  const getColorScale = (level: GeoLevel, isForecast: boolean = false, min?: number, max?: number, isRenterDemand: boolean = false) => {
     // Forecast uses percentage scale (typically -5% to +10%)
     if (isForecast) {
       return [
@@ -508,7 +508,21 @@ export default function MapPage() {
       ];
     }
 
-    // Dynamic scale if min/max provided (used for Rent Index)
+    // ZORDI (Renter Demand) - green scale for index values
+    if (isRenterDemand && min !== undefined && max !== undefined) {
+      const step = (max - min) / 5;
+      return [
+        'interpolate', ['linear'], ['get', 'value'],
+        min, '#f3f4f6',        // Lightest (lowest demand)
+        min + step, '#bbf7d0',
+        min + step * 2, '#86efac',
+        min + step * 3, '#4ade80',
+        min + step * 4, '#22c55e',
+        max, '#16a34a',        // Darkest green (highest demand)
+      ];
+    }
+
+    // Dynamic scale if min/max provided (used for Rent Index - blue)
     if (min !== undefined && max !== undefined) {
       const step = (max - min) / 5;
       return [
@@ -631,16 +645,15 @@ export default function MapPage() {
 
       // Fill layer
       const isForecast = selectedMetric === 'home_price_forecast';
-      // Determine dynamic scale for Rent Index or Renter Demand
-      const isRentIndex = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+      const isRentIndex = selectedMetric === 'rent_index';
+      const isRenterDemand = selectedMetric === 'rent_for_houses';
       let minVal, maxVal;
 
-      if (isRentIndex) {
+      if (isRentIndex || isRenterDemand) {
         const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
         if (values.length > 0) {
           minVal = values[0];
-          // Use 95th percentile for max to avoid skew from outliers (like extreme luxury rentals)
-          // valid indices are 0 to length-1.
+          // Use 95th percentile for max to avoid skew from outliers
           const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
           maxVal = values[p95Index];
         }
@@ -651,7 +664,7 @@ export default function MapPage() {
         type: 'fill',
         source: 'geo-data',
         paint: {
-          'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal) as any,
+          'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal, isRenterDemand) as any,
           'fill-opacity': 0.6,
         },
       });
@@ -720,6 +733,8 @@ export default function MapPage() {
           // Format value based on metric type
           let displayValue: string;
           let valueColor = '#6750a4';
+          const isRenterDemandMetric = selectedMetric === 'rent_for_houses';
+
           if (isForecast) {
             if (value !== 0) {
               const sign = value > 0 ? '+' : '';
@@ -728,6 +743,10 @@ export default function MapPage() {
             } else {
               displayValue = 'No data';
             }
+          } else if (isRenterDemandMetric) {
+            // ZORDI is an index value (0-100), not currency
+            displayValue = value > 0 ? value.toFixed(0) : 'No data';
+            valueColor = '#16a34a'; // Green for demand index
           } else {
             // Whole dollars for currency
             displayValue = value > 0
@@ -1217,14 +1236,15 @@ export default function MapPage() {
             {(() => {
               // Helper to calculate ranges and titles
               const isForecast = selectedMetric === 'home_price_forecast';
-              const isRentIndex = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+              const isRentIndex = selectedMetric === 'rent_index';
+              const isRenterDemand = selectedMetric === 'rent_for_houses';
 
               let legendTitle = 'Home Value';
               if (isForecast) {
                 legendTitle = forecastHorizon === '1m' ? '1-Month Forecast' : forecastHorizon === '3m' ? '3-Month Forecast' : '12-Month Forecast';
-              } else if (selectedMetric === 'rent_index') {
+              } else if (isRentIndex) {
                 legendTitle = 'Rent Index';
-              } else if (selectedMetric === 'rent_for_houses') {
+              } else if (isRenterDemand) {
                 legendTitle = 'Renter Demand Index';
               } else if (selectedMetric === 'for_sale_inventory') {
                 legendTitle = 'Inventory';
@@ -1258,7 +1278,40 @@ export default function MapPage() {
                 );
               }
 
-              // Dynamic Range Calculation
+              // ZORDI (Renter Demand) - index values 0-100
+              if (isRenterDemand) {
+                const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
+                let minVal = 0;
+                let maxVal = 100;
+                if (values.length > 0) {
+                  minVal = Math.floor(values[0]);
+                  const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
+                  maxVal = Math.ceil(values[p95Index]);
+                }
+
+                return (
+                  <>
+                    <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f3f4f6' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#bbf7d0' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#86efac' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#4ade80' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#16a34a' }}></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>{minVal}</span>
+                      <span>{maxVal}+</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                      Higher = stronger renter demand
+                    </div>
+                  </>
+                );
+              }
+
+              // Dynamic Range Calculation for currency metrics
               let minLabel = '$100K';
               let maxLabel = '$800K+';
 
