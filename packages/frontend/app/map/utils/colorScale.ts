@@ -1,7 +1,7 @@
 import type { GeoLevel } from '../types';
 
-// Mapbox expression type - can contain strings, numbers, and nested arrays
-type MapboxExpressionValue = string | number | MapboxExpressionValue[];
+// Mapbox expression type - can contain strings, numbers, booleans, null, and nested arrays
+type MapboxExpressionValue = string | number | boolean | null | MapboxExpressionValue[];
 type MapboxColorExpression = MapboxExpressionValue[];
 
 /**
@@ -59,29 +59,42 @@ export function getColorScale(
   }
 
   // Adjust scale based on geography level for home values - cool to warm
+  // Use case expression to handle null/0 values (no data) as transparent
   if (level === 'zip' || level === 'county') {
     return [
-      'interpolate', ['linear'], ['get', 'value'],
-      0, '#3b82f6',          // Blue (cool - lowest)
-      100000, '#06b6d4',     // Cyan
-      200000, '#10b981',     // Green
-      350000, '#fbbf24',     // Yellow
-      500000, '#f97316',     // Orange
-      650000, '#ef4444',     // Red
-      800000, '#b91c1c',     // Dark red (hot - highest)
+      'case',
+      ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',  // No data - light gray
+      ['==', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',     // Zero value - light gray
+      ['<=', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',     // Negative or zero - light gray
+      [
+        'interpolate', ['linear'], ['get', 'value'],
+        1, '#3b82f6',              // Blue (cool - lowest, but has data)
+        100000, '#06b6d4',         // Cyan
+        200000, '#10b981',         // Green
+        350000, '#fbbf24',         // Yellow
+        500000, '#f97316',         // Orange
+        650000, '#ef4444',         // Red
+        800000, '#b91c1c',         // Dark red (hot - highest)
+      ]
     ];
   }
 
-  // State/Metro/National level scale
+  // State/Metro/National level scale - also handle null/0 values
   return [
-    'interpolate', ['linear'], ['get', 'value'],
-    100000, '#3b82f6',       // Blue (cool - lowest)
-    200000, '#06b6d4',       // Cyan
-    350000, '#10b981',       // Green
-    500000, '#fbbf24',       // Yellow
-    650000, '#f97316',       // Orange
-    800000, '#ef4444',       // Red
-    1000000, '#b91c1c',      // Dark red (hot - highest)
+    'case',
+    ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',
+    ['==', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',
+    ['<=', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',
+    [
+      'interpolate', ['linear'], ['get', 'value'],
+      1, '#3b82f6',            // Blue (cool - lowest, but has data)
+      200000, '#06b6d4',       // Cyan
+      350000, '#10b981',       // Green
+      500000, '#fbbf24',       // Yellow
+      650000, '#f97316',       // Orange
+      800000, '#ef4444',       // Red
+      1000000, '#b91c1c',      // Dark red (hot - highest)
+    ]
   ];
 }
 

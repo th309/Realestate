@@ -33,8 +33,8 @@ export function Legend({
   let legendTitle = 'Home Value';
   if (isForecast) {
     legendTitle = forecastHorizon === '1m' ? '1-Month Forecast'
-                : forecastHorizon === '3m' ? '3-Month Forecast'
-                : '12-Month Forecast';
+      : forecastHorizon === '3m' ? '3-Month Forecast'
+        : '12-Month Forecast';
   } else if (isRentIndex) {
     legendTitle = 'Rent Index';
   } else if (isRenterDemand) {
@@ -141,7 +141,7 @@ export function Legend({
 function NoDataIndicator() {
   return (
     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-      <div className="w-6 h-4 rounded border border-gray-300" style={{ backgroundColor: '#f3f4f6' }} />
+      <div className="w-6 h-4 rounded border border-gray-300" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
       <span className="text-xs text-gray-500">No data available</span>
     </div>
   );

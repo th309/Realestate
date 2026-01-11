@@ -53,6 +53,7 @@ export class ZhviImporter {
   private geography: GeographyLevel;
   private batchSize: number;
   private metroMapping: Map<string, string> | null = null;
+  private ingestionLogId: string | null = null;
 
   constructor(geography: GeographyLevel, batchSize = 1000) {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -312,6 +313,9 @@ export class ZhviImporter {
         return result;
       }
 
+      // Start ingestion log NOW that we know the total records
+      await this.startIngestionLog(recordsToInsert.length);
+
       // Using upsert, no need to delete before insert
 
       // Insert/Update in batches
@@ -326,6 +330,11 @@ export class ZhviImporter {
         // Progress update
         const progress = Math.round(((i + batch.length) / recordsToInsert.length) * 100);
         process.stdout.write(`\rProgress: ${progress}% (${i + batch.length}/${recordsToInsert.length})`);
+
+        // Update database progress every 5 batches for better visibility
+        if (Math.floor(i / this.batchSize) % 5 === 0) {
+          await this.updateIngestionProgress(recordsToInsert.length, result.recordsInserted, result.errors.length);
+        }
       }
       console.log(); // New line after progress
 
@@ -334,7 +343,82 @@ export class ZhviImporter {
     }
 
     result.duration = Date.now() - startTime;
+    await this.completeIngestionLog(result, startTime);
     return result;
+  }
+
+  // Ingestion logging methods
+  private async startIngestionLog(totalRecords: number): Promise<void> {
+    try {
+      const { data, error } = await this.supabase
+        .from('data_ingestion_log')
+        .insert({
+          source: 'zillow',
+          table_name: 'zillow_zhvi',
+          metric_name: 'zhvi',
+          dataset_id: `zhvi_${this.geography.toLowerCase()}`,
+          status: 'running',
+          records_processed: totalRecords,
+          records_success: 0,
+          records_error: 0,
+          started_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (!error && data) {
+        this.ingestionLogId = data.id;
+        console.log(`📝 Started ingestion log: ${data.id}`);
+      }
+    } catch (e: any) {
+      console.warn('⚠️ Could not start ingestion log:', e.message);
+    }
+  }
+
+  private async updateIngestionProgress(recordsProcessed: number, recordsSuccess: number, recordsError: number): Promise<void> {
+    if (!this.ingestionLogId) return;
+
+    try {
+      await this.supabase
+        .from('data_ingestion_log')
+        .update({
+          records_processed: recordsProcessed,
+          records_success: recordsSuccess,
+          records_error: recordsError
+        })
+        .eq('id', this.ingestionLogId);
+    } catch (e) {
+      // Silently fail - don't interrupt the import
+    }
+  }
+
+  private async completeIngestionLog(result: ImportResult, startTime: number): Promise<void> {
+    if (!this.ingestionLogId) return;
+
+    const durationMs = Date.now() - startTime;
+    const status = result.errors.length > 0
+      ? (result.recordsInserted > 0 ? 'partial' : 'failed')
+      : 'success';
+
+    try {
+      await this.supabase
+        .from('data_ingestion_log')
+        .update({
+          status,
+          records_processed: result.recordsProcessed,
+          records_success: result.recordsInserted,
+          records_error: result.errors.length,
+          completed_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          error_message: result.errors.length > 0 ? result.errors.slice(0, 5).join('; ') : null
+        })
+        .eq('id', this.ingestionLogId);
+
+      const statusIcon = status === 'success' ? '✅' : status === 'partial' ? '⚠️' : '❌';
+      console.log(`${statusIcon} Ingestion log completed: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    } catch (e: any) {
+      console.warn('⚠️ Error completing ingestion log:', e.message);
+    }
   }
 }
 

@@ -9,6 +9,11 @@
 
 import { parse as parseSync } from 'csv-parse/sync'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import {
+  startIngestionLog,
+  updateIngestionProgress,
+  completeIngestionLog
+} from '../progress-logger'
 
 // Import types, constants, and utilities from modular components
 import type {
@@ -141,10 +146,25 @@ export async function importRedfinData(
   onProgress?: ProgressCallback,
   sourceFileName?: string
 ): Promise<ImportResult> {
+  const startTime = Date.now()
   let supabase
+  let ingestionLogId: string | null = null
+  let totalRecordsProcessed = 0
+  let totalRecordsSuccess = 0
+  let totalRecordsError = 0
+
   try {
     supabase = createSupabaseAdminClient()
     console.log('✅ Supabase client created successfully')
+
+    // Start ingestion log for real-time progress tracking
+    ingestionLogId = await startIngestionLog(
+      supabase,
+      'redfin',
+      'market_time_series',
+      metricName,
+      sourceFileName || metricName
+    )
 
     console.log('🔍 Testing database connection...')
     const { error: testError } = await supabase
@@ -543,12 +563,27 @@ export async function importRedfinData(
             if (tsError) {
               console.error(`❌ Error upserting batch:`, tsError.message)
               errors++
+              totalRecordsError++
             } else {
               totalTimeSeriesInserted += batch.length
+              totalRecordsSuccess += batch.length
+              totalRecordsProcessed += batch.length
+
+              // Update progress in database periodically (every 5 batches)
+              if (ingestionLogId && batchNum % 5 === 0) {
+                await updateIngestionProgress(
+                  supabase,
+                  ingestionLogId,
+                  totalRecordsProcessed,
+                  totalRecordsSuccess,
+                  totalRecordsError
+                )
+              }
             }
           } catch (fetchError: any) {
             console.error(`❌ Fetch error:`, fetchError.message)
             errors++
+            totalRecordsError++
           }
         }
 
@@ -585,7 +620,33 @@ export async function importRedfinData(
 
   } catch (error: any) {
     console.error('❌ Error downloading or parsing Redfin data:', error.message)
+
+    // Log the failure
+    if (supabase && ingestionLogId) {
+      await completeIngestionLog(
+        supabase,
+        ingestionLogId,
+        totalRecordsProcessed,
+        totalRecordsSuccess,
+        totalRecordsError + 1,
+        startTime,
+        error.message
+      )
+    }
+
     throw error
+  } finally {
+    // Ensure ingestion log is completed even on success
+    if (supabase && ingestionLogId) {
+      await completeIngestionLog(
+        supabase,
+        ingestionLogId,
+        totalRecordsProcessed,
+        totalRecordsSuccess,
+        totalRecordsError,
+        startTime
+      )
+    }
   }
 }
 
