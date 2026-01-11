@@ -495,67 +495,71 @@ export default function MapPage() {
 
   // Color scale function
   const getColorScale = (level: GeoLevel, isForecast: boolean = false, min?: number, max?: number, isRenterDemand: boolean = false) => {
-    // Forecast uses percentage scale (typically -5% to +10%)
+    // Forecast uses percentage scale - cool to warm (blue = decline, red = growth)
     if (isForecast) {
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        -5, '#ef4444',    // Red for negative growth
-        -2, '#f97316',    // Orange
-        0, '#fbbf24',     // Yellow for flat
-        2, '#84cc16',     // Light green
-        5, '#22c55e',     // Green for positive growth
-        10, '#059669',    // Dark green for strong growth
+        -5, '#3b82f6',    // Blue (cool - decline)
+        -2, '#06b6d4',    // Cyan
+        0, '#10b981',     // Green (flat)
+        2, '#fbbf24',     // Yellow
+        5, '#f97316',     // Orange
+        10, '#b91c1c',    // Dark red (hot - strong growth)
       ];
     }
 
-    // ZORDI (Renter Demand) - 7-color scale from 0 to 200, yellow at baseline 100
+    // ZORDI (Renter Demand) - 7-color cool-to-warm scale, yellow at baseline 100
     if (isRenterDemand) {
-      // 0 = no demand, 100 = baseline (yellow), >100 = high demand
+      // 0 = no demand (cool/blue), 100 = baseline (yellow), >100 = high demand (warm/red)
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        0, '#dc2626',          // Dark red (no demand)
-        33, '#f87171',         // Red
-        67, '#fb923c',         // Orange
+        0, '#3b82f6',          // Blue (cool - no demand)
+        33, '#06b6d4',         // Cyan
+        67, '#10b981',         // Green
         100, '#fbbf24',        // Yellow (baseline)
-        133, '#a3e635',        // Light green
-        167, '#4ade80',        // Green
-        200, '#16a34a',        // Dark green (high demand)
+        133, '#f97316',        // Orange
+        167, '#ef4444',        // Red
+        200, '#b91c1c',        // Dark red (hot - high demand)
       ];
     }
 
-    // Dynamic scale if min/max provided (used for Rent Index - blue)
+    // Dynamic scale if min/max provided (used for Rent Index - cool to warm)
     if (min !== undefined && max !== undefined) {
-      const step = (max - min) / 5;
+      const step = (max - min) / 6;
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        min, '#f3f4f6',      // Lightest (lowest rent)
-        min + step, '#dbeafe',
-        min + step * 2, '#93c5fd',
-        min + step * 3, '#3b82f6',
-        min + step * 4, '#1d4ed8',
-        max, '#1e3a8a',      // Darkest (highest rent)
+        min, '#3b82f6',              // Blue (cool - lowest)
+        min + step, '#06b6d4',       // Cyan
+        min + step * 2, '#10b981',   // Green
+        min + step * 3, '#fbbf24',   // Yellow
+        min + step * 4, '#f97316',   // Orange
+        min + step * 5, '#ef4444',   // Red
+        max, '#b91c1c',              // Dark red (hot - highest)
       ];
     }
 
-    // Adjust scale based on geography level for home values
+    // Adjust scale based on geography level for home values - cool to warm
     if (level === 'zip' || level === 'county') {
       return [
         'interpolate', ['linear'], ['get', 'value'],
-        0, '#f3f4f6',
-        100000, '#dbeafe',
-        200000, '#93c5fd',
-        350000, '#3b82f6',
-        500000, '#1d4ed8',
-        750000, '#1e3a8a',
+        0, '#3b82f6',          // Blue (cool - lowest)
+        100000, '#06b6d4',     // Cyan
+        200000, '#10b981',     // Green
+        350000, '#fbbf24',     // Yellow
+        500000, '#f97316',     // Orange
+        650000, '#ef4444',     // Red
+        800000, '#b91c1c',     // Dark red (hot - highest)
       ];
     }
     return [
       'interpolate', ['linear'], ['get', 'value'],
-      100000, '#dbeafe',
-      250000, '#93c5fd',
-      400000, '#3b82f6',
-      600000, '#1d4ed8',
-      800000, '#1e3a8a',
+      100000, '#3b82f6',       // Blue (cool - lowest)
+      200000, '#06b6d4',       // Cyan
+      350000, '#10b981',       // Green
+      500000, '#fbbf24',       // Yellow
+      650000, '#f97316',       // Orange
+      800000, '#ef4444',       // Red
+      1000000, '#b91c1c',      // Dark red (hot - highest)
     ];
   };
 
@@ -740,14 +744,15 @@ export default function MapPage() {
             if (value !== 0) {
               const sign = value > 0 ? '+' : '';
               displayValue = `${sign}${value.toFixed(1)}%`;
-              valueColor = value > 0 ? '#059669' : value < 0 ? '#ef4444' : '#6b7280';
+              // Cool-to-warm: blue for decline, red for growth
+              valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
             } else {
               displayValue = 'No data';
             }
           } else if (isRenterDemandMetric) {
-            // ZORDI is an index value (0-100), not currency
+            // ZORDI is an index value, use warm color for high demand
             displayValue = value > 0 ? value.toFixed(0) : 'No data';
-            valueColor = '#16a34a'; // Green for demand index
+            valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
           } else {
             // Whole dollars for currency
             displayValue = value > 0
@@ -1258,12 +1263,12 @@ export default function MapPage() {
                       {legendTitle}
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#06b6d4' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#059669' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#b91c1c' }}></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>-5%</span>
@@ -1279,19 +1284,19 @@ export default function MapPage() {
                 );
               }
 
-              // ZORDI (Renter Demand) - 7-color scale with yellow at baseline 100
+              // ZORDI (Renter Demand) - 7-color cool-to-warm with yellow at baseline 100
               if (isRenterDemand) {
                 return (
                   <>
                     <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
                     <div className="flex items-center gap-1">
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dc2626' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f87171' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fb923c' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#06b6d4' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
                       <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#a3e635' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#4ade80' }}></div>
-                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#16a34a' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#b91c1c' }}></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>0</span>
@@ -1334,12 +1339,13 @@ export default function MapPage() {
                 <>
                   <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
                   <div className="flex items-center gap-1">
-                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f3f4f6' }}></div>
-                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
-                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
                     <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
-                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#06b6d4' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#b91c1c' }}></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>{minLabel}</span>
