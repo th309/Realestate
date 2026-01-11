@@ -27,6 +27,7 @@ export interface SearchResult {
   name: string;
   type: 'state' | 'metro' | 'county' | 'zip' | 'city';
   center?: [number, number];
+  bbox?: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]
   state?: string;
 }
 

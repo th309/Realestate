@@ -81,6 +81,7 @@ export function useMapSearch({
           name: feature.place_name,
           type,
           center: feature.center as [number, number],
+          bbox: feature.bbox as [number, number, number, number] | undefined,
           state: stateAbbrev,
         };
       }) || [];
@@ -98,29 +99,35 @@ export function useMapSearch({
   const handleSelectSearchResult = (result: SearchResult) => {
     console.log('Search result clicked:', result);
 
-    if (!result.center) {
-      console.error('No center coordinates for result');
-      return;
-    }
-
     if (!mapRef.current) {
       console.error('Map not initialized');
       return;
     }
 
-    // Fly to the location
-    const zoomLevel = result.type === 'state' ? 5.5 :
-                      result.type === 'zip' ? 12 :
-                      result.type === 'county' ? 8 :
-                      result.type === 'city' ? 10 : 8;
+    // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
+    if (result.bbox) {
+      console.log('Fitting to bounds:', result.bbox);
+      mapRef.current.fitBounds(
+        [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
+        { padding: 50, duration: 1000 }
+      );
+    } else if (result.center) {
+      // Fallback zoom levels if no bbox available
+      const zoomLevel = result.type === 'state' ? 5.5 :
+                        result.type === 'zip' ? 12 :
+                        result.type === 'county' ? 8 :
+                        result.type === 'city' ? 10 : 8;
 
-    console.log('Flying to:', result.center, 'zoom:', zoomLevel);
-
-    mapRef.current.flyTo({
-      center: result.center,
-      zoom: zoomLevel,
-      duration: 1000,
-    });
+      console.log('Flying to:', result.center, 'zoom:', zoomLevel);
+      mapRef.current.flyTo({
+        center: result.center,
+        zoom: zoomLevel,
+        duration: 1000,
+      });
+    } else {
+      console.error('No location data for result');
+      return;
+    }
 
     // Update geo level and state based on result type
     if (result.type === 'state') {
