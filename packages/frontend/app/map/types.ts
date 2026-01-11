@@ -5,6 +5,7 @@ export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
 export type HomeValues = Record<string, number>;
+export type ViewMode = 'homebuyer' | 'investor';
 
 export interface NavItem {
   id: string;
@@ -13,13 +14,28 @@ export interface NavItem {
   href: string;
 }
 
+export interface Metric {
+  id: string;
+  name: string;
+  isPremium?: boolean;
+  isNew?: boolean;
+}
+
+export interface SubSection {
+  id: string;
+  name: string;
+  metrics: Metric[];
+}
+
 export interface MetricCategory {
   id: string;
   name: string;
   icon: React.ReactNode;
   expanded?: boolean;
   isNew?: boolean;
-  metrics?: { id: string; name: string; isPremium?: boolean; isNew?: boolean }[];
+  metrics?: Metric[];
+  subSections?: SubSection[];
+  viewMode?: ViewMode; // If set, only shows in this view mode
 }
 
 export interface SearchResult {

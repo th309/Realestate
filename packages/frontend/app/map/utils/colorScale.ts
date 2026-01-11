@@ -1,6 +1,8 @@
 import type { GeoLevel } from '../types';
 
-type MapboxColorExpression = (string | number)[];
+// Mapbox expression type - can contain strings, numbers, and nested arrays
+type MapboxExpressionValue = string | number | MapboxExpressionValue[];
+type MapboxColorExpression = MapboxExpressionValue[];
 
 /**
  * Get color scale for map visualization

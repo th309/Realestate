@@ -8,7 +8,7 @@ interface SearchBarProps {
   searchResults: SearchResult[];
   searchLoading: boolean;
   showSearchResults: boolean;
-  searchRef: React.RefObject<HTMLDivElement>;
+  searchRef: React.RefObject<HTMLDivElement | null>;
   onSearch: (query: string) => void;
   onSelectResult: (result: SearchResult) => void;
   onFocus: () => void;

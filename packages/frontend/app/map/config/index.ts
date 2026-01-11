@@ -3,4 +3,4 @@
  */
 
 export { NAV_ITEMS } from './nav-items';
-export { METRIC_CATEGORIES } from './metric-categories';
+export { METRIC_CATEGORIES, getMetricCategories } from './metric-categories';

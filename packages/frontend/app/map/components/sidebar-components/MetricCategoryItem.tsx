@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { ChevronDownIcon } from '../Icons';
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MetricCategory } from '../../types';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MetricCategory, SubSection } from '../../types';
 import { MetricItem } from './MetricItem';
 
 interface MetricCategoryItemProps {
@@ -35,6 +36,63 @@ export function MetricCategoryItem({
   onRentIndexTypeChange,
   onRenterDemandTypeChange,
 }: MetricCategoryItemProps) {
+  // Track which sub-sections are expanded
+  const [expandedSubSections, setExpandedSubSections] = useState<string[]>([]);
+
+  const toggleSubSection = (subSectionId: string) => {
+    setExpandedSubSections(prev =>
+      prev.includes(subSectionId)
+        ? prev.filter(id => id !== subSectionId)
+        : [...prev, subSectionId]
+    );
+  };
+
+  const handleSelectMetric = (metricId: string) => {
+    onSelectMetric(metricId);
+    if (metricId === 'home_price_forecast' && !['metro', 'zip'].includes(geoLevel)) {
+      onGeoLevelChange('metro');
+    }
+  };
+
+  const renderMetric = (metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean }) => (
+    <MetricItem
+      key={metric.id}
+      metric={metric}
+      isSelected={selectedMetric === metric.id}
+      geoLevel={geoLevel}
+      forecastHorizon={forecastHorizon}
+      rentIndexType={rentIndexType}
+      renterDemandType={renterDemandType}
+      onSelect={() => handleSelectMetric(metric.id)}
+      onForecastHorizonChange={onForecastHorizonChange}
+      onRentIndexTypeChange={onRentIndexTypeChange}
+      onRenterDemandTypeChange={onRenterDemandTypeChange}
+    />
+  );
+
+  const renderSubSection = (subSection: SubSection) => {
+    const isSubExpanded = expandedSubSections.includes(subSection.id);
+
+    return (
+      <div key={subSection.id} className="mt-1">
+        <button
+          onClick={() => toggleSubSection(subSection.id)}
+          className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <span className="text-xs font-medium text-gray-700">{subSection.name}</span>
+          <span className={`transition-transform text-gray-400 ${isSubExpanded ? 'rotate-180' : ''}`}>
+            <ChevronDownIcon />
+          </span>
+        </button>
+        {isSubExpanded && (
+          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-gray-200 pl-2">
+            {subSection.metrics.map(renderMetric)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <button
@@ -53,28 +111,21 @@ export function MetricCategoryItem({
         </div>
       </button>
 
-      {isExpanded && category.metrics && (
-        <div className="ml-6 mt-1 mb-2 space-y-0.5">
-          {category.metrics.map((metric) => (
-            <MetricItem
-              key={metric.id}
-              metric={metric}
-              isSelected={selectedMetric === metric.id}
-              geoLevel={geoLevel}
-              forecastHorizon={forecastHorizon}
-              rentIndexType={rentIndexType}
-              renterDemandType={renterDemandType}
-              onSelect={() => {
-                onSelectMetric(metric.id);
-                if (metric.id === 'home_price_forecast' && !['metro', 'zip'].includes(geoLevel)) {
-                  onGeoLevelChange('metro');
-                }
-              }}
-              onForecastHorizonChange={onForecastHorizonChange}
-              onRentIndexTypeChange={onRentIndexTypeChange}
-              onRenterDemandTypeChange={onRenterDemandTypeChange}
-            />
-          ))}
+      {isExpanded && (
+        <div className="ml-6 mt-1 mb-2">
+          {/* Render direct metrics if any */}
+          {category.metrics && category.metrics.length > 0 && (
+            <div className="space-y-0.5">
+              {category.metrics.map(renderMetric)}
+            </div>
+          )}
+
+          {/* Render sub-sections if any */}
+          {category.subSections && category.subSections.length > 0 && (
+            <div className="space-y-0.5">
+              {category.subSections.map(renderSubSection)}
+            </div>
+          )}
         </div>
       )}
     </div>

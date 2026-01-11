@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Import types and constants
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from './types';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode } from './types';
 import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
@@ -17,7 +17,9 @@ import { SearchBar, GeoLevelPills, Legend, Sidebar } from './components';
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
 
 // Import config
-import { NAV_ITEMS, METRIC_CATEGORIES } from './config';
+import { NAV_ITEMS, getMetricCategories } from './config';
+
+const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 
@@ -35,8 +37,26 @@ export default function MapPage() {
   const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>('all');
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
   const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
   const isResizing = useRef(false);
   const pathname = usePathname();
+
+  // Load view mode from localStorage on mount
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    if (savedViewMode === 'homebuyer' || savedViewMode === 'investor') {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  // Handler to update view mode and persist to localStorage
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+  }, []);
+
+  // Compute metric categories based on view mode
+  const metricCategories = useMemo(() => getMetricCategories(viewMode), [viewMode]);
 
   // Use extracted hooks
   const { homeValues, dataLoading, fetchHomeValues } = useMapData();
@@ -205,7 +225,7 @@ export default function MapPage() {
         <Sidebar
           pathname={pathname}
           navItems={NAV_ITEMS}
-          metricCategories={METRIC_CATEGORIES}
+          metricCategories={metricCategories}
           expandedCategories={expandedCategories}
           selectedMetric={selectedMetric}
           geoLevel={geoLevel}
@@ -215,6 +235,7 @@ export default function MapPage() {
           recordCount={recordCount}
           selectedState={selectedState}
           sidebarWidth={sidebarWidth}
+          viewMode={viewMode}
           onToggleCategory={toggleCategory}
           onSelectMetric={setSelectedMetric}
           onGeoLevelChange={setGeoLevel}
@@ -222,6 +243,7 @@ export default function MapPage() {
           onRentIndexTypeChange={setRentIndexType}
           onRenterDemandTypeChange={setRenterDemandType}
           onMouseDown={handleMouseDown}
+          onViewModeChange={handleViewModeChange}
         />
 
         {/* Map */}

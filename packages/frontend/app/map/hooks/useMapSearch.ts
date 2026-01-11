@@ -15,7 +15,7 @@ interface UseMapSearchReturn {
   searchResults: SearchResult[];
   searchLoading: boolean;
   showSearchResults: boolean;
-  searchRef: React.RefObject<HTMLDivElement>;
+  searchRef: React.RefObject<HTMLDivElement | null>;
   searchNavigatedRef: React.MutableRefObject<boolean>;
   handleSearch: (query: string) => Promise<void>;
   handleSelectSearchResult: (result: SearchResult) => void;

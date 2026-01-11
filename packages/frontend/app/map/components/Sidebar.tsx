@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory } from '../types';
-import { DataSummary, MetricCategoryItem } from './sidebar-components';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory, ViewMode } from '../types';
+import { DataSummary, MetricCategoryItem, ViewToggle } from './sidebar-components';
 
 interface SidebarProps {
   pathname: string;
@@ -17,6 +17,7 @@ interface SidebarProps {
   recordCount: number;
   selectedState: string;
   sidebarWidth: number;
+  viewMode: ViewMode;
   onToggleCategory: (id: string) => void;
   onSelectMetric: (id: string) => void;
   onGeoLevelChange: (level: GeoLevel) => void;
@@ -24,6 +25,7 @@ interface SidebarProps {
   onRentIndexTypeChange: (type: RentIndexType) => void;
   onRenterDemandTypeChange: (type: RenterDemandType) => void;
   onMouseDown: (e: React.MouseEvent) => void;
+  onViewModeChange: (mode: ViewMode) => void;
 }
 
 export function Sidebar({
@@ -39,6 +41,7 @@ export function Sidebar({
   recordCount,
   selectedState,
   sidebarWidth,
+  viewMode,
   onToggleCategory,
   onSelectMetric,
   onGeoLevelChange,
@@ -46,6 +49,7 @@ export function Sidebar({
   onRentIndexTypeChange,
   onRenterDemandTypeChange,
   onMouseDown,
+  onViewModeChange,
 }: SidebarProps) {
   return (
     <aside className="flex bg-white shadow-lg">
@@ -73,6 +77,9 @@ export function Sidebar({
       {/* Metric Panel */}
       <div className="overflow-y-auto p-4" style={{ width: sidebarWidth }}>
         <h2 className="text-lg font-medium text-gray-900 mb-4">Market Trends</h2>
+
+        {/* View Mode Toggle */}
+        <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
 
         {/* Data summary */}
         <DataSummary

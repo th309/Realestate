@@ -80,8 +80,8 @@ export interface TestResult {
 
 export interface TestSectionProps {
   loading: boolean;
-  setLoading: (loading: boolean) => void;
-  setResult: (result: TestResult | null) => void;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  setResult: React.Dispatch<React.SetStateAction<TestResult | null>>;
 }
 
 export interface RedfinSectionProps extends TestSectionProps {
