@@ -35,10 +35,28 @@ interface ZillowHomeValue {
   cbsa_code?: string;
 }
 
+interface ZillowForecast {
+  region_id: string;
+  region_name: string;
+  value: number;  // forecast_12m used as main value
+  forecast_1m: number | null;
+  forecast_3m: number | null;
+  forecast_12m: number | null;
+  cbsa_code?: string;
+  zip_code?: string;
+  state_abbrev?: string;
+}
+
 interface ZillowApiResponse {
   success: boolean;
   count: number;
   data: ZillowHomeValue[];
+}
+
+interface ZillowForecastResponse {
+  success: boolean;
+  count: number;
+  data: ZillowForecast[];
 }
 
 export type StateHomeValues = Record<string, number>;
@@ -98,5 +116,36 @@ export const api = {
     const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/zips?state=${state}`);
     // ZIP codes use region_id (the ZIP code itself) as key
     return transformZillowResponse(response, 'region_id');
+  },
+
+  // ZHVF Forecast endpoints - returns forecast % growth values
+  // horizon: '1m' | '3m' | '12m' - which forecast horizon to use
+  getMetroForecast: async (horizon: string = '12m'): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowForecastResponse>(`/api/zillow/forecast/metros?horizon=${horizon}`);
+    // Use CBSA code to match GeoJSON
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.value !== null) {
+        result[key] = item.value;
+      }
+    });
+    return result;
+  },
+
+  getZipForecast: async (state?: string, horizon: string = '12m'): Promise<ZipHomeValues> => {
+    const params = new URLSearchParams();
+    if (state) params.append('state', state);
+    params.append('horizon', horizon);
+    const url = `/api/zillow/forecast/zips?${params.toString()}`;
+    const response = await fetchAPI<ZillowForecastResponse>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.zip_code || item.region_id;
+      if (key && item.value !== null) {
+        result[key] = item.value;
+      }
+    });
+    return result;
   },
 };

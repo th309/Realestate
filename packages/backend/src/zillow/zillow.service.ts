@@ -18,6 +18,20 @@ export interface HomeValueData {
   geography: string;
 }
 
+export interface ForecastData {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string | null;
+  zip_code?: string | null;
+  state_abbrev?: string | null;
+  forecast_1m: number | null;
+  forecast_3m: number | null;
+  forecast_12m: number | null;
+  value: number;  // We'll use forecast_12m as the main value for map coloring
+  date: string;
+  geography: string;
+}
+
 @Injectable()
 export class ZillowService {
   constructor(
@@ -353,5 +367,155 @@ export class ZillowService {
 
     if (error) throw new Error(error.message);
     return data || [];
+  }
+
+  // ============================================================================
+  // ZHVF (Zillow Home Value Forecast) Methods
+  // ============================================================================
+
+  async getMetroForecast(horizon: string = '12m'): Promise<ForecastData[]> {
+    // Get all metro forecasts
+    const { data: forecasts, error } = await this.supabase
+      .from('zillow_zhvf')
+      .select('region_id, date, forecast_1m, forecast_3m, forecast_12m, geography')
+      .in('geography', ['Metro', 'US'])
+      .order('date', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    if (!forecasts) return [];
+
+    // Build crosswalk map for CBSA lookup
+    const cbsaMap = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
+
+    let page = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      const { data: crosswalk } = await this.supabase
+        .from('geography_crosswalk')
+        .select('cbsa_code, cbsa_name, zillow_metro_region_id, state_abbrev')
+        .not('cbsa_code', 'is', null)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        // Map by Zillow metro region ID
+        if (row.zillow_metro_region_id && !cbsaMap.has(String(row.zillow_metro_region_id))) {
+          cbsaMap.set(String(row.zillow_metro_region_id), {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+        // Also map by CBSA code directly (some region_ids are CBSA codes)
+        if (row.cbsa_code && !cbsaMap.has(row.cbsa_code)) {
+          cbsaMap.set(row.cbsa_code, {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+      });
+
+      page++;
+      if (crosswalk.length < pageSize) break;
+    }
+
+    // Helper to get forecast value based on horizon
+    const getForecastValue = (f: any): number => {
+      switch (horizon) {
+        case '1m': return f.forecast_1m || 0;
+        case '3m': return f.forecast_3m || 0;
+        case '12m':
+        default: return f.forecast_12m || 0;
+      }
+    };
+
+    return forecasts.map(f => {
+      const metro = cbsaMap.get(f.region_id);
+      const is5DigitCode = /^\d{5}$/.test(f.region_id);
+
+      return {
+        region_id: f.region_id,
+        region_name: f.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
+        cbsa_code: metro?.cbsa_code || (is5DigitCode ? f.region_id : null),
+        state_abbrev: metro?.state || null,
+        forecast_1m: f.forecast_1m,
+        forecast_3m: f.forecast_3m,
+        forecast_12m: f.forecast_12m,
+        value: getForecastValue(f),  // Use selected horizon as main value
+        date: f.date,
+        geography: f.geography,
+      };
+    }).sort((a, b) => getForecastValue(b) - getForecastValue(a));
+  }
+
+  async getZipForecast(stateFilter?: string, horizon: string = '12m'): Promise<ForecastData[]> {
+    // Get ZIP forecasts
+    const { data: forecasts, error } = await this.supabase
+      .from('zillow_zhvf')
+      .select('region_id, date, forecast_1m, forecast_3m, forecast_12m, geography')
+      .eq('geography', 'Zip')
+      .order('date', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    if (!forecasts) return [];
+
+    // Build ZIP lookup map from crosswalk
+    const zipMap = new Map<string, { city: string; state: string }>();
+
+    let query = this.supabase
+      .from('geography_crosswalk')
+      .select('zip_code, zip_default_city, state_abbrev')
+      .not('zip_code', 'is', null);
+
+    if (stateFilter) {
+      query = query.eq('state_abbrev', stateFilter);
+    }
+
+    const { data: crosswalk } = await query.limit(30000);
+
+    crosswalk?.forEach(row => {
+      if (row.zip_code) {
+        zipMap.set(row.zip_code, {
+          city: row.zip_default_city,
+          state: row.state_abbrev
+        });
+      }
+    });
+
+    // Filter forecasts to only those in our ZIP map (if state filter applied)
+    let filteredForecasts = forecasts;
+    if (stateFilter) {
+      const validZips = new Set(zipMap.keys());
+      filteredForecasts = forecasts.filter(f => validZips.has(f.region_id));
+    }
+
+    // Helper to get forecast value based on horizon
+    const getForecastValue = (f: any): number => {
+      switch (horizon) {
+        case '1m': return f.forecast_1m || 0;
+        case '3m': return f.forecast_3m || 0;
+        case '12m':
+        default: return f.forecast_12m || 0;
+      }
+    };
+
+    return filteredForecasts.map(f => {
+      const zip = zipMap.get(f.region_id);
+      return {
+        region_id: f.region_id,
+        region_name: zip ? `${f.region_id} - ${zip.city}` : f.region_id,
+        zip_code: f.region_id,
+        state_abbrev: zip?.state || null,
+        forecast_1m: f.forecast_1m,
+        forecast_3m: f.forecast_3m,
+        forecast_12m: f.forecast_12m,
+        value: getForecastValue(f),
+        date: f.date,
+        geography: 'Zip',
+      };
+    }).sort((a, b) => getForecastValue(b) - getForecastValue(a));
   }
 }

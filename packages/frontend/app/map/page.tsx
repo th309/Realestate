@@ -18,6 +18,7 @@ const GEOJSON_SOURCES = {
 };
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip';
+type ForecastHorizon = '1m' | '3m' | '12m';
 type HomeValues = Record<string, number>;
 
 interface NavItem {
@@ -200,6 +201,7 @@ export default function MapPage() {
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedState, setSelectedState] = useState<string>('');
   const [selectedMetric, setSelectedMetric] = useState('home_value');
+  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>('12m');
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [homeValues, setHomeValues] = useState<HomeValues>({});
   const [dataLoading, setDataLoading] = useState(true);
@@ -346,25 +348,31 @@ export default function MapPage() {
     );
   };
 
-  // Fetch home values based on geo level
-  const fetchHomeValues = useCallback(async (level: GeoLevel, state?: string) => {
+  // Fetch home values based on geo level and metric
+  const fetchHomeValues = useCallback(async (level: GeoLevel, state?: string, metric?: string, horizon?: ForecastHorizon) => {
     setDataLoading(true);
     try {
       let data: HomeValues = {};
+
+      // Check if we're fetching forecast data
+      const isForecast = metric === 'home_price_forecast';
+
       switch (level) {
         case 'state':
         case 'national':
+          // Forecast data not available for states - show regular home values
           data = await api.getStateHomeValues();
           break;
         case 'metro':
-          data = await api.getMetroHomeValues();
+          data = isForecast ? await api.getMetroForecast(horizon) : await api.getMetroHomeValues();
           break;
         case 'county':
+          // Forecast data not available for counties - show regular home values
           data = await api.getCountyHomeValues();
           break;
         case 'zip':
           if (state) {
-            data = await api.getZipHomeValues(state);
+            data = isForecast ? await api.getZipForecast(state, horizon) : await api.getZipHomeValues(state);
           }
           break;
       }
@@ -376,32 +384,44 @@ export default function MapPage() {
     }
   }, []);
 
-  // Load initial data
+  // Load stats on mount
   useEffect(() => {
     api.getStats().then(setStats).catch(console.error);
-    fetchHomeValues(geoLevel);
   }, []);
 
-  // Reload data when geo level or selected state changes
+  // Reload data when geo level, selected state, metric, or forecast horizon changes
   useEffect(() => {
     if (mapLoaded) {
       if (geoLevel === 'zip') {
         if (selectedState) {
-          fetchHomeValues(geoLevel, selectedState);
+          fetchHomeValues(geoLevel, selectedState, selectedMetric, forecastHorizon);
         } else {
           // Clear data when ZIP selected but no state chosen
           setHomeValues({});
           setDataLoading(false);
         }
       } else {
-        fetchHomeValues(geoLevel);
+        fetchHomeValues(geoLevel, undefined, selectedMetric, forecastHorizon);
       }
     }
-  }, [geoLevel, selectedState, fetchHomeValues, mapLoaded]);
+  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, fetchHomeValues, mapLoaded]);
 
   // Color scale function
-  const getColorScale = (level: GeoLevel) => {
-    // Adjust scale based on geography level
+  const getColorScale = (level: GeoLevel, isForecast: boolean = false) => {
+    // Forecast uses percentage scale (typically -5% to +10%)
+    if (isForecast) {
+      return [
+        'interpolate', ['linear'], ['get', 'value'],
+        -5, '#ef4444',    // Red for negative growth
+        -2, '#f97316',    // Orange
+        0, '#fbbf24',     // Yellow for flat
+        2, '#84cc16',     // Light green
+        5, '#22c55e',     // Green for positive growth
+        10, '#059669',    // Dark green for strong growth
+      ];
+    }
+
+    // Adjust scale based on geography level for home values
     if (level === 'zip' || level === 'county') {
       return [
         'interpolate', ['linear'], ['get', 'value'],
@@ -509,12 +529,13 @@ export default function MapPage() {
       });
 
       // Fill layer
+      const isForecast = selectedMetric === 'home_price_forecast';
       map.current!.addLayer({
         id: 'geo-fills',
         type: 'fill',
         source: 'geo-data',
         paint: {
-          'fill-color': getColorScale(geoLevel) as any,
+          'fill-color': getColorScale(geoLevel, isForecast) as any,
           'fill-opacity': 0.6,
         },
       });
@@ -580,14 +601,33 @@ export default function MapPage() {
             });
           }
 
+          // Format value based on metric type
+          let displayValue: string;
+          let valueColor = '#6750a4';
+          if (isForecast) {
+            if (value !== 0) {
+              const sign = value > 0 ? '+' : '';
+              displayValue = `${sign}${value.toFixed(1)}%`;
+              valueColor = value > 0 ? '#059669' : value < 0 ? '#ef4444' : '#6b7280';
+            } else {
+              displayValue = 'No data';
+            }
+          } else {
+            displayValue = value > 0 ? '$' + value.toLocaleString() : 'No data';
+          }
+
+          // Get forecast horizon label
+          const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
+
           popup.current
             .setLngLat(e.lngLat)
             .setHTML(`
               <div style="font-family: 'Google Sans', Roboto, sans-serif; padding: 8px 12px;">
                 <div style="font-weight: 500; font-size: 14px; color: #1a1a2e;">${name}</div>
-                <div style="font-size: 20px; font-weight: 600; color: #6750a4;">
-                  ${value > 0 ? '$' + value.toLocaleString() : 'No data'}
+                <div style="font-size: 20px; font-weight: 600; color: ${valueColor};">
+                  ${displayValue}
                 </div>
+                ${isForecast ? `<div style="font-size: 11px; color: #6b7280;">${horizonLabel} forecast</div>` : ''}
               </div>
             `)
             .addTo(map.current!);
@@ -597,7 +637,7 @@ export default function MapPage() {
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, homeValues, mapLoaded, selectedState]);
+  }, [geoLevel, homeValues, mapLoaded, selectedState, selectedMetric, forecastHorizon]);
 
   // Update layers when homeValues or geoLevel changes
   useEffect(() => {
@@ -804,6 +844,32 @@ export default function MapPage() {
               )}
             </div>
 
+            {/* Forecast Horizon Selector - only show when forecast metric is selected */}
+            {selectedMetric === 'home_price_forecast' && (
+              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="text-xs font-medium text-purple-800 mb-2">Forecast Horizon</div>
+                <div className="flex gap-1">
+                  {([
+                    { value: '1m', label: '1 Month' },
+                    { value: '3m', label: '3 Month' },
+                    { value: '12m', label: '12 Month' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setForecastHorizon(option.value)}
+                      className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+                        forecastHorizon === option.value
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Search box */}
             <div className="mb-4">
               <div className="relative">
@@ -905,18 +971,46 @@ export default function MapPage() {
 
           {/* Legend */}
           <div className="absolute bottom-6 left-6 bg-white rounded-xl shadow-lg p-4 z-10">
-            <div className="text-sm font-medium text-gray-700 mb-2">Home Value</div>
-            <div className="flex items-center gap-1">
-              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
-              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
-              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
-              <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>$100K</span>
-              <span>$800K+</span>
-            </div>
+            {selectedMetric === 'home_price_forecast' ? (
+              <>
+                <div className="text-sm font-medium text-gray-700 mb-2">
+                  {forecastHorizon === '1m' ? '1-Month' : forecastHorizon === '3m' ? '3-Month' : '12-Month'} Forecast
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#059669' }}></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>-5%</span>
+                  <span>+10%</span>
+                </div>
+                {/* Info about available geo levels */}
+                {(geoLevel === 'state' || geoLevel === 'national' || geoLevel === 'county') && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-amber-600">
+                    Forecast data available for Metro and ZIP levels
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="text-sm font-medium text-gray-700 mb-2">Home Value</div>
+                <div className="flex items-center gap-1">
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
+                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>$100K</span>
+                  <span>$800K+</span>
+                </div>
+              </>
+            )}
             {/* No data indicator */}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
               <div className="w-6 h-4 rounded border border-gray-300" style={{ backgroundColor: '#f3f4f6' }}></div>

@@ -89,4 +89,35 @@ export class ZillowController {
       data,
     };
   }
+
+  // ============================================================================
+  // ZHVF (Forecast) Endpoints
+  // ============================================================================
+
+  @Get('forecast/metros')
+  async getMetroForecast(@Query('horizon') horizon: string = '12m') {
+    const data = await this.zillowService.getMetroForecast(horizon);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      horizon,
+      data,
+    };
+  }
+
+  @Get('forecast/zips')
+  async getZipForecast(
+    @Query('state') state?: string,
+    @Query('horizon') horizon: string = '12m',
+  ) {
+    const data = await this.zillowService.getZipForecast(state, horizon);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Zip',
+      horizon,
+      data,
+    };
+  }
 }
