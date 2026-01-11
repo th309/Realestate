@@ -341,15 +341,27 @@ export default function MapPage() {
     }
   }, []);
 
-  // Handle search result selection
-  const handleSelectSearchResult = useCallback((result: typeof searchResults[0]) => {
-    if (!map.current || !result.center) return;
+  // Handle search result selection - regular function to avoid stale closure with map ref
+  const handleSelectSearchResult = (result: typeof searchResults[0]) => {
+    console.log('Search result clicked:', result);
+
+    if (!result.center) {
+      console.error('No center coordinates for result');
+      return;
+    }
+
+    if (!map.current) {
+      console.error('Map not initialized');
+      return;
+    }
 
     // Fly to the location
     const zoomLevel = result.type === 'state' ? 5.5 :
                       result.type === 'zip' ? 12 :
                       result.type === 'county' ? 8 :
                       result.type === 'city' ? 10 : 8;
+
+    console.log('Flying to:', result.center, 'zoom:', zoomLevel);
 
     map.current.flyTo({
       center: result.center,
@@ -374,7 +386,7 @@ export default function MapPage() {
     setSearchQuery('');
     setSearchResults([]);
     setShowSearchResults(false);
-  }, []);
+  };
 
   const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: <HomeIcon />, href: '/' },
