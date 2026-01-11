@@ -567,6 +567,16 @@ export default function MapPage() {
   const updateMapLayers = useCallback(async () => {
     if (!map.current || !mapLoaded) return;
 
+    // Ensure the map style is fully loaded before adding sources/layers
+    // This fixes a race condition on initial page load where the 'load' event fires
+    // but the map isn't fully ready for addSource/addLayer operations
+    if (!map.current.isStyleLoaded()) {
+      map.current.once('idle', () => {
+        updateMapLayers();
+      });
+      return;
+    }
+
     // Remove existing layers and sources
     const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels'];
     layersToRemove.forEach(layerId => {
@@ -800,6 +810,7 @@ export default function MapPage() {
       style: 'mapbox://styles/mapbox/light-v11',
       center: [-96, 37.8],
       zoom: 3.5,
+      projection: 'mercator', // Flat map instead of globe
     });
 
     map.current.on('load', () => {
