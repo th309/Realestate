@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MetricGraph } from '@/src/components/graphs/MetricGraph';
 import { METRIC_REGISTRY } from '@/src/config/metric-registry';
@@ -11,7 +11,7 @@ import { RegionCompare } from '@/src/components/graphs/RegionCompare';
 
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip' | 'city';
 
-export default function GraphsPage() {
+function GraphsContent() {
   const searchParams = useSearchParams();
 
   // Get initial metric from URL or default to ZHVI
@@ -107,5 +107,13 @@ export default function GraphsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GraphsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      <GraphsContent />
+    </Suspense>
   );
 }

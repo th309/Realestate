@@ -10,6 +10,7 @@ const nextConfig = {
       './public/geojson/**',
     ],
   },
+  transpilePackages: ['recharts'],
 };
 
 export default nextConfig;
