@@ -1065,13 +1065,9 @@ export default function MapPage() {
                             )}
                             {/* Rent Index Type Selector - show below the rent index metric when selected */}
                             {metric.id === 'rent_index' && selectedMetric === 'rent_index' && (
-                              <div className="mt-1 ml-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                                <div className="text-[10px] font-medium text-green-800 mb-1.5 min-h-[15px] flex items-center justify-between">
+                              <div className="mt-1 ml-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                                <div className="text-[10px] font-medium text-purple-800 mb-1.5 min-h-[15px] flex items-center justify-between">
                                   <span>Property Type</span>
-                                  {/* Show simplified warning if restricted */}
-                                  {(geoLevel === 'county' || geoLevel === 'zip') && (
-                                    <span className="text-[8px] text-orange-600 font-normal">Metro/US only</span>
-                                  )}
                                 </div>
                                 <div className="flex gap-1">
                                   {([
@@ -1097,8 +1093,8 @@ export default function MapPage() {
                                       ${isDisabled
                                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                             : rentIndexType === option.value
-                                              ? 'bg-green-600 text-white shadow-sm'
-                                              : 'bg-white text-green-700 border border-green-300 hover:bg-green-100'
+                                              ? 'bg-purple-600 text-white shadow-sm'
+                                              : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
                                           }`}
                                       >
                                         {option.label}
@@ -1113,10 +1109,6 @@ export default function MapPage() {
                               <div className="mt-1 ml-2 p-2 bg-green-50 rounded-lg border border-green-200">
                                 <div className="text-[10px] font-medium text-green-800 mb-1.5 min-h-[15px] flex items-center justify-between">
                                   <span>Property Type</span>
-                                  {/* Show simplified warning if restricted */}
-                                  {(geoLevel === 'county' || geoLevel === 'zip') && (
-                                    <span className="text-[8px] text-orange-600 font-normal">Metro/US only</span>
-                                  )}
                                 </div>
                                 <div className="flex gap-1">
                                   {([
