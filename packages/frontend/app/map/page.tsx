@@ -1177,46 +1177,89 @@ export default function MapPage() {
 
           {/* Legend */}
           <div className="absolute bottom-6 left-6 bg-white rounded-xl shadow-lg p-4 z-10">
-            {selectedMetric === 'home_price_forecast' ? (
-              <>
-                <div className="text-sm font-medium text-gray-700 mb-2">
-                  {forecastHorizon === '1m' ? '1-Month' : forecastHorizon === '3m' ? '3-Month' : '12-Month'} Forecast
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#059669' }}></div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>-5%</span>
-                  <span>+10%</span>
-                </div>
-                {/* Info about available geo levels */}
-                {(geoLevel === 'state' || geoLevel === 'national' || geoLevel === 'county') && (
-                  <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-amber-600">
-                    Forecast data available for Metro and ZIP levels
+            {(() => {
+              // Helper to calculate ranges and titles
+              const isForecast = selectedMetric === 'home_price_forecast';
+              const isRentIndex = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+
+              let legendTitle = 'Home Value';
+              if (isForecast) {
+                legendTitle = forecastHorizon === '1m' ? '1-Month Forecast' : forecastHorizon === '3m' ? '3-Month Forecast' : '12-Month Forecast';
+              } else if (selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses') {
+                legendTitle = 'Rent Index';
+              } else if (selectedMetric === 'for_sale_inventory') {
+                legendTitle = 'Inventory';
+              }
+
+              if (isForecast) {
+                return (
+                  <>
+                    <div className="text-sm font-medium text-gray-700 mb-2">
+                      {legendTitle}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#84cc16' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                      <div className="w-6 h-4 rounded" style={{ backgroundColor: '#059669' }}></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>-5%</span>
+                      <span>+10%</span>
+                    </div>
+                    {/* Info about available geo levels */}
+                    {(geoLevel === 'state' || geoLevel === 'national' || geoLevel === 'county') && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-amber-600">
+                        Forecast data available for Metro and ZIP levels
+                      </div>
+                    )}
+                  </>
+                );
+              }
+
+              // Dynamic Range Calculation
+              let minLabel = '$100K';
+              let maxLabel = '$800K+';
+
+              if (isRentIndex) {
+                // Calculate min/max from loaded data
+                const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0);
+                if (values.length > 0) {
+                  const minVal = Math.min(...values);
+                  const maxVal = Math.max(...values);
+                  // Format logic
+                  const formatMoney = (val: number) => {
+                    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
+                    return `$${val}`;
+                  };
+                  minLabel = formatMoney(minVal);
+                  maxLabel = formatMoney(maxVal);
+                } else {
+                  minLabel = '$0';
+                  maxLabel = 'N/A';
+                }
+              }
+
+              return (
+                <>
+                  <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f3f4f6' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
+                    <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
                   </div>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="text-sm font-medium text-gray-700 mb-2">Home Value</div>
-                <div className="flex items-center gap-1">
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
-                  <div className="w-6 h-4 rounded" style={{ backgroundColor: '#1e3a8a' }}></div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>$100K</span>
-                  <span>$800K+</span>
-                </div>
-              </>
-            )}
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{minLabel}</span>
+                    <span>{maxLabel}</span>
+                  </div>
+                </>
+              );
+            })()}
             {/* No data indicator */}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
               <div className="w-6 h-4 rounded border border-gray-300" style={{ backgroundColor: '#f3f4f6' }}></div>
