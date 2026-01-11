@@ -43,7 +43,7 @@ export default function MapPage() {
   const {
     searchQuery, searchResults, searchLoading, showSearchResults, searchRef,
     handleSearch, handleSelectSearchResult, setShowSearchResults
-  } = useMapSearch(map, setGeoLevel, setSelectedState);
+  } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
   const { updateMapLayers } = useMapLayers({
     map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, homeValues, mapLoaded
   });
