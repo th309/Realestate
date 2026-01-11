@@ -706,7 +706,10 @@ export default function MapPage() {
               displayValue = 'No data';
             }
           } else {
-            displayValue = value > 0 ? '$' + value.toLocaleString() : 'No data';
+            // Whole dollars for currency
+            displayValue = value > 0
+              ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+              : 'No data';
           }
 
           // Get forecast horizon label
@@ -1231,8 +1234,7 @@ export default function MapPage() {
                   const maxVal = Math.max(...values);
                   // Format logic
                   const formatMoney = (val: number) => {
-                    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
-                    return `$${val}`;
+                    return val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
                   };
                   minLabel = formatMoney(minVal);
                   maxLabel = formatMoney(maxVal);
