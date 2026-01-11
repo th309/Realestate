@@ -47,6 +47,22 @@ class ZordiImporter extends ZhviImporter {
         this.propertyTypeId = PROPERTY_TYPE_URLS[propertyType];
     }
 
+    // Override downloadCsv to provide correct logging
+    async downloadCsv(): Promise<string> {
+        const url = this.getDownloadUrl();
+        console.log(`Downloading ${(this as any).geography} ZORDI data from Zillow...`);
+        console.log(`URL: ${url}`);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+        }
+
+        const text = await response.text();
+        console.log(`Downloaded ${(text.length / 1024 / 1024).toFixed(2)} MB`);
+        return text;
+    }
+
     // Override download URL
     protected getDownloadUrl(): string {
         // Pattern: {Geography}_zordi_{PropertyType}_month.csv
@@ -162,7 +178,8 @@ async function main() {
     const forceFullImport = process.argv.includes('--force');
 
     // Geographies to import
-    const geographies: GeographyLevel[] = ['Metro', 'County', 'Zip'];
+    // User verified ZORDI is only available at Metro/US level
+    const geographies: GeographyLevel[] = ['Metro'];
 
     // Property types to import
     const propertyTypes = ['all', 'sfr', 'mfr'];

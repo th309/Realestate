@@ -75,7 +75,45 @@ class ZoriImporter extends ZhviImporter {
         const errors: string[] = [];
         let inserted = 0;
 
-        // Use specific ZORI table
+        // 1. Ensure markets exist
+        const uniqueMarkets = new Map<string, any>();
+        records.forEach(r => {
+            if (!uniqueMarkets.has(r.region_id)) {
+                let regionType = this.geography.toLowerCase();
+                // Map geography to region_type expected by markets table
+                if (regionType === 'metro') regionType = 'msa'; // Markets uses 'msa' for metro
+                if (regionType === 'zip') regionType = 'zip';
+                if (regionType === 'county') regionType = 'county';
+
+                // State extraction
+                let stateCode = null;
+                if (r.region_name && r.region_name.includes(', ')) {
+                    stateCode = r.region_name.split(', ')[1];
+                }
+
+                uniqueMarkets.set(r.region_id, {
+                    region_id: r.region_id,
+                    region_name: r.region_name,
+                    region_type: regionType,
+                    state_code: stateCode
+                });
+            }
+        });
+
+        const marketsToUpsert = Array.from(uniqueMarkets.values());
+        if (marketsToUpsert.length > 0) {
+            const { error: marketError } = await (this as any).supabase
+                .from('markets')
+                .upsert(marketsToUpsert, { onConflict: 'region_id' });
+
+            if (marketError) {
+                // If this fails, we log it but try to continue (though data insert will likely fail next)
+                console.warn('Failed to upsert markets:', marketError.message);
+                errors.push(`Market upsert error: ${marketError.message}`);
+            }
+        }
+
+        // 2. Insert ZORI data
         const { error } = await (this as any).supabase
             .from('zillow_zori')
             .upsert(
@@ -120,17 +158,13 @@ class ZoriImporter extends ZhviImporter {
 
     // Override existing check to target correct table
     async getExistingDates(): Promise<Set<string>> {
-        // Need access to supabase client. 
-        // Base class has private 'supabase'. We might need to instantiate our own or cast.
-        // Since base class 'supabase' is private, we can't access it easily without ts-ignore or protected.
-        // But we passed credentials in constructor, so we can create a new client or use the one we have if we change base to protected.
-        // For now, I'll allow the any cast in constructor or just create a new one.
-        // Subclassing wrapper:
+        const dbPropertyType = PROPERTY_TYPE_DB_NAMES[this.propertyTypeCode];
 
         const { data, error } = await (this as any).supabase
             .from('zillow_zori')
             .select('date')
             .eq('geography', (this as any).geography)
+            .eq('property_type', dbPropertyType)
             .limit(1000);
 
         if (error) {

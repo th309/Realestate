@@ -82,8 +82,9 @@ function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_
       default:
         key = item.region_id;
     }
-    if (key && item.value) {
-      result[key] = item.value;
+    if (key && item.value != null) {
+      // Ensure value is a number (DECIMAL from DB may come as string)
+      result[key] = Number(item.value);
     }
   });
   return result;
@@ -126,8 +127,8 @@ export const api = {
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
       const key = item.cbsa_code || item.region_id;
-      if (key && item.value !== null) {
-        result[key] = item.value;
+      if (key && item.value != null) {
+        result[key] = Number(item.value);
       }
     });
     return result;
@@ -142,8 +143,8 @@ export const api = {
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
       const key = item.zip_code || item.region_id;
-      if (key && item.value !== null) {
-        result[key] = item.value;
+      if (key && item.value != null) {
+        result[key] = Number(item.value);
       }
     });
     return result;
