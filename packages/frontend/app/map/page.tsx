@@ -223,6 +223,14 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    // Auto-switch to Metro for Rent Index if on restricted level
+    const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+    if (isRentIndexMode && ['national', 'state', 'county'].includes(geoLevel)) {
+      setGeoLevel('metro');
+    }
+  }, [selectedMetric, geoLevel]);
+
+  useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
       // Calculate new width (accounting for 80px nav bar)
@@ -862,16 +870,29 @@ export default function MapPage() {
           {(['National', 'State', 'Metro', 'County', 'Zip'] as const).map((level) => {
             const levelKey = level.toLowerCase() as GeoLevel;
             const isActive = geoLevel === levelKey;
+
             // Forecast data only available for Metro and ZIP
             const isForecastMode = selectedMetric === 'home_price_forecast';
             const isDisabledForForecast = isForecastMode && ['national', 'state', 'county'].includes(levelKey);
+
+            // Rent Index data restricted to Metro and Zip (user requested National, State, County greyed out)
+            const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+            const isDisabledForRentIndex = isRentIndexMode && ['national', 'state', 'county'].includes(levelKey);
+
+            const isDisabled = isDisabledForForecast || isDisabledForRentIndex;
+            const disabledTitle = isDisabledForForecast
+              ? 'Forecast data not available for this geography level'
+              : isDisabledForRentIndex
+                ? 'Rent Index data available for Metro and Zip levels only'
+                : undefined;
+
             return (
               <button
                 key={level}
-                onClick={() => !isDisabledForForecast && setGeoLevel(levelKey)}
-                disabled={isDisabledForForecast}
-                title={isDisabledForForecast ? 'Forecast data not available for this geography level' : undefined}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${isDisabledForForecast
+                onClick={() => !isDisabled && setGeoLevel(levelKey)}
+                disabled={isDisabled}
+                title={disabledTitle}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${isDisabled
                   ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                   : isActive
                     ? 'bg-gray-900 text-white shadow-md'
