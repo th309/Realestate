@@ -69,22 +69,25 @@ function GraphsContent() {
       />
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto p-6">
-          {/* Header Section */}
-          <div className="mb-6 space-y-6">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Controls Panel */}
+        <div className="w-80 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+          <div className="p-6 space-y-8">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">
                 {metric?.name || 'Select a Metric'}
               </h1>
-              <p className="text-gray-500 mt-1">{metric?.description}</p>
+              <p className="text-sm text-gray-500 mt-1">{metric?.description}</p>
             </div>
 
-            <div className="flex flex-col gap-4 max-w-xl">
-              {/* Search Bar */}
-              <GraphSearchBar onSelect={handleSearchSelect} />
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
+                </label>
+                <GraphSearchBar onSelect={handleSearchSelect} />
+              </div>
 
-              {/* Geography Selector */}
               <GeographySelector
                 currentLevel={geoLevel}
                 currentRegion={selectedRegion}
@@ -92,31 +95,35 @@ function GraphsContent() {
                 onSelect={handleRegionSelect}
               />
             </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <RegionCompare
+                metricId={selectedMetric}
+                currentRegion={selectedRegion}
+                geoLevel={geoLevel}
+                compareRegions={compareRegions}
+                onAddRegion={(region) => setCompareRegions([...compareRegions, region])}
+                onRemoveRegion={(region) =>
+                  setCompareRegions(compareRegions.filter(r => r !== region))
+                }
+              />
+            </div>
           </div>
+        </div>
 
-          {/* Main Graph */}
-          {metric && (
-            <MetricGraph
-              metricId={selectedMetric}
-              regionId={selectedRegion.id}
-              regionName={selectedRegion.name}
-              geoLevel={geoLevel}
-              compareRegions={compareRegions}
-            />
-          )}
-
-          {/* Region Comparison */}
-          <div className="mt-8">
-            <RegionCompare
-              metricId={selectedMetric}
-              currentRegion={selectedRegion}
-              geoLevel={geoLevel}
-              compareRegions={compareRegions}
-              onAddRegion={(region) => setCompareRegions([...compareRegions, region])}
-              onRemoveRegion={(region) =>
-                setCompareRegions(compareRegions.filter(r => r !== region))
-              }
-            />
+        {/* Graph Panel */}
+        <div className="flex-1 bg-gray-50 overflow-auto p-6">
+          <div className="max-w-5xl mx-auto">
+            {/* Main Graph */}
+            {metric && (
+              <MetricGraph
+                metricId={selectedMetric}
+                regionId={selectedRegion.id}
+                regionName={selectedRegion.name}
+                geoLevel={geoLevel}
+                compareRegions={compareRegions}
+              />
+            )}
           </div>
         </div>
       </div>
