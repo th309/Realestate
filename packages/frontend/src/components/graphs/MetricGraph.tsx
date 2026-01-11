@@ -104,20 +104,35 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
                 metric.format === 'percent' ? 5 :
                     metric.format === 'days' ? 45 : 100;
 
+        // Base values for comparison regions
+        const compareBaseValues: Record<string, number> = {};
+        compareRegions.forEach(region => {
+            compareBaseValues[region] = baseValue * (0.8 + Math.random() * 0.4); // Random start between 80% and 120% of base
+        });
+
         for (let i = months; i >= 0; i--) {
             const date = new Date(now);
             date.setMonth(now.getMonth() - i);
 
-            // Random walk
+            // Random walk for primary
             const change = (Math.random() - 0.45) * (baseValue * 0.02);
             baseValue += change;
-
             if (baseValue < 0) baseValue = 0;
 
-            data.push({
+            const point: DataPoint = {
                 date: date.toISOString().split('T')[0],
                 value: baseValue,
+            };
+
+            // Random walk for comparison regions
+            compareRegions.forEach(region => {
+                const compChange = (Math.random() - 0.45) * (compareBaseValues[region] * 0.02);
+                compareBaseValues[region] += compChange;
+                if (compareBaseValues[region] < 0) compareBaseValues[region] = 0;
+                point[region] = compareBaseValues[region];
             });
+
+            data.push(point);
         }
         return data;
     };
@@ -202,7 +217,7 @@ export const MetricGraph: React.FC<MetricGraphProps> = ({
         }[metric.chartType];
 
         return (
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={320}>
                 <ChartComponent {...commonProps}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis

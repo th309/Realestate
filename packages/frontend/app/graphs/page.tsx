@@ -9,6 +9,8 @@ import { MetricSidebar } from '@/src/components/sidebar/MetricSidebar';
 import { GeographySelector } from '@/src/components/selectors/GeographySelector';
 import { RegionCompare } from '@/src/components/graphs/RegionCompare';
 
+import { GraphSearchBar, SearchResult } from '@/src/components/graphs/GraphSearchBar';
+
 type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'zip' | 'city';
 
 function GraphsContent() {
@@ -50,6 +52,12 @@ function GraphsContent() {
     updateURL(selectedMetric, region.id, level);
   };
 
+  const handleSearchSelect = (result: SearchResult) => {
+    // Types are already normalized in GraphSearchBar
+    const level = result.type as GeoLevel;
+    handleRegionSelect({ id: result.id, name: result.name }, level);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar with metric selection */}
@@ -63,8 +71,8 @@ function GraphsContent() {
       {/* Main content */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto p-6">
-          {/* Header with geography selector */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Header Section */}
+          <div className="mb-6 space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {metric?.name || 'Select a Metric'}
@@ -72,12 +80,18 @@ function GraphsContent() {
               <p className="text-gray-500 mt-1">{metric?.description}</p>
             </div>
 
-            <GeographySelector
-              currentLevel={geoLevel}
-              currentRegion={selectedRegion}
-              availableLevels={metric?.geoLevels || ['national']}
-              onSelect={handleRegionSelect}
-            />
+            <div className="flex flex-col gap-4 max-w-xl">
+              {/* Search Bar */}
+              <GraphSearchBar onSelect={handleSearchSelect} />
+
+              {/* Geography Selector */}
+              <GeographySelector
+                currentLevel={geoLevel}
+                currentRegion={selectedRegion}
+                availableLevels={metric?.geoLevels || ['national']}
+                onSelect={handleRegionSelect}
+              />
+            </div>
           </div>
 
           {/* Main Graph */}
