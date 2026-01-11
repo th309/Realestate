@@ -224,8 +224,14 @@ export default function MapPage() {
 
   useEffect(() => {
     // Auto-switch to Metro for Rent Index if on restricted level
-    const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+    const isRentIndexMode = selectedMetric === 'rent_index';
+    const isRenterDemandMode = selectedMetric === 'rent_for_houses';
+
     if (isRentIndexMode && ['national', 'state'].includes(geoLevel)) {
+      setGeoLevel('metro');
+    }
+    // ZORDI (Renter Demand) only available for Metro and Zip
+    if (isRenterDemandMode && ['national', 'state', 'county'].includes(geoLevel)) {
       setGeoLevel('metro');
     }
   }, [selectedMetric, geoLevel]);
@@ -405,17 +411,16 @@ export default function MapPage() {
 
       // Check if we're fetching forecast data
       const isForecast = metric === 'home_price_forecast';
-      // Check if we're fetching rent index data - utilizing the new Renter Demand Index metric ID OR the standard Rent Index
-      const isRentIndex = metric === 'rent_for_houses' || metric === 'rent_index';
-      // Determine which state variable to track for property type
-      const rentPropType = metric === 'rent_for_houses' ? renterDemandType : rentIndexType;
+      // Check if we're fetching rent index data (ZORI)
+      const isRentIndex = metric === 'rent_index';
+      // Check if we're fetching renter demand index data (ZORDI)
+      const isRenterDemand = metric === 'rent_for_houses';
 
       switch (level) {
         case 'state':
         case 'national':
-          if (isRentIndex) {
-            // Rent data not available for states in this dataset implementation, or fallback to something else if needed
-            // For now, consistent with forecast, we might not show anything or show metro data if applicable.
+          if (isRentIndex || isRenterDemand) {
+            // Rent/demand data not available for states
             data = {};
           } else {
             // Forecast data not available for states - show regular home values
@@ -426,14 +431,19 @@ export default function MapPage() {
           if (isForecast) {
             data = await api.getMetroForecast(horizon);
           } else if (isRentIndex) {
-            data = await api.getMetroRent(rentPropType);
+            data = await api.getMetroRent(rentIndexType);
+          } else if (isRenterDemand) {
+            data = await api.getMetroRenterDemand(renterDemandType);
           } else {
             data = await api.getMetroHomeValues();
           }
           break;
         case 'county':
           if (isRentIndex) {
-            data = await api.getCountyRent(rentPropType);
+            data = await api.getCountyRent(rentIndexType);
+          } else if (isRenterDemand) {
+            // ZORDI county data not available - show empty or fallback
+            data = {};
           } else {
             // Forecast data not available for counties - show regular home values
             data = await api.getCountyHomeValues();
@@ -444,7 +454,9 @@ export default function MapPage() {
             if (isForecast) {
               data = await api.getZipForecast(state, horizon);
             } else if (isRentIndex) {
-              data = await api.getZipRent(state, rentPropType);
+              data = await api.getZipRent(state, rentIndexType);
+            } else if (isRenterDemand) {
+              data = await api.getZipRenterDemand(state, renterDemandType);
             } else {
               data = await api.getZipHomeValues(state);
             }
@@ -878,16 +890,22 @@ export default function MapPage() {
             const isForecastMode = selectedMetric === 'home_price_forecast';
             const isDisabledForForecast = isForecastMode && ['national', 'state', 'county'].includes(levelKey);
 
-            // Rent Index data restricted to Metro, County, and Zip (National/State not currently available)
-            const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
+            // Rent Index (ZORI) data restricted to Metro, County, and Zip (National/State not currently available)
+            const isRentIndexMode = selectedMetric === 'rent_index';
             const isDisabledForRentIndex = isRentIndexMode && ['national', 'state'].includes(levelKey);
 
-            const isDisabled = isDisabledForForecast || isDisabledForRentIndex;
+            // Renter Demand (ZORDI) data only available for Metro and Zip
+            const isRenterDemandMode = selectedMetric === 'rent_for_houses';
+            const isDisabledForRenterDemand = isRenterDemandMode && ['national', 'state', 'county'].includes(levelKey);
+
+            const isDisabled = isDisabledForForecast || isDisabledForRentIndex || isDisabledForRenterDemand;
             const disabledTitle = isDisabledForForecast
               ? 'Forecast data not available for this geography level'
               : isDisabledForRentIndex
-                ? 'Rent Index data available for Metro and Zip levels only'
-                : undefined;
+                ? 'Rent Index data available for Metro, County, and Zip levels only'
+                : isDisabledForRenterDemand
+                  ? 'Renter Demand Index data available for Metro and Zip levels only'
+                  : undefined;
 
             return (
               <button
@@ -1204,8 +1222,10 @@ export default function MapPage() {
               let legendTitle = 'Home Value';
               if (isForecast) {
                 legendTitle = forecastHorizon === '1m' ? '1-Month Forecast' : forecastHorizon === '3m' ? '3-Month Forecast' : '12-Month Forecast';
-              } else if (selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses') {
+              } else if (selectedMetric === 'rent_index') {
                 legendTitle = 'Rent Index';
+              } else if (selectedMetric === 'rent_for_houses') {
+                legendTitle = 'Renter Demand Index';
               } else if (selectedMetric === 'for_sale_inventory') {
                 legendTitle = 'Inventory';
               }

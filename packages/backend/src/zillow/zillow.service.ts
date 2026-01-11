@@ -784,4 +784,169 @@ export class ZillowService {
       };
     }).sort((a, b) => b.value - a.value);
   }
+
+  // ============================================================================
+  // ZORDI (Renter Demand Index) Methods
+  // ============================================================================
+
+  async getMetroRenterDemand(date?: string, propertyType: string = 'all'): Promise<HomeValueData[]> {
+    const dbPropertyType = this.mapRentPropertyType(propertyType);
+
+    let targetDate = date;
+    if (!targetDate) {
+      const { data } = await this.supabase
+        .from('zillow_zordi')
+        .select('date')
+        .eq('geography', 'Metro')
+        .order('date', { ascending: false })
+        .limit(1);
+      targetDate = data?.[0]?.date || '2025-10-31';
+    }
+
+    const { data: zillow, error } = await this.supabase
+      .from('zillow_zordi')
+      .select('region_id, value, date, property_type, geography')
+      .in('geography', ['Metro', 'US'])
+      .eq('date', targetDate)
+      .eq('property_type', dbPropertyType);
+
+    if (error) throw new Error(error.message);
+    if (!zillow) return [];
+
+    // Build crosswalk maps
+    const zillowIdToMetro = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
+    const cbsaCodeToMetro = new Map<string, { cbsa_code: string; cbsa_name: string; state: string }>();
+
+    let page = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      const { data: crosswalk } = await this.supabase
+        .from('geography_crosswalk')
+        .select('cbsa_code, cbsa_name, zillow_metro_region_id, state_abbrev')
+        .not('cbsa_code', 'is', null)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        if (row.zillow_metro_region_id && !zillowIdToMetro.has(String(row.zillow_metro_region_id))) {
+          zillowIdToMetro.set(String(row.zillow_metro_region_id), {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+        if (row.cbsa_code && !cbsaCodeToMetro.has(row.cbsa_code)) {
+          cbsaCodeToMetro.set(row.cbsa_code, {
+            cbsa_code: row.cbsa_code,
+            cbsa_name: row.cbsa_name,
+            state: row.state_abbrev
+          });
+        }
+      });
+      page++;
+      if (crosswalk.length < pageSize) break;
+    }
+
+    return zillow.map(z => {
+      if (z.geography === 'US') {
+        return {
+          region_id: z.region_id,
+          region_name: 'United States',
+          value: z.value,
+          date: z.date,
+          property_type: z.property_type,
+          geography: 'US',
+        };
+      }
+
+      const is5DigitCode = /^\d{5}$/.test(z.region_id);
+      let metro;
+      let cbsaCode = null;
+
+      if (is5DigitCode) {
+        metro = cbsaCodeToMetro.get(z.region_id);
+        if (metro) cbsaCode = z.region_id;
+      }
+      if (!metro) {
+        metro = zillowIdToMetro.get(z.region_id);
+        if (metro) cbsaCode = metro.cbsa_code;
+      }
+
+      return {
+        region_id: z.region_id,
+        region_name: metro?.cbsa_name || 'Unknown',
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        value: z.value,
+        date: z.date,
+        property_type: z.property_type,
+        geography: 'Metro',
+      };
+    }).sort((a, b) => b.value - a.value);
+  }
+
+  async getZipRenterDemand(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
+    const dbPropertyType = this.mapRentPropertyType(propertyType);
+
+    let targetDate = date;
+    if (!targetDate) {
+      const { data } = await this.supabase
+        .from('zillow_zordi')
+        .select('date')
+        .eq('geography', 'Zip')
+        .order('date', { ascending: false })
+        .limit(1);
+      targetDate = data?.[0]?.date || '2025-10-31';
+    }
+
+    const { data: crosswalk } = await this.supabase
+      .from('geography_crosswalk')
+      .select('zip_code, zip_default_city, county_name, state_abbrev, state_name')
+      .eq('state_abbrev', stateFilter)
+      .limit(3000);
+
+    if (!crosswalk || crosswalk.length === 0) return [];
+
+    const zipMap = new Map<string, { city: string; county: string; state_abbrev: string; state_name: string }>();
+    crosswalk.forEach(row => {
+      zipMap.set(row.zip_code, {
+        city: row.zip_default_city,
+        county: row.county_name,
+        state_abbrev: row.state_abbrev,
+        state_name: row.state_name
+      });
+    });
+
+    const zipCodes = [...zipMap.keys()];
+
+    const { data: zillow, error } = await this.supabase
+      .from('zillow_zordi')
+      .select('region_id, value, date, property_type, geography')
+      .eq('date', targetDate)
+      .eq('property_type', dbPropertyType)
+      .in('region_id', zipCodes)
+      .limit(3000);
+
+    if (error) throw new Error(error.message);
+    if (!zillow) return [];
+
+    return zillow.map(z => {
+      const zip = zipMap.get(z.region_id);
+      return {
+        region_id: z.region_id,
+        region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
+        zip_code: z.region_id,
+        city: zip?.city || null,
+        county_name: zip?.county || null,
+        state_abbrev: zip?.state_abbrev || null,
+        state_name: zip?.state_name || null,
+        value: z.value,
+        date: z.date,
+        property_type: z.property_type,
+        geography: 'ZIP',
+      };
+    }).sort((a, b) => b.value - a.value);
+  }
 }

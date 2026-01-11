@@ -177,4 +177,45 @@ export class ZillowController {
       data,
     };
   }
+
+  // ============================================================================
+  // ZORDI (Renter Demand Index) Endpoints
+  // ============================================================================
+
+  @Get('demand/metros')
+  async getMetroRenterDemand(
+    @Query('date') date?: string,
+    @Query('propertyType') propertyType: string = 'all',
+  ) {
+    const data = await this.zillowService.getMetroRenterDemand(date, propertyType);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      propertyType,
+      data,
+    };
+  }
+
+  @Get('demand/zips')
+  async getZipRenterDemand(
+    @Query('state') state: string,
+    @Query('date') date?: string,
+    @Query('propertyType') propertyType: string = 'all',
+  ) {
+    if (!state) {
+      return {
+        success: false,
+        error: 'State parameter is required for ZIP-level data',
+      };
+    }
+    const data = await this.zillowService.getZipRenterDemand(state, propertyType, date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'ZIP',
+      propertyType,
+      data,
+    };
+  }
 }

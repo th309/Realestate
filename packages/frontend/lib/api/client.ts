@@ -168,4 +168,18 @@ export const api = {
     // Use ZIP code as key
     return transformZillowResponse(response, 'region_id');
   },
+
+  // ZORDI Renter Demand Index endpoints
+  // propertyType: 'all' | 'sfr' | 'mfr'
+  getMetroRenterDemand: async (propertyType: string = 'all'): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/demand/metros?propertyType=${propertyType}`);
+    // Use CBSA code to match GeoJSON
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  getZipRenterDemand: async (state: string, propertyType: string = 'all'): Promise<ZipHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/demand/zips?state=${state}&propertyType=${propertyType}`);
+    // Use ZIP code as key
+    return transformZillowResponse(response, 'region_id');
+  },
 };
