@@ -225,7 +225,7 @@ export default function MapPage() {
   useEffect(() => {
     // Auto-switch to Metro for Rent Index if on restricted level
     const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
-    if (isRentIndexMode && ['national', 'state', 'county'].includes(geoLevel)) {
+    if (isRentIndexMode && ['national', 'state'].includes(geoLevel)) {
       setGeoLevel('metro');
     }
   }, [selectedMetric, geoLevel]);
@@ -875,9 +875,9 @@ export default function MapPage() {
             const isForecastMode = selectedMetric === 'home_price_forecast';
             const isDisabledForForecast = isForecastMode && ['national', 'state', 'county'].includes(levelKey);
 
-            // Rent Index data restricted to Metro and Zip (user requested National, State, County greyed out)
+            // Rent Index data restricted to Metro, County, and Zip (National/State not currently available)
             const isRentIndexMode = selectedMetric === 'rent_index' || selectedMetric === 'rent_for_houses';
-            const isDisabledForRentIndex = isRentIndexMode && ['national', 'state', 'county'].includes(levelKey);
+            const isDisabledForRentIndex = isRentIndexMode && ['national', 'state'].includes(levelKey);
 
             const isDisabled = isDisabledForForecast || isDisabledForRentIndex;
             const disabledTitle = isDisabledForForecast
