@@ -59,6 +59,60 @@ interface ZillowForecastResponse {
   data: ZillowForecast[];
 }
 
+// Affordability data from zillow_affordability table
+interface ZillowAffordability {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string;
+  state_abbrev?: string;
+  homeowner_income_needed: number | null;
+  renter_income_needed: number | null;
+  affordable_home_price: number | null;
+  years_to_save: number | null;
+  homeowner_affordability_percent: number | null;
+  renter_affordability_percent: number | null;
+}
+
+interface ZillowAffordabilityResponse {
+  success: boolean;
+  count: number;
+  data: ZillowAffordability[];
+}
+
+// Price cuts data (combined from multiple tables)
+interface ZillowPriceCuts {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string;
+  state_abbrev?: string;
+  share_with_price_cut: number | null;
+  median_price_cut_amount: number | null;
+  median_price_cut_percent: number | null;
+}
+
+interface ZillowPriceCutsResponse {
+  success: boolean;
+  count: number;
+  data: ZillowPriceCuts[];
+}
+
+// New construction data (combined from multiple tables)
+interface ZillowNewConstruction {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string;
+  state_abbrev?: string;
+  sales_count: number | null;
+  median_sale_price: number | null;
+  price_per_sqft: number | null;
+}
+
+interface ZillowNewConstructionResponse {
+  success: boolean;
+  count: number;
+  data: ZillowNewConstruction[];
+}
+
 export type StateHomeValues = Record<string, number>;
 export type MetroHomeValues = Record<string, number>;
 export type CountyHomeValues = Record<string, number>;
@@ -182,5 +236,224 @@ export const api = {
     const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/demand/zips?state=${state}&propertyType=${propertyType}`);
     // Use ZIP code as key
     return transformZillowResponse(response, 'region_id');
+  },
+
+  // ============================================================================
+  // Market Indicators Endpoints
+  // ============================================================================
+
+  // Inventory (for_sale_inventory)
+  getMetroInventory: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/inventory/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // New Listings (new_listings)
+  getMetroNewListings: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/new-listings/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Pending Listings (pending_listings)
+  getMetroPendingListings: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/pending-listings/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Median List Price (list_price)
+  getMetroListPrice: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/list-price/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Sales Count (home_sales)
+  getMetroSalesCount: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/sales-count/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Median Sale Price (sale_price)
+  getMetroSalePrice: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/sale-price/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Sale-to-List Ratio (sale_to_list)
+  getMetroSaleToList: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/sale-to-list/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Days on Market / Days to Pending (days_on_market)
+  getMetroDaysToPending: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/days-to-pending/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Days to Close (days_to_close)
+  getMetroDaysToClose: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/days-to-close/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // Market Heat Index (market_health)
+  getMetroMarketHeat: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>('/api/zillow/market-heat/metros');
+    return transformZillowResponse(response, 'cbsa_code');
+  },
+
+  // ============================================================================
+  // Price Cuts Endpoints
+  // ============================================================================
+
+  // Price Cut Share % (price_cut_pct)
+  getMetroPriceCutShare: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowPriceCutsResponse>('/api/zillow/price-cuts/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.share_with_price_cut != null) {
+        result[key] = Number(item.share_with_price_cut);
+      }
+    });
+    return result;
+  },
+
+  // Price Cut Amount $ (price_cut_amount)
+  getMetroPriceCutAmount: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowPriceCutsResponse>('/api/zillow/price-cuts/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.median_price_cut_amount != null) {
+        result[key] = Number(item.median_price_cut_amount);
+      }
+    });
+    return result;
+  },
+
+  // ============================================================================
+  // New Construction Endpoints
+  // ============================================================================
+
+  // New Construction Sales Count (new_construction_sales)
+  getMetroNewConstructionSales: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowNewConstructionResponse>('/api/zillow/new-construction/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.sales_count != null) {
+        result[key] = Number(item.sales_count);
+      }
+    });
+    return result;
+  },
+
+  // New Construction Price (new_construction_price)
+  getMetroNewConstructionPrice: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowNewConstructionResponse>('/api/zillow/new-construction/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.median_sale_price != null) {
+        result[key] = Number(item.median_sale_price);
+      }
+    });
+    return result;
+  },
+
+  // New Construction $/Sq Ft (new_construction_ppsf)
+  getMetroNewConstructionPPSF: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowNewConstructionResponse>('/api/zillow/new-construction/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.price_per_sqft != null) {
+        result[key] = Number(item.price_per_sqft);
+      }
+    });
+    return result;
+  },
+
+  // ============================================================================
+  // Affordability Endpoints
+  // ============================================================================
+
+  // Income Needed to Buy (income_to_buy)
+  getMetroIncomeToBuy: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.homeowner_income_needed != null) {
+        result[key] = Number(item.homeowner_income_needed);
+      }
+    });
+    return result;
+  },
+
+  // Income Needed to Rent (income_to_rent)
+  getMetroIncomeToRent: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.renter_income_needed != null) {
+        result[key] = Number(item.renter_income_needed);
+      }
+    });
+    return result;
+  },
+
+  // Affordable Home Price (affordable_home_price)
+  getMetroAffordableHomePrice: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.affordable_home_price != null) {
+        result[key] = Number(item.affordable_home_price);
+      }
+    });
+    return result;
+  },
+
+  // Years to Save (years_to_save)
+  getMetroYearsToSave: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.years_to_save != null) {
+        result[key] = Number(item.years_to_save);
+      }
+    });
+    return result;
+  },
+
+  // Homeowner Affordability % (homeowner_affordability)
+  getMetroHomeownerAffordability: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.homeowner_affordability_percent != null) {
+        result[key] = Number(item.homeowner_affordability_percent);
+      }
+    });
+    return result;
+  },
+
+  // Renter Affordability % (renter_affordability)
+  getMetroRenterAffordability: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.renter_affordability_percent != null) {
+        result[key] = Number(item.renter_affordability_percent);
+      }
+    });
+    return result;
   },
 };

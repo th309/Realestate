@@ -64,6 +64,10 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
       { id: 'sfh_value_yoy', name: 'Single Family Value Growth (YoY)', isPremium: true },
       { id: 'condo_value', name: 'Condo Value', isPremium: true },
       { id: 'condo_value_yoy', name: 'Condo Value Growth (YoY)', isPremium: true },
+      { id: 'income_to_buy', name: 'Income Needed to Buy', isNew: true },
+      { id: 'affordable_home_price', name: 'Affordable Home Price', isNew: true },
+      { id: 'years_to_save', name: 'Years to Save (Down Payment)', isPremium: true, isNew: true },
+      { id: 'homeowner_affordability', name: 'Homeowner Affordability %', isPremium: true, isNew: true },
     ],
   },
   {
@@ -87,6 +91,7 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
         name: 'Velocity',
         metrics: [
           { id: 'days_on_market', name: 'Days on Market' },
+          { id: 'days_to_close', name: 'Days to Close', isNew: true },
           { id: 'home_sales', name: 'Home Sales', isPremium: true },
           { id: 'sales_yoy', name: 'Sales Growth (YoY)', isPremium: true },
           { id: 'sale_to_list', name: 'Sale-to-List Ratio', isPremium: true },
@@ -97,9 +102,19 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
         name: 'Pricing Dynamics',
         metrics: [
           { id: 'price_cut_pct', name: 'Price Cut %', isPremium: true },
+          { id: 'price_cut_amount', name: 'Median Price Cut ($)', isPremium: true, isNew: true },
           { id: 'list_price', name: 'Median List Price', isPremium: true },
           { id: 'sale_price', name: 'Median Sale Price', isPremium: true },
           { id: 'price_per_sqft', name: 'Price per Sq Ft', isPremium: true },
+        ],
+      },
+      {
+        id: 'new_construction',
+        name: 'New Construction',
+        metrics: [
+          { id: 'new_construction_sales', name: 'New Construction Sales', isNew: true },
+          { id: 'new_construction_price', name: 'New Construction Price', isNew: true },
+          { id: 'new_construction_ppsf', name: 'New Construction $/Sq Ft', isPremium: true, isNew: true },
         ],
       },
     ],
@@ -145,6 +160,8 @@ export const INVESTOR_CATEGORIES: MetricCategory[] = [
       { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true },
       { id: 'rent_growth', name: 'Rent Growth (YoY)', isPremium: true },
       { id: 'rent_to_price', name: 'Rent-to-Price Ratio', isPremium: true },
+      { id: 'income_to_rent', name: 'Income Needed to Rent', isNew: true },
+      { id: 'renter_affordability', name: 'Renter Affordability %', isPremium: true, isNew: true },
     ],
   },
 ];
