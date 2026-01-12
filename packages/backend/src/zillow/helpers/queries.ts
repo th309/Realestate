@@ -287,7 +287,7 @@ export async function queryZordi(
   targetDate: string,
   _propertyType: string,
   regionIds?: string[]
-) {
+): Promise<any[]> {
   // ZORDI data not yet in new schema - return empty array
   // TODO: Add zordi metric to new tables or keep separate table
   console.warn('queryZordi: ZORDI data not yet migrated to new schema');
@@ -301,7 +301,7 @@ export async function queryZordi(
 export async function queryZhvf(
   supabase: SupabaseClient,
   geography: string | string[]
-) {
+): Promise<any[]> {
   // ZHVF data not yet in new schema - return empty array
   // TODO: Add forecast metrics to new tables or keep separate table
   console.warn('queryZhvf: ZHVF data not yet migrated to new schema');
@@ -356,7 +356,7 @@ export async function queryAffordability(
   targetDate: string,
   _propertyType?: string,
   regionIds?: string[]
-) {
+): Promise<any[]> {
   // Affordability data not yet in new schema - return empty array
   // TODO: Add affordability metrics to calculated_metrics table
   console.warn('queryAffordability: Affordability data not yet migrated to new schema');
