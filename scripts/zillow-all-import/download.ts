@@ -13,7 +13,7 @@ export async function downloadDataset(config: DatasetConfig): Promise<DownloadRe
     console.log(`  📥 Downloading from: ${config.downloadUrl}`);
     const response = await axios.get(config.downloadUrl, {
       timeout: 120000,
-      maxContentLength: 200 * 1024 * 1024,
+      maxContentLength: 500 * 1024 * 1024,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }

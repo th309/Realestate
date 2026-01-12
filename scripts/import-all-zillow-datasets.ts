@@ -152,12 +152,6 @@ async function main() {
 
   const supabase = createZillowImportClient();
 
-  // Skip datasets - only skip truly problematic ones (US aggregate duplicates)
-  const skipDatasets = [
-    'zhvi-us-all-homes-sm-sa',      // US aggregate is in metro file
-    'zori-us-all-homes-sm',         // US aggregate is in metro file
-  ];
-
   // Sort by estimated size (smallest first): state < metro < county < city < zip
   const getSizePriority = (id: string): number => {
     if (id.includes('-us-')) return 0;      // US aggregate (tiny)
@@ -169,12 +163,19 @@ async function main() {
     return 3; // Default to middle
   };
 
-  const datasetsToProcess = ZILLOW_DATASETS
-    .filter(d => !skipDatasets.includes(d.id))
+  const args = process.argv.slice(2);
+  const filterArg = args.find(arg => arg.startsWith('--filter='));
+  const filter = filterArg ? filterArg.split('=')[1] : null;
+
+  let datasetsToProcess = ZILLOW_DATASETS
     .sort((a, b) => getSizePriority(a.id) - getSizePriority(b.id));
 
-  console.log(`Processing ${datasetsToProcess.length} datasets (sorted smallest to largest)...`);
-  console.log(`Skipping ${skipDatasets.length} duplicate datasets\n`);
+  if (filter) {
+    console.log(`🔍 Filtering datasets by: "${filter}"`);
+    datasetsToProcess = datasetsToProcess.filter(d => d.id.includes(filter));
+  }
+
+  console.log(`Processing ${datasetsToProcess.length} datasets (sorted smallest to largest)...\n`);
 
   const results: ImportResult[] = [];
 

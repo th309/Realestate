@@ -11,7 +11,6 @@
 import { join } from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
-
 // Load environment variables from multiple possible locations
 config({ path: join(__dirname, '../../.env.local') });
 config({ path: join(__dirname, '../../packages/frontend/.env.local') });
