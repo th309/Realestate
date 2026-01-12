@@ -9,7 +9,7 @@
  * - zillow_zip
  *
  * Metrics imported: ZHVI, ZORI, Inventory, etc.
- * Metro imports use Zillow_Census_Metro_Crosswalk.csv for CBSA codes.
+ * Metro imports use zillow_metro_crosswalk table for CBSA codes.
  *
  * Usage:
  *   npx tsx scripts/zillow-import/import-all.ts
@@ -18,54 +18,55 @@
  *   npx tsx scripts/zillow-import/import-all.ts --metric zhvi,zori   # Specific metrics
  */
 
-import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName, ZillowRecord } from './base-importer';
-import { readFileSync } from 'fs';
+import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName } from './base-importer';
+import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
 import { join } from 'path';
-import { parse } from 'csv-parse/sync';
 
-// CBSA crosswalk mapping: Zillow RegionID -> CBSA info
+config({ path: join(__dirname, '../../packages/backend/.env') });
+
+// CBSA crosswalk mapping: Zillow RegionID -> CBSA code
 interface CbsaCrosswalkEntry {
   cbsaCode: string;
   cbsaName: string;
   cbsaType: string;
 }
 
-// Global crosswalk cache (loaded once, used for all Metro imports)
+// Global crosswalk cache (loaded once from database, used for all Metro imports)
 let cbsaCrosswalk: Map<number, CbsaCrosswalkEntry> | null = null;
 
-function loadCbsaCrosswalk(): Map<number, CbsaCrosswalkEntry> {
+async function loadCbsaCrosswalk(): Promise<Map<number, CbsaCrosswalkEntry>> {
   if (cbsaCrosswalk) return cbsaCrosswalk;
 
-  const crosswalkPath = join(__dirname, '../../data/normalization/Zillow_Census_Metro_Crosswalk.csv');
-  console.log('Loading CBSA crosswalk from:', crosswalkPath);
+  console.log('Loading CBSA crosswalk from database...');
 
-  try {
-    const csvContent = readFileSync(crosswalkPath, 'utf-8');
-    const records = parse(csvContent, {
-      columns: true,
-      skip_empty_lines: true,
-    });
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
 
-    cbsaCrosswalk = new Map<number, CbsaCrosswalkEntry>();
-    for (const record of records) {
-      const regionId = parseInt(record.Zillow_RegionID, 10);
-      // Deduplicate - file has multiple rows per metro (one per county)
-      if (!isNaN(regionId) && record['CBSA Code'] && !cbsaCrosswalk.has(regionId)) {
-        cbsaCrosswalk.set(regionId, {
-          cbsaCode: record['CBSA Code'],
-          cbsaName: record['CBSA Title'] || '',
-          cbsaType: record['Metropolitan/Micropolitan Statistical Area'] || '',
-        });
-      }
-    }
+  const { data, error } = await supabase
+    .from('zillow_metro_crosswalk')
+    .select('zillow_region_id, cbsa_code, cbsa_title, cbsa_type');
 
-    console.log(`Loaded ${cbsaCrosswalk.size} CBSA mappings from crosswalk\n`);
-    return cbsaCrosswalk;
-  } catch (error: any) {
-    console.error('Error loading CBSA crosswalk:', error.message);
+  if (error) {
+    console.error('Error loading CBSA crosswalk from database:', error.message);
     cbsaCrosswalk = new Map();
     return cbsaCrosswalk;
   }
+
+  cbsaCrosswalk = new Map<number, CbsaCrosswalkEntry>();
+  for (const record of data || []) {
+    cbsaCrosswalk.set(record.zillow_region_id, {
+      cbsaCode: record.cbsa_code,
+      cbsaName: record.cbsa_title || '',
+      cbsaType: record.cbsa_type || '',
+    });
+  }
+
+  console.log(`Loaded ${cbsaCrosswalk.size} CBSA mappings from database\n`);
+  return cbsaCrosswalk;
 }
 
 // All geography levels and their available metrics
@@ -102,11 +103,11 @@ class MultiMetricImporter extends ZillowImporter {
     if (metricUrls && metricUrls[geography]) {
       this.customUrl = metricUrls[geography];
     }
+  }
 
-    // Load CBSA crosswalk for Metro imports
-    if (geography === 'Metro') {
-      this.crosswalk = loadCbsaCrosswalk();
-    }
+  // Set crosswalk from pre-loaded data (call before import for Metro)
+  setCrosswalk(crosswalk: Map<number, CbsaCrosswalkEntry>) {
+    this.crosswalk = crosswalk;
   }
 
   // Override getCbsaCode to use the crosswalk for Metro imports
@@ -182,6 +183,12 @@ async function main() {
   console.log(`Levels: ${levelsToImport.join(', ')}`);
   console.log(`Metrics: ${metricsFilter ? metricsFilter.join(', ') : 'all available'}\n`);
 
+  // Pre-load CBSA crosswalk if importing Metro data
+  let crosswalk: Map<number, CbsaCrosswalkEntry> | null = null;
+  if (levelsToImport.includes('Metro')) {
+    crosswalk = await loadCbsaCrosswalk();
+  }
+
   const results: ImportResult[] = [];
   const startTime = Date.now();
 
@@ -201,6 +208,12 @@ async function main() {
         // Use smaller batch for larger datasets
         const batchSize = ['Zip'].includes(level) ? 5000 : 10000;
         const importer = new MultiMetricImporter(level, metric, batchSize);
+
+        // Set crosswalk for Metro imports
+        if (level === 'Metro' && crosswalk) {
+          importer.setCrosswalk(crosswalk);
+        }
+
         const result = await importer.import(forceFullImport);
         results.push(result);
         printResult(result);
