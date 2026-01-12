@@ -9,6 +9,7 @@
  * - zillow_zip
  *
  * Metrics imported: ZHVI, ZORI, Inventory, etc.
+ * Metro imports use Zillow_Census_Metro_Crosswalk.csv for CBSA codes.
  *
  * Usage:
  *   npx tsx scripts/zillow-import/import-all.ts
@@ -17,7 +18,55 @@
  *   npx tsx scripts/zillow-import/import-all.ts --metric zhvi,zori   # Specific metrics
  */
 
-import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName } from './base-importer';
+import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName, ZillowRecord } from './base-importer';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { parse } from 'csv-parse/sync';
+
+// CBSA crosswalk mapping: Zillow RegionID -> CBSA info
+interface CbsaCrosswalkEntry {
+  cbsaCode: string;
+  cbsaName: string;
+  cbsaType: string;
+}
+
+// Global crosswalk cache (loaded once, used for all Metro imports)
+let cbsaCrosswalk: Map<number, CbsaCrosswalkEntry> | null = null;
+
+function loadCbsaCrosswalk(): Map<number, CbsaCrosswalkEntry> {
+  if (cbsaCrosswalk) return cbsaCrosswalk;
+
+  const crosswalkPath = join(__dirname, '../../data/normalization/Zillow_Census_Metro_Crosswalk.csv');
+  console.log('Loading CBSA crosswalk from:', crosswalkPath);
+
+  try {
+    const csvContent = readFileSync(crosswalkPath, 'utf-8');
+    const records = parse(csvContent, {
+      columns: true,
+      skip_empty_lines: true,
+    });
+
+    cbsaCrosswalk = new Map<number, CbsaCrosswalkEntry>();
+    for (const record of records) {
+      const regionId = parseInt(record.Zillow_RegionID, 10);
+      // Deduplicate - file has multiple rows per metro (one per county)
+      if (!isNaN(regionId) && record['CBSA Code'] && !cbsaCrosswalk.has(regionId)) {
+        cbsaCrosswalk.set(regionId, {
+          cbsaCode: record['CBSA Code'],
+          cbsaName: record['CBSA Title'] || '',
+          cbsaType: record['Metropolitan/Micropolitan Statistical Area'] || '',
+        });
+      }
+    }
+
+    console.log(`Loaded ${cbsaCrosswalk.size} CBSA mappings from crosswalk\n`);
+    return cbsaCrosswalk;
+  } catch (error: any) {
+    console.error('Error loading CBSA crosswalk:', error.message);
+    cbsaCrosswalk = new Map();
+    return cbsaCrosswalk;
+  }
+}
 
 // All geography levels and their available metrics
 const GEOGRAPHY_METRICS: Record<GeographyLevel, MetricName[]> = {
@@ -43,6 +92,7 @@ const METRIC_URLS: Partial<Record<MetricName, Record<GeographyLevel, string | nu
 
 class MultiMetricImporter extends ZillowImporter {
   private customUrl: string | null = null;
+  private crosswalk: Map<number, CbsaCrosswalkEntry> | null = null;
 
   constructor(geography: GeographyLevel, metricName: MetricName, batchSize = 10000) {
     super(geography, metricName, batchSize);
@@ -52,6 +102,29 @@ class MultiMetricImporter extends ZillowImporter {
     if (metricUrls && metricUrls[geography]) {
       this.customUrl = metricUrls[geography];
     }
+
+    // Load CBSA crosswalk for Metro imports
+    if (geography === 'Metro') {
+      this.crosswalk = loadCbsaCrosswalk();
+    }
+  }
+
+  // Override getCbsaCode to use the crosswalk for Metro imports
+  getCbsaCode(record: any): string | null {
+    if (this.geography !== 'Metro' || !this.crosswalk) {
+      return super.getCbsaCode(record);
+    }
+
+    const regionId = parseInt(record.RegionID, 10);
+    if (isNaN(regionId)) return null;
+
+    const crosswalkEntry = this.crosswalk.get(regionId);
+    if (crosswalkEntry) {
+      return crosswalkEntry.cbsaCode;
+    }
+
+    // Fallback to CSV field if present
+    return record.CBSACode || null;
   }
 
   async downloadCsv(): Promise<string> {
