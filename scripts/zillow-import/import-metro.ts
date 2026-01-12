@@ -2,7 +2,7 @@
 /**
  * Import Zillow ZHVI Metro-level data
  *
- * Downloads and imports the latest metro/MSA-level home value index data from Zillow.
+ * Downloads and imports metro/MSA-level home value index data into zillow_metro table.
  * Run monthly to keep data current.
  *
  * Usage:
@@ -10,16 +10,17 @@
  *   npx tsx scripts/zillow-import/import-metro.ts --force  # Full reimport
  */
 
-import { ZhviImporter, printResult } from './base-importer';
+import { ZillowImporter, printResult } from './base-importer';
 
 async function main() {
   const forceFullImport = process.argv.includes('--force');
 
   console.log('=== Zillow ZHVI Metro Import ===');
+  console.log(`Target: zillow_metro table`);
   console.log(`Mode: ${forceFullImport ? 'Full Import' : 'Incremental Update'}`);
   console.log(`Date: ${new Date().toISOString()}\n`);
 
-  const importer = new ZhviImporter('Metro');
+  const importer = new ZillowImporter('Metro', 'zhvi');
   const result = await importer.import(forceFullImport);
 
   printResult(result);

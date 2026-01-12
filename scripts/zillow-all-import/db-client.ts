@@ -1,5 +1,11 @@
 /**
  * Database client for Zillow All Datasets Import
+ *
+ * Updated to use new long-format tables:
+ * - zillow_state
+ * - zillow_metro
+ * - zillow_county
+ * - zillow_zip
  */
 
 import { join } from 'path';
@@ -9,6 +15,7 @@ import { config } from 'dotenv';
 // Load environment variables from multiple possible locations
 config({ path: join(__dirname, '../../.env.local') });
 config({ path: join(__dirname, '../../packages/frontend/.env.local') });
+config({ path: join(__dirname, '../../packages/backend/.env') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
@@ -18,7 +25,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
  */
 export function createZillowImportClient(): SupabaseClient {
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('❌ Missing Supabase credentials');
+    console.error('Missing Supabase credentials');
     process.exit(1);
   }
 
@@ -31,114 +38,95 @@ export function createZillowImportClient(): SupabaseClient {
 }
 
 /**
- * Determine which table to use based on dataset type
+ * Determine which table to use based on geography
+ * New schema uses geography-based tables instead of metric-based tables
  */
-export function getTableName(datasetType: string): string {
-  const tableMap: Record<string, string> = {
-    // Home Values
-    'zhvi': 'zillow_zhvi',
+export function getTableForGeography(geography: string): string {
+  const geoLower = geography.toLowerCase();
 
-    // Forecasts
-    'zhvf_growth': 'zillow_zhvf',
+  if (geoLower === 'state') return 'zillow_state';
+  if (geoLower === 'metro' || geoLower === 'msa') return 'zillow_metro';
+  if (geoLower === 'county') return 'zillow_county';
+  if (geoLower === 'zip') return 'zillow_zip';
+  if (geoLower === 'city') return 'zillow_metro'; // Cities go to metro table
+  if (geoLower === 'united states' || geoLower === 'us') return 'zillow_metro';
 
-    // Rentals
-    'zori': 'zillow_zori',
-    'zordi': 'zillow_zordi',
-
-    // For-Sale Listings
-    'invt_fs': 'zillow_inventory',
-    'new_listings': 'zillow_new_listings',
-    'new_pending': 'zillow_pending_listings',
-    'mlp': 'zillow_median_list_price',
-
-    // Sales
-    'sales_count_now': 'zillow_sales_count',
-    'median_sale_price': 'zillow_sales_price',
-    'median_sale_price_now': 'zillow_sales_price',
-    'median_sale_to_list': 'zillow_sale_to_list',
-
-    // Days on Market
-    'mean_doz_pending': 'zillow_days_to_pending',
-    'median_days_to_close': 'zillow_days_to_close',
-
-    // Price Cuts
-    'perc_listings_price_cut': 'zillow_price_cut_share',
-    'med_listings_price_cut_amt': 'zillow_price_cut_amt',
-    'med_listings_price_cut_perc': 'zillow_price_cut_pct',
-
-    // Market Heat
-    'market_temp_index': 'zillow_market_heat_index',
-
-    // New Construction
-    'new_con_sales_count_raw': 'zillow_new_construction_sales_count',
-    'new_con_median_sale_price': 'zillow_new_construction_sale_price',
-    'new_con_median_sale_price_raw': 'zillow_new_construction_sale_price',
-    'new_con_median_sale_price_per_sqft': 'zillow_new_construction_sale_price',
-
-    // Affordability
-    'new_homeowner_income_needed': 'zillow_affordability',
-    'new_renter_income_needed': 'zillow_affordability',
-    'affordable_home_price': 'zillow_affordability',
-    'affordable_price': 'zillow_affordability',
-    'years_to_save': 'zillow_affordability',
-    'new_homeowner_affordability': 'zillow_affordability',
-    'new_renter_affordability': 'zillow_affordability'
-  };
-
-  return tableMap[datasetType] || 'market_time_series';
+  // Default to metro
+  return 'zillow_metro';
 }
 
 /**
- * Get conflict columns for upsert based on table
+ * Legacy function - maps dataset type to metric name
+ * Kept for backwards compatibility during transition
  */
-export function getConflictColumns(tableName: string): string {
-  if (tableName === 'zillow_zhvi') {
-    return 'region_id,date,property_type,tier';
-  }
+export function getTableName(datasetType: string): string {
+  // Now we return the metric name instead of table name
+  // This is for backwards compatibility - the new schema uses geography-based tables
+  const metricMap: Record<string, string> = {
+    // Home Values
+    'zhvi': 'zhvi',
 
-  if (tableName === 'zillow_zhvf') {
-    return 'region_id,date,geography';
-  }
+    // Forecasts
+    'zhvf_growth': 'zhvf',
 
-  if (tableName === 'zillow_zordi') {
-    return 'region_id,date,property_type,geography';
-  }
+    // Rentals
+    'zori': 'zori',
+    'zordi': 'zordi',
 
-  if (tableName === 'zillow_affordability') {
-    return 'region_id,date,property_type,down_payment_percent';
-  }
+    // For-Sale Listings
+    'invt_fs': 'inventory',
+    'new_listings': 'new_listings',
+    'new_pending': 'pending_sales',
+    'mlp': 'list_price',
 
-  // Tables that use region_id, date, property_type, geography (new migration 026 tables)
-  const tablesWithGeography = [
-    'zillow_new_listings',
-    'zillow_pending_listings',
-    'zillow_median_list_price',
-    'zillow_sale_to_list',
-    'zillow_days_to_close',
-    'zillow_price_cut_share',
-    'zillow_price_cut_amt',
-    'zillow_price_cut_pct'
-  ];
+    // Sales
+    'sales_count_now': 'sales_count',
+    'median_sale_price': 'sale_price',
+    'median_sale_price_now': 'sale_price',
+    'median_sale_to_list': 'sale_to_list',
 
-  if (tablesWithGeography.includes(tableName)) {
-    return 'region_id,date,property_type,geography';
-  }
+    // Days on Market
+    'mean_doz_pending': 'dom',
+    'median_days_to_close': 'dom',
 
-  // Tables that use region_id, date, property_type (older tables)
-  const standardTables = [
-    'zillow_zori',
-    'zillow_inventory',
-    'zillow_sales_count',
-    'zillow_sales_price',
-    'zillow_days_to_pending',
-    'zillow_market_heat_index',
-    'zillow_new_construction_sales_count',
-    'zillow_new_construction_sale_price'
-  ];
+    // Price Cuts
+    'perc_listings_price_cut': 'price_cuts',
+    'med_listings_price_cut_amt': 'price_cuts',
+    'med_listings_price_cut_perc': 'price_cuts',
 
-  if (standardTables.includes(tableName)) {
-    return 'region_id,date,property_type';
-  }
+    // Market Heat
+    'market_temp_index': 'market_heat',
 
-  return 'region_id,date,metric_name,data_source,attributes';
+    // New Construction
+    'new_con_sales_count_raw': 'new_con_sales',
+    'new_con_median_sale_price': 'new_con_price',
+    'new_con_median_sale_price_raw': 'new_con_price',
+    'new_con_median_sale_price_per_sqft': 'new_con_price_sqft',
+
+    // Affordability
+    'new_homeowner_income_needed': 'homeowner_income',
+    'new_renter_income_needed': 'renter_income',
+    'affordable_home_price': 'affordable_price',
+    'affordable_price': 'affordable_price',
+    'years_to_save': 'years_to_save',
+    'new_homeowner_affordability': 'homeowner_afford',
+    'new_renter_affordability': 'renter_afford'
+  };
+
+  return metricMap[datasetType] || datasetType;
+}
+
+/**
+ * Map dataset type to standardized metric name for new schema
+ */
+export function getMetricName(datasetType: string): string {
+  return getTableName(datasetType);
+}
+
+/**
+ * Get conflict columns for upsert
+ * New schema uses (region_id, period_date, metric_name)
+ */
+export function getConflictColumns(_tableName: string): string {
+  return 'region_id,period_date,metric_name';
 }

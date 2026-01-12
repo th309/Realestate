@@ -1,27 +1,205 @@
 /**
  * Query Helpers
- * Reusable database query functions
+ * Reusable database query functions for Zillow data
+ *
+ * Uses long-format tables: zillow_metro, zillow_county, zillow_state, zillow_zip
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+export type GeographyType = 'state' | 'metro' | 'county' | 'zip';
+export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
+                  'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
+                  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
+
+// Map geography string to table name
+function getTableForGeography(geography: string): string {
+  const geoLower = geography.toLowerCase();
+  if (geoLower === 'state') return 'zillow_state';
+  if (geoLower === 'metro') return 'zillow_metro';
+  if (geoLower === 'county') return 'zillow_county';
+  if (geoLower === 'zip') return 'zillow_zip';
+  // Default to metro for US/national level
+  return 'zillow_metro';
+}
+
+// ============================================================================
+// Core Query Functions
+// ============================================================================
+
 /**
- * Get the latest date for a given table and geography
+ * Get the latest date for a given geography and metric
  */
-export async function getLatestDateForTable(
+export async function getLatestDate(
   supabase: SupabaseClient,
-  table: 'zillow_zhvi' | 'zillow_zori' | 'zillow_zordi' | 'zillow_zhvf',
-  geography: string
+  geography: GeographyType,
+  metricName: MetricName = 'zhvi'
 ): Promise<string> {
+  const table = getTableForGeography(geography);
+
   const { data } = await supabase
     .from(table)
-    .select('date')
-    .eq('geography', geography)
-    .order('date', { ascending: false })
+    .select('period_date')
+    .eq('metric_name', metricName)
+    .order('period_date', { ascending: false })
     .limit(1);
 
-  return data?.[0]?.date || '2025-10-31';
+  return data?.[0]?.period_date || '2025-10-31';
 }
+
+// Backwards-compatible alias
+export const getLatestDateForTable = async (
+  supabase: SupabaseClient,
+  _table: string,
+  geography: string
+): Promise<string> => {
+  return getLatestDate(supabase, geography.toLowerCase() as GeographyType, 'zhvi');
+};
+
+export const getLatestDateForMarketTable = getLatestDateForTable;
+
+/**
+ * Query data from long-format tables
+ */
+export async function queryZillowData(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  metricName: MetricName,
+  targetDate: string,
+  regionIds?: number[]
+) {
+  const table = getTableForGeography(geography);
+
+  let query = supabase
+    .from(table)
+    .select('region_id, region_name, state_code, period_date, metric_name, value')
+    .eq('metric_name', metricName)
+    .eq('period_date', targetDate);
+
+  if (regionIds && regionIds.length > 0) {
+    query = query.in('region_id', regionIds);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
+ * Query data with legacy-compatible response format
+ */
+export async function queryWithLegacyFormat(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  metricName: MetricName,
+  targetDate: string,
+  regionIds?: number[]
+) {
+  const data = await queryZillowData(supabase, geography, metricName, targetDate, regionIds);
+
+  // Map to legacy format for compatibility with existing service code
+  return data.map((row: any) => ({
+    region_id: String(row.region_id),
+    value: row.value,
+    date: row.period_date,
+    property_type: 'sfrcondo', // Default for compatibility
+    geography: geography.charAt(0).toUpperCase() + geography.slice(1),
+  }));
+}
+
+/**
+ * Query multiple metrics at once
+ */
+export async function queryMultipleMetrics(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  metricNames: MetricName[],
+  targetDate: string,
+  regionIds?: number[]
+) {
+  const table = getTableForGeography(geography);
+
+  let query = supabase
+    .from(table)
+    .select('region_id, region_name, state_code, period_date, metric_name, value')
+    .in('metric_name', metricNames)
+    .eq('period_date', targetDate);
+
+  if (regionIds && regionIds.length > 0) {
+    query = query.in('region_id', regionIds);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
+ * Get time series data for a specific region
+ */
+export async function queryTimeSeries(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  regionId: number,
+  metricName: MetricName,
+  startDate?: string,
+  endDate?: string
+) {
+  const table = getTableForGeography(geography);
+
+  let query = supabase
+    .from(table)
+    .select('region_id, region_name, period_date, metric_name, value')
+    .eq('region_id', regionId)
+    .eq('metric_name', metricName)
+    .order('period_date', { ascending: true });
+
+  if (startDate) {
+    query = query.gte('period_date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('period_date', endDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+/**
+ * Get available dates for a geography/metric combination
+ */
+export async function getAvailableDates(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  metric: MetricName = 'zhvi'
+): Promise<string[]> {
+  const table = getTableForGeography(geography);
+
+  const { data, error } = await supabase
+    .from(table)
+    .select('period_date')
+    .eq('metric_name', metric)
+    .order('period_date', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  // Get unique dates
+  const uniqueDates = [...new Set((data || []).map((d: any) => d.period_date))];
+  return uniqueDates as string[];
+}
+
+// ============================================================================
+// Legacy-Compatible Query Functions
+// These maintain the same signatures as before for easier migration
+// ============================================================================
 
 /**
  * Map frontend property type to database property type
@@ -40,15 +218,15 @@ export function mapRentPropertyType(type: string): string {
  */
 export function getForecastValue(forecast: any, horizon: string): number {
   switch (horizon) {
-    case '1m': return forecast.forecast_1m || 0;
-    case '3m': return forecast.forecast_3m || 0;
+    case '1m': return forecast.forecast_1m || forecast.value || 0;
+    case '3m': return forecast.forecast_3m || forecast.value || 0;
     case '12m':
-    default: return forecast.forecast_12m || 0;
+    default: return forecast.forecast_12m || forecast.value || 0;
   }
 }
 
 /**
- * Query ZHVI data with standard filters
+ * Query ZHVI data (legacy-compatible)
  */
 export async function queryZhvi(
   supabase: SupabaseClient,
@@ -56,106 +234,157 @@ export async function queryZhvi(
   targetDate: string,
   regionIds?: string[]
 ) {
-  let query = supabase
-    .from('zillow_zhvi')
-    .select('region_id, value, date, property_type, geography')
-    .eq('geography', geography)
-    .eq('date', targetDate)
-    .eq('property_type', 'sfrcondo')
-    .eq('tier', '0.33_0.67');
-
-  if (regionIds) {
-    query = query.in('region_id', regionIds);
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw new Error(error.message);
-  return data || [];
+  const geoType = geography.toLowerCase() as GeographyType;
+  const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+  return queryWithLegacyFormat(supabase, geoType, 'zhvi', targetDate, numericIds);
 }
 
 /**
- * Query ZORI (rent) data with standard filters
+ * Query ZORI (rent) data (legacy-compatible)
  */
 export async function queryZori(
   supabase: SupabaseClient,
   geography: string | string[],
   targetDate: string,
-  propertyType: string,
+  _propertyType: string, // Not used in new schema
   regionIds?: string[]
 ) {
-  let query = supabase
-    .from('zillow_zori')
-    .select('region_id, value, date, property_type, geography');
-
-  if (Array.isArray(geography)) {
-    query = query.in('geography', geography);
-  } else {
-    query = query.eq('geography', geography);
-  }
-
-  query = query.eq('date', targetDate).eq('property_type', propertyType);
-
-  if (regionIds) {
-    query = query.in('region_id', regionIds);
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw new Error(error.message);
-  return data || [];
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+  const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+  return queryWithLegacyFormat(supabase, geoType, 'zori', targetDate, numericIds);
 }
 
 /**
- * Query ZORDI (renter demand) data with standard filters
+ * Query ZORDI (renter demand) data (legacy-compatible)
+ * Note: ZORDI not yet migrated, returns empty for now
  */
 export async function queryZordi(
   supabase: SupabaseClient,
   geography: string | string[],
   targetDate: string,
-  propertyType: string,
+  _propertyType: string,
   regionIds?: string[]
 ) {
-  let query = supabase
-    .from('zillow_zordi')
-    .select('region_id, value, date, property_type, geography');
-
-  if (Array.isArray(geography)) {
-    query = query.in('geography', geography);
-  } else {
-    query = query.eq('geography', geography);
-  }
-
-  query = query.eq('date', targetDate).eq('property_type', propertyType);
-
-  if (regionIds) {
-    query = query.in('region_id', regionIds);
-  }
-
-  const { data, error } = await query;
-
-  if (error) throw new Error(error.message);
-  return data || [];
+  // ZORDI data not yet in new schema - return empty array
+  // TODO: Add zordi metric to new tables or keep separate table
+  console.warn('queryZordi: ZORDI data not yet migrated to new schema');
+  return [];
 }
 
 /**
- * Query ZHVF (forecast) data
+ * Query ZHVF (forecast) data (legacy-compatible)
+ * Note: ZHVF not yet migrated, returns empty for now
  */
 export async function queryZhvf(
   supabase: SupabaseClient,
   geography: string | string[]
 ) {
-  let query = supabase
-    .from('zillow_zhvf')
-    .select('region_id, date, forecast_1m, forecast_3m, forecast_12m, geography');
+  // ZHVF data not yet in new schema - return empty array
+  // TODO: Add forecast metrics to new tables or keep separate table
+  console.warn('queryZhvf: ZHVF data not yet migrated to new schema');
+  return [];
+}
 
-  if (Array.isArray(geography)) {
-    query = query.in('geography', geography);
-  } else {
-    query = query.eq('geography', geography);
+/**
+ * Generic query for market indicators (legacy-compatible)
+ */
+export async function queryMarketIndicator(
+  supabase: SupabaseClient,
+  table: string,
+  geography: string | string[],
+  targetDate: string,
+  _propertyType?: string,
+  regionIds?: string[]
+) {
+  // Map old table names to new metric names
+  const tableToMetricMap: Record<string, MetricName> = {
+    'zillow_inventory': 'inventory',
+    'zillow_new_listings': 'new_listings',
+    'zillow_pending_listings': 'pending_sales',
+    'zillow_median_list_price': 'list_price',
+    'zillow_sales_count': 'sale_price',
+    'zillow_sales_price': 'sale_price',
+    'zillow_sale_to_list': 'sale_to_list',
+    'zillow_days_to_pending': 'dom',
+    'zillow_days_to_close': 'dom',
+    'zillow_price_cut_share': 'price_cuts',
+    'zillow_price_cut_amt': 'price_cuts',
+    'zillow_price_cut_pct': 'price_cuts',
+    'zillow_market_heat_index': 'inventory',
+    'zillow_new_construction_sales_count': 'sale_price',
+    'zillow_new_construction_sale_price': 'sale_price',
+    'zillow_affordability': 'zhvi',
+  };
+
+  const metricName = tableToMetricMap[table] || 'zhvi';
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+  const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+
+  return queryWithLegacyFormat(supabase, geoType, metricName, targetDate, numericIds);
+}
+
+/**
+ * Query affordability data (legacy-compatible)
+ * Note: Affordability not yet migrated, returns empty for now
+ */
+export async function queryAffordability(
+  supabase: SupabaseClient,
+  geography: string | string[],
+  targetDate: string,
+  _propertyType?: string,
+  regionIds?: string[]
+) {
+  // Affordability data not yet in new schema - return empty array
+  // TODO: Add affordability metrics to calculated_metrics table
+  console.warn('queryAffordability: Affordability data not yet migrated to new schema');
+  return [];
+}
+
+// ============================================================================
+// Advanced Query Interface
+// ============================================================================
+
+export interface ZillowQueryOptions {
+  geography: GeographyType;
+  metric: MetricName;
+  date?: string;
+  regionIds?: number[];
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * Unified query function with full options
+ */
+export async function query(
+  supabase: SupabaseClient,
+  options: ZillowQueryOptions
+) {
+  const { geography, metric, date, regionIds, startDate, endDate } = options;
+
+  const table = getTableForGeography(geography);
+
+  let query = supabase
+    .from(table)
+    .select('region_id, region_name, state_code, period_date, metric_name, value')
+    .eq('metric_name', metric);
+
+  if (date) {
+    query = query.eq('period_date', date);
+  }
+  if (startDate) {
+    query = query.gte('period_date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('period_date', endDate);
+  }
+  if (regionIds && regionIds.length > 0) {
+    query = query.in('region_id', regionIds);
   }
 
-  const { data, error } = await query.order('date', { ascending: false });
+  query = query.order('period_date', { ascending: true });
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return data || [];

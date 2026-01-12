@@ -59,3 +59,78 @@ export interface ZipMapping {
 
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type PropertyType = 'all' | 'sfr' | 'mfr';
+
+// Market Indicator Types
+export interface MarketIndicatorData {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string | null;
+  state_abbrev?: string | null;
+  value: number;
+  date: string;
+  property_type?: string;
+  geography: string;
+  // Additional fields for specific metrics
+  mean_price?: number;
+  price_per_sqft?: number;
+}
+
+export interface AffordabilityData {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string | null;
+  state_abbrev?: string | null;
+  date: string;
+  geography: string;
+  homeowner_income_needed: number | null;
+  renter_income_needed: number | null;
+  affordable_home_price: number | null;
+  years_to_save: number | null;
+  homeowner_affordability_percent: number | null;
+  renter_affordability_percent: number | null;
+  down_payment_percent: number | null;
+  property_type?: string;
+}
+
+export interface PriceCutsData {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string | null;
+  state_abbrev?: string | null;
+  date: string;
+  geography: string;
+  share_with_price_cut: number | null;
+  median_price_cut_amount: number | null;
+  median_price_cut_percent: number | null;
+}
+
+export interface NewConstructionData {
+  region_id: string;
+  region_name: string;
+  cbsa_code?: string | null;
+  state_abbrev?: string | null;
+  date: string;
+  geography: string;
+  sales_count: number | null;
+  median_sale_price: number | null;
+  price_per_sqft: number | null;
+}
+
+// Type for market indicator table names
+export type MarketIndicatorTable =
+  | 'zillow_inventory'
+  | 'zillow_new_listings'
+  | 'zillow_pending_listings'
+  | 'zillow_median_list_price'
+  | 'zillow_sales_count'
+  | 'zillow_sales_price'
+  | 'zillow_sale_to_list'
+  | 'zillow_days_to_pending'
+  | 'zillow_days_to_close'
+  | 'zillow_price_cut_share'
+  | 'zillow_price_cut_amt'
+  | 'zillow_price_cut_pct'
+  | 'zillow_market_heat_index'
+  | 'zillow_new_construction_sales_count'
+  | 'zillow_new_construction_sale_price'
+  | 'zillow_affordability';

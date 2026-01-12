@@ -1,27 +1,30 @@
 #!/usr/bin/env npx tsx
 /**
- * Import Zillow ZHVI Zip-level data
+ * Import Zillow ZHVI ZIP-level data
  *
- * Downloads and imports the latest ZIP code-level home value index data from Zillow.
- * This is the largest dataset (~33K+ ZIP codes).
+ * Downloads and imports ZIP code-level home value index data into zillow_zip table.
  * Run monthly to keep data current.
+ *
+ * Note: ZIP-level data is large (~33,000 ZIP codes x ~300 months = ~10M records)
+ * This import may take longer than other geography levels.
  *
  * Usage:
  *   npx tsx scripts/zillow-import/import-zip.ts
  *   npx tsx scripts/zillow-import/import-zip.ts --force  # Full reimport
  */
 
-import { ZhviImporter, printResult } from './base-importer';
+import { ZillowImporter, printResult } from './base-importer';
 
 async function main() {
   const forceFullImport = process.argv.includes('--force');
 
-  console.log('=== Zillow ZHVI Zip Import ===');
+  console.log('=== Zillow ZHVI ZIP Import ===');
+  console.log(`Target: zillow_zip table`);
   console.log(`Mode: ${forceFullImport ? 'Full Import' : 'Incremental Update'}`);
   console.log(`Date: ${new Date().toISOString()}\n`);
 
-  // Use larger batch size for ZIP (many records)
-  const importer = new ZhviImporter('Zip', 2000);
+  // Use larger batch size for ZIP data
+  const importer = new ZillowImporter('Zip', 'zhvi', 5000);
   const result = await importer.import(forceFullImport);
 
   printResult(result);

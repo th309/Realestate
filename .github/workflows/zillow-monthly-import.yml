@@ -61,12 +61,12 @@ jobs:
             echo "has_failures=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Verify Data Import
+      - name: Calculate YoY Growth
         run: |
           echo "=============================================="
-          echo "Verifying imported data..."
+          echo "Calculating Year-over-Year growth for ZHVI..."
           echo "=============================================="
-          npx tsx scripts/verify-and-import-zillow.ts --check-only
+          npx tsx scripts/calculate-zhvi-yoy-growth.ts 2>&1 | tee -a import-output.txt
 
       - name: Upload Import Log
         if: always()
@@ -108,22 +108,24 @@ jobs:
               `**Date:** ${date}`,
               '',
               '### Tables That Should Have Data',
-              '- zillow_zhvi (Home Values)',
-              '- zillow_zori (Rent Index)',
-              '- zillow_zhvf (Forecasts)',
-              '- zillow_new_listings',
-              '- zillow_pending_listings',
-              '- zillow_median_list_price',
-              '- zillow_sale_to_list',
-              '- zillow_days_to_close',
-              '- zillow_price_cut_share/amt/pct',
+              '- zillow_state (State-level metrics)',
+              '- zillow_metro (Metro/MSA-level metrics)',
+              '- zillow_county (County-level metrics)',
+              '- zillow_zip (ZIP code-level metrics)',
+              '',
+              '### Metrics Imported',
+              '- zhvi (Home Values)',
+              '- zori (Rent Index)',
+              '- inventory (For-Sale Inventory)',
+              '- dom (Days on Market)',
+              '- sale_price (Median Sale Price)',
               '- And more...',
               '',
               '### Action Required',
               '1. Check the workflow logs and downloaded artifact for detailed errors',
               '2. Verify Supabase credentials are valid',
               '3. Check if Zillow CSV URLs have changed',
-              '4. Run `npx tsx scripts/verify-and-import-zillow.ts` locally to diagnose',
+              '4. Run `npx tsx scripts/zillow-import/import-all.ts` locally to diagnose',
               '5. Re-run the workflow manually once fixed'
             ].join('\n');
 
@@ -164,5 +166,10 @@ jobs:
           echo "Zillow Data Import Completed Successfully"
           echo "Date: $(date)"
           echo "=============================================="
-          echo "All 20 Zillow tables should now have updated data."
+          echo "Data imported to long-format tables:"
+          echo "  - zillow_state"
+          echo "  - zillow_metro"
+          echo "  - zillow_county"
+          echo "  - zillow_zip"
+          echo ""
           echo "Check Supabase dashboard to verify."

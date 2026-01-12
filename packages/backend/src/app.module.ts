@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 import { MarketsModule } from './markets/markets.module';
 import { ZillowModule } from './zillow/zillow.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ZillowModule } from './zillow/zillow.module';
     SupabaseModule,
     MarketsModule,
     ZillowModule,
+    ScoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],

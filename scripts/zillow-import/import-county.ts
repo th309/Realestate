@@ -2,7 +2,7 @@
 /**
  * Import Zillow ZHVI County-level data
  *
- * Downloads and imports the latest county-level home value index data from Zillow.
+ * Downloads and imports county-level home value index data into zillow_county table.
  * Run monthly to keep data current.
  *
  * Usage:
@@ -10,16 +10,17 @@
  *   npx tsx scripts/zillow-import/import-county.ts --force  # Full reimport
  */
 
-import { ZhviImporter, printResult } from './base-importer';
+import { ZillowImporter, printResult } from './base-importer';
 
 async function main() {
   const forceFullImport = process.argv.includes('--force');
 
   console.log('=== Zillow ZHVI County Import ===');
+  console.log(`Target: zillow_county table`);
   console.log(`Mode: ${forceFullImport ? 'Full Import' : 'Incremental Update'}`);
   console.log(`Date: ${new Date().toISOString()}\n`);
 
-  const importer = new ZhviImporter('County');
+  const importer = new ZillowImporter('County', 'zhvi');
   const result = await importer.import(forceFullImport);
 
   printResult(result);

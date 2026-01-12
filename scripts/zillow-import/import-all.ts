@@ -1,23 +1,83 @@
 #!/usr/bin/env npx tsx
 /**
- * Import All Zillow ZHVI Data
+ * Import All Zillow Data
  *
- * Master script that imports all geography levels:
- * - State (51 regions)
- * - Metro (~900 MSAs)
- * - County (~3,000 counties)
- * - Zip (~33,000 ZIP codes)
- * - City (~30,000 cities)
+ * Master script that imports all Zillow data into long-format tables:
+ * - zillow_state
+ * - zillow_metro
+ * - zillow_county
+ * - zillow_zip
+ *
+ * Metrics imported: ZHVI, ZORI, Inventory, etc.
  *
  * Usage:
  *   npx tsx scripts/zillow-import/import-all.ts
  *   npx tsx scripts/zillow-import/import-all.ts --force  # Full reimport all
  *   npx tsx scripts/zillow-import/import-all.ts --level state,metro  # Specific levels
+ *   npx tsx scripts/zillow-import/import-all.ts --metric zhvi,zori   # Specific metrics
  */
 
-import { ZhviImporter, printResult, ImportResult, GeographyLevel } from './base-importer';
+import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName } from './base-importer';
 
-const ALL_LEVELS: GeographyLevel[] = ['State', 'Metro', 'County', 'Zip', 'City'];
+// All geography levels and their available metrics
+const GEOGRAPHY_METRICS: Record<GeographyLevel, MetricName[]> = {
+  State: ['zhvi'],  // State only has ZHVI
+  Metro: ['zhvi', 'zori'],
+  County: ['zhvi', 'zori'],
+  Zip: ['zhvi', 'zori'],
+  City: ['zhvi'],  // City only has ZHVI
+};
+
+const ALL_LEVELS: GeographyLevel[] = ['State', 'Metro', 'County', 'Zip'];
+
+// Metric-specific URL overrides
+const METRIC_URLS: Partial<Record<MetricName, Record<GeographyLevel, string | null>>> = {
+  zori: {
+    State: null,
+    Metro: 'https://files.zillowstatic.com/research/public_csvs/zori/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv',
+    County: 'https://files.zillowstatic.com/research/public_csvs/zori/County_zori_uc_sfrcondomfr_sm_sa_month.csv',
+    Zip: 'https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_sa_month.csv',
+    City: null,
+  },
+};
+
+class MultiMetricImporter extends ZillowImporter {
+  private customUrl: string | null = null;
+
+  constructor(geography: GeographyLevel, metricName: MetricName, batchSize = 10000) {
+    super(geography, metricName, batchSize);
+
+    // Check for custom URL for this metric
+    const metricUrls = METRIC_URLS[metricName];
+    if (metricUrls && metricUrls[geography]) {
+      this.customUrl = metricUrls[geography];
+    }
+  }
+
+  async downloadCsv(): Promise<string> {
+    // Use custom URL if available
+    if (this.customUrl) {
+      console.log(`Downloading ${this.geography} ${this.metricName} data...`);
+      console.log(`URL: ${this.customUrl}`);
+
+      const response = await fetch(this.customUrl);
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.warn(`Data not found (404)`);
+          return '';
+        }
+        throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      console.log(`Downloaded ${(text.length / 1024 / 1024).toFixed(2)} MB`);
+      return text;
+    }
+
+    // Otherwise use base class URL (ZHVI)
+    return super.downloadCsv();
+  }
+}
 
 async function main() {
   const forceFullImport = process.argv.includes('--force');
@@ -33,37 +93,56 @@ async function main() {
     });
   }
 
-  console.log('╔══════════════════════════════════════════╗');
-  console.log('║    Zillow ZHVI Monthly Data Import       ║');
-  console.log('╚══════════════════════════════════════════╝');
+  // Parse --metric argument
+  let metricsFilter: MetricName[] | null = null;
+  const metricArg = process.argv.find(arg => arg.startsWith('--metric='));
+  if (metricArg) {
+    const metricStr = metricArg.split('=')[1];
+    metricsFilter = metricStr.split(',').map(m => m.toLowerCase() as MetricName);
+  }
+
+  console.log('='.repeat(50));
+  console.log('    Zillow Monthly Data Import');
+  console.log('='.repeat(50));
   console.log(`Date: ${new Date().toISOString()}`);
   console.log(`Mode: ${forceFullImport ? 'Full Import' : 'Incremental Update'}`);
-  console.log(`Levels: ${levelsToImport.join(', ')}\n`);
+  console.log(`Levels: ${levelsToImport.join(', ')}`);
+  console.log(`Metrics: ${metricsFilter ? metricsFilter.join(', ') : 'all available'}\n`);
 
   const results: ImportResult[] = [];
   const startTime = Date.now();
 
   for (const level of levelsToImport) {
-    console.log(`\n${'='.repeat(50)}`);
-    console.log(`Importing ${level} data...`);
-    console.log('='.repeat(50));
+    // Get metrics available for this geography
+    let metrics = GEOGRAPHY_METRICS[level];
+    if (metricsFilter) {
+      metrics = metrics.filter(m => metricsFilter!.includes(m));
+    }
 
-    try {
-      const batchSize = ['Zip', 'City'].includes(level) ? 2000 : 1000;
-      const importer = new ZhviImporter(level, batchSize);
-      const result = await importer.import(forceFullImport);
-      results.push(result);
-      printResult(result);
-    } catch (error: any) {
-      console.error(`Failed to import ${level}:`, error.message);
-      results.push({
-        geography: level,
-        recordsProcessed: 0,
-        recordsInserted: 0,
-        recordsUpdated: 0,
-        errors: [error.message],
-        duration: 0,
-      });
+    for (const metric of metrics) {
+      console.log(`\n${'='.repeat(50)}`);
+      console.log(`Importing ${level} ${metric.toUpperCase()} data...`);
+      console.log('='.repeat(50));
+
+      try {
+        // Use smaller batch for larger datasets
+        const batchSize = ['Zip'].includes(level) ? 5000 : 10000;
+        const importer = new MultiMetricImporter(level, metric, batchSize);
+        const result = await importer.import(forceFullImport);
+        results.push(result);
+        printResult(result);
+      } catch (error: any) {
+        console.error(`Failed to import ${level} ${metric}:`, error.message);
+        results.push({
+          geography: level,
+          metricName: metric,
+          recordsProcessed: 0,
+          recordsInserted: 0,
+          recordsUpdated: 0,
+          errors: [error.message],
+          duration: 0,
+        });
+      }
     }
   }
 
@@ -73,17 +152,17 @@ async function main() {
   const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
 
   console.log('\n');
-  console.log('╔══════════════════════════════════════════╗');
-  console.log('║           IMPORT SUMMARY                 ║');
-  console.log('╚══════════════════════════════════════════╝');
+  console.log('='.repeat(50));
+  console.log('           IMPORT SUMMARY');
+  console.log('='.repeat(50));
   console.log(`Total Duration: ${(totalDuration / 1000 / 60).toFixed(1)} minutes`);
   console.log(`Total Records Inserted: ${totalRecords.toLocaleString()}`);
   console.log(`Total Errors: ${totalErrors}`);
-  console.log('\nBy Geography:');
+  console.log('\nBy Geography/Metric:');
 
   for (const r of results) {
-    const status = r.errors.length > 0 ? '❌' : '✅';
-    console.log(`  ${status} ${r.geography}: ${r.recordsInserted.toLocaleString()} records (${(r.duration / 1000).toFixed(1)}s)`);
+    const status = r.errors.length > 0 ? '[ERR]' : '[OK]';
+    console.log(`  ${status} ${r.geography} ${r.metricName}: ${r.recordsInserted.toLocaleString()} records (${(r.duration / 1000).toFixed(1)}s)`);
   }
 
   process.exit(totalErrors > 0 ? 1 : 0);

@@ -30,80 +30,109 @@ export class MarketsService {
   }
 
   async getStates() {
+    // Use geographies table
     const { data, error } = await this.supabase
-      .from('tiger_states')
-      .select('geoid, name, state_abbreviation, population')
+      .from('geographies')
+      .select('geography_id, name, state_code, population')
+      .eq('geography_type', 'state')
       .order('name');
 
     if (error) throw error;
-    return data;
+    return (data || []).map(row => ({
+      geoid: row.geography_id,
+      name: row.name,
+      state_abbreviation: row.state_code,
+      population: row.population,
+    }));
   }
 
-  async getCountiesByState(stateGeoid: string) {
+  async getCountiesByState(stateCode: string) {
+    // Use geographies table - filter by state_code
     const { data, error } = await this.supabase
-      .from('tiger_counties')
-      .select('geoid, name, state_abbreviation, population')
-      .eq('geoid', stateGeoid)
+      .from('geographies')
+      .select('geography_id, name, state_code, population, fips_code')
+      .eq('geography_type', 'county')
+      .eq('state_code', stateCode)
       .order('name');
 
     if (error) throw error;
-    return data;
+    return (data || []).map(row => ({
+      geoid: row.fips_code || row.geography_id,
+      name: row.name,
+      state_abbreviation: row.state_code,
+      population: row.population,
+    }));
+  }
+
+  async getMetrosByState(stateCode: string) {
+    // Get metros that have counties in the given state
+    const { data, error } = await this.supabase
+      .from('geographies')
+      .select('cbsa_code, cbsa_name, zillow_metro_region_id')
+      .eq('geography_type', 'county')
+      .eq('state_code', stateCode)
+      .not('cbsa_code', 'is', null);
+
+    if (error) throw error;
+
+    // Dedupe metros
+    const metroMap = new Map<string, any>();
+    for (const row of data || []) {
+      if (row.cbsa_code && !metroMap.has(row.cbsa_code)) {
+        metroMap.set(row.cbsa_code, {
+          cbsa_code: row.cbsa_code,
+          name: row.cbsa_name,
+          zillow_region_id: row.zillow_metro_region_id,
+        });
+      }
+    }
+
+    return Array.from(metroMap.values()).sort((a, b) => a.name?.localeCompare(b.name));
   }
 
   async getMarketStats() {
+    // Use geographies table for counts
     const { count: totalMarkets } = await this.supabase
       .from('markets')
       .select('*', { count: 'exact', head: true });
 
     const { count: totalStates } = await this.supabase
-      .from('tiger_states')
-      .select('*', { count: 'exact', head: true });
+      .from('geographies')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography_type', 'state');
 
     const { count: totalCounties } = await this.supabase
-      .from('tiger_counties')
-      .select('*', { count: 'exact', head: true });
+      .from('geographies')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography_type', 'county');
+
+    const { count: totalMetros } = await this.supabase
+      .from('geographies')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography_type', 'metro');
 
     const { count: totalZips } = await this.supabase
-      .from('tiger_zcta')
-      .select('*', { count: 'exact', head: true });
+      .from('geographies')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography_type', 'zip');
 
     return {
       totalMarkets,
       totalStates,
       totalCounties,
+      totalMetros,
       totalZips,
     };
   }
 
-  // Zillow RegionID to State Name mapping
-  private readonly ZILLOW_STATE_MAP: Record<string, string> = {
-    '3': 'Alaska', '4': 'Alabama', '6': 'Arkansas', '8': 'Arizona',
-    '9': 'California', '10': 'Colorado', '11': 'Connecticut',
-    '12': 'District of Columbia', '13': 'Delaware', '14': 'Florida',
-    '16': 'Georgia', '18': 'Hawaii', '19': 'Iowa', '20': 'Idaho',
-    '21': 'Illinois', '22': 'Indiana', '23': 'Kansas', '24': 'Kentucky',
-    '25': 'Louisiana', '26': 'Massachusetts', '27': 'Maryland', '28': 'Maine',
-    '30': 'Michigan', '31': 'Minnesota', '32': 'Missouri', '34': 'Mississippi',
-    '35': 'Montana', '36': 'North Carolina', '37': 'North Dakota',
-    '38': 'Nebraska', '39': 'New Hampshire', '40': 'New Jersey',
-    '41': 'New Mexico', '42': 'Nevada', '43': 'New York', '44': 'Ohio',
-    '45': 'Oklahoma', '46': 'Oregon', '47': 'Pennsylvania', '50': 'Rhode Island',
-    '51': 'South Carolina', '52': 'South Dakota', '53': 'Tennessee',
-    '54': 'Texas', '55': 'Utah', '56': 'Virginia', '58': 'Vermont',
-    '59': 'Washington', '60': 'Wisconsin', '61': 'West Virginia', '62': 'Wyoming',
-  };
-
   async getStateHomeValues() {
     try {
-      // Get ZHVI data for specific state region_ids (efficient IN query)
-      const stateRegionIds = Object.keys(this.ZILLOW_STATE_MAP);
-
+      // Use zillow_state table
       const { data: zhviData, error: zhviError } = await this.supabase
-        .from('zillow_zhvi')
-        .select('region_id, value, date')
-        .in('region_id', stateRegionIds)
-        .order('date', { ascending: false })
-        .limit(500);
+        .from('zillow_state')
+        .select('region_id, region_name, value, period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false });
 
       if (zhviError) {
         console.error('Error fetching ZHVI data:', zhviError);
@@ -112,15 +141,14 @@ export class MarketsService {
 
       // Build result - only use most recent value per state
       const result: Record<string, number> = {};
-      const seenStates = new Set<string>();
+      const seenStates = new Set<number>();
 
       for (const record of zhviData || []) {
         if (seenStates.has(record.region_id)) continue;
         seenStates.add(record.region_id);
 
-        const stateName = this.ZILLOW_STATE_MAP[record.region_id];
-        if (stateName && record.value) {
-          result[stateName] = Math.round(Number(record.value));
+        if (record.region_name && record.value) {
+          result[record.region_name] = Math.round(Number(record.value));
         }
       }
 
@@ -133,13 +161,12 @@ export class MarketsService {
 
   async getMetroHomeValues() {
     try {
-      // Get most recent ZHVI for metros
+      // Use zillow_metro table
       const { data: zhviData, error: zhviError } = await this.supabase
-        .from('zillow_zhvi')
-        .select('region_id, value, date')
-        .eq('geography', 'Metro')
-        .order('date', { ascending: false })
-        .limit(2000);
+        .from('zillow_metro')
+        .select('region_id, region_name, value, period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false });
 
       if (zhviError) {
         console.error('Error fetching Metro ZHVI data:', zhviError);
@@ -148,14 +175,14 @@ export class MarketsService {
 
       // Build result - only use most recent value per metro
       const result: Record<string, number> = {};
-      const seenMetros = new Set<string>();
+      const seenMetros = new Set<number>();
 
       for (const record of zhviData || []) {
         if (seenMetros.has(record.region_id)) continue;
         seenMetros.add(record.region_id);
 
         if (record.value) {
-          result[record.region_id] = Math.round(Number(record.value));
+          result[String(record.region_id)] = Math.round(Number(record.value));
         }
       }
 
@@ -168,13 +195,12 @@ export class MarketsService {
 
   async getCountyHomeValues() {
     try {
-      // Get most recent ZHVI for counties (need enough rows for all ~3000 counties)
+      // Use zillow_county table
       const { data: zhviData, error: zhviError } = await this.supabase
-        .from('zillow_zhvi')
-        .select('region_id, value, date')
-        .eq('geography', 'County')
-        .order('date', { ascending: false })
-        .limit(50000);
+        .from('zillow_county')
+        .select('region_id, region_name, value, period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false });
 
       if (zhviError) {
         console.error('Error fetching County ZHVI data:', zhviError);
@@ -183,14 +209,14 @@ export class MarketsService {
 
       // Build result - only use most recent value per county
       const result: Record<string, number> = {};
-      const seenCounties = new Set<string>();
+      const seenCounties = new Set<number>();
 
       for (const record of zhviData || []) {
         if (seenCounties.has(record.region_id)) continue;
         seenCounties.add(record.region_id);
 
         if (record.value) {
-          result[record.region_id] = Math.round(Number(record.value));
+          result[String(record.region_id)] = Math.round(Number(record.value));
         }
       }
 
@@ -203,13 +229,12 @@ export class MarketsService {
 
   async getZipHomeValues() {
     try {
-      // Get most recent ZHVI for ZIP codes
+      // Use zillow_zip table
       const { data: zhviData, error: zhviError } = await this.supabase
-        .from('zillow_zhvi')
-        .select('region_id, value, date')
-        .eq('geography', 'Zip')
-        .order('date', { ascending: false })
-        .limit(50000);
+        .from('zillow_zip')
+        .select('region_id, region_name, value, period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false });
 
       if (zhviError) {
         console.error('Error fetching Zip ZHVI data:', zhviError);
@@ -218,14 +243,14 @@ export class MarketsService {
 
       // Build result - only use most recent value per ZIP
       const result: Record<string, number> = {};
-      const seenZips = new Set<string>();
+      const seenZips = new Set<number>();
 
       for (const record of zhviData || []) {
         if (seenZips.has(record.region_id)) continue;
         seenZips.add(record.region_id);
 
         if (record.value) {
-          result[record.region_id] = Math.round(Number(record.value));
+          result[String(record.region_id)] = Math.round(Number(record.value));
         }
       }
 
@@ -234,5 +259,58 @@ export class MarketsService {
       console.error('getZipHomeValues error:', error);
       throw error;
     }
+  }
+
+  // Get home values with names included
+  async getStateHomeValuesWithNames() {
+    const { data, error } = await this.supabase
+      .from('zillow_state')
+      .select('region_id, region_name, state_code, value, period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false });
+
+    if (error) throw error;
+
+    // Dedupe to most recent per state
+    const stateMap = new Map<number, any>();
+    for (const row of data || []) {
+      if (!stateMap.has(row.region_id)) {
+        stateMap.set(row.region_id, {
+          regionId: row.region_id,
+          name: row.region_name,
+          stateCode: row.state_code,
+          value: row.value ? Math.round(Number(row.value)) : null,
+          date: row.period_date,
+        });
+      }
+    }
+
+    return Array.from(stateMap.values());
+  }
+
+  async getMetroHomeValuesWithNames() {
+    const { data, error } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name, cbsa_code, value, period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false });
+
+    if (error) throw error;
+
+    // Dedupe to most recent per metro
+    const metroMap = new Map<number, any>();
+    for (const row of data || []) {
+      if (!metroMap.has(row.region_id)) {
+        metroMap.set(row.region_id, {
+          regionId: row.region_id,
+          name: row.region_name,
+          cbsaCode: row.cbsa_code,
+          value: row.value ? Math.round(Number(row.value)) : null,
+          date: row.period_date,
+        });
+      }
+    }
+
+    return Array.from(metroMap.values());
   }
 }

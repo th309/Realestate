@@ -218,4 +218,176 @@ export class ZillowController {
       data,
     };
   }
+
+  // ============================================================================
+  // Market Indicators Endpoints
+  // ============================================================================
+
+  @Get('inventory/metros')
+  async getMetroInventory(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroInventory(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'inventory',
+      data,
+    };
+  }
+
+  @Get('new-listings/metros')
+  async getMetroNewListings(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroNewListings(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'new_listings',
+      data,
+    };
+  }
+
+  @Get('pending-listings/metros')
+  async getMetroPendingListings(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroPendingListings(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'pending_listings',
+      data,
+    };
+  }
+
+  @Get('list-price/metros')
+  async getMetroListPrice(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroListPrice(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'median_list_price',
+      data,
+    };
+  }
+
+  @Get('sales-count/metros')
+  async getMetroSalesCount(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroSalesCount(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'sales_count',
+      data,
+    };
+  }
+
+  @Get('sale-price/metros')
+  async getMetroSalePrice(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroSalePrice(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'median_sale_price',
+      data,
+    };
+  }
+
+  @Get('sale-to-list/metros')
+  async getMetroSaleToList(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroSaleToList(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'sale_to_list_ratio',
+      data,
+    };
+  }
+
+  @Get('days-to-pending/metros')
+  async getMetroDaysToPending(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroDaysToPending(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'days_to_pending',
+      data,
+    };
+  }
+
+  @Get('days-to-close/metros')
+  async getMetroDaysToClose(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroDaysToClose(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'days_to_close',
+      data,
+    };
+  }
+
+  @Get('market-heat/metros')
+  async getMetroMarketHeat(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroMarketHeat(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'market_heat_index',
+      data,
+    };
+  }
+
+  // ============================================================================
+  // Price Cuts Endpoint (Combined)
+  // ============================================================================
+
+  @Get('price-cuts/metros')
+  async getMetroPriceCuts(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroPriceCuts(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'price_cuts',
+      data,
+    };
+  }
+
+  // ============================================================================
+  // New Construction Endpoint (Combined)
+  // ============================================================================
+
+  @Get('new-construction/metros')
+  async getMetroNewConstruction(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroNewConstruction(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'new_construction',
+      data,
+    };
+  }
+
+  // ============================================================================
+  // Affordability Endpoint (All metrics combined)
+  // ============================================================================
+
+  @Get('affordability/metros')
+  async getMetroAffordability(@Query('date') date?: string) {
+    const data = await this.zillowService.getMetroAffordability(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'affordability',
+      data,
+    };
+  }
 }

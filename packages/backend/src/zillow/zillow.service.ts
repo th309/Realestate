@@ -24,13 +24,18 @@ import {
 
 import {
   getLatestDateForTable,
+  getLatestDateForMarketTable,
   mapRentPropertyType,
   getForecastValue,
   queryZhvi,
   queryZori,
   queryZordi,
-  queryZhvf
+  queryZhvf,
+  queryMarketIndicator,
+  queryAffordability
 } from './helpers/queries';
+
+import type { MarketIndicatorData, AffordabilityData, PriceCutsData, NewConstructionData, MarketIndicatorTable } from './types';
 
 @Injectable()
 export class ZillowService {
@@ -430,5 +435,262 @@ export class ZillowService {
         geography: 'ZIP',
       };
     }).sort((a, b) => b.value - a.value);
+  }
+
+  // ============================================================================
+  // Market Indicators Methods
+  // ============================================================================
+
+  /**
+   * Generic method to get market indicator data for metros
+   */
+  async getMetroMarketIndicator(
+    table: MarketIndicatorTable,
+    date?: string,
+    propertyType: string = 'sfrcondo'
+  ): Promise<MarketIndicatorData[]> {
+    const targetDate = date || await getLatestDateForMarketTable(this.supabase, table, 'Metro');
+    const data = await queryMarketIndicator(this.supabase, table, ['Metro', 'US'], targetDate, propertyType);
+
+    if (!data.length) return [];
+
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+
+    return data.map(d => {
+      if (d.geography === 'US') {
+        return {
+          region_id: d.region_id,
+          region_name: 'United States',
+          value: d.value,
+          date: d.date,
+          property_type: d.property_type,
+          geography: 'US',
+        };
+      }
+
+      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+
+      return {
+        region_id: d.region_id,
+        region_name: metro?.cbsa_name || 'Unknown',
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        value: d.value,
+        date: d.date,
+        property_type: d.property_type,
+        geography: 'Metro',
+      };
+    }).sort((a, b) => b.value - a.value);
+  }
+
+  // Inventory
+  async getMetroInventory(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_inventory', date);
+  }
+
+  // New Listings
+  async getMetroNewListings(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_new_listings', date);
+  }
+
+  // Pending Listings
+  async getMetroPendingListings(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_pending_listings', date);
+  }
+
+  // Median List Price
+  async getMetroListPrice(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_median_list_price', date);
+  }
+
+  // Sales Count
+  async getMetroSalesCount(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_sales_count', date);
+  }
+
+  // Median Sale Price
+  async getMetroSalePrice(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_sales_price', date);
+  }
+
+  // Sale-to-List Ratio
+  async getMetroSaleToList(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_sale_to_list', date);
+  }
+
+  // Days to Pending
+  async getMetroDaysToPending(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_days_to_pending', date);
+  }
+
+  // Days to Close
+  async getMetroDaysToClose(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_days_to_close', date);
+  }
+
+  // Market Heat Index
+  async getMetroMarketHeat(date?: string): Promise<MarketIndicatorData[]> {
+    return this.getMetroMarketIndicator('zillow_market_heat_index', date);
+  }
+
+  // ============================================================================
+  // Price Cuts (Combined Metrics)
+  // ============================================================================
+
+  async getMetroPriceCuts(date?: string): Promise<PriceCutsData[]> {
+    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_price_cut_share', 'Metro');
+
+    const [shareData, amtData, pctData] = await Promise.all([
+      queryMarketIndicator(this.supabase, 'zillow_price_cut_share', ['Metro', 'US'], targetDate),
+      queryMarketIndicator(this.supabase, 'zillow_price_cut_amt', ['Metro', 'US'], targetDate),
+      queryMarketIndicator(this.supabase, 'zillow_price_cut_pct', ['Metro', 'US'], targetDate),
+    ]);
+
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+
+    // Combine the data by region_id
+    const combinedMap = new Map<string, PriceCutsData>();
+
+    for (const d of shareData) {
+      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+      combinedMap.set(d.region_id, {
+        region_id: d.region_id,
+        region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        date: d.date,
+        geography: d.geography,
+        share_with_price_cut: d.value,
+        median_price_cut_amount: null,
+        median_price_cut_percent: null,
+      });
+    }
+
+    for (const d of amtData) {
+      const existing = combinedMap.get(d.region_id);
+      if (existing) {
+        existing.median_price_cut_amount = d.value;
+      }
+    }
+
+    for (const d of pctData) {
+      const existing = combinedMap.get(d.region_id);
+      if (existing) {
+        existing.median_price_cut_percent = d.value;
+      }
+    }
+
+    return Array.from(combinedMap.values()).sort((a, b) =>
+      (b.share_with_price_cut || 0) - (a.share_with_price_cut || 0)
+    );
+  }
+
+  // ============================================================================
+  // New Construction (Combined Metrics)
+  // ============================================================================
+
+  async getMetroNewConstruction(date?: string): Promise<NewConstructionData[]> {
+    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_new_construction_sales_count', 'Metro');
+
+    const [salesCountData, salePriceData] = await Promise.all([
+      queryMarketIndicator(this.supabase, 'zillow_new_construction_sales_count', ['Metro', 'US'], targetDate),
+      queryMarketIndicator(this.supabase, 'zillow_new_construction_sale_price', ['Metro', 'US'], targetDate),
+    ]);
+
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+
+    // Combine the data by region_id
+    const combinedMap = new Map<string, NewConstructionData>();
+
+    for (const d of salesCountData) {
+      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+      combinedMap.set(d.region_id, {
+        region_id: d.region_id,
+        region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        date: d.date,
+        geography: d.geography,
+        sales_count: d.value,
+        median_sale_price: null,
+        price_per_sqft: null,
+      });
+    }
+
+    for (const d of salePriceData) {
+      const existing = combinedMap.get(d.region_id);
+      if (existing) {
+        existing.median_sale_price = d.value;
+        existing.price_per_sqft = (d as any).price_per_sqft || null;
+      } else {
+        const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+        combinedMap.set(d.region_id, {
+          region_id: d.region_id,
+          region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
+          cbsa_code: cbsaCode,
+          state_abbrev: metro?.state || null,
+          date: d.date,
+          geography: d.geography,
+          sales_count: null,
+          median_sale_price: d.value,
+          price_per_sqft: (d as any).price_per_sqft || null,
+        });
+      }
+    }
+
+    return Array.from(combinedMap.values()).sort((a, b) =>
+      (b.sales_count || 0) - (a.sales_count || 0)
+    );
+  }
+
+  // ============================================================================
+  // Affordability
+  // ============================================================================
+
+  async getMetroAffordability(date?: string): Promise<AffordabilityData[]> {
+    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_affordability', 'Metro');
+    const data = await queryAffordability(this.supabase, ['Metro', 'US'], targetDate);
+
+    if (!data.length) return [];
+
+    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+
+    return data.map(d => {
+      if (d.geography === 'US') {
+        return {
+          region_id: d.region_id,
+          region_name: 'United States',
+          date: d.date,
+          geography: 'US',
+          homeowner_income_needed: d.homeowner_income_needed,
+          renter_income_needed: d.renter_income_needed,
+          affordable_home_price: d.affordable_home_price,
+          years_to_save: d.years_to_save,
+          homeowner_affordability_percent: d.homeowner_affordability_percent,
+          renter_affordability_percent: d.renter_affordability_percent,
+          down_payment_percent: d.down_payment_percent,
+          property_type: d.property_type,
+        };
+      }
+
+      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+
+      return {
+        region_id: d.region_id,
+        region_name: metro?.cbsa_name || 'Unknown',
+        cbsa_code: cbsaCode,
+        state_abbrev: metro?.state || null,
+        date: d.date,
+        geography: 'Metro',
+        homeowner_income_needed: d.homeowner_income_needed,
+        renter_income_needed: d.renter_income_needed,
+        affordable_home_price: d.affordable_home_price,
+        years_to_save: d.years_to_save,
+        homeowner_affordability_percent: d.homeowner_affordability_percent,
+        renter_affordability_percent: d.renter_affordability_percent,
+        down_payment_percent: d.down_payment_percent,
+        property_type: d.property_type,
+      };
+    }).sort((a, b) => (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0));
   }
 }
