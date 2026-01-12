@@ -1,8 +1,26 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { fetch as undiciFetch, Agent } from 'undici';
 
 export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
+
+// Create a custom agent with connection handling for Railway
+const agent = new Agent({
+  keepAliveTimeout: 10_000,
+  keepAliveMaxTimeout: 30_000,
+  connect: {
+    timeout: 30_000,
+  },
+});
+
+// Custom fetch wrapper using undici
+const customFetch = (url: string | URL | Request, init?: RequestInit) => {
+  return undiciFetch(url as any, {
+    ...init,
+    dispatcher: agent,
+  } as any);
+};
 
 @Global()
 @Module({
@@ -26,6 +44,9 @@ export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
           auth: {
             autoRefreshToken: false,
             persistSession: false,
+          },
+          global: {
+            fetch: customFetch as unknown as typeof fetch,
           },
         });
       },
