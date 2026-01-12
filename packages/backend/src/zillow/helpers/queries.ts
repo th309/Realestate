@@ -43,17 +43,25 @@ export async function getLatestDate(
 ): Promise<string> {
   const table = getTableForGeography(geography);
 
-  // First try to get any single record to find a recent date
-  // This is faster than ordering the entire table
-  const { data } = await supabase
-    .from(table)
-    .select('period_date')
-    .eq('metric_name', metricName)
-    .order('period_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from(table)
+      .select('period_date')
+      .eq('metric_name', metricName)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  return data?.period_date || '2025-10-31';
+    if (error) {
+      console.error(`getLatestDate error for ${table}/${metricName}:`, error.message);
+      return '2025-10-31';
+    }
+
+    return data?.period_date || '2025-10-31';
+  } catch (err) {
+    console.error(`getLatestDate network error for ${table}/${metricName}:`, err);
+    return '2025-10-31';
+  }
 }
 
 // Backwards-compatible alias
@@ -80,22 +88,28 @@ export async function queryZillowData(
 ) {
   const table = getTableForGeography(geography);
 
+  console.log(`queryZillowData: table=${table}, metric=${metricName}, date=${targetDate}`);
+
   let query = supabase
     .from(table)
     .select('region_id, region_name, state_code, period_date, metric_name, value')
-    .eq('period_date', targetDate)  // Filter by date first (likely indexed)
+    .eq('period_date', targetDate)
     .eq('metric_name', metricName);
 
   if (regionIds && regionIds.length > 0) {
     query = query.in('region_id', regionIds);
   }
 
-  // Add reasonable limit to prevent timeouts
   query = query.limit(5000);
 
   const { data, error } = await query;
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error(`queryZillowData error: ${error.message}`);
+    throw new Error(error.message);
+  }
+
+  console.log(`queryZillowData: returned ${data?.length || 0} rows`);
   return data || [];
 }
 
