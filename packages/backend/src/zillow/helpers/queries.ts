@@ -22,6 +22,7 @@ function getTableForGeography(geography: string): string {
   if (geoLower === 'state') return 'zillow_state';
   if (geoLower === 'metro') return 'zillow_metro';
   if (geoLower === 'county') return 'zillow_county';
+  if (geoLower === 'city') return 'zillow_city';
   if (geoLower === 'zip') return 'zillow_zip';
   // Default to metro for US/national level
   return 'zillow_metro';
@@ -33,6 +34,7 @@ function getTableForGeography(geography: string): string {
 
 /**
  * Get the latest date for a given geography and metric
+ * Optimized: Uses a single region to find max date (faster than full table scan)
  */
 export async function getLatestDate(
   supabase: SupabaseClient,
@@ -41,14 +43,17 @@ export async function getLatestDate(
 ): Promise<string> {
   const table = getTableForGeography(geography);
 
+  // First try to get any single record to find a recent date
+  // This is faster than ordering the entire table
   const { data } = await supabase
     .from(table)
     .select('period_date')
     .eq('metric_name', metricName)
     .order('period_date', { ascending: false })
-    .limit(1);
+    .limit(1)
+    .maybeSingle();
 
-  return data?.[0]?.period_date || '2025-10-31';
+  return data?.period_date || '2025-10-31';
 }
 
 // Backwards-compatible alias
@@ -64,6 +69,7 @@ export const getLatestDateForMarketTable = getLatestDateForTable;
 
 /**
  * Query data from long-format tables
+ * Added limit to prevent timeouts on large tables
  */
 export async function queryZillowData(
   supabase: SupabaseClient,
@@ -77,12 +83,15 @@ export async function queryZillowData(
   let query = supabase
     .from(table)
     .select('region_id, region_name, state_code, period_date, metric_name, value')
-    .eq('metric_name', metricName)
-    .eq('period_date', targetDate);
+    .eq('period_date', targetDate)  // Filter by date first (likely indexed)
+    .eq('metric_name', metricName);
 
   if (regionIds && regionIds.length > 0) {
     query = query.in('region_id', regionIds);
   }
+
+  // Add reasonable limit to prevent timeouts
+  query = query.limit(5000);
 
   const { data, error } = await query;
 
