@@ -15,24 +15,30 @@ const US_STATE_ABBREVS = [
 
 /**
  * Build state mappings from Zillow region IDs to state info
+ * Optimized: Single query instead of 53 separate queries
  */
 export async function buildStateMappings(supabase: SupabaseClient): Promise<Map<string, StateMapping>> {
   const stateMap = new Map<string, StateMapping>();
 
-  for (const st of US_STATE_ABBREVS) {
-    const { data } = await supabase
-      .from('geography_crosswalk')
-      .select('state_abbrev, state_name, zillow_state_region_id')
-      .eq('state_abbrev', st)
-      .limit(1);
+  // Single query to get all state mappings
+  const { data } = await supabase
+    .from('geography_crosswalk')
+    .select('state_abbrev, state_name, zillow_state_region_id')
+    .in('state_abbrev', US_STATE_ABBREVS)
+    .not('zillow_state_region_id', 'is', null)
+    .limit(100);
 
-    if (data?.[0]?.zillow_state_region_id) {
+  // Deduplicate by zillow_state_region_id
+  const seen = new Set<number>();
+  data?.forEach(row => {
+    if (row.zillow_state_region_id && !seen.has(row.zillow_state_region_id)) {
+      seen.add(row.zillow_state_region_id);
       stateMap.set(
-        String(data[0].zillow_state_region_id),
-        { abbrev: data[0].state_abbrev, name: data[0].state_name }
+        String(row.zillow_state_region_id),
+        { abbrev: row.state_abbrev, name: row.state_name }
       );
     }
-  }
+  });
 
   return stateMap;
 }

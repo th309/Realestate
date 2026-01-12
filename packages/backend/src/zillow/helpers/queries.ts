@@ -11,7 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 // Type Definitions
 // ============================================================================
 
-export type GeographyType = 'state' | 'metro' | 'county' | 'zip';
+export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
 export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
                   'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
                   'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
