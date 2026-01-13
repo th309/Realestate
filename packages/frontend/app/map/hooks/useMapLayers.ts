@@ -54,6 +54,19 @@ export function useMapLayers({
       // Add values to features
       addValuesToFeatures(geojson, geoLevel, homeValues);
 
+      // Remove source again right before adding (handles race condition)
+      // This is needed because another updateMapLayers call may have started
+      // while we were fetching the GeoJSON
+      if (map.current!.getSource('geo-data')) {
+        const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels'];
+        layersToRemove.forEach(layerId => {
+          if (map.current!.getLayer(layerId)) {
+            map.current!.removeLayer(layerId);
+          }
+        });
+        map.current!.removeSource('geo-data');
+      }
+
       // Add source
       map.current!.addSource('geo-data', { type: 'geojson', data: geojson });
 
