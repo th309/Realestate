@@ -488,11 +488,14 @@ export const api = {
   // ============================================================================
 
   // Helper to transform Realtor response based on geography type
-  transformRealtorResponse: (response: RealtorApiResponse, keyField: 'region_id' | 'state_id' | 'cbsa_code' | 'county_fips' | 'postal_code' = 'region_id'): Record<string, number> => {
+  transformRealtorResponse: (response: RealtorApiResponse, keyField: 'region_id' | 'region_name' | 'state_id' | 'cbsa_code' | 'county_fips' | 'postal_code' = 'region_id'): Record<string, number> => {
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
       let key: string | undefined;
       switch (keyField) {
+        case 'region_name':
+          key = item.region_name;
+          break;
         case 'state_id':
           key = item.state_id || item.region_id;
           break;
@@ -518,7 +521,8 @@ export const api = {
   // --- Home Value (median_listing_price) ---
   getRealtorStateHomeValues: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    // Use region_name (full state name) to match GeoJSON
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroHomeValues: async (): Promise<MetroHomeValues> => {
@@ -540,7 +544,7 @@ export const api = {
   // --- Home Value YoY (median_listing_price_yy) ---
   getRealtorStateHomeValueYoy: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroHomeValueYoy: async (): Promise<MetroHomeValues> => {
@@ -562,7 +566,7 @@ export const api = {
   // --- Inventory (active_listing_count) ---
   getRealtorStateInventory: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroInventory: async (): Promise<MetroHomeValues> => {
@@ -584,7 +588,7 @@ export const api = {
   // --- Inventory YoY (active_listing_count_yy) ---
   getRealtorStateInventoryYoy: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroInventoryYoy: async (): Promise<MetroHomeValues> => {
@@ -606,7 +610,7 @@ export const api = {
   // --- Days on Market (median_days_on_market) ---
   getRealtorStateDom: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/dom/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroDom: async (): Promise<MetroHomeValues> => {
@@ -628,7 +632,7 @@ export const api = {
   // --- New Listings (new_listing_count) ---
   getRealtorStateNewListings: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroNewListings: async (): Promise<MetroHomeValues> => {
@@ -650,7 +654,7 @@ export const api = {
   // --- Pending Listings (pending_listing_count) ---
   getRealtorStatePendingListings: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroPendingListings: async (): Promise<MetroHomeValues> => {
@@ -672,7 +676,7 @@ export const api = {
   // --- Price Reduced Share (price_reduced_share) ---
   getRealtorStatePriceReduced: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-reduced/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroPriceReduced: async (): Promise<MetroHomeValues> => {
@@ -694,7 +698,7 @@ export const api = {
   // --- Price per Sq Ft (median_listing_price_per_square_foot) ---
   getRealtorStatePricePerSqft: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-per-sqft/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroPricePerSqft: async (): Promise<MetroHomeValues> => {
@@ -767,7 +771,7 @@ export const api = {
   // --- Pending Ratio (pending_ratio) ---
   getRealtorStatePendingRatio: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-ratio/states');
-    return api.transformRealtorResponse(response, 'region_id');
+    return api.transformRealtorResponse(response, 'region_name');
   },
 
   getRealtorMetroPendingRatio: async (): Promise<MetroHomeValues> => {
