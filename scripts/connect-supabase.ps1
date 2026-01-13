@@ -4,10 +4,10 @@
 
 param(
     [string]$Query = "",
-    [string]$DbHost = "db.pysflbhpnqwoczyuaaif.supabase.co",
-    [int]$Port = 5432,
+    [string]$DbHost = "aws-1-us-east-1.pooler.supabase.com",
+    [int]$Port = 6543,
     [string]$Database = "postgres",
-    [string]$Username = "postgres",
+    [string]$Username = "postgres.pysflbhpnqwoczyuaaif",
     [string]$Password = "",
     [switch]$Interactive = $false
 )
@@ -32,7 +32,8 @@ if ([string]::IsNullOrEmpty($Password)) {
             $envContent = Get-Content $envPath -Raw
             if ($envContent -match 'SUPABASE_DB_PASSWORD=(.+)') {
                 $Password = $matches[1].Trim()
-            } elseif ($envContent -match 'DATABASE_URL=postgresql://[^:]+:([^@]+)@') {
+            }
+            elseif ($envContent -match 'DATABASE_URL=postgresql://[^:]+:([^@]+)@') {
                 $Password = $matches[1].Trim()
             }
         }
@@ -64,7 +65,8 @@ if (-not [string]::IsNullOrEmpty($Query)) {
     if ($exitCode -eq 0) {
         Write-Host $result
         Write-Host "`n✅ Query executed successfully" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "❌ Query failed" -ForegroundColor Red
         Write-Host $result
         Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue

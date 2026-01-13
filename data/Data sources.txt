@@ -1,0 +1,130 @@
+Data sources
+
+Zillow
+Zillow Home Value Index (ZHVI): A measure of the typical home value and market changes across a given region and housing type. It reflects the typical value for homes in the 35th to 65th percentile range. Available as a smoothed, seasonally adjusted measure and as a raw measure.
+
+ZVHI All Homes (SFR, Condo/Co-op Time Series, Smoothed
+Metro/US=https://files.zillowstatic.com/research/public_csvs/zhvi/Metro_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+State=https://files.zillowstatic.com/research/public_csvs/zhvi/State_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+County=https://files.zillowstatic.com/research/public_csvs/zhvi/County_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+Zip Code=https://files.zillowstatic.com/research/public_csvs/zhvi/Zip_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+Zillow Home Value Forecast (ZHVF): A month-ahead, quarter-ahead and year-ahead forecast of the Zillow Home Value Index (ZHVI). ZHVF is created using the all homes, mid-tier cut of ZHVI and is available both raw and smoothed, seasonally adjusted
+
+ZHVF (Forecast), All Homes (SFR, Condo/Co-op), Smoothed MoM%,QoQ%,YoY%
+Metro & US=https://files.zillowstatic.com/research/public_csvs/zhvf_growth/Metro_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+Zip Code=https://files.zillowstatic.com/research/public_csvs/zhvf_growth/Zip_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+Zillow Observed Rent Index (ZORI): A smoothed measure of the typical observed market rate rent across a given region. ZORI is a repeat-rent index that is weighted to the rental housing stock to ensure representativeness across the entire market, not just those homes currently listed for-rent. The index is dollar-denominated by computing the mean of listed rents that fall into the 35th to 65th percentile range for all homes and apartments in a given region, which is weighted to reflect the rental housing stock.
+
+ZORI (Smoothed): All Homes Plus Multifamily Time Series
+Metro & US=https://files.zillowstatic.com/research/public_csvs/zori/Metro_zori_uc_sfrcondomfr_sm_month.csv?t=1768139840
+Zip codes=https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv?t=1768139840
+County=https://files.zillowstatic.com/research/public_csvs/zori/County_zori_uc_sfrcondomfr_sm_month.csv?t=1768139840
+City=https://files.zillowstatic.com/research/public_csvs/zori/City_zori_uc_sfrcondomfr_sm_month.csv?t=1768139840
+
+Zillow Observed Renter Demand Index (ZORDI): A measure of the typical observed rental market engagement across a region. ZORDI tracks engagement on Zillow’s rental listings to proxy changes in rental demand. The metric is smoothed to remove volatility.
+
+ZORDI: All Homes Plus Multifamily Time Series
+Metro & US=https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfrcondomfr_month.csv?t=1768139840
+
+For Sale Listings
+For-Sale Inventory: The count of unique listings that were active at any time in a given month.
+For-Sale Inventory (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/invt_fs/Metro_invt_fs_uc_sfrcondo_sm_month.csv?t=1768139840
+
+New Listings: Indicates how many new listings have come on the market in a given month.
+New Listings (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_listings/Metro_new_listings_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Newly Pending Listings: The count of listings that changed from for-sale to pending status on Zillow.com in a given time period.
+Newly Pending Listings (Smoothed, All Homes Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_pending/Metro_new_pending_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Median List Price: The median price at which homes across various geographies were listed.
+Median List Price (Smoothed, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/mlp/Metro_mlp_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Sales
+Sales count (nowcast): The estimated number of unique properties that sold during the month. For sales count nowcast, the latest month’s number is the estimation after accounting for the latency between when sales occur and when they are reported. Available only for the raw cut for all homes.
+Sales Count (Nowcast, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/sales_count_now/Metro_sales_count_now_uc_sfrcondo_month.csv?t=1768139840
+
+Sale Price (median/mean): The price at which homes across various geographies were sold. The latest month’s number is the estimation after accounting for the latency between when sales occur and when they are reported. Available only for the raw cut for all homes.
+Median Sale Price (Nowcast, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/median_sale_price_now/Metro_median_sale_price_now_uc_sfrcondo_month.csv?t=1768139840
+
+Sale-to-List Ratio (mean/median): Ratio of sale vs. final list price.
+Median Sale-to-List Ratio (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/median_sale_to_list/Metro_median_sale_to_list_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Days on Market and Price Cuts
+Days to Pending: How long it takes homes in a region to change to pending status on Zillow.com after first being shown as for sale. The reported figure indicates the number of days (mean or median) that it took for homes that went pending during the week being reported, to go pending. This differs from the old “Days on Zillow” metric in that it excludes the in-contract period before a home sells.
+Mean Days to Pending (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/mean_doz_pending/Metro_mean_doz_pending_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Days to Close (mean/median): Number of days between the listing going pending and the sale date.
+Median Days to Close (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/median_days_to_close/Metro_median_days_to_close_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Share of Listings With a Price Cut: The number of unique properties with a list price at the end of the month that’s less than the list price at the beginning of the month, divided by the number of unique properties with an active listing at some point during the month.
+Share of Listings with a Price Cut (Smooth, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/perc_listings_price_cut/Metro_perc_listings_price_cut_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Price Cuts: The mean and median price cut for listings in a given region during a given time period, expressed as both dollars ($) and as a percentage (%) of list price.
+Median Price Cut ($, Smoothed, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/med_listings_price_cut_amt/Metro_med_listings_price_cut_amt_uc_sfrcondo_sm_month.csv?t=1768139840
+Median Price Cut (%, Smoothed, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/med_listings_price_cut_perc/Metro_med_listings_price_cut_perc_uc_sfrcondo_sm_month.csv?t=1768139840
+
+Market Heat Index
+Market Heat Index (All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/market_temp_index/Metro_market_temp_index_uc_sfrcondo_month.csv?t=1768139840
+
+New Construction
+New Construction Sales Count: The number of unique new construction homes that sold during the month. Available for the raw cut of single family residence and condo.
+New construction Sales Count (Raw, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_con_sales_count_raw/Metro_new_con_sales_count_raw_uc_sfrcondo_month.csv?t=1768139840
+
+New Construction Median Sale Price: The median sale price at which new construction homes across various geographies were sold during the month.
+New Construction Median Sale Price (Raw, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_con_median_sale_price/Metro_new_con_median_sale_price_uc_sfrcondo_month.csv?t=1768139840
+
+New Construction Median Sale Price Per Sqft: The median sale price divided by square footage calculated over all new construction homes across various geographies were sold during the month.
+New Construction Median Sale Price Per Sqft (Raw, All Homes, Monthly)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_con_median_sale_price_per_sqft/Metro_new_con_median_sale_price_per_sqft_uc_sfrcondo_month.csv?t=1768139840
+
+Affordability
+New Homeowner Income Needed: An estimate of the annual household income required to spend less than 30% of monthly income on the total monthly payment after newly purchasing the typical home with a 20% down payment.
+New Homeowner Income Needed (20% Down, All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_homeowner_income_needed/Metro_new_homeowner_income_needed_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+New Renter Income Needed: An estimate of the household income required to spend less than 30% of monthly income to newly lease the typical rental.
+New Renter Income Needed (All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_renter_income_needed/Metro_new_renter_income_needed_uc_sfrcondomfr_sm_sa_month.csv?t=1768139840
+
+Affordable Home Price: An estimate of the home price such that the total monthly payment on such a home would not exceed 30% of the median household’s monthly income with a 20% down payment.
+Affordable Home Price (20% Down, All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/affordable_price/Metro_affordable_price_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+Years to Save: A measure of the number of years it would take the median household to save for a 20% down payment on a home, assuming they are able to save 10% of their income into a simple savings account accruing no interest. This is equivalent to the number of years it would take the median household to save for a 10% down payment, assuming a 5% savings rate.
+Years to Save (20% Down, All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/years_to_save/Metro_years_to_save_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+New Homeowner Affordability: A measure of the share of income the median household would spend on a newly purchased home, including its mortgage payment, homeowner’s insurance, property taxes, and maintenance costs. Typically, spending more than 30% of income on housing is considered unaffordable.
+New Homeowner Affordability (20% Down, All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_homeowner_affordability/Metro_new_homeowner_affordability_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768139840
+
+New Renter Affordability: A measure of the share of income the median household would spend to newly lease the typical rental. Typically, spending more than 30% of income on housing is considered unaffordable.
+New Renter Affordability (All Homes, Smoothed and Seasonally Adjusted)
+Metro & US=https://files.zillowstatic.com/research/public_csvs/new_renter_affordability/Metro_new_renter_affordability_uc_sfrcondomfr_sm_sa_month.csv?t=1768139840
+
+
+
+
+
+
+
+
+
+

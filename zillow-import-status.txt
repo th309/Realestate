@@ -1,0 +1,14 @@
+======================================================================
+REMAINING ZILLOW IMPORT - 2026-01-12T16:04:11.880Z
+Elapsed: 27m 8s
+======================================================================
+
+[OK] zhvi-city-all-homes-sm-sa: 4,723,554 records 27m 8s
+[OK] zori-city-all-homes-sm: 194,541 records 16m 24s
+[OK] zhvi-zip-all-homes-sm-sa: 6,249,447 records 15m 52s
+[OK] zori-zip-all-homes-sm: 409,310 records 2m 35s
+[OK] zhvf-zip-growth: 60,440 records 1m 14s
+[OK] new-construction-sale-price-metro: 15,773 records 43s
+[OK] affordability-home-price-metro: 64,936 records 30s
+
+======================================================================

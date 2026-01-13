@@ -1,11 +1,11 @@
 # Quick test script for Supabase psql connection
 # Usage: .\scripts\test-psql-connection.ps1
 
-$dbHost = "db.pysflbhpnqwoczyuaaif.supabase.co"
-$port = 5432
+$dbHost = "aws-1-us-east-1.pooler.supabase.com"
+$port = 6543
 $database = "postgres"
-$username = "postgres"
-$password = "Ihatedoingpt$$12"
+$username = "postgres.pysflbhpnqwoczyuaaif"
+$password = "IHatedoingpt12"
 
 Write-Host "Testing Supabase PostgreSQL connection..." -ForegroundColor Cyan
 Write-Host "Host: $dbHost" -ForegroundColor Gray
@@ -28,7 +28,8 @@ $result = & psql $connectionString -c "SELECT version();" 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ Connection successful!" -ForegroundColor Green
     Write-Host $result
-} else {
+}
+else {
     Write-Host "`n❌ Connection failed with connection string format" -ForegroundColor Red
     Write-Host $result
     
@@ -39,7 +40,8 @@ if ($LASTEXITCODE -eq 0) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host "`n✅ Connection successful with -h flag!" -ForegroundColor Green
         Write-Host $result2
-    } else {
+    }
+    else {
         Write-Host "`n❌ Connection failed" -ForegroundColor Red
         Write-Host $result2
         Write-Host "`nTroubleshooting tips:" -ForegroundColor Yellow

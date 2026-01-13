@@ -324,7 +324,7 @@ export const ZILLOW_DATASETS: ZillowDatasetConfig[] = [
     datasetType: 'new_con_median_sale_price',
     propertyType: 'sfrcondo',
     frequency: 'month',
-    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_con_median_sale_price_raw/Metro_new_con_median_sale_price_raw_uc_sfrcondo_month.csv',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_con_median_sale_price/Metro_new_con_median_sale_price_uc_sfrcondo_month.csv?t=1768221332',
     description: 'New Construction Median Sale Price - Metro areas, all homes, monthly'
   },
 
@@ -367,7 +367,7 @@ export const ZILLOW_DATASETS: ZillowDatasetConfig[] = [
     smoothing: 'sm',
     seasonalAdjustment: true,
     frequency: 'month',
-    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/affordable_home_price/Metro_affordable_home_price_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/affordable_price/Metro_affordable_price_downpayment_0.20_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv?t=1768221332',
     description: 'Affordable Home Price - Metro areas, 20% down, all homes, smoothed, seasonally adjusted'
   },
   {
@@ -410,5 +410,191 @@ export const ZILLOW_DATASETS: ZillowDatasetConfig[] = [
     frequency: 'month',
     downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_renter_affordability/Metro_new_renter_affordability_uc_sfrcondomfr_sm_sa_month.csv',
     description: 'New Renter Affordability - Metro areas, all homes, smoothed, seasonally adjusted'
+  },
+
+  // ============================================================================
+  // HOME VALUE FORECASTS - ZHVF
+  // ============================================================================
+  {
+    id: 'zhvf-metro-growth',
+    category: 'HOME VALUE FORECASTS',
+    dataType: 'ZHVF Growth (MoM%, QoQ%, YoY%)',
+    geography: 'Metro',
+    datasetType: 'zhvf_growth',
+    propertyType: 'sfrcondo',
+    tier: '0.33_0.67',
+    smoothing: 'sm',
+    seasonalAdjustment: true,
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/zhvf_growth/Metro_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+    description: 'Home Value Forecast - Metro areas, 1m/3m/12m growth forecasts'
+  },
+  {
+    id: 'zhvf-zip-growth',
+    category: 'HOME VALUE FORECASTS',
+    dataType: 'ZHVF Growth (MoM%, QoQ%, YoY%)',
+    geography: 'ZIP',
+    datasetType: 'zhvf_growth',
+    propertyType: 'sfrcondo',
+    tier: '0.33_0.67',
+    smoothing: 'sm',
+    seasonalAdjustment: true,
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/zhvf_growth/Zip_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
+    description: 'Home Value Forecast - ZIP codes, 1m/3m/12m growth forecasts'
+  },
+
+  // ============================================================================
+  // RENTER DEMAND - ZORDI
+  // ============================================================================
+  {
+    id: 'zordi-metro',
+    category: 'RENTER DEMAND',
+    dataType: 'ZORDI: All Homes Plus Multifamily Time Series',
+    geography: 'Metro',
+    datasetType: 'zordi',
+    propertyType: 'sfrcondomfr',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/zordi/Metro_zordi_uc_sfrcondomfr_month.csv',
+    description: 'Renter Demand Index - Metro areas, all homes plus multifamily'
+  },
+
+  // ============================================================================
+  // RENTALS - ZORI (Additional geographies)
+  // ============================================================================
+  {
+    id: 'zori-zip-all-homes-sm',
+    category: 'RENTALS',
+    dataType: 'ZORI (Smoothed): All Homes Plus Multifamily Time Series ($)',
+    geography: 'ZIP',
+    datasetType: 'zori',
+    propertyType: 'sfrcondomfr',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv',
+    description: 'Zillow Observed Rent Index - ZIP codes, all homes plus multifamily, smoothed'
+  },
+
+  // ============================================================================
+  // FOR-SALE LISTINGS - Additional Metrics
+  // ============================================================================
+  {
+    id: 'new-listings-metro-sm-month',
+    category: 'FOR-SALE LISTINGS',
+    dataType: 'New Listings (Smooth, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'new_listings',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_listings/Metro_new_listings_uc_sfrcondo_sm_month.csv',
+    description: 'New Listings - Metro areas, all homes, smoothed, monthly'
+  },
+  {
+    id: 'pending-listings-metro-sm-month',
+    category: 'FOR-SALE LISTINGS',
+    dataType: 'Newly Pending Listings (Smoothed, All Homes Monthly)',
+    geography: 'Metro',
+    datasetType: 'new_pending',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_pending/Metro_new_pending_uc_sfrcondo_sm_month.csv',
+    description: 'Newly Pending Listings - Metro areas, all homes, smoothed, monthly'
+  },
+  {
+    id: 'median-list-price-metro-sm-month',
+    category: 'FOR-SALE LISTINGS',
+    dataType: 'Median List Price (Smoothed, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'mlp',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/mlp/Metro_mlp_uc_sfrcondo_sm_month.csv',
+    description: 'Median List Price - Metro areas, all homes, smoothed, monthly'
+  },
+
+  // ============================================================================
+  // SALES - Additional Metrics
+  // ============================================================================
+  {
+    id: 'sale-to-list-metro-sm-month',
+    category: 'SALES',
+    dataType: 'Median Sale-to-List Ratio (Smooth, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'median_sale_to_list',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/median_sale_to_list/Metro_median_sale_to_list_uc_sfrcondo_sm_month.csv',
+    description: 'Median Sale-to-List Ratio - Metro areas, all homes, smoothed, monthly'
+  },
+
+  // ============================================================================
+  // DAYS ON MARKET AND PRICE CUTS - Additional Metrics
+  // ============================================================================
+  {
+    id: 'days-to-close-metro-sm-month',
+    category: 'DAYS ON MARKET AND PRICE CUTS',
+    dataType: 'Median Days to Close (Smooth, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'median_days_to_close',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/median_days_to_close/Metro_median_days_to_close_uc_sfrcondo_sm_month.csv',
+    description: 'Median Days to Close - Metro areas, all homes, smoothed, monthly'
+  },
+  {
+    id: 'price-cut-share-metro-sm-month',
+    category: 'DAYS ON MARKET AND PRICE CUTS',
+    dataType: 'Share of Listings with a Price Cut (Smooth, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'perc_listings_price_cut',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/perc_listings_price_cut/Metro_perc_listings_price_cut_uc_sfrcondo_sm_month.csv',
+    description: 'Share of Listings with Price Cut - Metro areas, all homes, smoothed, monthly'
+  },
+  {
+    id: 'price-cut-amt-metro-sm-month',
+    category: 'DAYS ON MARKET AND PRICE CUTS',
+    dataType: 'Median Price Cut ($, Smoothed, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'med_listings_price_cut_amt',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/med_listings_price_cut_amt/Metro_med_listings_price_cut_amt_uc_sfrcondo_sm_month.csv',
+    description: 'Median Price Cut Amount ($) - Metro areas, all homes, smoothed, monthly'
+  },
+  {
+    id: 'price-cut-pct-metro-sm-month',
+    category: 'DAYS ON MARKET AND PRICE CUTS',
+    dataType: 'Median Price Cut (%, Smoothed, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'med_listings_price_cut_perc',
+    propertyType: 'sfrcondo',
+    smoothing: 'sm',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/med_listings_price_cut_perc/Metro_med_listings_price_cut_perc_uc_sfrcondo_sm_month.csv',
+    description: 'Median Price Cut Percent (%) - Metro areas, all homes, smoothed, monthly'
+  },
+
+  // ============================================================================
+  // NEW CONSTRUCTION - Additional Metrics
+  // ============================================================================
+  {
+    id: 'new-construction-price-per-sqft-metro',
+    category: 'NEW CONSTRUCTION',
+    dataType: 'New Construction Median Sale Price Per Sqft (Raw, All Homes, Monthly)',
+    geography: 'Metro',
+    datasetType: 'new_con_median_sale_price_per_sqft',
+    propertyType: 'sfrcondo',
+    frequency: 'month',
+    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/new_con_median_sale_price_per_sqft/Metro_new_con_median_sale_price_per_sqft_uc_sfrcondo_month.csv',
+    description: 'New Construction Median Sale Price Per Sqft - Metro areas, all homes, monthly'
   }
 ];

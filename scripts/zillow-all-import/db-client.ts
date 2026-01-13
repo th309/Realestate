@@ -46,8 +46,8 @@ export function getTableForGeography(geography: string): string {
   if (geoLower === 'state') return 'zillow_state';
   if (geoLower === 'metro' || geoLower === 'msa') return 'zillow_metro';
   if (geoLower === 'county') return 'zillow_county';
+  if (geoLower === 'city') return 'zillow_city';
   if (geoLower === 'zip') return 'zillow_zip';
-  if (geoLower === 'city') return 'zillow_metro'; // Cities go to metro table
   if (geoLower === 'united states' || geoLower === 'us') return 'zillow_metro';
 
   // Default to metro
