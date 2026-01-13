@@ -87,7 +87,7 @@ async function fetchRealtorMetric(
   state?: string
 ): Promise<HomeValues> {
   switch (metric) {
-    // Home Value metrics - from Realtor median_listing_price
+    // Home Value metrics - from Realtor median_listing_price (city from Zillow)
     case 'home_value':
     case 'list_price':
       switch (level) {
@@ -98,13 +98,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroHomeValues();
         case 'county':
           return api.getRealtorCountyHomeValues();
+        case 'city':
+          return state ? api.getCityHomeValues(state) : {};
         case 'zip':
           return api.getRealtorZipHomeValues(state);
         default:
           return {};
       }
 
-    // Home Value YoY - from Realtor median_listing_price_yy
+    // Home Value YoY - from Realtor median_listing_price_yy (no city data)
     case 'home_value_yoy':
       switch (level) {
         case 'state':
@@ -114,13 +116,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroHomeValueYoy();
         case 'county':
           return api.getRealtorCountyHomeValueYoy();
+        case 'city':
+          return {}; // No city YoY data available
         case 'zip':
           return api.getRealtorZipHomeValueYoy(state);
         default:
           return {};
       }
 
-    // Inventory - from Realtor active_listing_count
+    // Inventory - from Realtor active_listing_count (no city data)
     case 'for_sale_inventory':
       switch (level) {
         case 'state':
@@ -130,13 +134,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroInventory();
         case 'county':
           return api.getRealtorCountyInventory();
+        case 'city':
+          return {}; // No city inventory data
         case 'zip':
           return api.getRealtorZipInventory(state);
         default:
           return {};
       }
 
-    // Inventory YoY - from Realtor active_listing_count_yy
+    // Inventory YoY - from Realtor active_listing_count_yy (no city data)
     case 'inventory_yoy':
       switch (level) {
         case 'state':
@@ -146,13 +152,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroInventoryYoy();
         case 'county':
           return api.getRealtorCountyInventoryYoy();
+        case 'city':
+          return {}; // No city inventory YoY data
         case 'zip':
           return api.getRealtorZipInventoryYoy(state);
         default:
           return {};
       }
 
-    // Days on Market - from Realtor median_days_on_market
+    // Days on Market - from Realtor median_days_on_market (no city data)
     case 'days_on_market':
       switch (level) {
         case 'state':
@@ -162,13 +170,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroDom();
         case 'county':
           return api.getRealtorCountyDom();
+        case 'city':
+          return {}; // No city DOM data
         case 'zip':
           return api.getRealtorZipDom(state);
         default:
           return {};
       }
 
-    // New Listings - from Realtor new_listing_count
+    // New Listings - from Realtor new_listing_count (no city data)
     case 'new_listings':
       switch (level) {
         case 'state':
@@ -178,13 +188,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroNewListings();
         case 'county':
           return api.getRealtorCountyNewListings();
+        case 'city':
+          return {}; // No city new listings data
         case 'zip':
           return api.getRealtorZipNewListings(state);
         default:
           return {};
       }
 
-    // Pending Listings - from Realtor pending_listing_count
+    // Pending Listings - from Realtor pending_listing_count (no city data)
     case 'pending_listings':
       switch (level) {
         case 'state':
@@ -194,13 +206,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroPendingListings();
         case 'county':
           return api.getRealtorCountyPendingListings();
+        case 'city':
+          return {}; // No city pending listings data
         case 'zip':
           return api.getRealtorZipPendingListings(state);
         default:
           return {};
       }
 
-    // Price Cut % - from Realtor price_reduced_share
+    // Price Cut % - from Realtor price_reduced_share (no city data)
     case 'price_cut_pct':
       switch (level) {
         case 'state':
@@ -210,13 +224,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroPriceReduced();
         case 'county':
           return api.getRealtorCountyPriceReduced();
+        case 'city':
+          return {}; // No city price reduced data
         case 'zip':
           return api.getRealtorZipPriceReduced(state);
         default:
           return {};
       }
 
-    // Price per Sq Ft - from Realtor median_listing_price_per_square_foot
+    // Price per Sq Ft - from Realtor median_listing_price_per_square_foot (no city data)
     case 'price_per_sqft':
       switch (level) {
         case 'state':
@@ -226,13 +242,15 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroPricePerSqft();
         case 'county':
           return api.getRealtorCountyPricePerSqft();
+        case 'city':
+          return {}; // No city price per sqft data
         case 'zip':
           return api.getRealtorZipPricePerSqft(state);
         default:
           return {};
       }
 
-    // Pending Ratio - from Realtor pending_ratio
+    // Pending Ratio - from Realtor pending_ratio (no city data)
     case 'pending_ratio':
       switch (level) {
         case 'state':
@@ -242,6 +260,8 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroPendingRatio();
         case 'county':
           return api.getRealtorCountyPendingRatio();
+        case 'city':
+          return {}; // No city pending ratio data
         case 'zip':
           return api.getRealtorZipPendingRatio(state);
         default:
@@ -298,6 +318,8 @@ async function fetchRealtorMetric(
           return api.getRealtorMetroHomeValues();
         case 'county':
           return api.getRealtorCountyHomeValues();
+        case 'city':
+          return state ? api.getCityHomeValues(state) : {};
         case 'zip':
           return api.getRealtorZipHomeValues(state);
         default:
