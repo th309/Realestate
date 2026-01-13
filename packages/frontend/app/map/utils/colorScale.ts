@@ -18,13 +18,17 @@ export function getColorScale(
   // Forecast uses percentage scale - cool to warm (blue = decline, red = growth)
   if (isForecast) {
     return [
-      'interpolate', ['linear'], ['get', 'value'],
-      -5, '#3b82f6',    // Blue (cool - decline)
-      -2, '#06b6d4',    // Cyan
-      0, '#10b981',     // Green (flat)
-      2, '#fbbf24',     // Yellow
-      5, '#f97316',     // Orange
-      10, '#b91c1c',    // Dark red (hot - strong growth)
+      'case',
+      ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',  // No data - light gray
+      [
+        'interpolate', ['linear'], ['get', 'value'],
+        -5, '#3b82f6',    // Blue (cool - decline)
+        -2, '#06b6d4',    // Cyan
+        0, '#10b981',     // Green (flat)
+        2, '#fbbf24',     // Yellow
+        5, '#f97316',     // Orange
+        10, '#b91c1c',    // Dark red (hot - strong growth)
+      ]
     ];
   }
 
