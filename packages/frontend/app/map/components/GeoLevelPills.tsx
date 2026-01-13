@@ -22,7 +22,7 @@ export function GeoLevelPills({
   const isRentIndexMode = selectedMetric === 'rent_index';
   const isRenterDemandMode = selectedMetric === 'rent_for_houses';
 
-  const levels = ['National', 'State', 'Metro', 'County', 'City', 'Zip', 'Tract'] as const;
+  const levels = ['National', 'State', 'Metro', 'County', 'City', 'Zip'] as const;
 
   return (
     <div className="flex gap-2 items-center">
@@ -31,14 +31,12 @@ export function GeoLevelPills({
         const isActive = geoLevel === levelKey;
 
         // Determine if this level is disabled based on selected metric
-        // Tract doesn't have Zillow data yet, so disable it for Zillow metrics
         // City is only available for home value metrics (not forecast, rent, etc.)
-        const hasNoZillowData = levelKey === 'tract';
         const isCityDisabled = levelKey === 'city' && (isForecastMode || isRentIndexMode || isRenterDemandMode);
         const isForecastDisabled = isForecastMode && !['metro', 'zip'].includes(levelKey);
         const isRentIndexDisabled = isRentIndexMode && ['national', 'state'].includes(levelKey);
         const isRenterDemandDisabled = isRenterDemandMode && levelKey !== 'metro';
-        const isDisabled = hasNoZillowData || isCityDisabled || isForecastDisabled || isRentIndexDisabled || isRenterDemandDisabled;
+        const isDisabled = isCityDisabled || isForecastDisabled || isRentIndexDisabled || isRenterDemandDisabled;
 
         return (
           <button
@@ -61,8 +59,8 @@ export function GeoLevelPills({
         );
       })}
 
-      {/* State selector for state-specific levels (City, ZIP, Tract) */}
-      {['city', 'zip', 'tract'].includes(geoLevel) && (
+      {/* State selector for state-specific levels (City, ZIP) */}
+      {['city', 'zip'].includes(geoLevel) && (
         <select
           value={selectedState}
           onChange={(e) => onStateChange(e.target.value)}
