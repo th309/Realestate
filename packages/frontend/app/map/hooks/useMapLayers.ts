@@ -135,7 +135,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'county') {
     geojson.features.forEach((feature: any) => {
       const fips = feature.id || feature.properties.id;
-      feature.properties.value = homeValues[fips] || homeValues[String(parseInt(fips, 10))] || null;
+      feature.properties.value = homeValues[fips] ?? homeValues[String(parseInt(fips, 10))] ?? null;
       feature.properties.id = fips;
       const stateFips = fips?.substring(0, 2);
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
@@ -144,7 +144,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'metro') {
     geojson.features.forEach((feature: any) => {
       const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
-      feature.properties.value = homeValues[cbsaCode] || null;
+      feature.properties.value = homeValues[cbsaCode] ?? null;
       feature.properties.id = cbsaCode;
       feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
     });
@@ -157,14 +157,14 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
       // Try matching by name first (Zillow data), then by GEOID
-      feature.properties.value = homeValues[placeName] || homeValues[placeId] || null;
+      feature.properties.value = homeValues[placeName] ?? homeValues[placeId] ?? null;
       feature.properties.id = placeId;
       feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
     });
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
       const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
-      feature.properties.value = homeValues[zipCode] || null;
+      feature.properties.value = homeValues[zipCode] ?? null;
       feature.properties.id = zipCode;
       feature.properties.displayName = zipCode;
     });
@@ -176,7 +176,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const countyFips = feature.properties.COUNTYFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
-      feature.properties.value = homeValues[tractId] || null;
+      feature.properties.value = homeValues[tractId] ?? null;
       feature.properties.id = tractId;
       feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ''}`;
       feature.properties.countyFips = stateFips + countyFips;
