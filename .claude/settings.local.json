@@ -56,7 +56,8 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(wmic:*)",
-      "Bash(taskkill /F /FI \"WINDOWTITLE eq *ingest-all-zillow*\")"
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq *ingest-all-zillow*\")",
+      "Bash(npm i:*)"
     ]
   }
 }

@@ -151,31 +151,44 @@ export class ZillowService {
       targetDate = latestData?.period_date;
     }
 
-    // Query zillow_county table with date filter for efficiency
-    let query = this.supabase
-      .from('zillow_county')
-      .select('region_id, region_name, state_code, fips_code, value, period_date')
-      .eq('metric_name', 'zhvi');
+    // Supabase has a 1000 row limit per request, so we need to paginate
+    // to get all ~3200 counties
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
 
-    if (targetDate) {
-      query = query.eq('period_date', targetDate);
+    while (true) {
+      let query = this.supabase
+        .from('zillow_county')
+        .select('region_id, region_name, state_code, fips_code, value, period_date')
+        .eq('metric_name', 'zhvi');
+
+      if (targetDate) {
+        query = query.eq('period_date', targetDate);
+      }
+
+      if (stateFilter) {
+        query = query.eq('state_code', stateFilter.toUpperCase());
+      }
+
+      const { data: pageData, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        throw new Error(`Error fetching county home values: ${error.message}`);
+      }
+
+      if (!pageData || pageData.length === 0) break;
+
+      allData.push(...pageData);
+
+      if (pageData.length < pageSize) break; // Last page
+      page++;
     }
 
-    if (stateFilter) {
-      query = query.eq('state_code', stateFilter.toUpperCase());
-    }
-
-    // Set limit high enough to get all ~3200 counties
-    const { data: countyData, error } = await query.limit(5000);
-
-    if (error) {
-      throw new Error(`Error fetching county home values: ${error.message}`);
-    }
-
-    if (!countyData || countyData.length === 0) return [];
+    if (allData.length === 0) return [];
 
     // Map results (already filtered by date, no dedup needed)
-    const results: HomeValueData[] = countyData
+    const results: HomeValueData[] = allData
       .filter(record => record.fips_code) // Skip records without fips_code
       .map(record => ({
         region_id: String(record.region_id),
@@ -212,28 +225,41 @@ export class ZillowService {
       targetDate = latestData?.period_date;
     }
 
-    // Query with date filter for efficiency
-    let query = this.supabase
-      .from('zillow_zip')
-      .select('region_id, region_name, state_code, county_fips, value, period_date')
-      .eq('metric_name', 'zhvi')
-      .eq('state_code', stateFilter.toUpperCase());
+    // Supabase has a 1000 row limit per request, so we need to paginate
+    // for states with many ZIPs (CA has ~1700)
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
 
-    if (targetDate) {
-      query = query.eq('period_date', targetDate);
+    while (true) {
+      let query = this.supabase
+        .from('zillow_zip')
+        .select('region_id, region_name, state_code, county_fips, value, period_date')
+        .eq('metric_name', 'zhvi')
+        .eq('state_code', stateFilter.toUpperCase());
+
+      if (targetDate) {
+        query = query.eq('period_date', targetDate);
+      }
+
+      const { data: pageData, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        throw new Error(`Error fetching ZIP home values: ${error.message}`);
+      }
+
+      if (!pageData || pageData.length === 0) break;
+
+      allData.push(...pageData);
+
+      if (pageData.length < pageSize) break; // Last page
+      page++;
     }
 
-    // Set limit high enough for states with many ZIPs (CA has ~1700)
-    const { data: zipData, error } = await query.limit(3000);
-
-    if (error) {
-      throw new Error(`Error fetching ZIP home values: ${error.message}`);
-    }
-
-    if (!zipData || zipData.length === 0) return [];
+    if (allData.length === 0) return [];
 
     // Map results (already filtered by date, no dedup needed)
-    const results: HomeValueData[] = zipData.map(record => ({
+    const results: HomeValueData[] = allData.map(record => ({
       region_id: String(record.region_id),
       region_name: record.region_name,
       zip_code: record.region_name,
