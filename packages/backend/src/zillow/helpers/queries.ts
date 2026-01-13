@@ -295,17 +295,37 @@ export async function queryZordi(
 }
 
 /**
- * Query ZHVF (forecast) data (legacy-compatible)
- * Note: ZHVF not yet migrated, returns empty for now
+ * Query ZHVF (forecast) data from zillow_zhvf table
  */
 export async function queryZhvf(
   supabase: SupabaseClient,
   geography: string | string[]
 ): Promise<any[]> {
-  // ZHVF data not yet in new schema - return empty array
-  // TODO: Add forecast metrics to new tables or keep separate table
-  console.warn('queryZhvf: ZHVF data not yet migrated to new schema');
-  return [];
+  // Get the latest date in the forecast table
+  const { data: latestData } = await supabase
+    .from('zillow_zhvf')
+    .select('date')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!latestData?.date) return [];
+
+  // Build query for the specified geography types
+  const geoArray = Array.isArray(geography) ? geography : [geography];
+
+  const { data, error } = await supabase
+    .from('zillow_zhvf')
+    .select('region_id, date, forecast_1m, forecast_3m, forecast_12m, geography')
+    .in('geography', geoArray)
+    .eq('date', latestData.date);
+
+  if (error) {
+    console.error('Error fetching ZHVF data:', error.message);
+    return [];
+  }
+
+  return data || [];
 }
 
 /**
