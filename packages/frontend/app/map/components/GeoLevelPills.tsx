@@ -31,12 +31,14 @@ export function GeoLevelPills({
         const isActive = geoLevel === levelKey;
 
         // Determine if this level is disabled based on selected metric
-        // City and Tract don't have Zillow data yet, so disable them for Zillow metrics
-        const hasNoZillowData = ['city', 'tract'].includes(levelKey);
+        // Tract doesn't have Zillow data yet, so disable it for Zillow metrics
+        // City is only available for home value metrics (not forecast, rent, etc.)
+        const hasNoZillowData = levelKey === 'tract';
+        const isCityDisabled = levelKey === 'city' && (isForecastMode || isRentIndexMode || isRenterDemandMode);
         const isForecastDisabled = isForecastMode && !['metro', 'zip'].includes(levelKey);
         const isRentIndexDisabled = isRentIndexMode && ['national', 'state'].includes(levelKey);
         const isRenterDemandDisabled = isRenterDemandMode && levelKey !== 'metro';
-        const isDisabled = hasNoZillowData || isForecastDisabled || isRentIndexDisabled || isRenterDemandDisabled;
+        const isDisabled = hasNoZillowData || isCityDisabled || isForecastDisabled || isRentIndexDisabled || isRenterDemandDisabled;
 
         return (
           <button

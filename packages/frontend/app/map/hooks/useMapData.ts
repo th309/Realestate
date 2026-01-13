@@ -188,8 +188,14 @@ export function useMapData(): UseMapDataReturn {
           break;
 
         case 'city':
-          // City-level data not yet available - boundaries only
-          data = {};
+          if (state) {
+            if (isMetroOnlyMetric) {
+              data = {};
+            } else {
+              // City level only supports home values currently
+              data = await api.getCityHomeValues(state);
+            }
+          }
           break;
 
         case 'zip':

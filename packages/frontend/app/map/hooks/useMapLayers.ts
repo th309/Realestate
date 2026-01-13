@@ -151,11 +151,13 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'city') {
     geojson.features.forEach((feature: any) => {
       // TIGER Place files use GEOID (state FIPS + place FIPS) and NAME
+      // Zillow city data uses region_name (city name) as the key
       const placeId = feature.properties.GEOID || feature.properties.PLACEFP;
       const placeName = feature.properties.NAME || feature.properties.NAMELSAD || 'Unknown City';
       const stateFips = feature.properties.STATEFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
-      feature.properties.value = homeValues[placeId] || null;
+      // Try matching by name first (Zillow data), then by GEOID
+      feature.properties.value = homeValues[placeName] || homeValues[placeId] || null;
       feature.properties.id = placeId;
       feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
     });

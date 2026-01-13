@@ -117,6 +117,7 @@ export type StateHomeValues = Record<string, number>;
 export type MetroHomeValues = Record<string, number>;
 export type CountyHomeValues = Record<string, number>;
 export type ZipHomeValues = Record<string, number>;
+export type CityHomeValues = Record<string, number>;
 
 // Transform Zillow API response to Record<region_id, value> format
 function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_id' | 'region_name' | 'county_fips' | 'cbsa_code' = 'region_id'): Record<string, number> {
@@ -171,6 +172,12 @@ export const api = {
     const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/zips?state=${state}`);
     // ZIP codes use region_id (the ZIP code itself) as key
     return transformZillowResponse(response, 'region_id');
+  },
+
+  getCityHomeValues: async (state: string): Promise<CityHomeValues> => {
+    const response = await fetchAPI<ZillowApiResponse>(`/api/zillow/cities?state=${state}`);
+    // Cities use region_name as key to match tiger_places NAME
+    return transformZillowResponse(response, 'region_name');
   },
 
   // ZHVF Forecast endpoints - returns forecast % growth values
