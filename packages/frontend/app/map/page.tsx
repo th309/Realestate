@@ -81,6 +81,16 @@ export default function MapPage() {
     }
   }, [selectedMetric, geoLevel]);
 
+  // Handler to change geo level and clear state filter for levels that don't need it
+  const handleGeoLevelChange = useCallback((level: GeoLevel) => {
+    setGeoLevel(level);
+    // Clear state filter when switching to levels that don't require it
+    // (only city, zip, tract need state filtering)
+    if (!['city', 'zip', 'tract'].includes(level)) {
+      setSelectedState('');
+    }
+  }, []);
+
   // Sidebar resize handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -214,7 +224,7 @@ export default function MapPage() {
           geoLevel={geoLevel}
           selectedMetric={selectedMetric}
           selectedState={selectedState}
-          onGeoLevelChange={setGeoLevel}
+          onGeoLevelChange={handleGeoLevelChange}
           onStateChange={setSelectedState}
         />
       </header>
@@ -234,7 +244,7 @@ export default function MapPage() {
           viewMode={viewMode}
           onToggleCategory={toggleCategory}
           onSelectMetric={setSelectedMetric}
-          onGeoLevelChange={setGeoLevel}
+          onGeoLevelChange={handleGeoLevelChange}
           onForecastHorizonChange={setForecastHorizon}
           onRentIndexTypeChange={setRentIndexType}
           onRenterDemandTypeChange={setRenterDemandType}
