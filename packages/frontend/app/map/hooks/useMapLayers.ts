@@ -8,6 +8,9 @@ import type { GeoLevel, ForecastHorizon, HomeValues } from '../types';
 import { GEOJSON_SOURCES, FIPS_TO_STATE } from '../types';
 import { getColorScale } from '../utils';
 
+// API URL for backend
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 interface UseMapLayersProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
   popup: React.MutableRefObject<mapboxgl.Popup | null>;
@@ -87,18 +90,25 @@ function removeExistingLayers(map: mapboxgl.Map): void {
 }
 
 function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null {
+  // All GeoJSON now comes from the backend API
   if (geoLevel === 'state' || geoLevel === 'national') {
-    return GEOJSON_SOURCES.state;
+    return `${API_URL}${GEOJSON_SOURCES.state}`;
   } else if (geoLevel === 'county') {
-    return GEOJSON_SOURCES.county;
+    // Use state-specific endpoint if state selected, otherwise all counties
+    if (selectedState) {
+      return `${API_URL}${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`;
+    }
+    return `${API_URL}${GEOJSON_SOURCES.county}`;
   } else if (geoLevel === 'metro') {
-    return GEOJSON_SOURCES.metro;
+    return `${API_URL}${GEOJSON_SOURCES.metro}`;
   } else if (geoLevel === 'city' && selectedState) {
-    return `/geojson/place/${selectedState.toLowerCase()}.json`;
+    return `${API_URL}${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`;
   } else if (geoLevel === 'zip' && selectedState) {
-    return `/geojson/zcta/${selectedState.toLowerCase()}.json`;
+    return `${API_URL}${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`;
   } else if (geoLevel === 'tract' && selectedState) {
-    return `/geojson/tract/${selectedState.toLowerCase()}.json`;
+    // Tracts not yet available - table is empty
+    console.warn('Tract data not available');
+    return null;
   }
   return null;
 }

@@ -6,6 +6,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { MarketsModule } from './markets/markets.module';
 import { ZillowModule } from './zillow/zillow.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { GeographyModule } from './geography/geography.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ScoringModule } from './scoring/scoring.module';
     MarketsModule,
     ZillowModule,
     ScoringModule,
+    GeographyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -65,6 +65,17 @@ export class ZillowController {
     };
   }
 
+  @Get('cities')
+  async getCityHomeValues(@Query('state') state?: string) {
+    const data = await this.zillowService.getCityHomeValues(state);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'City',
+      data,
+    };
+  }
+
   @Get('dates')
   async getAvailableDates(@Query('geography') geography: string = 'State') {
     const dates = await this.zillowService.getAvailableDates(geography);

@@ -48,10 +48,14 @@ export interface SearchResult {
 }
 
 // GeoJSON sources for different geography levels
+// These are API endpoint paths - prepend NEXT_PUBLIC_API_URL at runtime
 export const GEOJSON_SOURCES = {
-  state: 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
-  county: 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json',
-  metro: '/geojson/cbsa_2023.json',
+  state: '/api/geography/states',
+  county: '/api/geography/counties',
+  metro: '/api/geography/metros',
+  // State-specific endpoints (append /:state)
+  city: '/api/geography/cities',
+  zip: '/api/geography/zips',
 };
 
 // FIPS code to state abbreviation mapping
