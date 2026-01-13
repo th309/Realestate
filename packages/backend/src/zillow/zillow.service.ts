@@ -85,18 +85,34 @@ export class ZillowService {
   }
 
   async getMetroHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    // Query zillow_metro table directly - it has cbsa_code and region_name built in
+    // First get the latest date if not provided
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestData } = await this.supabase
+        .from('zillow_metro')
+        .select('period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestData?.period_date;
+    }
+
+    // Query zillow_metro table directly - filter by date for efficiency
     let query = this.supabase
       .from('zillow_metro')
       .select('region_id, region_name, state_code, cbsa_code, value, period_date')
-      .eq('metric_name', 'zhvi')
-      .order('period_date', { ascending: false });
+      .eq('metric_name', 'zhvi');
+
+    if (targetDate) {
+      query = query.eq('period_date', targetDate);
+    }
 
     if (stateFilter) {
       query = query.eq('state_code', stateFilter.toUpperCase());
     }
 
-    const { data: metroData, error } = await query;
+    const { data: metroData, error } = await query.limit(2000);
 
     if (error) {
       throw new Error(`Error fetching metro home values: ${error.message}`);
@@ -104,18 +120,10 @@ export class ZillowService {
 
     if (!metroData || metroData.length === 0) return [];
 
-    // Get the most recent value per metro (data is ordered by date desc)
-    const seenMetros = new Set<number>();
-    const results: HomeValueData[] = [];
-
-    for (const record of metroData) {
-      if (seenMetros.has(record.region_id)) continue;
-      seenMetros.add(record.region_id);
-
-      // Skip records without cbsa_code (like "United States" aggregate)
-      if (!record.cbsa_code) continue;
-
-      results.push({
+    // Map results (already filtered by date, no dedup needed)
+    const results: HomeValueData[] = metroData
+      .filter(record => record.cbsa_code) // Skip records without cbsa_code
+      .map(record => ({
         region_id: String(record.region_id),
         region_name: record.region_name,
         cbsa_code: record.cbsa_code,
@@ -124,8 +132,7 @@ export class ZillowService {
         date: record.period_date,
         property_type: 'sfrcondo',
         geography: 'Metro',
-      });
-    }
+      }));
 
     return results.sort((a, b) => b.value - a.value);
   }
@@ -222,18 +229,32 @@ export class ZillowService {
   }
 
   async getCityHomeValues(stateFilter?: string): Promise<HomeValueData[]> {
-    // Query zillow_city table directly - it has region_name (city name) and state_code built in
-    let query = this.supabase
+    // City data requires a state filter due to large dataset (5M+ records)
+    if (!stateFilter) {
+      return []; // Return empty - cities require state filter
+    }
+
+    // First get the latest date
+    const { data: latestData } = await this.supabase
+      .from('zillow_city')
+      .select('period_date')
+      .eq('metric_name', 'zhvi')
+      .eq('state_code', stateFilter.toUpperCase())
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    const targetDate = latestData?.period_date;
+    if (!targetDate) return [];
+
+    // Query zillow_city table - filter by state AND date for efficiency
+    const { data: cityData, error } = await this.supabase
       .from('zillow_city')
       .select('region_id, region_name, state_code, metro_region_id, value, period_date')
       .eq('metric_name', 'zhvi')
-      .order('period_date', { ascending: false });
-
-    if (stateFilter) {
-      query = query.eq('state_code', stateFilter.toUpperCase());
-    }
-
-    const { data: cityData, error } = await query;
+      .eq('state_code', stateFilter.toUpperCase())
+      .eq('period_date', targetDate)
+      .limit(5000);
 
     if (error) {
       throw new Error(`Error fetching city home values: ${error.message}`);
@@ -241,25 +262,17 @@ export class ZillowService {
 
     if (!cityData || cityData.length === 0) return [];
 
-    // Get the most recent value per city (data is ordered by date desc)
-    const seenCities = new Set<number>();
-    const results: HomeValueData[] = [];
-
-    for (const record of cityData) {
-      if (seenCities.has(record.region_id)) continue;
-      seenCities.add(record.region_id);
-
-      results.push({
-        region_id: String(record.region_id),
-        region_name: record.region_name,
-        state_abbrev: record.state_code,
-        state_name: null,
-        value: Number(record.value),
-        date: record.period_date,
-        property_type: 'sfrcondo',
-        geography: 'City',
-      });
-    }
+    // Map results (already filtered by date, no dedup needed)
+    const results: HomeValueData[] = cityData.map(record => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      state_abbrev: record.state_code,
+      state_name: null,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: 'sfrcondo',
+      geography: 'City',
+    }));
 
     return results.sort((a, b) => b.value - a.value);
   }
