@@ -3,9 +3,14 @@
  *
  * Categories are organized by view mode (homebuyer/investor) with some shared categories.
  * Market Trends has nested sub-sections for Supply, Velocity, and Pricing Dynamics.
+ *
+ * Data Source Strategy (Realtor-first):
+ * - Realtor: Primary source for listings, inventory, DOM, price dynamics (best coverage)
+ * - Zillow: Specialty data - rent, forecasts, affordability, new construction
+ * - Calculated: Derived metrics using formulas from base data
  */
 
-import type { MetricCategory, ViewMode } from '../types';
+import type { MetricCategory, ViewMode, DataSource } from '../types';
 import {
   StarIcon, AttachMoneyIcon, ShowChartIcon, PeopleIcon,
   TrendingIcon, AnalyticsIcon
@@ -20,22 +25,22 @@ const EconomicIcon = () => (
 
 // Popular Data metrics for Homebuyer/Renter view
 const HOMEBUYER_POPULAR_METRICS = [
-  { id: 'home_value', name: 'Home Value' },
-  { id: 'home_value_yoy', name: 'Home Value Growth (YoY)' },
-  { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true },
-  { id: 'for_sale_inventory', name: 'For Sale Inventory' },
-  { id: 'days_on_market', name: 'Days on Market' },
-  { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true },
+  { id: 'home_value', name: 'Home Value', dataSource: 'realtor' as DataSource },
+  { id: 'home_value_yoy', name: 'Home Value Growth (YoY)', dataSource: 'realtor' as DataSource },
+  { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true, dataSource: 'zillow' as DataSource },
+  { id: 'for_sale_inventory', name: 'For Sale Inventory', dataSource: 'realtor' as DataSource },
+  { id: 'days_on_market', name: 'Days on Market', dataSource: 'realtor' as DataSource },
+  { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true, dataSource: 'zillow' as DataSource },
 ];
 
 // Popular Data metrics for Investor view
 const INVESTOR_POPULAR_METRICS = [
-  { id: 'cap_rate', name: 'Cap Rate' },
-  { id: 'rent_index', name: 'Rent Index' },
-  { id: 'rent_for_houses', name: 'Renter Demand Index' },
-  { id: 'home_value_yoy', name: 'Home Value Growth (YoY)' },
-  { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true },
-  { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true },
+  { id: 'cap_rate', name: 'Cap Rate', dataSource: 'calculated' as DataSource },
+  { id: 'rent_index', name: 'Rent Index', dataSource: 'zillow' as DataSource },
+  { id: 'rent_for_houses', name: 'Renter Demand Index', dataSource: 'zillow' as DataSource },
+  { id: 'home_value_yoy', name: 'Home Value Growth (YoY)', dataSource: 'realtor' as DataSource },
+  { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true, dataSource: 'census' as DataSource },
+  { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
 ];
 
 // Helper to get Popular Data category based on view mode
@@ -55,19 +60,19 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
     name: 'Home Price & Affordability',
     icon: <AttachMoneyIcon />,
     metrics: [
-      { id: 'home_value', name: 'Home Value' },
-      { id: 'home_value_yoy', name: 'Home Value Growth (YoY)' },
-      { id: 'home_value_5yr', name: 'Home Value Growth (5-Year)', isPremium: true },
-      { id: 'home_value_mom', name: 'Home Value Growth (MoM)', isPremium: true },
-      { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true },
-      { id: 'sfh_value', name: 'Single Family Value', isPremium: true },
-      { id: 'sfh_value_yoy', name: 'Single Family Value Growth (YoY)', isPremium: true },
-      { id: 'condo_value', name: 'Condo Value', isPremium: true },
-      { id: 'condo_value_yoy', name: 'Condo Value Growth (YoY)', isPremium: true },
-      { id: 'income_to_buy', name: 'Income Needed to Buy', isNew: true },
-      { id: 'affordable_home_price', name: 'Affordable Home Price', isNew: true },
-      { id: 'years_to_save', name: 'Years to Save (Down Payment)', isPremium: true, isNew: true },
-      { id: 'homeowner_affordability', name: 'Homeowner Affordability %', isPremium: true, isNew: true },
+      { id: 'home_value', name: 'Home Value', dataSource: 'realtor' as DataSource },
+      { id: 'home_value_yoy', name: 'Home Value Growth (YoY)', dataSource: 'realtor' as DataSource },
+      { id: 'home_value_5yr', name: 'Home Value Growth (5-Year)', isPremium: true, dataSource: 'calculated' as DataSource },
+      { id: 'home_value_mom', name: 'Home Value Growth (MoM)', isPremium: true, dataSource: 'realtor' as DataSource },
+      { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'sfh_value', name: 'Single Family Value', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'sfh_value_yoy', name: 'Single Family Value Growth (YoY)', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'condo_value', name: 'Condo Value', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'condo_value_yoy', name: 'Condo Value Growth (YoY)', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'income_to_buy', name: 'Income Needed to Buy', isNew: true, dataSource: 'zillow' as DataSource },
+      { id: 'affordable_home_price', name: 'Affordable Home Price', isNew: true, dataSource: 'zillow' as DataSource },
+      { id: 'years_to_save', name: 'Years to Save (Down Payment)', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
+      { id: 'homeowner_affordability', name: 'Homeowner Affordability %', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
     ],
   },
   {
@@ -79,42 +84,42 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
         id: 'supply',
         name: 'Supply',
         metrics: [
-          { id: 'for_sale_inventory', name: 'For Sale Inventory' },
-          { id: 'inventory_yoy', name: 'Inventory Growth (YoY)' },
-          { id: 'inventory_surplus', name: 'Inventory Surplus/Deficit', isPremium: true },
-          { id: 'new_listings', name: 'New Listings', isPremium: true },
-          { id: 'pending_listings', name: 'Pending Listings', isPremium: true },
+          { id: 'for_sale_inventory', name: 'For Sale Inventory', dataSource: 'realtor' as DataSource },
+          { id: 'inventory_yoy', name: 'Inventory Growth (YoY)', dataSource: 'realtor' as DataSource },
+          { id: 'inventory_surplus', name: 'Inventory Surplus/Deficit', isPremium: true, dataSource: 'calculated' as DataSource },
+          { id: 'new_listings', name: 'New Listings', isPremium: true, dataSource: 'realtor' as DataSource },
+          { id: 'pending_listings', name: 'Pending Listings', isPremium: true, dataSource: 'realtor' as DataSource },
         ],
       },
       {
         id: 'velocity',
         name: 'Velocity',
         metrics: [
-          { id: 'days_on_market', name: 'Days on Market' },
-          { id: 'days_to_close', name: 'Days to Close', isNew: true },
-          { id: 'home_sales', name: 'Home Sales', isPremium: true },
-          { id: 'sales_yoy', name: 'Sales Growth (YoY)', isPremium: true },
-          { id: 'sale_to_list', name: 'Sale-to-List Ratio', isPremium: true },
+          { id: 'days_on_market', name: 'Days on Market', dataSource: 'realtor' as DataSource },
+          { id: 'days_to_close', name: 'Days to Close', isNew: true, dataSource: 'zillow' as DataSource },
+          { id: 'home_sales', name: 'Home Sales', isPremium: true, dataSource: 'zillow' as DataSource },
+          { id: 'sales_yoy', name: 'Sales Growth (YoY)', isPremium: true, dataSource: 'zillow' as DataSource },
+          { id: 'sale_to_list', name: 'Sale-to-List Ratio', isPremium: true, dataSource: 'zillow' as DataSource },
         ],
       },
       {
         id: 'pricing_dynamics',
         name: 'Pricing Dynamics',
         metrics: [
-          { id: 'price_cut_pct', name: 'Price Cut %', isPremium: true },
-          { id: 'price_cut_amount', name: 'Median Price Cut ($)', isPremium: true, isNew: true },
-          { id: 'list_price', name: 'Median List Price', isPremium: true },
-          { id: 'sale_price', name: 'Median Sale Price', isPremium: true },
-          { id: 'price_per_sqft', name: 'Price per Sq Ft', isPremium: true },
+          { id: 'price_cut_pct', name: 'Price Cut %', isPremium: true, dataSource: 'realtor' as DataSource },
+          { id: 'price_cut_amount', name: 'Median Price Cut ($)', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
+          { id: 'list_price', name: 'Median List Price', isPremium: true, dataSource: 'realtor' as DataSource },
+          { id: 'sale_price', name: 'Median Sale Price', isPremium: true, dataSource: 'zillow' as DataSource },
+          { id: 'price_per_sqft', name: 'Price per Sq Ft', isPremium: true, dataSource: 'realtor' as DataSource },
         ],
       },
       {
         id: 'new_construction',
         name: 'New Construction',
         metrics: [
-          { id: 'new_construction_sales', name: 'New Construction Sales', isNew: true },
-          { id: 'new_construction_price', name: 'New Construction Price', isNew: true },
-          { id: 'new_construction_ppsf', name: 'New Construction $/Sq Ft', isPremium: true, isNew: true },
+          { id: 'new_construction_sales', name: 'New Construction Sales', isNew: true, dataSource: 'zillow' as DataSource },
+          { id: 'new_construction_price', name: 'New Construction Price', isNew: true, dataSource: 'zillow' as DataSource },
+          { id: 'new_construction_ppsf', name: 'New Construction $/Sq Ft', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
         ],
       },
     ],
@@ -124,12 +129,12 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
     name: 'Demographic',
     icon: <PeopleIcon />,
     metrics: [
-      { id: 'population', name: 'Population' },
-      { id: 'population_growth', name: 'Population Growth', isPremium: true },
-      { id: 'median_income', name: 'Median Household Income' },
-      { id: 'income_growth', name: 'Income Growth', isPremium: true },
-      { id: 'median_age', name: 'Median Age', isPremium: true },
-      { id: 'homeownership_rate', name: 'Homeownership Rate', isPremium: true },
+      { id: 'population', name: 'Population', dataSource: 'census' as DataSource },
+      { id: 'population_growth', name: 'Population Growth', isPremium: true, dataSource: 'census' as DataSource },
+      { id: 'median_income', name: 'Median Household Income', dataSource: 'census' as DataSource },
+      { id: 'income_growth', name: 'Income Growth', isPremium: true, dataSource: 'census' as DataSource },
+      { id: 'median_age', name: 'Median Age', isPremium: true, dataSource: 'census' as DataSource },
+      { id: 'homeownership_rate', name: 'Homeownership Rate', isPremium: true, dataSource: 'census' as DataSource },
     ],
   },
   {
@@ -137,10 +142,10 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
     name: 'Economic Context',
     icon: <EconomicIcon />,
     metrics: [
-      { id: 'unemployment_rate', name: 'Unemployment Rate' },
-      { id: 'job_growth', name: 'Job Growth', isPremium: true },
-      { id: 'gdp_growth', name: 'GDP Growth', isPremium: true },
-      { id: 'cost_of_living', name: 'Cost of Living Index', isPremium: true },
+      { id: 'unemployment_rate', name: 'Unemployment Rate', dataSource: 'fred' as DataSource },
+      { id: 'job_growth', name: 'Job Growth', isPremium: true, dataSource: 'fred' as DataSource },
+      { id: 'gdp_growth', name: 'GDP Growth', isPremium: true, dataSource: 'fred' as DataSource },
+      { id: 'cost_of_living', name: 'Cost of Living Index', isPremium: true, dataSource: 'census' as DataSource },
     ],
   },
 ];
@@ -153,15 +158,15 @@ export const INVESTOR_CATEGORIES: MetricCategory[] = [
     icon: <TrendingIcon />,
     viewMode: 'investor',
     metrics: [
-      { id: 'rent_index', name: 'Rent Index' },
-      { id: 'rent_for_houses', name: 'Renter Demand Index' },
-      { id: 'cap_rate', name: 'Cap Rate', isPremium: true },
-      { id: 'gross_yield', name: 'Gross Yield', isPremium: true },
-      { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true },
-      { id: 'rent_growth', name: 'Rent Growth (YoY)', isPremium: true },
-      { id: 'rent_to_price', name: 'Rent-to-Price Ratio', isPremium: true },
-      { id: 'income_to_rent', name: 'Income Needed to Rent', isNew: true },
-      { id: 'renter_affordability', name: 'Renter Affordability %', isPremium: true, isNew: true },
+      { id: 'rent_index', name: 'Rent Index', dataSource: 'zillow' as DataSource },
+      { id: 'rent_for_houses', name: 'Renter Demand Index', dataSource: 'zillow' as DataSource },
+      { id: 'cap_rate', name: 'Cap Rate', isPremium: true, dataSource: 'calculated' as DataSource },
+      { id: 'gross_yield', name: 'Gross Yield', isPremium: true, dataSource: 'calculated' as DataSource },
+      { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true, dataSource: 'census' as DataSource },
+      { id: 'rent_growth', name: 'Rent Growth (YoY)', isPremium: true, dataSource: 'zillow' as DataSource },
+      { id: 'rent_to_price', name: 'Rent-to-Price Ratio', isPremium: true, dataSource: 'calculated' as DataSource },
+      { id: 'income_to_rent', name: 'Income Needed to Rent', isNew: true, dataSource: 'zillow' as DataSource },
+      { id: 'renter_affordability', name: 'Renter Affordability %', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
     ],
   },
 ];
@@ -173,10 +178,10 @@ export const SCORES_CATEGORY: MetricCategory = {
   icon: <AnalyticsIcon />,
   isNew: true,
   metrics: [
-    { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true },
-    { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true },
-    { id: 'market_health', name: 'Market Health Score', isPremium: true, isNew: true },
-    { id: 'investment_score', name: 'Investment Score', isPremium: true, isNew: true },
+    { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true, dataSource: 'zillow' as DataSource },
+    { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
+    { id: 'market_health', name: 'Market Health Score', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
+    { id: 'investment_score', name: 'Investment Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
   ],
 };
 

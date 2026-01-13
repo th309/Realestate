@@ -5,8 +5,10 @@ import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 import { MarketsModule } from './markets/markets.module';
 import { ZillowModule } from './zillow/zillow.module';
+import { RealtorModule } from './realtor/realtor.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { GeographyModule } from './geography/geography.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -17,8 +19,10 @@ import { GeographyModule } from './geography/geography.module';
     SupabaseModule,
     MarketsModule,
     ZillowModule,
+    RealtorModule,
     ScoringModule,
     GeographyModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

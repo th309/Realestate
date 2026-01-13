@@ -18,101 +18,346 @@ interface UseMapDataReturn {
   ) => Promise<void>;
 }
 
-// Metrics that are only available at Metro level
-const METRO_ONLY_METRICS = new Set([
-  'for_sale_inventory',
-  'inventory_yoy',
-  'new_listings',
-  'pending_listings',
-  'days_on_market',
-  'days_to_close',
-  'home_sales',
-  'sales_yoy',
-  'sale_to_list',
-  'price_cut_pct',
-  'price_cut_amount',
-  'list_price',
-  'sale_price',
-  'price_per_sqft',
-  'new_construction_sales',
-  'new_construction_price',
-  'new_construction_ppsf',
+// Metrics that are ONLY available from Zillow (specialty data)
+const ZILLOW_ONLY_METRICS = new Set([
+  // Rent metrics (Zillow ZORI)
+  'rent_index',
+  'rent_growth',
+  // Renter demand (Zillow ZORDI)
+  'rent_for_houses',
+  // Forecasts (Zillow ZHVF)
+  'home_price_forecast',
+  // Affordability (Zillow metro only)
   'income_to_buy',
   'income_to_rent',
   'affordable_home_price',
   'years_to_save',
   'homeowner_affordability',
   'renter_affordability',
+  // New construction (Zillow metro only)
+  'new_construction_sales',
+  'new_construction_price',
+  'new_construction_ppsf',
+  // Sale prices (Zillow metro only)
+  'sale_price',
+  'sale_to_list',
+  'home_sales',
+  'sales_yoy',
+  'days_to_close',
+  // Market heat (Zillow metro only)
+  'market_health',
+  // SFH/Condo specific (Zillow)
+  'sfh_value',
+  'sfh_value_yoy',
+  'condo_value',
+  'condo_value_yoy',
+]);
+
+// Zillow metrics that are METRO-ONLY
+const ZILLOW_METRO_ONLY = new Set([
+  'income_to_buy',
+  'income_to_rent',
+  'affordable_home_price',
+  'years_to_save',
+  'homeowner_affordability',
+  'renter_affordability',
+  'new_construction_sales',
+  'new_construction_price',
+  'new_construction_ppsf',
+  'sale_price',
+  'sale_to_list',
+  'home_sales',
+  'sales_yoy',
+  'days_to_close',
   'market_health',
 ]);
 
-// Helper to fetch metro-level data for a specific metric
-async function fetchMetroMetric(metric: string, rentType: string, demandType: string, horizon?: string): Promise<HomeValues> {
+// Hotness metrics only available at Metro/County/ZIP from Realtor
+const REALTOR_HOTNESS_METRICS = new Set([
+  'hotness_score',
+  'hotness_rank',
+  'supply_score',
+  'demand_score',
+]);
+
+// Fetch Realtor data based on metric and geographic level
+async function fetchRealtorMetric(
+  level: GeoLevel,
+  metric: string,
+  state?: string
+): Promise<HomeValues> {
   switch (metric) {
-    // Home Value metrics (from zillow_zhvi)
+    // Home Value metrics - from Realtor median_listing_price
     case 'home_value':
+    case 'list_price':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateHomeValues();
+        case 'metro':
+          return api.getRealtorMetroHomeValues();
+        case 'county':
+          return api.getRealtorCountyHomeValues();
+        case 'zip':
+          return api.getRealtorZipHomeValues(state);
+        default:
+          return {};
+      }
+
+    // Home Value YoY - from Realtor median_listing_price_yy
     case 'home_value_yoy':
-    case 'home_value_5yr':
-    case 'home_value_mom':
-    case 'sfh_value':
-    case 'sfh_value_yoy':
-    case 'condo_value':
-    case 'condo_value_yoy':
-      return api.getMetroHomeValues();
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateHomeValueYoy();
+        case 'metro':
+          return api.getRealtorMetroHomeValueYoy();
+        case 'county':
+          return api.getRealtorCountyHomeValueYoy();
+        case 'zip':
+          return api.getRealtorZipHomeValueYoy(state);
+        default:
+          return {};
+      }
 
-    // Forecast metrics (from zillow_zhvf)
-    case 'home_price_forecast':
-      return api.getMetroForecast(horizon);
+    // Inventory - from Realtor active_listing_count
+    case 'for_sale_inventory':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateInventory();
+        case 'metro':
+          return api.getRealtorMetroInventory();
+        case 'county':
+          return api.getRealtorCountyInventory();
+        case 'zip':
+          return api.getRealtorZipInventory(state);
+        default:
+          return {};
+      }
 
+    // Inventory YoY - from Realtor active_listing_count_yy
+    case 'inventory_yoy':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateInventoryYoy();
+        case 'metro':
+          return api.getRealtorMetroInventoryYoy();
+        case 'county':
+          return api.getRealtorCountyInventoryYoy();
+        case 'zip':
+          return api.getRealtorZipInventoryYoy(state);
+        default:
+          return {};
+      }
+
+    // Days on Market - from Realtor median_days_on_market
+    case 'days_on_market':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateDom();
+        case 'metro':
+          return api.getRealtorMetroDom();
+        case 'county':
+          return api.getRealtorCountyDom();
+        case 'zip':
+          return api.getRealtorZipDom(state);
+        default:
+          return {};
+      }
+
+    // New Listings - from Realtor new_listing_count
+    case 'new_listings':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateNewListings();
+        case 'metro':
+          return api.getRealtorMetroNewListings();
+        case 'county':
+          return api.getRealtorCountyNewListings();
+        case 'zip':
+          return api.getRealtorZipNewListings(state);
+        default:
+          return {};
+      }
+
+    // Pending Listings - from Realtor pending_listing_count
+    case 'pending_listings':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStatePendingListings();
+        case 'metro':
+          return api.getRealtorMetroPendingListings();
+        case 'county':
+          return api.getRealtorCountyPendingListings();
+        case 'zip':
+          return api.getRealtorZipPendingListings(state);
+        default:
+          return {};
+      }
+
+    // Price Cut % - from Realtor price_reduced_share
+    case 'price_cut_pct':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStatePriceReduced();
+        case 'metro':
+          return api.getRealtorMetroPriceReduced();
+        case 'county':
+          return api.getRealtorCountyPriceReduced();
+        case 'zip':
+          return api.getRealtorZipPriceReduced(state);
+        default:
+          return {};
+      }
+
+    // Price per Sq Ft - from Realtor median_listing_price_per_square_foot
+    case 'price_per_sqft':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStatePricePerSqft();
+        case 'metro':
+          return api.getRealtorMetroPricePerSqft();
+        case 'county':
+          return api.getRealtorCountyPricePerSqft();
+        case 'zip':
+          return api.getRealtorZipPricePerSqft(state);
+        default:
+          return {};
+      }
+
+    // Pending Ratio - from Realtor pending_ratio
+    case 'pending_ratio':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStatePendingRatio();
+        case 'metro':
+          return api.getRealtorMetroPendingRatio();
+        case 'county':
+          return api.getRealtorCountyPendingRatio();
+        case 'zip':
+          return api.getRealtorZipPendingRatio(state);
+        default:
+          return {};
+      }
+
+    // Hotness Score - from Realtor (metro/county/zip only)
+    case 'hotness_score':
+    case 'hotness_rank':
+      switch (level) {
+        case 'metro':
+          return api.getRealtorMetroHotness();
+        case 'county':
+          return api.getRealtorCountyHotness();
+        case 'zip':
+          return api.getRealtorZipHotness(state);
+        default:
+          return {}; // Not available at state/national
+      }
+
+    // Supply Score - from Realtor (metro/county/zip only)
+    case 'supply_score':
+      switch (level) {
+        case 'metro':
+          return api.getRealtorMetroSupplyScore();
+        case 'county':
+          return api.getRealtorCountySupplyScore();
+        case 'zip':
+          return api.getRealtorZipSupplyScore(state);
+        default:
+          return {};
+      }
+
+    // Demand Score - from Realtor (metro/county/zip only)
+    case 'demand_score':
+      switch (level) {
+        case 'metro':
+          return api.getRealtorMetroDemandScore();
+        case 'county':
+          return api.getRealtorCountyDemandScore();
+        case 'zip':
+          return api.getRealtorZipDemandScore(state);
+        default:
+          return {};
+      }
+
+    // Default to home values
+    default:
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateHomeValues();
+        case 'metro':
+          return api.getRealtorMetroHomeValues();
+        case 'county':
+          return api.getRealtorCountyHomeValues();
+        case 'zip':
+          return api.getRealtorZipHomeValues(state);
+        default:
+          return {};
+      }
+  }
+}
+
+// Fetch Zillow specialty data (rent, forecasts, affordability, etc.)
+async function fetchZillowMetric(
+  level: GeoLevel,
+  metric: string,
+  state?: string,
+  rentType: string = 'all',
+  demandType: string = 'all',
+  horizon?: string
+): Promise<HomeValues> {
+  // Metro-only Zillow metrics
+  if (ZILLOW_METRO_ONLY.has(metric) && level !== 'metro') {
+    return {};
+  }
+
+  switch (metric) {
     // Rent metrics (from zillow_zori)
     case 'rent_index':
     case 'rent_growth':
-      return api.getMetroRent(rentType);
+      switch (level) {
+        case 'metro':
+          return api.getMetroRent(rentType);
+        case 'county':
+          return api.getCountyRent(rentType);
+        case 'zip':
+          return state ? api.getZipRent(state, rentType) : {};
+        default:
+          return {};
+      }
 
-    // Renter demand metrics (from zillow_zordi)
+    // Renter demand (from zillow_zordi)
     case 'rent_for_houses':
-      return api.getMetroRenterDemand(demandType);
+      switch (level) {
+        case 'metro':
+          return api.getMetroRenterDemand(demandType);
+        case 'zip':
+          return state ? api.getZipRenterDemand(state, demandType) : {};
+        default:
+          return {};
+      }
 
-    // Market Indicators - Supply (from zillow_inventory, zillow_new_listings, zillow_pending_listings)
-    case 'for_sale_inventory':
-    case 'inventory_yoy':
-      return api.getMetroInventory();
-    case 'new_listings':
-      return api.getMetroNewListings();
-    case 'pending_listings':
-      return api.getMetroPendingListings();
+    // Forecasts (from zillow_zhvf)
+    case 'home_price_forecast':
+      switch (level) {
+        case 'metro':
+          return api.getMetroForecast(horizon);
+        case 'zip':
+          return state ? api.getZipForecast(state, horizon) : {};
+        default:
+          return {};
+      }
 
-    // Market Indicators - Velocity (from zillow_days_to_pending, zillow_days_to_close, zillow_sales_count, zillow_sale_to_list)
-    case 'days_on_market':
-      return api.getMetroDaysToPending();
-    case 'days_to_close':
-      return api.getMetroDaysToClose();
-    case 'home_sales':
-    case 'sales_yoy':
-      return api.getMetroSalesCount();
-    case 'sale_to_list':
-      return api.getMetroSaleToList();
-
-    // Market Indicators - Pricing (from zillow_median_list_price, zillow_sales_price, zillow_price_cut_*)
-    case 'list_price':
-      return api.getMetroListPrice();
-    case 'sale_price':
-      return api.getMetroSalePrice();
-    case 'price_cut_pct':
-      return api.getMetroPriceCutShare();
-    case 'price_cut_amount':
-      return api.getMetroPriceCutAmount();
-
-    // New Construction (from zillow_new_construction_*)
-    case 'new_construction_sales':
-      return api.getMetroNewConstructionSales();
-    case 'new_construction_price':
-      return api.getMetroNewConstructionPrice();
-    case 'new_construction_ppsf':
-    case 'price_per_sqft':
-      return api.getMetroNewConstructionPPSF();
-
-    // Affordability (from zillow_affordability)
+    // Affordability metrics (Zillow metro only)
     case 'income_to_buy':
       return api.getMetroIncomeToBuy();
     case 'income_to_rent':
@@ -122,18 +367,48 @@ async function fetchMetroMetric(metric: string, rentType: string, demandType: st
     case 'years_to_save':
       return api.getMetroYearsToSave();
     case 'homeowner_affordability':
-    case 'overvalued_pct': // Map overvalued to affordability for now
+    case 'overvalued_pct':
       return api.getMetroHomeownerAffordability();
     case 'renter_affordability':
       return api.getMetroRenterAffordability();
 
-    // Market Health (from zillow_market_heat_index)
+    // New Construction (Zillow metro only)
+    case 'new_construction_sales':
+      return api.getMetroNewConstructionSales();
+    case 'new_construction_price':
+      return api.getMetroNewConstructionPrice();
+    case 'new_construction_ppsf':
+      return api.getMetroNewConstructionPPSF();
+
+    // Sale metrics (Zillow metro only)
+    case 'sale_price':
+      return api.getMetroSalePrice();
+    case 'sale_to_list':
+      return api.getMetroSaleToList();
+    case 'home_sales':
+    case 'sales_yoy':
+      return api.getMetroSalesCount();
+    case 'days_to_close':
+      return api.getMetroDaysToClose();
+
+    // Market health (Zillow metro only)
     case 'market_health':
       return api.getMetroMarketHeat();
 
-    // Default to home values
+    // SFH/Condo values (from Zillow ZHVI by property type)
+    case 'sfh_value':
+    case 'sfh_value_yoy':
+    case 'condo_value':
+    case 'condo_value_yoy':
+      switch (level) {
+        case 'metro':
+          return api.getMetroHomeValues();
+        default:
+          return {};
+      }
+
     default:
-      return api.getMetroHomeValues();
+      return {};
   }
 }
 
@@ -143,6 +418,7 @@ export function useMapData(): UseMapDataReturn {
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch home values based on geo level and metric
+  // Uses Realtor as primary source, Zillow for specialty data only
   const fetchHomeValues = useCallback(async (
     level: GeoLevel,
     state?: string,
@@ -156,69 +432,25 @@ export function useMapData(): UseMapDataReturn {
       let data: HomeValues = {};
       const currentMetric = metric || 'home_value';
 
-      // Check if metric is metro-only and we're at a different level
-      const isMetroOnlyMetric = METRO_ONLY_METRICS.has(currentMetric);
+      // Check if this is a Zillow-only metric
+      const isZillowOnly = ZILLOW_ONLY_METRICS.has(currentMetric);
 
-      switch (level) {
-        case 'state':
-        case 'national':
-          // State level only supports home values
-          if (currentMetric === 'rent_index' || currentMetric === 'rent_for_houses' || isMetroOnlyMetric) {
-            data = {};
-          } else {
-            data = await api.getStateHomeValues();
-          }
-          break;
+      // Check if hotness metric at unsupported level
+      const isHotnessAtUnsupportedLevel =
+        REALTOR_HOTNESS_METRICS.has(currentMetric) &&
+        (level === 'state' || level === 'national');
 
-        case 'metro':
-          data = await fetchMetroMetric(currentMetric, rentType, demandType, horizon);
-          break;
-
-        case 'county':
-          // County level supports home values and rent
-          if (isMetroOnlyMetric) {
-            data = {};
-          } else if (currentMetric === 'rent_index' || currentMetric === 'rent_growth') {
-            data = await api.getCountyRent(rentType);
-          } else if (currentMetric === 'rent_for_houses') {
-            data = {};
-          } else {
-            data = await api.getCountyHomeValues();
-          }
-          break;
-
-        case 'city':
-          if (state) {
-            if (isMetroOnlyMetric) {
-              data = {};
-            } else {
-              // City level only supports home values currently
-              data = await api.getCityHomeValues(state);
-            }
-          }
-          break;
-
-        case 'zip':
-          if (state) {
-            if (isMetroOnlyMetric) {
-              data = {};
-            } else if (currentMetric === 'home_price_forecast') {
-              data = await api.getZipForecast(state, horizon);
-            } else if (currentMetric === 'rent_index' || currentMetric === 'rent_growth') {
-              data = await api.getZipRent(state, rentType);
-            } else if (currentMetric === 'rent_for_houses') {
-              data = await api.getZipRenterDemand(state, demandType);
-            } else {
-              data = await api.getZipHomeValues(state);
-            }
-          }
-          break;
-
-        case 'tract':
-          // Tract-level data not yet available - boundaries only
-          data = {};
-          break;
+      if (isHotnessAtUnsupportedLevel) {
+        // Hotness metrics not available at state/national level
+        data = {};
+      } else if (isZillowOnly) {
+        // Use Zillow for specialty metrics
+        data = await fetchZillowMetric(level, currentMetric, state, rentType, demandType, horizon);
+      } else {
+        // Use Realtor for all other metrics (primary source)
+        data = await fetchRealtorMetric(level, currentMetric, state);
       }
+
       setHomeValues(data);
     } catch (err) {
       console.error('Error loading data for metric:', metric, err);

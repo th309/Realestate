@@ -14,11 +14,15 @@ export interface NavItem {
   href: string;
 }
 
+// Data source types for metrics
+export type DataSource = 'realtor' | 'zillow' | 'calculated' | 'census' | 'fred';
+
 export interface Metric {
   id: string;
   name: string;
   isPremium?: boolean;
   isNew?: boolean;
+  dataSource?: DataSource;
 }
 
 export interface SubSection {

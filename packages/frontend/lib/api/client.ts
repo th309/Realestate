@@ -96,6 +96,25 @@ interface ZillowPriceCutsResponse {
   data: ZillowPriceCuts[];
 }
 
+// Realtor API response types
+interface RealtorDataPoint {
+  region_id: string;
+  region_name: string;
+  value: number;
+  state_id?: string;
+  cbsa_code?: string;
+  county_fips?: string;
+  postal_code?: string;
+}
+
+interface RealtorApiResponse {
+  success: boolean;
+  count: number;
+  geography: string;
+  metric: string;
+  data: RealtorDataPoint[];
+}
+
 // New construction data (combined from multiple tables)
 interface ZillowNewConstruction {
   region_id: string;
@@ -462,5 +481,308 @@ export const api = {
       }
     });
     return result;
+  },
+
+  // ============================================================================
+  // REALTOR API ENDPOINTS (Primary Source for Most Metrics)
+  // ============================================================================
+
+  // Helper to transform Realtor response based on geography type
+  transformRealtorResponse: (response: RealtorApiResponse, keyField: 'region_id' | 'state_id' | 'cbsa_code' | 'county_fips' | 'postal_code' = 'region_id'): Record<string, number> => {
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      let key: string | undefined;
+      switch (keyField) {
+        case 'state_id':
+          key = item.state_id || item.region_id;
+          break;
+        case 'cbsa_code':
+          key = item.cbsa_code || item.region_id;
+          break;
+        case 'county_fips':
+          key = item.county_fips || item.region_id;
+          break;
+        case 'postal_code':
+          key = item.postal_code || item.region_id;
+          break;
+        default:
+          key = item.region_id;
+      }
+      if (key && item.value != null) {
+        result[key] = Number(item.value);
+      }
+    });
+    return result;
+  },
+
+  // --- Home Value (median_listing_price) ---
+  getRealtorStateHomeValues: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroHomeValues: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyHomeValues: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipHomeValues: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/home-value/zips?state=${state}` : '/api/realtor/home-value/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Home Value YoY (median_listing_price_yy) ---
+  getRealtorStateHomeValueYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroHomeValueYoy: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyHomeValueYoy: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipHomeValueYoy: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/home-value-yoy/zips?state=${state}` : '/api/realtor/home-value-yoy/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Inventory (active_listing_count) ---
+  getRealtorStateInventory: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroInventory: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyInventory: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipInventory: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/inventory/zips?state=${state}` : '/api/realtor/inventory/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Inventory YoY (active_listing_count_yy) ---
+  getRealtorStateInventoryYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroInventoryYoy: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyInventoryYoy: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipInventoryYoy: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/inventory-yoy/zips?state=${state}` : '/api/realtor/inventory-yoy/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Days on Market (median_days_on_market) ---
+  getRealtorStateDom: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/dom/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroDom: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/dom/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyDom: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/dom/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipDom: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/dom/zips?state=${state}` : '/api/realtor/dom/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- New Listings (new_listing_count) ---
+  getRealtorStateNewListings: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroNewListings: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyNewListings: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipNewListings: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/new-listings/zips?state=${state}` : '/api/realtor/new-listings/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Pending Listings (pending_listing_count) ---
+  getRealtorStatePendingListings: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroPendingListings: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyPendingListings: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipPendingListings: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/pending-listings/zips?state=${state}` : '/api/realtor/pending-listings/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Price Reduced Share (price_reduced_share) ---
+  getRealtorStatePriceReduced: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-reduced/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroPriceReduced: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-reduced/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyPriceReduced: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-reduced/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipPriceReduced: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/price-reduced/zips?state=${state}` : '/api/realtor/price-reduced/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Price per Sq Ft (median_listing_price_per_square_foot) ---
+  getRealtorStatePricePerSqft: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-per-sqft/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroPricePerSqft: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-per-sqft/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyPricePerSqft: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-per-sqft/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipPricePerSqft: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/price-per-sqft/zips?state=${state}` : '/api/realtor/price-per-sqft/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Hotness Score (hotness_score) - Metro/County/ZIP only ---
+  getRealtorMetroHotness: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/hotness/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyHotness: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/hotness/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipHotness: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/hotness/zips?state=${state}` : '/api/realtor/hotness/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Supply Score (supply_score) - Metro/County/ZIP only ---
+  getRealtorMetroSupplyScore: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/supply-score/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountySupplyScore: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/supply-score/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipSupplyScore: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/supply-score/zips?state=${state}` : '/api/realtor/supply-score/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Demand Score (demand_score) - Metro/County/ZIP only ---
+  getRealtorMetroDemandScore: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/demand-score/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyDemandScore: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/demand-score/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipDemandScore: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/demand-score/zips?state=${state}` : '/api/realtor/demand-score/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
+  },
+
+  // --- Pending Ratio (pending_ratio) ---
+  getRealtorStatePendingRatio: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-ratio/states');
+    return api.transformRealtorResponse(response, 'region_id');
+  },
+
+  getRealtorMetroPendingRatio: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-ratio/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code');
+  },
+
+  getRealtorCountyPendingRatio: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-ratio/counties');
+    return api.transformRealtorResponse(response, 'county_fips');
+  },
+
+  getRealtorZipPendingRatio: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/pending-ratio/zips?state=${state}` : '/api/realtor/pending-ratio/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code');
   },
 };
