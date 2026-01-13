@@ -138,18 +138,35 @@ export class ZillowService {
   }
 
   async getCountyHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    // Query zillow_county table directly - it has fips_code and region_name built in
+    // First get the latest date if not provided
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestData } = await this.supabase
+        .from('zillow_county')
+        .select('period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestData?.period_date;
+    }
+
+    // Query zillow_county table with date filter for efficiency
     let query = this.supabase
       .from('zillow_county')
       .select('region_id, region_name, state_code, fips_code, value, period_date')
-      .eq('metric_name', 'zhvi')
-      .order('period_date', { ascending: false });
+      .eq('metric_name', 'zhvi');
+
+    if (targetDate) {
+      query = query.eq('period_date', targetDate);
+    }
 
     if (stateFilter) {
       query = query.eq('state_code', stateFilter.toUpperCase());
     }
 
-    const { data: countyData, error } = await query;
+    // Set limit high enough to get all ~3200 counties
+    const { data: countyData, error } = await query.limit(5000);
 
     if (error) {
       throw new Error(`Error fetching county home values: ${error.message}`);
@@ -157,46 +174,57 @@ export class ZillowService {
 
     if (!countyData || countyData.length === 0) return [];
 
-    // Get the most recent value per county (data is ordered by date desc)
-    const seenCounties = new Set<number>();
-    const results: HomeValueData[] = [];
-
-    for (const record of countyData) {
-      if (seenCounties.has(record.region_id)) continue;
-      seenCounties.add(record.region_id);
-
-      // Skip records without fips_code
-      if (!record.fips_code) continue;
-
-      results.push({
+    // Map results (already filtered by date, no dedup needed)
+    const results: HomeValueData[] = countyData
+      .filter(record => record.fips_code) // Skip records without fips_code
+      .map(record => ({
         region_id: String(record.region_id),
         region_name: record.region_name,
         county_fips: record.fips_code,
         state_abbrev: record.state_code,
-        state_name: null, // Not stored in zillow_county
+        state_name: null,
         value: Number(record.value),
         date: record.period_date,
         property_type: 'sfrcondo',
         geography: 'County',
-      });
-    }
+      }));
 
     return results.sort((a, b) => b.value - a.value);
   }
 
   async getZipHomeValues(stateFilter: string, countyFilter?: string, date?: string): Promise<HomeValueData[]> {
-    // Query zillow_zip table directly - it has state_code and region_name (ZIP code) built in
+    // State filter is required for ZIP data
+    if (!stateFilter) {
+      return [];
+    }
+
+    // First get the latest date if not provided
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestData } = await this.supabase
+        .from('zillow_zip')
+        .select('period_date')
+        .eq('metric_name', 'zhvi')
+        .eq('state_code', stateFilter.toUpperCase())
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestData?.period_date;
+    }
+
+    // Query with date filter for efficiency
     let query = this.supabase
       .from('zillow_zip')
       .select('region_id, region_name, state_code, county_fips, value, period_date')
       .eq('metric_name', 'zhvi')
-      .order('period_date', { ascending: false });
+      .eq('state_code', stateFilter.toUpperCase());
 
-    if (stateFilter) {
-      query = query.eq('state_code', stateFilter.toUpperCase());
+    if (targetDate) {
+      query = query.eq('period_date', targetDate);
     }
 
-    const { data: zipData, error } = await query;
+    // Set limit high enough for states with many ZIPs (CA has ~1700)
+    const { data: zipData, error } = await query.limit(3000);
 
     if (error) {
       throw new Error(`Error fetching ZIP home values: ${error.message}`);
@@ -204,26 +232,18 @@ export class ZillowService {
 
     if (!zipData || zipData.length === 0) return [];
 
-    // Get the most recent value per ZIP (data is ordered by date desc)
-    const seenZips = new Set<number>();
-    const results: HomeValueData[] = [];
-
-    for (const record of zipData) {
-      if (seenZips.has(record.region_id)) continue;
-      seenZips.add(record.region_id);
-
-      results.push({
-        region_id: String(record.region_id),
-        region_name: record.region_name,
-        zip_code: record.region_name,
-        state_abbrev: record.state_code,
-        state_name: null,
-        value: Number(record.value),
-        date: record.period_date,
-        property_type: 'sfrcondo',
-        geography: 'ZIP',
-      });
-    }
+    // Map results (already filtered by date, no dedup needed)
+    const results: HomeValueData[] = zipData.map(record => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      zip_code: record.region_name,
+      state_abbrev: record.state_code,
+      state_name: null,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: 'sfrcondo',
+      geography: 'ZIP',
+    }));
 
     return results.sort((a, b) => b.value - a.value);
   }
