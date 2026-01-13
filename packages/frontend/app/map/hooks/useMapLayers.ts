@@ -279,7 +279,8 @@ function setupHoverInteractions(
     if (e.features && e.features.length > 0) {
       const feature = e.features[0];
       const name = feature.properties?.name || feature.properties?.displayName || feature.properties?.NAME || 'Unknown';
-      const value = feature.properties?.value || 0;
+      // Use null to indicate "no data" - don't convert 0 to null since 0 is a valid forecast value
+      const value = feature.properties?.value ?? null;
 
       if (!popup.current) {
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
@@ -303,21 +304,23 @@ function setupHoverInteractions(
 }
 
 function formatDisplayValue(
-  value: number,
+  value: number | null,
   isForecast: boolean,
   isRenterDemand: boolean
 ): { displayValue: string; valueColor: string } {
   let displayValue: string;
   let valueColor = '#6750a4';
 
+  // Handle null (no data) case
+  if (value === null || value === undefined) {
+    return { displayValue: 'No data', valueColor: '#6b7280' };
+  }
+
   if (isForecast) {
-    if (value !== 0) {
-      const sign = value > 0 ? '+' : '';
-      displayValue = `${sign}${value.toFixed(1)}%`;
-      valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
-    } else {
-      displayValue = 'No data';
-    }
+    // For forecasts, 0 is a valid value (no change predicted)
+    const sign = value > 0 ? '+' : '';
+    displayValue = `${sign}${value.toFixed(1)}%`;
+    valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
   } else if (isRenterDemand) {
     displayValue = value > 0 ? value.toFixed(0) : 'No data';
     valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
