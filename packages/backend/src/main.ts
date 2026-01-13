@@ -26,5 +26,6 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 API running on http://localhost:${port}`);
   console.log(`📚 Swagger docs at http://localhost:${port}/api/docs`);
+  console.log(`📅 Build: ${new Date().toISOString()}`);
 }
 bootstrap();
