@@ -386,30 +386,38 @@ export class ZillowService {
     const forecasts = await queryZhvf(this.supabase, 'Zip');
     if (!forecasts.length) return [];
 
-    // Build ZIP lookup
-    let query = this.supabase
-      .from('geography_crosswalk')
-      .select('zip_code, zip_default_city, state_abbrev')
-      .not('zip_code', 'is', null);
-
-    if (stateFilter) {
-      query = query.eq('state_abbrev', stateFilter);
-    }
-
-    const { data: crosswalk } = await query.limit(30000);
-
+    // Build ZIP lookup with pagination to get ALL ZIP codes
     const zipMap = new Map<string, { city: string; state: string }>();
-    crosswalk?.forEach(row => {
-      if (row.zip_code) {
-        zipMap.set(row.zip_code, { city: row.zip_default_city, state: row.state_abbrev });
-      }
-    });
+    let page = 0;
+    const pageSize = 1000;
 
-    let filteredForecasts = forecasts;
-    if (stateFilter) {
-      const validZips = new Set(zipMap.keys());
-      filteredForecasts = forecasts.filter(f => validZips.has(f.region_id));
+    while (true) {
+      let query = this.supabase
+        .from('geography_crosswalk')
+        .select('zip_code, zip_default_city, state_abbrev')
+        .not('zip_code', 'is', null);
+
+      if (stateFilter) {
+        query = query.eq('state_abbrev', stateFilter.toUpperCase());
+      }
+
+      const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        if (row.zip_code) {
+          zipMap.set(row.zip_code, { city: row.zip_default_city, state: row.state_abbrev });
+        }
+      });
+
+      page++;
+      if (crosswalk.length < pageSize) break;
     }
+
+    // Filter forecasts to only include valid ZIP codes
+    // zhvf region_id IS the ZIP code when it's a valid 5-digit ZIP
+    const validZips = new Set(zipMap.keys());
+    const filteredForecasts = forecasts.filter(f => validZips.has(f.region_id));
 
     return filteredForecasts.map(f => {
       const zip = zipMap.get(f.region_id);
