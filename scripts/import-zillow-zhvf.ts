@@ -2,7 +2,7 @@
  * Import Zillow Home Value Forecast (ZHVF) Data
  *
  * Downloads ZHVF (Home Value Forecast) data from Zillow Research
- * and imports into zillow_zhvf table.
+ * and imports into zillow_zip and zillow_metro tables.
  *
  * ZHVF provides month-ahead, quarter-ahead and year-ahead forecasts
  * of the Zillow Home Value Index (percentage growth).
@@ -12,6 +12,8 @@
  * - {1-month-date}: 1-month forecast (% change)
  * - {3-month-date}: 3-month forecast (% change)
  * - {12-month-date}: 12-month forecast (% change)
+ *
+ * Inserts records with metric_name: 'zhvf_1m', 'zhvf_3m', 'zhvf_12m'
  *
  * Usage:
  *   npx tsx scripts/import-zillow-zhvf.ts [--geography=metro|zip|all]
@@ -49,13 +51,23 @@ const ZHVF_URLS: Record<string, string> = {
   zip: 'https://files.zillowstatic.com/research/public_csvs/zhvf_growth/Zip_zhvf_growth_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv',
 };
 
-interface ZHVFRecord {
-  region_id: string;
-  date: string;
-  forecast_1m: number | null;
-  forecast_3m: number | null;
-  forecast_12m: number | null;
-  geography: string;
+// Target tables by geography
+const TARGET_TABLES: Record<string, string> = {
+  metro: 'zillow_metro',
+  zip: 'zillow_zip',
+};
+
+// Forecast metrics
+type ForecastMetric = 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
+
+interface ZillowForecastRecord {
+  region_id: number;
+  region_name: string;
+  state_code: string | null;
+  cbsa_code?: string | null;
+  period_date: string;
+  metric_name: ForecastMetric;
+  value: number;
 }
 
 async function downloadCSV(url: string): Promise<string> {
@@ -69,7 +81,7 @@ async function downloadCSV(url: string): Promise<string> {
   return response.data;
 }
 
-function parseZHVFData(csvContent: string, geography: string): ZHVFRecord[] {
+function parseZHVFData(csvContent: string, geography: string): ZillowForecastRecord[] {
   const records: any[] = parseSync(csvContent, {
     columns: true,
     skip_empty_lines: true,
@@ -100,53 +112,71 @@ function parseZHVFData(csvContent: string, geography: string): ZHVFRecord[] {
 
   console.log(`Using: 1m=${col1m}, 3m=${col3m}, 12m=${col12m}`);
 
-  const zhvfRecords: ZHVFRecord[] = [];
-
-  // Map RegionType to our geography naming
-  const geoMap: Record<string, string> = {
-    'msa': 'Metro',
-    'country': 'US',
-    'zip': 'Zip',
-    'state': 'State'
-  };
+  const forecastRecords: ZillowForecastRecord[] = [];
 
   for (const record of records) {
-    const regionId = record.RegionID;
+    const regionId = parseInt(record.RegionID, 10);
+    const regionName = record.RegionName || '';
     const baseDate = record.BaseDate;
-    const regionType = record.RegionType;
+    const stateName = record.StateName || null;
 
-    if (!regionId || !baseDate) continue;
+    if (!regionId || isNaN(regionId) || !baseDate) continue;
 
     // Parse forecast values
     const forecast1m = col1m && record[col1m] !== '' ? parseFloat(record[col1m]) : null;
     const forecast3m = col3m && record[col3m] !== '' ? parseFloat(record[col3m]) : null;
     const forecast12m = col12m && record[col12m] !== '' ? parseFloat(record[col12m]) : null;
 
-    // Skip if all forecasts are null
-    if (forecast1m === null && forecast3m === null && forecast12m === null) continue;
+    // Create separate records for each forecast horizon (like other metrics)
+    // This matches the pattern: region_id + period_date + metric_name
+    if (forecast1m !== null && !isNaN(forecast1m)) {
+      forecastRecords.push({
+        region_id: regionId,
+        region_name: regionName,
+        state_code: stateName,
+        period_date: baseDate,
+        metric_name: 'zhvf_1m',
+        value: forecast1m,
+      });
+    }
 
-    zhvfRecords.push({
-      region_id: String(regionId),
-      date: baseDate,
-      forecast_1m: isNaN(forecast1m!) ? null : forecast1m,
-      forecast_3m: isNaN(forecast3m!) ? null : forecast3m,
-      forecast_12m: isNaN(forecast12m!) ? null : forecast12m,
-      geography: geoMap[regionType] || geography.charAt(0).toUpperCase() + geography.slice(1)
-    });
+    if (forecast3m !== null && !isNaN(forecast3m)) {
+      forecastRecords.push({
+        region_id: regionId,
+        region_name: regionName,
+        state_code: stateName,
+        period_date: baseDate,
+        metric_name: 'zhvf_3m',
+        value: forecast3m,
+      });
+    }
+
+    if (forecast12m !== null && !isNaN(forecast12m)) {
+      forecastRecords.push({
+        region_id: regionId,
+        region_name: regionName,
+        state_code: stateName,
+        period_date: baseDate,
+        metric_name: 'zhvf_12m',
+        value: forecast12m,
+      });
+    }
   }
 
-  return zhvfRecords;
+  return forecastRecords;
 }
 
 async function importZHVF(geography: string): Promise<number> {
   const url = ZHVF_URLS[geography];
-  if (!url) {
+  const tableName = TARGET_TABLES[geography];
+
+  if (!url || !tableName) {
     console.error(`Unknown geography: ${geography}`);
     return 0;
   }
 
   console.log(`\n${'='.repeat(70)}`);
-  console.log(`IMPORTING ZHVF: ${geography.toUpperCase()}`);
+  console.log(`IMPORTING ZHVF: ${geography.toUpperCase()} -> ${tableName}`);
   console.log('='.repeat(70));
 
   try {
@@ -154,7 +184,7 @@ async function importZHVF(geography: string): Promise<number> {
     console.log(`Downloaded ${(csvContent.length / 1024).toFixed(1)} KB`);
 
     const records = parseZHVFData(csvContent, geography);
-    console.log(`\nPrepared ${records.length} ZHVF records for insertion`);
+    console.log(`\nPrepared ${records.length} forecast records for insertion`);
 
     if (records.length === 0) {
       console.log('No records to insert');
@@ -163,35 +193,37 @@ async function importZHVF(geography: string): Promise<number> {
 
     // Show sample
     console.log('\nSample records:');
-    records.slice(0, 3).forEach(r => {
-      console.log(`  ${r.region_id} (${r.geography}): 1m=${r.forecast_1m}%, 3m=${r.forecast_3m}%, 12m=${r.forecast_12m}%`);
+    records.slice(0, 6).forEach(r => {
+      console.log(`  ${r.region_id} "${r.region_name}" ${r.metric_name}=${r.value}%`);
     });
 
     // Insert in batches using upsert
-    const batchSize = 500;
+    const batchSize = 1000;
     let inserted = 0;
+    let errors = 0;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
 
       const { error } = await supabase
-        .from('zillow_zhvf')
+        .from(tableName)
         .upsert(batch, {
-          onConflict: 'region_id,date,geography',
+          onConflict: 'region_id,period_date,metric_name',
           ignoreDuplicates: false
         });
 
       if (error) {
         console.error(`\nBatch error at ${i}:`, error.message);
+        errors++;
         // Continue with next batch
       } else {
         inserted += batch.length;
       }
 
-      process.stdout.write(`\rInserted ${inserted}/${records.length} records...`);
+      process.stdout.write(`\rProgress: ${inserted}/${records.length} records (${errors} errors)...`);
     }
 
-    console.log(`\n\nCompleted ${geography}: ${inserted} records inserted`);
+    console.log(`\n\nCompleted ${geography}: ${inserted} records inserted into ${tableName}`);
     return inserted;
 
   } catch (error: any) {
@@ -215,6 +247,7 @@ async function main() {
   console.log('='.repeat(70));
   console.log(`Supabase URL: ${supabaseUrl}`);
   console.log(`Geography: ${geography}`);
+  console.log(`Target tables: metro -> zillow_metro, zip -> zillow_zip`);
   console.log('');
 
   let totalInserted = 0;
@@ -231,35 +264,51 @@ async function main() {
   console.log(`IMPORT COMPLETE: ${totalInserted} total records`);
   console.log('='.repeat(70));
 
-  // Verify data
-  const { data: sample, error: sampleError } = await supabase
-    .from('zillow_zhvf')
-    .select('region_id, date, forecast_1m, forecast_3m, forecast_12m, geography')
-    .order('date', { ascending: false })
+  // Verify ZIP data
+  console.log('\n--- Verifying zillow_zip forecast data ---');
+  const { data: zipSample, error: zipError } = await supabase
+    .from('zillow_zip')
+    .select('region_id, region_name, metric_name, value, period_date')
+    .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+    .order('period_date', { ascending: false })
     .limit(10);
 
-  if (sample && sample.length > 0) {
-    console.log('\nSample data in database:');
-    console.table(sample);
-  } else if (sampleError) {
-    console.log('\nCould not verify:', sampleError.message);
+  if (zipSample && zipSample.length > 0) {
+    console.log('Sample ZIP forecast data:');
+    console.table(zipSample);
+  } else if (zipError) {
+    console.log('Could not verify ZIP data:', zipError.message);
+  } else {
+    console.log('No ZIP forecast data found');
   }
 
-  // Show summary by geography
-  const { data: summary } = await supabase
-    .from('zillow_zhvf')
-    .select('geography')
-    .order('geography');
+  // Verify Metro data
+  console.log('\n--- Verifying zillow_metro forecast data ---');
+  const { data: metroSample, error: metroError } = await supabase
+    .from('zillow_metro')
+    .select('region_id, region_name, metric_name, value, period_date')
+    .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+    .order('period_date', { ascending: false })
+    .limit(10);
 
-  if (summary) {
-    const counts = summary.reduce((acc: Record<string, number>, r) => {
-      acc[r.geography] = (acc[r.geography] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('\nRecords by geography:');
-    Object.entries(counts).forEach(([geo, count]) => {
-      console.log(`  ${geo}: ${count}`);
-    });
+  if (metroSample && metroSample.length > 0) {
+    console.log('Sample Metro forecast data:');
+    console.table(metroSample);
+  } else if (metroError) {
+    console.log('Could not verify Metro data:', metroError.message);
+  } else {
+    console.log('No Metro forecast data found');
+  }
+
+  // Count forecast records by table
+  console.log('\n--- Forecast record counts ---');
+  for (const [geo, table] of Object.entries(TARGET_TABLES)) {
+    const { count } = await supabase
+      .from(table)
+      .select('*', { count: 'exact', head: true })
+      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m']);
+
+    console.log(`  ${table}: ${count?.toLocaleString() || 0} forecast records`);
   }
 }
 
