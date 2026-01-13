@@ -11,6 +11,9 @@ const agent = new Agent({
   keepAliveMaxTimeout: 30_000,
   connect: {
     timeout: 30_000,
+    // Force IPv4 to avoid DNS resolution issues on Railway
+    autoSelectFamily: true,
+    autoSelectFamilyAttemptTimeout: 2000,
   },
 });
 
