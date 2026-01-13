@@ -74,14 +74,15 @@ export function useMapLayers({
       const isForecast = selectedMetric === 'home_price_forecast';
       const isRentIndex = selectedMetric === 'rent_index';
       const isRenterDemand = selectedMetric === 'rent_for_houses';
+      const isInventory = selectedMetric === 'for_sale_inventory';
 
-      const { minVal, maxVal } = calculateValueRange(homeValues, isRentIndex || isRenterDemand);
+      const { minVal, maxVal } = calculateValueRange(homeValues, isRentIndex || isRenterDemand || isInventory);
 
       // Add layers
-      addMapLayers(map.current!, geoLevel, isForecast, isRenterDemand, minVal, maxVal);
+      addMapLayers(map.current!, geoLevel, isForecast, isRenterDemand, minVal, maxVal, isInventory);
 
       // Setup hover interactions
-      setupHoverInteractions(map.current!, popup, isForecast, isRenterDemand, forecastHorizon);
+      setupHoverInteractions(map.current!, popup, isForecast, isRenterDemand, forecastHorizon, isInventory);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
@@ -203,7 +204,8 @@ function addMapLayers(
   isForecast: boolean,
   isRenterDemand: boolean,
   minVal?: number,
-  maxVal?: number
+  maxVal?: number,
+  isInventory: boolean = false
 ): void {
   // Fill layer
   map.addLayer({
@@ -211,7 +213,7 @@ function addMapLayers(
     type: 'fill',
     source: 'geo-data',
     paint: {
-      'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal, isRenterDemand) as any,
+      'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal, isRenterDemand, isInventory) as any,
       'fill-opacity': 0.6,
     },
   });
@@ -264,7 +266,8 @@ function setupHoverInteractions(
   popup: React.MutableRefObject<mapboxgl.Popup | null>,
   isForecast: boolean,
   isRenterDemand: boolean,
-  forecastHorizon: ForecastHorizon
+  forecastHorizon: ForecastHorizon,
+  isInventory: boolean = false
 ): void {
   map.on('mouseenter', 'geo-fills', () => {
     map.getCanvas().style.cursor = 'pointer';
@@ -286,7 +289,7 @@ function setupHoverInteractions(
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
       }
 
-      const { displayValue, valueColor } = formatDisplayValue(value, isForecast, isRenterDemand);
+      const { displayValue, valueColor } = formatDisplayValue(value, isForecast, isRenterDemand, isInventory);
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
 
       popup.current
@@ -306,7 +309,8 @@ function setupHoverInteractions(
 function formatDisplayValue(
   value: number | null,
   isForecast: boolean,
-  isRenterDemand: boolean
+  isRenterDemand: boolean,
+  isInventory: boolean = false
 ): { displayValue: string; valueColor: string } {
   let displayValue: string;
   let valueColor = '#6750a4';
@@ -324,6 +328,10 @@ function formatDisplayValue(
   } else if (isRenterDemand) {
     displayValue = value > 0 ? value.toFixed(0) : 'No data';
     valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
+  } else if (isInventory) {
+    // Inventory is a count, not currency
+    displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
+    valueColor = '#6750a4';
   } else {
     displayValue = value > 0
       ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })

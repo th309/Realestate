@@ -13,7 +13,8 @@ export function getColorScale(
   isForecast: boolean = false,
   min?: number,
   max?: number,
-  isRenterDemand: boolean = false
+  isRenterDemand: boolean = false,
+  isInventory: boolean = false
 ): MapboxColorExpression {
   // Forecast uses percentage scale - cool to warm (blue = decline, red = growth)
   if (isForecast) {
@@ -44,6 +45,25 @@ export function getColorScale(
       133, '#f97316',        // Orange
       167, '#ef4444',        // Red
       200, '#b91c1c',        // Dark red (hot - high demand)
+    ];
+  }
+
+  // Inventory uses 0-max scale (count-based, not currency)
+  if (isInventory && max !== undefined) {
+    const step = max / 6;
+    return [
+      'case',
+      ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',  // No data - light gray
+      [
+        'interpolate', ['linear'], ['get', 'value'],
+        0, '#3b82f6',              // Blue (cool - lowest)
+        step, '#06b6d4',           // Cyan
+        step * 2, '#10b981',       // Green
+        step * 3, '#fbbf24',       // Yellow
+        step * 4, '#f97316',       // Orange
+        step * 5, '#ef4444',       // Red
+        max, '#b91c1c',            // Dark red (hot - highest)
+      ]
     ];
   }
 

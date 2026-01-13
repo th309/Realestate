@@ -28,6 +28,7 @@ export function Legend({
   const isForecast = selectedMetric === 'home_price_forecast';
   const isRentIndex = selectedMetric === 'rent_index';
   const isRenterDemand = selectedMetric === 'rent_for_houses';
+  const isInventory = selectedMetric === 'for_sale_inventory';
 
   // Determine legend title
   let legendTitle = 'Home Value';
@@ -84,6 +85,36 @@ export function Legend({
         </div>
         <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
           100 = baseline · &gt;100 = higher demand
+        </div>
+        <NoDataIndicator />
+      </div>
+    );
+  }
+
+  // Inventory legend (count-based, 0 to max)
+  if (isInventory) {
+    const values = Object.values(homeValues)
+      .filter((v): v is number => typeof v === 'number' && v >= 0)
+      .sort((a, b) => a - b);
+
+    let maxLabel = '10,000+';
+    if (values.length > 0) {
+      const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
+      const maxVal = values[p95Index];
+      maxLabel = maxVal.toLocaleString('en-US') + '+';
+    }
+
+    return (
+      <div className="absolute bottom-6 left-6 bg-white rounded-xl shadow-lg p-4 z-10">
+        <div className="text-sm font-medium text-gray-700 mb-2">{legendTitle}</div>
+        <div className="flex items-center gap-1">
+          {COLOR_SCALE.map((color, i) => (
+            <div key={i} className="w-6 h-4 rounded" style={{ backgroundColor: color }} />
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>0</span>
+          <span>{maxLabel}</span>
         </div>
         <NoDataIndicator />
       </div>
