@@ -236,6 +236,11 @@ function addMapLayers(
 
   // Labels for state level
   if (geoLevel === 'state' || geoLevel === 'national') {
+    // Build value format expression - no $ for inventory (it's a count, not currency)
+    const valueFormat = isInventory
+      ? ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]
+      : ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
+
     map.addLayer({
       id: 'geo-labels',
       type: 'symbol',
@@ -245,7 +250,7 @@ function addMapLayers(
           'format',
           ['get', 'name'], { 'font-scale': 0.85, 'text-font': ['literal', ['DIN Pro Medium', 'Arial Unicode MS Regular']] },
           '\n', {},
-          ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]],
+          valueFormat,
           { 'font-scale': 0.75, 'text-font': ['literal', ['DIN Pro Regular', 'Arial Unicode MS Regular']] },
         ],
         'text-size': 11,

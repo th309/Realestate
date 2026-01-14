@@ -3,6 +3,13 @@
 import type { GeoLevel } from '../types';
 import { US_STATES } from '../types';
 
+// Metrics that have city-level data available (from Zillow ZHVI city data)
+// All other metrics do NOT have city data
+const CITY_AVAILABLE_METRICS = new Set([
+  'home_value',
+  'list_price',
+]);
+
 interface GeoLevelPillsProps {
   geoLevel: GeoLevel;
   selectedMetric: string;
@@ -33,8 +40,8 @@ export function GeoLevelPills({
         const isActive = geoLevel === levelKey;
 
         // Determine if this level is disabled based on selected metric
-        // City is only available for home value metrics (not forecast, rent, etc.)
-        const isCityDisabled = levelKey === 'city' && (isForecastMode || isRentIndexMode || isRenterDemandMode);
+        // City is only available for home_value and list_price metrics
+        const isCityDisabled = levelKey === 'city' && !CITY_AVAILABLE_METRICS.has(selectedMetric);
         const isForecastDisabled = isForecastMode && !['metro', 'zip'].includes(levelKey);
         const isRentIndexDisabled = isRentIndexMode && ['national', 'state'].includes(levelKey);
         const isRenterDemandDisabled = isRenterDemandMode && levelKey !== 'metro';
