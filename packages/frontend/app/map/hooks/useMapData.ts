@@ -391,8 +391,10 @@ async function fetchZillowMetric(
     case 'homeowner_affordability':
       return api.getMetroHomeownerAffordability();
     case 'overvalued_pct':
-      // TODO: overvalued_pct should come from calculated_metrics table, not yet implemented
-      return {};
+      return api.getMetroOvervalued();
+    case 'cap_rate':
+    case 'gross_yield':
+      return api.getMetroCapRate();
     case 'renter_affordability':
       return api.getMetroRenterAffordability();
 

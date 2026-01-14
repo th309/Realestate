@@ -484,6 +484,52 @@ export const api = {
   },
 
   // ============================================================================
+  // CALCULATED METRICS ENDPOINTS
+  // ============================================================================
+
+  // Overvalued % (calculated from ZHVI and median income benchmark)
+  getMetroOvervalued: async (): Promise<MetroHomeValues> => {
+    interface OvervaluedResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        cbsa_code?: string;
+        overvalued_pct: number;
+      }>;
+    }
+    const response = await fetchAPI<OvervaluedResponse>('/api/metrics/overvalued/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.overvalued_pct != null) {
+        result[key] = Number(item.overvalued_pct);
+      }
+    });
+    return result;
+  },
+
+  // Cap Rate (calculated from ZORI and ZHVI)
+  getMetroCapRate: async (): Promise<MetroHomeValues> => {
+    interface CapRateResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        cbsa_code?: string;
+        cap_rate: number;
+      }>;
+    }
+    const response = await fetchAPI<CapRateResponse>('/api/metrics/cap-rate/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.cap_rate != null) {
+        result[key] = Number(item.cap_rate);
+      }
+    });
+    return result;
+  },
+
+  // ============================================================================
   // REALTOR API ENDPOINTS (Primary Source for Most Metrics)
   // ============================================================================
 
