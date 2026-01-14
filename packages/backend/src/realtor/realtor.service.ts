@@ -205,10 +205,10 @@ export class RealtorService {
     return ((data || []) as RealtorRow[]).map(row => {
       let value = Number(row[metric]) || 0;
 
-      // Filter out unrealistic growth values (data quality issue)
-      // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme for metros
-      if (isGrowthMetric && (value > 1 || value < -1)) {
-        value = 0; // Treat as no data
+      // Filter out only clearly corrupt data (values in millions of percent)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
+      if (isGrowthMetric && (value > 100 || value < -100)) {
+        value = 0; // Treat as corrupt data
       }
 
       return {
@@ -243,10 +243,10 @@ export class RealtorService {
     return data.map(row => {
       let value = Number(row[metric]) || 0;
 
-      // Filter out unrealistic growth values (data quality issue)
-      // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme for counties
-      if (isGrowthMetric && (value > 1 || value < -1)) {
-        value = 0; // Treat as no data
+      // Filter out only clearly corrupt data (values in millions of percent)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
+      if (isGrowthMetric && (value > 100 || value < -100)) {
+        value = 0; // Treat as corrupt data
       }
 
       return {
@@ -301,10 +301,10 @@ export class RealtorService {
       .map(row => {
         let value = Number(row[metric]) || 0;
 
-        // Filter out unrealistic growth values (data quality issue)
-        // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme
-        if (isGrowthMetric && (value > 1 || value < -1)) {
-          value = 0; // Treat as no data
+        // Filter out only clearly corrupt data (values in millions of percent)
+        // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
+        if (isGrowthMetric && (value > 100 || value < -100)) {
+          value = 0; // Treat as corrupt data
         }
 
         return {
