@@ -62,6 +62,34 @@ export class RealtorController {
   }
 
   // ============================================================================
+  // Home Value MoM (median_listing_price_mm)
+  // ============================================================================
+
+  @Get('home-value-mom/states')
+  async getStateHomeValueMom(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateHomeValueMom(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'median_listing_price_mm', data };
+  }
+
+  @Get('home-value-mom/metros')
+  async getMetroHomeValueMom(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroHomeValueMom(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'median_listing_price_mm', data };
+  }
+
+  @Get('home-value-mom/counties')
+  async getCountyHomeValueMom(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyHomeValueMom(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'median_listing_price_mm', data };
+  }
+
+  @Get('home-value-mom/zips')
+  async getZipHomeValueMom(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipHomeValueMom(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'median_listing_price_mm', data };
+  }
+
+  // ============================================================================
   // Inventory (active_listing_count)
   // ============================================================================
 

@@ -295,6 +295,23 @@ export class RealtorService {
     return this.getZipData('median_listing_price_yy', state, date);
   }
 
+  // Home Value MoM (median_listing_price_mm)
+  async getStateHomeValueMom(date?: string) {
+    return this.getStateData('median_listing_price_mm', date);
+  }
+
+  async getMetroHomeValueMom(date?: string) {
+    return this.getMetroData('median_listing_price_mm', date);
+  }
+
+  async getCountyHomeValueMom(date?: string) {
+    return this.getCountyData('median_listing_price_mm', date);
+  }
+
+  async getZipHomeValueMom(state?: string, date?: string) {
+    return this.getZipData('median_listing_price_mm', state, date);
+  }
+
   // Inventory (active_listing_count)
   async getStateInventory(date?: string) {
     return this.getStateData('active_listing_count', date);

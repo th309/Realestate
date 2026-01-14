@@ -529,12 +529,58 @@ export const api = {
     return result;
   },
 
+  // 5-Year Home Value Growth (CAGR from Zillow ZHVI)
+  getMetroHomeValue5Yr: async (): Promise<MetroHomeValues> => {
+    interface GrowthResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        cbsa_code?: string;
+        cagr_5yr: number;
+      }>;
+    }
+    const response = await fetchAPI<GrowthResponse>('/api/metrics/home-value-5yr/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.cagr_5yr != null) {
+        result[key] = Number(item.cagr_5yr);
+      }
+    });
+    return result;
+  },
+
+  getStateHomeValue5Yr: async (): Promise<StateHomeValues> => {
+    interface GrowthResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        region_name?: string;
+        cagr_5yr: number;
+      }>;
+    }
+    const response = await fetchAPI<GrowthResponse>('/api/metrics/home-value-5yr/states');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.region_name || item.region_id;
+      if (key && item.cagr_5yr != null) {
+        result[key] = Number(item.cagr_5yr);
+      }
+    });
+    return result;
+  },
+
   // ============================================================================
   // REALTOR API ENDPOINTS (Primary Source for Most Metrics)
   // ============================================================================
 
   // Helper to transform Realtor response based on geography type
-  transformRealtorResponse: (response: RealtorApiResponse, keyField: 'region_id' | 'region_name' | 'state_id' | 'cbsa_code' | 'county_fips' | 'postal_code' = 'region_id'): Record<string, number> => {
+  // Set asPercent=true to multiply decimal values by 100 (e.g., 0.05 -> 5)
+  transformRealtorResponse: (
+    response: RealtorApiResponse,
+    keyField: 'region_id' | 'region_name' | 'state_id' | 'cbsa_code' | 'county_fips' | 'postal_code' = 'region_id',
+    asPercent: boolean = false
+  ): Record<string, number> => {
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
       let key: string | undefined;
@@ -558,7 +604,8 @@ export const api = {
           key = item.region_id;
       }
       if (key && item.value != null) {
-        result[key] = Number(item.value);
+        const value = Number(item.value);
+        result[key] = asPercent ? value * 100 : value;
       }
     });
     return result;
@@ -588,25 +635,49 @@ export const api = {
   },
 
   // --- Home Value YoY (median_listing_price_yy) ---
+  // Note: Values are stored as decimals (0.05 = 5%), converting to percentage display
   getRealtorStateHomeValueYoy: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/states');
-    return api.transformRealtorResponse(response, 'region_name');
+    return api.transformRealtorResponse(response, 'region_name', true);
   },
 
   getRealtorMetroHomeValueYoy: async (): Promise<MetroHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/metros');
-    return api.transformRealtorResponse(response, 'cbsa_code');
+    return api.transformRealtorResponse(response, 'cbsa_code', true);
   },
 
   getRealtorCountyHomeValueYoy: async (): Promise<CountyHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/counties');
-    return api.transformRealtorResponse(response, 'county_fips');
+    return api.transformRealtorResponse(response, 'county_fips', true);
   },
 
   getRealtorZipHomeValueYoy: async (state?: string): Promise<ZipHomeValues> => {
     const url = state ? `/api/realtor/home-value-yoy/zips?state=${state}` : '/api/realtor/home-value-yoy/zips';
     const response = await fetchAPI<RealtorApiResponse>(url);
-    return api.transformRealtorResponse(response, 'postal_code');
+    return api.transformRealtorResponse(response, 'postal_code', true);
+  },
+
+  // --- Home Value MoM (median_listing_price_mm) ---
+  // Note: Values are stored as decimals (0.01 = 1%), converting to percentage display
+  getRealtorStateHomeValueMom: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-mom/states');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorMetroHomeValueMom: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-mom/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code', true);
+  },
+
+  getRealtorCountyHomeValueMom: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-mom/counties');
+    return api.transformRealtorResponse(response, 'county_fips', true);
+  },
+
+  getRealtorZipHomeValueMom: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/home-value-mom/zips?state=${state}` : '/api/realtor/home-value-mom/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code', true);
   },
 
   // --- Inventory (active_listing_count) ---
@@ -632,25 +703,26 @@ export const api = {
   },
 
   // --- Inventory YoY (active_listing_count_yy) ---
+  // Note: Values are stored as decimals (0.05 = 5%), converting to percentage display
   getRealtorStateInventoryYoy: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/states');
-    return api.transformRealtorResponse(response, 'region_name');
+    return api.transformRealtorResponse(response, 'region_name', true);
   },
 
   getRealtorMetroInventoryYoy: async (): Promise<MetroHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/metros');
-    return api.transformRealtorResponse(response, 'cbsa_code');
+    return api.transformRealtorResponse(response, 'cbsa_code', true);
   },
 
   getRealtorCountyInventoryYoy: async (): Promise<CountyHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/counties');
-    return api.transformRealtorResponse(response, 'county_fips');
+    return api.transformRealtorResponse(response, 'county_fips', true);
   },
 
   getRealtorZipInventoryYoy: async (state?: string): Promise<ZipHomeValues> => {
     const url = state ? `/api/realtor/inventory-yoy/zips?state=${state}` : '/api/realtor/inventory-yoy/zips';
     const response = await fetchAPI<RealtorApiResponse>(url);
-    return api.transformRealtorResponse(response, 'postal_code');
+    return api.transformRealtorResponse(response, 'postal_code', true);
   },
 
   // --- Days on Market (median_days_on_market) ---

@@ -124,6 +124,40 @@ async function fetchRealtorMetric(
           return {};
       }
 
+    // Home Value MoM - from Realtor median_listing_price_mm (no city data)
+    case 'home_value_mom':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getRealtorStateHomeValueMom();
+        case 'metro':
+          return api.getRealtorMetroHomeValueMom();
+        case 'county':
+          return api.getRealtorCountyHomeValueMom();
+        case 'city':
+          return {}; // No city MoM data available
+        case 'zip':
+          return api.getRealtorZipHomeValueMom(state);
+        default:
+          return {};
+      }
+
+    // Home Value 5-Year Growth (CAGR) - calculated from Zillow ZHVI
+    case 'home_value_5yr':
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getStateHomeValue5Yr();
+        case 'metro':
+          return api.getMetroHomeValue5Yr();
+        case 'county':
+        case 'city':
+        case 'zip':
+          return {}; // 5-year growth only available at state/metro level
+        default:
+          return {};
+      }
+
     // Inventory - from Realtor active_listing_count (no city data)
     case 'for_sale_inventory':
       switch (level) {
