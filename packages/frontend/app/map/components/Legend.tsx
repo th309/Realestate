@@ -10,10 +10,10 @@ interface LegendProps {
 }
 
 const COLOR_SCALE = [
+  '#7c3aed', // Violet (distinct from blue)
   '#3b82f6', // Blue
-  '#06b6d4', // Cyan
-  '#10b981', // Green
-  '#fbbf24', // Yellow
+  '#22c55e', // Green (skip cyan - more distinct)
+  '#eab308', // Yellow
   '#f97316', // Orange
   '#ef4444', // Red
   '#b91c1c', // Dark red
