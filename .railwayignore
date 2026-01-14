@@ -1,34 +1,50 @@
+# Large data directories
+redfin_downloads/
+redfin_downloads
+data/
+data
+scripts/
+scripts
+
 # Dependencies (installed during build)
 node_modules/
+node_modules
 
-# Data files
-data/
-*.csv
-*.geojson
-*.json.gz
-
-# Build outputs (rebuilt during deploy)
+# Build outputs
 .next/
 out/
 dist/
 build/
 coverage/
 
+# Git
+.git/
+.git
+
 # Environment files
 .env
 .env.*
 *.local
 
-# IDE and OS
+# Large files
+*.csv
+*.geojson
+*.json.gz
+*.zip
+*.tar
+*.gz
+
+# IDE
 .idea/
 .vscode/
-.DS_Store
-*.log
 
-# Git
-.git/
-
-# Test files
+# Tests
+__tests__/
 *.test.ts
 *.spec.ts
-__tests__/
+
+# Misc
+.DS_Store
+*.log
+backups/
+e2e/
