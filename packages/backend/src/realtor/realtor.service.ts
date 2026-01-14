@@ -199,12 +199,25 @@ export class RealtorService {
 
     if (error) throw error;
 
-    return ((data || []) as RealtorRow[]).map(row => ({
-      region_id: String(row.cbsa_code || ''),
-      region_name: String(row.cbsa_title || ''),
-      cbsa_code: String(row.cbsa_code || ''),
-      value: Number(row[metric]) || 0,
-    }));
+    // Check if this is a growth/percent metric that needs data quality filtering
+    const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
+
+    return ((data || []) as RealtorRow[]).map(row => {
+      let value = Number(row[metric]) || 0;
+
+      // Filter out unrealistic growth values (data quality issue)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme for metros
+      if (isGrowthMetric && (value > 1 || value < -1)) {
+        value = 0; // Treat as no data
+      }
+
+      return {
+        region_id: String(row.cbsa_code || ''),
+        region_name: String(row.cbsa_title || ''),
+        cbsa_code: String(row.cbsa_code || ''),
+        value,
+      };
+    });
   }
 
   // ============================================================================
@@ -224,12 +237,25 @@ export class RealtorService {
     // Use pagination to get all counties (~3200)
     const data = await this.fetchAllRows('realtor_county', latestDate as string);
 
-    return data.map(row => ({
-      region_id: String(row.county_fips || ''),
-      region_name: String(row.county_name || ''),
-      county_fips: String(row.county_fips || ''),
-      value: Number(row[metric]) || 0,
-    }));
+    // Check if this is a growth/percent metric that needs data quality filtering
+    const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
+
+    return data.map(row => {
+      let value = Number(row[metric]) || 0;
+
+      // Filter out unrealistic growth values (data quality issue)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme for counties
+      if (isGrowthMetric && (value > 1 || value < -1)) {
+        value = 0; // Treat as no data
+      }
+
+      return {
+        region_id: String(row.county_fips || ''),
+        region_name: String(row.county_name || ''),
+        county_fips: String(row.county_fips || ''),
+        value,
+      };
+    });
   }
 
   // ============================================================================
@@ -249,12 +275,45 @@ export class RealtorService {
     // Use pagination to get all ZIPs (~28000)
     const data = await this.fetchAllRows('realtor_zip', latestDate as string);
 
-    return data.map(row => ({
-      region_id: String(row.postal_code || ''),
-      region_name: String(row.zip_name || ''),
-      postal_code: String(row.postal_code || ''),
-      value: Number(row[metric]) || 0,
-    }));
+    // Extract state from zip_name (e.g., "agawam, ma" -> "MA")
+    const stateUpper = state?.toUpperCase();
+
+    // Check if this is a growth/percent metric that needs data quality filtering
+    const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
+
+    return data
+      .filter(row => {
+        // Filter by state if provided (state is in zip_name after comma)
+        if (stateUpper) {
+          const zipName = String(row.zip_name || '');
+          const parts = zipName.split(',');
+          if (parts.length >= 2) {
+            const zipState = parts[parts.length - 1].trim().toUpperCase();
+            if (zipState !== stateUpper) {
+              return false;
+            }
+          } else {
+            return false; // No state info in zip_name
+          }
+        }
+        return true;
+      })
+      .map(row => {
+        let value = Number(row[metric]) || 0;
+
+        // Filter out unrealistic growth values (data quality issue)
+        // Growth metrics are stored as decimals (0.05 = 5%), so ±1 (±100%) is extreme
+        if (isGrowthMetric && (value > 1 || value < -1)) {
+          value = 0; // Treat as no data
+        }
+
+        return {
+          region_id: String(row.postal_code || ''),
+          region_name: String(row.zip_name || ''),
+          postal_code: String(row.postal_code || ''),
+          value,
+        };
+      });
   }
 
   // ============================================================================
