@@ -120,7 +120,8 @@ export function useMapLayers({
       // Determine metric format for display
       const metricFormat = getMetricFormat(selectedMetric);
       const needsRange = metricFormat !== 'currency'; // Non-currency metrics need dynamic range
-      const { minVal, maxVal } = calculateValueRange(homeValues, needsRange);
+      const isPercent = metricFormat === 'percent';
+      const { minVal, maxVal } = calculateValueRange(homeValues, needsRange, isPercent);
 
       // Add layers
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
@@ -229,17 +230,30 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   }
 }
 
-function calculateValueRange(homeValues: HomeValues, needsRange: boolean): { minVal?: number; maxVal?: number } {
+function calculateValueRange(homeValues: HomeValues, needsRange: boolean, isPercent: boolean = false): { minVal?: number; maxVal?: number } {
   if (!needsRange) return {};
 
-  const values = Object.values(homeValues).filter(v => typeof v === 'number' && v > 0).sort((a, b) => a - b);
-  if (values.length === 0) return {};
+  // For percent metrics (growth rates), include negative values
+  // For other metrics, only include positive values
+  const allValues = Object.values(homeValues).filter((v): v is number => typeof v === 'number' && !isNaN(v));
+  if (allValues.length === 0) return {};
 
-  const minVal = values[0];
-  const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
-  const maxVal = values[p95Index];
+  if (isPercent) {
+    // For percent/growth metrics, use 5th and 95th percentile to exclude outliers
+    const sorted = [...allValues].sort((a, b) => a - b);
+    const p5Index = Math.max(0, Math.floor(sorted.length * 0.05));
+    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+    return { minVal: sorted[p5Index], maxVal: sorted[p95Index] };
+  } else {
+    // For non-percent metrics, use min and 95th percentile of positive values
+    const values = allValues.filter(v => v > 0).sort((a, b) => a - b);
+    if (values.length === 0) return {};
 
-  return { minVal, maxVal };
+    const minVal = values[0];
+    const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
+    const maxVal = values[p95Index];
+    return { minVal, maxVal };
+  }
 }
 
 function addMapLayers(

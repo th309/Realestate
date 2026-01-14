@@ -16,19 +16,25 @@ export function getColorScale(
   isRenterDemand: boolean = false,
   isInventory: boolean = false
 ): MapboxColorExpression {
-  // Forecast uses percentage scale - cool to warm (blue = decline, red = growth)
+  // Forecast/Percent uses dynamic min/max scale - cool to warm (blue = min, red = max)
   if (isForecast) {
+    // Use provided min/max or default to -5 to +10
+    const minValue = min !== undefined ? min : -5;
+    const maxValue = max !== undefined ? max : 10;
+    const range = maxValue - minValue;
+    const step = range / 5;
+
     return [
       'case',
       ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',  // No data - light gray
       [
         'interpolate', ['linear'], ['get', 'value'],
-        -5, '#3b82f6',    // Blue (cool - decline)
-        -2, '#06b6d4',    // Cyan
-        0, '#10b981',     // Green (flat)
-        2, '#fbbf24',     // Yellow
-        5, '#f97316',     // Orange
-        10, '#b91c1c',    // Dark red (hot - strong growth)
+        minValue, '#3b82f6',              // Blue (cool - min growth)
+        minValue + step, '#06b6d4',       // Cyan
+        minValue + step * 2, '#10b981',   // Green
+        minValue + step * 3, '#fbbf24',   // Yellow
+        minValue + step * 4, '#f97316',   // Orange
+        maxValue, '#b91c1c',              // Dark red (hot - max growth)
       ]
     ];
   }

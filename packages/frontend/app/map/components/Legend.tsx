@@ -55,6 +55,7 @@ function getMetricTitle(metricId: string, forecastHorizon?: ForecastHorizon): st
       : forecastHorizon === '3m' ? '3-Month Forecast' : '12-Month Forecast',
     'home_value_yoy': 'Home Value YoY',
     'home_value_mom': 'Home Value MoM',
+    'home_value_5yr': '5-Year Growth (CAGR)',
     'rent_index': 'Rent Index',
     'rent_for_houses': 'Renter Demand Index',
     'for_sale_inventory': 'Inventory',
@@ -81,16 +82,33 @@ export function Legend({
   const isForecast = selectedMetric === 'home_price_forecast';
 
   // Calculate dynamic range from data
-  const values = Object.values(homeValues)
-    .filter((v): v is number => typeof v === 'number' && v >= 0)
-    .sort((a, b) => a - b);
+  // For percent metrics, include negative values; for others, only positive
+  const allValues = Object.values(homeValues).filter((v): v is number => typeof v === 'number' && !isNaN(v));
 
   const getRange = () => {
-    if (values.length === 0) return { min: 0, max: 100 };
-    const minVal = values[0];
-    const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
-    const maxVal = values[p95Index];
-    return { min: minVal, max: maxVal };
+    if (allValues.length === 0) {
+      // Default ranges based on metric type
+      if (metricFormat === 'percent') return { min: -5, max: 10 };
+      if (metricFormat === 'days') return { min: 0, max: 90 };
+      if (metricFormat === 'number') return { min: 0, max: 10000 };
+      if (metricFormat === 'index') return { min: 0, max: 200 };
+      return { min: 100000, max: 800000 }; // currency
+    }
+
+    const sorted = [...allValues].sort((a, b) => a - b);
+
+    if (metricFormat === 'percent') {
+      // For growth metrics, use 5th and 95th percentile to exclude outliers
+      const p5Index = Math.max(0, Math.floor(sorted.length * 0.05));
+      const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+      return { min: sorted[p5Index], max: sorted[p95Index] };
+    } else {
+      // For non-percent metrics, use min and 95th percentile
+      const positiveValues = sorted.filter(v => v >= 0);
+      if (positiveValues.length === 0) return { min: 0, max: 100 };
+      const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * 0.95));
+      return { min: positiveValues[0], max: positiveValues[p95Index] };
+    }
   };
 
   const { min, max } = getRange();
@@ -100,7 +118,9 @@ export function Legend({
     const suffix = position === 'max' ? '+' : '';
     switch (metricFormat) {
       case 'percent':
-        return (val > 0 ? '+' : '') + val.toFixed(0) + '%';
+        // For percent, show sign and round to 1 decimal for precision
+        const sign = val > 0 ? '+' : '';
+        return sign + val.toFixed(1) + '%';
       case 'number':
         return val.toLocaleString('en-US') + suffix;
       case 'days':
@@ -120,8 +140,8 @@ export function Legend({
 
   // Percent legend (forecasts, growth rates)
   if (metricFormat === 'percent') {
-    const minLabel = values.length > 0 ? formatLabel(min, 'min') : '-5%';
-    const maxLabel = values.length > 0 ? formatLabel(max, 'max') : '+10%';
+    const minLabel = allValues.length > 0 ? formatLabel(min, 'min') : '-5.0%';
+    const maxLabel = allValues.length > 0 ? formatLabel(max, 'max') : '+10.0%';
     return (
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
@@ -146,8 +166,8 @@ export function Legend({
 
   // Index legend (renter demand, cost of living)
   if (metricFormat === 'index') {
-    const minLabel = values.length > 0 ? formatLabel(min, 'min') : '0';
-    const maxLabel = values.length > 0 ? formatLabel(max, 'max') : '200+';
+    const minLabel = allValues.length > 0 ? formatLabel(min, 'min') : '0';
+    const maxLabel = allValues.length > 0 ? formatLabel(max, 'max') : '200+';
     return (
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
@@ -167,7 +187,7 @@ export function Legend({
 
   // Number legend (inventory, listings, population)
   if (metricFormat === 'number') {
-    const maxLabel = values.length > 0 ? formatLabel(max, 'max') : '10,000+';
+    const maxLabel = allValues.length > 0 ? formatLabel(max, 'max') : '10,000+';
     return (
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
@@ -187,8 +207,8 @@ export function Legend({
 
   // Days legend (days on market, days to close)
   if (metricFormat === 'days') {
-    const minLabel = values.length > 0 ? formatLabel(min, 'min') : '0 days';
-    const maxLabel = values.length > 0 ? formatLabel(max, 'max') : '90+ days';
+    const minLabel = allValues.length > 0 ? formatLabel(min, 'min') : '0 days';
+    const maxLabel = allValues.length > 0 ? formatLabel(max, 'max') : '90+ days';
     return (
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
@@ -207,8 +227,8 @@ export function Legend({
   }
 
   // Currency legend (home values, prices, rent, income) - default
-  const minLabel = values.length > 0 ? formatLabel(min, 'min') : '$100K';
-  const maxLabel = values.length > 0 ? formatLabel(max, 'max') : '$800K+';
+  const minLabel = allValues.length > 0 ? formatLabel(min, 'min') : '$100K';
+  const maxLabel = allValues.length > 0 ? formatLabel(max, 'max') : '$800K+';
 
   return (
     <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
