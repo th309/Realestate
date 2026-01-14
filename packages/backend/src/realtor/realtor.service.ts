@@ -17,43 +17,109 @@ interface RealtorRow {
   [key: string]: unknown;
 }
 
+// Cache entry with TTL
+interface CacheEntry<T> {
+  data: T;
+  expiry: number;
+}
+
 @Injectable()
 export class RealtorService {
   private readonly PAGE_SIZE = 1000; // Supabase default max
+  private readonly PARALLEL_PAGES = 5; // Fetch 5 pages concurrently
+  private readonly CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours in ms
+  private cache = new Map<string, CacheEntry<RealtorRow[]>>();
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
 
   /**
-   * Fetch all rows using pagination to bypass Supabase 1000 row limit
+   * Get cached data or fetch fresh
+   */
+  private getCached(key: string): RealtorRow[] | null {
+    const entry = this.cache.get(key);
+    if (entry && entry.expiry > Date.now()) {
+      return entry.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  /**
+   * Store data in cache
+   */
+  private setCache(key: string, data: RealtorRow[]): void {
+    this.cache.set(key, {
+      data,
+      expiry: Date.now() + this.CACHE_TTL,
+    });
+  }
+
+  /**
+   * Fetch a single page of data
+   */
+  private async fetchPage(
+    table: string,
+    periodDate: string,
+    offset: number
+  ): Promise<RealtorRow[]> {
+    const { data, error } = await this.supabase
+      .from(table)
+      .select('*')
+      .eq('period_date', periodDate)
+      .range(offset, offset + this.PAGE_SIZE - 1);
+
+    if (error) throw error;
+    return (data || []) as RealtorRow[];
+  }
+
+  /**
+   * Fetch all rows using parallel pagination to bypass Supabase 1000 row limit
    */
   private async fetchAllRows(
     table: string,
     periodDate: string
   ): Promise<RealtorRow[]> {
+    // Check cache first
+    const cacheKey = `${table}:${periodDate}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const allData: RealtorRow[] = [];
     let offset = 0;
     let hasMore = true;
 
     while (hasMore) {
-      const { data, error } = await this.supabase
-        .from(table)
-        .select('*')
-        .eq('period_date', periodDate)
-        .range(offset, offset + this.PAGE_SIZE - 1);
+      // Fetch multiple pages in parallel
+      const pagePromises: Promise<RealtorRow[]>[] = [];
+      for (let i = 0; i < this.PARALLEL_PAGES; i++) {
+        pagePromises.push(this.fetchPage(table, periodDate, offset + i * this.PAGE_SIZE));
+      }
 
-      if (error) throw error;
+      const results = await Promise.all(pagePromises);
 
-      if (data && data.length > 0) {
-        allData.push(...(data as RealtorRow[]));
-        offset += this.PAGE_SIZE;
-        hasMore = data.length === this.PAGE_SIZE;
-      } else {
+      for (const pageData of results) {
+        if (pageData.length > 0) {
+          allData.push(...pageData);
+        }
+      }
+
+      // Check if we got full pages - if any page is less than PAGE_SIZE, we're done
+      const lastPageSize = results[results.length - 1].length;
+      const totalFetched = results.reduce((sum, r) => sum + r.length, 0);
+
+      if (totalFetched < this.PARALLEL_PAGES * this.PAGE_SIZE || lastPageSize < this.PAGE_SIZE) {
         hasMore = false;
+      } else {
+        offset += this.PARALLEL_PAGES * this.PAGE_SIZE;
       }
     }
 
+    // Cache the result
+    this.setCache(cacheKey, allData);
     return allData;
   }
 
