@@ -74,18 +74,24 @@ export function getColorScale(
     ];
   }
 
-  // Dynamic scale if min/max provided (used for Rent Index - cool to warm)
+  // Dynamic scale if min/max provided (used for all metrics with dynamic range)
   if (min !== undefined && max !== undefined) {
     const step = (max - min) / 6;
     return [
-      'interpolate', ['linear'], ['get', 'value'],
-      min, '#7c3aed',              // Violet (cool - lowest)
-      min + step, '#3b82f6',       // Blue
-      min + step * 2, '#22c55e',   // Green
-      min + step * 3, '#eab308',   // Yellow
-      min + step * 4, '#f97316',   // Orange
-      min + step * 5, '#ef4444',   // Red
-      max, '#b91c1c',              // Dark red (hot - highest)
+      'case',
+      ['==', ['get', 'value'], null], 'rgba(200, 200, 200, 0.3)',  // No data - light gray
+      ['==', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',     // Zero value - light gray
+      ['<=', ['get', 'value'], 0], 'rgba(200, 200, 200, 0.3)',     // Negative or zero - light gray
+      [
+        'interpolate', ['linear'], ['get', 'value'],
+        min, '#7c3aed',              // Violet (cool - lowest)
+        min + step, '#3b82f6',       // Blue
+        min + step * 2, '#22c55e',   // Green
+        min + step * 3, '#eab308',   // Yellow
+        min + step * 4, '#f97316',   // Orange
+        min + step * 5, '#ef4444',   // Red
+        max, '#b91c1c',              // Dark red (hot - highest)
+      ]
     ];
   }
 

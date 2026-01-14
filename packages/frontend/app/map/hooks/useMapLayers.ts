@@ -119,7 +119,7 @@ export function useMapLayers({
 
       // Determine metric format for display
       const metricFormat = getMetricFormat(selectedMetric);
-      const needsRange = metricFormat !== 'currency'; // Non-currency metrics need dynamic range
+      const needsRange = true; // All metrics use dynamic range for proper legend matching
       const isPercent = metricFormat === 'percent';
       const { minVal, maxVal } = calculateValueRange(homeValues, needsRange, isPercent);
 
