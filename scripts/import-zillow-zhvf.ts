@@ -191,22 +191,21 @@ async function importZHVF(geography: string): Promise<number> {
       return 0;
     }
 
-    // For metro, look up existing cbsa_codes from the database
+    // For metro, look up CBSA codes from the crosswalk table (authoritative source)
     if (geography === 'metro') {
-      console.log('\nLooking up CBSA codes from existing data...');
-      const { data: existingCodes } = await supabase
-        .from('zillow_metro')
-        .select('region_id, cbsa_code')
-        .not('cbsa_code', 'is', null);
+      console.log('\nLooking up CBSA codes from zillow_metro_crosswalk...');
+      const { data: crosswalkData, error: crosswalkError } = await supabase
+        .from('zillow_metro_crosswalk')
+        .select('zillow_region_id, cbsa_code');
 
-      if (existingCodes && existingCodes.length > 0) {
+      if (crosswalkError) {
+        console.error('Error loading crosswalk:', crosswalkError.message);
+      } else if (crosswalkData && crosswalkData.length > 0) {
         const codeMap = new Map<number, string>();
-        for (const row of existingCodes) {
-          if (row.cbsa_code && !codeMap.has(row.region_id)) {
-            codeMap.set(row.region_id, row.cbsa_code);
-          }
+        for (const row of crosswalkData) {
+          codeMap.set(row.zillow_region_id, row.cbsa_code);
         }
-        console.log(`Found ${codeMap.size} unique CBSA code mappings`);
+        console.log(`Loaded ${codeMap.size} CBSA mappings from crosswalk`);
 
         // Apply cbsa_codes to records
         let matched = 0;
