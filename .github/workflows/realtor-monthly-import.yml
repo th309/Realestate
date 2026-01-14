@@ -1,32 +1,32 @@
-name: Zillow Data Monthly Import
+name: Realtor.com Data Monthly Import
 
 on:
-  # Run on the 18th of every month at 6:00 AM UTC
-  # Zillow publishes new data around the 15th-16th, import on 18th for safety
+  # Run on the 15th of every month at 6:00 AM UTC
   schedule:
-    - cron: '0 6 18 * *'
+    - cron: '0 6 15 * *'
 
   # Allow manual trigger
   workflow_dispatch:
     inputs:
-      datasets:
-        description: 'Which datasets to import'
+      dataset:
+        description: 'Which dataset to import'
         required: false
         default: 'all'
         type: choice
         options:
           - all
-          - zhvi-only
-          - zori-only
-          - market-indicators
-          - affordability
+          - national
+          - state
+          - metro
+          - county
+          - zip
 
 
 
 jobs:
-  import-zillow-data:
+  import-realtor-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3 hours for large datasets
+    timeout-minutes: 180  # 3 hours for large ZIP dataset
     
 
 
@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Zillow Data Import
+      - name: Run Realtor.com Data Import
         id: import
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -52,35 +52,47 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           echo "=============================================="
-          echo "Zillow Data Import - $(date)"
+          echo "Realtor.com Data Import - $(date)"
           echo "=============================================="
-          npx tsx scripts/import-all-zillow-datasets.ts 2>&1 | tee import-output.txt
+
+          # Import National data
+          echo ""
+          echo ">>> Importing National data..."
+          npx tsx scripts/import-realtor-national.ts 2>&1 | tee import-output.txt
+
+          # Import State data
+          echo ""
+          echo ">>> Importing State data..."
+          npx tsx scripts/import-realtor-state.ts 2>&1 | tee -a import-output.txt
+
+          # Import Metro data
+          echo ""
+          echo ">>> Importing Metro data..."
+          npx tsx scripts/import-realtor-metro.ts 2>&1 | tee -a import-output.txt
+
+          # Import County data
+          echo ""
+          echo ">>> Importing County data..."
+          npx tsx scripts/import-realtor-county.ts 2>&1 | tee -a import-output.txt
+
+          # Import ZIP data
+          echo ""
+          echo ">>> Importing ZIP data..."
+          npx tsx scripts/import-realtor-zip.ts 2>&1 | tee -a import-output.txt
 
           # Check for failures in output
-          if grep -q "Failed: [1-9]" import-output.txt; then
+          if grep -q "COMPLETED WITH ERRORS" import-output.txt; then
             echo "has_failures=true" >> $GITHUB_OUTPUT
-            echo "::warning::Some datasets failed to import"
+            echo "::warning::Import completed with errors"
           else
             echo "has_failures=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Calculate YoY Growth
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: |
-          echo "=============================================="
-          echo "Calculating Year-over-Year growth for ZHVI..."
-          echo "=============================================="
-          npx tsx scripts/calculate-zhvi-yoy-growth.ts 2>&1 | tee -a import-output.txt
 
       - name: Upload Import Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: import-log-${{ github.run_id }}
+          name: realtor-import-log-${{ github.run_id }}
           path: import-output.txt
           retention-days: 30
 
@@ -88,9 +100,9 @@ jobs:
       has_failures: ${{ steps.import.outputs.has_failures }}
 
   notify-on-failure:
-    needs: import-zillow-data
+    needs: import-realtor-data
     runs-on: ubuntu-latest
-    if: failure() || needs.import-zillow-data.outputs.has_failures == 'true'
+    if: failure() || needs.import-realtor-data.outputs.has_failures == 'true'
 
     steps:
       - name: Create Issue on Failure
@@ -98,42 +110,39 @@ jobs:
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];
-            const isPartialFailure = '${{ needs.import-zillow-data.outputs.has_failures }}' === 'true';
+            const isPartialFailure = '${{ needs.import-realtor-data.outputs.has_failures }}' === 'true';
 
             const title = isPartialFailure
-              ? `Zillow Data Import Partial Failure - ${date}`
-              : `Zillow Data Import Failed - ${date}`;
+              ? `Realtor.com Data Import Partial Failure - ${date}`
+              : `Realtor.com Data Import Failed - ${date}`;
 
             const body = [
-              isPartialFailure ? '## Zillow Data Import Partial Failure' : '## Zillow Data Import Failure',
+              isPartialFailure ? '## Realtor.com Data Import Partial Failure' : '## Realtor.com Data Import Failure',
               '',
               isPartialFailure
-                ? 'Some Zillow datasets failed to import. The workflow completed but with errors.'
-                : 'The monthly Zillow data import workflow failed completely.',
+                ? 'Some Realtor.com datasets failed to import. The workflow completed but with errors.'
+                : 'The monthly Realtor.com data import workflow failed completely.',
               '',
               `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
               '',
               `**Date:** ${date}`,
               '',
               '### Tables That Should Have Data',
-              '- zillow_state (State-level metrics)',
-              '- zillow_metro (Metro/MSA-level metrics)',
-              '- zillow_county (County-level metrics)',
-              '- zillow_zip (ZIP code-level metrics)',
+              '- realtor_national (National-level metrics)',
+              '- realtor_state (State-level metrics)',
+              '- realtor_metro (Metro-level metrics with hotness)',
+              '- realtor_county (County-level metrics with hotness)',
+              '- realtor_zip (ZIP-level metrics with hotness)',
               '',
               '### Metrics Imported',
-              '- zhvi (Home Values)',
-              '- zori (Rent Index)',
-              '- inventory (For-Sale Inventory)',
-              '- dom (Days on Market)',
-              '- sale_price (Median Sale Price)',
-              '- And more...',
+              '- Core: median_listing_price, active_listing_count, median_days_on_market, etc.',
+              '- Hotness: hotness_rank, hotness_score, supply_score, demand_score, etc.',
               '',
               '### Action Required',
               '1. Check the workflow logs and downloaded artifact for detailed errors',
               '2. Verify Supabase credentials are valid',
-              '3. Check if Zillow CSV URLs have changed',
-              '4. Run `npx tsx scripts/zillow-import/import-all.ts` locally to diagnose',
+              '3. Check if Realtor.com CSV URLs have changed',
+              '4. Run import scripts locally to diagnose',
               '5. Re-run the workflow manually once fixed'
             ].join('\n');
 
@@ -146,7 +155,7 @@ jobs:
             });
 
             const hasExisting = existingIssues.some(issue =>
-              issue.title.includes('Zillow Data Import') && issue.title.includes(date)
+              issue.title.includes('Realtor.com Data Import') && issue.title.includes(date)
             );
 
             if (!hasExisting) {
@@ -163,21 +172,22 @@ jobs:
             }
 
   notify-on-success:
-    needs: import-zillow-data
+    needs: import-realtor-data
     runs-on: ubuntu-latest
-    if: success() && needs.import-zillow-data.outputs.has_failures != 'true'
+    if: success() && needs.import-realtor-data.outputs.has_failures != 'true'
 
     steps:
       - name: Log Success
         run: |
           echo "=============================================="
-          echo "Zillow Data Import Completed Successfully"
+          echo "Realtor.com Data Import Completed Successfully"
           echo "Date: $(date)"
           echo "=============================================="
-          echo "Data imported to long-format tables:"
-          echo "  - zillow_state"
-          echo "  - zillow_metro"
-          echo "  - zillow_county"
-          echo "  - zillow_zip"
+          echo "Data imported to:"
+          echo "  - realtor_national"
+          echo "  - realtor_state"
+          echo "  - realtor_metro"
+          echo "  - realtor_county"
+          echo "  - realtor_zip"
           echo ""
           echo "Check Supabase dashboard to verify."
