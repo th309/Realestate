@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory, ViewMode } from '../types';
 import { MetricCategoryItem, ViewToggle } from './sidebar-components';
+import { GeoLevelPills } from './GeoLevelPills';
 
 interface SidebarProps {
   pathname: string;
@@ -11,19 +12,23 @@ interface SidebarProps {
   expandedCategories: string[];
   selectedMetric: string;
   geoLevel: GeoLevel;
+  selectedState: string;
   forecastHorizon: ForecastHorizon;
   rentIndexType: RentIndexType;
   renterDemandType: RenterDemandType;
   sidebarWidth: number;
   viewMode: ViewMode;
+  mobileMenuOpen: boolean;
   onToggleCategory: (id: string) => void;
   onSelectMetric: (id: string) => void;
   onGeoLevelChange: (level: GeoLevel) => void;
+  onStateChange: (state: string) => void;
   onForecastHorizonChange: (horizon: ForecastHorizon) => void;
   onRentIndexTypeChange: (type: RentIndexType) => void;
   onRenterDemandTypeChange: (type: RenterDemandType) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onViewModeChange: (mode: ViewMode) => void;
+  onCloseMobileMenu: () => void;
 }
 
 export function Sidebar({
@@ -33,46 +38,87 @@ export function Sidebar({
   expandedCategories,
   selectedMetric,
   geoLevel,
+  selectedState,
   forecastHorizon,
   rentIndexType,
   renterDemandType,
   sidebarWidth,
   viewMode,
+  mobileMenuOpen,
   onToggleCategory,
   onSelectMetric,
   onGeoLevelChange,
+  onStateChange,
   onForecastHorizonChange,
   onRentIndexTypeChange,
   onRenterDemandTypeChange,
   onMouseDown,
   onViewModeChange,
+  onCloseMobileMenu,
 }: SidebarProps) {
   return (
-    <aside className="flex bg-white shadow-lg">
+    <aside
+      className={`
+        flex bg-white shadow-lg
+        fixed md:relative inset-y-0 left-0 z-50 md:z-auto
+        transform transition-transform duration-300 ease-in-out
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}
+    >
       {/* Navigation Rail */}
-      <div className="w-20 border-r border-gray-200 flex flex-col items-center py-4 gap-1">
+      <div className="w-16 md:w-20 border-r border-gray-200 flex flex-col items-center py-4 gap-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.id}
               href={item.href}
-              className={`w-16 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
+              onClick={onCloseMobileMenu}
+              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
                 isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               <span className={isActive ? 'text-purple-700' : 'text-gray-600'}>
                 {item.icon}
               </span>
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-[10px] md:text-xs font-medium">{item.label}</span>
             </Link>
           );
         })}
       </div>
 
-      {/* Metric Panel */}
-      <div className="overflow-y-auto p-4" style={{ width: sidebarWidth }}>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Market Trends</h2>
+      {/* Metric Panel - fixed 256px on mobile, dynamic sidebarWidth on desktop via CSS variable */}
+      <div
+        className="sidebar-panel overflow-y-auto p-3 md:p-4"
+        style={{ '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}
+      >
+        {/* Mobile header with close button */}
+        <div className="flex items-center justify-between mb-4 md:mb-4">
+          <h2 className="text-base md:text-lg font-medium text-gray-900">Market Trends</h2>
+          <button
+            onClick={onCloseMobileMenu}
+            className="md:hidden p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Close menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile-only: Geo Level Pills */}
+        <div className="md:hidden mb-4 pb-4 border-b border-gray-200">
+          <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Geographic Level</p>
+          <GeoLevelPills
+            geoLevel={geoLevel}
+            selectedMetric={selectedMetric}
+            selectedState={selectedState}
+            onGeoLevelChange={onGeoLevelChange}
+            onStateChange={onStateChange}
+            isMobile={true}
+          />
+        </div>
 
         {/* View Mode Toggle */}
         <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
@@ -110,10 +156,10 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Resize handle */}
+      {/* Resize handle - hidden on mobile */}
       <div
         onMouseDown={onMouseDown}
-        className="w-1 hover:w-1.5 bg-transparent hover:bg-purple-300 cursor-col-resize transition-all flex-shrink-0 group"
+        className="hidden md:block w-1 hover:w-1.5 bg-transparent hover:bg-purple-300 cursor-col-resize transition-all flex-shrink-0 group"
         title="Drag to resize sidebar"
       >
         <div className="w-full h-full flex items-center justify-center">

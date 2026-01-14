@@ -25,9 +25,9 @@ export function SearchBar({
   onFocus,
 }: SearchBarProps) {
   return (
-    <div className="flex-1 max-w-2xl mx-8" ref={searchRef}>
+    <div className="flex-1 max-w-2xl mx-0 md:mx-8" ref={searchRef}>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+        <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-gray-500">
           <SearchIcon />
         </div>
         <input
@@ -36,7 +36,7 @@ export function SearchBar({
           onChange={(e) => onSearch(e.target.value)}
           onFocus={onFocus}
           placeholder="Search city, zip, or county"
-          className="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
+          className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-2.5 md:py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
         />
         {/* Search Results Dropdown */}
         {showSearchResults && (

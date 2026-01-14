@@ -38,6 +38,7 @@ export default function MapPage() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isResizing = useRef(false);
   const pathname = usePathname();
 
@@ -201,35 +202,83 @@ export default function MapPage() {
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: '#f7f2fa', fontFamily: "'Google Sans', Roboto, sans-serif" }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <MenuIcon />
-          </button>
-          <h1 className="text-xl font-medium text-gray-900">PropertyIQ</h1>
+      <header className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 shadow-sm">
+        {/* Mobile: stacked layout, Desktop: single row */}
+        <div className="flex items-center justify-between gap-2 md:gap-3">
+          {/* Left: Menu + Title */}
+          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <button
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <MenuIcon />
+            </button>
+            <h1 className="text-lg md:text-xl font-medium text-gray-900">PropertyIQ</h1>
+          </div>
+
+          {/* Search - hidden on mobile, shown on desktop */}
+          <div className="hidden md:block flex-1">
+            <SearchBar
+              searchRef={searchRef}
+              searchQuery={searchQuery}
+              searchResults={searchResults}
+              searchLoading={searchLoading}
+              showSearchResults={showSearchResults}
+              onSearch={handleSearch}
+              onSelectResult={handleSelectSearchResult}
+              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+            />
+          </div>
+
+          {/* Geo Pills - hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block flex-shrink-0">
+            <GeoLevelPills
+              geoLevel={geoLevel}
+              selectedMetric={selectedMetric}
+              selectedState={selectedState}
+              onGeoLevelChange={handleGeoLevelChange}
+              onStateChange={setSelectedState}
+            />
+          </div>
         </div>
 
-        <SearchBar
-          searchRef={searchRef}
-          searchQuery={searchQuery}
-          searchResults={searchResults}
-          searchLoading={searchLoading}
-          showSearchResults={showSearchResults}
-          onSearch={handleSearch}
-          onSelectResult={handleSelectSearchResult}
-          onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-        />
+        {/* Mobile: Search bar on second row */}
+        <div className="md:hidden mt-2">
+          <SearchBar
+            searchRef={searchRef}
+            searchQuery={searchQuery}
+            searchResults={searchResults}
+            searchLoading={searchLoading}
+            showSearchResults={showSearchResults}
+            onSearch={handleSearch}
+            onSelectResult={handleSelectSearchResult}
+            onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+          />
+        </div>
 
-        <GeoLevelPills
-          geoLevel={geoLevel}
-          selectedMetric={selectedMetric}
-          selectedState={selectedState}
-          onGeoLevelChange={handleGeoLevelChange}
-          onStateChange={setSelectedState}
-        />
+        {/* Tablet: Geo pills on second row (hidden on mobile, shown on tablet, hidden on desktop) */}
+        <div className="hidden md:flex lg:hidden mt-2 justify-center">
+          <GeoLevelPills
+            geoLevel={geoLevel}
+            selectedMetric={selectedMetric}
+            selectedState={selectedState}
+            onGeoLevelChange={handleGeoLevelChange}
+            onStateChange={setSelectedState}
+          />
+        </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile overlay backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         <Sidebar
           pathname={pathname}
           navItems={NAV_ITEMS}
@@ -237,19 +286,23 @@ export default function MapPage() {
           expandedCategories={expandedCategories}
           selectedMetric={selectedMetric}
           geoLevel={geoLevel}
+          selectedState={selectedState}
           forecastHorizon={forecastHorizon}
           rentIndexType={rentIndexType}
           renterDemandType={renterDemandType}
           sidebarWidth={sidebarWidth}
           viewMode={viewMode}
+          mobileMenuOpen={mobileMenuOpen}
           onToggleCategory={toggleCategory}
           onSelectMetric={setSelectedMetric}
           onGeoLevelChange={handleGeoLevelChange}
+          onStateChange={setSelectedState}
           onForecastHorizonChange={setForecastHorizon}
           onRentIndexTypeChange={setRentIndexType}
           onRenterDemandTypeChange={setRenterDemandType}
           onMouseDown={handleMouseDown}
           onViewModeChange={handleViewModeChange}
+          onCloseMobileMenu={() => setMobileMenuOpen(false)}
         />
 
         {/* Map */}
@@ -276,9 +329,9 @@ export default function MapPage() {
             homeValues={homeValues}
           />
 
-          <button className="absolute bottom-6 right-6 bg-white shadow-lg rounded-2xl px-5 py-3 flex items-center gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
+          <button className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-white shadow-lg rounded-xl md:rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
             <TableIcon />
-            <span className="font-medium text-gray-800">Table View</span>
+            <span className="hidden sm:inline font-medium text-gray-800">Table View</span>
           </button>
         </main>
       </div>

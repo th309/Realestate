@@ -9,6 +9,7 @@ interface GeoLevelPillsProps {
   selectedState: string;
   onGeoLevelChange: (level: GeoLevel) => void;
   onStateChange: (state: string) => void;
+  isMobile?: boolean;
 }
 
 export function GeoLevelPills({
@@ -17,6 +18,7 @@ export function GeoLevelPills({
   selectedState,
   onGeoLevelChange,
   onStateChange,
+  isMobile = false,
 }: GeoLevelPillsProps) {
   const isForecastMode = selectedMetric === 'home_price_forecast';
   const isRentIndexMode = selectedMetric === 'rent_index';
@@ -25,7 +27,7 @@ export function GeoLevelPills({
   const levels = ['National', 'State', 'Metro', 'County', 'City', 'Zip'] as const;
 
   return (
-    <div className="flex gap-2 items-center">
+    <div className={`flex gap-2 ${isMobile ? 'flex-wrap' : 'items-center'}`}>
       {levels.map((level) => {
         const levelKey = level.toLowerCase() as GeoLevel;
         const isActive = geoLevel === levelKey;
@@ -44,7 +46,7 @@ export function GeoLevelPills({
             onClick={() => !isDisabled && onGeoLevelChange(levelKey)}
             disabled={isDisabled}
             className={`
-              px-4 py-2 rounded-full text-sm font-medium transition-all
+              ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-full font-medium transition-all
               ${isActive
                 ? 'bg-purple-600 text-white shadow-md'
                 : isDisabled
@@ -64,7 +66,10 @@ export function GeoLevelPills({
         <select
           value={selectedState}
           onChange={(e) => onStateChange(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className={`
+            ${isMobile ? 'w-full mt-2 px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm'}
+            rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500
+          `}
         >
           <option value="">Select State</option>
           {US_STATES.map((state) => (
