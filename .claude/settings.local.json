@@ -58,7 +58,16 @@
       "Bash(wmic:*)",
       "Bash(taskkill /F /FI \"WINDOWTITLE eq *ingest-all-zillow*\")",
       "Bash(npm i:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(git reset:*)",
+      "Bash(railway --version:*)",
+      "Bash(railway status:*)",
+      "Bash(railway link:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway list:*)",
+      "Bash(railway redeploy:*)",
+      "Bash(railway up:*)",
+      "Bash(du:*)"
     ]
   }
 }

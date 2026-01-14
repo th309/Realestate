@@ -370,13 +370,35 @@ export class ZillowService {
     if (!latestData?.period_date) return [];
 
     // Query all forecast metrics for that date
-    const { data: forecasts, error } = await this.supabase
-      .from('zillow_metro')
-      .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
-      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-      .eq('period_date', latestData.period_date);
+    // Need to paginate because there are ~2685 records (895 metros × 3 horizons)
+    // and Supabase has a default 1000 row limit
+    const allForecasts: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
 
-    if (error || !forecasts?.length) return [];
+    while (true) {
+      const { data: pageData, error } = await this.supabase
+        .from('zillow_metro')
+        .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
+        .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+        .eq('period_date', latestData.period_date)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (error) {
+        console.error('Error fetching metro forecasts:', error.message);
+        break;
+      }
+
+      if (!pageData || pageData.length === 0) break;
+
+      allForecasts.push(...pageData);
+
+      if (pageData.length < pageSize) break; // Last page
+      page++;
+    }
+
+    if (allForecasts.length === 0) return [];
+    const forecasts = allForecasts;
 
     // Group by region_id to combine forecast metrics
     const byRegion = new Map<number, any>();
@@ -417,20 +439,40 @@ export class ZillowService {
 
     if (!latestData?.period_date) return [];
 
-    // Query all forecast metrics for that date
-    let query = this.supabase
-      .from('zillow_zip')
-      .select('region_id, region_name, state_code, metric_name, value, period_date')
-      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-      .eq('period_date', latestData.period_date);
+    // Query all forecast metrics for that date with pagination
+    const allForecasts: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
 
-    if (stateFilter) {
-      query = query.eq('state_code', stateFilter.toUpperCase());
+    while (true) {
+      let query = this.supabase
+        .from('zillow_zip')
+        .select('region_id, region_name, state_code, metric_name, value, period_date')
+        .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+        .eq('period_date', latestData.period_date)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (stateFilter) {
+        query = query.eq('state_code', stateFilter.toUpperCase());
+      }
+
+      const { data: pageData, error } = await query;
+
+      if (error) {
+        console.error('Error fetching zip forecasts:', error.message);
+        break;
+      }
+
+      if (!pageData || pageData.length === 0) break;
+
+      allForecasts.push(...pageData);
+
+      if (pageData.length < pageSize) break; // Last page
+      page++;
     }
 
-    const { data: forecasts, error } = await query;
-
-    if (error || !forecasts?.length) return [];
+    if (allForecasts.length === 0) return [];
+    const forecasts = allForecasts;
 
     // Group by region_id to combine forecast metrics
     const byRegion = new Map<number, any>();

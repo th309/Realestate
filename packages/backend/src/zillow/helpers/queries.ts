@@ -13,8 +13,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
 export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
-                  'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
-                  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
+  'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
+  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
 
 // Map geography string to table name
 function getTableForGeography(geography: string): string {
@@ -76,8 +76,64 @@ export const getLatestDateForTable = async (
 export const getLatestDateForMarketTable = getLatestDateForTable;
 
 /**
+ * Paginated query helper to overcome Supabase's 1000 row default limit
+ * Automatically fetches all pages of results
+ */
+export async function paginatedQuery<T = any>(
+  supabase: SupabaseClient,
+  table: string,
+  selectColumns: string,
+  filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[],
+  pageSize: number = 1000
+): Promise<T[]> {
+  const allData: T[] = [];
+  let page = 0;
+
+  while (true) {
+    let query = supabase
+      .from(table)
+      .select(selectColumns)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    // Apply filters
+    for (const filter of filters) {
+      switch (filter.operator || 'eq') {
+        case 'in':
+          query = query.in(filter.column, filter.value);
+          break;
+        case 'gte':
+          query = query.gte(filter.column, filter.value);
+          break;
+        case 'lte':
+          query = query.lte(filter.column, filter.value);
+          break;
+        case 'eq':
+        default:
+          query = query.eq(filter.column, filter.value);
+      }
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`paginatedQuery error for ${table}:`, error.message);
+      break;
+    }
+
+    if (!data || data.length === 0) break;
+
+    allData.push(...(data as T[]));
+
+    if (data.length < pageSize) break; // Last page
+    page++;
+  }
+
+  return allData;
+}
+
+/**
  * Query data from long-format tables
- * Added limit to prevent timeouts on large tables
+ * Uses pagination to fetch all results (no row limit)
  */
 export async function queryZillowData(
   supabase: SupabaseClient,
@@ -90,28 +146,26 @@ export async function queryZillowData(
 
   console.log(`queryZillowData: table=${table}, metric=${metricName}, date=${targetDate}`);
 
-  let query = supabase
-    .from(table)
-    .select('region_id, region_name, state_code, period_date, metric_name, value')
-    .eq('period_date', targetDate)
-    .eq('metric_name', metricName);
+  const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
+    { column: 'period_date', value: targetDate },
+    { column: 'metric_name', value: metricName },
+  ];
 
   if (regionIds && regionIds.length > 0) {
-    query = query.in('region_id', regionIds);
+    filters.push({ column: 'region_id', value: regionIds, operator: 'in' });
   }
 
-  query = query.limit(5000);
+  const data = await paginatedQuery(
+    supabase,
+    table,
+    'region_id, region_name, state_code, period_date, metric_name, value',
+    filters
+  );
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error(`queryZillowData error: ${error.message}`);
-    throw new Error(error.message);
-  }
-
-  console.log(`queryZillowData: returned ${data?.length || 0} rows`);
-  return data || [];
+  console.log(`queryZillowData: returned ${data.length} rows`);
+  return data;
 }
+
 
 /**
  * Query data with legacy-compatible response format
@@ -137,6 +191,7 @@ export async function queryWithLegacyFormat(
 
 /**
  * Query multiple metrics at once
+ * Uses pagination to fetch all results
  */
 export async function queryMultipleMetrics(
   supabase: SupabaseClient,
@@ -147,21 +202,23 @@ export async function queryMultipleMetrics(
 ) {
   const table = getTableForGeography(geography);
 
-  let query = supabase
-    .from(table)
-    .select('region_id, region_name, state_code, period_date, metric_name, value')
-    .in('metric_name', metricNames)
-    .eq('period_date', targetDate);
+  const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
+    { column: 'metric_name', value: metricNames, operator: 'in' },
+    { column: 'period_date', value: targetDate },
+  ];
 
   if (regionIds && regionIds.length > 0) {
-    query = query.in('region_id', regionIds);
+    filters.push({ column: 'region_id', value: regionIds, operator: 'in' });
   }
 
-  const { data, error } = await query;
-
-  if (error) throw new Error(error.message);
-  return data || [];
+  return paginatedQuery(
+    supabase,
+    table,
+    'region_id, region_name, state_code, period_date, metric_name, value',
+    filters
+  );
 }
+
 
 /**
  * Get time series data for a specific region
@@ -398,6 +455,7 @@ export interface ZillowQueryOptions {
 
 /**
  * Unified query function with full options
+ * Uses pagination to fetch all results
  */
 export async function query(
   supabase: SupabaseClient,
@@ -407,28 +465,28 @@ export async function query(
 
   const table = getTableForGeography(geography);
 
-  let query = supabase
-    .from(table)
-    .select('region_id, region_name, state_code, period_date, metric_name, value')
-    .eq('metric_name', metric);
+  const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
+    { column: 'metric_name', value: metric },
+  ];
 
   if (date) {
-    query = query.eq('period_date', date);
+    filters.push({ column: 'period_date', value: date });
   }
   if (startDate) {
-    query = query.gte('period_date', startDate);
+    filters.push({ column: 'period_date', value: startDate, operator: 'gte' });
   }
   if (endDate) {
-    query = query.lte('period_date', endDate);
+    filters.push({ column: 'period_date', value: endDate, operator: 'lte' });
   }
   if (regionIds && regionIds.length > 0) {
-    query = query.in('region_id', regionIds);
+    filters.push({ column: 'region_id', value: regionIds, operator: 'in' });
   }
 
-  query = query.order('period_date', { ascending: true });
-
-  const { data, error } = await query;
-
-  if (error) throw new Error(error.message);
-  return data || [];
+  return paginatedQuery(
+    supabase,
+    table,
+    'region_id, region_name, state_code, period_date, metric_name, value',
+    filters
+  );
 }
+
