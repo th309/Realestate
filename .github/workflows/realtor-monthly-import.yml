@@ -25,8 +25,6 @@ jobs:
   import-realtor-data:
     runs-on: ubuntu-latest
     timeout-minutes: 180  # 3 hours for large ZIP dataset
-    
-
 
     steps:
       - name: Checkout repository
@@ -44,10 +42,10 @@ jobs:
       - name: Run Realtor.com Data Import
         id: import
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
         run: |
           echo "=============================================="
           echo "Realtor.com Data Import - $(date)"

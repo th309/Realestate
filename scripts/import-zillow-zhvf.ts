@@ -31,7 +31,7 @@ import { join } from 'path';
 config({ path: join(__dirname, '../packages/backend/.env') });
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
@@ -189,6 +189,36 @@ async function importZHVF(geography: string): Promise<number> {
     if (records.length === 0) {
       console.log('No records to insert');
       return 0;
+    }
+
+    // For metro, look up existing cbsa_codes from the database
+    if (geography === 'metro') {
+      console.log('\nLooking up CBSA codes from existing data...');
+      const { data: existingCodes } = await supabase
+        .from('zillow_metro')
+        .select('region_id, cbsa_code')
+        .not('cbsa_code', 'is', null);
+
+      if (existingCodes && existingCodes.length > 0) {
+        const codeMap = new Map<number, string>();
+        for (const row of existingCodes) {
+          if (row.cbsa_code && !codeMap.has(row.region_id)) {
+            codeMap.set(row.region_id, row.cbsa_code);
+          }
+        }
+        console.log(`Found ${codeMap.size} unique CBSA code mappings`);
+
+        // Apply cbsa_codes to records
+        let matched = 0;
+        for (const record of records) {
+          const cbsa = codeMap.get(record.region_id);
+          if (cbsa) {
+            record.cbsa_code = cbsa;
+            matched++;
+          }
+        }
+        console.log(`Matched ${matched} of ${records.length} records with CBSA codes`);
+      }
     }
 
     // Show sample

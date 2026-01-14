@@ -89,3 +89,6 @@ redfin_downloads/raw_files/housing_market_county.tsv
 redfin_downloads/raw_files/housing_market_metro.tsv
 redfin_downloads/raw_files/*.tmp.gz
 
+# Large Realtor data files (imported to database)
+data/Realtor/*.csv
+
