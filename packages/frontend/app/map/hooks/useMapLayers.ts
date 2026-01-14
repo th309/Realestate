@@ -11,6 +11,53 @@ import { getColorScale } from '../utils';
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Display format types for metrics
+type MetricFormat = 'currency' | 'percent' | 'number' | 'index' | 'days';
+
+// Map metric IDs to their display format
+function getMetricFormat(metricId: string): MetricFormat {
+  // Percent format - forecasts, growth rates, ratios
+  const percentMetrics = [
+    'home_price_forecast', 'home_value_yoy', 'home_value_mom', 'home_value_5yr',
+    'sfh_value_yoy', 'condo_value_yoy', 'inventory_yoy', 'sales_yoy',
+    'rent_growth', 'population_growth', 'income_growth', 'job_growth', 'gdp_growth',
+    'overvalued_pct', 'price_cut_pct', 'sale_to_list', 'vacancy_rate',
+    'homeowner_affordability', 'renter_affordability', 'homeownership_rate',
+    'cap_rate', 'gross_yield', 'rent_to_price',
+  ];
+
+  // Plain number format - counts, scores
+  const numberMetrics = [
+    'for_sale_inventory', 'new_listings', 'pending_listings', 'home_sales',
+    'new_construction_sales', 'population', 'median_age',
+    'long_term_growth', 'market_health', 'investment_score',
+  ];
+
+  // Days format
+  const daysMetrics = [
+    'days_on_market', 'days_to_close',
+  ];
+
+  // Index format (plain number, but semantically different)
+  const indexMetrics = [
+    'rent_for_houses', 'cost_of_living',
+  ];
+
+  // Years format (treat as number with suffix handled elsewhere)
+  const yearsMetrics = [
+    'years_to_save',
+  ];
+
+  if (percentMetrics.includes(metricId)) return 'percent';
+  if (numberMetrics.includes(metricId)) return 'number';
+  if (daysMetrics.includes(metricId)) return 'days';
+  if (indexMetrics.includes(metricId)) return 'index';
+  if (yearsMetrics.includes(metricId)) return 'number'; // years displayed as plain number
+
+  // Default to currency for home values, prices, rent, income
+  return 'currency';
+}
+
 interface UseMapLayersProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
   popup: React.MutableRefObject<mapboxgl.Popup | null>;
@@ -70,19 +117,16 @@ export function useMapLayers({
       // Add source
       map.current!.addSource('geo-data', { type: 'geojson', data: geojson });
 
-      // Calculate color scale parameters
-      const isForecast = selectedMetric === 'home_price_forecast';
-      const isRentIndex = selectedMetric === 'rent_index';
-      const isRenterDemand = selectedMetric === 'rent_for_houses';
-      const isInventory = selectedMetric === 'for_sale_inventory';
-
-      const { minVal, maxVal } = calculateValueRange(homeValues, isRentIndex || isRenterDemand || isInventory);
+      // Determine metric format for display
+      const metricFormat = getMetricFormat(selectedMetric);
+      const needsRange = metricFormat !== 'currency'; // Non-currency metrics need dynamic range
+      const { minVal, maxVal } = calculateValueRange(homeValues, needsRange);
 
       // Add layers
-      addMapLayers(map.current!, geoLevel, isForecast, isRenterDemand, minVal, maxVal, isInventory);
+      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
 
       // Setup hover interactions
-      setupHoverInteractions(map.current!, popup, isForecast, isRenterDemand, forecastHorizon, isInventory);
+      setupHoverInteractions(map.current!, popup, metricFormat, forecastHorizon);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
@@ -201,12 +245,15 @@ function calculateValueRange(homeValues: HomeValues, needsRange: boolean): { min
 function addMapLayers(
   map: mapboxgl.Map,
   geoLevel: GeoLevel,
-  isForecast: boolean,
-  isRenterDemand: boolean,
+  metricFormat: MetricFormat,
   minVal?: number,
-  maxVal?: number,
-  isInventory: boolean = false
+  maxVal?: number
 ): void {
+  // For color scale, we need to know specific metric types
+  const isForecast = metricFormat === 'percent';
+  const isRenterDemand = metricFormat === 'index';
+  const isInventory = metricFormat === 'number' || metricFormat === 'days';
+
   // Fill layer
   map.addLayer({
     id: 'geo-fills',
@@ -236,10 +283,37 @@ function addMapLayers(
 
   // Labels for state level
   if (geoLevel === 'state' || geoLevel === 'national') {
-    // Build value format expression - no $ for inventory (it's a count, not currency)
-    const valueFormat = isInventory
-      ? ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]
-      : ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
+    // Build value format expression based on metric type
+    let valueFormat: any;
+    switch (metricFormat) {
+      case 'percent':
+        // Show as percentage with sign
+        valueFormat = [
+          'concat',
+          ['case', ['>', ['get', 'value'], 0], '+', ''],
+          ['number-format', ['get', 'value'], { 'min-fraction-digits': 1, 'max-fraction-digits': 1 }],
+          '%'
+        ];
+        break;
+      case 'number':
+      case 'index':
+        // Plain number with thousands separator
+        valueFormat = ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
+        break;
+      case 'days':
+        // Number with "days" suffix
+        valueFormat = [
+          'concat',
+          ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
+          ' days'
+        ];
+        break;
+      case 'currency':
+      default:
+        // Currency with $ prefix
+        valueFormat = ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
+        break;
+    }
 
     map.addLayer({
       id: 'geo-labels',
@@ -269,10 +343,8 @@ function addMapLayers(
 function setupHoverInteractions(
   map: mapboxgl.Map,
   popup: React.MutableRefObject<mapboxgl.Popup | null>,
-  isForecast: boolean,
-  isRenterDemand: boolean,
-  forecastHorizon: ForecastHorizon,
-  isInventory: boolean = false
+  metricFormat: MetricFormat,
+  forecastHorizon: ForecastHorizon
 ): void {
   map.on('mouseenter', 'geo-fills', () => {
     map.getCanvas().style.cursor = 'pointer';
@@ -294,8 +366,9 @@ function setupHoverInteractions(
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
       }
 
-      const { displayValue, valueColor } = formatDisplayValue(value, isForecast, isRenterDemand, isInventory);
+      const { displayValue, valueColor } = formatDisplayValue(value, metricFormat);
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
+      const isForecast = metricFormat === 'percent';
 
       popup.current
         .setLngLat(e.lngLat)
@@ -313,9 +386,7 @@ function setupHoverInteractions(
 
 function formatDisplayValue(
   value: number | null,
-  isForecast: boolean,
-  isRenterDemand: boolean,
-  isInventory: boolean = false
+  metricFormat: MetricFormat
 ): { displayValue: string; valueColor: string } {
   let displayValue: string;
   let valueColor = '#6750a4';
@@ -325,22 +396,29 @@ function formatDisplayValue(
     return { displayValue: 'No data', valueColor: '#6b7280' };
   }
 
-  if (isForecast) {
-    // For forecasts, 0 is a valid value (no change predicted)
-    const sign = value > 0 ? '+' : '';
-    displayValue = `${sign}${value.toFixed(1)}%`;
-    valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
-  } else if (isRenterDemand) {
-    displayValue = value > 0 ? value.toFixed(0) : 'No data';
-    valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
-  } else if (isInventory) {
-    // Inventory is a count, not currency
-    displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
-    valueColor = '#6750a4';
-  } else {
-    displayValue = value > 0
-      ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
-      : 'No data';
+  switch (metricFormat) {
+    case 'percent':
+      // For percentages, 0 is a valid value (no change predicted)
+      const sign = value > 0 ? '+' : '';
+      displayValue = `${sign}${value.toFixed(1)}%`;
+      valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
+      break;
+    case 'index':
+      displayValue = value > 0 ? value.toFixed(0) : 'No data';
+      valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
+      break;
+    case 'number':
+      displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
+      break;
+    case 'days':
+      displayValue = value >= 0 ? `${value.toLocaleString('en-US')} days` : 'No data';
+      break;
+    case 'currency':
+    default:
+      displayValue = value > 0
+        ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        : 'No data';
+      break;
   }
 
   return { displayValue, valueColor };
