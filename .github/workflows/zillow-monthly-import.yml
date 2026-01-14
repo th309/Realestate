@@ -21,8 +21,6 @@ on:
           - market-indicators
           - affordability
 
-
-
 jobs:
   import-zillow-data:
     runs-on: ubuntu-latest

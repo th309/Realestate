@@ -21,8 +21,6 @@ on:
           - county
           - zip
 
-
-
 jobs:
   import-realtor-data:
     runs-on: ubuntu-latest
