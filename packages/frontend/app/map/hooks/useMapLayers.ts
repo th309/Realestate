@@ -85,7 +85,7 @@ export function useMapLayers({
 
       // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
-      const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat);
+      const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat, selectedMetric);
 
       // Add layers
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);

@@ -208,10 +208,14 @@ async function insertTimeSeries(
     stateCode: record.StateName?.length === 2 ? record.StateName : undefined
   } : undefined;
 
+  // For market_heat (market_temp_index), allow zero and negative values
+  const allowZeroAndNegative = config.datasetType === 'market_temp_index';
+
   for (const dateCol of dateColumns) {
     const value = parseFloat(record[dateCol]);
-    if (!isNaN(value) && value !== null && value !== 0) {
-      timeSeriesData.push(buildRecord(
+    // Skip NaN/null, and skip zero for most metrics (but allow for market_heat)
+    if (isNaN(value) || value === null || (!allowZeroAndNegative && value === 0)) continue;
+    timeSeriesData.push(buildRecord(
         regionId,
         dateCol,
         value,

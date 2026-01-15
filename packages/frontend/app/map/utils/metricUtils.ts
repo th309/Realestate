@@ -87,11 +87,13 @@ export function getMetricFormat(metricId: string): MetricFormat {
  *
  * @param homeValues - Object mapping region IDs to values
  * @param metricFormat - The format type of the metric
+ * @param metricId - Optional metric ID for special handling (e.g., market_heat)
  * @returns min and max values for the color scale
  */
 export function calculateValueRange(
   homeValues: HomeValues,
-  metricFormat: MetricFormat
+  metricFormat: MetricFormat,
+  metricId?: string
 ): { min: number; max: number } {
   // Default ranges based on metric type
   const defaults: Record<MetricFormat, { min: number; max: number }> = {
@@ -99,7 +101,7 @@ export function calculateValueRange(
     percent_abs: { min: 0, max: 100 },
     days: { min: 0, max: 90 },
     number: { min: 0, max: 10000 },
-    index: { min: 0, max: 200 },
+    index: { min: -50, max: 100 },
     currency: { min: 100000, max: 800000 },
   };
 
@@ -112,6 +114,11 @@ export function calculateValueRange(
   }
 
   const sorted = [...allValues].sort((a, b) => a - b);
+
+  // Market Heat Index uses actual min/max (100% of data, no percentile clipping)
+  if (metricId === 'market_heat') {
+    return { min: sorted[0], max: sorted[sorted.length - 1] };
+  }
 
   if (metricFormat === 'percent') {
     // For growth metrics, use 5th and 95th percentile to exclude outliers
