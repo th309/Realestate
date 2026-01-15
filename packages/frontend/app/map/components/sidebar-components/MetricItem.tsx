@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PremiumIcon, InfoSmallIcon } from '../Icons';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from '../../types';
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
@@ -33,7 +34,9 @@ export function MetricItem({
   onRenterDemandTypeChange,
 }: MetricItemProps) {
   const [showInfo, setShowInfo] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
   const infoRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLSpanElement>(null);
 
   // Close popup when clicking outside
   useEffect(() => {
@@ -51,6 +54,13 @@ export function MetricItem({
 
   const handleInfoClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopupPosition({
+        top: rect.top,
+        left: rect.right + 8, // 8px gap to the right
+      });
+    }
     setShowInfo(!showInfo);
   };
 
@@ -71,6 +81,7 @@ export function MetricItem({
         <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
           {metric.isPremium && <PremiumIcon />}
           <span
+            ref={buttonRef}
             onClick={handleInfoClick}
             className="cursor-pointer hover:text-purple-600 transition-colors"
           >
@@ -79,11 +90,16 @@ export function MetricItem({
         </span>
       </button>
 
-      {/* Metric Info Popup - positioned to the right of the info icon, above map */}
-      {showInfo && metricDef && (
+      {/* Metric Info Popup - rendered via portal to appear above map */}
+      {showInfo && metricDef && typeof document !== 'undefined' && createPortal(
         <div
           ref={infoRef}
-          className="absolute left-full top-0 ml-2 z-[9999] w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-3 text-xs"
+          className="fixed w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-3 text-xs"
+          style={{
+            top: popupPosition.top,
+            left: popupPosition.left,
+            zIndex: 99999,
+          }}
         >
           <div className="flex justify-between items-start mb-2">
             <h4 className="font-semibold text-gray-900">{metricDef.name}</h4>
@@ -114,7 +130,8 @@ export function MetricItem({
           {metricDef.notes && (
             <p className="text-[11px] text-gray-400 italic mt-2">{metricDef.notes}</p>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Forecast Horizon Selector */}
