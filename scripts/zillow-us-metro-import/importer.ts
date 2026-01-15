@@ -8,9 +8,32 @@ import { createZillowUsMetroClient } from './db-client';
 import { downloadDataset } from './downloader';
 import { buildRecord, getConflictColumns, getPropertyType, requiresTier } from './record-builder';
 
-// Global crosswalk map: region_id -> cbsa_code
-const cbsaCrosswalkMap: Map<string, string> = new Map();
+// Global crosswalk maps
+const cbsaCrosswalkMap: Map<string, string> = new Map(); // region_id -> cbsa_code
+const cbsaNameMap: Map<string, string> = new Map(); // normalized_name -> cbsa_code
 let crosswalkLoaded = false;
+
+/**
+ * Normalize metro name for fuzzy matching
+ * "Peoria, IL" -> "peoria il"
+ */
+function normalizeMetroName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[,\-]/g, ' ')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extract primary metro name (before comma)
+ * "Peoria, IL" -> "peoria"
+ */
+function extractPrimaryMetroName(name: string): string {
+  const parts = name.split(',');
+  return parts[0].toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
 
 /**
  * Load CBSA crosswalk from database
@@ -23,7 +46,7 @@ async function loadCbsaCrosswalk(): Promise<void> {
 
   const { data, error } = await supabase
     .from('zillow_metro_crosswalk')
-    .select('zillow_region_id, cbsa_code');
+    .select('zillow_region_id, zillow_region_name, cbsa_code, cbsa_title');
 
   if (error) {
     console.warn(`  ⚠️ Could not load CBSA crosswalk: ${error.message}`);
@@ -34,10 +57,36 @@ async function loadCbsaCrosswalk(): Promise<void> {
   if (data) {
     for (const row of data) {
       if (row.zillow_region_id && row.cbsa_code) {
+        // Map by region_id
         cbsaCrosswalkMap.set(String(row.zillow_region_id), row.cbsa_code);
+
+        // Map by normalized Zillow region name
+        if (row.zillow_region_name) {
+          const normalizedZillow = normalizeMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(normalizedZillow)) {
+            cbsaNameMap.set(normalizedZillow, row.cbsa_code);
+          }
+          const primaryZillow = extractPrimaryMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(primaryZillow)) {
+            cbsaNameMap.set(primaryZillow, row.cbsa_code);
+          }
+        }
+
+        // Map by normalized CBSA title
+        if (row.cbsa_title) {
+          const normalizedCbsa = normalizeMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(normalizedCbsa)) {
+            cbsaNameMap.set(normalizedCbsa, row.cbsa_code);
+          }
+          const primaryCbsa = extractPrimaryMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(primaryCbsa)) {
+            cbsaNameMap.set(primaryCbsa, row.cbsa_code);
+          }
+        }
       }
     }
-    console.log(`  ✅ Loaded ${cbsaCrosswalkMap.size} CBSA mappings`);
+    console.log(`  ✅ Loaded ${cbsaCrosswalkMap.size} CBSA mappings by region_id`);
+    console.log(`  ✅ Loaded ${cbsaNameMap.size} CBSA mappings by name`);
   }
 
   crosswalkLoaded = true;
@@ -202,8 +251,15 @@ async function insertTimeSeries(
   const tier = requiresTier(config.datasetType) ? '0.33_0.67' : undefined;
 
   // Build options for zillow_metro table (includes CBSA code from crosswalk)
+  // Try: 1) CSV CBSACode, 2) crosswalk by region_id, 3) crosswalk by name
+  let cbsaCode: string | undefined = record.CBSACode || cbsaCrosswalkMap.get(String(regionId));
+  if (!cbsaCode && record.RegionName) {
+    cbsaCode = cbsaNameMap.get(normalizeMetroName(record.RegionName))
+      || cbsaNameMap.get(extractPrimaryMetroName(record.RegionName));
+  }
+
   const options = config.tableName === 'zillow_metro' ? {
-    cbsaCode: record.CBSACode || cbsaCrosswalkMap.get(String(regionId)) || undefined,
+    cbsaCode: cbsaCode || undefined,
     regionName: record.RegionName || undefined,
     stateCode: record.StateName?.length === 2 ? record.StateName : undefined
   } : undefined;

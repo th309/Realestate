@@ -70,6 +70,7 @@ interface TableStatus {
 const datasetStatuses: Map<string, DatasetStatus> = new Map();
 const tableRowCounts: Map<string, number> = new Map();
 const cbsaCrosswalMap: Map<string, string> = new Map(); // region_id -> cbsa_code
+const cbsaNameMap: Map<string, string> = new Map(); // normalized_name -> cbsa_code
 let statusIntervalId: NodeJS.Timeout | null = null;
 let importStartTime: number = 0;
 let currentDatasetIndex: number = 0;
@@ -359,8 +360,15 @@ async function importCSV(
 
     const stateCode = extractStateCode(record);
     const fipsCode = buildFipsCode(record);
-    // Use CBSACode from CSV if available, otherwise look up from crosswalk
-    const cbsaCode = record.CBSACode || cbsaCrosswalMap.get(String(regionId)) || null;
+    // Use CBSACode from CSV if available, otherwise look up from crosswalk by ID or name
+    let cbsaCode = record.CBSACode || cbsaCrosswalMap.get(String(regionId)) || null;
+
+    // Fallback to name-based lookup if region_id lookup failed
+    if (!cbsaCode && regionName) {
+      cbsaCode = cbsaNameMap.get(normalizeMetroName(regionName))
+        || cbsaNameMap.get(extractPrimaryMetroName(regionName))
+        || null;
+    }
 
     const dateColumns = Object.keys(record).filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key));
 
@@ -471,12 +479,35 @@ async function getTableCounts(supabase: SupabaseClient): Promise<void> {
   }
 }
 
+/**
+ * Normalize metro name for fuzzy matching
+ * "Peoria, IL" -> "peoria il"
+ * "Chicago-Naperville-Elgin, IL-IN-WI" -> "chicago naperville elgin il in wi"
+ */
+function normalizeMetroName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[,\-]/g, ' ')  // Replace commas and hyphens with spaces
+    .replace(/[^a-z0-9\s]/g, '')  // Remove other punctuation
+    .replace(/\s+/g, ' ')  // Collapse multiple spaces
+    .trim();
+}
+
+/**
+ * Extract primary metro name (before comma)
+ * "Peoria, IL" -> "peoria"
+ */
+function extractPrimaryMetroName(name: string): string {
+  const parts = name.split(',');
+  return parts[0].toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
+
 async function loadCbsaCrosswalk(supabase: SupabaseClient): Promise<void> {
   console.log('Loading CBSA crosswalk data...');
 
   const { data, error } = await supabase
     .from('zillow_metro_crosswalk')
-    .select('zillow_region_id, cbsa_code');
+    .select('zillow_region_id, zillow_region_name, cbsa_code, cbsa_title');
 
   if (error) {
     console.warn(`Warning: Could not load CBSA crosswalk: ${error.message}`);
@@ -486,10 +517,38 @@ async function loadCbsaCrosswalk(supabase: SupabaseClient): Promise<void> {
   if (data) {
     for (const row of data) {
       if (row.zillow_region_id && row.cbsa_code) {
+        // Map by region_id
         cbsaCrosswalMap.set(String(row.zillow_region_id), row.cbsa_code);
+
+        // Map by normalized Zillow region name
+        if (row.zillow_region_name) {
+          const normalizedZillow = normalizeMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(normalizedZillow)) {
+            cbsaNameMap.set(normalizedZillow, row.cbsa_code);
+          }
+          // Also map by primary name only (e.g., "peoria" without state)
+          const primaryZillow = extractPrimaryMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(primaryZillow)) {
+            cbsaNameMap.set(primaryZillow, row.cbsa_code);
+          }
+        }
+
+        // Map by normalized CBSA title
+        if (row.cbsa_title) {
+          const normalizedCbsa = normalizeMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(normalizedCbsa)) {
+            cbsaNameMap.set(normalizedCbsa, row.cbsa_code);
+          }
+          // Also map by primary name only
+          const primaryCbsa = extractPrimaryMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(primaryCbsa)) {
+            cbsaNameMap.set(primaryCbsa, row.cbsa_code);
+          }
+        }
       }
     }
-    console.log(`Loaded ${cbsaCrosswalMap.size} CBSA mappings from crosswalk`);
+    console.log(`Loaded ${cbsaCrosswalMap.size} CBSA mappings by region_id`);
+    console.log(`Loaded ${cbsaNameMap.size} CBSA mappings by name`);
   }
 }
 
