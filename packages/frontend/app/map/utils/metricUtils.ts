@@ -34,7 +34,7 @@ export function getMetricFormat(metricId: string): MetricFormat {
   // Percent format - forecasts, growth rates, ratios
   const percentMetrics = [
     'home_price_forecast', 'home_value_yoy', 'home_value_mom', 'home_value_5yr',
-    'sfh_value_yoy', 'condo_value_yoy', 'inventory_yoy', 'sales_yoy',
+    'inventory_yoy', 'sales_yoy',
     'rent_growth', 'population_growth', 'income_growth', 'job_growth', 'gdp_growth',
     'overvalued_pct', 'price_cut_pct', 'sale_to_list', 'vacancy_rate',
     'homeowner_affordability', 'renter_affordability', 'homeownership_rate',
