@@ -41,6 +41,7 @@ const INVESTOR_POPULAR_METRICS = [
   { id: 'rent_for_houses', name: 'Renter Demand Index', dataSource: 'zillow' as DataSource },
   { id: 'home_value_yoy', name: 'Home Value Growth (YoY)', dataSource: 'realtor' as DataSource },
   { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true, dataSource: 'census' as DataSource },
+  { id: 'market_heat', name: 'Market Heat Index', dataSource: 'zillow' as DataSource },
   { id: 'investoredge_score', name: 'InvestorEdge Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
 ];
 
