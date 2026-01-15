@@ -137,15 +137,15 @@ export function BenchmarkPanel({
       const state = benchmarkData.state[metric.id];
       const national = benchmarkData.national[metric.id];
 
-      if (local === null) continue;
+      if (local === null || local === undefined) continue;
       total++;
 
-      if (state !== null) {
+      if (state !== null && state !== undefined) {
         const isBetter = metric.lowerIsBetter ? local < state : local > state;
         if (isBetter) beatState++;
       }
 
-      if (national !== null) {
+      if (national !== null && national !== undefined) {
         const isBetter = metric.lowerIsBetter ? local < national : local > national;
         if (isBetter) beatNational++;
       }
@@ -323,12 +323,12 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
           const state = benchmarkData.state[m.id];
           const national = benchmarkData.national[m.id];
 
-          if (local === null) return (
+          if (local === null || local === undefined) return (
             <div key={i} className="flex-1 h-2 rounded-full bg-gray-200" />
           );
 
-          const beatStateVal = state !== null && (m.lowerIsBetter ? local < state : local > state);
-          const beatNationalVal = national !== null && (m.lowerIsBetter ? local < national : local > national);
+          const beatStateVal = state !== null && state !== undefined && (m.lowerIsBetter ? local < state : local > state);
+          const beatNationalVal = national !== null && national !== undefined && (m.lowerIsBetter ? local < national : local > national);
 
           return (
             <div
@@ -384,8 +384,8 @@ function BenchmarkBar({
   primaryColor
 }: BenchmarkBarProps) {
   // Format value based on metric type
-  const formatValue = (value: number | null, format: string): string => {
-    if (value === null) return 'N/A';
+  const formatValue = (value: number | null | undefined, format: string): string => {
+    if (value === null || value === undefined) return 'N/A';
     switch (format) {
       case 'currency':
         if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
@@ -407,7 +407,7 @@ function BenchmarkBar({
   };
 
   // If no local value, show placeholder
-  if (localValue === null) {
+  if (localValue === null || localValue === undefined) {
     return (
       <div className="p-4 rounded-2xl bg-gray-50 opacity-50">
         <div className="flex items-center justify-between">
@@ -422,25 +422,25 @@ function BenchmarkBar({
   }
 
   // Calculate positions for markers
-  const allValues = [localValue, stateValue, nationalValue].filter((v): v is number => v !== null);
+  const allValues = [localValue, stateValue, nationalValue].filter((v): v is number => v !== null && v !== undefined);
   const minVal = Math.min(...allValues) * 0.85;
   const maxVal = Math.max(...allValues) * 1.15;
   const range = maxVal - minVal || 1;
 
-  const getPosition = (value: number | null) => {
-    if (value === null) return 50;
+  const getPosition = (value: number | null | undefined) => {
+    if (value === null || value === undefined) return 50;
     return Math.max(5, Math.min(95, ((value - minVal) / range) * 100));
   };
 
   const localPos = getPosition(localValue);
-  const statePos = stateValue !== null ? getPosition(stateValue) : null;
-  const nationalPos = nationalValue !== null ? getPosition(nationalValue) : null;
+  const statePos = stateValue !== null && stateValue !== undefined ? getPosition(stateValue) : null;
+  const nationalPos = nationalValue !== null && nationalValue !== undefined ? getPosition(nationalValue) : null;
 
   // Determine comparison results
-  const isBetterThanState = stateValue !== null && (metric.lowerIsBetter
+  const isBetterThanState = stateValue !== null && stateValue !== undefined && (metric.lowerIsBetter
     ? localValue < stateValue
     : localValue > stateValue);
-  const isBetterThanNational = nationalValue !== null && (metric.lowerIsBetter
+  const isBetterThanNational = nationalValue !== null && nationalValue !== undefined && (metric.lowerIsBetter
     ? localValue < nationalValue
     : localValue > nationalValue);
 
@@ -591,13 +591,13 @@ function BenchmarkBar({
             />
             <span className="text-slate-500">This Market</span>
           </div>
-          {stateValue !== null && (
+          {stateValue !== null && stateValue !== undefined && (
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full border-2 border-amber-500 bg-amber-100" />
               <span className="text-slate-500">State</span>
             </div>
           )}
-          {nationalValue !== null && (
+          {nationalValue !== null && nationalValue !== undefined && (
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rotate-45 bg-slate-400 border border-slate-500" />
               <span className="text-slate-500">National</span>
@@ -605,15 +605,15 @@ function BenchmarkBar({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {stateValue !== null && (
+          {stateValue !== null && stateValue !== undefined && (
             <span className={isBetterThanState ? 'text-emerald-600' : 'text-rose-500'}>
               {isBetterThanState ? '+' : '-'} vs State
             </span>
           )}
-          {stateValue !== null && nationalValue !== null && (
+          {stateValue !== null && stateValue !== undefined && nationalValue !== null && nationalValue !== undefined && (
             <span className="text-slate-300">|</span>
           )}
-          {nationalValue !== null && (
+          {nationalValue !== null && nationalValue !== undefined && (
             <span className={isBetterThanNational ? 'text-emerald-600' : 'text-rose-500'}>
               {isBetterThanNational ? '+' : '-'} vs National
             </span>
