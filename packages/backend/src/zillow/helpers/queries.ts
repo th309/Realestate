@@ -424,8 +424,8 @@ export async function queryMarketIndicator(
 }
 
 /**
- * Query affordability data (legacy-compatible)
- * Note: Affordability not yet migrated, returns empty for now
+ * Query affordability data from zillow_metro long-format table
+ * Combines multiple affordability metrics into unified response
  */
 export async function queryAffordability(
   supabase: SupabaseClient,
@@ -434,11 +434,67 @@ export async function queryAffordability(
   _propertyType?: string,
   regionIds?: string[]
 ): Promise<any[]> {
-  // Affordability data not yet in new schema - return empty array
-  // TODO: Add affordability metrics to calculated_metrics table
-  console.warn('queryAffordability: Affordability data not yet migrated to new schema');
-  return [];
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+
+  // Affordability metrics are only available at metro level
+  if (geoType !== 'metro') {
+    console.warn(`queryAffordability: Affordability data only available at metro level, not ${geoType}`);
+    return [];
+  }
+
+  const affordabilityMetrics = ['homeowner_income_needed', 'affordable_home_price', 'years_to_save', 'renter_income_needed'];
+
+  // Query all affordability metrics for the given date
+  const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
+    { column: 'metric_name', value: affordabilityMetrics, operator: 'in' },
+    { column: 'period_date', value: targetDate },
+  ];
+
+  if (regionIds && regionIds.length > 0) {
+    const numericIds = regionIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+    filters.push({ column: 'region_id', value: numericIds, operator: 'in' });
+  }
+
+  const data = await paginatedQuery(
+    supabase,
+    'zillow_metro',
+    'region_id, region_name, cbsa_code, state_code, period_date, metric_name, value',
+    filters
+  );
+
+  if (!data.length) return [];
+
+  // Group by region_id to combine metrics
+  const byRegion = new Map<number, any>();
+  for (const row of data) {
+    if (!byRegion.has(row.region_id)) {
+      byRegion.set(row.region_id, {
+        region_id: String(row.region_id),
+        region_name: row.region_name,
+        cbsa_code: row.cbsa_code,
+        state_code: row.state_code,
+        date: row.period_date,
+        geography: 'Metro',
+        homeowner_income_needed: null,
+        renter_income_needed: null,
+        affordable_home_price: null,
+        years_to_save: null,
+        homeowner_affordability_percent: null,
+        renter_affordability_percent: null,
+        down_payment_percent: null,
+        property_type: 'sfrcondo',
+      });
+    }
+    const entry = byRegion.get(row.region_id);
+    if (row.metric_name === 'homeowner_income_needed') entry.homeowner_income_needed = row.value;
+    if (row.metric_name === 'affordable_home_price') entry.affordable_home_price = row.value;
+    if (row.metric_name === 'years_to_save') entry.years_to_save = row.value;
+    if (row.metric_name === 'renter_income_needed') entry.renter_income_needed = row.value;
+  }
+
+  return [...byRegion.values()];
 }
+
 
 // ============================================================================
 // Advanced Query Interface

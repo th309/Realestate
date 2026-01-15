@@ -882,8 +882,22 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroAffordability(date?: string): Promise<AffordabilityData[]> {
-    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_affordability', 'Metro');
-    const data = await queryAffordability(this.supabase, ['Metro', 'US'], targetDate);
+    // Get latest date from zillow_metro where affordability metrics are stored
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestData } = await this.supabase
+        .from('zillow_metro')
+        .select('period_date')
+        .eq('metric_name', 'homeowner_income_needed')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestData?.period_date;
+    }
+
+    if (!targetDate) return [];
+
+    const data = await queryAffordability(this.supabase, ['Metro'], targetDate);
 
     if (!data.length) return [];
 
