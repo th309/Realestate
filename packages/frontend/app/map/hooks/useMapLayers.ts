@@ -87,8 +87,8 @@ export function useMapLayers({
       const metricFormat = getMetricFormat(selectedMetric);
       const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat, selectedMetric);
 
-      // Add layers - pass selectedMetric to correctly identify renter demand vs other index metrics
-      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, selectedMetric);
+      // Add layers - uses same min/max as legend for consistent colors
+      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
 
       // Setup hover and click interactions
       setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, onFeatureClick);
@@ -216,23 +216,16 @@ function addMapLayers(
   map: mapboxgl.Map,
   geoLevel: GeoLevel,
   metricFormat: MetricFormat,
-  minVal?: number,
-  maxVal?: number,
-  metricId?: string
+  minVal: number,
+  maxVal: number
 ): void {
-  // For color scale, we need to know specific metric types
-  const isForecast = metricFormat === 'percent';
-  // Only use renter demand scale for actual renter demand metric, not all index metrics
-  const isRenterDemand = metricId === 'rent_for_houses';
-  const isInventory = metricFormat === 'number' || metricFormat === 'days';
-
-  // Fill layer
+  // Fill layer - uses dynamic min/max from calculateValueRange (same as legend)
   map.addLayer({
     id: 'geo-fills',
     type: 'fill',
     source: 'geo-data',
     paint: {
-      'fill-color': getColorScale(geoLevel, isForecast, minVal, maxVal, isRenterDemand, isInventory) as any,
+      'fill-color': getColorScale(minVal, maxVal) as any,
       'fill-opacity': 0.6,
     },
   });
