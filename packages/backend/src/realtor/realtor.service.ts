@@ -30,6 +30,34 @@ export class RealtorService {
   private readonly CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours in ms
   private cache = new Map<string, CacheEntry<RealtorRow[]>>();
 
+  // FIPS code to state abbreviation mapping (realtor_state uses abbreviations, not FIPS)
+  private readonly fipsToAbbr: Record<string, string> = {
+    '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
+    '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
+    '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
+    '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
+    '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
+    '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
+    '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
+    '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
+    '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
+    '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
+    '56': 'WY', '72': 'PR'
+  };
+
+  /**
+   * Convert FIPS code or abbreviation to state abbreviation
+   */
+  private toStateAbbr(stateIdOrFips: string): string {
+    // If it's already a 2-letter abbreviation, return as-is
+    if (stateIdOrFips.length === 2 && /^[A-Z]{2}$/i.test(stateIdOrFips)) {
+      return stateIdOrFips.toUpperCase();
+    }
+    // Try to convert from FIPS code
+    const padded = stateIdOrFips.padStart(2, '0');
+    return this.fipsToAbbr[padded] || stateIdOrFips;
+  }
+
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
@@ -221,34 +249,22 @@ export class RealtorService {
 
   /**
    * Get state average for a given state
+   * @param stateId - Can be FIPS code (e.g., "32") or abbreviation (e.g., "NV")
    */
   async getStateAverages(stateId: string): Promise<Record<string, number | null>> {
     const columns = ['state_id', ...Object.values(this.metricColumnMap)];
-    console.log(`[getStateAverages] Querying with stateId=${stateId}`);
+    // Convert FIPS to state abbreviation (database stores abbreviations like "NV", not FIPS "32")
+    const stateAbbr = this.toStateAbbr(stateId);
+    console.log(`[getStateAverages] Input stateId=${stateId}, converted to stateAbbr=${stateAbbr}`);
 
-    let { data, error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('realtor_state')
       .select(columns.join(','))
-      .eq('state_id', stateId)
+      .eq('state_id', stateAbbr)
       .order('period_date', { ascending: false })
       .limit(1);
 
-    console.log(`[getStateAverages] First query result: ${data?.length || 0} rows`);
-
-    // If no results, always try with numeric ID (state_id might be stored as number)
-    if (!data || data.length === 0) {
-      const numericId = parseInt(stateId, 10);
-      console.log(`[getStateAverages] Retrying with numeric ID: ${numericId}`);
-      const retry = await this.supabase
-        .from('realtor_state')
-        .select(columns.join(','))
-        .eq('state_id', numericId)
-        .order('period_date', { ascending: false })
-        .limit(1);
-      data = retry.data;
-      error = retry.error;
-      console.log(`[getStateAverages] Retry result: ${data?.length || 0} rows`);
-    }
+    console.log(`[getStateAverages] Query result: ${data?.length || 0} rows`);
 
     if (error) {
       console.error('Error fetching state averages:', error);
@@ -294,29 +310,21 @@ export class RealtorService {
     let stateName: string | null = null;
 
     if (stateId && geoLevel !== 'state') {
-      console.log(`[getBenchmarks] Fetching state averages for stateId=${stateId}`);
+      // Convert FIPS to abbreviation (database stores "NV" not "32")
+      const stateAbbr = this.toStateAbbr(stateId);
+      console.log(`[getBenchmarks] Fetching state averages for stateId=${stateId} (abbr=${stateAbbr})`);
       state = await this.getStateAverages(stateId);
       const stateMetricsWithValues = Object.values(state).filter(v => v !== null).length;
       console.log(`[getBenchmarks] State averages received: ${stateMetricsWithValues} metrics with values`);
 
-      // Get state name - try string first, then numeric
-      let { data: stateData } = await this.supabase
+      // Get state name using abbreviation
+      const { data: stateData } = await this.supabase
         .from('realtor_state')
         .select('state_name')
-        .eq('state_id', stateId)
+        .eq('state_id', stateAbbr)
         .limit(1);
 
-      // If no result, try numeric ID
-      if (!stateData || stateData.length === 0) {
-        const numericStateId = parseInt(stateId, 10);
-        const retry = await this.supabase
-          .from('realtor_state')
-          .select('state_name')
-          .eq('state_id', numericStateId)
-          .limit(1);
-        stateData = retry.data;
-      }
-      stateName = stateData?.[0]?.state_name || null;
+      stateName = stateData?.[0]?.state_name || stateAbbr;
       console.log(`[getBenchmarks] State name: ${stateName}`);
     } else {
       console.log(`[getBenchmarks] Skipping state averages: stateId=${stateId}, geoLevel=${geoLevel}`);
@@ -327,30 +335,18 @@ export class RealtorService {
     let locationName = '';
 
     if (geoLevel === 'state') {
-      // Try with string first, then numeric (state_id might be stored as number)
-      let { data, error } = await this.supabase
+      // Convert FIPS to abbreviation (database stores "NV" not "32")
+      const stateAbbr = this.toStateAbbr(regionId);
+      console.log(`[getBenchmarks] State query for regionId=${regionId} (abbr=${stateAbbr})`);
+
+      const { data, error } = await this.supabase
         .from('realtor_state')
         .select([...columns, 'state_name'].join(','))
-        .eq('state_id', regionId)
+        .eq('state_id', stateAbbr)
         .order('period_date', { ascending: false })
         .limit(1);
 
-      console.log(`[getBenchmarks] State query for regionId=${regionId}:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
-
-      // If no results, always try with numeric ID (state_id might be stored as number)
-      if (!data || data.length === 0) {
-        const numericId = parseInt(regionId, 10);
-        console.log(`[getBenchmarks] Retrying with numeric state_id=${numericId}`);
-        const retry = await this.supabase
-          .from('realtor_state')
-          .select([...columns, 'state_name'].join(','))
-          .eq('state_id', numericId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-        data = retry.data;
-        error = retry.error;
-        console.log(`[getBenchmarks] Retry result:`, data?.length || 0, 'rows');
-      }
+      console.log(`[getBenchmarks] State query result:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
