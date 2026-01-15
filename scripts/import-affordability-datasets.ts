@@ -136,9 +136,30 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
 // IMPORT LOGIC
 // ============================================================================
 
+async function loadCrosswalks(supabase: SupabaseClient): Promise<Map<number, string>> {
+  console.log('Loading CBSA crosswalk from database...');
+  const { data, error } = await supabase
+    .from('zillow_metro_crosswalk')
+    .select('zillow_region_id, cbsa_code');
+
+  if (error) {
+    console.error('Error loading crosswalk:', error.message);
+    return new Map();
+  }
+
+  const map = new Map<number, string>();
+  data?.forEach(row => {
+    map.set(row.zillow_region_id, row.cbsa_code);
+  });
+
+  console.log(`Loaded ${map.size} CBSA crosswalk entries`);
+  return map;
+}
+
 async function importDataset(
   supabase: SupabaseClient,
-  dataset: DatasetConfig
+  dataset: DatasetConfig,
+  cbsaCrosswalk: Map<number, string>
 ): Promise<{ inserted: number; errors: number }> {
   const filePath = join(DATA_DIR, `${dataset.id}.csv`);
 
@@ -166,12 +187,12 @@ async function importDataset(
   // Build records for upsert
   const dbRecords: any[] = [];
   let skipped = 0;
+  let missingCbsa = 0;
 
   for (const record of records) {
     const regionId = parseInt(record.RegionID, 10);
     const regionName = record.RegionName;
     const stateName = record.StateName;
-    const cbsaCode = record.CBSACode || null;
 
     // Skip US aggregate (RegionType = 'country')
     if (record.RegionType === 'country') continue;
@@ -180,6 +201,12 @@ async function importDataset(
     if (record.RegionType !== 'msa') {
       skipped++;
       continue;
+    }
+
+    // Look up CBSA code from crosswalk (Zillow CSV doesn't have it)
+    const cbsaCode = cbsaCrosswalk.get(regionId) || null;
+    if (!cbsaCode) {
+      missingCbsa++;
     }
 
     const stateCode = stateName ? STATE_NAME_TO_CODE[stateName] || null : null;
@@ -201,6 +228,10 @@ async function importDataset(
         value: numValue
       });
     }
+  }
+
+  if (missingCbsa > 0) {
+    console.log(`Warning: ${missingCbsa} metros missing CBSA code in crosswalk`);
   }
 
   console.log(`Built ${dbRecords.length} database records (skipped ${skipped} non-metro)`);
@@ -254,12 +285,15 @@ async function main() {
 
   const supabase = getSupabaseClient();
 
+  // Load CBSA crosswalk once for all datasets
+  const cbsaCrosswalk = await loadCrosswalks(supabase);
+
   let totalInserted = 0;
   let totalErrors = 0;
 
   for (const dataset of AFFORDABILITY_DATASETS) {
     try {
-      const result = await importDataset(supabase, dataset);
+      const result = await importDataset(supabase, dataset, cbsaCrosswalk);
       totalInserted += result.inserted;
       totalErrors += result.errors;
     } catch (error) {
