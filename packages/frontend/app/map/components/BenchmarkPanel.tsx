@@ -141,12 +141,19 @@ export function BenchmarkPanel({
     let beatNational = 0;
     let total = 0;
 
+    console.log('[SummaryStats] Calculating for metrics:', metrics.map(m => m.id));
+    console.log('[SummaryStats] benchmarkData.location:', benchmarkData.location);
+    console.log('[SummaryStats] benchmarkData.national:', benchmarkData.national);
+
     for (const metric of metrics) {
       const local = benchmarkData.location[metric.id];
       const state = benchmarkData.state[metric.id];
       const national = benchmarkData.national[metric.id];
 
-      if (local === null || local === undefined) continue;
+      if (local === null || local === undefined) {
+        console.log(`[SummaryStats] ${metric.id}: local is null/undefined, skipping`);
+        continue;
+      }
       total++;
 
       if (state !== null && state !== undefined) {
@@ -156,7 +163,10 @@ export function BenchmarkPanel({
 
       if (national !== null && national !== undefined) {
         const isBetter = metric.lowerIsBetter ? local < national : local > national;
+        console.log(`[SummaryStats] ${metric.id}: local=${local}, national=${national}, lowerIsBetter=${metric.lowerIsBetter}, isBetter=${isBetter}`);
         if (isBetter) beatNational++;
+      } else {
+        console.log(`[SummaryStats] ${metric.id}: national is null/undefined`);
       }
     }
 
