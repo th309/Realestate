@@ -42,19 +42,17 @@ interface BenchmarkData {
 }
 
 // Metric configurations
-// lowerIsBetter: For homebuyers, indicates if lower values favor buyers
-// - Lower home prices = better for buyers (lowerIsBetter: true)
-// - Higher DOM = less competition, more time to shop (lowerIsBetter: false)
-// - Lower price/sqft = cheaper (lowerIsBetter: true)
+// lowerIsBetter: indicates if lower values are better for the user
+// Homebuyers: lower prices, lower appreciation (not rising fast), higher DOM (less competition)
+// Investors: lower inventory growth (supply constraint), higher appreciation
 const METRIC_CONFIGS: MetricConfig[] = [
-  // Homebuyer metrics - what's good for BUYERS
+  // Homebuyer metrics - what's good for BUYERS (5 metrics)
   { id: 'home_value', label: 'Median Home Value', description: 'Median listing price', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
   { id: 'home_value_yoy', label: 'YoY Appreciation', description: '12-month price change', format: 'percent', lowerIsBetter: true, category: 'homebuyer' }, // Lower appreciation = prices not rising fast
   { id: 'days_on_market', label: 'Days on Market', description: 'Median listing duration', format: 'days', lowerIsBetter: false, category: 'homebuyer' }, // Higher DOM = more time to shop, less competition
   { id: 'months_of_supply', label: 'Months of Supply', description: 'Inventory ÷ pending sales', format: 'months', lowerIsBetter: false, category: 'homebuyer' }, // >6 = buyer's market, <3 = seller's market
   { id: 'price_cut_pct', label: 'Listings with Price Cuts', description: 'Share of reduced listings', format: 'percent', lowerIsBetter: false, category: 'homebuyer' }, // More price cuts = buyer advantage
-  { id: 'price_per_sqft', label: 'Price per Sq Ft', description: 'Median price per square foot', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
-  // Investor metrics - what's good for INVESTORS
+  // Investor metrics - what's good for INVESTORS (4 metrics)
   { id: 'inventory_yoy', label: 'Inventory Growth', description: 'YoY inventory change', format: 'percent', lowerIsBetter: true, category: 'investor' }, // Lower inventory growth = constrained supply = price support
   { id: 'new_listings', label: 'New Listings', description: 'New listings this month', format: 'number', lowerIsBetter: false, category: 'investor' }, // More new listings = opportunities
   { id: 'pending_listings', label: 'Pending Listings', description: 'Under contract listings', format: 'number', lowerIsBetter: false, category: 'investor' }, // More pending = active market
