@@ -70,18 +70,19 @@ export function GeoLevelPills({
         const isMetroOnlyDisabled = isMetroOnlyMode && levelKey !== 'metro';
         const isDisabled = isCityDisabled || isForecastDisabled || isRentIndexDisabled || isMetroOnlyDisabled;
 
+        // M3 Filter Chips: rounded-lg, border-outline, bg-surface
         return (
           <button
             key={level}
             onClick={() => !isDisabled && onGeoLevelChange(levelKey)}
             disabled={isDisabled}
             className={`
-              ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-full font-medium transition-all
+              ${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-lg font-medium transition-all duration-200
               ${isActive
-                ? 'bg-purple-600 text-white shadow-md'
+                ? 'bg-primary text-on-primary elevation-1'
                 : isDisabled
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-surface-container text-on-surface-variant/50 cursor-not-allowed'
+                  : 'bg-surface border border-outline text-on-surface-variant hover:bg-surface-container-high'
               }
             `}
             title={isDisabled ? `Not available for ${selectedMetric.replace(/_/g, ' ')}` : undefined}
@@ -98,7 +99,7 @@ export function GeoLevelPills({
           onChange={(e) => onStateChange(e.target.value)}
           className={`
             ${isMobile ? 'w-full mt-2 px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm'}
-            rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500
+            rounded-lg border border-outline bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary
           `}
         >
           <option value="">Select State</option>

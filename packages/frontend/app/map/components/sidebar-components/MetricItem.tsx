@@ -70,8 +70,8 @@ export function MetricItem({
     <div className="relative">
       <button
         onClick={onSelect}
-        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors ${
-          isSelected ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${
+          isSelected ? 'bg-primary-container text-on-primary-container font-medium' : 'text-on-surface-variant hover:bg-surface-container'
         }`}
       >
         <span className="flex items-center gap-1.5 min-w-0">
@@ -83,18 +83,18 @@ export function MetricItem({
           <span
             ref={buttonRef}
             onClick={handleInfoClick}
-            className="cursor-pointer hover:text-purple-600 transition-colors"
+            className="cursor-pointer hover:text-primary transition-colors duration-200"
           >
             <InfoSmallIcon />
           </span>
         </span>
       </button>
 
-      {/* Metric Info Popup - rendered via portal to appear above map */}
+      {/* Metric Info Popup - M3 Dialog styling */}
       {showInfo && metricDef && typeof document !== 'undefined' && createPortal(
         <div
           ref={infoRef}
-          className="fixed w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-3 text-xs"
+          className="fixed w-72 bg-surface-container-lowest rounded-[28px] elevation-3 border border-outline-variant p-3 text-xs"
           style={{
             top: popupPosition.top,
             left: popupPosition.left,
@@ -102,33 +102,33 @@ export function MetricItem({
           }}
         >
           <div className="flex justify-between items-start mb-2">
-            <h4 className="font-semibold text-gray-900">{metricDef.name}</h4>
+            <h4 className="font-semibold text-on-surface">{metricDef.name}</h4>
             <button
               onClick={() => setShowInfo(false)}
-              className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+              className="text-on-surface-variant hover:text-on-surface text-lg leading-none transition-colors duration-200"
             >
               &times;
             </button>
           </div>
 
-          <p className="text-gray-600 mb-3">{metricDef.description}</p>
+          <p className="text-on-surface-variant mb-3">{metricDef.description}</p>
 
           {metricDef.formula && (
             <div className="mb-2">
-              <span className="font-medium text-gray-700">Formula: </span>
-              <span className="text-gray-600 font-mono text-[11px] bg-gray-50 px-1 py-0.5 rounded">
+              <span className="font-medium text-on-surface">Formula: </span>
+              <span className="text-on-surface-variant font-mono text-[11px] bg-surface-container px-1 py-0.5 rounded">
                 {metricDef.formula}
               </span>
             </div>
           )}
 
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 border-t border-gray-100 pt-2 mt-2">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-on-surface-variant border-t border-outline-variant pt-2 mt-2">
             <span><span className="font-medium">Source:</span> {metricDef.dataSource}</span>
             <span><span className="font-medium">Updates:</span> {metricDef.updateFrequency}</span>
           </div>
 
           {metricDef.notes && (
-            <p className="text-[11px] text-gray-400 italic mt-2">{metricDef.notes}</p>
+            <p className="text-[11px] text-on-surface-variant/70 italic mt-2">{metricDef.notes}</p>
           )}
         </div>,
         document.body

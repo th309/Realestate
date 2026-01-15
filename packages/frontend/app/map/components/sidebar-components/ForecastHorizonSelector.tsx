@@ -15,8 +15,8 @@ export function ForecastHorizonSelector({ value, onChange }: ForecastHorizonSele
   ];
 
   return (
-    <div className="mt-1 ml-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
-      <div className="text-[10px] font-medium text-purple-800 mb-1.5">Forecast Horizon</div>
+    <div className="mt-1 ml-2 p-2 bg-primary-container/30 rounded-lg border border-outline-variant">
+      <div className="text-[10px] font-medium text-on-primary-container mb-1.5">Forecast Horizon</div>
       <div className="flex gap-1">
         {options.map((option) => (
           <button
@@ -25,10 +25,10 @@ export function ForecastHorizonSelector({ value, onChange }: ForecastHorizonSele
               e.stopPropagation();
               onChange(option.value);
             }}
-            className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${
+            className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all duration-200 ${
               value === option.value
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'bg-white text-purple-700 border border-purple-300 hover:bg-purple-100'
+                ? 'bg-primary text-on-primary elevation-1'
+                : 'bg-surface-container-lowest text-primary border border-outline hover:bg-surface-container'
             }`}
           >
             {option.label}

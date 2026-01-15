@@ -77,15 +77,15 @@ export function MetricCategoryItem({
       <div key={subSection.id} className="mt-1">
         <button
           onClick={() => toggleSubSection(subSection.id)}
-          className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-lg transition-colors"
+          className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-surface-container rounded-lg transition-colors duration-200"
         >
-          <span className="text-xs font-medium text-gray-700">{subSection.name}</span>
-          <span className={`transition-transform text-gray-400 ${isSubExpanded ? 'rotate-180' : ''}`}>
+          <span className="text-xs font-medium text-on-surface">{subSection.name}</span>
+          <span className={`transition-transform duration-200 text-on-surface-variant ${isSubExpanded ? 'rotate-180' : ''}`}>
             <ChevronDownIcon />
           </span>
         </button>
         {isSubExpanded && (
-          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-gray-200 pl-2">
+          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-outline-variant pl-2">
             {subSection.metrics.map(renderMetric)}
           </div>
         )}
@@ -97,15 +97,15 @@ export function MetricCategoryItem({
     <div>
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        className="w-full flex items-center justify-between p-2 hover:bg-surface-container rounded-lg transition-colors duration-200"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-gray-600 flex-shrink-0">{category.icon}</span>
-          <span className="font-medium text-xs text-gray-800 truncate">{category.name}</span>
+          <span className="text-on-surface-variant flex-shrink-0">{category.icon}</span>
+          <span className="font-medium text-xs text-on-surface truncate">{category.name}</span>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {category.isNew && <span className="text-[10px] text-rose-500 font-medium">New</span>}
-          <span className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+          <span className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
             <ChevronDownIcon />
           </span>
         </div>

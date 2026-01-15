@@ -59,14 +59,15 @@ export function Sidebar({
   return (
     <aside
       className={`
-        flex bg-white shadow-lg
+        flex bg-surface-container-low elevation-2 rounded-r-2xl
         fixed md:relative inset-y-0 left-0 z-50 md:z-auto
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-400
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}
+      style={{ transitionTimingFunction: 'var(--ease-standard, cubic-bezier(0.2, 0, 0, 1))' }}
     >
-      {/* Navigation Rail */}
-      <div className="w-16 md:w-20 border-r border-gray-200 flex flex-col items-center py-4 gap-1">
+      {/* M3 Navigation Rail */}
+      <div className="w-16 md:w-20 border-r border-outline-variant flex flex-col items-center py-4 gap-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -74,11 +75,11 @@ export function Sidebar({
               key={item.id}
               href={item.href}
               onClick={onCloseMobileMenu}
-              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
-                isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
+              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-200 ${
+                isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container'
               }`}
             >
-              <span className={isActive ? 'text-purple-700' : 'text-gray-600'}>
+              <span className={isActive ? 'text-on-primary-container' : 'text-on-surface-variant'}>
                 {item.icon}
               </span>
               <span className="text-[10px] md:text-xs font-medium">{item.label}</span>
@@ -94,10 +95,10 @@ export function Sidebar({
       >
         {/* Mobile header with close button */}
         <div className="flex items-center justify-between mb-4 md:mb-4">
-          <h2 className="text-base md:text-lg font-medium text-gray-900">Market Trends</h2>
+          <h2 className="text-base md:text-lg font-medium text-on-surface">Market Trends</h2>
           <button
             onClick={onCloseMobileMenu}
-            className="md:hidden p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+            className="md:hidden p-1.5 hover:bg-surface-container rounded-full transition-colors duration-200"
             aria-label="Close menu"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,8 +109,8 @@ export function Sidebar({
         </div>
 
         {/* Mobile-only: Geo Level Pills */}
-        <div className="md:hidden mb-4 pb-4 border-b border-gray-200">
-          <p className="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Geographic Level</p>
+        <div className="md:hidden mb-4 pb-4 border-b border-outline-variant">
+          <p className="text-xs text-on-surface-variant mb-2 font-medium uppercase tracking-wide">Geographic Level</p>
           <GeoLevelPills
             geoLevel={geoLevel}
             selectedMetric={selectedMetric}
@@ -146,8 +147,8 @@ export function Sidebar({
         </div>
 
         {/* Explore link */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <a href="#" className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
+        <div className="mt-4 pt-4 border-t border-outline-variant">
+          <a href="#" className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors duration-200">
             Explore Data Points
             <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
               <path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" />
@@ -159,11 +160,11 @@ export function Sidebar({
       {/* Resize handle - hidden on mobile */}
       <div
         onMouseDown={onMouseDown}
-        className="hidden md:block w-1 hover:w-1.5 bg-transparent hover:bg-purple-300 cursor-col-resize transition-all flex-shrink-0 group"
+        className="hidden md:block w-1 hover:w-1.5 bg-transparent hover:bg-primary/30 cursor-col-resize transition-all duration-200 flex-shrink-0 group"
         title="Drag to resize sidebar"
       >
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-0.5 h-8 bg-gray-300 group-hover:bg-purple-500 rounded-full transition-colors" />
+          <div className="w-0.5 h-8 bg-outline-variant group-hover:bg-primary rounded-full transition-colors duration-200" />
         </div>
       </div>
     </aside>

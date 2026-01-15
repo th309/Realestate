@@ -222,57 +222,57 @@ export function BenchmarkPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end p-2 md:p-4 pointer-events-none">
+      {/* M3 Standard Side Sheet: bg-surface-container-low, border-l, rounded-xl */}
       <div
-        className="pointer-events-auto w-full max-w-md rounded-xl shadow-2xl bg-white"
+        className="pointer-events-auto w-full max-w-md rounded-xl elevation-3 bg-surface-container-low border-l border-outline-variant"
         style={{
-          border: '1px solid rgba(0, 0, 0, 0.08)',
           opacity: animateIn ? 1 : 0,
           transform: animateIn ? 'translateX(0)' : 'translateX(20px)',
-          transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          transition: 'all 0.4s var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1))'
         }}
       >
         {/* Header */}
-        <div className="p-3 border-b border-gray-100 bg-white rounded-t-xl">
+        <div className="p-3 border-b border-outline-variant bg-surface-container-low rounded-t-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-slate-900">{selectedGeography.name}</h1>
+              <h1 className="text-base font-bold text-on-surface">{selectedGeography.name}</h1>
               {stateName && (
-                <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-slate-100 text-slate-600 rounded-full uppercase">
+                <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-surface-container-high text-on-surface-variant rounded-full uppercase">
                   {stateName}
                 </span>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              className="p-1 hover:bg-surface-container rounded-full transition-colors duration-200"
               aria-label="Close panel"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-on-surface-variant">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
           </div>
 
-          {/* Tab Toggle */}
+          {/* Tab Toggle - M3 Segmented Button */}
           <div className="flex items-center mt-2">
-            <div className="inline-flex p-0.5 bg-gray-100 rounded-lg">
+            <div className="inline-flex p-0.5 bg-surface-container rounded-lg">
               <button
                 onClick={() => setActiveTab('homebuyer')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-300 ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
                   activeTab === 'homebuyer'
-                    ? 'bg-orange-500 text-white shadow'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-orange-500 text-white elevation-1'
+                    : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
                 Homebuyer
               </button>
               <button
                 onClick={() => setActiveTab('investor')}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-300 ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
                   activeTab === 'investor'
-                    ? 'bg-emerald-500 text-white shadow'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-emerald-500 text-white elevation-1'
+                    : 'text-on-surface-variant hover:text-on-surface'
                 }`}
               >
                 Investor
@@ -285,7 +285,7 @@ export function BenchmarkPanel({
         <div className="p-3">
           {loading ? (
             <div className="flex items-center justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-orange-500"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-container border-t-primary"></div>
             </div>
           ) : benchmarkData ? (
             <>
@@ -320,12 +320,12 @@ export function BenchmarkPanel({
               </div>
 
               {/* Footer */}
-              <div className="mt-3 pt-2 border-t border-gray-100 text-[10px] text-slate-400">
+              <div className="mt-3 pt-2 border-t border-outline-variant text-[10px] text-on-surface-variant">
                 Source: Realtor.com
               </div>
             </>
           ) : (
-            <div className="text-center py-6 text-slate-500 text-sm">
+            <div className="text-center py-6 text-on-surface-variant text-sm">
               No benchmark data available
             </div>
           )}
@@ -349,23 +349,23 @@ interface SummaryCardProps {
 function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, animateIn }: SummaryCardProps) {
   return (
     <div
-      className="p-2.5 rounded-xl border border-gray-200 bg-gradient-to-br from-slate-50 to-white"
+      className="p-2.5 rounded-xl border border-outline-variant bg-surface-container elevation-1"
       style={{
         opacity: animateIn ? 1 : 0,
         transform: animateIn ? 'translateY(0)' : 'translateY(-10px)',
-        transition: 'all 0.5s ease-out'
+        transition: 'all 0.5s var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1))'
       }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-700">Market Position</span>
+        <span className="text-xs font-semibold text-on-surface">Market Position</span>
         <div className="flex gap-3">
           <div className="flex items-center gap-1">
             <span className="text-lg font-bold text-amber-500">{beatState}/{total}</span>
-            <span className="text-[9px] text-slate-400">State</span>
+            <span className="text-[9px] text-on-surface-variant">State</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-lg font-bold text-slate-500">{beatNational}/{total}</span>
-            <span className="text-[9px] text-slate-400">National</span>
+            <span className="text-lg font-bold text-on-surface-variant">{beatNational}/{total}</span>
+            <span className="text-[9px] text-on-surface-variant">National</span>
           </div>
         </div>
       </div>
@@ -378,7 +378,7 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
           const national = benchmarkData.national[m.id];
 
           if (local === null || local === undefined) return (
-            <div key={i} className="flex-1 h-1.5 rounded-full bg-gray-200" />
+            <div key={i} className="flex-1 h-1.5 rounded-full bg-surface-container-highest" />
           );
 
           const beatStateVal = state !== null && state !== undefined && (m.lowerIsBetter ? local < state : local > state);
@@ -387,7 +387,7 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
           return (
             <div
               key={i}
-              className="flex-1 h-1.5 rounded-full transition-all duration-500"
+              className="flex-1 h-1.5 rounded-full transition-all duration-400"
               style={{
                 backgroundColor: beatStateVal && beatNationalVal
                   ? '#10b981'
@@ -460,10 +460,10 @@ function BenchmarkBar({
   // If no local value, show placeholder
   if (localValue === null || localValue === undefined) {
     return (
-      <div className="p-2 rounded-lg bg-gray-50 opacity-50">
+      <div className="p-2 rounded-lg bg-surface-container opacity-50">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-600">{metric.label}</span>
-          <span className="text-slate-400 text-xs">No data</span>
+          <span className="text-xs font-medium text-on-surface-variant">{metric.label}</span>
+          <span className="text-on-surface-variant text-xs">No data</span>
         </div>
       </div>
     );
@@ -509,13 +509,13 @@ function BenchmarkBar({
 
   return (
     <div
-      className={`relative p-2.5 rounded-xl transition-all duration-300 cursor-pointer border ${
-        isHovered ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-100 hover:border-gray-200'
+      className={`relative p-2.5 rounded-xl transition-all duration-200 cursor-pointer border ${
+        isHovered ? 'bg-surface-container border-outline' : 'bg-surface-container-lowest border-outline-variant hover:border-outline'
       }`}
       style={{
         opacity: animateIn ? 1 : 0,
         transform: animateIn ? 'translateX(0)' : 'translateX(-20px)',
-        transition: `all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.05}s`
+        transition: `all 0.4s var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1)) ${index * 0.05}s`
       }}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
@@ -523,14 +523,14 @@ function BenchmarkBar({
       {/* Header */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-slate-800">{metric.label}</span>
+          <span className="text-xs font-semibold text-on-surface">{metric.label}</span>
           {isTop && (
             <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-600 rounded uppercase">
               Top
             </span>
           )}
         </div>
-        <span className="text-sm font-bold text-slate-900">
+        <span className="text-sm font-bold text-on-surface">
           {formatValue(localValue, metric.format)}
         </span>
       </div>
@@ -560,10 +560,10 @@ function BenchmarkBar({
             }}
           >
             <div
-              className="w-3 h-3 bg-slate-500"
+              className="w-3 h-3 bg-on-surface-variant"
               style={{
                 transform: `rotate(45deg) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
-                transition: `transform 0.3s ease-out ${0.2 + index * 0.05}s`
+                transition: `transform 0.3s var(--ease-standard, ease-out) ${0.2 + index * 0.05}s`
               }}
             />
           </div>
@@ -583,7 +583,7 @@ function BenchmarkBar({
               className="w-4 h-4 rounded-full border-2 border-amber-500 bg-amber-100"
               style={{
                 transform: animateIn ? 'scale(1)' : 'scale(0)',
-                transition: `transform 0.3s ease-out ${0.25 + index * 0.05}s`
+                transition: `transform 0.3s var(--ease-standard, ease-out) ${0.25 + index * 0.05}s`
               }}
             />
           </div>
@@ -596,7 +596,7 @@ function BenchmarkBar({
             left: `${localPos}%`,
             top: '50%',
             transform: `translate(-50%, -50%) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
-            transition: `transform 0.3s ease-out ${0.3 + index * 0.05}s`
+            transition: `transform 0.3s var(--ease-standard, ease-out) ${0.3 + index * 0.05}s`
           }}
         >
           <div

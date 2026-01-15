@@ -37,19 +37,19 @@ export function Legend({
   // Percent legend (forecasts, growth rates)
   if (metricFormat === 'percent') {
     return (
-      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.slice(0, 6).map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
         {isForecast && (geoLevel === 'state' || geoLevel === 'national' || geoLevel === 'county') && (
-          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-gray-100 text-[10px] md:text-xs text-amber-600">
+          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-outline-variant text-[10px] md:text-xs text-amber-600">
             Forecast data available for Metro and ZIP levels
           </div>
         )}
@@ -61,14 +61,14 @@ export function Legend({
   // Absolute percent legend (affordability, rates - 0-100%)
   if (metricFormat === 'percent_abs') {
     return (
-      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
@@ -80,14 +80,14 @@ export function Legend({
   // Index legend (renter demand, cost of living)
   if (metricFormat === 'index') {
     return (
-      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
@@ -99,14 +99,14 @@ export function Legend({
   // Number legend (inventory, listings, population)
   if (metricFormat === 'number') {
     return (
-      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
@@ -118,14 +118,14 @@ export function Legend({
   // Days legend (days on market, days to close)
   if (metricFormat === 'days') {
     return (
-      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
@@ -137,14 +137,14 @@ export function Legend({
   // Currency legend (home values, prices, rent, income) - default
 
   return (
-    <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-      <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+    <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
       <div className="flex items-center gap-0.5 md:gap-1">
         {COLOR_SCALE.map((color, i) => (
           <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
         ))}
       </div>
-      <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+      <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
         <span>{minLabel}</span>
         <span>{maxLabel}</span>
       </div>
@@ -155,9 +155,9 @@ export function Legend({
 
 function NoDataIndicator() {
   return (
-    <div className="flex items-center gap-1.5 md:gap-2 mt-2 md:mt-3 pt-2 md:pt-3 border-t border-gray-100">
-      <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-gray-300" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
-      <span className="text-[10px] md:text-xs text-gray-500">No data available</span>
+    <div className="flex items-center gap-1.5 md:gap-2 mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
+      <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
+      <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
     </div>
   );
 }

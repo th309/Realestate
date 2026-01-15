@@ -16,18 +16,21 @@ export function PropertyTypeSelector({ value, geoLevel, colorScheme, onChange }:
     { value: 'mfr', label: 'Multi-Family' },
   ];
 
+  // M3: Use semantic colors with different tints for color schemes
   const colors = colorScheme === 'purple' ? {
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    text: 'text-purple-800',
-    active: 'bg-purple-600',
-    inactive: 'text-purple-700 border-purple-300 hover:bg-purple-100',
+    bg: 'bg-primary-container/30',
+    border: 'border-outline-variant',
+    text: 'text-on-primary-container',
+    active: 'bg-primary',
+    activeText: 'text-on-primary',
+    inactive: 'text-primary border-outline hover:bg-surface-container',
   } : {
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    text: 'text-green-800',
-    active: 'bg-green-600',
-    inactive: 'text-green-700 border-green-300 hover:bg-green-100',
+    bg: 'bg-tertiary-container/30',
+    border: 'border-outline-variant',
+    text: 'text-on-tertiary-container',
+    active: 'bg-tertiary',
+    activeText: 'text-on-tertiary',
+    inactive: 'text-tertiary border-outline hover:bg-surface-container',
   };
 
   return (
@@ -46,12 +49,12 @@ export function PropertyTypeSelector({ value, geoLevel, colorScheme, onChange }:
               }}
               disabled={isDisabled}
               title={isDisabled ? "Not available for County/Zip level" : ""}
-              className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all ${
+              className={`flex-1 px-2 py-1 text-[10px] font-medium rounded transition-all duration-200 ${
                 isDisabled
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                  ? 'bg-surface-container text-on-surface-variant/50 cursor-not-allowed border border-outline-variant'
                   : value === option.value
-                    ? `${colors.active} text-white shadow-sm`
-                    : `bg-white ${colors.inactive}`
+                    ? `${colors.active} ${colors.activeText} elevation-1`
+                    : `bg-surface-container-lowest ${colors.inactive}`
               }`}
             >
               {option.label}

@@ -224,21 +224,21 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col" style={{ backgroundColor: '#f7f2fa', fontFamily: "'Google Sans', Roboto, sans-serif" }}>
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-3 md:px-4 py-2 md:py-3 shadow-sm">
+    <div className="h-screen flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif" }}>
+      {/* M3 Top App Bar */}
+      <header className="bg-surface-container-lowest border-b border-outline-variant px-3 md:px-4 py-2 md:py-3 elevation-1">
         {/* Mobile: stacked layout, Desktop: single row */}
         <div className="flex items-center justify-between gap-2 md:gap-3">
           {/* Left: Menu + Title */}
           <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-surface-container rounded-full transition-colors duration-200"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
               <MenuIcon />
             </button>
-            <h1 className="text-lg md:text-xl font-medium text-gray-900">PropertyIQ</h1>
+            <h1 className="text-lg md:text-xl font-medium text-on-surface">PropertyIQ</h1>
           </div>
 
           {/* Search - hidden on mobile, shown on desktop */}
@@ -294,10 +294,10 @@ export default function MapPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile overlay backdrop */}
+        {/* M3 Scrim - Mobile overlay backdrop */}
         {mobileMenuOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-on-surface/40 z-40 md:hidden"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
@@ -332,15 +332,16 @@ export default function MapPage() {
         {/* Map */}
         <main className="flex-1 relative" style={{ minHeight: '100%' }}>
           {mapError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
-              <p className="text-red-600 font-medium">{mapError}</p>
+            <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
+              <p className="text-on-error-container font-medium">{mapError}</p>
             </div>
           )}
           {dataLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-surface/80 z-10">
               <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-                <p className="text-gray-600">Loading {geoLevel} data...</p>
+                {/* M3 Circular Progress Indicator */}
+                <div className="w-8 h-8 border-4 border-primary-container border-t-primary rounded-full animate-spin"></div>
+                <p className="text-on-surface-variant">Loading {geoLevel} data...</p>
               </div>
             </div>
           )}
@@ -362,9 +363,10 @@ export default function MapPage() {
             />
           )}
 
-          <button className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-white shadow-lg rounded-xl md:rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
+          {/* M3 Extended FAB */}
+          <button className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container">
             <TableIcon />
-            <span className="hidden sm:inline font-medium text-gray-800">Table View</span>
+            <span className="hidden sm:inline font-medium">Table View</span>
           </button>
         </main>
       </div>
