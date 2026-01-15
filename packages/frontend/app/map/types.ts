@@ -4,7 +4,23 @@ export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
-export type HomeValues = Record<string, number>;
+// Home values can be simple numbers or objects with value and date
+export type HomeValueEntry = number | { value: number; date?: string };
+export type HomeValues = Record<string, HomeValueEntry>;
+
+// Helper to extract numeric value from HomeValueEntry
+export function getValueFromEntry(entry: HomeValueEntry | undefined | null): number | null {
+  if (entry == null) return null;
+  if (typeof entry === 'number') return entry;
+  return entry.value;
+}
+
+// Helper to extract date from HomeValueEntry
+export function getDateFromEntry(entry: HomeValueEntry | undefined | null): string | undefined {
+  if (entry == null) return undefined;
+  if (typeof entry === 'number') return undefined;
+  return entry.date;
+}
 export type ViewMode = 'homebuyer' | 'investor';
 
 export interface NavItem {

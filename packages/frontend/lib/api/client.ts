@@ -30,6 +30,7 @@ interface ZillowHomeValue {
   region_id: string;
   region_name: string;
   value: number;
+  date?: string;
   state_abbrev?: string;
   county_fips?: string;
   cbsa_code?: string;
@@ -159,6 +160,37 @@ function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_
     if (key && item.value != null) {
       // Ensure value is a number (DECIMAL from DB may come as string)
       result[key] = Number(item.value);
+    }
+  });
+  return result;
+}
+
+// Transform Zillow API response including date for "as of" display
+function transformZillowResponseWithDates(
+  response: ZillowApiResponse,
+  keyField: 'region_id' | 'region_name' | 'county_fips' | 'cbsa_code' = 'region_id'
+): Record<string, { value: number; date?: string }> {
+  const result: Record<string, { value: number; date?: string }> = {};
+  response.data?.forEach(item => {
+    let key: string | undefined;
+    switch (keyField) {
+      case 'county_fips':
+        key = item.county_fips || item.region_id;
+        break;
+      case 'region_name':
+        key = item.region_name;
+        break;
+      case 'cbsa_code':
+        key = item.cbsa_code || item.region_id;
+        break;
+      default:
+        key = item.region_id;
+    }
+    if (key && item.value != null) {
+      result[key] = {
+        value: Number(item.value),
+        date: item.date,
+      };
     }
   });
   return result;
@@ -322,10 +354,10 @@ export const api = {
     return transformZillowResponse(response, 'cbsa_code');
   },
 
-  // Market Heat Index (market_health)
-  getMetroMarketHeat: async (): Promise<MetroHomeValues> => {
+  // Market Heat Index (market_health) - includes dates for "as of" display
+  getMetroMarketHeat: async (): Promise<Record<string, { value: number; date?: string }>> => {
     const response = await fetchAPI<ZillowApiResponse>('/api/zillow/market-heat/metros');
-    return transformZillowResponse(response, 'cbsa_code');
+    return transformZillowResponseWithDates(response, 'cbsa_code');
   },
 
   // ============================================================================

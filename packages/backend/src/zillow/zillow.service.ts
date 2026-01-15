@@ -32,6 +32,7 @@ import {
   queryZordi,
   queryZhvf,
   queryMarketIndicator,
+  queryMarketIndicatorLatest,
   queryAffordability
 } from './helpers/queries';
 
@@ -677,20 +678,23 @@ export class ZillowService {
 
   /**
    * Generic method to get market indicator data for metros
+   * When no date is provided, returns the latest available data per region
    */
   async getMetroMarketIndicator(
     table: MarketIndicatorTable,
     date?: string,
     propertyType: string = 'sfrcondo'
   ): Promise<MarketIndicatorData[]> {
-    const targetDate = date || await getLatestDateForMarketTable(this.supabase, table, 'Metro');
-    const data = await queryMarketIndicator(this.supabase, table, ['Metro', 'US'], targetDate, propertyType);
+    // Use latest-per-region when no specific date requested
+    const data = date
+      ? await queryMarketIndicator(this.supabase, table, ['Metro', 'US'], date, propertyType)
+      : await queryMarketIndicatorLatest(this.supabase, table, ['Metro', 'US']);
 
     if (!data.length) return [];
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 
-    return data.map(d => {
+    return data.map((d: any) => {
       if (d.geography === 'US') {
         return {
           region_id: d.region_id,
@@ -702,13 +706,14 @@ export class ZillowService {
         };
       }
 
+      // Use data from query if available, fallback to crosswalk lookup
       const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
 
       return {
         region_id: d.region_id,
-        region_name: metro?.cbsa_name || 'Unknown',
-        cbsa_code: cbsaCode,
-        state_abbrev: metro?.state || null,
+        region_name: d.region_name || metro?.cbsa_name || 'Unknown',
+        cbsa_code: d.cbsa_code || cbsaCode,
+        state_abbrev: d.state_code || metro?.state || null,
         value: d.value,
         date: d.date,
         property_type: d.property_type,

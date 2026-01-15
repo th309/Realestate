@@ -180,12 +180,56 @@ export async function queryZillowData(
   const data = await paginatedQuery(
     supabase,
     table,
-    'region_id, region_name, state_code, period_date, metric_name, value',
+    'region_id, region_name, state_code, cbsa_code, period_date, metric_name, value',
     filters
   );
 
   console.log(`queryZillowData: returned ${data.length} rows`);
   return data;
+}
+
+/**
+ * Query the most recent data for each region (not limited to a single date)
+ * Returns each region's latest available data point with its date
+ */
+export async function queryLatestPerRegion(
+  supabase: SupabaseClient,
+  geography: GeographyType,
+  metricName: MetricName,
+  regionIds?: number[]
+) {
+  const table = getTableForGeography(geography);
+
+  console.log(`queryLatestPerRegion: table=${table}, metric=${metricName}`);
+
+  const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
+    { column: 'metric_name', value: metricName },
+  ];
+
+  if (regionIds && regionIds.length > 0) {
+    filters.push({ column: 'region_id', value: regionIds, operator: 'in' });
+  }
+
+  // Fetch all records for this metric
+  const allData = await paginatedQuery(
+    supabase,
+    table,
+    'region_id, region_name, state_code, cbsa_code, period_date, metric_name, value',
+    filters
+  );
+
+  // Group by region_id and keep only the most recent record
+  const latestByRegion = new Map<number, any>();
+  for (const row of allData) {
+    const existing = latestByRegion.get(row.region_id);
+    if (!existing || row.period_date > existing.period_date) {
+      latestByRegion.set(row.region_id, row);
+    }
+  }
+
+  const result = [...latestByRegion.values()];
+  console.log(`queryLatestPerRegion: ${allData.length} total rows -> ${result.length} unique regions`);
+  return result;
 }
 
 
@@ -408,42 +452,65 @@ export async function queryZhvf(
 }
 
 /**
- * Query Market Heat Index from zillow_market_heat_index table
+ * Query Market Heat Index from zillow_metro long-format table
  */
 export async function queryMarketHeat(
   supabase: SupabaseClient,
   geography: string | string[]
 ): Promise<any[]> {
-  // Get the latest date in the market heat table
-  const { data: latestData } = await supabase
-    .from('zillow_market_heat_index')
-    .select('date')
-    .order('date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+  const table = getTableForGeography(geoType);
 
-  if (!latestData?.date) {
-    console.warn('queryMarketHeat: No data found in zillow_market_heat_index');
+  // Get the latest date for market_heat metric
+  const latestDate = await getLatestDate(supabase, geoType, 'market_heat');
+
+  if (!latestDate) {
+    console.warn(`queryMarketHeat: No market_heat data found in ${table}`);
     return [];
   }
 
-  // Build query for the specified geography types
-  const geoArray = Array.isArray(geography) ? geography : [geography];
+  // Query from long-format table
+  const data = await paginatedQuery(
+    supabase,
+    table,
+    'region_id, region_name, cbsa_code, state_code, period_date, metric_name, value',
+    [
+      { column: 'metric_name', value: 'market_heat' },
+      { column: 'period_date', value: latestDate },
+    ]
+  );
 
-  const { data, error } = await supabase
-    .from('zillow_market_heat_index')
-    .select('region_id, date, heat_index, geography, property_type')
-    .in('geography', geoArray)
-    .eq('date', latestData.date);
+  console.log(`queryMarketHeat: returned ${data.length} rows for date ${latestDate}`);
 
-  if (error) {
-    console.error('Error fetching Market Heat data:', error.message);
-    return [];
-  }
-
-  console.log(`queryMarketHeat: returned ${data?.length || 0} rows for date ${latestData.date}`);
-  return data || [];
+  // Map to legacy format for backwards compatibility
+  return data.map((row: any) => ({
+    region_id: String(row.region_id),
+    date: row.period_date,
+    heat_index: row.value,
+    geography: geoType.charAt(0).toUpperCase() + geoType.slice(1),
+    property_type: 'sfrcondo',
+  }));
 }
+
+// Map old table names to new metric names (shared across functions)
+const TABLE_TO_METRIC_MAP: Record<string, MetricName> = {
+  'zillow_inventory': 'inventory',
+  'zillow_new_listings': 'new_listings',
+  'zillow_pending_listings': 'pending_sales',
+  'zillow_median_list_price': 'list_price',
+  'zillow_sales_count': 'sale_price',
+  'zillow_sales_price': 'sale_price',
+  'zillow_sale_to_list': 'sale_to_list',
+  'zillow_days_to_pending': 'dom',
+  'zillow_days_to_close': 'dom',
+  'zillow_price_cut_share': 'price_cuts',
+  'zillow_price_cut_amt': 'price_cuts',
+  'zillow_price_cut_pct': 'price_cuts',
+  'zillow_market_heat_index': 'market_heat',
+  'zillow_new_construction_sales_count': 'sale_price',
+  'zillow_new_construction_sale_price': 'sale_price',
+  'zillow_affordability': 'zhvi',
+};
 
 /**
  * Generic query for market indicators (legacy-compatible)
@@ -456,31 +523,40 @@ export async function queryMarketIndicator(
   _propertyType?: string,
   regionIds?: string[]
 ) {
-  // Map old table names to new metric names
-  const tableToMetricMap: Record<string, MetricName> = {
-    'zillow_inventory': 'inventory',
-    'zillow_new_listings': 'new_listings',
-    'zillow_pending_listings': 'pending_sales',
-    'zillow_median_list_price': 'list_price',
-    'zillow_sales_count': 'sale_price',
-    'zillow_sales_price': 'sale_price',
-    'zillow_sale_to_list': 'sale_to_list',
-    'zillow_days_to_pending': 'dom',
-    'zillow_days_to_close': 'dom',
-    'zillow_price_cut_share': 'price_cuts',
-    'zillow_price_cut_amt': 'price_cuts',
-    'zillow_price_cut_pct': 'price_cuts',
-    'zillow_market_heat_index': 'market_heat',
-    'zillow_new_construction_sales_count': 'sale_price',
-    'zillow_new_construction_sale_price': 'sale_price',
-    'zillow_affordability': 'zhvi',
-  };
-
-  const metricName = tableToMetricMap[table] || 'zhvi';
+  const metricName = TABLE_TO_METRIC_MAP[table] || 'zhvi';
   const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
   const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
 
   return queryWithLegacyFormat(supabase, geoType, metricName, targetDate, numericIds);
+}
+
+/**
+ * Query market indicators using latest available data per region
+ * Returns each region's most recent data point (not limited to a single global date)
+ */
+export async function queryMarketIndicatorLatest(
+  supabase: SupabaseClient,
+  table: string,
+  geography: string | string[],
+  regionIds?: string[]
+) {
+  const metricName = TABLE_TO_METRIC_MAP[table] || 'zhvi';
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+  const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+
+  const data = await queryLatestPerRegion(supabase, geoType, metricName, numericIds);
+
+  // Map to legacy format with date included
+  return data.map((row: any) => ({
+    region_id: String(row.region_id),
+    value: row.value,
+    date: row.period_date,
+    property_type: 'sfrcondo',
+    geography: geoType.charAt(0).toUpperCase() + geoType.slice(1),
+    cbsa_code: row.cbsa_code,
+    region_name: row.region_name,
+    state_code: row.state_code,
+  }));
 }
 
 /**

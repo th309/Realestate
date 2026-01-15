@@ -5,7 +5,8 @@
  * Both map layers and legend components import from here to ensure consistency.
  */
 
-import type { HomeValues } from '../types';
+import type { HomeValues, HomeValueEntry } from '../types';
+import { getValueFromEntry } from '../types';
 
 // Display format types for metrics
 // 'percent' = growth rates with +/- signs (YoY, forecasts)
@@ -105,9 +106,10 @@ export function calculateValueRange(
     currency: { min: 100000, max: 800000 },
   };
 
-  const allValues = Object.values(homeValues).filter(
-    (v): v is number => typeof v === 'number' && !isNaN(v)
-  );
+  // Extract numeric values from both simple numbers and object entries
+  const allValues = Object.values(homeValues)
+    .map((entry: HomeValueEntry) => getValueFromEntry(entry))
+    .filter((v): v is number => v !== null && !isNaN(v));
 
   if (allValues.length === 0) {
     return defaults[metricFormat];

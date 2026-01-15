@@ -5,7 +5,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 import type { GeoLevel, ForecastHorizon, HomeValues, SelectedGeography } from '../types';
-import { GEOJSON_SOURCES, FIPS_TO_STATE, STATE_NAME_TO_FIPS } from '../types';
+import { GEOJSON_SOURCES, FIPS_TO_STATE, STATE_NAME_TO_FIPS, getValueFromEntry, getDateFromEntry } from '../types';
 import {
   getColorScale,
   getMetricFormat,
@@ -140,7 +140,9 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   if (geoLevel === 'state' || geoLevel === 'national') {
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.name;
-      feature.properties.value = homeValues[name] || 0;
+      const entry = homeValues[name];
+      feature.properties.value = getValueFromEntry(entry) || 0;
+      feature.properties.dataDate = getDateFromEntry(entry);
       // Set state ID (FIPS code) for benchmark lookups
       // Try multiple sources: STATEFP property, name-to-FIPS lookup, feature.id
       const stateFips = feature.properties.STATEFP || STATE_NAME_TO_FIPS[name] || feature.id;
@@ -151,7 +153,9 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'county') {
     geojson.features.forEach((feature: any) => {
       const fips = feature.id || feature.properties.id;
-      feature.properties.value = homeValues[fips] ?? homeValues[String(parseInt(fips, 10))] ?? null;
+      const entry = homeValues[fips] ?? homeValues[String(parseInt(fips, 10))];
+      feature.properties.value = getValueFromEntry(entry);
+      feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = fips;
       const stateFips = fips?.substring(0, 2);
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
@@ -160,7 +164,9 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'metro') {
     geojson.features.forEach((feature: any) => {
       const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
-      feature.properties.value = homeValues[cbsaCode] ?? null;
+      const entry = homeValues[cbsaCode];
+      feature.properties.value = getValueFromEntry(entry);
+      feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = cbsaCode;
       feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
     });
@@ -173,14 +179,18 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
       // Try matching by name first (Zillow data), then by GEOID
-      feature.properties.value = homeValues[placeName] ?? homeValues[placeId] ?? null;
+      const entry = homeValues[placeName] ?? homeValues[placeId];
+      feature.properties.value = getValueFromEntry(entry);
+      feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = placeId;
       feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
     });
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
       const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
-      feature.properties.value = homeValues[zipCode] ?? null;
+      const entry = homeValues[zipCode];
+      feature.properties.value = getValueFromEntry(entry);
+      feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = zipCode;
       feature.properties.displayName = zipCode;
     });
@@ -192,7 +202,9 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const countyFips = feature.properties.COUNTYFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
-      feature.properties.value = homeValues[tractId] ?? null;
+      const entry = homeValues[tractId];
+      feature.properties.value = getValueFromEntry(entry);
+      feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = tractId;
       feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ''}`;
       feature.properties.countyFips = stateFips + countyFips;
@@ -329,6 +341,7 @@ function setupInteractions(
       const name = feature.properties?.name || feature.properties?.displayName || feature.properties?.NAME || 'Unknown';
       // Use null to indicate "no data" - don't convert 0 to null since 0 is a valid forecast value
       const value = feature.properties?.value ?? null;
+      const dataDate = feature.properties?.dataDate;
 
       if (!popup.current) {
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
@@ -338,6 +351,19 @@ function setupInteractions(
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
       const isForecast = metricFormat === 'percent';
 
+      // Format "as of" date if available (e.g., "2025-11-30" -> "Nov 2025")
+      let asOfText = '';
+      if (dataDate && value !== null) {
+        try {
+          const date = new Date(dataDate + 'T00:00:00');
+          const month = date.toLocaleString('en-US', { month: 'short' });
+          const year = date.getFullYear();
+          asOfText = `as of ${month} ${year}`;
+        } catch {
+          // Ignore date parsing errors
+        }
+      }
+
       popup.current
         .setLngLat(e.lngLat)
         .setHTML(`
@@ -345,6 +371,7 @@ function setupInteractions(
             <div style="font-weight: 500; font-size: 14px; color: #1a1a2e;">${name}</div>
             <div style="font-size: 20px; font-weight: 600; color: ${valueColor};">${displayValue}</div>
             ${isForecast ? `<div style="font-size: 11px; color: #6b7280;">${horizonLabel} forecast</div>` : ''}
+            ${asOfText ? `<div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">${asOfText}</div>` : ''}
           </div>
         `)
         .addTo(map);
