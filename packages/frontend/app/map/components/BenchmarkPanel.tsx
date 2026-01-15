@@ -89,6 +89,15 @@ export function BenchmarkPanel({
           stateId = selectedGeography.id.substring(0, 2);
         }
 
+        // Fallback: extract state from name (e.g., "Riverton, WY" -> "WY")
+        if (!stateId && selectedGeography.name.includes(', ')) {
+          const parts = selectedGeography.name.split(', ');
+          const lastPart = parts[parts.length - 1].trim().toUpperCase();
+          if (lastPart.length === 2 && STATE_ABBR_TO_FIPS[lastPart]) {
+            stateId = STATE_ABBR_TO_FIPS[lastPart];
+          }
+        }
+
         const params = new URLSearchParams({
           geoLevel,
           regionId: selectedGeography.id,
@@ -545,7 +554,7 @@ function BenchmarkBar({
             }}
           >
             <div
-              className="w-4 h-4 bg-slate-500 border-2 border-slate-600 shadow-sm"
+              className="w-4 h-4 bg-slate-500 border-2 border-slate-600"
               style={{
                 transform: `rotate(45deg) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
                 transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + index * 0.08}s`
@@ -594,12 +603,11 @@ function BenchmarkBar({
             transition: `transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.5 + index * 0.08}s`
           }}
         >
-          {/* Main marker - no glow for cleaner look */}
+          {/* Main marker - flat on the bar, no shadow */}
           <div
-            className="w-5 h-5 rounded-full flex items-center justify-center shadow-md"
+            className="w-5 h-5 rounded-full flex items-center justify-center"
             style={{
-              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`,
-              boxShadow: `0 2px 8px ${primaryColor}50`
+              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`
             }}
           >
             <div className="w-1.5 h-1.5 rounded-full bg-white" />
