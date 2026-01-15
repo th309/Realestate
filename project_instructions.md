@@ -224,3 +224,4 @@ if (isMetricSupportedForGeo('market_heat', 'metro')) {
 - Don't hardcode color scale breakpoints (use dynamic min/max)
 - Don't create separate API methods for each metric (use `fetchMetricData`)
 - Don't format values manually (use `formatValue()` or `formatTooltipValue()`)
+- Don't hardcode zoom levels - use `GEO_ZOOM_LEVELS` from `config/metrics.ts`

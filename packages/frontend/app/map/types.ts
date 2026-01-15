@@ -1,6 +1,8 @@
 // Map page types and constants
 
-export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
+// GeoLevel is defined in config/metrics.ts to avoid circular imports
+import type { GeoLevel as GeoLevelType } from './config/metrics';
+export type GeoLevel = GeoLevelType;
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
@@ -76,16 +78,8 @@ export interface SelectedGeography {
   stateAbbr?: string;
 }
 
-// GeoJSON sources for different geography levels
-// These are API endpoint paths - prepend NEXT_PUBLIC_API_URL at runtime
-export const GEOJSON_SOURCES = {
-  state: '/api/geography/states',
-  county: '/api/geography/counties',
-  metro: '/api/geography/metros',
-  // State-specific endpoints (append /:state)
-  city: '/api/geography/cities',
-  zip: '/api/geography/zips',
-};
+// GeoJSON sources - re-exported from central config
+export { GEOJSON_SOURCES } from './config/metrics';
 
 // FIPS code to state abbreviation mapping
 export const FIPS_TO_STATE: Record<string, string> = {
@@ -202,13 +196,5 @@ export const STATE_CENTERS: Record<string, { lat: number; lng: number; zoom: num
   WY: { lat: 42.755966, lng: -107.30249, zoom: 6 },
 };
 
-// Zoom levels by geography type
-export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
-  national: 3.5,
-  state: 3.5,
-  metro: 4,
-  county: 4.5,
-  city: 5,
-  zip: 5,
-  tract: 6,
-};
+// Zoom levels - re-exported from central config
+export { GEO_ZOOM_LEVELS, getDefaultZoom } from './config/metrics';

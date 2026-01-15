@@ -1,7 +1,7 @@
 /**
  * CENTRAL METRIC CONFIGURATION
  *
- * Single source of truth for ALL metric definitions.
+ * Single source of truth for ALL metric definitions and map display settings.
  * Add a new metric here and it automatically works everywhere:
  * - Map display
  * - Legend
@@ -10,7 +10,45 @@
  * - Color scale
  */
 
-import type { GeoLevel } from '../types';
+// GeoLevel defined here to avoid circular imports (types.ts re-exports from here)
+export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
+
+// ============================================================================
+// MAP DISPLAY SETTINGS
+// ============================================================================
+
+/**
+ * Default zoom levels by geography type
+ * Used when displaying data for each geography level
+ */
+export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
+  national: 3.5,
+  state: 3.5,
+  metro: 4,
+  county: 4.5,
+  city: 5,
+  zip: 5,
+  tract: 6,
+};
+
+/**
+ * GeoJSON source endpoints for each geography level
+ * City and zip require state parameter: /api/geography/cities/:state
+ */
+export const GEOJSON_SOURCES: Record<string, string> = {
+  state: '/api/geography/states',
+  county: '/api/geography/counties',
+  metro: '/api/geography/metros',
+  city: '/api/geography/cities',
+  zip: '/api/geography/zips',
+};
+
+/**
+ * Get the default zoom level for a geography type
+ */
+export function getDefaultZoom(geoLevel: GeoLevel): number {
+  return GEO_ZOOM_LEVELS[geoLevel] ?? 4;
+}
 
 // Display format types
 export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'days';

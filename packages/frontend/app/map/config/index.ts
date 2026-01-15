@@ -7,6 +7,13 @@ export { METRIC_CATEGORIES, getMetricCategories } from './metric-categories';
 
 // Central metric configuration - single source of truth
 export {
+  // Core types
+  type GeoLevel,
+  // Map display settings
+  GEO_ZOOM_LEVELS,
+  GEOJSON_SOURCES,
+  getDefaultZoom,
+  // Metric configuration
   METRICS,
   getMetricConfig,
   getMetricFormat,
