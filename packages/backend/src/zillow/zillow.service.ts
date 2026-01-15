@@ -883,12 +883,13 @@ export class ZillowService {
 
   async getMetroAffordability(date?: string): Promise<AffordabilityData[]> {
     // Get latest date from zillow_metro where affordability metrics are stored
+    // Uses 'homeowner_income' which is the metric_name as stored by ingest-all-zillow-clean.ts
     let targetDate = date;
     if (!targetDate) {
       const { data: latestData } = await this.supabase
         .from('zillow_metro')
         .select('period_date')
-        .eq('metric_name', 'homeowner_income_needed')
+        .eq('metric_name', 'homeowner_income')
         .order('period_date', { ascending: false })
         .limit(1)
         .single();
