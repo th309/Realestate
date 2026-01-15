@@ -57,6 +57,25 @@ export function Legend({
     );
   }
 
+  // Absolute percent legend (affordability, rates - 0-100%)
+  if (metricFormat === 'percent_abs') {
+    return (
+      <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-white rounded-lg md:rounded-xl shadow-lg p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
+        <div className="text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="flex items-center gap-0.5 md:gap-1">
+          {COLOR_SCALE.map((color, i) => (
+            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+          ))}
+        </div>
+        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 mt-1">
+          <span>{minLabel}</span>
+          <span>{maxLabel}</span>
+        </div>
+        <NoDataIndicator />
+      </div>
+    );
+  }
+
   // Index legend (renter demand, cost of living)
   if (metricFormat === 'index') {
     return (

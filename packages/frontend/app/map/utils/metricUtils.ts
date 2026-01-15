@@ -8,7 +8,9 @@
 import type { HomeValues } from '../types';
 
 // Display format types for metrics
-export type MetricFormat = 'currency' | 'percent' | 'number' | 'index' | 'days';
+// 'percent' = growth rates with +/- signs (YoY, forecasts)
+// 'percent_abs' = absolute 0-100% values (affordability, rates)
+export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'days';
 
 // Shared color scale - violet to red (7 colors)
 // Used by both map fills and legend display
@@ -31,13 +33,18 @@ export const NO_DATA_COLOR = 'rgba(200, 200, 200, 0.3)';
  * Adding a new metric here automatically updates both map and legend.
  */
 export function getMetricFormat(metricId: string): MetricFormat {
-  // Percent format - forecasts, growth rates, ratios
+  // Percent format - forecasts, growth rates (can be negative, show +/- signs)
   const percentMetrics = [
     'home_price_forecast', 'home_value_yoy', 'home_value_mom', 'home_value_5yr',
     'inventory_yoy', 'sales_yoy',
     'rent_growth', 'population_growth', 'income_growth', 'job_growth', 'gdp_growth',
-    'overvalued_pct', 'price_cut_pct', 'sale_to_list', 'vacancy_rate',
+    'overvalued_pct',
+  ];
+
+  // Absolute percent format - 0-100% values (no +/- signs)
+  const percentAbsMetrics = [
     'homeowner_affordability', 'renter_affordability', 'homeownership_rate',
+    'vacancy_rate', 'price_cut_pct', 'sale_to_list',
     'cap_rate', 'gross_yield', 'rent_to_price',
   ];
 
@@ -64,6 +71,7 @@ export function getMetricFormat(metricId: string): MetricFormat {
   ];
 
   if (percentMetrics.includes(metricId)) return 'percent';
+  if (percentAbsMetrics.includes(metricId)) return 'percent_abs';
   if (numberMetrics.includes(metricId)) return 'number';
   if (daysMetrics.includes(metricId)) return 'days';
   if (indexMetrics.includes(metricId)) return 'index';
@@ -88,6 +96,7 @@ export function calculateValueRange(
   // Default ranges based on metric type
   const defaults: Record<MetricFormat, { min: number; max: number }> = {
     percent: { min: -5, max: 10 },
+    percent_abs: { min: 0, max: 100 },
     days: { min: 0, max: 90 },
     number: { min: 0, max: 10000 },
     index: { min: 0, max: 200 },
@@ -109,6 +118,15 @@ export function calculateValueRange(
     const p5Index = Math.max(0, Math.floor(sorted.length * 0.05));
     const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
     return { min: sorted[p5Index], max: sorted[p95Index] };
+  } else if (metricFormat === 'percent_abs') {
+    // For absolute percent metrics (0-100%), use data-driven range
+    const positiveValues = sorted.filter(v => v >= 0);
+    if (positiveValues.length === 0) {
+      return defaults[metricFormat];
+    }
+    const p5Index = Math.max(0, Math.floor(positiveValues.length * 0.05));
+    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * 0.95));
+    return { min: positiveValues[p5Index], max: positiveValues[p95Index] };
   } else {
     // For non-percent metrics, use min and 95th percentile of positive values
     const positiveValues = sorted.filter(v => v > 0);
@@ -135,6 +153,9 @@ export function formatValue(
     case 'percent':
       const sign = value > 0 ? '+' : '';
       return sign + value.toFixed(1) + '%';
+    case 'percent_abs':
+      // Absolute percent (0-100%) - no +/- sign
+      return value.toFixed(1) + '%';
     case 'number':
       return value.toLocaleString('en-US') + suffix;
     case 'days':
