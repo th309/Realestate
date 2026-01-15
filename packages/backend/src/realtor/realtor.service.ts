@@ -225,12 +225,25 @@ export class RealtorService {
   async getStateAverages(stateId: string): Promise<Record<string, number | null>> {
     const columns = ['state_id', ...Object.values(this.metricColumnMap)];
 
-    const { data, error } = await this.supabase
+    let { data, error } = await this.supabase
       .from('realtor_state')
       .select(columns.join(','))
       .eq('state_id', stateId)
       .order('period_date', { ascending: false })
       .limit(1);
+
+    // If no results, try with numeric ID
+    if ((!data || data.length === 0) && stateId.startsWith('0')) {
+      const numericId = parseInt(stateId, 10);
+      const retry = await this.supabase
+        .from('realtor_state')
+        .select(columns.join(','))
+        .eq('state_id', numericId)
+        .order('period_date', { ascending: false })
+        .limit(1);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error('Error fetching state averages:', error);
@@ -291,7 +304,8 @@ export class RealtorService {
     let locationName = '';
 
     if (geoLevel === 'state') {
-      const { data, error } = await this.supabase
+      // Try with string first, then numeric (state_id might be stored as number)
+      let { data, error } = await this.supabase
         .from('realtor_state')
         .select([...columns, 'state_name'].join(','))
         .eq('state_id', regionId)
@@ -299,6 +313,21 @@ export class RealtorService {
         .limit(1);
 
       console.log(`[getBenchmarks] State query for regionId=${regionId}:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
+
+      // If no results, try with numeric ID (remove leading zeros)
+      if ((!data || data.length === 0) && regionId.startsWith('0')) {
+        const numericId = parseInt(regionId, 10);
+        console.log(`[getBenchmarks] Retrying with numeric state_id=${numericId}`);
+        const retry = await this.supabase
+          .from('realtor_state')
+          .select([...columns, 'state_name'].join(','))
+          .eq('state_id', numericId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+        data = retry.data;
+        error = retry.error;
+        console.log(`[getBenchmarks] Retry result:`, data?.length || 0, 'rows');
+      }
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
