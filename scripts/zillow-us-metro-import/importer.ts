@@ -282,7 +282,6 @@ async function insertTimeSeries(
         tier,
         options
       ));
-    }
   }
 
   if (timeSeriesData.length === 0) {

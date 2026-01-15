@@ -6,8 +6,10 @@ import { join } from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 
-// Load environment variables
+// Load environment variables - try multiple locations
+config({ path: join(__dirname, '../../packages/backend/.env') });
 config({ path: join(__dirname, '../../web/.env.local') });
+config({ path: join(__dirname, '../../.env') });
 
 let supabaseInstance: SupabaseClient | null = null;
 
@@ -34,10 +36,10 @@ export function createZillowUsMetroClient(): SupabaseClient {
 
 export function getBuildZillowUrl(): any {
   try {
-    const zillowDatasets = require('../../web/lib/data-ingestion/sources/zillow-datasets');
+    const zillowDatasets = require('../../packages/frontend/lib/data-ingestion/sources/zillow-datasets');
     return zillowDatasets.buildZillowUrl;
   } catch (error) {
-    console.error('❌ Could not import zillow-datasets');
+    console.error('❌ Could not import zillow-datasets:', error);
     process.exit(1);
   }
 }
