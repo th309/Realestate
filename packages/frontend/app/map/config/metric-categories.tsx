@@ -30,7 +30,8 @@ const HOMEBUYER_POPULAR_METRICS = [
   { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true, dataSource: 'zillow' as DataSource },
   { id: 'for_sale_inventory', name: 'For Sale Inventory', dataSource: 'realtor' as DataSource },
   { id: 'days_on_market', name: 'Days on Market', dataSource: 'realtor' as DataSource },
-  { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true, dataSource: 'zillow' as DataSource },
+  { id: 'market_heat', name: 'Market Heat Index', dataSource: 'zillow' as DataSource },
+  { id: 'homeready_score', name: 'HomeReady Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
 ];
 
 // Popular Data metrics for Investor view

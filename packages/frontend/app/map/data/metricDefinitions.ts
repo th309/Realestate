@@ -415,6 +415,16 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     notes: '100 = national average; higher values indicate more expensive areas',
   },
 
+  // Market Heat
+  market_heat: {
+    id: 'market_heat',
+    name: 'Market Heat Index',
+    description: 'An indicator of how competitive the housing market is in a given area. Higher values indicate a hotter, more competitive market with faster sales and more buyer competition.',
+    dataSource: 'Zillow',
+    updateFrequency: 'Monthly',
+    notes: 'Index scale where higher values indicate hotter markets. Available for metro areas.',
+  },
+
   // Supply/Demand
   months_supply: {
     id: 'months_supply',

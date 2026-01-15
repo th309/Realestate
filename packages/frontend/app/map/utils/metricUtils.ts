@@ -62,7 +62,7 @@ export function getMetricFormat(metricId: string): MetricFormat {
 
   // Index format (plain number, but semantically different)
   const indexMetrics = [
-    'rent_for_houses', 'cost_of_living',
+    'rent_for_houses', 'cost_of_living', 'market_heat',
   ];
 
   // Years format (treat as number)
@@ -190,6 +190,7 @@ export function getMetricTitle(metricId: string, forecastHorizon?: string): stri
     'days_on_market': 'Days on Market',
     'days_to_close': 'Days to Close',
     'overvalued_pct': 'Overvalued %',
+    'market_heat': 'Market Heat Index',
     'price_cut_pct': 'Price Cut %',
     'new_listings': 'New Listings',
     'pending_listings': 'Pending Listings',

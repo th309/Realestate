@@ -46,6 +46,7 @@ const ZILLOW_ONLY_METRICS = new Set([
   'days_to_close',
   // Market heat (Zillow metro only)
   'market_health',
+  'market_heat',
   // SFH/Condo specific (Zillow)
   'sfh_value',
   'sfh_value_yoy',
@@ -70,6 +71,7 @@ const ZILLOW_METRO_ONLY = new Set([
   'sales_yoy',
   'days_to_close',
   'market_health',
+  'market_heat',
 ]);
 
 // Hotness metrics only available at Metro/County/ZIP from Realtor
@@ -451,8 +453,9 @@ async function fetchZillowMetric(
     case 'days_to_close':
       return api.getMetroDaysToClose();
 
-    // Market health (Zillow metro only)
+    // Market heat (Zillow metro only)
     case 'market_health':
+    case 'market_heat':
       return api.getMetroMarketHeat();
 
     // SFH/Condo values (from Zillow ZHVI by property type)
