@@ -442,10 +442,11 @@ export async function queryAffordability(
     return [];
   }
 
-  // Metric names as stored in zillow_metro (from ingest-all-zillow-clean.ts mapping)
+  // Metric names as stored in zillow_metro
+  // Some use mapped names (homeowner_income), others use original names (new_homeowner_affordability)
   const affordabilityMetrics = [
     'homeowner_income', 'affordable_price', 'years_to_save', 'renter_income',
-    'homeowner_afford', 'renter_afford'
+    'new_homeowner_affordability', 'new_renter_affordability'
   ];
 
   // Query all affordability metrics for the given date
@@ -490,13 +491,13 @@ export async function queryAffordability(
       });
     }
     const entry = byRegion.get(row.region_id);
-    // Match metric names as stored in zillow_metro (from ingest-all-zillow-clean.ts)
+    // Match metric names as stored in zillow_metro
     if (row.metric_name === 'homeowner_income') entry.homeowner_income_needed = row.value;
     if (row.metric_name === 'affordable_price') entry.affordable_home_price = row.value;
     if (row.metric_name === 'years_to_save') entry.years_to_save = row.value;
     if (row.metric_name === 'renter_income') entry.renter_income_needed = row.value;
-    if (row.metric_name === 'homeowner_afford') entry.homeowner_affordability_percent = row.value;
-    if (row.metric_name === 'renter_afford') entry.renter_affordability_percent = row.value;
+    if (row.metric_name === 'new_homeowner_affordability') entry.homeowner_affordability_percent = row.value;
+    if (row.metric_name === 'new_renter_affordability') entry.renter_affordability_percent = row.value;
   }
 
   return [...byRegion.values()];
