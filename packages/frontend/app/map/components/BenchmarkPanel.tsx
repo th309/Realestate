@@ -221,9 +221,9 @@ export function BenchmarkPanel({
   const primaryColor = activeTab === 'homebuyer' ? '#f97316' : '#10b981';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end p-4 md:p-6 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-start justify-end p-2 md:p-4 pointer-events-none">
       <div
-        className="pointer-events-auto w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl shadow-2xl bg-white"
+        className="pointer-events-auto w-full max-w-md rounded-xl shadow-2xl bg-white"
         style={{
           border: '1px solid rgba(0, 0, 0, 0.08)',
           opacity: animateIn ? 1 : 0,
@@ -232,25 +232,22 @@ export function BenchmarkPanel({
         }}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 p-4 md:p-5 border-b border-gray-100 bg-white rounded-t-2xl">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl md:text-2xl font-bold text-slate-900">{selectedGeography.name}</h1>
-                {stateName && (
-                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600 rounded-full uppercase tracking-wider">
-                    {stateName}
-                  </span>
-                )}
-              </div>
-              <p className="text-slate-500 text-sm">Market benchmarks compared to state & national averages</p>
+        <div className="p-3 border-b border-gray-100 bg-white rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-slate-900">{selectedGeography.name}</h1>
+              {stateName && (
+                <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-slate-100 text-slate-600 rounded-full uppercase">
+                  {stateName}
+                </span>
+              )}
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
               aria-label="Close panel"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
@@ -258,39 +255,37 @@ export function BenchmarkPanel({
           </div>
 
           {/* Tab Toggle */}
-          <div className="flex items-center gap-4 mt-4">
-            <div className="inline-flex p-1 bg-gray-100 rounded-xl">
+          <div className="flex items-center mt-2">
+            <div className="inline-flex p-0.5 bg-gray-100 rounded-lg">
               <button
                 onClick={() => setActiveTab('homebuyer')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-300 ${
                   activeTab === 'homebuyer'
-                    ? 'bg-orange-500 text-white shadow-lg'
+                    ? 'bg-orange-500 text-white shadow'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
-                style={activeTab === 'homebuyer' ? { boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)' } : {}}
               >
-                Homebuyer Metrics
+                Homebuyer
               </button>
               <button
                 onClick={() => setActiveTab('investor')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all duration-300 ${
                   activeTab === 'investor'
-                    ? 'bg-emerald-500 text-white shadow-lg'
+                    ? 'bg-emerald-500 text-white shadow'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
-                style={activeTab === 'investor' ? { boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)' } : {}}
               >
-                Investor Metrics
+                Investor
               </button>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 md:p-5">
+        <div className="p-3">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-orange-500"></div>
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-orange-500"></div>
             </div>
           ) : benchmarkData ? (
             <>
@@ -306,7 +301,7 @@ export function BenchmarkPanel({
               />
 
               {/* Benchmark Bars */}
-              <div className="space-y-3 mt-4">
+              <div className="space-y-2 mt-3">
                 {metrics.map((metric, index) => (
                   <BenchmarkBar
                     key={metric.id}
@@ -325,14 +320,12 @@ export function BenchmarkPanel({
               </div>
 
               {/* Footer */}
-              <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                <div className="text-xs text-slate-400">
-                  Data sources: Realtor.com
-                </div>
+              <div className="mt-3 pt-2 border-t border-gray-100 text-[10px] text-slate-400">
+                Source: Realtor.com
               </div>
             </>
           ) : (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-6 text-slate-500 text-sm">
               No benchmark data available
             </div>
           )}
@@ -353,10 +346,10 @@ interface SummaryCardProps {
   locationName: string;
 }
 
-function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, animateIn, locationName }: SummaryCardProps) {
+function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, animateIn }: SummaryCardProps) {
   return (
     <div
-      className="p-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-slate-50 to-white"
+      className="p-2.5 rounded-xl border border-gray-200 bg-gradient-to-br from-slate-50 to-white"
       style={{
         opacity: animateIn ? 1 : 0,
         transform: animateIn ? 'translateY(0)' : 'translateY(-10px)',
@@ -364,31 +357,28 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
       }}
     >
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-bold text-slate-900">Market Position Summary</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{locationName} vs benchmarks</p>
-        </div>
-        <div className="flex gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-amber-500">{beatState}/{total}</div>
-            <div className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Beat State</div>
+        <span className="text-xs font-semibold text-slate-700">Market Position</span>
+        <div className="flex gap-3">
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-bold text-amber-500">{beatState}/{total}</span>
+            <span className="text-[9px] text-slate-400">State</span>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-slate-500">{beatNational}/{total}</div>
-            <div className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Beat National</div>
+          <div className="flex items-center gap-1">
+            <span className="text-lg font-bold text-slate-500">{beatNational}/{total}</span>
+            <span className="text-[9px] text-slate-400">National</span>
           </div>
         </div>
       </div>
 
       {/* Mini visualization */}
-      <div className="mt-3 flex gap-1">
+      <div className="mt-2 flex gap-0.5">
         {metrics.map((m, i) => {
           const local = benchmarkData.location[m.id];
           const state = benchmarkData.state[m.id];
           const national = benchmarkData.national[m.id];
 
           if (local === null || local === undefined) return (
-            <div key={i} className="flex-1 h-2 rounded-full bg-gray-200" />
+            <div key={i} className="flex-1 h-1.5 rounded-full bg-gray-200" />
           );
 
           const beatStateVal = state !== null && state !== undefined && (m.lowerIsBetter ? local < state : local > state);
@@ -397,7 +387,7 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
           return (
             <div
               key={i}
-              className="flex-1 h-2 rounded-full transition-all duration-500"
+              className="flex-1 h-1.5 rounded-full transition-all duration-500"
               style={{
                 backgroundColor: beatStateVal && beatNationalVal
                   ? '#10b981'
@@ -411,11 +401,6 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
             />
           );
         })}
-      </div>
-      <div className="flex justify-between mt-2 text-[9px] text-slate-400">
-        <span>Green = Beats both</span>
-        <span>Yellow = Beats one</span>
-        <span>Red = Below both</span>
       </div>
     </div>
   );
@@ -475,13 +460,10 @@ function BenchmarkBar({
   // If no local value, show placeholder
   if (localValue === null || localValue === undefined) {
     return (
-      <div className="p-4 rounded-2xl bg-gray-50 opacity-50">
+      <div className="p-2 rounded-lg bg-gray-50 opacity-50">
         <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm font-semibold text-slate-700">{metric.label}</span>
-            <span className="text-[11px] text-slate-400 block">{metric.description}</span>
-          </div>
-          <div className="text-slate-400 text-sm">No data</div>
+          <span className="text-xs font-medium text-slate-600">{metric.label}</span>
+          <span className="text-slate-400 text-xs">No data</span>
         </div>
       </div>
     );
@@ -527,64 +509,50 @@ function BenchmarkBar({
 
   return (
     <div
-      className={`relative p-4 rounded-2xl transition-all duration-300 cursor-pointer border ${
-        isHovered ? 'bg-gray-50 scale-[1.01] border-gray-200 shadow-md' : 'bg-white border-gray-100 hover:border-gray-200'
+      className={`relative p-2.5 rounded-xl transition-all duration-300 cursor-pointer border ${
+        isHovered ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-100 hover:border-gray-200'
       }`}
       style={{
         opacity: animateIn ? 1 : 0,
         transform: animateIn ? 'translateX(0)' : 'translateX(-20px)',
-        transition: `all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.08}s`
+        transition: `all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.05}s`
       }}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900">{metric.label}</span>
-            {isTop && (
-              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-600 rounded-full uppercase tracking-wider">
-                Top
-              </span>
-            )}
-          </div>
-          <span className="text-[11px] text-slate-400">{metric.description}</span>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-slate-800">{metric.label}</span>
+          {isTop && (
+            <span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-600 rounded uppercase">
+              Top
+            </span>
+          )}
         </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-slate-900">
-            {formatValue(localValue, metric.format)}
-          </div>
-          <div className="text-[10px] text-slate-400">This Market</div>
-        </div>
+        <span className="text-sm font-bold text-slate-900">
+          {formatValue(localValue, metric.format)}
+        </span>
       </div>
 
       {/* Bar Container */}
-      <div className="relative h-10 mb-2">
+      <div className="relative h-6">
         {/* Background track with gradient zones */}
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full overflow-hidden">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 rounded-full overflow-hidden">
           <div
             className="absolute inset-0"
             style={{
               background: metric.lowerIsBetter
-                ? 'linear-gradient(to right, rgba(16, 185, 129, 0.25), rgba(251, 191, 36, 0.25), rgba(239, 68, 68, 0.25))'
-                : 'linear-gradient(to right, rgba(239, 68, 68, 0.25), rgba(251, 191, 36, 0.25), rgba(16, 185, 129, 0.25))'
+                ? 'linear-gradient(to right, rgba(16, 185, 129, 0.3), rgba(251, 191, 36, 0.3), rgba(239, 68, 68, 0.3))'
+                : 'linear-gradient(to right, rgba(239, 68, 68, 0.3), rgba(251, 191, 36, 0.3), rgba(16, 185, 129, 0.3))'
             }}
           />
-          {/* Grid lines */}
-          {[25, 50, 75].map((pos) => (
-            <div
-              key={pos}
-              className="absolute top-0 bottom-0 w-px bg-slate-200"
-              style={{ left: `${pos}%` }}
-            />
-          ))}
         </div>
 
-        {/* National marker (diamond) - positioned on the bar */}
+        {/* National marker (diamond) */}
         {nationalPos !== null && (
           <div
-            className="absolute z-10 group"
+            className="absolute z-10"
             style={{
               left: `${nationalPos}%`,
               top: '50%',
@@ -592,21 +560,16 @@ function BenchmarkBar({
             }}
           >
             <div
-              className="w-4 h-4 bg-slate-500 border-2 border-slate-600"
+              className="w-3 h-3 bg-slate-500"
               style={{
                 transform: `rotate(45deg) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
-                transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + index * 0.08}s`
+                transition: `transform 0.3s ease-out ${0.2 + index * 0.05}s`
               }}
             />
-            {isHovered && (
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-white whitespace-nowrap z-20">
-                National: {formatValue(nationalValue, metric.format)}
-              </div>
-            )}
           </div>
         )}
 
-        {/* State marker (circle outline) - positioned on the bar */}
+        {/* State marker (circle outline) */}
         {statePos !== null && (
           <div
             className="absolute z-10"
@@ -617,83 +580,48 @@ function BenchmarkBar({
             }}
           >
             <div
-              className="w-5 h-5 rounded-full border-2 border-amber-500 bg-amber-100"
+              className="w-4 h-4 rounded-full border-2 border-amber-500 bg-amber-100"
               style={{
                 transform: animateIn ? 'scale(1)' : 'scale(0)',
-                transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.45 + index * 0.08}s`
+                transition: `transform 0.3s ease-out ${0.25 + index * 0.05}s`
               }}
             />
-            {isHovered && (
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-amber-300 whitespace-nowrap z-20">
-                State: {formatValue(stateValue, metric.format)}
-              </div>
-            )}
           </div>
         )}
 
-        {/* Local value marker (main indicator) - positioned on the bar */}
+        {/* Local value marker */}
         <div
           className="absolute z-20"
           style={{
             left: `${localPos}%`,
             top: '50%',
             transform: `translate(-50%, -50%) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
-            transition: `transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.5 + index * 0.08}s`
+            transition: `transform 0.3s ease-out ${0.3 + index * 0.05}s`
           }}
         >
-          {/* Main marker - flat on the bar, no shadow */}
           <div
-            className="w-5 h-5 rounded-full flex items-center justify-center"
+            className="w-4 h-4 rounded-full flex items-center justify-center"
             style={{
               background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`
             }}
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+            <div className="w-1 h-1 rounded-full bg-white" />
           </div>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-between text-[10px]">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: primaryColor }}
-            />
-            <span className="text-slate-500">This Market</span>
-          </div>
-          {stateValue !== null && stateValue !== undefined && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full border-2 border-amber-500 bg-amber-100" />
-              <span className="text-slate-500">State</span>
-            </div>
-          )}
-          {nationalValue !== null && nationalValue !== undefined && (
-            <div className="flex items-center gap-1.5">
-              <div
-                className="w-2.5 h-2.5 bg-slate-500 border border-slate-600"
-                style={{ transform: 'rotate(45deg)' }}
-              />
-              <span className="text-slate-500">National</span>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          {stateValue !== null && stateValue !== undefined && (
-            <span className={isBetterThanState ? 'text-emerald-600' : 'text-rose-500'}>
-              {isBetterThanState ? '+' : '-'} vs State
-            </span>
-          )}
-          {stateValue !== null && stateValue !== undefined && nationalValue !== null && nationalValue !== undefined && (
-            <span className="text-slate-300">|</span>
-          )}
-          {nationalValue !== null && nationalValue !== undefined && (
-            <span className={isBetterThanNational ? 'text-emerald-600' : 'text-rose-500'}>
-              {isBetterThanNational ? '+' : '-'} vs National
-            </span>
-          )}
-        </div>
+      {/* Compact comparison indicators */}
+      <div className="flex items-center justify-end gap-2 mt-1 text-[9px]">
+        {stateValue !== null && stateValue !== undefined && (
+          <span className={isBetterThanState ? 'text-emerald-600' : 'text-rose-500'}>
+            {isBetterThanState ? '▲' : '▼'} State
+          </span>
+        )}
+        {nationalValue !== null && nationalValue !== undefined && (
+          <span className={isBetterThanNational ? 'text-emerald-600' : 'text-rose-500'}>
+            {isBetterThanNational ? '▲' : '▼'} Nat'l
+          </span>
+        )}
       </div>
     </div>
   );
