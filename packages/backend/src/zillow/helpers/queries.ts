@@ -443,7 +443,10 @@ export async function queryAffordability(
   }
 
   // Metric names as stored in zillow_metro (from ingest-all-zillow-clean.ts mapping)
-  const affordabilityMetrics = ['homeowner_income', 'affordable_price', 'years_to_save', 'renter_income'];
+  const affordabilityMetrics = [
+    'homeowner_income', 'affordable_price', 'years_to_save', 'renter_income',
+    'homeowner_afford', 'renter_afford'
+  ];
 
   // Query all affordability metrics for the given date
   const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
@@ -492,6 +495,8 @@ export async function queryAffordability(
     if (row.metric_name === 'affordable_price') entry.affordable_home_price = row.value;
     if (row.metric_name === 'years_to_save') entry.years_to_save = row.value;
     if (row.metric_name === 'renter_income') entry.renter_income_needed = row.value;
+    if (row.metric_name === 'homeowner_afford') entry.homeowner_affordability_percent = row.value;
+    if (row.metric_name === 'renter_afford') entry.renter_affordability_percent = row.value;
   }
 
   return [...byRegion.values()];
