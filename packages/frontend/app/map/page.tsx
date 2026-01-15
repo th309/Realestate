@@ -159,15 +159,17 @@ export default function MapPage() {
   }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchHomeValues]);
 
   // Update layers when homeValues or geoLevel changes
-  // For city/tract levels, we show boundaries even without data
+  // Always update when geoLevel changes to ensure correct geographic shapes are shown
   useEffect(() => {
-    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
-    const hasData = Object.keys(homeValues).length > 0;
-    const hasBoundariesOnly = ['city', 'tract'].includes(geoLevel) && selectedState;
+    if (!mapLoaded) return;
 
-    if (mapLoaded && (hasData || hasBoundariesOnly)) {
-      updateMapLayers();
-    }
+    // Some levels require state selection before we can show anything
+    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    if (requiresState && !selectedState) return;
+
+    // Always update layers when geoLevel changes - shapes should update immediately
+    // Data coloring will show "no data" until homeValues loads
+    updateMapLayers();
   }, [homeValues, geoLevel, selectedState, mapLoaded, updateMapLayers]);
 
   // Initialize map
