@@ -235,8 +235,8 @@ export class RealtorService {
 
     console.log(`[getStateAverages] First query result: ${data?.length || 0} rows`);
 
-    // If no results, try with numeric ID
-    if ((!data || data.length === 0) && stateId.startsWith('0')) {
+    // If no results, always try with numeric ID (state_id might be stored as number)
+    if (!data || data.length === 0) {
       const numericId = parseInt(stateId, 10);
       console.log(`[getStateAverages] Retrying with numeric ID: ${numericId}`);
       const retry = await this.supabase
@@ -299,12 +299,23 @@ export class RealtorService {
       const stateMetricsWithValues = Object.values(state).filter(v => v !== null).length;
       console.log(`[getBenchmarks] State averages received: ${stateMetricsWithValues} metrics with values`);
 
-      // Get state name
-      const { data: stateData } = await this.supabase
+      // Get state name - try string first, then numeric
+      let { data: stateData } = await this.supabase
         .from('realtor_state')
         .select('state_name')
         .eq('state_id', stateId)
         .limit(1);
+
+      // If no result, try numeric ID
+      if (!stateData || stateData.length === 0) {
+        const numericStateId = parseInt(stateId, 10);
+        const retry = await this.supabase
+          .from('realtor_state')
+          .select('state_name')
+          .eq('state_id', numericStateId)
+          .limit(1);
+        stateData = retry.data;
+      }
       stateName = stateData?.[0]?.state_name || null;
       console.log(`[getBenchmarks] State name: ${stateName}`);
     } else {
@@ -326,8 +337,8 @@ export class RealtorService {
 
       console.log(`[getBenchmarks] State query for regionId=${regionId}:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
 
-      // If no results, try with numeric ID (remove leading zeros)
-      if ((!data || data.length === 0) && regionId.startsWith('0')) {
+      // If no results, always try with numeric ID (state_id might be stored as number)
+      if (!data || data.length === 0) {
         const numericId = parseInt(regionId, 10);
         console.log(`[getBenchmarks] Retrying with numeric state_id=${numericId}`);
         const retry = await this.supabase
