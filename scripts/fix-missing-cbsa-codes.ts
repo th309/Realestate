@@ -92,7 +92,52 @@ async function loadCbsaCrosswalk(): Promise<void> {
         }
       }
     }
-    console.log(`Loaded ${cbsaNameMap.size} name-based CBSA mappings`);
+    console.log(`Loaded ${cbsaNameMap.size} name-based CBSA mappings from crosswalk`);
+  }
+
+  // Also load from tiger_cbsa (Census shapefile data) for metros not in crosswalk
+  console.log('Loading CBSA names from tiger_cbsa...');
+  const { data: tigerData, error: tigerError } = await supabase
+    .from('tiger_cbsa')
+    .select('geoid, name');
+
+  if (tigerError) {
+    console.error('Error loading tiger_cbsa:', tigerError.message);
+    return;
+  }
+
+  let tigerAdded = 0;
+  if (tigerData) {
+    for (const row of tigerData) {
+      if (row.geoid && row.name) {
+        // Map by normalized name (e.g., "Dayton-Kettering-Beavercreek, OH")
+        const normalizedName = normalizeMetroName(row.name);
+        if (!cbsaNameMap.has(normalizedName)) {
+          cbsaNameMap.set(normalizedName, row.geoid);
+          tigerAdded++;
+        }
+
+        // Map by primary name (e.g., "dayton")
+        const primaryName = extractPrimaryMetroName(row.name);
+        if (!cbsaNameMap.has(primaryName)) {
+          cbsaNameMap.set(primaryName, row.geoid);
+          tigerAdded++;
+        }
+
+        // Also try splitting by hyphen for multi-city metros
+        // "Dayton-Kettering-Beavercreek, OH" -> ["dayton", "kettering", "beavercreek"]
+        const namePart = row.name.split(',')[0]; // Get part before state
+        const cities = namePart.split('-').map(c => c.toLowerCase().trim());
+        for (const city of cities) {
+          if (city && !cbsaNameMap.has(city)) {
+            cbsaNameMap.set(city, row.geoid);
+            tigerAdded++;
+          }
+        }
+      }
+    }
+    console.log(`Added ${tigerAdded} additional mappings from tiger_cbsa`);
+    console.log(`Total CBSA name mappings: ${cbsaNameMap.size}`);
   }
 }
 
