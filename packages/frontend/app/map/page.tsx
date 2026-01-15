@@ -335,7 +335,6 @@ export default function MapPage() {
             <BenchmarkPanel
               selectedGeography={selectedGeography}
               selectedMetric={selectedMetric}
-              homeValues={homeValues}
               geoLevel={geoLevel}
               onClose={() => setSelectedGeography(null)}
             />

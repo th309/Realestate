@@ -1,336 +1,625 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import type { SelectedGeography, HomeValues, GeoLevel } from '../types';
-import { getMetricFormat, getMetricTitle, formatValue } from '../utils';
+import type { SelectedGeography, GeoLevel } from '../types';
 
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// State abbreviation to FIPS mapping
+const STATE_ABBR_TO_FIPS: Record<string, string> = {
+  'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06', 'CO': '08', 'CT': '09', 'DE': '10',
+  'DC': '11', 'FL': '12', 'GA': '13', 'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18', 'IA': '19',
+  'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24', 'MA': '25', 'MI': '26', 'MN': '27',
+  'MS': '28', 'MO': '29', 'MT': '30', 'NE': '31', 'NV': '32', 'NH': '33', 'NJ': '34', 'NM': '35',
+  'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39', 'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44',
+  'SC': '45', 'SD': '46', 'TN': '47', 'TX': '48', 'UT': '49', 'VT': '50', 'VA': '51', 'WA': '53',
+  'WV': '54', 'WI': '55', 'WY': '56', 'PR': '72'
+};
+
 interface BenchmarkPanelProps {
   selectedGeography: SelectedGeography;
   selectedMetric: string;
-  homeValues: HomeValues;
   geoLevel: GeoLevel;
   onClose: () => void;
 }
 
+interface MetricConfig {
+  id: string;
+  label: string;
+  description: string;
+  format: 'currency' | 'percent' | 'days' | 'number' | 'ratio';
+  lowerIsBetter: boolean;
+  category: 'homebuyer' | 'investor';
+}
+
+interface BenchmarkData {
+  location: Record<string, number | null>;
+  state: Record<string, number | null>;
+  national: Record<string, number | null>;
+  locationName: string;
+  stateName: string | null;
+}
+
+// Metric configurations
+const METRIC_CONFIGS: MetricConfig[] = [
+  // Homebuyer metrics
+  { id: 'home_value', label: 'Median Home Value', description: 'Median listing price', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
+  { id: 'home_value_yoy', label: 'YoY Appreciation', description: '12-month price change', format: 'percent', lowerIsBetter: false, category: 'homebuyer' },
+  { id: 'days_on_market', label: 'Days on Market', description: 'Median listing duration', format: 'days', lowerIsBetter: true, category: 'homebuyer' },
+  { id: 'for_sale_inventory', label: 'For Sale Inventory', description: 'Active listings count', format: 'number', lowerIsBetter: false, category: 'homebuyer' },
+  { id: 'price_cut_pct', label: 'Listings with Price Cuts', description: 'Share of reduced listings', format: 'percent', lowerIsBetter: false, category: 'homebuyer' },
+  { id: 'price_per_sqft', label: 'Price per Sq Ft', description: 'Median price per square foot', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
+  // Investor metrics
+  { id: 'inventory_yoy', label: 'Inventory Growth', description: 'YoY inventory change', format: 'percent', lowerIsBetter: false, category: 'investor' },
+  { id: 'new_listings', label: 'New Listings', description: 'New listings this month', format: 'number', lowerIsBetter: false, category: 'investor' },
+  { id: 'pending_listings', label: 'Pending Listings', description: 'Under contract listings', format: 'number', lowerIsBetter: false, category: 'investor' },
+  { id: 'home_value_mom', label: 'MoM Price Change', description: 'Month-over-month change', format: 'percent', lowerIsBetter: false, category: 'investor' },
+];
+
 export function BenchmarkPanel({
   selectedGeography,
-  selectedMetric,
-  homeValues,
   geoLevel,
   onClose
 }: BenchmarkPanelProps) {
-  const [nationalAverage, setNationalAverage] = useState<number | null>(null);
+  const [animateIn, setAnimateIn] = useState(false);
+  const [activeTab, setActiveTab] = useState<'homebuyer' | 'investor'>('homebuyer');
+  const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
+  const [benchmarkData, setBenchmarkData] = useState<BenchmarkData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const metricFormat = getMetricFormat(selectedMetric);
-  const metricTitle = getMetricTitle(selectedMetric);
-
-  // Fetch national average from API
+  // Animation trigger
   useEffect(() => {
-    async function fetchNationalAverage() {
+    const timer = setTimeout(() => setAnimateIn(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch benchmark data
+  useEffect(() => {
+    async function fetchBenchmarks() {
+      setLoading(true);
       try {
-        const response = await fetch(
-          `${API_URL}/api/realtor/national-average?metric=${selectedMetric}`
-        );
+        // Determine state ID from the selected geography
+        let stateId = selectedGeography.stateAbbr
+          ? STATE_ABBR_TO_FIPS[selectedGeography.stateAbbr.toUpperCase()]
+          : undefined;
+
+        // For county/zip, extract state from ID (first 2 digits of FIPS)
+        if (!stateId && geoLevel === 'county' && selectedGeography.id.length >= 2) {
+          stateId = selectedGeography.id.substring(0, 2);
+        }
+
+        const params = new URLSearchParams({
+          geoLevel,
+          regionId: selectedGeography.id,
+        });
+        if (stateId) {
+          params.append('stateId', stateId);
+        }
+
+        const response = await fetch(`${API_URL}/api/realtor/benchmarks?${params}`);
         if (response.ok) {
           const data = await response.json();
-          setNationalAverage(data.value);
+          setBenchmarkData(data);
         }
       } catch (error) {
-        console.error('Error fetching national average:', error);
+        console.error('Error fetching benchmarks:', error);
+      } finally {
+        setLoading(false);
       }
     }
 
-    fetchNationalAverage();
-  }, [selectedMetric]);
+    fetchBenchmarks();
+  }, [selectedGeography.id, selectedGeography.stateAbbr, geoLevel]);
 
-  // Calculate all benchmark statistics from the existing homeValues data
-  // This uses the SAME data that's displayed on the map - no separate API call
-  const benchmarkStats = useMemo(() => {
-    const allValues = Object.values(homeValues).filter(
-      (v): v is number => typeof v === 'number' && !isNaN(v) && v !== 0
-    );
+  // Filter metrics by category
+  const metrics = useMemo(() => {
+    return METRIC_CONFIGS.filter(m => m.category === activeTab);
+  }, [activeTab]);
 
-    if (allValues.length === 0) {
-      return null;
+  // Get state name or abbreviation
+  const stateName = useMemo(() => {
+    if (benchmarkData?.stateName) return benchmarkData.stateName;
+    if (selectedGeography.stateAbbr) return selectedGeography.stateAbbr.toUpperCase();
+    return null;
+  }, [benchmarkData?.stateName, selectedGeography.stateAbbr]);
+
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    if (!benchmarkData) return { beatState: 0, beatNational: 0, total: 0 };
+
+    let beatState = 0;
+    let beatNational = 0;
+    let total = 0;
+
+    for (const metric of metrics) {
+      const local = benchmarkData.location[metric.id];
+      const state = benchmarkData.state[metric.id];
+      const national = benchmarkData.national[metric.id];
+
+      if (local === null) continue;
+      total++;
+
+      if (state !== null) {
+        const isBetter = metric.lowerIsBetter ? local < state : local > state;
+        if (isBetter) beatState++;
+      }
+
+      if (national !== null) {
+        const isBetter = metric.lowerIsBetter ? local < national : local > national;
+        if (isBetter) beatNational++;
+      }
     }
 
-    const sorted = [...allValues].sort((a, b) => a - b);
-    const sum = allValues.reduce((a, b) => a + b, 0);
-    const count = allValues.length;
+    return { beatState, beatNational, total };
+  }, [benchmarkData, metrics]);
 
-    // Calculate statistics
-    const average = sum / count;
-    const median = count % 2 === 0
-      ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2
-      : sorted[Math.floor(count / 2)];
-    const min = sorted[0];
-    const max = sorted[count - 1];
-
-    // Calculate percentile rank for the selected value
-    let percentileRank: number | null = null;
-    if (selectedGeography.value !== null) {
-      const belowCount = sorted.filter(v => v < selectedGeography.value!).length;
-      percentileRank = Math.round((belowCount / count) * 100);
-    }
-
-    // Calculate percentile values (25th, 75th)
-    const p25Index = Math.floor(count * 0.25);
-    const p75Index = Math.floor(count * 0.75);
-    const p25 = sorted[p25Index];
-    const p75 = sorted[p75Index];
-
-    return {
-      average: Math.round(average),
-      median: Math.round(median),
-      min: Math.round(min),
-      max: Math.round(max),
-      p25: Math.round(p25),
-      p75: Math.round(p75),
-      count,
-      percentileRank
-    };
-  }, [homeValues, selectedGeography.value]);
-
-  // Get geo level display name
-  const geoLevelName = {
-    national: 'National',
-    state: 'State',
-    metro: 'Metro Area',
-    county: 'County',
-    city: 'City',
-    zip: 'ZIP Code',
-    tract: 'Census Tract'
-  }[selectedGeography.geoLevel] || selectedGeography.geoLevel;
-
-  // Determine comparison label based on current view
-  const getComparisonLabel = () => {
-    switch (geoLevel) {
-      case 'state':
-      case 'national':
-        return 'All States';
-      case 'metro':
-        return 'All Metros';
-      case 'county':
-        return 'All Counties';
-      case 'city':
-        return 'All Cities';
-      case 'zip':
-        return 'All ZIP Codes';
-      case 'tract':
-        return 'All Tracts';
-      default:
-        return 'All Regions';
-    }
-  };
-
-  // Calculate bar widths based on values
-  const getBarWidth = (value: number | null, max: number) => {
-    if (value === null || max === 0) return 0;
-    return Math.min(100, Math.max(5, (value / max) * 100));
-  };
-
-  const maxValue = useMemo(() => {
-    if (!benchmarkStats || selectedGeography.value === null) return 1;
-    const values = [selectedGeography.value, benchmarkStats.average, benchmarkStats.median];
-    if (nationalAverage !== null) values.push(nationalAverage);
-    return Math.max(...values);
-  }, [benchmarkStats, selectedGeography.value, nationalAverage]);
+  const primaryColor = activeTab === 'homebuyer' ? '#f97316' : '#10b981';
 
   return (
-    <div className="absolute top-3 right-3 md:top-6 md:right-6 bg-white rounded-xl shadow-lg z-20 w-80 md:w-96 overflow-hidden animate-slideIn">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-4 py-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base truncate">{selectedGeography.name}</h3>
-            <p className="text-slate-300 text-xs mt-0.5">{geoLevelName} • {metricTitle}</p>
+    <div className="fixed inset-0 z-50 flex items-start justify-end p-4 md:p-6 pointer-events-none">
+      <div
+        className="pointer-events-auto w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl shadow-2xl bg-white"
+        style={{
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          opacity: animateIn ? 1 : 0,
+          transform: animateIn ? 'translateX(0)' : 'translateX(20px)',
+          transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        }}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 p-4 md:p-5 border-b border-gray-100 bg-white rounded-t-2xl">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-900">{selectedGeography.name}</h1>
+                {stateName && (
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600 rounded-full uppercase tracking-wider">
+                    {stateName}
+                  </span>
+                )}
+              </div>
+              <p className="text-slate-500 text-sm">Market benchmarks compared to state & national averages</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close panel"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="ml-2 p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
-            aria-label="Close panel"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Main Value */}
-        <div className="text-center mb-4 pb-4 border-b border-gray-100">
-          <div className="text-3xl font-bold text-slate-900">
-            {selectedGeography.value !== null
-              ? formatValue(selectedGeography.value, metricFormat)
-              : 'No data'}
+          {/* Tab Toggle */}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="inline-flex p-1 bg-gray-100 rounded-xl">
+              <button
+                onClick={() => setActiveTab('homebuyer')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                  activeTab === 'homebuyer'
+                    ? 'bg-orange-500 text-white shadow-lg'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                style={activeTab === 'homebuyer' ? { boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)' } : {}}
+              >
+                Homebuyer Metrics
+              </button>
+              <button
+                onClick={() => setActiveTab('investor')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                  activeTab === 'investor'
+                    ? 'bg-emerald-500 text-white shadow-lg'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                style={activeTab === 'investor' ? { boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)' } : {}}
+              >
+                Investor Metrics
+              </button>
+            </div>
           </div>
-          {benchmarkStats && benchmarkStats.percentileRank !== null && (
-            <div className="text-sm text-slate-500 mt-1">
-              Ranks in the <span className="font-medium text-cyan-600">
-                {benchmarkStats.percentileRank === 0 ? '1st' :
-                 benchmarkStats.percentileRank === 1 ? '1st' :
-                 benchmarkStats.percentileRank === 2 ? '2nd' :
-                 benchmarkStats.percentileRank === 3 ? '3rd' :
-                 `${benchmarkStats.percentileRank}th`}
-              </span> percentile of {benchmarkStats.count.toLocaleString()} {geoLevel}s
+        </div>
+
+        {/* Content */}
+        <div className="p-4 md:p-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-orange-500"></div>
+            </div>
+          ) : benchmarkData ? (
+            <>
+              {/* Summary Card */}
+              <SummaryCard
+                beatState={summaryStats.beatState}
+                beatNational={summaryStats.beatNational}
+                total={summaryStats.total}
+                metrics={metrics}
+                benchmarkData={benchmarkData}
+                animateIn={animateIn}
+                locationName={selectedGeography.name}
+              />
+
+              {/* Benchmark Bars */}
+              <div className="space-y-3 mt-4">
+                {metrics.map((metric, index) => (
+                  <BenchmarkBar
+                    key={metric.id}
+                    metric={metric}
+                    index={index}
+                    localValue={benchmarkData.location[metric.id]}
+                    stateValue={benchmarkData.state[metric.id]}
+                    nationalValue={benchmarkData.national[metric.id]}
+                    animateIn={animateIn}
+                    isHovered={hoveredMetric === metric.id}
+                    onHover={() => setHoveredMetric(metric.id)}
+                    onLeave={() => setHoveredMetric(null)}
+                    primaryColor={primaryColor}
+                  />
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <div className="text-xs text-slate-400">
+                  Data sources: Realtor.com
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-slate-500">
+              No benchmark data available
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {benchmarkStats ? (
-          <>
-            {/* Benchmark Bars */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                Comparison
-              </h4>
+// Summary Card Component
+interface SummaryCardProps {
+  beatState: number;
+  beatNational: number;
+  total: number;
+  metrics: MetricConfig[];
+  benchmarkData: BenchmarkData;
+  animateIn: boolean;
+  locationName: string;
+}
 
-              {/* This Location Bar */}
-              <BenchmarkBar
-                label="This Location"
-                value={selectedGeography.value}
-                metricFormat={metricFormat}
-                barWidth={getBarWidth(selectedGeography.value, maxValue)}
-                color="bg-cyan-500"
-                isHighlighted
-              />
+function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, animateIn, locationName }: SummaryCardProps) {
+  return (
+    <div
+      className="p-4 rounded-2xl border border-gray-200 bg-gradient-to-br from-slate-50 to-white"
+      style={{
+        opacity: animateIn ? 1 : 0,
+        transform: animateIn ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'all 0.5s ease-out'
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-bold text-slate-900">Market Position Summary</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{locationName} vs benchmarks</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-amber-500">{beatState}/{total}</div>
+            <div className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Beat State</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-slate-500">{beatNational}/{total}</div>
+            <div className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Beat National</div>
+          </div>
+        </div>
+      </div>
 
-              {/* National Average Bar */}
-              <BenchmarkBar
-                label="US National"
-                value={nationalAverage}
-                metricFormat={metricFormat}
-                barWidth={getBarWidth(nationalAverage, maxValue)}
-                color="bg-violet-500"
-              />
+      {/* Mini visualization */}
+      <div className="mt-3 flex gap-1">
+        {metrics.map((m, i) => {
+          const local = benchmarkData.location[m.id];
+          const state = benchmarkData.state[m.id];
+          const national = benchmarkData.national[m.id];
 
-              {/* Geo Level Average Bar */}
-              <BenchmarkBar
-                label={`${getComparisonLabel()} Avg`}
-                value={benchmarkStats.average}
-                metricFormat={metricFormat}
-                barWidth={getBarWidth(benchmarkStats.average, maxValue)}
-                color="bg-emerald-500"
-              />
+          if (local === null) return (
+            <div key={i} className="flex-1 h-2 rounded-full bg-gray-200" />
+          );
 
-              {/* Median Bar */}
-              <BenchmarkBar
-                label={`${getComparisonLabel()} Median`}
-                value={benchmarkStats.median}
-                metricFormat={metricFormat}
-                barWidth={getBarWidth(benchmarkStats.median, maxValue)}
-                color="bg-amber-400"
-              />
-            </div>
+          const beatStateVal = state !== null && (m.lowerIsBetter ? local < state : local > state);
+          const beatNationalVal = national !== null && (m.lowerIsBetter ? local < national : local > national);
 
-            {/* Range Info */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-slate-500">Min:</span>{' '}
-                  <span className="font-medium text-slate-700">
-                    {formatValue(benchmarkStats.min, metricFormat)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Max:</span>{' '}
-                  <span className="font-medium text-slate-700">
-                    {formatValue(benchmarkStats.max, metricFormat)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500">25th %:</span>{' '}
-                  <span className="font-medium text-slate-700">
-                    {formatValue(benchmarkStats.p25, metricFormat)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500">75th %:</span>{' '}
-                  <span className="font-medium text-slate-700">
-                    {formatValue(benchmarkStats.p75, metricFormat)}
-                  </span>
-                </div>
-              </div>
-            </div>
+          return (
+            <div
+              key={i}
+              className="flex-1 h-2 rounded-full transition-all duration-500"
+              style={{
+                backgroundColor: beatStateVal && beatNationalVal
+                  ? '#10b981'
+                  : beatStateVal || beatNationalVal
+                    ? '#fbbf24'
+                    : '#ef4444',
+                opacity: animateIn ? 1 : 0.3,
+                transitionDelay: `${0.1 + i * 0.05}s`
+              }}
+              title={m.label}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2 text-[9px] text-slate-400">
+        <span>Green = Beats both</span>
+        <span>Yellow = Beats one</span>
+        <span>Red = Below both</span>
+      </div>
+    </div>
+  );
+}
 
-            {/* Comparison Summary */}
-            {selectedGeography.value !== null && nationalAverage !== null && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <ComparisonSummary
-                  localValue={selectedGeography.value}
-                  nationalValue={nationalAverage}
-                  metricFormat={metricFormat}
-                />
-              </div>
+// Benchmark Bar Component
+interface BenchmarkBarProps {
+  metric: MetricConfig;
+  index: number;
+  localValue: number | null;
+  stateValue: number | null;
+  nationalValue: number | null;
+  animateIn: boolean;
+  isHovered: boolean;
+  onHover: () => void;
+  onLeave: () => void;
+  primaryColor: string;
+}
+
+function BenchmarkBar({
+  metric,
+  index,
+  localValue,
+  stateValue,
+  nationalValue,
+  animateIn,
+  isHovered,
+  onHover,
+  onLeave,
+  primaryColor
+}: BenchmarkBarProps) {
+  // Format value based on metric type
+  const formatValue = (value: number | null, format: string): string => {
+    if (value === null) return 'N/A';
+    switch (format) {
+      case 'currency':
+        if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+        if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+        return `$${value.toFixed(0)}`;
+      case 'percent':
+        // Handle decimal percentages (0.05 = 5%)
+        const pctValue = Math.abs(value) < 1 ? value * 100 : value;
+        return `${pctValue.toFixed(1)}%`;
+      case 'days':
+        return `${Math.round(value)} days`;
+      case 'number':
+        return value.toLocaleString();
+      case 'ratio':
+        return `${value.toFixed(1)}x`;
+      default:
+        return String(value);
+    }
+  };
+
+  // If no local value, show placeholder
+  if (localValue === null) {
+    return (
+      <div className="p-4 rounded-2xl bg-gray-50 opacity-50">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-semibold text-slate-700">{metric.label}</span>
+            <span className="text-[11px] text-slate-400 block">{metric.description}</span>
+          </div>
+          <div className="text-slate-400 text-sm">No data</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate positions for markers
+  const allValues = [localValue, stateValue, nationalValue].filter((v): v is number => v !== null);
+  const minVal = Math.min(...allValues) * 0.85;
+  const maxVal = Math.max(...allValues) * 1.15;
+  const range = maxVal - minVal || 1;
+
+  const getPosition = (value: number | null) => {
+    if (value === null) return 50;
+    return Math.max(5, Math.min(95, ((value - minVal) / range) * 100));
+  };
+
+  const localPos = getPosition(localValue);
+  const statePos = stateValue !== null ? getPosition(stateValue) : null;
+  const nationalPos = nationalValue !== null ? getPosition(nationalValue) : null;
+
+  // Determine comparison results
+  const isBetterThanState = stateValue !== null && (metric.lowerIsBetter
+    ? localValue < stateValue
+    : localValue > stateValue);
+  const isBetterThanNational = nationalValue !== null && (metric.lowerIsBetter
+    ? localValue < nationalValue
+    : localValue > nationalValue);
+
+  const isTop = isBetterThanState && isBetterThanNational;
+
+  return (
+    <div
+      className={`relative p-4 rounded-2xl transition-all duration-300 cursor-pointer border ${
+        isHovered ? 'bg-gray-50 scale-[1.01] border-gray-200 shadow-md' : 'bg-white border-gray-100 hover:border-gray-200'
+      }`}
+      style={{
+        opacity: animateIn ? 1 : 0,
+        transform: animateIn ? 'translateX(0)' : 'translateX(-20px)',
+        transition: `all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 0.08}s`
+      }}
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900">{metric.label}</span>
+            {isTop && (
+              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-600 rounded-full uppercase tracking-wider">
+                Top
+              </span>
             )}
-          </>
-        ) : (
-          <div className="text-center py-4 text-slate-500 text-sm">
-            No comparison data available
+          </div>
+          <span className="text-[11px] text-slate-400">{metric.description}</span>
+        </div>
+        <div className="text-right">
+          <div className="text-lg font-bold text-slate-900">
+            {formatValue(localValue, metric.format)}
+          </div>
+          <div className="text-[10px] text-slate-400">This Market</div>
+        </div>
+      </div>
+
+      {/* Bar Container */}
+      <div className="relative h-10 mb-2">
+        {/* Background track with gradient zones */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 rounded-full overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: metric.lowerIsBetter
+                ? 'linear-gradient(to right, rgba(16, 185, 129, 0.25), rgba(251, 191, 36, 0.25), rgba(239, 68, 68, 0.25))'
+                : 'linear-gradient(to right, rgba(239, 68, 68, 0.25), rgba(251, 191, 36, 0.25), rgba(16, 185, 129, 0.25))'
+            }}
+          />
+          {/* Grid lines */}
+          {[25, 50, 75].map((pos) => (
+            <div
+              key={pos}
+              className="absolute top-0 bottom-0 w-px bg-slate-200"
+              style={{ left: `${pos}%` }}
+            />
+          ))}
+        </div>
+
+        {/* National marker (diamond) */}
+        {nationalPos !== null && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+            style={{ left: `${nationalPos}%` }}
+          >
+            <div className="relative group">
+              <div
+                className="w-4 h-4 rotate-45 bg-slate-400 border-2 border-slate-500 shadow-sm"
+                style={{
+                  transform: animateIn ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0)',
+                  transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + index * 0.08}s`
+                }}
+              />
+              {isHovered && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-white whitespace-nowrap z-20">
+                  National: {formatValue(nationalValue, metric.format)}
+                </div>
+              )}
+            </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
 
-interface BenchmarkBarProps {
-  label: string;
-  value: number | null;
-  metricFormat: ReturnType<typeof getMetricFormat>;
-  barWidth: number;
-  color: string;
-  isHighlighted?: boolean;
-}
+        {/* State marker (circle outline) */}
+        {statePos !== null && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+            style={{ left: `${statePos}%` }}
+          >
+            <div className="relative">
+              <div
+                className="w-5 h-5 rounded-full border-2 border-amber-500 bg-amber-100"
+                style={{
+                  transform: animateIn ? 'scale(1)' : 'scale(0)',
+                  transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.45 + index * 0.08}s`
+                }}
+              />
+              {isHovered && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-amber-300 whitespace-nowrap z-20">
+                  State: {formatValue(stateValue, metric.format)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-function BenchmarkBar({ label, value, metricFormat, barWidth, color, isHighlighted }: BenchmarkBarProps) {
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between items-center">
-        <span className={`text-sm ${isHighlighted ? 'font-medium text-slate-900' : 'text-slate-600'}`}>
-          {label}
-        </span>
-        <span className={`text-sm font-medium ${isHighlighted ? 'text-cyan-600' : 'text-slate-700'}`}>
-          {value !== null ? formatValue(value, metricFormat) : 'N/A'}
-        </span>
-      </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        {/* Local value marker (main indicator) */}
         <div
-          className={`h-full ${color} rounded-full transition-all duration-500 ease-out`}
-          style={{ width: `${barWidth}%` }}
-        />
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20"
+          style={{
+            left: `${localPos}%`,
+            transform: animateIn ? 'translateY(-50%) translateX(-50%)' : 'translateY(-50%) translateX(-50%) scale(0)',
+            transition: `transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.5 + index * 0.08}s`
+          }}
+        >
+          <div className="relative">
+            {/* Glow effect */}
+            <div
+              className="absolute inset-0 rounded-full blur-md"
+              style={{
+                backgroundColor: primaryColor,
+                opacity: 0.4,
+                transform: 'scale(1.5)'
+              }}
+            />
+            {/* Main marker */}
+            <div
+              className="relative w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+              style={{
+                background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`,
+                boxShadow: `0 4px 12px ${primaryColor}40`
+              }}
+            >
+              <div className="w-2 h-2 rounded-full bg-white" />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
 
-interface ComparisonSummaryProps {
-  localValue: number;
-  nationalValue: number;
-  metricFormat: ReturnType<typeof getMetricFormat>;
-}
-
-function ComparisonSummary({ localValue, nationalValue, metricFormat }: ComparisonSummaryProps) {
-  const diff = localValue - nationalValue;
-  const pctDiff = nationalValue !== 0 ? (diff / nationalValue) * 100 : 0;
-  const isHigher = diff > 0;
-
-  // For some metrics like days on market, lower is better
-  const lowerIsBetter = metricFormat === 'days';
-  const isPositive = lowerIsBetter ? !isHigher : isHigher;
-
-  return (
-    <div className={`text-sm ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-      <span className="font-medium">
-        {Math.abs(pctDiff).toFixed(1)}% {isHigher ? 'above' : 'below'}
-      </span>
-      {' '}US national average
+      {/* Legend */}
+      <div className="flex items-center justify-between text-[10px]">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: primaryColor }}
+            />
+            <span className="text-slate-500">This Market</span>
+          </div>
+          {stateValue !== null && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full border-2 border-amber-500 bg-amber-100" />
+              <span className="text-slate-500">State</span>
+            </div>
+          )}
+          {nationalValue !== null && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rotate-45 bg-slate-400 border border-slate-500" />
+              <span className="text-slate-500">National</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {stateValue !== null && (
+            <span className={isBetterThanState ? 'text-emerald-600' : 'text-rose-500'}>
+              {isBetterThanState ? '+' : '-'} vs State
+            </span>
+          )}
+          {stateValue !== null && nationalValue !== null && (
+            <span className="text-slate-300">|</span>
+          )}
+          {nationalValue !== null && (
+            <span className={isBetterThanNational ? 'text-emerald-600' : 'text-rose-500'}>
+              {isBetterThanNational ? '+' : '-'} vs National
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -15,6 +15,16 @@ export class RealtorController {
     return { success: true, ...data };
   }
 
+  @Get('benchmarks')
+  async getBenchmarks(
+    @Query('geoLevel') geoLevel: string,
+    @Query('regionId') regionId: string,
+    @Query('stateId') stateId?: string,
+  ) {
+    const data = await this.realtorService.getBenchmarks(geoLevel, regionId, stateId);
+    return { success: true, ...data };
+  }
+
   // ============================================================================
   // Home Value (median_listing_price)
   // ============================================================================

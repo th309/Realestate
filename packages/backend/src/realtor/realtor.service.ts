@@ -147,26 +147,26 @@ export class RealtorService {
     }));
   }
 
+  // Map frontend metric IDs to Realtor column names
+  private readonly metricColumnMap: Record<string, string> = {
+    'home_value': 'median_listing_price',
+    'home_value_yoy': 'median_listing_price_yy',
+    'home_value_mom': 'median_listing_price_mm',
+    'for_sale_inventory': 'active_listing_count',
+    'inventory_yoy': 'active_listing_count_yy',
+    'days_on_market': 'median_days_on_market',
+    'new_listings': 'new_listing_count',
+    'pending_listings': 'pending_listing_count',
+    'price_cut_pct': 'price_reduced_share',
+    'price_per_sqft': 'median_listing_price_per_square_foot',
+  };
+
   /**
    * Get national average for a given frontend metric ID
    * Maps frontend metric IDs to Realtor column names
    */
   async getNationalAverage(metricId: string): Promise<{ value: number | null; metricId: string }> {
-    // Map frontend metric IDs to Realtor column names
-    const metricColumnMap: Record<string, string> = {
-      'home_value': 'median_listing_price',
-      'home_value_yoy': 'median_listing_price_yy',
-      'home_value_mom': 'median_listing_price_mm',
-      'for_sale_inventory': 'active_listing_count',
-      'inventory_yoy': 'active_listing_count_yy',
-      'days_on_market': 'median_days_on_market',
-      'new_listings': 'new_listing_count',
-      'pending_listings': 'pending_listing_count',
-      'price_cut_pct': 'price_reduced_share',
-      'price_per_sqft': 'median_listing_price_per_square_foot',
-    };
-
-    const columnName = metricColumnMap[metricId];
+    const columnName = this.metricColumnMap[metricId];
     if (!columnName) {
       return { value: null, metricId };
     }
@@ -188,6 +188,178 @@ export class RealtorService {
     return {
       value: value !== null && !isNaN(value) ? Math.round(value) : null,
       metricId
+    };
+  }
+
+  /**
+   * Get all national averages for benchmark comparison
+   */
+  async getAllNationalAverages(): Promise<Record<string, number | null>> {
+    const columns = Object.values(this.metricColumnMap);
+
+    const { data, error } = await this.supabase
+      .from('realtor_national')
+      .select(columns.join(','))
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching national averages:', error);
+      return {};
+    }
+
+    const row = data?.[0] || {};
+    const result: Record<string, number | null> = {};
+
+    for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+      const value = row[column] !== undefined ? Number(row[column]) : null;
+      result[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+    }
+
+    return result;
+  }
+
+  /**
+   * Get state average for a given state
+   */
+  async getStateAverages(stateId: string): Promise<Record<string, number | null>> {
+    const columns = ['state_id', ...Object.values(this.metricColumnMap)];
+
+    const { data, error } = await this.supabase
+      .from('realtor_state')
+      .select(columns.join(','))
+      .eq('state_id', stateId)
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching state averages:', error);
+      return {};
+    }
+
+    const row = data?.[0] || {};
+    const result: Record<string, number | null> = {};
+
+    for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+      const value = row[column] !== undefined ? Number(row[column]) : null;
+      result[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+    }
+
+    return result;
+  }
+
+  /**
+   * Get comprehensive benchmark data for a specific geography
+   * Returns location values, state averages, and national averages for all metrics
+   */
+  async getBenchmarks(
+    geoLevel: string,
+    regionId: string,
+    stateId?: string
+  ): Promise<{
+    location: Record<string, number | null>;
+    state: Record<string, number | null>;
+    national: Record<string, number | null>;
+    locationName: string;
+    stateName: string | null;
+  }> {
+    const columns = Object.values(this.metricColumnMap);
+
+    // Get national averages
+    const national = await this.getAllNationalAverages();
+
+    // Get state averages if applicable
+    let state: Record<string, number | null> = {};
+    let stateName: string | null = null;
+
+    if (stateId && geoLevel !== 'state') {
+      state = await this.getStateAverages(stateId);
+
+      // Get state name
+      const { data: stateData } = await this.supabase
+        .from('realtor_state')
+        .select('state_name')
+        .eq('state_id', stateId)
+        .limit(1);
+      stateName = stateData?.[0]?.state_name || null;
+    }
+
+    // Get location values based on geo level
+    const location: Record<string, number | null> = {};
+    let locationName = '';
+
+    if (geoLevel === 'state') {
+      const { data } = await this.supabase
+        .from('realtor_state')
+        .select([...columns, 'state_name'].join(','))
+        .eq('state_id', regionId)
+        .order('period_date', { ascending: false })
+        .limit(1);
+
+      const row = (data as RealtorRow[] | null)?.[0];
+      if (row) {
+        locationName = String(row.state_name || '');
+        for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+          const value = row[column] !== undefined ? Number(row[column]) : null;
+          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+        }
+      }
+    } else if (geoLevel === 'metro') {
+      const { data } = await this.supabase
+        .from('realtor_metro')
+        .select([...columns, 'cbsa_title'].join(','))
+        .eq('cbsa_code', regionId)
+        .order('period_date', { ascending: false })
+        .limit(1);
+
+      const row = (data as RealtorRow[] | null)?.[0];
+      if (row) {
+        locationName = String(row.cbsa_title || '');
+        for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+          const value = row[column] !== undefined ? Number(row[column]) : null;
+          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+        }
+      }
+    } else if (geoLevel === 'county') {
+      const { data } = await this.supabase
+        .from('realtor_county')
+        .select([...columns, 'county_name'].join(','))
+        .eq('county_fips', regionId)
+        .order('period_date', { ascending: false })
+        .limit(1);
+
+      const row = (data as RealtorRow[] | null)?.[0];
+      if (row) {
+        locationName = String(row.county_name || '');
+        for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+          const value = row[column] !== undefined ? Number(row[column]) : null;
+          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+        }
+      }
+    } else if (geoLevel === 'zip') {
+      const { data } = await this.supabase
+        .from('realtor_zip')
+        .select([...columns, 'zip_name'].join(','))
+        .eq('postal_code', regionId)
+        .order('period_date', { ascending: false })
+        .limit(1);
+
+      const row = (data as RealtorRow[] | null)?.[0];
+      if (row) {
+        locationName = String(row.zip_name || '');
+        for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
+          const value = row[column] !== undefined ? Number(row[column]) : null;
+          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+        }
+      }
+    }
+
+    return {
+      location,
+      state,
+      national,
+      locationName,
+      stateName
     };
   }
 
