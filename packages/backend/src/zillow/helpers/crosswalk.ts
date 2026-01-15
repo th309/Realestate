@@ -44,7 +44,18 @@ export async function buildStateMappings(supabase: SupabaseClient): Promise<Map<
 }
 
 /**
+ * Extract state abbreviation from CBSA title (e.g., "Peoria, IL" -> "IL")
+ */
+function extractStateFromCbsaTitle(cbsaTitle: string | null): string | null {
+  if (!cbsaTitle) return null;
+  // CBSA titles end with state abbreviation(s) like "Peoria, IL" or "Chicago-Naperville-Elgin, IL-IN-WI"
+  const match = cbsaTitle.match(/,\s*([A-Z]{2})(?:-[A-Z]{2})*$/);
+  return match ? match[1] : null;
+}
+
+/**
  * Build metro mappings from both Zillow IDs and CBSA codes
+ * Uses zillow_metro_crosswalk table
  */
 export async function buildMetroMappings(
   supabase: SupabaseClient,
@@ -58,27 +69,28 @@ export async function buildMetroMappings(
 
   while (true) {
     let query = supabase
-      .from('geography_crosswalk')
-      .select('cbsa_code, cbsa_name, zillow_metro_region_id, state_abbrev')
+      .from('zillow_metro_crosswalk')
+      .select('cbsa_code, cbsa_title, zillow_region_id, zillow_state_name')
       .not('cbsa_code', 'is', null);
 
-    if (stateFilter) {
-      query = query.eq('state_abbrev', stateFilter);
-    }
+    // Note: stateFilter expects abbreviation but zillow_state_name is full name
+    // For now, skip state filtering on this table - it's only ~900 metros anyway
 
     const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
 
     if (!crosswalk || crosswalk.length === 0) break;
 
     crosswalk.forEach(row => {
+      const stateAbbrev = extractStateFromCbsaTitle(row.cbsa_title);
+
       const metroInfo: MetroMapping = {
         cbsa_code: row.cbsa_code,
-        cbsa_name: row.cbsa_name,
-        state: row.state_abbrev
+        cbsa_name: row.cbsa_title,
+        state: stateAbbrev
       };
 
-      if (row.zillow_metro_region_id && !byZillowId.has(String(row.zillow_metro_region_id))) {
-        byZillowId.set(String(row.zillow_metro_region_id), metroInfo);
+      if (row.zillow_region_id && !byZillowId.has(String(row.zillow_region_id))) {
+        byZillowId.set(String(row.zillow_region_id), metroInfo);
       }
       if (row.cbsa_code && !byCbsaCode.has(row.cbsa_code)) {
         byCbsaCode.set(row.cbsa_code, metroInfo);

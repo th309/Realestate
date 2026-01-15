@@ -64,13 +64,35 @@ export async function getLatestDate(
   }
 }
 
-// Backwards-compatible alias
+// Map table names to metric names for latest date lookup
+const tableToMetricForDate: Record<string, MetricName> = {
+  'zillow_zhvi': 'zhvi',
+  'zillow_zori': 'zori',
+  'zillow_inventory': 'inventory',
+  'zillow_new_listings': 'new_listings',
+  'zillow_pending_listings': 'pending_sales',
+  'zillow_median_list_price': 'list_price',
+  'zillow_sales_count': 'sale_price',
+  'zillow_sales_price': 'sale_price',
+  'zillow_sale_to_list': 'sale_to_list',
+  'zillow_days_to_pending': 'dom',
+  'zillow_days_to_close': 'dom',
+  'zillow_market_heat_index': 'market_heat',
+  'zillow_price_cut_share': 'price_cuts',
+  'zillow_price_cut_amt': 'price_cuts',
+  'zillow_price_cut_pct': 'price_cuts',
+  'zillow_new_construction_sales_count': 'sale_price',
+  'zillow_new_construction_sale_price': 'sale_price',
+};
+
+// Backwards-compatible alias that maps table names to metrics
 export const getLatestDateForTable = async (
   supabase: SupabaseClient,
-  _table: string,
+  table: string,
   geography: string
 ): Promise<string> => {
-  return getLatestDate(supabase, geography.toLowerCase() as GeographyType, 'zhvi');
+  const metricName = tableToMetricForDate[table] || 'zhvi';
+  return getLatestDate(supabase, geography.toLowerCase() as GeographyType, metricName);
 };
 
 export const getLatestDateForMarketTable = getLatestDateForTable;
