@@ -14,7 +14,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
 export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
   'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
-  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m';
+  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m' | 'market_heat';
 
 // Map geography string to table name
 function getTableForGeography(geography: string): string {
@@ -410,7 +410,7 @@ export async function queryMarketIndicator(
     'zillow_price_cut_share': 'price_cuts',
     'zillow_price_cut_amt': 'price_cuts',
     'zillow_price_cut_pct': 'price_cuts',
-    'zillow_market_heat_index': 'inventory',
+    'zillow_market_heat_index': 'market_heat',
     'zillow_new_construction_sales_count': 'sale_price',
     'zillow_new_construction_sale_price': 'sale_price',
     'zillow_affordability': 'zhvi',
