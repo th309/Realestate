@@ -419,10 +419,10 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
   market_heat: {
     id: 'market_heat',
     name: 'Market Heat Index',
-    description: 'A time series dataset that captures the balance of for-sale supply and demand in a given market. A higher number means the market is more tilted in favor of sellers. It relies on a combination of engagement and listing performance inputs to provide insights into current market dynamics.',
+    description: 'An indicator of how competitive the housing market is in a given area. Higher values indicate a hotter, more competitive market with faster sales and more buyer competition.',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
-    notes: 'Calculated for single-family and condo homes. Available for metro areas.',
+    notes: 'Index scale where higher values indicate hotter markets. Available for metro areas.',
   },
 
   // Supply/Demand
