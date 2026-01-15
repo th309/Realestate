@@ -6,6 +6,18 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { StateMapping, MetroMapping, CountyMapping, ZipMapping } from '../types';
 
+// ============================================================================
+// In-memory cache for crosswalk data (rarely changes, expensive to fetch)
+// ============================================================================
+interface MetroMappingsCache {
+  byZillowId: Map<string, MetroMapping>;
+  byCbsaCode: Map<string, MetroMapping>;
+  timestamp: number;
+}
+
+let metroMappingsCache: MetroMappingsCache | null = null;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
 const US_STATE_ABBREVS = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
   'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
@@ -56,11 +68,20 @@ function extractStateFromCbsaTitle(cbsaTitle: string | null): string | null {
 /**
  * Build metro mappings from both Zillow IDs and CBSA codes
  * Uses zillow_metro_crosswalk table
+ * OPTIMIZED: Results are cached for 1 hour since crosswalk data rarely changes
  */
 export async function buildMetroMappings(
   supabase: SupabaseClient,
   stateFilter?: string
 ): Promise<{ byZillowId: Map<string, MetroMapping>; byCbsaCode: Map<string, MetroMapping> }> {
+  // Return cached data if still valid (stateFilter not used, so cache is global)
+  if (metroMappingsCache && Date.now() - metroMappingsCache.timestamp < CACHE_TTL_MS) {
+    return {
+      byZillowId: metroMappingsCache.byZillowId,
+      byCbsaCode: metroMappingsCache.byCbsaCode,
+    };
+  }
+
   const byZillowId = new Map<string, MetroMapping>();
   const byCbsaCode = new Map<string, MetroMapping>();
 
@@ -100,6 +121,9 @@ export async function buildMetroMappings(
     page++;
     if (crosswalk.length < pageSize) break;
   }
+
+  // Cache the results
+  metroMappingsCache = { byZillowId, byCbsaCode, timestamp: Date.now() };
 
   return { byZillowId, byCbsaCode };
 }

@@ -189,8 +189,9 @@ export async function queryZillowData(
 }
 
 /**
- * Query the most recent data for each region (not limited to a single date)
- * Returns each region's latest available data point with its date
+ * Query the most recent data for each region
+ * OPTIMIZED: Gets the latest date first, then queries only that date's data
+ * This avoids fetching all historical records and filtering in JS
  */
 export async function queryLatestPerRegion(
   supabase: SupabaseClient,
@@ -200,36 +201,30 @@ export async function queryLatestPerRegion(
 ) {
   const table = getTableForGeography(geography);
 
-  console.log(`queryLatestPerRegion: table=${table}, metric=${metricName}`);
+  // Step 1: Get the latest date for this metric (single fast query)
+  const latestDate = await getLatestDate(supabase, geography, metricName);
 
+  console.log(`queryLatestPerRegion: table=${table}, metric=${metricName}, latestDate=${latestDate}`);
+
+  // Step 2: Query only the latest date's data (much smaller dataset)
   const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
     { column: 'metric_name', value: metricName },
+    { column: 'period_date', value: latestDate },
   ];
 
   if (regionIds && regionIds.length > 0) {
     filters.push({ column: 'region_id', value: regionIds, operator: 'in' });
   }
 
-  // Fetch all records for this metric
-  const allData = await paginatedQuery(
+  const data = await paginatedQuery(
     supabase,
     table,
     'region_id, region_name, state_code, cbsa_code, period_date, metric_name, value',
     filters
   );
 
-  // Group by region_id and keep only the most recent record
-  const latestByRegion = new Map<number, any>();
-  for (const row of allData) {
-    const existing = latestByRegion.get(row.region_id);
-    if (!existing || row.period_date > existing.period_date) {
-      latestByRegion.set(row.region_id, row);
-    }
-  }
-
-  const result = [...latestByRegion.values()];
-  console.log(`queryLatestPerRegion: ${allData.length} total rows -> ${result.length} unique regions`);
-  return result;
+  console.log(`queryLatestPerRegion: returned ${data.length} rows for date ${latestDate}`);
+  return data;
 }
 
 
