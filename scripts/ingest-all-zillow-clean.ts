@@ -69,6 +69,7 @@ interface TableStatus {
 
 const datasetStatuses: Map<string, DatasetStatus> = new Map();
 const tableRowCounts: Map<string, number> = new Map();
+const cbsaCrosswalMap: Map<string, string> = new Map(); // region_id -> cbsa_code
 let statusIntervalId: NodeJS.Timeout | null = null;
 let importStartTime: number = 0;
 let currentDatasetIndex: number = 0;
@@ -358,7 +359,8 @@ async function importCSV(
 
     const stateCode = extractStateCode(record);
     const fipsCode = buildFipsCode(record);
-    const cbsaCode = record.CBSACode || null;
+    // Use CBSACode from CSV if available, otherwise look up from crosswalk
+    const cbsaCode = record.CBSACode || cbsaCrosswalMap.get(String(regionId)) || null;
 
     const dateColumns = Object.keys(record).filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key));
 
@@ -469,6 +471,28 @@ async function getTableCounts(supabase: SupabaseClient): Promise<void> {
   }
 }
 
+async function loadCbsaCrosswalk(supabase: SupabaseClient): Promise<void> {
+  console.log('Loading CBSA crosswalk data...');
+
+  const { data, error } = await supabase
+    .from('zillow_metro_crosswalk')
+    .select('zillow_region_id, cbsa_code');
+
+  if (error) {
+    console.warn(`Warning: Could not load CBSA crosswalk: ${error.message}`);
+    return;
+  }
+
+  if (data) {
+    for (const row of data) {
+      if (row.zillow_region_id && row.cbsa_code) {
+        cbsaCrosswalMap.set(String(row.zillow_region_id), row.cbsa_code);
+      }
+    }
+    console.log(`Loaded ${cbsaCrosswalMap.size} CBSA mappings from crosswalk`);
+  }
+}
+
 // ============================================================================
 // MAIN IMPORT FUNCTION
 // ============================================================================
@@ -558,6 +582,9 @@ async function main() {
 
   // Truncate all tables for clean ingest
   await truncateAllTables(supabase);
+
+  // Load CBSA crosswalk for metro data
+  await loadCbsaCrosswalk(supabase);
 
   // Start status reporting every 60 seconds
   statusIntervalId = setInterval(() => {

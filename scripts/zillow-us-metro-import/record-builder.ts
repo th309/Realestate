@@ -29,7 +29,8 @@ export function buildRecord(
   tableName: string,
   propertyType: string,
   geography: string,
-  tier?: string
+  tier?: string,
+  options?: { cbsaCode?: string; regionName?: string; stateCode?: string }
 ): any {
   const record: any = {
     region_id: regionId,
@@ -77,6 +78,10 @@ export function buildRecord(
       record.metric_name = getMetricNameForDataset(datasetType);
       record.value = value;
       record.period_date = record.date;
+      // Add optional fields for zillow_metro
+      if (options?.cbsaCode) record.cbsa_code = options.cbsaCode;
+      if (options?.regionName) record.region_name = options.regionName;
+      if (options?.stateCode) record.state_code = options.stateCode;
       delete record.date;
       delete record.property_type;
       delete record.geography;

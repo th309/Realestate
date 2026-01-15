@@ -8,11 +8,51 @@ import { createZillowUsMetroClient } from './db-client';
 import { downloadDataset } from './downloader';
 import { buildRecord, getConflictColumns, getPropertyType, requiresTier } from './record-builder';
 
+// Global crosswalk map: region_id -> cbsa_code
+const cbsaCrosswalkMap: Map<string, string> = new Map();
+let crosswalkLoaded = false;
+
+/**
+ * Load CBSA crosswalk from database
+ */
+async function loadCbsaCrosswalk(): Promise<void> {
+  if (crosswalkLoaded) return;
+
+  const supabase = createZillowUsMetroClient();
+  console.log('  📍 Loading CBSA crosswalk...');
+
+  const { data, error } = await supabase
+    .from('zillow_metro_crosswalk')
+    .select('zillow_region_id, cbsa_code');
+
+  if (error) {
+    console.warn(`  ⚠️ Could not load CBSA crosswalk: ${error.message}`);
+    crosswalkLoaded = true;
+    return;
+  }
+
+  if (data) {
+    for (const row of data) {
+      if (row.zillow_region_id && row.cbsa_code) {
+        cbsaCrosswalkMap.set(String(row.zillow_region_id), row.cbsa_code);
+      }
+    }
+    console.log(`  ✅ Loaded ${cbsaCrosswalkMap.size} CBSA mappings`);
+  }
+
+  crosswalkLoaded = true;
+}
+
 /**
  * Import a single dataset
  */
 export async function importDataset(config: DatasetConfig): Promise<ImportResult> {
   const supabase = createZillowUsMetroClient();
+
+  // Load crosswalk if importing to zillow_metro
+  if (config.tableName === 'zillow_metro') {
+    await loadCbsaCrosswalk();
+  }
 
   console.log(`\n📊 Processing: ${config.description}`);
   console.log(`   Table: ${config.tableName}`);
@@ -161,6 +201,13 @@ async function insertTimeSeries(
   const geography = config.filterUS ? 'United States' : 'Metro';
   const tier = requiresTier(config.datasetType) ? '0.33_0.67' : undefined;
 
+  // Build options for zillow_metro table (includes CBSA code from crosswalk)
+  const options = config.tableName === 'zillow_metro' ? {
+    cbsaCode: record.CBSACode || cbsaCrosswalkMap.get(String(regionId)) || undefined,
+    regionName: record.RegionName || undefined,
+    stateCode: record.StateName?.length === 2 ? record.StateName : undefined
+  } : undefined;
+
   for (const dateCol of dateColumns) {
     const value = parseFloat(record[dateCol]);
     if (!isNaN(value) && value !== null && value !== 0) {
@@ -172,7 +219,8 @@ async function insertTimeSeries(
         config.tableName,
         propertyType,
         geography,
-        tier
+        tier,
+        options
       ));
     }
   }
