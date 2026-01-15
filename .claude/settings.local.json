@@ -67,7 +67,8 @@
       "Bash(railway list:*)",
       "Bash(railway redeploy:*)",
       "Bash(railway up:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(node test-zip-yoy.js:*)"
     ]
   }
 }

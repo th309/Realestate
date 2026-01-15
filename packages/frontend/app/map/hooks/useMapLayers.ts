@@ -141,6 +141,11 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.name;
       feature.properties.value = homeValues[name] || 0;
+      // Set state ID (FIPS code) for benchmark lookups
+      const stateFips = feature.properties.STATEFP || feature.id;
+      feature.properties.id = stateFips;
+      // Also set stateAbbr from FIPS for states
+      feature.properties.stateAbbr = FIPS_TO_STATE[stateFips] || '';
     });
   } else if (geoLevel === 'county') {
     geojson.features.forEach((feature: any) => {

@@ -263,10 +263,12 @@ export class RealtorService {
     locationName: string;
     stateName: string | null;
   }> {
+    console.log(`[getBenchmarks] geoLevel=${geoLevel}, regionId=${regionId}, stateId=${stateId}`);
     const columns = Object.values(this.metricColumnMap);
 
     // Get national averages
     const national = await this.getAllNationalAverages();
+    console.log(`[getBenchmarks] National averages:`, Object.keys(national).length, 'metrics');
 
     // Get state averages if applicable
     let state: Record<string, number | null> = {};
@@ -289,12 +291,14 @@ export class RealtorService {
     let locationName = '';
 
     if (geoLevel === 'state') {
-      const { data } = await this.supabase
+      const { data, error } = await this.supabase
         .from('realtor_state')
         .select([...columns, 'state_name'].join(','))
         .eq('state_id', regionId)
         .order('period_date', { ascending: false })
         .limit(1);
+
+      console.log(`[getBenchmarks] State query for regionId=${regionId}:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
@@ -303,6 +307,7 @@ export class RealtorService {
           const value = row[column] !== undefined ? Number(row[column]) : null;
           location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
         }
+        console.log(`[getBenchmarks] Found state: ${locationName}, metrics with values:`, Object.values(location).filter(v => v !== null).length);
       }
     } else if (geoLevel === 'metro') {
       const { data } = await this.supabase
