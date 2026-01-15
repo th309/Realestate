@@ -6,57 +6,15 @@ import { useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import type { GeoLevel, ForecastHorizon, HomeValues } from '../types';
 import { GEOJSON_SOURCES, FIPS_TO_STATE } from '../types';
-import { getColorScale } from '../utils';
+import {
+  getColorScale,
+  getMetricFormat,
+  calculateValueRange,
+  type MetricFormat,
+} from '../utils';
 
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-// Display format types for metrics
-type MetricFormat = 'currency' | 'percent' | 'number' | 'index' | 'days';
-
-// Map metric IDs to their display format
-function getMetricFormat(metricId: string): MetricFormat {
-  // Percent format - forecasts, growth rates, ratios
-  const percentMetrics = [
-    'home_price_forecast', 'home_value_yoy', 'home_value_mom', 'home_value_5yr',
-    'sfh_value_yoy', 'condo_value_yoy', 'inventory_yoy', 'sales_yoy',
-    'rent_growth', 'population_growth', 'income_growth', 'job_growth', 'gdp_growth',
-    'overvalued_pct', 'price_cut_pct', 'sale_to_list', 'vacancy_rate',
-    'homeowner_affordability', 'renter_affordability', 'homeownership_rate',
-    'cap_rate', 'gross_yield', 'rent_to_price',
-  ];
-
-  // Plain number format - counts, scores
-  const numberMetrics = [
-    'for_sale_inventory', 'new_listings', 'pending_listings', 'home_sales',
-    'new_construction_sales', 'population', 'median_age',
-    'long_term_growth', 'market_health', 'investment_score',
-  ];
-
-  // Days format
-  const daysMetrics = [
-    'days_on_market', 'days_to_close',
-  ];
-
-  // Index format (plain number, but semantically different)
-  const indexMetrics = [
-    'rent_for_houses', 'cost_of_living',
-  ];
-
-  // Years format (treat as number with suffix handled elsewhere)
-  const yearsMetrics = [
-    'years_to_save',
-  ];
-
-  if (percentMetrics.includes(metricId)) return 'percent';
-  if (numberMetrics.includes(metricId)) return 'number';
-  if (daysMetrics.includes(metricId)) return 'days';
-  if (indexMetrics.includes(metricId)) return 'index';
-  if (yearsMetrics.includes(metricId)) return 'number'; // years displayed as plain number
-
-  // Default to currency for home values, prices, rent, income
-  return 'currency';
-}
 
 interface UseMapLayersProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
@@ -117,11 +75,9 @@ export function useMapLayers({
       // Add source
       map.current!.addSource('geo-data', { type: 'geojson', data: geojson });
 
-      // Determine metric format for display
+      // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
-      const needsRange = true; // All metrics use dynamic range for proper legend matching
-      const isPercent = metricFormat === 'percent';
-      const { minVal, maxVal } = calculateValueRange(homeValues, needsRange, isPercent);
+      const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat);
 
       // Add layers
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
@@ -227,32 +183,6 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       feature.properties.displayName = `${tractName}${stateAbbr ? `, ${stateAbbr}` : ''}`;
       feature.properties.countyFips = stateFips + countyFips;
     });
-  }
-}
-
-function calculateValueRange(homeValues: HomeValues, needsRange: boolean, isPercent: boolean = false): { minVal?: number; maxVal?: number } {
-  if (!needsRange) return {};
-
-  // For percent metrics (growth rates), include negative values
-  // For other metrics, only include positive values
-  const allValues = Object.values(homeValues).filter((v): v is number => typeof v === 'number' && !isNaN(v));
-  if (allValues.length === 0) return {};
-
-  if (isPercent) {
-    // For percent/growth metrics, use 5th and 95th percentile to exclude outliers
-    const sorted = [...allValues].sort((a, b) => a - b);
-    const p5Index = Math.max(0, Math.floor(sorted.length * 0.05));
-    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
-    return { minVal: sorted[p5Index], maxVal: sorted[p95Index] };
-  } else {
-    // For non-percent metrics, use min and 95th percentile of positive values
-    const values = allValues.filter(v => v > 0).sort((a, b) => a - b);
-    if (values.length === 0) return {};
-
-    const minVal = values[0];
-    const p95Index = Math.min(Math.floor(values.length * 0.95), values.length - 1);
-    const maxVal = values[p95Index];
-    return { minVal, maxVal };
   }
 }
 
