@@ -279,7 +279,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: '((Current Value - Expected Value) / Expected Value) × 100',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
-    notes: 'Based on long-term price-to-income relationship',
+    notes: 'Based on long-term price-to-income relationship. Covers 400+ metro areas.',
   },
   income_to_buy: {
     id: 'income_to_buy',
@@ -288,6 +288,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: '(Monthly Mortgage + Taxes + Insurance) × 12 / 0.28',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
+    notes: 'Covers 400+ metro areas.',
   },
   income_to_rent: {
     id: 'income_to_rent',
@@ -296,6 +297,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: '(Monthly Rent × 12) / 0.30',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
+    notes: 'Covers 400+ metro areas.',
   },
   affordable_home_price: {
     id: 'affordable_home_price',
@@ -304,6 +306,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: 'Based on median income, current rates, and 28% DTI',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
+    notes: 'Covers 400+ metro areas.',
   },
   years_to_save: {
     id: 'years_to_save',
@@ -312,7 +315,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: '(Median Home Value × 0.20) / (Median Income × Savings Rate)',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
-    notes: 'Assumes 10% annual savings rate',
+    notes: 'Assumes 10% annual savings rate. Covers 400+ metro areas.',
   },
   homeowner_affordability: {
     id: 'homeowner_affordability',
@@ -320,6 +323,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     description: 'Percentage of local households that can afford to purchase the median-priced home based on income distribution.',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
+    notes: 'Covers 400+ metro areas.',
   },
   renter_affordability: {
     id: 'renter_affordability',
@@ -327,6 +331,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     description: 'Percentage of local households that can afford the median rent without being cost-burdened (spending over 30% of income).',
     dataSource: 'Zillow',
     updateFrequency: 'Monthly',
+    notes: 'Covers 400+ metro areas.',
   },
 
   // Demographics

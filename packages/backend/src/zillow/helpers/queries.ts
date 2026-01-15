@@ -442,7 +442,8 @@ export async function queryAffordability(
     return [];
   }
 
-  const affordabilityMetrics = ['homeowner_income_needed', 'affordable_home_price', 'years_to_save', 'renter_income_needed'];
+  // Metric names as stored in zillow_metro (from ingest-all-zillow-clean.ts mapping)
+  const affordabilityMetrics = ['homeowner_income', 'affordable_price', 'years_to_save', 'renter_income'];
 
   // Query all affordability metrics for the given date
   const filters: { column: string; value: any; operator?: 'eq' | 'in' | 'gte' | 'lte' }[] = [
@@ -486,10 +487,11 @@ export async function queryAffordability(
       });
     }
     const entry = byRegion.get(row.region_id);
-    if (row.metric_name === 'homeowner_income_needed') entry.homeowner_income_needed = row.value;
-    if (row.metric_name === 'affordable_home_price') entry.affordable_home_price = row.value;
+    // Match metric names as stored in zillow_metro (from ingest-all-zillow-clean.ts)
+    if (row.metric_name === 'homeowner_income') entry.homeowner_income_needed = row.value;
+    if (row.metric_name === 'affordable_price') entry.affordable_home_price = row.value;
     if (row.metric_name === 'years_to_save') entry.years_to_save = row.value;
-    if (row.metric_name === 'renter_income_needed') entry.renter_income_needed = row.value;
+    if (row.metric_name === 'renter_income') entry.renter_income_needed = row.value;
   }
 
   return [...byRegion.values()];

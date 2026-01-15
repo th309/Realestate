@@ -901,33 +901,15 @@ export class ZillowService {
 
     if (!data.length) return [];
 
-    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
-
-    return data.map(d => {
-      if (d.geography === 'US') {
-        return {
-          region_id: d.region_id,
-          region_name: 'United States',
-          date: d.date,
-          geography: 'US',
-          homeowner_income_needed: d.homeowner_income_needed,
-          renter_income_needed: d.renter_income_needed,
-          affordable_home_price: d.affordable_home_price,
-          years_to_save: d.years_to_save,
-          homeowner_affordability_percent: d.homeowner_affordability_percent,
-          renter_affordability_percent: d.renter_affordability_percent,
-          down_payment_percent: d.down_payment_percent,
-          property_type: d.property_type,
-        };
-      }
-
-      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
-
-      return {
+    // Use cbsa_code directly from zillow_metro data (same approach as getMetroHomeValues)
+    // Filter out records without cbsa_code - they can't be displayed on the map
+    return data
+      .filter(d => d.cbsa_code) // Skip records without cbsa_code
+      .map(d => ({
         region_id: d.region_id,
-        region_name: metro?.cbsa_name || 'Unknown',
-        cbsa_code: cbsaCode,
-        state_abbrev: metro?.state || null,
+        region_name: d.region_name || 'Unknown',
+        cbsa_code: d.cbsa_code,
+        state_abbrev: d.state_code || null,
         date: d.date,
         geography: 'Metro',
         homeowner_income_needed: d.homeowner_income_needed,
@@ -938,7 +920,7 @@ export class ZillowService {
         renter_affordability_percent: d.renter_affordability_percent,
         down_payment_percent: d.down_payment_percent,
         property_type: d.property_type,
-      };
-    }).sort((a, b) => (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0));
+      }))
+      .sort((a, b) => (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0));
   }
 }

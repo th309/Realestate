@@ -73,7 +73,37 @@ GRANT SELECT ON propertyiq_scores TO anon;
 -- Add comment
 COMMENT ON TABLE propertyiq_scores IS 'PropertyIQ proprietary scores: HomeReady (homebuyers/renters) and InvestorEdge (investors). Calculated monthly for metros, counties, and ZIP codes.';
 
--- Score History Table (for trend analysis)
+-- Score Details Table (for Pro tier component breakdown)
+CREATE TABLE IF NOT EXISTS propertyiq_score_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  score_id UUID REFERENCES propertyiq_scores(id) ON DELETE CASCADE,
+
+  -- Component identification
+  score_type TEXT NOT NULL,              -- 'homeready' or 'investoredge'
+  component TEXT NOT NULL,               -- 'affordability', 'cashflow', etc.
+
+  -- Metrics that drove this component
+  metrics JSONB NOT NULL,                -- Array of {metric_id, value, percentile, weight, contribution}
+
+  -- Helping/Hurting factors
+  helping_factors TEXT[],                -- Array of positive factors
+  hurting_factors TEXT[],                -- Array of negative factors
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT valid_score_type CHECK (score_type IN ('homeready', 'investoredge'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_score_details_score ON propertyiq_score_details(score_id);
+CREATE INDEX IF NOT EXISTS idx_score_details_component ON propertyiq_score_details(score_type, component);
+
+GRANT SELECT, INSERT, DELETE ON propertyiq_score_details TO authenticated;
+GRANT SELECT ON propertyiq_score_details TO anon;
+
+COMMENT ON TABLE propertyiq_score_details IS 'Detailed component breakdown for PropertyIQ scores. Shows which metrics drove each component score.';
+
+-- Score History Table (for backtesting and trend analysis)
 CREATE TABLE IF NOT EXISTS propertyiq_scores_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   geography_id TEXT NOT NULL,
@@ -81,17 +111,31 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores_history (
   period_date DATE NOT NULL,
   homeready_score NUMERIC(5,2),
   investoredge_score NUMERIC(5,2),
-  archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT valid_history_geography_type CHECK (geography_type IN ('metro', 'county', 'zip', 'state', 'national'))
+  -- Actual outcomes (filled in retrospectively for backtesting)
+  actual_appreciation_12m NUMERIC(6,3),    -- Actual price change 12 months later
+  actual_appreciation_24m NUMERIC(6,3),    -- Actual price change 24 months later
+  actual_rent_growth_12m NUMERIC(6,3),     -- Actual rent change 12 months later
+  actual_dom_avg_12m NUMERIC(6,2),         -- Average DOM over next 12 months
+
+  -- Validation metrics
+  prediction_error_12m NUMERIC(6,3),       -- Score prediction vs actual
+  prediction_error_24m NUMERIC(6,3),
+
+  archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  outcomes_updated_at TIMESTAMPTZ,
+
+  CONSTRAINT valid_history_geography_type CHECK (geography_type IN ('metro', 'county', 'zip', 'state', 'national')),
+  CONSTRAINT unique_history_geography_period UNIQUE (geography_id, geography_type, period_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_propertyiq_history_geography ON propertyiq_scores_history(geography_id, geography_type, period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_propertyiq_history_period ON propertyiq_scores_history(period_date);
 
-GRANT SELECT, INSERT ON propertyiq_scores_history TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON propertyiq_scores_history TO authenticated;
 GRANT SELECT ON propertyiq_scores_history TO anon;
 
-COMMENT ON TABLE propertyiq_scores_history IS 'Historical PropertyIQ scores for trend analysis. Archived when new scores are calculated.';
+COMMENT ON TABLE propertyiq_scores_history IS 'Historical PropertyIQ scores with actual outcomes for backtesting validation.';
 
 -- Rankings Table (for percentile comparisons)
 CREATE TABLE IF NOT EXISTS propertyiq_rankings (
@@ -127,3 +171,130 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON propertyiq_rankings TO authenticated;
 GRANT SELECT ON propertyiq_rankings TO anon;
 
 COMMENT ON TABLE propertyiq_rankings IS 'National and state rankings for PropertyIQ scores. Used for percentile displays and comparisons.';
+
+-- Metric Percentiles Table (pre-computed for faster scoring)
+CREATE TABLE IF NOT EXISTS metric_percentiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  metric_id TEXT NOT NULL,               -- e.g., 'zhvi', 'zori', 'grm'
+  geography_type TEXT NOT NULL,          -- 'metro', 'county', 'zip'
+  period_date DATE NOT NULL,
+
+  -- Percentile breakpoints
+  p10 NUMERIC,
+  p20 NUMERIC,
+  p30 NUMERIC,
+  p40 NUMERIC,
+  p50 NUMERIC,
+  p60 NUMERIC,
+  p70 NUMERIC,
+  p80 NUMERIC,
+  p90 NUMERIC,
+  min_value NUMERIC,
+  max_value NUMERIC,
+  count_values INTEGER,
+  mean_value NUMERIC,
+  stddev_value NUMERIC,
+
+  calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT unique_percentile_metric_geo_period UNIQUE (metric_id, geography_type, period_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_percentiles_lookup ON metric_percentiles(metric_id, geography_type, period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_percentiles_period ON metric_percentiles(period_date DESC);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON metric_percentiles TO authenticated;
+GRANT SELECT ON metric_percentiles TO anon;
+
+COMMENT ON TABLE metric_percentiles IS 'Pre-computed percentile breakpoints for all scoring metrics. Used to quickly determine percentile rank during score calculation.';
+
+-- Calculated Metrics Table (derived values for scoring)
+CREATE TABLE IF NOT EXISTS calculated_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  geography_id TEXT NOT NULL,
+  geography_type TEXT NOT NULL,
+  period_date DATE NOT NULL,
+
+  -- Derived from ZHVI/ZORI
+  grm NUMERIC(8,2),                          -- Gross Rent Multiplier: ZHVI / (ZORI * 12)
+  annual_rent_price_ratio NUMERIC(8,5),      -- (ZORI * 12) / ZHVI
+  cap_rate_proxy NUMERIC(6,4),               -- Estimated cap rate
+  price_rent_ratio NUMERIC(8,2),             -- ZHVI / ZORI (monthly)
+
+  -- Year-over-year changes
+  zhvi_yoy_change NUMERIC(8,4),              -- YoY price change %
+  zori_yoy_change NUMERIC(8,4),              -- YoY rent change %
+  inventory_yoy_change NUMERIC(8,4),         -- YoY inventory change %
+
+  -- Multi-year changes
+  zhvi_3y_change NUMERIC(8,4),               -- 3-year price change %
+  zhvi_5y_change NUMERIC(8,4),               -- 5-year price change %
+  zhvi_3y_cagr NUMERIC(8,4),                 -- 3-year compound annual growth rate
+  zhvi_5y_cagr NUMERIC(8,4),                 -- 5-year compound annual growth rate
+
+  -- 90-day momentum
+  zhvi_90d_change NUMERIC(8,4),
+  zori_90d_change NUMERIC(8,4),
+  inventory_90d_change NUMERIC(8,4),
+  dom_90d_change NUMERIC(8,4),
+
+  -- Volatility metrics (standard deviation)
+  zhvi_stddev_12m NUMERIC(12,2),             -- 1-year price std dev
+  zhvi_stddev_36m NUMERIC(12,2),             -- 3-year price std dev
+  zori_stddev_12m NUMERIC(10,2),             -- 1-year rent std dev
+  inventory_stddev_12m NUMERIC(12,2),        -- 1-year inventory std dev
+  dom_stddev_12m NUMERIC(8,2),               -- 1-year DOM std dev
+
+  -- Affordability derived
+  income_gap_ratio NUMERIC(8,4),             -- Income needed / Median income
+  price_trend_deviation NUMERIC(8,4),        -- Current price vs 5-year trend line
+
+  -- Risk metrics
+  inventory_pct_vs_history NUMERIC(6,2),     -- Current inventory percentile vs 5yr range
+  affordability_percentile NUMERIC(6,2),     -- Affordability vs all markets
+  months_of_supply NUMERIC(6,2),             -- Inventory / pending sales
+
+  calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT unique_calc_metrics_geo_period UNIQUE (geography_id, geography_type, period_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_calc_metrics_lookup ON calculated_metrics(geography_id, geography_type, period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_calc_metrics_period ON calculated_metrics(period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_calc_metrics_type_period ON calculated_metrics(geography_type, period_date DESC);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON calculated_metrics TO authenticated;
+GRANT SELECT ON calculated_metrics TO anon;
+
+COMMENT ON TABLE calculated_metrics IS 'Derived metrics calculated from raw data sources. Used as inputs to PropertyIQ score calculation.';
+
+-- Score Calculation Log (for debugging and audit)
+CREATE TABLE IF NOT EXISTS score_calculation_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  calculation_type TEXT NOT NULL,           -- 'full', 'incremental', 'single', 'backtest'
+  geography_type TEXT,                      -- NULL for full calculation
+  period_date DATE NOT NULL,
+
+  started_at TIMESTAMPTZ NOT NULL,
+  completed_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'running',   -- 'running', 'completed', 'failed'
+
+  geographies_processed INTEGER DEFAULT 0,
+  geographies_failed INTEGER DEFAULT 0,
+  error_message TEXT,
+
+  calculation_version TEXT,
+  metadata JSONB                            -- Additional details
+
+);
+
+CREATE INDEX IF NOT EXISTS idx_calc_log_period ON score_calculation_log(period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_calc_log_status ON score_calculation_log(status);
+
+GRANT SELECT, INSERT, UPDATE ON score_calculation_log TO authenticated;
+GRANT SELECT ON score_calculation_log TO anon;
+
+COMMENT ON TABLE score_calculation_log IS 'Audit log of score calculation runs for debugging and monitoring.';
