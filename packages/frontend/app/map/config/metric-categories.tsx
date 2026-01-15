@@ -66,6 +66,7 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
       { id: 'home_value_mom', name: 'Home Value Growth (MoM)', isPremium: true, dataSource: 'realtor' as DataSource },
       { id: 'overvalued_pct', name: 'Overvalued %', isPremium: true, dataSource: 'zillow' as DataSource },
       { id: 'income_to_buy', name: 'Income Needed to Buy', isNew: true, dataSource: 'zillow' as DataSource },
+      { id: 'income_to_rent', name: 'Income Needed to Rent', isNew: true, dataSource: 'zillow' as DataSource },
       { id: 'affordable_home_price', name: 'Affordable Home Price', isNew: true, dataSource: 'zillow' as DataSource },
       { id: 'years_to_save', name: 'Years to Save (Down Payment)', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
       { id: 'homeowner_affordability', name: 'Homeowner Affordability %', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
