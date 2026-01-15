@@ -40,7 +40,7 @@ const INVESTOR_POPULAR_METRICS = [
   { id: 'rent_for_houses', name: 'Renter Demand Index', dataSource: 'zillow' as DataSource },
   { id: 'home_value_yoy', name: 'Home Value Growth (YoY)', dataSource: 'realtor' as DataSource },
   { id: 'vacancy_rate', name: 'Vacancy Rate', isPremium: true, dataSource: 'census' as DataSource },
-  { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
+  { id: 'investoredge_score', name: 'InvestorEdge Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
 ];
 
 // Helper to get Popular Data category based on view mode
@@ -175,10 +175,9 @@ export const SCORES_CATEGORY: MetricCategory = {
   icon: <AnalyticsIcon />,
   isNew: true,
   metrics: [
+    { id: 'homeready_score', name: 'HomeReady Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
+    { id: 'investoredge_score', name: 'InvestorEdge Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
     { id: 'home_price_forecast', name: 'Home Price Forecast', isPremium: true, dataSource: 'zillow' as DataSource },
-    { id: 'long_term_growth', name: 'Long-Term Growth Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
-    { id: 'market_health', name: 'Market Health Score', isPremium: true, isNew: true, dataSource: 'zillow' as DataSource },
-    { id: 'investment_score', name: 'Investment Score', isPremium: true, isNew: true, dataSource: 'calculated' as DataSource },
   ],
 };
 
