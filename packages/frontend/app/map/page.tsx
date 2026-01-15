@@ -71,15 +71,35 @@ export default function MapPage() {
     onFeatureClick: setSelectedGeography
   });
 
+  // Metro-only metrics that should auto-switch to metro level
+  const METRO_ONLY_METRICS = new Set([
+    'income_to_buy',
+    'income_to_rent',
+    'affordable_home_price',
+    'years_to_save',
+    'homeowner_affordability',
+    'renter_affordability',
+    'new_construction_sales',
+    'new_construction_price',
+    'new_construction_ppsf',
+    'sale_price',
+    'sale_to_list',
+    'home_sales',
+    'sales_yoy',
+    'days_to_close',
+    'market_health',
+    'rent_for_houses',
+  ]);
+
   // Auto-switch geo level for restricted metrics
   useEffect(() => {
     const isRentIndexMode = selectedMetric === 'rent_index';
-    const isRenterDemandMode = selectedMetric === 'rent_for_houses';
+    const isMetroOnlyMetric = METRO_ONLY_METRICS.has(selectedMetric);
 
     if (isRentIndexMode && ['national', 'state'].includes(geoLevel)) {
       setGeoLevel('metro');
     }
-    if (isRenterDemandMode && geoLevel !== 'metro') {
+    if (isMetroOnlyMetric && geoLevel !== 'metro') {
       setGeoLevel('metro');
     }
   }, [selectedMetric, geoLevel]);

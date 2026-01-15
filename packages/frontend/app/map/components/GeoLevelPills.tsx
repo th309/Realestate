@@ -10,6 +10,29 @@ const CITY_AVAILABLE_METRICS = new Set([
   'list_price',
 ]);
 
+// Metrics that are ONLY available at metro level
+const METRO_ONLY_METRICS = new Set([
+  'income_to_buy',
+  'income_to_rent',
+  'affordable_home_price',
+  'years_to_save',
+  'homeowner_affordability',
+  'renter_affordability',
+  'new_construction_sales',
+  'new_construction_price',
+  'new_construction_ppsf',
+  'sale_price',
+  'sale_to_list',
+  'home_sales',
+  'sales_yoy',
+  'days_to_close',
+  'market_health',
+  'rent_for_houses',
+  'overvalued_pct',
+  'cap_rate',
+  'gross_yield',
+]);
+
 interface GeoLevelPillsProps {
   geoLevel: GeoLevel;
   selectedMetric: string;
@@ -29,7 +52,7 @@ export function GeoLevelPills({
 }: GeoLevelPillsProps) {
   const isForecastMode = selectedMetric === 'home_price_forecast';
   const isRentIndexMode = selectedMetric === 'rent_index';
-  const isRenterDemandMode = selectedMetric === 'rent_for_houses';
+  const isMetroOnlyMode = METRO_ONLY_METRICS.has(selectedMetric);
 
   const levels = ['National', 'State', 'Metro', 'County', 'City', 'Zip'] as const;
 
@@ -44,8 +67,8 @@ export function GeoLevelPills({
         const isCityDisabled = levelKey === 'city' && !CITY_AVAILABLE_METRICS.has(selectedMetric);
         const isForecastDisabled = isForecastMode && !['metro', 'zip'].includes(levelKey);
         const isRentIndexDisabled = isRentIndexMode && ['national', 'state'].includes(levelKey);
-        const isRenterDemandDisabled = isRenterDemandMode && levelKey !== 'metro';
-        const isDisabled = isCityDisabled || isForecastDisabled || isRentIndexDisabled || isRenterDemandDisabled;
+        const isMetroOnlyDisabled = isMetroOnlyMode && levelKey !== 'metro';
+        const isDisabled = isCityDisabled || isForecastDisabled || isRentIndexDisabled || isMetroOnlyDisabled;
 
         return (
           <button
