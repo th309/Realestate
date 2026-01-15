@@ -92,3 +92,4 @@ redfin_downloads/raw_files/*.tmp.gz
 # Large Realtor data files (imported to database)
 data/Realtor/*.csv
 
+data/zillow/*.csv
