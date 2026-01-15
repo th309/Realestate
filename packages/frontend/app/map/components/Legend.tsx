@@ -27,7 +27,8 @@ export function Legend({
   const isForecast = selectedMetric === 'home_price_forecast';
 
   // Use shared range calculation - ensures consistency with map layer colors
-  const { min, max } = calculateValueRange(homeValues, metricFormat);
+  // Pass selectedMetric for special handling (e.g., market_heat uses full range)
+  const { min, max } = calculateValueRange(homeValues, metricFormat, selectedMetric);
 
   // Use shared formatValue for labels - ensures consistency with map
   const minLabel = formatValue(min, metricFormat, 'min');
