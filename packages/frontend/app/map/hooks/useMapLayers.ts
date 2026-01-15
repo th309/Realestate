@@ -2,9 +2,9 @@
  * Map Layers Hook
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
-import type { GeoLevel, ForecastHorizon, HomeValues } from '../types';
+import type { GeoLevel, ForecastHorizon, HomeValues, SelectedGeography } from '../types';
 import { GEOJSON_SOURCES, FIPS_TO_STATE } from '../types';
 import {
   getColorScale,
@@ -25,6 +25,7 @@ interface UseMapLayersProps {
   forecastHorizon: ForecastHorizon;
   homeValues: HomeValues;
   mapLoaded: boolean;
+  onFeatureClick?: (geography: SelectedGeography | null) => void;
 }
 
 export function useMapLayers({
@@ -35,8 +36,15 @@ export function useMapLayers({
   selectedMetric,
   forecastHorizon,
   homeValues,
-  mapLoaded
+  mapLoaded,
+  onFeatureClick
 }: UseMapLayersProps) {
+  // Store current geoLevel in ref for click handler
+  const geoLevelRef = useRef(geoLevel);
+  useEffect(() => {
+    geoLevelRef.current = geoLevel;
+  }, [geoLevel]);
+
   const updateMapLayers = useCallback(async () => {
     if (!map.current || !mapLoaded) return;
 
@@ -82,12 +90,12 @@ export function useMapLayers({
       // Add layers
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
 
-      // Setup hover interactions
-      setupHoverInteractions(map.current!, popup, metricFormat, forecastHorizon);
+      // Setup hover and click interactions
+      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, onFeatureClick);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, homeValues, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup]);
+  }, [geoLevel, homeValues, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, onFeatureClick]);
 
   return { updateMapLayers };
 }
@@ -284,11 +292,13 @@ function addMapLayers(
   }
 }
 
-function setupHoverInteractions(
+function setupInteractions(
   map: mapboxgl.Map,
   popup: React.MutableRefObject<mapboxgl.Popup | null>,
   metricFormat: MetricFormat,
-  forecastHorizon: ForecastHorizon
+  forecastHorizon: ForecastHorizon,
+  geoLevelRef: React.MutableRefObject<GeoLevel>,
+  onFeatureClick?: (geography: SelectedGeography | null) => void
 ): void {
   map.on('mouseenter', 'geo-fills', () => {
     map.getCanvas().style.cursor = 'pointer';
@@ -324,6 +334,41 @@ function setupHoverInteractions(
           </div>
         `)
         .addTo(map);
+    }
+  });
+
+  // Click handler for benchmark comparison
+  map.on('click', 'geo-fills', (e) => {
+    if (!onFeatureClick || !e.features || e.features.length === 0) return;
+
+    const feature = e.features[0];
+    const props = feature.properties || {};
+
+    // Extract geography info based on level
+    const name = props.name || props.displayName || props.NAME || 'Unknown';
+    const id = props.id || feature.id || '';
+    const value = props.value ?? null;
+
+    // Get state abbreviation if available
+    const stateFips = props.STATEFP || (typeof id === 'string' ? id.substring(0, 2) : '');
+    const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
+
+    onFeatureClick({
+      id: String(id),
+      name,
+      geoLevel: geoLevelRef.current,
+      value,
+      stateAbbr
+    });
+  });
+
+  // Click outside of features to deselect
+  map.on('click', (e) => {
+    if (!onFeatureClick) return;
+
+    const features = map.queryRenderedFeatures(e.point, { layers: ['geo-fills'] });
+    if (features.length === 0) {
+      onFeatureClick(null);
     }
   });
 }

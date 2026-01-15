@@ -6,6 +6,16 @@ export class RealtorController {
   constructor(private readonly realtorService: RealtorService) {}
 
   // ============================================================================
+  // National Average (for benchmarks)
+  // ============================================================================
+
+  @Get('national-average')
+  async getNationalAverage(@Query('metric') metric: string) {
+    const data = await this.realtorService.getNationalAverage(metric);
+    return { success: true, ...data };
+  }
+
+  // ============================================================================
   // Home Value (median_listing_price)
   // ============================================================================
 

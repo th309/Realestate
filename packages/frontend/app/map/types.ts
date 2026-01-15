@@ -51,6 +51,15 @@ export interface SearchResult {
   state?: string;
 }
 
+// Selected geography for benchmark comparison panel
+export interface SelectedGeography {
+  id: string;
+  name: string;
+  geoLevel: GeoLevel;
+  value: number | null;
+  stateAbbr?: string;
+}
+
 // GeoJSON sources for different geography levels
 // These are API endpoint paths - prepend NEXT_PUBLIC_API_URL at runtime
 export const GEOJSON_SOURCES = {

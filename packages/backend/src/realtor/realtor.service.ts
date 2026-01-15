@@ -147,6 +147,50 @@ export class RealtorService {
     }));
   }
 
+  /**
+   * Get national average for a given frontend metric ID
+   * Maps frontend metric IDs to Realtor column names
+   */
+  async getNationalAverage(metricId: string): Promise<{ value: number | null; metricId: string }> {
+    // Map frontend metric IDs to Realtor column names
+    const metricColumnMap: Record<string, string> = {
+      'home_value': 'median_listing_price',
+      'home_value_yoy': 'median_listing_price_yy',
+      'home_value_mom': 'median_listing_price_mm',
+      'for_sale_inventory': 'active_listing_count',
+      'inventory_yoy': 'active_listing_count_yy',
+      'days_on_market': 'median_days_on_market',
+      'new_listings': 'new_listing_count',
+      'pending_listings': 'pending_listing_count',
+      'price_cut_pct': 'price_reduced_share',
+      'price_per_sqft': 'median_listing_price_per_square_foot',
+    };
+
+    const columnName = metricColumnMap[metricId];
+    if (!columnName) {
+      return { value: null, metricId };
+    }
+
+    const { data, error } = await this.supabase
+      .from('realtor_national')
+      .select(columnName)
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Error fetching national average:', error);
+      return { value: null, metricId };
+    }
+
+    const row = data?.[0];
+    const value = row ? Number(row[columnName]) : null;
+
+    return {
+      value: value !== null && !isNaN(value) ? Math.round(value) : null,
+      metricId
+    };
+  }
+
   // ============================================================================
   // State Data
   // ============================================================================

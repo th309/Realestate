@@ -6,12 +6,12 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Import types and constants
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode } from './types';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode, SelectedGeography } from './types';
 import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchBar, GeoLevelPills, Legend, Sidebar } from './components';
+import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel } from './components';
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
@@ -39,6 +39,7 @@ export default function MapPage() {
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedGeography, setSelectedGeography] = useState<SelectedGeography | null>(null);
   const isResizing = useRef(false);
   const pathname = usePathname();
 
@@ -66,7 +67,8 @@ export default function MapPage() {
     handleSearch, handleSelectSearchResult, setShowSearchResults
   } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
   const { updateMapLayers } = useMapLayers({
-    map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, homeValues, mapLoaded
+    map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, homeValues, mapLoaded,
+    onFeatureClick: setSelectedGeography
   });
 
   // Auto-switch geo level for restricted metrics
@@ -328,6 +330,16 @@ export default function MapPage() {
             geoLevel={geoLevel}
             homeValues={homeValues}
           />
+
+          {selectedGeography && (
+            <BenchmarkPanel
+              selectedGeography={selectedGeography}
+              selectedMetric={selectedMetric}
+              homeValues={homeValues}
+              geoLevel={geoLevel}
+              onClose={() => setSelectedGeography(null)}
+            />
+          )}
 
           <button className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-white shadow-lg rounded-xl md:rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:shadow-xl transition-shadow z-10 border border-gray-200">
             <TableIcon />
