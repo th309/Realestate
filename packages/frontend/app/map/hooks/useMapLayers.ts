@@ -87,8 +87,8 @@ export function useMapLayers({
       const metricFormat = getMetricFormat(selectedMetric);
       const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat, selectedMetric);
 
-      // Add layers
-      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
+      // Add layers - pass selectedMetric to correctly identify renter demand vs other index metrics
+      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, selectedMetric);
 
       // Setup hover and click interactions
       setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, onFeatureClick);
@@ -217,11 +217,13 @@ function addMapLayers(
   geoLevel: GeoLevel,
   metricFormat: MetricFormat,
   minVal?: number,
-  maxVal?: number
+  maxVal?: number,
+  metricId?: string
 ): void {
   // For color scale, we need to know specific metric types
   const isForecast = metricFormat === 'percent';
-  const isRenterDemand = metricFormat === 'index';
+  // Only use renter demand scale for actual renter demand metric, not all index metrics
+  const isRenterDemand = metricId === 'rent_for_houses';
   const isInventory = metricFormat === 'number' || metricFormat === 'days';
 
   // Fill layer
