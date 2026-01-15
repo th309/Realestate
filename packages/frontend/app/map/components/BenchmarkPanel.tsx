@@ -28,7 +28,7 @@ interface MetricConfig {
   id: string;
   label: string;
   description: string;
-  format: 'currency' | 'percent' | 'days' | 'number' | 'ratio';
+  format: 'currency' | 'percent' | 'days' | 'number' | 'ratio' | 'months';
   lowerIsBetter: boolean;
   category: 'homebuyer' | 'investor';
 }
@@ -51,7 +51,7 @@ const METRIC_CONFIGS: MetricConfig[] = [
   { id: 'home_value', label: 'Median Home Value', description: 'Median listing price', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
   { id: 'home_value_yoy', label: 'YoY Appreciation', description: '12-month price change', format: 'percent', lowerIsBetter: true, category: 'homebuyer' }, // Lower appreciation = prices not rising fast
   { id: 'days_on_market', label: 'Days on Market', description: 'Median listing duration', format: 'days', lowerIsBetter: false, category: 'homebuyer' }, // Higher DOM = more time to shop, less competition
-  { id: 'for_sale_inventory', label: 'For Sale Inventory', description: 'Active listings count', format: 'number', lowerIsBetter: false, category: 'homebuyer' }, // Higher inventory = more choices
+  { id: 'months_of_supply', label: 'Months of Supply', description: 'Inventory ÷ pending sales', format: 'months', lowerIsBetter: false, category: 'homebuyer' }, // >6 = buyer's market, <3 = seller's market
   { id: 'price_cut_pct', label: 'Listings with Price Cuts', description: 'Share of reduced listings', format: 'percent', lowerIsBetter: false, category: 'homebuyer' }, // More price cuts = buyer advantage
   { id: 'price_per_sqft', label: 'Price per Sq Ft', description: 'Median price per square foot', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
   // Investor metrics - what's good for INVESTORS
@@ -122,11 +122,27 @@ export function BenchmarkPanel({
         const response = await fetch(`${API_URL}/api/realtor/benchmarks?${params}`);
         if (response.ok) {
           const data = await response.json();
+
+          // Calculate derived metrics: Months of Supply = inventory / pending_listings
+          // This is a normalized metric comparable across geo levels
+          const calcMonthsOfSupply = (obj: Record<string, number | null>) => {
+            const inventory = obj?.for_sale_inventory;
+            const pending = obj?.pending_listings;
+            if (inventory && pending && pending > 0) {
+              return inventory / pending;
+            }
+            return null;
+          };
+
+          if (data.location) data.location.months_of_supply = calcMonthsOfSupply(data.location);
+          if (data.state) data.state.months_of_supply = calcMonthsOfSupply(data.state);
+          if (data.national) data.national.months_of_supply = calcMonthsOfSupply(data.national);
+
           console.log('[BenchmarkPanel] API Response:', {
             locationMetrics: Object.keys(data.location || {}).filter(k => data.location[k] !== null).length,
             stateMetrics: Object.keys(data.state || {}).filter(k => data.state[k] !== null).length,
             nationalMetrics: Object.keys(data.national || {}).filter(k => data.national[k] !== null).length,
-            state: data.state
+            months_of_supply: { local: data.location?.months_of_supply, state: data.state?.months_of_supply, national: data.national?.months_of_supply }
           });
           setBenchmarkData(data);
         } else {
@@ -447,6 +463,8 @@ function BenchmarkBar({
         return `${pctValue.toFixed(1)}%`;
       case 'days':
         return `${Math.round(value)} days`;
+      case 'months':
+        return `${value.toFixed(1)} mo`;
       case 'number':
         return value.toLocaleString();
       case 'ratio':
