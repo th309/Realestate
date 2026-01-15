@@ -79,11 +79,11 @@ export function MetricItem({
         </span>
       </button>
 
-      {/* Metric Info Popup - positioned to the right of the info icon */}
+      {/* Metric Info Popup - positioned to the right of the info icon, above map */}
       {showInfo && metricDef && (
         <div
           ref={infoRef}
-          className="absolute left-full top-0 ml-2 z-50 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-3 text-xs"
+          className="absolute left-full top-0 ml-2 z-[9999] w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-3 text-xs"
         >
           <div className="flex justify-between items-start mb-2">
             <h4 className="font-semibold text-gray-900">{metricDef.name}</h4>
