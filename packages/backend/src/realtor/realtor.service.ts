@@ -224,6 +224,7 @@ export class RealtorService {
    */
   async getStateAverages(stateId: string): Promise<Record<string, number | null>> {
     const columns = ['state_id', ...Object.values(this.metricColumnMap)];
+    console.log(`[getStateAverages] Querying with stateId=${stateId}`);
 
     let { data, error } = await this.supabase
       .from('realtor_state')
@@ -232,9 +233,12 @@ export class RealtorService {
       .order('period_date', { ascending: false })
       .limit(1);
 
+    console.log(`[getStateAverages] First query result: ${data?.length || 0} rows`);
+
     // If no results, try with numeric ID
     if ((!data || data.length === 0) && stateId.startsWith('0')) {
       const numericId = parseInt(stateId, 10);
+      console.log(`[getStateAverages] Retrying with numeric ID: ${numericId}`);
       const retry = await this.supabase
         .from('realtor_state')
         .select(columns.join(','))
@@ -243,6 +247,7 @@ export class RealtorService {
         .limit(1);
       data = retry.data;
       error = retry.error;
+      console.log(`[getStateAverages] Retry result: ${data?.length || 0} rows`);
     }
 
     if (error) {
@@ -258,6 +263,7 @@ export class RealtorService {
       result[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
     }
 
+    console.log(`[getStateAverages] Returning ${Object.values(result).filter(v => v !== null).length} metrics with values`);
     return result;
   }
 
@@ -288,7 +294,10 @@ export class RealtorService {
     let stateName: string | null = null;
 
     if (stateId && geoLevel !== 'state') {
+      console.log(`[getBenchmarks] Fetching state averages for stateId=${stateId}`);
       state = await this.getStateAverages(stateId);
+      const stateMetricsWithValues = Object.values(state).filter(v => v !== null).length;
+      console.log(`[getBenchmarks] State averages received: ${stateMetricsWithValues} metrics with values`);
 
       // Get state name
       const { data: stateData } = await this.supabase
@@ -297,6 +306,9 @@ export class RealtorService {
         .eq('state_id', stateId)
         .limit(1);
       stateName = stateData?.[0]?.state_name || null;
+      console.log(`[getBenchmarks] State name: ${stateName}`);
+    } else {
+      console.log(`[getBenchmarks] Skipping state averages: stateId=${stateId}, geoLevel=${geoLevel}`);
     }
 
     // Get location values based on geo level
