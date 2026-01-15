@@ -21,6 +21,134 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CSVImportResult, DatasetConfig } from './types';
 import { getTableForGeography, getMetricName, getConflictColumns } from './db-client';
 
+// Global crosswalk maps for CBSA code matching
+const cbsaCrosswalkMap: Map<string, string> = new Map(); // region_id -> cbsa_code
+const cbsaNameMap: Map<string, string> = new Map(); // normalized_name -> cbsa_code
+let crosswalkLoaded = false;
+
+/**
+ * Normalize metro name for fuzzy matching
+ * "Peoria, IL" -> "peoria il"
+ */
+function normalizeMetroName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[,\-]/g, ' ')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Extract primary metro name (before comma)
+ * "Peoria, IL" -> "peoria"
+ */
+function extractPrimaryMetroName(name: string): string {
+  const parts = name.split(',');
+  return parts[0].toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
+
+/**
+ * Load CBSA crosswalk from database and tiger_cbsa
+ */
+async function loadCbsaCrosswalk(supabase: SupabaseClient): Promise<void> {
+  if (crosswalkLoaded) return;
+
+  console.log('  📍 Loading CBSA crosswalk...');
+
+  // Load from zillow_metro_crosswalk
+  const { data, error } = await supabase
+    .from('zillow_metro_crosswalk')
+    .select('zillow_region_id, zillow_region_name, cbsa_code, cbsa_title');
+
+  if (error) {
+    console.warn(`  ⚠️ Could not load crosswalk: ${error.message}`);
+  } else if (data) {
+    for (const row of data) {
+      if (row.zillow_region_id && row.cbsa_code) {
+        cbsaCrosswalkMap.set(String(row.zillow_region_id), row.cbsa_code);
+
+        if (row.zillow_region_name) {
+          const normalizedZillow = normalizeMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(normalizedZillow)) {
+            cbsaNameMap.set(normalizedZillow, row.cbsa_code);
+          }
+          const primaryZillow = extractPrimaryMetroName(row.zillow_region_name);
+          if (!cbsaNameMap.has(primaryZillow)) {
+            cbsaNameMap.set(primaryZillow, row.cbsa_code);
+          }
+        }
+
+        if (row.cbsa_title) {
+          const normalizedCbsa = normalizeMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(normalizedCbsa)) {
+            cbsaNameMap.set(normalizedCbsa, row.cbsa_code);
+          }
+          const primaryCbsa = extractPrimaryMetroName(row.cbsa_title);
+          if (!cbsaNameMap.has(primaryCbsa)) {
+            cbsaNameMap.set(primaryCbsa, row.cbsa_code);
+          }
+        }
+      }
+    }
+  }
+
+  // Also load from tiger_cbsa for metros not in crosswalk
+  const { data: tigerData, error: tigerError } = await supabase
+    .from('tiger_cbsa')
+    .select('geoid, name');
+
+  if (!tigerError && tigerData) {
+    for (const row of tigerData) {
+      if (row.geoid && row.name) {
+        const normalizedName = normalizeMetroName(row.name);
+        if (!cbsaNameMap.has(normalizedName)) {
+          cbsaNameMap.set(normalizedName, row.geoid);
+        }
+        const primaryName = extractPrimaryMetroName(row.name);
+        if (!cbsaNameMap.has(primaryName)) {
+          cbsaNameMap.set(primaryName, row.geoid);
+        }
+        // Split multi-city metros: "Dayton-Kettering-Beavercreek, OH"
+        const namePart = row.name.split(',')[0];
+        const cities = namePart.split('-').map((c: string) => c.toLowerCase().trim());
+        for (const city of cities) {
+          if (city && !cbsaNameMap.has(city)) {
+            cbsaNameMap.set(city, row.geoid);
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`  ✅ Loaded ${cbsaCrosswalkMap.size} CBSA mappings by region_id`);
+  console.log(`  ✅ Loaded ${cbsaNameMap.size} CBSA mappings by name`);
+  crosswalkLoaded = true;
+}
+
+/**
+ * Look up CBSA code using crosswalk (by ID and name)
+ */
+function lookupCbsaCode(regionId: number, regionName: string, csvCbsaCode: string | null): string | null {
+  // 1. Use CSV field if available
+  if (csvCbsaCode) return csvCbsaCode;
+
+  // 2. Look up by region_id
+  const byId = cbsaCrosswalkMap.get(String(regionId));
+  if (byId) return byId;
+
+  // 3. Look up by name
+  if (regionName) {
+    const byNormalizedName = cbsaNameMap.get(normalizeMetroName(regionName));
+    if (byNormalizedName) return byNormalizedName;
+
+    const byPrimaryName = cbsaNameMap.get(extractPrimaryMetroName(regionName));
+    if (byPrimaryName) return byPrimaryName;
+  }
+
+  return null;
+}
+
 /**
  * Build time series record for new long-format schema
  */
@@ -136,6 +264,11 @@ export async function importCSV(
   const batchSize = 50;
   const conflictColumns = getConflictColumns(tableName);
 
+  // Load CBSA crosswalk for Metro imports
+  if (geography.toLowerCase() === 'metro') {
+    await loadCbsaCrosswalk(supabase);
+  }
+
   // Collect all time series data first
   const allTimeSeriesData: any[] = [];
 
@@ -149,7 +282,8 @@ export async function importCSV(
 
     const stateCode = extractStateCode(record);
     const fipsCode = buildFipsCode(record);
-    const cbsaCode = record.CBSACode || null;
+    // Use crosswalk lookup for CBSA code (includes name-based matching)
+    const cbsaCode = lookupCbsaCode(regionId, regionName, record.CBSACode || null);
 
     // Extract time series data from date columns
     const dateColumns = Object.keys(record).filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key));
