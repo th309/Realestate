@@ -253,6 +253,14 @@ function addMapLayers(
           '%'
         ];
         break;
+      case 'percent_abs':
+        // Absolute percentage (0-100%) - no sign
+        valueFormat = [
+          'concat',
+          ['number-format', ['get', 'value'], { 'min-fraction-digits': 1, 'max-fraction-digits': 1 }],
+          '%'
+        ];
+        break;
       case 'number':
       case 'index':
         // Plain number with thousands separator
@@ -397,6 +405,11 @@ function formatDisplayValue(
       const sign = value > 0 ? '+' : '';
       displayValue = `${sign}${value.toFixed(1)}%`;
       valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
+      break;
+    case 'percent_abs':
+      // Absolute percentages (0-100%) - no +/- sign
+      displayValue = `${value.toFixed(1)}%`;
+      valueColor = '#6750a4';
       break;
     case 'index':
       displayValue = value > 0 ? value.toFixed(0) : 'No data';
