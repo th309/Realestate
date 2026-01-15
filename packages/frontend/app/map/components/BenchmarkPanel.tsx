@@ -42,19 +42,23 @@ interface BenchmarkData {
 }
 
 // Metric configurations
+// lowerIsBetter: For homebuyers, indicates if lower values favor buyers
+// - Lower home prices = better for buyers (lowerIsBetter: true)
+// - Higher DOM = less competition, more time to shop (lowerIsBetter: false)
+// - Lower price/sqft = cheaper (lowerIsBetter: true)
 const METRIC_CONFIGS: MetricConfig[] = [
-  // Homebuyer metrics
+  // Homebuyer metrics - what's good for BUYERS
   { id: 'home_value', label: 'Median Home Value', description: 'Median listing price', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
-  { id: 'home_value_yoy', label: 'YoY Appreciation', description: '12-month price change', format: 'percent', lowerIsBetter: false, category: 'homebuyer' },
-  { id: 'days_on_market', label: 'Days on Market', description: 'Median listing duration', format: 'days', lowerIsBetter: true, category: 'homebuyer' },
-  { id: 'for_sale_inventory', label: 'For Sale Inventory', description: 'Active listings count', format: 'number', lowerIsBetter: false, category: 'homebuyer' },
-  { id: 'price_cut_pct', label: 'Listings with Price Cuts', description: 'Share of reduced listings', format: 'percent', lowerIsBetter: false, category: 'homebuyer' },
+  { id: 'home_value_yoy', label: 'YoY Appreciation', description: '12-month price change', format: 'percent', lowerIsBetter: true, category: 'homebuyer' }, // Lower appreciation = prices not rising fast
+  { id: 'days_on_market', label: 'Days on Market', description: 'Median listing duration', format: 'days', lowerIsBetter: false, category: 'homebuyer' }, // Higher DOM = more time to shop, less competition
+  { id: 'for_sale_inventory', label: 'For Sale Inventory', description: 'Active listings count', format: 'number', lowerIsBetter: false, category: 'homebuyer' }, // Higher inventory = more choices
+  { id: 'price_cut_pct', label: 'Listings with Price Cuts', description: 'Share of reduced listings', format: 'percent', lowerIsBetter: false, category: 'homebuyer' }, // More price cuts = buyer advantage
   { id: 'price_per_sqft', label: 'Price per Sq Ft', description: 'Median price per square foot', format: 'currency', lowerIsBetter: true, category: 'homebuyer' },
-  // Investor metrics
-  { id: 'inventory_yoy', label: 'Inventory Growth', description: 'YoY inventory change', format: 'percent', lowerIsBetter: false, category: 'investor' },
-  { id: 'new_listings', label: 'New Listings', description: 'New listings this month', format: 'number', lowerIsBetter: false, category: 'investor' },
-  { id: 'pending_listings', label: 'Pending Listings', description: 'Under contract listings', format: 'number', lowerIsBetter: false, category: 'investor' },
-  { id: 'home_value_mom', label: 'MoM Price Change', description: 'Month-over-month change', format: 'percent', lowerIsBetter: false, category: 'investor' },
+  // Investor metrics - what's good for INVESTORS
+  { id: 'inventory_yoy', label: 'Inventory Growth', description: 'YoY inventory change', format: 'percent', lowerIsBetter: true, category: 'investor' }, // Lower inventory growth = constrained supply = price support
+  { id: 'new_listings', label: 'New Listings', description: 'New listings this month', format: 'number', lowerIsBetter: false, category: 'investor' }, // More new listings = opportunities
+  { id: 'pending_listings', label: 'Pending Listings', description: 'Under contract listings', format: 'number', lowerIsBetter: false, category: 'investor' }, // More pending = active market
+  { id: 'home_value_mom', label: 'MoM Price Change', description: 'Month-over-month change', format: 'percent', lowerIsBetter: false, category: 'investor' }, // Higher MoM = appreciation
 ];
 
 export function BenchmarkPanel({
@@ -80,21 +84,29 @@ export function BenchmarkPanel({
       setLoading(true);
       try {
         // Determine state ID from the selected geography
-        let stateId = selectedGeography.stateAbbr
-          ? STATE_ABBR_TO_FIPS[selectedGeography.stateAbbr.toUpperCase()]
-          : undefined;
+        // Priority: 1) Extract from name (most reliable), 2) From county FIPS, 3) From stateAbbr property
+        let stateId: string | undefined;
 
-        // For county/zip, extract state from ID (first 2 digits of FIPS)
-        if (!stateId && geoLevel === 'county' && selectedGeography.id.length >= 2) {
-          stateId = selectedGeography.id.substring(0, 2);
-        }
-
-        // Fallback: extract state from name (e.g., "Riverton, WY" -> "WY")
-        if (!stateId && selectedGeography.name.includes(', ')) {
+        // First: extract state from name (e.g., "Flagstaff, AZ" -> "AZ")
+        // This is the most reliable method since the name clearly shows the state
+        if (selectedGeography.name.includes(', ')) {
           const parts = selectedGeography.name.split(', ');
           const lastPart = parts[parts.length - 1].trim().toUpperCase();
           if (lastPart.length === 2 && STATE_ABBR_TO_FIPS[lastPart]) {
             stateId = STATE_ABBR_TO_FIPS[lastPart];
+          }
+        }
+
+        // Second: for county, extract from FIPS (first 2 digits)
+        if (!stateId && geoLevel === 'county' && selectedGeography.id.length >= 2) {
+          stateId = selectedGeography.id.substring(0, 2);
+        }
+
+        // Third: fallback to stateAbbr property if available
+        if (!stateId && selectedGeography.stateAbbr) {
+          const abbr = selectedGeography.stateAbbr.toUpperCase();
+          if (STATE_ABBR_TO_FIPS[abbr]) {
+            stateId = STATE_ABBR_TO_FIPS[abbr];
           }
         }
 
@@ -135,12 +147,22 @@ export function BenchmarkPanel({
     return METRIC_CONFIGS.filter(m => m.category === activeTab);
   }, [activeTab]);
 
-  // Get state name or abbreviation
+  // Get state name or abbreviation - prioritize extracting from name which is most reliable
   const stateName = useMemo(() => {
+    // First: extract from name (e.g., "Flagstaff, AZ" -> "AZ")
+    if (selectedGeography.name.includes(', ')) {
+      const parts = selectedGeography.name.split(', ');
+      const lastPart = parts[parts.length - 1].trim().toUpperCase();
+      if (lastPart.length === 2) {
+        return lastPart;
+      }
+    }
+    // Second: use API response
     if (benchmarkData?.stateName) return benchmarkData.stateName;
+    // Third: fallback to stateAbbr property
     if (selectedGeography.stateAbbr) return selectedGeography.stateAbbr.toUpperCase();
     return null;
-  }, [benchmarkData?.stateName, selectedGeography.stateAbbr]);
+  }, [selectedGeography.name, benchmarkData?.stateName, selectedGeography.stateAbbr]);
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
