@@ -386,6 +386,44 @@ export async function queryZhvf(
 }
 
 /**
+ * Query Market Heat Index from zillow_market_heat_index table
+ */
+export async function queryMarketHeat(
+  supabase: SupabaseClient,
+  geography: string | string[]
+): Promise<any[]> {
+  // Get the latest date in the market heat table
+  const { data: latestData } = await supabase
+    .from('zillow_market_heat_index')
+    .select('date')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!latestData?.date) {
+    console.warn('queryMarketHeat: No data found in zillow_market_heat_index');
+    return [];
+  }
+
+  // Build query for the specified geography types
+  const geoArray = Array.isArray(geography) ? geography : [geography];
+
+  const { data, error } = await supabase
+    .from('zillow_market_heat_index')
+    .select('region_id, date, heat_index, geography, property_type')
+    .in('geography', geoArray)
+    .eq('date', latestData.date);
+
+  if (error) {
+    console.error('Error fetching Market Heat data:', error.message);
+    return [];
+  }
+
+  console.log(`queryMarketHeat: returned ${data?.length || 0} rows for date ${latestData.date}`);
+  return data || [];
+}
+
+/**
  * Generic query for market indicators (legacy-compatible)
  */
 export async function queryMarketIndicator(
