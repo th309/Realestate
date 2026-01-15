@@ -97,10 +97,19 @@ export function BenchmarkPanel({
           params.append('stateId', stateId);
         }
 
+        console.log(`[BenchmarkPanel] Fetching: geoLevel=${geoLevel}, regionId=${selectedGeography.id}, stateId=${stateId}`);
         const response = await fetch(`${API_URL}/api/realtor/benchmarks?${params}`);
         if (response.ok) {
           const data = await response.json();
+          console.log('[BenchmarkPanel] API Response:', {
+            locationMetrics: Object.keys(data.location || {}).filter(k => data.location[k] !== null).length,
+            stateMetrics: Object.keys(data.state || {}).filter(k => data.state[k] !== null).length,
+            nationalMetrics: Object.keys(data.national || {}).filter(k => data.national[k] !== null).length,
+            state: data.state
+          });
           setBenchmarkData(data);
+        } else {
+          console.error('[BenchmarkPanel] API Error:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error fetching benchmarks:', error);
@@ -444,6 +453,19 @@ function BenchmarkBar({
     ? localValue < nationalValue
     : localValue > nationalValue);
 
+  // Debug logging for comparison issues
+  if (metric.id === 'home_value' || metric.id === 'days_on_market') {
+    console.log(`[BenchmarkBar] ${metric.id}:`, {
+      localValue,
+      nationalValue,
+      stateValue,
+      lowerIsBetter: metric.lowerIsBetter,
+      isBetterThanNational,
+      isBetterThanState,
+      comparison: metric.lowerIsBetter ? `${localValue} < ${nationalValue}` : `${localValue} > ${nationalValue}`
+    });
+  }
+
   const isTop = isBetterThanState && isBetterThanNational;
 
   return (
@@ -502,81 +524,75 @@ function BenchmarkBar({
           ))}
         </div>
 
-        {/* National marker (diamond) */}
+        {/* National marker (diamond) - positioned on the bar */}
         {nationalPos !== null && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
-            style={{ left: `${nationalPos}%` }}
+            className="absolute z-10 group"
+            style={{
+              left: `${nationalPos}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
           >
-            <div className="relative group">
-              <div
-                className="w-4 h-4 rotate-45 bg-slate-400 border-2 border-slate-500 shadow-sm"
-                style={{
-                  transform: animateIn ? 'rotate(45deg) scale(1)' : 'rotate(45deg) scale(0)',
-                  transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + index * 0.08}s`
-                }}
-              />
-              {isHovered && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-white whitespace-nowrap z-20">
-                  National: {formatValue(nationalValue, metric.format)}
-                </div>
-              )}
-            </div>
+            <div
+              className="w-4 h-4 bg-slate-500 border-2 border-slate-600 shadow-sm"
+              style={{
+                transform: `rotate(45deg) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
+                transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.4 + index * 0.08}s`
+              }}
+            />
+            {isHovered && (
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-white whitespace-nowrap z-20">
+                National: {formatValue(nationalValue, metric.format)}
+              </div>
+            )}
           </div>
         )}
 
-        {/* State marker (circle outline) */}
+        {/* State marker (circle outline) - positioned on the bar */}
         {statePos !== null && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
-            style={{ left: `${statePos}%` }}
+            className="absolute z-10"
+            style={{
+              left: `${statePos}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
           >
-            <div className="relative">
-              <div
-                className="w-5 h-5 rounded-full border-2 border-amber-500 bg-amber-100"
-                style={{
-                  transform: animateIn ? 'scale(1)' : 'scale(0)',
-                  transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.45 + index * 0.08}s`
-                }}
-              />
-              {isHovered && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-amber-300 whitespace-nowrap z-20">
-                  State: {formatValue(stateValue, metric.format)}
-                </div>
-              )}
-            </div>
+            <div
+              className="w-5 h-5 rounded-full border-2 border-amber-500 bg-amber-100"
+              style={{
+                transform: animateIn ? 'scale(1)' : 'scale(0)',
+                transition: `transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.45 + index * 0.08}s`
+              }}
+            />
+            {isHovered && (
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-700 rounded text-[10px] text-amber-300 whitespace-nowrap z-20">
+                State: {formatValue(stateValue, metric.format)}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Local value marker (main indicator) */}
+        {/* Local value marker (main indicator) - positioned on the bar */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20"
+          className="absolute z-20"
           style={{
             left: `${localPos}%`,
-            transform: animateIn ? 'translateY(-50%) translateX(-50%)' : 'translateY(-50%) translateX(-50%) scale(0)',
+            top: '50%',
+            transform: `translate(-50%, -50%) ${animateIn ? 'scale(1)' : 'scale(0)'}`,
             transition: `transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) ${0.5 + index * 0.08}s`
           }}
         >
-          <div className="relative">
-            {/* Glow effect */}
-            <div
-              className="absolute inset-0 rounded-full blur-md"
-              style={{
-                backgroundColor: primaryColor,
-                opacity: 0.4,
-                transform: 'scale(1.5)'
-              }}
-            />
-            {/* Main marker */}
-            <div
-              className="relative w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
-              style={{
-                background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`,
-                boxShadow: `0 4px 12px ${primaryColor}40`
-              }}
-            >
-              <div className="w-2 h-2 rounded-full bg-white" />
-            </div>
+          {/* Main marker - no glow for cleaner look */}
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center shadow-md"
+            style={{
+              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`,
+              boxShadow: `0 2px 8px ${primaryColor}50`
+            }}
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-white" />
           </div>
         </div>
       </div>
@@ -599,7 +615,10 @@ function BenchmarkBar({
           )}
           {nationalValue !== null && nationalValue !== undefined && (
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rotate-45 bg-slate-400 border border-slate-500" />
+              <div
+                className="w-2.5 h-2.5 bg-slate-500 border border-slate-600"
+                style={{ transform: 'rotate(45deg)' }}
+              />
               <span className="text-slate-500">National</span>
             </div>
           )}
