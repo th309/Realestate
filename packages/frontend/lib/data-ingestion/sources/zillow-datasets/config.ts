@@ -300,7 +300,7 @@ export const ZILLOW_DATASETS: ZillowDatasetConfig[] = [
     datasetType: 'market_temp_index',
     propertyType: 'sfrcondo',
     frequency: 'month',
-    downloadUrl: 'https://files.zillowstatic.com/research/public_csvs/market_temp_index/Metro_market_temp_index_uc_sfrcondo_month.csv',
+    downloadUrl: `https://files.zillowstatic.com/research/public_csvs/market_temp_index/Metro_market_temp_index_uc_sfrcondo_month.csv?t=${Date.now()}`,
     description: 'Market Heat Index - Metro areas, all homes, monthly'
   },
 

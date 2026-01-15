@@ -112,9 +112,9 @@ const daysPendingDatasets = createDatasetPair(
   })
 );
 
-// Market Heat Index
+// Market Heat Index - imports to zillow_metro with metric_name='market_heat'
 const marketHeatDatasets = createDatasetPair(
-  'market-heat-index', 'market_temp_index', 'zillow_market_heat_index', 'Market Heat Index',
+  'market-heat-index', 'market_temp_index', 'zillow_metro', 'Market Heat Index',
   `${ZILLOW_CSV_BASE}/market_temp_index/Metro_market_temp_index_uc_sfrcondo_month.csv`
 );
 

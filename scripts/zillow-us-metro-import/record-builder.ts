@@ -3,6 +3,22 @@
  */
 
 /**
+ * Map dataset type to metric name for long-format tables
+ */
+function getMetricNameForDataset(datasetType: string): string {
+  const metricMap: Record<string, string> = {
+    'market_temp_index': 'market_heat',
+    'zhvi': 'zhvi',
+    'zori': 'zori',
+    'invt_fs': 'inventory',
+    'sales_count_now': 'sales_count',
+    'median_sale_price': 'sale_price',
+    'mean_doz_pending': 'dom',
+  };
+  return metricMap[datasetType] || datasetType;
+}
+
+/**
  * Build a database record based on table and dataset type
  */
 export function buildRecord(
@@ -54,6 +70,16 @@ export function buildRecord(
 
     case 'zillow_market_heat_index':
       record.heat_index = value;
+      break;
+
+    case 'zillow_metro':
+      // Long-format table - use metric_name and value columns
+      record.metric_name = getMetricNameForDataset(datasetType);
+      record.value = value;
+      record.period_date = record.date;
+      delete record.date;
+      delete record.property_type;
+      delete record.geography;
       break;
 
     case 'zillow_new_construction_sales_count':
@@ -123,7 +149,9 @@ function buildAffordabilityRecord(record: any, datasetType: string, value: numbe
  * Get conflict columns for upsert
  */
 export function getConflictColumns(tableName: string, datasetType?: string): string {
-  if (tableName === 'zillow_zhvi') {
+  if (tableName === 'zillow_metro') {
+    return 'region_id,period_date,metric_name';
+  } else if (tableName === 'zillow_zhvi') {
     return 'region_id,date,property_type,tier';
   } else if (tableName === 'zillow_affordability') {
     return 'region_id,date,property_type,down_payment_percent';
