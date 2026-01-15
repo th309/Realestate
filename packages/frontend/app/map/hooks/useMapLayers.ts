@@ -10,6 +10,8 @@ import {
   getColorScale,
   getMetricFormat,
   calculateValueRange,
+  formatTooltipValue,
+  formatAsOfDate,
   type MetricFormat,
 } from '../utils';
 
@@ -342,22 +344,11 @@ function setupInteractions(
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
       }
 
-      const { displayValue, valueColor } = formatDisplayValue(value, metricFormat);
+      // Use centralized formatting functions
+      const { displayValue, valueColor } = formatTooltipValue(value, metricFormat);
+      const asOfText = value !== null ? formatAsOfDate(dataDate) : '';
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
       const isForecast = metricFormat === 'percent';
-
-      // Format "as of" date if available (e.g., "2025-11-30" -> "Nov 2025")
-      let asOfText = '';
-      if (dataDate && value !== null) {
-        try {
-          const date = new Date(dataDate + 'T00:00:00');
-          const month = date.toLocaleString('en-US', { month: 'short' });
-          const year = date.getFullYear();
-          asOfText = `as of ${month} ${year}`;
-        } catch {
-          // Ignore date parsing errors
-        }
-      }
 
       popup.current
         .setLngLat(e.lngLat)
@@ -409,47 +400,3 @@ function setupInteractions(
   });
 }
 
-function formatDisplayValue(
-  value: number | null,
-  metricFormat: MetricFormat
-): { displayValue: string; valueColor: string } {
-  let displayValue: string;
-  let valueColor = '#6750a4';
-
-  // Handle null (no data) case
-  if (value === null || value === undefined) {
-    return { displayValue: 'No data', valueColor: '#6b7280' };
-  }
-
-  switch (metricFormat) {
-    case 'percent':
-      // For percentages, 0 is a valid value (no change predicted)
-      const sign = value > 0 ? '+' : '';
-      displayValue = `${sign}${value.toFixed(1)}%`;
-      valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
-      break;
-    case 'percent_abs':
-      // Absolute percentages (0-100%) - no +/- sign
-      displayValue = `${value.toFixed(1)}%`;
-      valueColor = '#6750a4';
-      break;
-    case 'index':
-      displayValue = value > 0 ? value.toFixed(0) : 'No data';
-      valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
-      break;
-    case 'number':
-      displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
-      break;
-    case 'days':
-      displayValue = value >= 0 ? `${value.toLocaleString('en-US')} days` : 'No data';
-      break;
-    case 'currency':
-    default:
-      displayValue = value > 0
-        ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
-        : 'No data';
-      break;
-  }
-
-  return { displayValue, valueColor };
-}

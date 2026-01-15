@@ -1,17 +1,21 @@
 /**
  * Shared Metric Utilities
  *
- * Central source of truth for metric formatting, color scales, and range calculations.
- * Both map layers and legend components import from here to ensure consistency.
+ * Uses the central metric configuration from config/metrics.ts.
+ * This file provides:
+ * - Color scale constants
+ * - Value range calculation
+ * - Value formatting
+ *
+ * Re-exports getMetricFormat and getMetricTitle from central config for convenience.
  */
 
 import type { HomeValues, HomeValueEntry } from '../types';
 import { getValueFromEntry } from '../types';
+import { getMetricFormat as getFormat, getMetricTitle as getTitle, getMetricConfig } from '../config';
 
-// Display format types for metrics
-// 'percent' = growth rates with +/- signs (YoY, forecasts)
-// 'percent_abs' = absolute 0-100% values (affordability, rates)
-export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'days';
+// Re-export from central config for convenience
+export { getMetricFormat, getMetricTitle, type MetricFormat } from '../config';
 
 // Shared color scale - violet to red (7 colors)
 // Used by both map fills and legend display
@@ -29,80 +33,26 @@ export const COLOR_SCALE = [
 export const NO_DATA_COLOR = 'rgba(200, 200, 200, 0.3)';
 
 /**
- * Map metric IDs to their display format.
- * This is the single source of truth for how each metric should be formatted.
- * Adding a new metric here automatically updates both map and legend.
- */
-export function getMetricFormat(metricId: string): MetricFormat {
-  // Percent format - forecasts, growth rates (can be negative, show +/- signs)
-  const percentMetrics = [
-    'home_price_forecast', 'home_value_yoy', 'home_value_mom', 'home_value_5yr',
-    'inventory_yoy', 'sales_yoy',
-    'rent_growth', 'population_growth', 'income_growth', 'job_growth', 'gdp_growth',
-    'overvalued_pct',
-  ];
-
-  // Absolute percent format - 0-100% values (no +/- signs)
-  const percentAbsMetrics = [
-    'homeowner_affordability', 'renter_affordability', 'homeownership_rate',
-    'vacancy_rate', 'price_cut_pct', 'sale_to_list',
-    'cap_rate', 'gross_yield', 'rent_to_price',
-  ];
-
-  // Plain number format - counts, scores
-  const numberMetrics = [
-    'for_sale_inventory', 'new_listings', 'pending_listings', 'home_sales',
-    'new_construction_sales', 'population', 'median_age',
-    'long_term_growth', 'market_health', 'investment_score',
-  ];
-
-  // Days format
-  const daysMetrics = [
-    'days_on_market', 'days_to_close',
-  ];
-
-  // Index format (plain number, but semantically different)
-  const indexMetrics = [
-    'rent_for_houses', 'cost_of_living', 'market_heat',
-  ];
-
-  // Years format (treat as number)
-  const yearsMetrics = [
-    'years_to_save',
-  ];
-
-  if (percentMetrics.includes(metricId)) return 'percent';
-  if (percentAbsMetrics.includes(metricId)) return 'percent_abs';
-  if (numberMetrics.includes(metricId)) return 'number';
-  if (daysMetrics.includes(metricId)) return 'days';
-  if (indexMetrics.includes(metricId)) return 'index';
-  if (yearsMetrics.includes(metricId)) return 'number';
-
-  // Default to currency for home values, prices, rent, income
-  return 'currency';
-}
-
-/**
  * Calculate the value range for color scale mapping.
  * Uses percentile-based calculation to exclude outliers.
  *
  * @param homeValues - Object mapping region IDs to values
  * @param metricFormat - The format type of the metric
- * @param metricId - Optional metric ID for special handling (e.g., market_heat)
+ * @param metricId - Optional metric ID for special handling
  * @returns min and max values for the color scale
  */
 export function calculateValueRange(
   homeValues: HomeValues,
-  metricFormat: MetricFormat,
+  metricFormat: ReturnType<typeof getFormat>,
   metricId?: string
 ): { min: number; max: number } {
   // Default ranges based on metric type
-  const defaults: Record<MetricFormat, { min: number; max: number }> = {
+  const defaults: Record<ReturnType<typeof getFormat>, { min: number; max: number }> = {
     percent: { min: -5, max: 10 },
     percent_abs: { min: 0, max: 100 },
     days: { min: 0, max: 90 },
     number: { min: 0, max: 10000 },
-    index: { min: -50, max: 100 },
+    index: { min: 0, max: 100 },
     currency: { min: 100000, max: 800000 },
   };
 
@@ -117,8 +67,9 @@ export function calculateValueRange(
 
   const sorted = [...allValues].sort((a, b) => a - b);
 
-  // Market Heat Index uses actual min/max (100% of data, no percentile clipping)
-  if (metricId === 'market_heat') {
+  // Check if this metric uses full range (no percentile clipping)
+  const config = metricId ? getMetricConfig(metricId) : undefined;
+  if (config?.rangeType === 'full') {
     return { min: sorted[0], max: sorted[sorted.length - 1] };
   }
 
@@ -153,7 +104,7 @@ export function calculateValueRange(
  */
 export function formatValue(
   value: number,
-  metricFormat: MetricFormat,
+  metricFormat: ReturnType<typeof getFormat>,
   position?: 'min' | 'max'
 ): string {
   const suffix = position === 'max' ? '+' : '';
@@ -183,28 +134,64 @@ export function formatValue(
 }
 
 /**
- * Get metric display title.
+ * Format a value for tooltip display based on metric format.
+ * Returns both the formatted string and appropriate color.
  */
-export function getMetricTitle(metricId: string, forecastHorizon?: string): string {
-  const titles: Record<string, string> = {
-    'home_value': 'Home Value',
-    'home_price_forecast': forecastHorizon === '1m' ? '1-Month Forecast'
-      : forecastHorizon === '3m' ? '3-Month Forecast' : '12-Month Forecast',
-    'home_value_yoy': 'Home Value YoY',
-    'home_value_mom': 'Home Value MoM',
-    'home_value_5yr': '5-Year Growth (CAGR)',
-    'rent_index': 'Rent Index',
-    'rent_for_houses': 'Renter Demand Index',
-    'for_sale_inventory': 'Inventory',
-    'days_on_market': 'Days on Market',
-    'days_to_close': 'Days to Close',
-    'overvalued_pct': 'Overvalued %',
-    'market_heat': 'Market Heat Index',
-    'price_cut_pct': 'Price Cut %',
-    'new_listings': 'New Listings',
-    'pending_listings': 'Pending Listings',
-    'population': 'Population',
-    'median_income': 'Median Income',
-  };
-  return titles[metricId] || metricId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+export function formatTooltipValue(
+  value: number | null,
+  metricFormat: ReturnType<typeof getFormat>
+): { displayValue: string; valueColor: string } {
+  // Handle null (no data) case
+  if (value === null || value === undefined) {
+    return { displayValue: 'No data', valueColor: '#6b7280' };
+  }
+
+  let displayValue: string;
+  let valueColor = '#6750a4';
+
+  switch (metricFormat) {
+    case 'percent':
+      const sign = value > 0 ? '+' : '';
+      displayValue = `${sign}${value.toFixed(1)}%`;
+      valueColor = value > 0 ? '#b91c1c' : value < 0 ? '#3b82f6' : '#6b7280';
+      break;
+    case 'percent_abs':
+      displayValue = `${value.toFixed(1)}%`;
+      break;
+    case 'index':
+      displayValue = value > 0 ? value.toFixed(0) : 'No data';
+      valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
+      break;
+    case 'number':
+      displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
+      break;
+    case 'days':
+      displayValue = value >= 0 ? `${value.toLocaleString('en-US')} days` : 'No data';
+      break;
+    case 'currency':
+    default:
+      displayValue = value > 0
+        ? value.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        : 'No data';
+      break;
+  }
+
+  return { displayValue, valueColor };
+}
+
+/**
+ * Format a date for "as of" display in tooltips.
+ * Converts "2025-11-30" to "Nov 2025"
+ */
+export function formatAsOfDate(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+
+  try {
+    const date = new Date(dateStr + 'T00:00:00');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `as of ${month} ${year}`;
+  } catch {
+    return '';
+  }
 }
