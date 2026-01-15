@@ -68,7 +68,15 @@
       "Bash(railway redeploy:*)",
       "Bash(railway up:*)",
       "Bash(du:*)",
-      "Bash(node test-zip-yoy.js:*)"
+      "Bash(node test-zip-yoy.js:*)",
+      "Bash(git archive:*)",
+      "Bash(xargs -0 -I {} sh -c 'stat -c \"\"%s {}\"\" \"\"{}\"\" 2>/dev/null')",
+      "Bash(railway service:*)",
+      "Bash(railway variables:*)",
+      "Bash(railway deploy --help:*)",
+      "Bash(railway logs --help:*)",
+      "Bash(railway logs:*)",
+      "Bash(railway help:*)"
     ]
   }
 }

@@ -40,7 +40,7 @@ export interface StateMapping {
 export interface MetroMapping {
   cbsa_code: string;
   cbsa_name: string;
-  state: string;
+  state: string | null;
 }
 
 export interface CountyMapping {
