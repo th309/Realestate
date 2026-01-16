@@ -222,3 +222,15 @@ body {
 .elevation-5 {
   box-shadow: 0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px rgba(0, 0, 0, 0.3);
 }
+
+/* Mapbox Popup Overrides - Remove default white background */
+.mapboxgl-popup-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.mapboxgl-popup-tip {
+  display: none !important;
+}
