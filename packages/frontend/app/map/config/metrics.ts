@@ -378,6 +378,7 @@ export function getGeoPathSegment(geoLevel: GeoLevel): string {
  */
 export const METRO_ONLY_METRICS = new Set([
   'rent_index',              // ZORI rent data only available at metro level
+  'rent_for_houses',         // ZORDI renter demand only available at metro level
   'income_to_buy',
   'income_to_rent',
   'affordable_home_price',
