@@ -402,6 +402,7 @@ function addMapLayers(
         break;
     }
 
+    // M3 Typography: Use Roboto (with fallbacks), on-surface color #1d1b20
     map.addLayer({
       id: 'geo-labels',
       type: 'symbol',
@@ -409,19 +410,20 @@ function addMapLayers(
       layout: {
         'text-field': [
           'format',
-          ['get', 'name'], { 'font-scale': 0.85, 'text-font': ['literal', ['DIN Pro Medium', 'Arial Unicode MS Regular']] },
+          ['get', 'name'], { 'font-scale': 0.9, 'text-font': ['literal', ['Roboto Medium', 'DIN Pro Medium', 'Arial Unicode MS Bold']] },
           '\n', {},
           valueFormat,
-          { 'font-scale': 0.75, 'text-font': ['literal', ['DIN Pro Regular', 'Arial Unicode MS Regular']] },
+          { 'font-scale': 0.8, 'text-font': ['literal', ['Roboto Regular', 'DIN Pro Regular', 'Arial Unicode MS Regular']] },
         ],
-        'text-size': 19,  // Increased 75% from 11
+        'text-size': 19,  // M3 Label size (increased 75% from 11)
         'text-anchor': 'center',
         'text-max-width': 8,
+        'text-letter-spacing': 0.02,  // M3 tracking-wide for labels
       },
       paint: {
-        'text-color': '#1a1a2e',
-        'text-halo-color': 'rgba(255, 255, 255, 0.9)',
-        'text-halo-width': 2,  // Slightly larger halo for bigger text
+        'text-color': '#1d1b20',  // M3 on-surface color
+        'text-halo-color': 'rgba(255, 255, 255, 0.95)',
+        'text-halo-width': 2,
       },
     });
   }
