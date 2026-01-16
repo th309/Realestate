@@ -374,7 +374,7 @@ export class CalculatedMetricsService {
     // Get current data
     const { data: currentData } = await this.supabase
       .from('realtor_metro')
-      .select('cbsa_code, metro_name, median_listing_price')
+      .select('cbsa_code, cbsa_title, median_listing_price')
       .eq('period_date', targetDate)
       .not('median_listing_price', 'is', null);
 
@@ -414,7 +414,7 @@ export class CalculatedMetricsService {
         .upsert({
           geography_id: metro.cbsa_code,
           geography_type: 'metro',
-          geography_name: metro.metro_name,
+          geography_name: metro.cbsa_title,
           period_date: targetDate,
           home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
           calculated_at: new Date().toISOString(),

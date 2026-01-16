@@ -301,7 +301,7 @@ export class MetricsController {
     // Get current data from realtor_metro
     const { data: currentData, error: currentError } = await this.supabase
       .from('realtor_metro')
-      .select('cbsa_code, metro_name, median_listing_price')
+      .select('cbsa_code, cbsa_title, median_listing_price')
       .eq('period_date', targetDate)
       .not('median_listing_price', 'is', null);
 
@@ -339,7 +339,7 @@ export class MetricsController {
 
         return {
           region_id: metro.cbsa_code,
-          region_name: metro.metro_name,
+          region_name: metro.cbsa_title,
           cbsa_code: metro.cbsa_code,
           value: Math.round(growthPct * 100) / 100,
           cagr_5yr: Math.round(growthPct * 100) / 100,
