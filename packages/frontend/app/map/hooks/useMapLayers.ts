@@ -81,16 +81,24 @@ export function useMapLayers({
         });
         map.current!.removeSource('geo-data');
       }
+      if (map.current!.getSource('geo-labels-data')) {
+        map.current!.removeSource('geo-labels-data');
+      }
 
       // Add source
       map.current!.addSource('geo-data', { type: 'geojson', data: geojson });
+
+      // Create label points for state/national (single centered label per geography)
+      const labelPointsGeojson = (geoLevel === 'state' || geoLevel === 'national')
+        ? createLabelPoints(geojson, geoLevel)
+        : undefined;
 
       // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
       const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat, selectedMetric);
 
       // Add layers - uses same min/max as legend for consistent colors
-      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
+      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson);
 
       // Setup hover and click interactions
       setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick);
@@ -111,6 +119,9 @@ function removeExistingLayers(map: mapboxgl.Map): void {
   });
   if (map.getSource('geo-data')) {
     map.removeSource('geo-data');
+  }
+  if (map.getSource('geo-labels-data')) {
+    map.removeSource('geo-labels-data');
   }
 }
 
@@ -229,12 +240,95 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   }
 }
 
+/**
+ * Calculate the centroid of a polygon or multipolygon geometry
+ * Returns [lng, lat] coordinates
+ */
+function calculateCentroid(geometry: any): [number, number] | null {
+  if (!geometry || !geometry.coordinates) return null;
+
+  let allCoords: [number, number][] = [];
+
+  if (geometry.type === 'Polygon') {
+    // Use the exterior ring (first array)
+    allCoords = geometry.coordinates[0] || [];
+  } else if (geometry.type === 'MultiPolygon') {
+    // Collect all exterior rings from all polygons
+    geometry.coordinates.forEach((polygon: any) => {
+      if (polygon[0]) {
+        allCoords = allCoords.concat(polygon[0]);
+      }
+    });
+  }
+
+  if (allCoords.length === 0) return null;
+
+  // Calculate bounding box center (simple centroid approximation)
+  let minLng = Infinity, maxLng = -Infinity;
+  let minLat = Infinity, maxLat = -Infinity;
+
+  allCoords.forEach(([lng, lat]) => {
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  });
+
+  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+}
+
+/**
+ * Create point features at the centroid of each polygon feature for labeling
+ * This ensures only one label per geography, centered on the shape
+ */
+function createLabelPoints(geojson: any, geoLevel: GeoLevel): any {
+  // For national level, create exactly ONE label point at the center of contiguous US
+  // The national GeoJSON may have multiple features (continental US, Alaska, Hawaii, territories)
+  // but we only want one centered label
+  if (geoLevel === 'national') {
+    // Use properties from first feature (they should all be "United States")
+    const firstFeature = geojson.features[0];
+    return {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [-98.5795, 39.8283] // Geographic center of contiguous US (Kansas)
+        },
+        properties: firstFeature ? { ...firstFeature.properties } : { name: 'United States', value: 0 }
+      }]
+    };
+  }
+
+  // For state level, create one point per feature at its centroid
+  const labelFeatures = geojson.features.map((feature: any) => {
+    const centroid = calculateCentroid(feature.geometry);
+    if (!centroid) return null;
+
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: centroid
+      },
+      properties: { ...feature.properties }
+    };
+  }).filter(Boolean);
+
+  return {
+    type: 'FeatureCollection',
+    features: labelFeatures
+  };
+}
+
 function addMapLayers(
   map: mapboxgl.Map,
   geoLevel: GeoLevel,
   metricFormat: MetricFormat,
   minVal: number,
-  maxVal: number
+  maxVal: number,
+  labelPointsGeojson?: any
 ): void {
   // Fill layer - uses dynamic min/max from calculateValueRange (same as legend)
   map.addLayer({
@@ -263,8 +357,11 @@ function addMapLayers(
     },
   });
 
-  // Labels for state level
-  if (geoLevel === 'state' || geoLevel === 'national') {
+  // Labels for state and national level - use separate point source for centered labels
+  if ((geoLevel === 'state' || geoLevel === 'national') && labelPointsGeojson) {
+    // Add the label points source
+    map.addSource('geo-labels-data', { type: 'geojson', data: labelPointsGeojson });
+
     // Build value format expression based on metric type
     let valueFormat: any;
     switch (metricFormat) {
@@ -308,7 +405,7 @@ function addMapLayers(
     map.addLayer({
       id: 'geo-labels',
       type: 'symbol',
-      source: 'geo-data',
+      source: 'geo-labels-data',  // Use centroid points source for single centered labels
       layout: {
         'text-field': [
           'format',
