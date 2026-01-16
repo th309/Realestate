@@ -11,9 +11,9 @@ import {
   getMetricFormat,
   calculateValueRange,
   formatTooltipValue,
-  formatAsOfDate,
   type MetricFormat,
 } from '../utils';
+import { getMetricDataDate, formatDataDateForDisplay } from '../config/metrics';
 
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -93,7 +93,7 @@ export function useMapLayers({
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal);
 
       // Setup hover and click interactions
-      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, onFeatureClick);
+      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
@@ -321,6 +321,7 @@ function setupInteractions(
   metricFormat: MetricFormat,
   forecastHorizon: ForecastHorizon,
   geoLevelRef: React.MutableRefObject<GeoLevel>,
+  selectedMetric: string,
   onFeatureClick?: (geography: SelectedGeography | null) => void
 ): void {
   map.on('mouseenter', 'geo-fills', () => {
@@ -338,7 +339,6 @@ function setupInteractions(
       const name = feature.properties?.name || feature.properties?.displayName || feature.properties?.NAME || 'Unknown';
       // Use null to indicate "no data" - don't convert 0 to null since 0 is a valid forecast value
       const value = feature.properties?.value ?? null;
-      const dataDate = feature.properties?.dataDate;
 
       if (!popup.current) {
         popup.current = new mapboxgl.Popup({ closeButton: false, closeOnClick: false });
@@ -346,18 +346,29 @@ function setupInteractions(
 
       // Use centralized formatting functions
       const { displayValue, valueColor } = formatTooltipValue(value, metricFormat);
-      const asOfText = value !== null ? formatAsOfDate(dataDate) : '';
+
+      // Get "as of" date from central config (consistent across all maps/geographies)
+      const configDate = getMetricDataDate(selectedMetric);
+      const asOfText = `as of ${formatDataDateForDisplay(configDate)}`;
+
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
       const isForecast = metricFormat === 'percent';
 
+      // M3-compliant tooltip styling using CSS custom properties
       popup.current
         .setLngLat(e.lngLat)
         .setHTML(`
-          <div style="font-family: 'Google Sans', Roboto, sans-serif; padding: 8px 12px;">
-            <div style="font-weight: 500; font-size: 14px; color: #1a1a2e;">${name}</div>
-            <div style="font-size: 20px; font-weight: 600; color: ${valueColor};">${displayValue}</div>
-            ${isForecast ? `<div style="font-size: 11px; color: #6b7280;">${horizonLabel} forecast</div>` : ''}
-            ${asOfText ? `<div style="font-size: 10px; color: #9ca3af; margin-top: 2px;">${asOfText}</div>` : ''}
+          <div style="
+            font-family: 'Google Sans', Roboto, sans-serif;
+            padding: 12px 16px;
+            background: var(--md-surface-container-low, #f7f2fa);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+          ">
+            <div style="font-weight: 500; font-size: 14px; color: var(--md-on-surface, #1d1b20); line-height: 20px;">${name}</div>
+            <div style="font-size: 22px; font-weight: 600; color: ${valueColor}; margin: 4px 0;">${displayValue}</div>
+            ${isForecast ? `<div style="font-size: 11px; color: var(--md-on-surface-variant, #49454f);">${horizonLabel} forecast</div>` : ''}
+            <div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>
           </div>
         `)
         .addTo(map);

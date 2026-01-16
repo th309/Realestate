@@ -410,3 +410,55 @@ export function getMetricTitle(metricId: string, forecastHorizon?: string): stri
 
   return config.title;
 }
+
+// ============================================================================
+// DATA DATES CONFIGURATION
+// ============================================================================
+
+/**
+ * Central configuration for "as of" dates by data source.
+ * Update these when new data is imported to ensure consistent display
+ * across all maps, metrics, and geographies.
+ *
+ * Format: 'YYYY-MM-DD' for monthly data, 'YYYY' for annual data
+ */
+export const DATA_DATES: Record<DataSource, string> = {
+  zillow: '2025-11-30',      // Zillow ZHVI, forecasts, rent indices
+  realtor: '2025-12-01',     // Realtor.com inventory and market metrics
+  census: '2024',            // Census ACS data (annual)
+  calculated: '2025-11-30',  // Derived metrics (uses underlying data date)
+  fred: '2025-09-01',        // FRED economic indicators
+};
+
+/**
+ * Get the "as of" date for a metric
+ * Returns the date from the central config based on the metric's data source
+ */
+export function getMetricDataDate(metricId: string): string {
+  const config = METRICS[metricId];
+  if (!config) return DATA_DATES.zillow; // Default fallback
+
+  return DATA_DATES[config.dataSource];
+}
+
+/**
+ * Format data date for display in tooltips
+ * Converts '2025-11-30' to 'Nov 2025' or '2024' to '2024'
+ */
+export function formatDataDateForDisplay(dateStr: string): string {
+  if (!dateStr) return '';
+
+  // Handle annual data (just a year like '2024')
+  if (/^\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  try {
+    const date = new Date(dateStr + 'T00:00:00');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${month} ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
