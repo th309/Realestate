@@ -1,7 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { CalculatedMetricsService } from './calculated-metrics.service';
 
 // National median household income benchmark (approximate 2024 value)
 const NATIONAL_MEDIAN_INCOME = 75000;
@@ -12,6 +13,7 @@ const PRICE_TO_INCOME_BENCHMARK = 3.5;
 export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly calculatedMetricsService: CalculatedMetricsService,
   ) {}
 
   /**
@@ -183,13 +185,97 @@ export class MetricsController {
     };
   }
 
+  // ============================================================================
+  // BATCH CALCULATION ENDPOINTS
+  // ============================================================================
+
+  /**
+   * Trigger batch calculation of 5-year growth for all geographies
+   * Should be called monthly after new data is imported
+   */
+  @Post('calculate-5yr-growth')
+  async calculate5YrGrowthBatch() {
+    const results = await this.calculatedMetricsService.calculate5YrGrowthForAll();
+    return {
+      success: true,
+      message: 'Batch calculation completed',
+      results: {
+        metros: results.metros,
+        states: results.states,
+        counties: results.counties,
+        zips: results.zips,
+      },
+      totals: {
+        processed: results.metros.processed + results.states.processed +
+                   results.counties.processed + results.zips.processed,
+        stored: results.metros.stored + results.states.stored +
+                results.counties.stored + results.zips.stored,
+      },
+    };
+  }
+
+  /**
+   * Trigger batch calculation for a specific geography type
+   */
+  @Post('calculate-5yr-growth/:geoType')
+  async calculate5YrGrowthByGeo(@Param('geoType') geoType?: string) {
+    let result: { processed: number; stored: number };
+
+    switch (geoType) {
+      case 'metros':
+        result = await this.calculatedMetricsService.calculate5YrGrowthForMetros();
+        break;
+      case 'states':
+        result = await this.calculatedMetricsService.calculate5YrGrowthForStates();
+        break;
+      case 'counties':
+        result = await this.calculatedMetricsService.calculate5YrGrowthForCounties();
+        break;
+      case 'zips':
+        result = await this.calculatedMetricsService.calculate5YrGrowthForZips();
+        break;
+      default:
+        return { success: false, error: `Invalid geography type: ${geoType}` };
+    }
+
+    return {
+      success: true,
+      geography: geoType,
+      ...result,
+    };
+  }
+
+  // ============================================================================
+  // 5-YEAR GROWTH API ENDPOINTS (with pre-calculated fallback)
+  // ============================================================================
+
   /**
    * Get 5-year home value growth for metros
-   * Uses Realtor median_listing_price data
-   * Formula: ((current - past) / past) * 100
+   * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/metros')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
+    // First try pre-calculated data
+    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('metro');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'home_value_5yr',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fall back to on-the-fly calculation
+    return this.calculateMetroHomeValue5YrGrowth(date);
+  }
+
+  /**
+   * On-the-fly calculation for metro 5-year growth (fallback)
+   */
+  private async calculateMetroHomeValue5YrGrowth(date?: string) {
     // Get current date (latest data from realtor_metro table)
     let targetDate = date;
     if (!targetDate) {
@@ -266,6 +352,7 @@ export class MetricsController {
       count: results.length,
       geography: 'Metro',
       metric: 'home_value_5yr',
+      source: 'calculated',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,
@@ -274,10 +361,31 @@ export class MetricsController {
 
   /**
    * Get 5-year home value growth for states
-   * Uses Realtor median_listing_price data
+   * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/states')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
+    // First try pre-calculated data
+    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('state');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'State',
+        metric: 'home_value_5yr',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fall back to on-the-fly calculation
+    return this.calculateStateHomeValue5YrGrowth(date);
+  }
+
+  /**
+   * On-the-fly calculation for state 5-year growth (fallback)
+   */
+  private async calculateStateHomeValue5YrGrowth(date?: string) {
     // Get current date
     let targetDate = date;
     if (!targetDate) {
@@ -353,6 +461,7 @@ export class MetricsController {
       count: results.length,
       geography: 'State',
       metric: 'home_value_5yr',
+      source: 'calculated',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,
@@ -361,10 +470,31 @@ export class MetricsController {
 
   /**
    * Get 5-year home value growth for counties
-   * Uses Realtor median_listing_price data
+   * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/counties')
   async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
+    // First try pre-calculated data
+    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('county');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'County',
+        metric: 'home_value_5yr',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fall back to on-the-fly calculation
+    return this.calculateCountyHomeValue5YrGrowth(date);
+  }
+
+  /**
+   * On-the-fly calculation for county 5-year growth (fallback)
+   */
+  private async calculateCountyHomeValue5YrGrowth(date?: string) {
     // Get current date
     let targetDate = date;
     if (!targetDate) {
@@ -462,6 +592,7 @@ export class MetricsController {
       count: results.length,
       geography: 'County',
       metric: 'home_value_5yr',
+      source: 'calculated',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,
@@ -470,10 +601,33 @@ export class MetricsController {
 
   /**
    * Get 5-year home value growth for zip codes
-   * Uses Realtor median_listing_price data
+   * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/zips')
   async getZipHomeValue5YrGrowth(@Query('state') state?: string, @Query('date') date?: string) {
+    // First try pre-calculated data (if no state filter)
+    if (!state) {
+      const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('zip');
+      if (preCalculated.success && preCalculated.data.length > 0) {
+        return {
+          success: true,
+          count: preCalculated.data.length,
+          geography: 'ZIP',
+          metric: 'home_value_5yr',
+          source: 'pre-calculated',
+          data: preCalculated.data,
+        };
+      }
+    }
+
+    // Fall back to on-the-fly calculation (also handles state filter)
+    return this.calculateZipHomeValue5YrGrowth(state, date);
+  }
+
+  /**
+   * On-the-fly calculation for zip 5-year growth (fallback)
+   */
+  private async calculateZipHomeValue5YrGrowth(state?: string, date?: string) {
     // Get current date
     let targetDate = date;
     if (!targetDate) {
@@ -584,6 +738,7 @@ export class MetricsController {
       count: results.length,
       geography: 'ZIP',
       metric: 'home_value_5yr',
+      source: 'calculated',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,

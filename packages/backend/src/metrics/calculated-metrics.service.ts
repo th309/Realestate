@@ -342,4 +342,456 @@ export class CalculatedMetricsService {
 
     return result;
   }
+
+  // ============================================================================
+  // 5-YEAR GROWTH BATCH CALCULATION
+  // ============================================================================
+
+  private readonly PAGE_SIZE = 1000;
+
+  /**
+   * Calculate and store 5-year home value growth for all metros
+   */
+  async calculate5YrGrowthForMetros(): Promise<{ processed: number; stored: number }> {
+    // Get current date (latest data)
+    const { data: latestDateRow } = await this.supabase
+      .from('realtor_metro')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return { processed: 0, stored: 0 };
+    }
+
+    const targetDate = latestDateRow.period_date;
+    const fiveYearsAgo = new Date(targetDate);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Get current data
+    const { data: currentData } = await this.supabase
+      .from('realtor_metro')
+      .select('cbsa_code, metro_name, median_listing_price')
+      .eq('period_date', targetDate)
+      .not('median_listing_price', 'is', null);
+
+    if (!currentData || currentData.length === 0) {
+      return { processed: 0, stored: 0 };
+    }
+
+    // Get historical data
+    const { data: pastData } = await this.supabase
+      .from('realtor_metro')
+      .select('cbsa_code, median_listing_price')
+      .gte('period_date', pastDateStr)
+      .lte('period_date', pastDateMax)
+      .not('median_listing_price', 'is', null)
+      .order('period_date', { ascending: true });
+
+    // Build lookup for past values (earliest available per region)
+    const pastByRegion: Record<string, number> = {};
+    if (pastData) {
+      for (const row of pastData) {
+        if (!pastByRegion[row.cbsa_code]) {
+          pastByRegion[row.cbsa_code] = row.median_listing_price;
+        }
+      }
+    }
+
+    // Calculate and store
+    let stored = 0;
+    for (const metro of currentData) {
+      const pastValue = pastByRegion[metro.cbsa_code];
+      if (!pastValue || pastValue === 0) continue;
+
+      const growthPct = ((metro.median_listing_price - pastValue) / pastValue) * 100;
+
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert({
+          geography_id: metro.cbsa_code,
+          geography_type: 'metro',
+          geography_name: metro.metro_name,
+          period_date: targetDate,
+          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+          calculated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
+
+      if (!error) stored++;
+    }
+
+    return { processed: currentData.length, stored };
+  }
+
+  /**
+   * Calculate and store 5-year home value growth for all states
+   */
+  async calculate5YrGrowthForStates(): Promise<{ processed: number; stored: number }> {
+    // Get current date
+    const { data: latestDateRow } = await this.supabase
+      .from('realtor_state')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return { processed: 0, stored: 0 };
+    }
+
+    const targetDate = latestDateRow.period_date;
+    const fiveYearsAgo = new Date(targetDate);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Get current data
+    const { data: currentData } = await this.supabase
+      .from('realtor_state')
+      .select('state_id, state_name, median_listing_price')
+      .eq('period_date', targetDate)
+      .not('median_listing_price', 'is', null);
+
+    if (!currentData || currentData.length === 0) {
+      return { processed: 0, stored: 0 };
+    }
+
+    // Get historical data
+    const { data: pastData } = await this.supabase
+      .from('realtor_state')
+      .select('state_id, median_listing_price')
+      .gte('period_date', pastDateStr)
+      .lte('period_date', pastDateMax)
+      .not('median_listing_price', 'is', null)
+      .order('period_date', { ascending: true });
+
+    const pastByRegion: Record<string, number> = {};
+    if (pastData) {
+      for (const row of pastData) {
+        if (!pastByRegion[row.state_id]) {
+          pastByRegion[row.state_id] = row.median_listing_price;
+        }
+      }
+    }
+
+    let stored = 0;
+    for (const state of currentData) {
+      const pastValue = pastByRegion[state.state_id];
+      if (!pastValue || pastValue === 0) continue;
+
+      const growthPct = ((state.median_listing_price - pastValue) / pastValue) * 100;
+
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert({
+          geography_id: state.state_id,
+          geography_type: 'state',
+          geography_name: state.state_name,
+          period_date: targetDate,
+          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+          calculated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
+
+      if (!error) stored++;
+    }
+
+    return { processed: currentData.length, stored };
+  }
+
+  /**
+   * Calculate and store 5-year home value growth for all counties (paginated)
+   */
+  async calculate5YrGrowthForCounties(): Promise<{ processed: number; stored: number }> {
+    // Get current date
+    const { data: latestDateRow } = await this.supabase
+      .from('realtor_county')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return { processed: 0, stored: 0 };
+    }
+
+    const targetDate = latestDateRow.period_date;
+    const fiveYearsAgo = new Date(targetDate);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Get all current data (paginated)
+    const allCurrentData: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('realtor_county')
+        .select('county_fips, county_name, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allCurrentData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    if (allCurrentData.length === 0) {
+      return { processed: 0, stored: 0 };
+    }
+
+    // Get all historical data (paginated)
+    const allPastData: any[] = [];
+    offset = 0;
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('realtor_county')
+        .select('county_fips, median_listing_price')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', pastDateMax)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true })
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allPastData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    const pastByRegion: Record<string, number> = {};
+    for (const row of allPastData) {
+      if (!pastByRegion[row.county_fips]) {
+        pastByRegion[row.county_fips] = row.median_listing_price;
+      }
+    }
+
+    // Batch upsert for better performance
+    let stored = 0;
+    const batchSize = 100;
+    const recordsToUpsert: any[] = [];
+
+    for (const county of allCurrentData) {
+      const pastValue = pastByRegion[county.county_fips];
+      if (!pastValue || pastValue === 0) continue;
+
+      const growthPct = ((county.median_listing_price - pastValue) / pastValue) * 100;
+      recordsToUpsert.push({
+        geography_id: county.county_fips,
+        geography_type: 'county',
+        geography_name: county.county_name,
+        period_date: targetDate,
+        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+        calculated_at: new Date().toISOString(),
+      });
+
+      // Batch upsert
+      if (recordsToUpsert.length >= batchSize) {
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        if (!error) stored += recordsToUpsert.length;
+        recordsToUpsert.length = 0;
+      }
+    }
+
+    // Upsert remaining records
+    if (recordsToUpsert.length > 0) {
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+      if (!error) stored += recordsToUpsert.length;
+    }
+
+    return { processed: allCurrentData.length, stored };
+  }
+
+  /**
+   * Calculate and store 5-year home value growth for all zip codes (paginated)
+   */
+  async calculate5YrGrowthForZips(): Promise<{ processed: number; stored: number }> {
+    // Get current date
+    const { data: latestDateRow } = await this.supabase
+      .from('realtor_zip')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return { processed: 0, stored: 0 };
+    }
+
+    const targetDate = latestDateRow.period_date;
+    const fiveYearsAgo = new Date(targetDate);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Get all current data (paginated)
+    const allCurrentData: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('realtor_zip')
+        .select('postal_code, zip_name, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allCurrentData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    if (allCurrentData.length === 0) {
+      return { processed: 0, stored: 0 };
+    }
+
+    // Get all historical data (paginated)
+    const allPastData: any[] = [];
+    offset = 0;
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('realtor_zip')
+        .select('postal_code, median_listing_price')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', pastDateMax)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true })
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allPastData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    const pastByRegion: Record<string, number> = {};
+    for (const row of allPastData) {
+      if (!pastByRegion[row.postal_code]) {
+        pastByRegion[row.postal_code] = row.median_listing_price;
+      }
+    }
+
+    // Batch upsert
+    let stored = 0;
+    const batchSize = 100;
+    const recordsToUpsert: any[] = [];
+
+    for (const zip of allCurrentData) {
+      const pastValue = pastByRegion[zip.postal_code];
+      if (!pastValue || pastValue === 0) continue;
+
+      const growthPct = ((zip.median_listing_price - pastValue) / pastValue) * 100;
+      recordsToUpsert.push({
+        geography_id: zip.postal_code,
+        geography_type: 'zip',
+        geography_name: zip.zip_name,
+        period_date: targetDate,
+        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+        calculated_at: new Date().toISOString(),
+      });
+
+      if (recordsToUpsert.length >= batchSize) {
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        if (!error) stored += recordsToUpsert.length;
+        recordsToUpsert.length = 0;
+      }
+    }
+
+    if (recordsToUpsert.length > 0) {
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+      if (!error) stored += recordsToUpsert.length;
+    }
+
+    return { processed: allCurrentData.length, stored };
+  }
+
+  /**
+   * Calculate 5-year growth for all geographies
+   */
+  async calculate5YrGrowthForAll(): Promise<{
+    metros: { processed: number; stored: number };
+    states: { processed: number; stored: number };
+    counties: { processed: number; stored: number };
+    zips: { processed: number; stored: number };
+  }> {
+    const [metros, states, counties, zips] = await Promise.all([
+      this.calculate5YrGrowthForMetros(),
+      this.calculate5YrGrowthForStates(),
+      this.calculate5YrGrowthForCounties(),
+      this.calculate5YrGrowthForZips(),
+    ]);
+
+    return { metros, states, counties, zips };
+  }
+
+  /**
+   * Get pre-calculated 5-year growth data for map display
+   */
+  async get5YrGrowthForMap(
+    geographyType: 'metro' | 'state' | 'county' | 'zip'
+  ): Promise<{ data: any[]; success: boolean; source: string }> {
+    // Get the latest period_date for this geography type
+    const { data: latestRow } = await this.supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geographyType)
+      .not('home_value_5yr_cagr', 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestRow?.period_date) {
+      return { data: [], success: false, source: 'calculated_metrics' };
+    }
+
+    // Get all data for that period (paginated for large datasets)
+    const allData: any[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('calculated_metrics')
+        .select('geography_id, geography_name, home_value_5yr_cagr, period_date')
+        .eq('geography_type', geographyType)
+        .eq('period_date', latestRow.period_date)
+        .not('home_value_5yr_cagr', 'is', null)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    // Transform to API format
+    const results = allData.map(row => ({
+      region_id: row.geography_id,
+      region_name: row.geography_name,
+      value: row.home_value_5yr_cagr,
+      cagr_5yr: row.home_value_5yr_cagr,
+      date: row.period_date,
+      // Add geo-specific fields for key matching
+      ...(geographyType === 'metro' ? { cbsa_code: row.geography_id } : {}),
+      ...(geographyType === 'county' ? { county_fips: row.geography_id } : {}),
+      ...(geographyType === 'zip' ? { postal_code: row.geography_id } : {}),
+    }));
+
+    return { data: results, success: true, source: 'calculated_metrics' };
+  }
 }
