@@ -352,7 +352,7 @@ function setupInteractions(
       const asOfText = `as of ${formatDataDateForDisplay(configDate)}`;
 
       const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
-      const isForecast = metricFormat === 'percent';
+      const isForecast = selectedMetric === 'home_price_forecast';
 
       // M3-compliant tooltip styling using CSS custom properties
       popup.current
