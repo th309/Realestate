@@ -85,7 +85,6 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
       metric('home_value_yoy'),
       metric('home_value_5yr', { isPremium: true }),
       metric('home_value_mom', { isPremium: true }),
-      metric('overvalued_pct', { isPremium: true }),
       metric('income_to_buy', { isNew: true }),
       metric('income_to_rent', { isNew: true }),
       metric('affordable_home_price', { isNew: true }),
