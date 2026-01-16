@@ -372,11 +372,43 @@ export function getGeoPathSegment(geoLevel: GeoLevel): string {
 }
 
 /**
+ * Metrics that only have data at the METRO level
+ * Used by both UI (to disable geo pills) and data fetching
+ * Single source of truth for metro-only constraints
+ */
+export const METRO_ONLY_METRICS = new Set([
+  'rent_index',              // ZORI rent data only available at metro level
+  'income_to_buy',
+  'income_to_rent',
+  'affordable_home_price',
+  'years_to_save',
+  'homeowner_affordability',
+  'renter_affordability',
+  'new_construction_sales',
+  'new_construction_price',
+  'new_construction_ppsf',
+  'sale_price',
+  'sale_to_list',
+  'home_sales',
+  'sales_yoy',
+  'days_to_close',
+  'market_health',
+  'market_heat',
+  'cap_rate',
+  'overvalued_pct',
+]);
+
+/**
  * Check if a metric supports a given geography level
  */
 export function isMetricSupportedForGeo(metricId: string, geoLevel: GeoLevel): boolean {
   const config = METRICS[metricId];
   if (!config) return false;
+
+  // Check if metric is metro-only (override supportedGeos config)
+  if (METRO_ONLY_METRICS.has(metricId)) {
+    return geoLevel === 'metro';
+  }
 
   // National level uses state data
   if (geoLevel === 'national') {
@@ -406,7 +438,7 @@ export function getMetricTitle(metricId: string, forecastHorizon?: string): stri
   if (metricId === 'home_price_forecast' && forecastHorizon) {
     return forecastHorizon === '1m' ? '1-Month Forecast'
       : forecastHorizon === '3m' ? '3-Month Forecast'
-      : '12-Month Forecast';
+        : '12-Month Forecast';
   }
 
   return config.title;

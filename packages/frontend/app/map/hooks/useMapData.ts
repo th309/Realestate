@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, MarketStats } from '@/lib/api/client';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MapData } from '../types';
+import { METRO_ONLY_METRICS } from '../config';
 
 interface UseMapDataReturn {
   mapData: MapData;
@@ -54,25 +55,7 @@ const ZILLOW_ONLY_METRICS = new Set([
   'condo_value_yoy',
 ]);
 
-// Zillow metrics that are METRO-ONLY
-const ZILLOW_METRO_ONLY = new Set([
-  'income_to_buy',
-  'income_to_rent',
-  'affordable_home_price',
-  'years_to_save',
-  'homeowner_affordability',
-  'renter_affordability',
-  'new_construction_sales',
-  'new_construction_price',
-  'new_construction_ppsf',
-  'sale_price',
-  'sale_to_list',
-  'home_sales',
-  'sales_yoy',
-  'days_to_close',
-  'market_health',
-  'market_heat',
-]);
+// METRO_ONLY_METRICS is imported from ../config (single source of truth)
 
 // Hotness metrics only available at Metro/County/ZIP from Realtor
 const REALTOR_HOTNESS_METRICS = new Set([
@@ -386,8 +369,8 @@ async function fetchZillowMetric(
   demandType: string = 'all',
   horizon?: string
 ): Promise<MapData> {
-  // Metro-only Zillow metrics
-  if (ZILLOW_METRO_ONLY.has(metric) && level !== 'metro') {
+  // Metro-only metrics (from central config)
+  if (METRO_ONLY_METRICS.has(metric) && level !== 'metro') {
     return {};
   }
 

@@ -39,6 +39,8 @@ export {
   getKeyFieldForGeo,
   getGeoPathSegment,
   isMetricSupportedForGeo,
+  // Geo-level constraints
+  METRO_ONLY_METRICS,
   // Data dates - central config for "as of" dates
   DATA_DATES,
   getMetricDataDate,
