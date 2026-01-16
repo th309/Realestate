@@ -22,8 +22,8 @@ export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip
  * Used when displaying data for each geography level
  */
 export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
-  national: 3.5,
-  state: 3.5,
+  national: 4,
+  state: 4,
   metro: 4,
   county: 4,
   city: 5,
