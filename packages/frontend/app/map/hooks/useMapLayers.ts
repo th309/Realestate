@@ -241,7 +241,8 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
 }
 
 /**
- * Calculate the centroid of a polygon or multipolygon geometry
+ * Calculate the true centroid of a polygon or multipolygon geometry
+ * Uses the average of all coordinates for better visual centering
  * Returns [lng, lat] coordinates
  */
 function calculateCentroid(geometry: any): [number, number] | null {
@@ -263,18 +264,17 @@ function calculateCentroid(geometry: any): [number, number] | null {
 
   if (allCoords.length === 0) return null;
 
-  // Calculate bounding box center (simple centroid approximation)
-  let minLng = Infinity, maxLng = -Infinity;
-  let minLat = Infinity, maxLat = -Infinity;
+  // Calculate true centroid (average of all coordinates)
+  // This produces better visual centering for irregular shapes like CA, FL, TX
+  let sumLng = 0;
+  let sumLat = 0;
 
   allCoords.forEach(([lng, lat]) => {
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
+    sumLng += lng;
+    sumLat += lat;
   });
 
-  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+  return [sumLng / allCoords.length, sumLat / allCoords.length];
 }
 
 /**
@@ -414,14 +414,14 @@ function addMapLayers(
           valueFormat,
           { 'font-scale': 0.75, 'text-font': ['literal', ['DIN Pro Regular', 'Arial Unicode MS Regular']] },
         ],
-        'text-size': 11,
+        'text-size': 19,  // Increased 75% from 11
         'text-anchor': 'center',
         'text-max-width': 8,
       },
       paint: {
         'text-color': '#1a1a2e',
         'text-halo-color': 'rgba(255, 255, 255, 0.9)',
-        'text-halo-width': 1.5,
+        'text-halo-width': 2,  // Slightly larger halo for bigger text
       },
     });
   }
