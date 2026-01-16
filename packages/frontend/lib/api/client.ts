@@ -602,6 +602,49 @@ export const api = {
     return result;
   },
 
+  getCountyHomeValue5Yr: async (): Promise<CountyHomeValues> => {
+    interface GrowthResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        county_fips?: string;
+        cagr_5yr: number;
+      }>;
+    }
+    const response = await fetchAPI<GrowthResponse>('/api/metrics/home-value-5yr/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.county_fips || item.region_id;
+      if (key && item.cagr_5yr != null) {
+        result[key] = Number(item.cagr_5yr);
+      }
+    });
+    return result;
+  },
+
+  getZipHomeValue5Yr: async (state?: string): Promise<ZipHomeValues> => {
+    interface GrowthResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        postal_code?: string;
+        cagr_5yr: number;
+      }>;
+    }
+    const url = state
+      ? `/api/metrics/home-value-5yr/zips?state=${encodeURIComponent(state)}`
+      : '/api/metrics/home-value-5yr/zips';
+    const response = await fetchAPI<GrowthResponse>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.postal_code || item.region_id;
+      if (key && item.cagr_5yr != null) {
+        result[key] = Number(item.cagr_5yr);
+      }
+    });
+    return result;
+  },
+
   // ============================================================================
   // REALTOR API ENDPOINTS (Primary Source for Most Metrics)
   // ============================================================================

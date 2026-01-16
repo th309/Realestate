@@ -147,7 +147,7 @@ async function fetchRealtorMetric(
           return {};
       }
 
-    // Home Value 5-Year Growth (CAGR) - calculated from Zillow ZHVI
+    // Home Value 5-Year Growth - calculated from Realtor median_listing_price
     case 'home_value_5yr':
       switch (level) {
         case 'national':
@@ -156,9 +156,11 @@ async function fetchRealtorMetric(
         case 'metro':
           return api.getMetroHomeValue5Yr();
         case 'county':
+          return api.getCountyHomeValue5Yr();
         case 'city':
+          return {}; // No city 5-year growth data
         case 'zip':
-          return {}; // 5-year growth only available at state/metro level
+          return api.getZipHomeValue5Yr(state);
         default:
           return {};
       }
