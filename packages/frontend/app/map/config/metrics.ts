@@ -25,7 +25,7 @@ export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
   national: 3.5,
   state: 3.5,
   metro: 4,
-  county: 4.5,
+  county: 4,
   city: 5,
   zip: 5,
   tract: 6,
