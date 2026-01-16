@@ -12,7 +12,12 @@
 
 import type { HomeValues, HomeValueEntry } from '../types';
 import { getValueFromEntry } from '../types';
-import { getMetricFormat as getFormat, getMetricTitle as getTitle, getMetricConfig } from '../config';
+import { getMetricFormat as getFormat, getMetricConfig } from '../config';
+import {
+  CURRENCY_SCALES,
+  PERCENTILE_BOUNDS,
+  DEFAULT_VALUE_RANGES,
+} from '../config';
 
 // Re-export from central config for convenience
 export { getMetricFormat, getMetricTitle, type MetricFormat } from '../config';
@@ -46,23 +51,13 @@ export function calculateValueRange(
   metricFormat: ReturnType<typeof getFormat>,
   metricId?: string
 ): { min: number; max: number } {
-  // Default ranges based on metric type
-  const defaults: Record<ReturnType<typeof getFormat>, { min: number; max: number }> = {
-    percent: { min: -5, max: 10 },
-    percent_abs: { min: 0, max: 100 },
-    days: { min: 0, max: 90 },
-    number: { min: 0, max: 10000 },
-    index: { min: 0, max: 100 },
-    currency: { min: 100000, max: 800000 },
-  };
-
   // Extract numeric values from both simple numbers and object entries
   const allValues = Object.values(homeValues)
     .map((entry: HomeValueEntry) => getValueFromEntry(entry))
     .filter((v): v is number => v !== null && !isNaN(v));
 
   if (allValues.length === 0) {
-    return defaults[metricFormat];
+    return DEFAULT_VALUE_RANGES[metricFormat];
   }
 
   const sorted = [...allValues].sort((a, b) => a - b);
@@ -75,25 +70,25 @@ export function calculateValueRange(
 
   if (metricFormat === 'percent') {
     // For growth metrics, use 5th and 95th percentile to exclude outliers
-    const p5Index = Math.max(0, Math.floor(sorted.length * 0.05));
-    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+    const p5Index = Math.max(0, Math.floor(sorted.length * PERCENTILE_BOUNDS.MIN));
+    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * PERCENTILE_BOUNDS.MAX));
     return { min: sorted[p5Index], max: sorted[p95Index] };
   } else if (metricFormat === 'percent_abs') {
     // For absolute percent metrics (0-100%), use data-driven range
     const positiveValues = sorted.filter(v => v >= 0);
     if (positiveValues.length === 0) {
-      return defaults[metricFormat];
+      return DEFAULT_VALUE_RANGES[metricFormat];
     }
-    const p5Index = Math.max(0, Math.floor(positiveValues.length * 0.05));
-    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * 0.95));
+    const p5Index = Math.max(0, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MIN));
+    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MAX));
     return { min: positiveValues[p5Index], max: positiveValues[p95Index] };
   } else {
     // For non-percent metrics, use min and 95th percentile of positive values
     const positiveValues = sorted.filter(v => v > 0);
     if (positiveValues.length === 0) {
-      return defaults[metricFormat];
+      return DEFAULT_VALUE_RANGES[metricFormat];
     }
-    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * 0.95));
+    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MAX));
     return { min: positiveValues[0], max: positiveValues[p95Index] };
   }
 }
@@ -124,10 +119,10 @@ export function formatValue(
       return value.toFixed(0) + suffix;
     case 'currency':
     default:
-      if (value >= 1000000) {
-        return '$' + (value / 1000000).toFixed(1) + 'M' + suffix;
-      } else if (value >= 1000) {
-        return '$' + Math.round(value / 1000) + 'K' + suffix;
+      if (value >= CURRENCY_SCALES.MILLION) {
+        return '$' + (value / CURRENCY_SCALES.MILLION).toFixed(1) + 'M' + suffix;
+      } else if (value >= CURRENCY_SCALES.THOUSAND) {
+        return '$' + Math.round(value / CURRENCY_SCALES.THOUSAND) + 'K' + suffix;
       }
       return '$' + value.toLocaleString('en-US') + suffix;
   }
@@ -193,5 +188,40 @@ export function formatAsOfDate(dateStr: string | undefined): string {
     return `as of ${month} ${year}`;
   } catch {
     return '';
+  }
+}
+
+// Extended format types for benchmark comparisons
+export type BenchmarkFormat = 'currency' | 'percent' | 'days' | 'number' | 'ratio' | 'months';
+
+/**
+ * Format a value for benchmark display.
+ * Handles additional formats like 'months' and 'ratio' used in BenchmarkPanel.
+ */
+export function formatBenchmarkValue(
+  value: number | null | undefined,
+  format: BenchmarkFormat
+): string {
+  if (value === null || value === undefined) return 'N/A';
+
+  switch (format) {
+    case 'currency':
+      if (value >= CURRENCY_SCALES.MILLION) return `$${(value / CURRENCY_SCALES.MILLION).toFixed(1)}M`;
+      if (value >= CURRENCY_SCALES.THOUSAND) return `$${(value / CURRENCY_SCALES.THOUSAND).toFixed(0)}K`;
+      return `$${value.toFixed(0)}`;
+    case 'percent':
+      // Handle decimal percentages (0.05 = 5%)
+      const pctValue = Math.abs(value) < 1 ? value * 100 : value;
+      return `${pctValue.toFixed(1)}%`;
+    case 'days':
+      return `${Math.round(value)} days`;
+    case 'months':
+      return `${value.toFixed(1)} mo`;
+    case 'number':
+      return value.toLocaleString();
+    case 'ratio':
+      return `${value.toFixed(1)}x`;
+    default:
+      return String(value);
   }
 }

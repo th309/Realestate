@@ -3,6 +3,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import type { SearchResult, GeoLevel } from '../types';
+import { ANIMATION_DURATIONS, MAP_PADDING } from '../config';
+
+// Mapbox Geocoding API response types
+interface MapboxContext {
+  id: string;
+  short_code?: string;
+  text?: string;
+}
+
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  place_type: string[];
+  center: [number, number];
+  bbox?: [number, number, number, number];
+  context?: MapboxContext[];
+}
 
 interface UseMapSearchProps {
   mapRef: React.MutableRefObject<mapboxgl.Map | null>;
@@ -68,25 +85,26 @@ export function useMapSearch({
       );
       const data = await response.json();
 
-      const results: SearchResult[] = data.features?.map((feature: any) => {
+      const features: MapboxFeature[] = data.features || [];
+      const results: SearchResult[] = features.map((feature: MapboxFeature) => {
         let type: SearchResult['type'] = 'city';
         if (feature.place_type.includes('region')) type = 'state';
         else if (feature.place_type.includes('postcode')) type = 'zip';
         else if (feature.place_type.includes('district')) type = 'county';
         else if (feature.place_type.includes('place')) type = 'city';
 
-        const stateContext = feature.context?.find((c: any) => c.id.startsWith('region'));
+        const stateContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('region'));
         const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
 
         return {
           id: feature.id,
           name: feature.place_name,
           type,
-          center: feature.center as [number, number],
-          bbox: feature.bbox as [number, number, number, number] | undefined,
+          center: feature.center,
+          bbox: feature.bbox,
           state: stateAbbrev,
         };
-      }) || [];
+      });
 
       setSearchResults(results);
     } catch (err) {
@@ -111,7 +129,7 @@ export function useMapSearch({
       console.log('Fitting to bounds:', result.bbox);
       mapRef.current.fitBounds(
         [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
-        { padding: 50, duration: 1000 }
+        { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
       );
     } else if (result.center) {
       // Fallback zoom levels if no bbox available
@@ -124,7 +142,7 @@ export function useMapSearch({
       mapRef.current.flyTo({
         center: result.center,
         zoom: zoomLevel,
-        duration: 1000,
+        duration: ANIMATION_DURATIONS.MAP_FLY,
       });
     } else {
       console.error('No location data for result');

@@ -2,20 +2,16 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import type { SelectedGeography, GeoLevel } from '../types';
+import { STATE_ABBR_TO_FIPS } from '../types';
+import { formatBenchmarkValue, type BenchmarkFormat } from '../utils/metricUtils';
+import {
+  VIEW_MODE_COLORS,
+  getBenchmarkGradient,
+  getComparisonColor,
+} from '../config';
 
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-// State abbreviation to FIPS mapping
-const STATE_ABBR_TO_FIPS: Record<string, string> = {
-  'AL': '01', 'AK': '02', 'AZ': '04', 'AR': '05', 'CA': '06', 'CO': '08', 'CT': '09', 'DE': '10',
-  'DC': '11', 'FL': '12', 'GA': '13', 'HI': '15', 'ID': '16', 'IL': '17', 'IN': '18', 'IA': '19',
-  'KS': '20', 'KY': '21', 'LA': '22', 'ME': '23', 'MD': '24', 'MA': '25', 'MI': '26', 'MN': '27',
-  'MS': '28', 'MO': '29', 'MT': '30', 'NE': '31', 'NV': '32', 'NH': '33', 'NJ': '34', 'NM': '35',
-  'NY': '36', 'NC': '37', 'ND': '38', 'OH': '39', 'OK': '40', 'OR': '41', 'PA': '42', 'RI': '44',
-  'SC': '45', 'SD': '46', 'TN': '47', 'TX': '48', 'UT': '49', 'VT': '50', 'VA': '51', 'WA': '53',
-  'WV': '54', 'WI': '55', 'WY': '56', 'PR': '72'
-};
 
 interface BenchmarkPanelProps {
   selectedGeography: SelectedGeography;
@@ -28,7 +24,7 @@ interface MetricConfig {
   id: string;
   label: string;
   description: string;
-  format: 'currency' | 'percent' | 'days' | 'number' | 'ratio' | 'months';
+  format: BenchmarkFormat;
   lowerIsBetter: boolean;
   category: 'homebuyer' | 'investor';
 }
@@ -154,7 +150,7 @@ export function BenchmarkPanel({
     }
 
     fetchBenchmarks();
-  }, [selectedGeography.id, selectedGeography.stateAbbr, geoLevel]);
+  }, [selectedGeography.id, selectedGeography.name, selectedGeography.stateAbbr, geoLevel]);
 
   // Filter metrics by category
   const metrics = useMemo(() => {
@@ -218,7 +214,7 @@ export function BenchmarkPanel({
     return { beatState, beatNational, total };
   }, [benchmarkData, metrics]);
 
-  const primaryColor = activeTab === 'homebuyer' ? '#f97316' : '#10b981';
+  const viewModeColors = VIEW_MODE_COLORS[activeTab];
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end p-2 md:p-4 pointer-events-none">
@@ -314,7 +310,7 @@ export function BenchmarkPanel({
                     isHovered={hoveredMetric === metric.id}
                     onHover={() => setHoveredMetric(metric.id)}
                     onLeave={() => setHoveredMetric(null)}
-                    primaryColor={primaryColor}
+                    viewModeColors={viewModeColors}
                   />
                 ))}
               </div>
@@ -389,11 +385,7 @@ function SummaryCard({ beatState, beatNational, total, metrics, benchmarkData, a
               key={i}
               className="flex-1 h-1.5 rounded-full transition-all duration-400"
               style={{
-                backgroundColor: beatStateVal && beatNationalVal
-                  ? '#10b981'
-                  : beatStateVal || beatNationalVal
-                    ? '#fbbf24'
-                    : '#ef4444',
+                backgroundColor: getComparisonColor(beatStateVal, beatNationalVal),
                 opacity: animateIn ? 1 : 0.3,
                 transitionDelay: `${0.1 + i * 0.05}s`
               }}
@@ -417,7 +409,7 @@ interface BenchmarkBarProps {
   isHovered: boolean;
   onHover: () => void;
   onLeave: () => void;
-  primaryColor: string;
+  viewModeColors: { primary: string; primaryDark: string };
 }
 
 function BenchmarkBar({
@@ -430,33 +422,8 @@ function BenchmarkBar({
   isHovered,
   onHover,
   onLeave,
-  primaryColor
+  viewModeColors
 }: BenchmarkBarProps) {
-  // Format value based on metric type
-  const formatValue = (value: number | null | undefined, format: string): string => {
-    if (value === null || value === undefined) return 'N/A';
-    switch (format) {
-      case 'currency':
-        if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-        if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-        return `$${value.toFixed(0)}`;
-      case 'percent':
-        // Handle decimal percentages (0.05 = 5%)
-        const pctValue = Math.abs(value) < 1 ? value * 100 : value;
-        return `${pctValue.toFixed(1)}%`;
-      case 'days':
-        return `${Math.round(value)} days`;
-      case 'months':
-        return `${value.toFixed(1)} mo`;
-      case 'number':
-        return value.toLocaleString();
-      case 'ratio':
-        return `${value.toFixed(1)}x`;
-      default:
-        return String(value);
-    }
-  };
-
   // If no local value, show placeholder
   if (localValue === null || localValue === undefined) {
     return (
@@ -531,7 +498,7 @@ function BenchmarkBar({
           )}
         </div>
         <span className="text-sm font-bold text-on-surface">
-          {formatValue(localValue, metric.format)}
+          {formatBenchmarkValue(localValue, metric.format)}
         </span>
       </div>
 
@@ -542,9 +509,7 @@ function BenchmarkBar({
           <div
             className="absolute inset-0"
             style={{
-              background: metric.lowerIsBetter
-                ? 'linear-gradient(to right, rgba(16, 185, 129, 0.3), rgba(251, 191, 36, 0.3), rgba(239, 68, 68, 0.3))'
-                : 'linear-gradient(to right, rgba(239, 68, 68, 0.3), rgba(251, 191, 36, 0.3), rgba(16, 185, 129, 0.3))'
+              background: getBenchmarkGradient(metric.lowerIsBetter)
             }}
           />
         </div>
@@ -602,7 +567,7 @@ function BenchmarkBar({
           <div
             className="w-4 h-4 rounded-full flex items-center justify-center"
             style={{
-              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor === '#f97316' ? '#ea580c' : '#059669'})`
+              background: `linear-gradient(135deg, ${viewModeColors.primary}, ${viewModeColors.primaryDark})`
             }}
           >
             <div className="w-1 h-1 rounded-full bg-white" />
@@ -619,7 +584,7 @@ function BenchmarkBar({
         )}
         {nationalValue !== null && nationalValue !== undefined && (
           <span className={isBetterThanNational ? 'text-emerald-600' : 'text-rose-500'}>
-            {isBetterThanNational ? '▲' : '▼'} Nat'l
+            {isBetterThanNational ? '▲' : '▼'} Natl
           </span>
         )}
       </div>
