@@ -416,8 +416,9 @@ function addMapLayers(
           valueFormat,
           { 'font-scale': 0.8, 'text-font': ['literal', ['Roboto Regular', 'DIN Pro Regular', 'Arial Unicode MS Regular']] },
         ],
-        'text-size': 19,  // M3 Label size (increased 75% from 11)
-        'text-anchor': 'center',
+        'text-size': 15,  // M3 Label size (reduced 20% for better fit)
+        'text-variable-anchor': ['center', 'top', 'bottom', 'left', 'right'],  // Auto-shift to avoid collisions
+        'text-radial-offset': 0.5,  // Offset when using non-center anchors
         'text-max-width': 8,
         'text-letter-spacing': 0.02,  // M3 tracking-wide for labels
       },
