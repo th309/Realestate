@@ -12,7 +12,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 // ============================================================================
 
 export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
-export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
+export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_sfr' | 'zori_mfr' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
   'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
   'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m' | 'market_heat' |
   'homeowner_income' | 'zordi';
@@ -365,14 +365,17 @@ export async function getAvailableDates(
 // ============================================================================
 
 /**
- * Map frontend property type to database property type
+ * Map frontend property type to database metric name
+ * - 'all' → 'zori' (All Homes from Metro_zori_uc_sfrcondomfr_sm_month)
+ * - 'sfr' → 'zori_sfr' (Single Family from Metro_zori_uc_sfr_sm_month)
+ * - 'mfr' → 'zori_mfr' (Multi-Family from Metro_zori_uc_mfr_sm_month)
  */
-export function mapRentPropertyType(type: string): string {
+export function mapRentPropertyType(type: string): MetricName {
   switch (type) {
-    case 'sfr': return 'SFR';
-    case 'mfr': return 'Multifamily';
+    case 'sfr': return 'zori_sfr';
+    case 'mfr': return 'zori_mfr';
     case 'all':
-    default: return 'All Homes Plus Multifamily';
+    default: return 'zori';
   }
 }
 
@@ -404,17 +407,22 @@ export async function queryZhvi(
 
 /**
  * Query ZORI (rent) data (legacy-compatible)
+ * propertyType maps to metric_name:
+ * - 'all' → 'zori' (All Homes)
+ * - 'sfr' → 'zori_sfr' (Single Family)
+ * - 'mfr' → 'zori_mfr' (Multi-Family)
  */
 export async function queryZori(
   supabase: SupabaseClient,
   geography: string | string[],
   targetDate: string,
-  _propertyType: string, // Not used in new schema
+  propertyType: string = 'all',
   regionIds?: string[]
 ) {
   const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
   const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
-  return queryWithLegacyFormat(supabase, geoType, 'zori', targetDate, numericIds);
+  const metricName = mapRentPropertyType(propertyType);
+  return queryWithLegacyFormat(supabase, geoType, metricName, targetDate, numericIds);
 }
 
 /**
