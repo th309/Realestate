@@ -44,7 +44,7 @@ export function Legend({
       <div className="absolute bottom-3 left-3 md:bottom-6 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
         <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.slice(0, 6).map((color, i) => (
+          {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
           ))}
         </div>
