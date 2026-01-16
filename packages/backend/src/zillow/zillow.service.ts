@@ -23,6 +23,7 @@ import {
 } from './helpers/crosswalk';
 
 import {
+  getLatestDate,
   getLatestDateForTable,
   getLatestDateForMarketTable,
   mapRentPropertyType,
@@ -86,18 +87,8 @@ export class ZillowService {
   }
 
   async getMetroHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    // First get the latest date if not provided
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestData } = await this.supabase
-        .from('zillow_metro')
-        .select('period_date')
-        .eq('metric_name', 'zhvi')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestData?.period_date;
-    }
+    // Use cached latest date if not provided
+    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'zhvi');
 
     // Query zillow_metro table directly - filter by date for efficiency
     let query = this.supabase
@@ -139,18 +130,8 @@ export class ZillowService {
   }
 
   async getCountyHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
-    // First get the latest date if not provided
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestData } = await this.supabase
-        .from('zillow_county')
-        .select('period_date')
-        .eq('metric_name', 'zhvi')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestData?.period_date;
-    }
+    // Use cached latest date if not provided
+    const targetDate = date || await getLatestDate(this.supabase, 'county', 'zhvi');
 
     // Supabase has a 1000 row limit per request, so we need to paginate
     // to get all ~3200 counties
@@ -212,19 +193,8 @@ export class ZillowService {
       return [];
     }
 
-    // First get the latest date if not provided
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestData } = await this.supabase
-        .from('zillow_zip')
-        .select('period_date')
-        .eq('metric_name', 'zhvi')
-        .eq('state_code', stateFilter.toUpperCase())
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestData?.period_date;
-    }
+    // Use cached latest date if not provided
+    const targetDate = date || await getLatestDate(this.supabase, 'zip', 'zhvi');
 
     // Supabase has a 1000 row limit per request, so we need to paginate
     // for states with many ZIPs (CA has ~1700)
@@ -281,17 +251,8 @@ export class ZillowService {
       return []; // Return empty - cities require state filter
     }
 
-    // First get the latest date
-    const { data: latestData } = await this.supabase
-      .from('zillow_city')
-      .select('period_date')
-      .eq('metric_name', 'zhvi')
-      .eq('state_code', stateFilter.toUpperCase())
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    const targetDate = latestData?.period_date;
+    // Use cached latest date
+    const targetDate = await getLatestDate(this.supabase, 'city', 'zhvi');
     if (!targetDate) return [];
 
     // Query zillow_city table - filter by state AND date for efficiency
@@ -359,16 +320,9 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroForecast(horizon: string = '12m'): Promise<ForecastData[]> {
-    // Get latest date for forecast data
-    const { data: latestData } = await this.supabase
-      .from('zillow_metro')
-      .select('period_date')
-      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!latestData?.period_date) return [];
+    // Use cached latest date for forecast data
+    const latestDate = await getLatestDate(this.supabase, 'metro', 'zhvf_12m');
+    if (!latestDate) return [];
 
     // Query all forecast metrics for that date
     // Need to paginate because there are ~2685 records (895 metros × 3 horizons)
@@ -382,7 +336,7 @@ export class ZillowService {
         .from('zillow_metro')
         .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
         .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-        .eq('period_date', latestData.period_date)
+        .eq('period_date', latestDate)
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
       if (error) {
@@ -429,16 +383,9 @@ export class ZillowService {
   }
 
   async getZipForecast(stateFilter?: string, horizon: string = '12m'): Promise<ForecastData[]> {
-    // Get latest date for forecast data
-    const { data: latestData } = await this.supabase
-      .from('zillow_zip')
-      .select('period_date')
-      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!latestData?.period_date) return [];
+    // Use cached latest date for forecast data
+    const latestDate = await getLatestDate(this.supabase, 'zip', 'zhvf_12m');
+    if (!latestDate) return [];
 
     // Query all forecast metrics for that date with pagination
     const allForecasts: any[] = [];
@@ -450,7 +397,7 @@ export class ZillowService {
         .from('zillow_zip')
         .select('region_id, region_name, state_code, metric_name, value, period_date')
         .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
-        .eq('period_date', latestData.period_date)
+        .eq('period_date', latestDate)
         .range(page * pageSize, (page + 1) * pageSize - 1);
 
       if (stateFilter) {
@@ -578,9 +525,13 @@ export class ZillowService {
 
   async getZipRent(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
     const dbPropertyType = mapRentPropertyType(propertyType);
-    const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zori', 'Zip');
 
-    const zipMap = await buildZipMappings(this.supabase, stateFilter);
+    // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
+    const [targetDate, zipMap] = await Promise.all([
+      date ? Promise.resolve(date) : getLatestDateForTable(this.supabase, 'zillow_zori', 'Zip'),
+      buildZipMappings(this.supabase, stateFilter)
+    ]);
+
     const zipCodes = [...zipMap.keys()];
     if (zipCodes.length === 0) return [];
 
@@ -646,9 +597,13 @@ export class ZillowService {
 
   async getZipRenterDemand(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
     const dbPropertyType = mapRentPropertyType(propertyType);
-    const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip');
 
-    const zipMap = await buildZipMappings(this.supabase, stateFilter);
+    // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
+    const [targetDate, zipMap] = await Promise.all([
+      date ? Promise.resolve(date) : getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'),
+      buildZipMappings(this.supabase, stateFilter)
+    ]);
+
     const zipCodes = [...zipMap.keys()];
     if (zipCodes.length === 0) return [];
 
@@ -887,20 +842,8 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroAffordability(date?: string): Promise<AffordabilityData[]> {
-    // Get latest date from zillow_metro where affordability metrics are stored
-    // Uses 'homeowner_income' which is the metric_name as stored by ingest-all-zillow-clean.ts
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestData } = await this.supabase
-        .from('zillow_metro')
-        .select('period_date')
-        .eq('metric_name', 'homeowner_income')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestData?.period_date;
-    }
-
+    // Use cached latest date for affordability metrics
+    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'homeowner_income');
     if (!targetDate) return [];
 
     const data = await queryAffordability(this.supabase, ['Metro'], targetDate);

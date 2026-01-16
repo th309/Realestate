@@ -18,6 +18,9 @@ interface MetroMappingsCache {
 let metroMappingsCache: MetroMappingsCache | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+// Cache for ZIP mappings by state (key: stateFilter, value: cached result)
+const zipMappingsCache = new Map<string, { data: Map<string, ZipMapping>; timestamp: number }>();
+
 const US_STATE_ABBREVS = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
   'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
@@ -172,13 +175,20 @@ export async function buildCountyMappings(
 }
 
 /**
- * Build ZIP code mappings
+ * Build ZIP code mappings (with 1-hour cache per state)
  */
 export async function buildZipMappings(
   supabase: SupabaseClient,
   stateFilter: string,
   countyFilter?: string
 ): Promise<Map<string, ZipMapping>> {
+  // Check cache (only for state-only queries, not county-filtered)
+  const cacheKey = countyFilter ? `${stateFilter}:${countyFilter}` : stateFilter;
+  const cached = zipMappingsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   let query = supabase
     .from('geography_crosswalk')
     .select('zip_code, zip_default_city, county_name, state_abbrev, state_name')
@@ -202,6 +212,9 @@ export async function buildZipMappings(
       });
     }
   });
+
+  // Cache the result
+  zipMappingsCache.set(cacheKey, { data: zipMap, timestamp: Date.now() });
 
   return zipMap;
 }

@@ -14,7 +14,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
 export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
   'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
-  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m' | 'market_heat';
+  'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m' | 'market_heat' |
+  'homeowner_income' | 'zordi';
 
 // Map geography string to table name
 function getTableForGeography(geography: string): string {
@@ -29,12 +30,18 @@ function getTableForGeography(geography: string): string {
 }
 
 // ============================================================================
+// Latest Date Cache (avoids redundant queries)
+// ============================================================================
+const LATEST_DATE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const latestDateCache = new Map<string, { date: string; expiry: number }>();
+
+// ============================================================================
 // Core Query Functions
 // ============================================================================
 
 /**
- * Get the latest date for a given geography and metric
- * Optimized: Uses a single region to find max date (faster than full table scan)
+ * Get the latest date for a given geography and metric (with 1-hour cache)
+ * Optimized: Uses cache + single region to find max date
  */
 export async function getLatestDate(
   supabase: SupabaseClient,
@@ -42,6 +49,13 @@ export async function getLatestDate(
   metricName: MetricName = 'zhvi'
 ): Promise<string> {
   const table = getTableForGeography(geography);
+  const cacheKey = `${table}:${metricName}`;
+
+  // Check cache first
+  const cached = latestDateCache.get(cacheKey);
+  if (cached && cached.expiry > Date.now()) {
+    return cached.date;
+  }
 
   try {
     const { data, error } = await supabase
@@ -57,7 +71,15 @@ export async function getLatestDate(
       return '2025-10-31';
     }
 
-    return data?.period_date || '2025-10-31';
+    const latestDate = data?.period_date || '2025-10-31';
+
+    // Cache the result
+    latestDateCache.set(cacheKey, {
+      date: latestDate,
+      expiry: Date.now() + LATEST_DATE_CACHE_TTL,
+    });
+
+    return latestDate;
   } catch (err) {
     console.error(`getLatestDate network error for ${table}/${metricName}:`, err);
     return '2025-10-31';

@@ -30,6 +30,8 @@ export class RealtorService {
   private readonly PARALLEL_PAGES = 5; // Fetch 5 pages concurrently
   private readonly CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours in ms
   private cache = new Map<string, CacheEntry<RealtorRow[]>>();
+  // Cache for latest dates per table (avoids redundant date queries)
+  private latestDateCache = new Map<string, CacheEntry<string>>();
 
   // FIPS code to state abbreviation mapping (realtor_state uses abbreviations, not FIPS)
   private readonly fipsToAbbr: Record<string, string> = {
@@ -86,6 +88,34 @@ export class RealtorService {
   }
 
   /**
+   * Get latest date for a table (with 1-hour cache to avoid redundant queries)
+   */
+  private async getLatestDate(table: string): Promise<string | null> {
+    // Check cache
+    const cached = this.latestDateCache.get(table);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    const { data } = await this.supabase
+      .from(table)
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    const latestDate = (data?.[0] as RealtorRow)?.period_date as string | null;
+
+    if (latestDate) {
+      this.latestDateCache.set(table, {
+        data: latestDate,
+        expiry: Date.now() + this.CACHE_TTL,
+      });
+    }
+
+    return latestDate;
+  }
+
+  /**
    * Fetch a single page of data
    */
   private async fetchPage(
@@ -101,6 +131,37 @@ export class RealtorService {
 
     if (error) throw error;
     return (data || []) as RealtorRow[];
+  }
+
+  /**
+   * Fetch ZIP data filtered by state at database level (much faster than full fetch + JS filter)
+   * ZIP names are formatted as "city, ST" so we use ilike to match state suffix
+   */
+  private async fetchZipsByState(
+    periodDate: string,
+    state: string
+  ): Promise<RealtorRow[]> {
+    // Check cache with state-specific key
+    const cacheKey = `realtor_zip:${periodDate}:${state.toLowerCase()}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Query with state filter at database level - zip_name format is "city, ST"
+    const statePattern = `%, ${state.toLowerCase()}`;
+    const { data, error } = await this.supabase
+      .from('realtor_zip')
+      .select('*')
+      .eq('period_date', periodDate)
+      .ilike('zip_name', statePattern);
+
+    if (error) throw error;
+    const rows = (data || []) as RealtorRow[];
+
+    // Cache state-specific results
+    this.setCache(cacheKey, rows);
+    return rows;
   }
 
   /**
@@ -455,14 +516,8 @@ export class RealtorService {
   // ============================================================================
 
   async getStateData(metric: string, date?: string): Promise<RealtorDataPoint[]> {
-    // Get latest date if not specified
-    const { data: latestData } = await this.supabase
-      .from('realtor_state')
-      .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1);
-
-    const latestDate = date || (latestData?.[0] as RealtorRow)?.period_date;
+    // Use cached latest date if not specified
+    const latestDate = date || await this.getLatestDate('realtor_state');
 
     const { data, error } = await this.supabase
       .from('realtor_state')
@@ -498,14 +553,8 @@ export class RealtorService {
   // ============================================================================
 
   async getMetroData(metric: string, date?: string, state?: string): Promise<RealtorDataPoint[]> {
-    // Get latest date if not specified
-    const { data: latestData } = await this.supabase
-      .from('realtor_metro')
-      .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1);
-
-    const latestDate = date || (latestData?.[0] as RealtorRow)?.period_date;
+    // Use cached latest date if not specified
+    const latestDate = date || await this.getLatestDate('realtor_metro');
 
     // Use high limit to get all metros (~1000)
     const { data, error } = await this.supabase
@@ -543,14 +592,8 @@ export class RealtorService {
   // ============================================================================
 
   async getCountyData(metric: string, date?: string, state?: string): Promise<RealtorDataPoint[]> {
-    // Get latest date if not specified
-    const { data: latestData } = await this.supabase
-      .from('realtor_county')
-      .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1);
-
-    const latestDate = date || (latestData?.[0] as RealtorRow)?.period_date;
+    // Use cached latest date if not specified
+    const latestDate = date || await this.getLatestDate('realtor_county');
 
     // Use pagination to get all counties (~3200)
     const data = await this.fetchAllRows('realtor_county', latestDate as string);
@@ -582,58 +625,39 @@ export class RealtorService {
   // ============================================================================
 
   async getZipData(metric: string, state?: string, date?: string): Promise<RealtorDataPoint[]> {
-    // Get latest date if not specified
-    const { data: latestData } = await this.supabase
-      .from('realtor_zip')
-      .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1);
+    // Get latest date from cache if not specified
+    const latestDate = date || await this.getLatestDate('realtor_zip');
 
-    const latestDate = date || (latestData?.[0] as RealtorRow)?.period_date;
-
-    // Use pagination to get all ZIPs (~28000)
-    const data = await this.fetchAllRows('realtor_zip', latestDate as string);
-
-    // Extract state from zip_name (e.g., "agawam, ma" -> "MA")
-    const stateUpper = state?.toUpperCase();
+    // OPTIMIZATION: When state is provided, query database directly with filter
+    // This fetches ~500-2000 ZIPs per state instead of all 28,000
+    let data: RealtorRow[];
+    if (state) {
+      data = await this.fetchZipsByState(latestDate as string, state);
+    } else {
+      // No state filter - fetch all ZIPs (uses pagination + caching)
+      data = await this.fetchAllRows('realtor_zip', latestDate as string);
+    }
 
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return data
-      .filter(row => {
-        // Filter by state if provided (state is in zip_name after comma)
-        if (stateUpper) {
-          const zipName = String(row.zip_name || '');
-          const parts = zipName.split(',');
-          if (parts.length >= 2) {
-            const zipState = parts[parts.length - 1].trim().toUpperCase();
-            if (zipState !== stateUpper) {
-              return false;
-            }
-          } else {
-            return false; // No state info in zip_name
-          }
-        }
-        return true;
-      })
-      .map(row => {
-        let value = Number(row[metric]) || 0;
+    return data.map(row => {
+      let value = Number(row[metric]) || 0;
 
-        // Filter out only clearly corrupt data (values in millions of percent)
-        // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
-        if (isGrowthMetric && (value > 100 || value < -100)) {
-          value = 0; // Treat as corrupt data
-        }
+      // Filter out only clearly corrupt data (values in millions of percent)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
+      if (isGrowthMetric && (value > 100 || value < -100)) {
+        value = 0; // Treat as corrupt data
+      }
 
-        return {
-          region_id: String(row.postal_code || ''),
-          region_name: String(row.zip_name || ''),
-          postal_code: String(row.postal_code || ''),
-          value,
-          date: latestDate ? String(latestDate) : undefined,
-        };
-      });
+      return {
+        region_id: String(row.postal_code || ''),
+        region_name: String(row.zip_name || ''),
+        postal_code: String(row.postal_code || ''),
+        value,
+        date: latestDate ? String(latestDate) : undefined,
+      };
+    });
   }
 
   // ============================================================================
