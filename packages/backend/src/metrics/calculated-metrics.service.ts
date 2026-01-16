@@ -77,11 +77,13 @@ export class CalculatedMetricsService {
   }
 
   /**
-   * Calculate Inventory Surplus %: (current - avg) / avg × 100
+   * Calculate Inventory Surplus: Current Inventory - Historical Average Inventory
+   * Positive values indicate more homes available than typical (buyer's market)
+   * Negative values indicate fewer homes than typical (seller's market)
    */
   calculateInventorySurplus(current: number | undefined, avg: number | undefined): number | null {
-    if (!current || !avg || avg === 0) return null;
-    return (current - avg) / avg * 100;
+    if (!current || !avg) return null;
+    return current - avg;
   }
 
   /**
@@ -304,7 +306,7 @@ export class CalculatedMetricsService {
       investment_score: data.investment_score,
       long_term_growth_score: data.long_term_growth_score,
       home_value_5yr_cagr: data.home_value_5yr_cagr,
-      inventory_surplus_pct: data.inventory_surplus_pct,
+      inventory_surplus_pct: data.inventory_surplus,
       overvalued_pct: data.overvalued_pct,
     };
   }
