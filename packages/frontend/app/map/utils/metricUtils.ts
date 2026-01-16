@@ -197,6 +197,7 @@ export type BenchmarkFormat = 'currency' | 'percent' | 'days' | 'number' | 'rati
 /**
  * Format a value for benchmark display.
  * Handles additional formats like 'months' and 'ratio' used in BenchmarkPanel.
+ * Note: Percentage values are pre-converted by the backend (e.g., -3.82 means -3.82%)
  */
 export function formatBenchmarkValue(
   value: number | null | undefined,
@@ -210,9 +211,10 @@ export function formatBenchmarkValue(
       if (value >= CURRENCY_SCALES.THOUSAND) return `$${(value / CURRENCY_SCALES.THOUSAND).toFixed(0)}K`;
       return `$${value.toFixed(0)}`;
     case 'percent':
-      // Handle decimal percentages (0.05 = 5%)
-      const pctValue = Math.abs(value) < 1 ? value * 100 : value;
-      return `${pctValue.toFixed(1)}%`;
+      // Values are already in percentage format (e.g., -3.82 = -3.82%)
+      // Add + sign for positive values
+      const sign = value > 0 ? '+' : '';
+      return `${sign}${value.toFixed(1)}%`;
     case 'days':
       return `${Math.round(value)} days`;
     case 'months':

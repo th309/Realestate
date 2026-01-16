@@ -6,6 +6,7 @@ export interface RealtorDataPoint {
   region_id: string;
   region_name: string;
   value: number;
+  date?: string;
   state_id?: string;
   cbsa_code?: string;
   county_fips?: string;
@@ -189,6 +190,46 @@ export class RealtorService {
     'price_per_sqft': 'median_listing_price_per_square_foot',
   };
 
+  // Metrics that are stored as decimals and need to be converted to percentages
+  // These are multiplied by 100 for display (0.05 -> 5%)
+  private readonly percentMetrics = new Set([
+    'home_value_yoy',
+    'home_value_mom',
+    'inventory_yoy',
+    'price_cut_pct',
+  ]);
+
+  /**
+   * Process a metric value for benchmark display
+   * - Converts decimal percentages to display percentages (0.05 -> 5)
+   * - Filters out corrupt data for growth metrics
+   * - Rounds non-percentage values to integers
+   */
+  private processMetricValue(metricId: string, rawValue: unknown): number | null {
+    if (rawValue === null || rawValue === undefined) return null;
+
+    let value = Number(rawValue);
+    if (isNaN(value)) return null;
+
+    // Check for corrupt data in growth metrics (values stored as decimals)
+    // Values > 100 or < -100 as decimals would mean >10,000% which is corrupt
+    const isGrowthMetric = metricId.endsWith('_yoy') || metricId.endsWith('_mom');
+    if (isGrowthMetric && (value > 100 || value < -100)) {
+      return null; // Treat as corrupt data
+    }
+
+    // Convert decimal percentages to display percentages
+    if (this.percentMetrics.has(metricId)) {
+      // Stored as decimal (0.05 = 5%), convert to percentage (5)
+      value = value * 100;
+      // Round to 1 decimal place for percentages
+      return Math.round(value * 10) / 10;
+    }
+
+    // Round non-percentage values to integers
+    return Math.round(value);
+  }
+
   /**
    * Get national average for a given frontend metric ID
    * Maps frontend metric IDs to Realtor column names
@@ -211,10 +252,9 @@ export class RealtorService {
     }
 
     const row = data?.[0];
-    const value = row ? Number(row[columnName]) : null;
 
     return {
-      value: value !== null && !isNaN(value) ? Math.round(value) : null,
+      value: this.processMetricValue(metricId, row?.[columnName]),
       metricId
     };
   }
@@ -240,8 +280,7 @@ export class RealtorService {
     const result: Record<string, number | null> = {};
 
     for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-      const value = row[column] !== undefined ? Number(row[column]) : null;
-      result[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+      result[metricId] = this.processMetricValue(metricId, row[column]);
     }
 
     return result;
@@ -275,8 +314,7 @@ export class RealtorService {
     const result: Record<string, number | null> = {};
 
     for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-      const value = row[column] !== undefined ? Number(row[column]) : null;
-      result[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+      result[metricId] = this.processMetricValue(metricId, row[column]);
     }
 
     console.log(`[getStateAverages] Returning ${Object.values(result).filter(v => v !== null).length} metrics with values`);
@@ -352,8 +390,7 @@ export class RealtorService {
       if (row) {
         locationName = String(row.state_name || '');
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-          const value = row[column] !== undefined ? Number(row[column]) : null;
-          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+          location[metricId] = this.processMetricValue(metricId, row[column]);
         }
         console.log(`[getBenchmarks] Found state: ${locationName}, metrics with values:`, Object.values(location).filter(v => v !== null).length);
       }
@@ -369,8 +406,7 @@ export class RealtorService {
       if (row) {
         locationName = String(row.cbsa_title || '');
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-          const value = row[column] !== undefined ? Number(row[column]) : null;
-          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+          location[metricId] = this.processMetricValue(metricId, row[column]);
         }
       }
     } else if (geoLevel === 'county') {
@@ -385,8 +421,7 @@ export class RealtorService {
       if (row) {
         locationName = String(row.county_name || '');
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-          const value = row[column] !== undefined ? Number(row[column]) : null;
-          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+          location[metricId] = this.processMetricValue(metricId, row[column]);
         }
       }
     } else if (geoLevel === 'zip') {
@@ -401,8 +436,7 @@ export class RealtorService {
       if (row) {
         locationName = String(row.zip_name || '');
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
-          const value = row[column] !== undefined ? Number(row[column]) : null;
-          location[metricId] = value !== null && !isNaN(value) ? Math.round(value) : null;
+          location[metricId] = this.processMetricValue(metricId, row[column]);
         }
       }
     }
@@ -437,12 +471,26 @@ export class RealtorService {
 
     if (error) throw error;
 
-    return ((data || []) as RealtorRow[]).map(row => ({
-      region_id: String(row.state_id || ''),
-      region_name: String(row.state_name || ''),
-      state_id: String(row.state_id || ''),
-      value: Number(row[metric]) || 0,
-    }));
+    // Check if this is a growth/percent metric that needs data quality filtering
+    const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
+
+    return ((data || []) as RealtorRow[]).map(row => {
+      let value = Number(row[metric]) || 0;
+
+      // Filter out only clearly corrupt data (values in millions of percent)
+      // Growth metrics are stored as decimals (0.05 = 5%), so ±100 (±10,000%) catches only corrupt data
+      if (isGrowthMetric && (value > 100 || value < -100)) {
+        value = 0; // Treat as corrupt data
+      }
+
+      return {
+        region_id: String(row.state_id || ''),
+        region_name: String(row.state_name || ''),
+        state_id: String(row.state_id || ''),
+        value,
+        date: latestDate ? String(latestDate) : undefined,
+      };
+    });
   }
 
   // ============================================================================
@@ -485,6 +533,7 @@ export class RealtorService {
         region_name: String(row.cbsa_title || ''),
         cbsa_code: String(row.cbsa_code || ''),
         value,
+        date: latestDate ? String(latestDate) : undefined,
       };
     });
   }
@@ -523,6 +572,7 @@ export class RealtorService {
         region_name: String(row.county_name || ''),
         county_fips: String(row.county_fips || ''),
         value,
+        date: latestDate ? String(latestDate) : undefined,
       };
     });
   }
@@ -581,6 +631,7 @@ export class RealtorService {
           region_name: String(row.zip_name || ''),
           postal_code: String(row.postal_code || ''),
           value,
+          date: latestDate ? String(latestDate) : undefined,
         };
       });
   }
