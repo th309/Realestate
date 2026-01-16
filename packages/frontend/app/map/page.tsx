@@ -17,7 +17,7 @@ import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel } from './com
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
 
 // Import config
-import { NAV_ITEMS, getMetricCategories } from './config';
+import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
 
 const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
 
@@ -71,36 +71,18 @@ export default function MapPage() {
     onFeatureClick: setSelectedGeography
   });
 
-  // Metro-only metrics that should auto-switch to metro level
-  const METRO_ONLY_METRICS = new Set([
-    'income_to_buy',
-    'income_to_rent',
-    'affordable_home_price',
-    'years_to_save',
-    'homeowner_affordability',
-    'renter_affordability',
-    'new_construction_sales',
-    'new_construction_price',
-    'new_construction_ppsf',
-    'sale_price',
-    'sale_to_list',
-    'home_sales',
-    'sales_yoy',
-    'days_to_close',
-    'market_health',
-    'rent_for_houses',
-  ]);
-
-  // Auto-switch geo level for restricted metrics
+  // Auto-switch geo level when metric doesn't support current level
+  // Uses central config as single source of truth for metric/geo compatibility
   useEffect(() => {
-    const isRentIndexMode = selectedMetric === 'rent_index';
-    const isMetroOnlyMetric = METRO_ONLY_METRICS.has(selectedMetric);
-
-    if (isRentIndexMode && ['national', 'state'].includes(geoLevel)) {
-      setGeoLevel('metro');
-    }
-    if (isMetroOnlyMetric && geoLevel !== 'metro') {
-      setGeoLevel('metro');
+    // Check if current geoLevel is supported for the selected metric
+    if (!isMetricSupportedForGeo(selectedMetric, geoLevel)) {
+      // Get the first supported geo level from the metric's config
+      const config = getMetricConfig(selectedMetric);
+      const supportedGeos = config?.supportedGeos;
+      if (supportedGeos && supportedGeos.length > 0) {
+        // Auto-switch to the first supported geo (usually the broadest available)
+        setGeoLevel(supportedGeos[0] as GeoLevel);
+      }
     }
   }, [selectedMetric, geoLevel]);
 
