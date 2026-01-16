@@ -4,7 +4,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
-import type { GeoLevel, ForecastHorizon, HomeValues, SelectedGeography } from '../types';
+import type { GeoLevel, ForecastHorizon, MapData, SelectedGeography } from '../types';
 import { GEOJSON_SOURCES, FIPS_TO_STATE, STATE_NAME_TO_FIPS, getValueFromEntry, getDateFromEntry } from '../types';
 import {
   getColorScale,
@@ -68,7 +68,7 @@ interface UseMapLayersProps {
   selectedState: string;
   selectedMetric: string;
   forecastHorizon: ForecastHorizon;
-  homeValues: HomeValues;
+  mapData: MapData;
   mapLoaded: boolean;
   onFeatureClick?: (geography: SelectedGeography | null) => void;
 }
@@ -80,7 +80,7 @@ export function useMapLayers({
   selectedState,
   selectedMetric,
   forecastHorizon,
-  homeValues,
+  mapData,
   mapLoaded,
   onFeatureClick
 }: UseMapLayersProps) {
@@ -114,7 +114,7 @@ export function useMapLayers({
       const geojson = await response.json();
 
       // Add values to features
-      addValuesToFeatures(geojson, geoLevel, homeValues);
+      addValuesToFeatures(geojson, geoLevel, mapData);
 
       // Remove source again right before adding (handles race condition)
       // This is needed because another updateMapLayers call may have started
@@ -142,7 +142,7 @@ export function useMapLayers({
 
       // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
-      const { min: minVal, max: maxVal } = calculateValueRange(homeValues, metricFormat, selectedMetric);
+      const { min: minVal, max: maxVal } = calculateValueRange(mapData, metricFormat, selectedMetric);
 
       // Add layers - uses same min/max as legend for consistent colors
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson);
@@ -152,7 +152,7 @@ export function useMapLayers({
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, homeValues, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, onFeatureClick]);
+  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, onFeatureClick]);
 
   return { updateMapLayers };
 }
@@ -198,13 +198,13 @@ function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null
   return null;
 }
 
-function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeValues): void {
+function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData): void {
   if (geoLevel === 'national') {
     // National geojson has NAME: "United States", GEOID: "US"
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.NAME || feature.properties.name || 'United States';
       // Try multiple keys: "United States", "US", name
-      const entry = homeValues['United States'] ?? homeValues['US'] ?? homeValues[name];
+      const entry = mapData['United States'] ?? mapData['US'] ?? mapData[name];
       feature.properties.value = getValueFromEntry(entry) || 0;
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = feature.properties.GEOID || 'US';
@@ -215,7 +215,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'state') {
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.name;
-      const entry = homeValues[name];
+      const entry = mapData[name];
       feature.properties.value = getValueFromEntry(entry) || 0;
       feature.properties.dataDate = getDateFromEntry(entry);
       // Set state ID (FIPS code) for benchmark lookups
@@ -228,7 +228,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'county') {
     geojson.features.forEach((feature: any) => {
       const fips = feature.id || feature.properties.id;
-      const entry = homeValues[fips] ?? homeValues[String(parseInt(fips, 10))];
+      const entry = mapData[fips] ?? mapData[String(parseInt(fips, 10))];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = fips;
@@ -239,7 +239,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'metro') {
     geojson.features.forEach((feature: any) => {
       const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;
-      const entry = homeValues[cbsaCode];
+      const entry = mapData[cbsaCode];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = cbsaCode;
@@ -254,7 +254,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
       // Try matching by name first (Zillow data), then by GEOID
-      const entry = homeValues[placeName] ?? homeValues[placeId];
+      const entry = mapData[placeName] ?? mapData[placeId];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = placeId;
@@ -263,7 +263,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
       const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
-      const entry = homeValues[zipCode];
+      const entry = mapData[zipCode];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = zipCode;
@@ -277,7 +277,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeV
       const stateFips = feature.properties.STATEFP;
       const countyFips = feature.properties.COUNTYFP;
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
-      const entry = homeValues[tractId];
+      const entry = mapData[tractId];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = tractId;

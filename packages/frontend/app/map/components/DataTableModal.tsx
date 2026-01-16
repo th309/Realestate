@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { GeoLevel, HomeValues } from '../types';
+import type { GeoLevel, MapData } from '../types';
 import { getValueFromEntry, getDateFromEntry } from '../types';
 import { getMetricFormat, getMetricTitle } from '../config';
 import type { MetricFormat } from '../config';
@@ -9,7 +9,7 @@ import type { MetricFormat } from '../config';
 interface DataTableModalProps {
     isOpen: boolean;
     onClose: () => void;
-    homeValues: HomeValues;
+    mapData: MapData;
     selectedMetric: string;
     geoLevel: GeoLevel;
     forecastHorizon?: string;
@@ -46,7 +46,7 @@ function formatValue(value: number | null, format: MetricFormat): string {
 type SortDirection = 'asc' | 'desc';
 type SortField = 'name' | 'value';
 
-export function DataTableModal({ isOpen, onClose, homeValues, selectedMetric, geoLevel, forecastHorizon }: DataTableModalProps) {
+export function DataTableModal({ isOpen, onClose, mapData, selectedMetric, geoLevel, forecastHorizon }: DataTableModalProps) {
     const [sortField, setSortField] = useState<SortField>('value');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [searchFilter, setSearchFilter] = useState('');
@@ -55,9 +55,9 @@ export function DataTableModal({ isOpen, onClose, homeValues, selectedMetric, ge
     const metricFormat = getMetricFormat(selectedMetric);
     const metricName = getMetricTitle(selectedMetric, forecastHorizon);
 
-    // Transform homeValues into table rows
+    // Transform mapData into table rows
     const tableData = useMemo(() => {
-        const entries = Object.entries(homeValues).map(([key, entry]) => {
+        const entries = Object.entries(mapData).map(([key, entry]) => {
             const value = getValueFromEntry(entry);
             const date = getDateFromEntry(entry);
             return {
@@ -88,7 +88,7 @@ export function DataTableModal({ isOpen, onClose, homeValues, selectedMetric, ge
         });
 
         return filtered;
-    }, [homeValues, sortField, sortDirection, searchFilter]);
+    }, [mapData, sortField, sortDirection, searchFilter]);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -211,7 +211,7 @@ export function DataTableModal({ isOpen, onClose, homeValues, selectedMetric, ge
                 {/* Footer */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant bg-surface-container-low">
                     <p className="text-sm text-on-surface-variant">
-                        Showing {tableData.length} of {Object.keys(homeValues).length} records
+                        Showing {tableData.length} of {Object.keys(mapData).length} records
                     </p>
                     <button
                         onClick={onClose}

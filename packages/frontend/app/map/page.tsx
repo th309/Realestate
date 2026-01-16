@@ -62,13 +62,13 @@ export default function MapPage() {
   const metricCategories = useMemo(() => getMetricCategories(viewMode), [viewMode]);
 
   // Use extracted hooks
-  const { homeValues, dataLoading, fetchHomeValues } = useMapData();
+  const { mapData, dataLoading, fetchMapData } = useMapData();
   const {
     searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
     handleSearch, handleSelectSearchResult, setShowSearchResults
   } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
   const { updateMapLayers } = useMapLayers({
-    map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, homeValues, mapLoaded,
+    map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
     onFeatureClick: setSelectedGeography
   });
 
@@ -134,14 +134,14 @@ export default function MapPage() {
     const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
     if (requiresState) {
       if (selectedState) {
-        fetchHomeValues(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
+        fetchMapData(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
       }
     } else {
-      fetchHomeValues(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
+      fetchMapData(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
     }
-  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchHomeValues]);
+  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchMapData]);
 
-  // Update layers when homeValues or geoLevel changes
+  // Update layers when mapData or geoLevel changes
   // Always update when geoLevel changes to ensure correct geographic shapes are shown
   useEffect(() => {
     if (!mapLoaded) return;
@@ -151,9 +151,9 @@ export default function MapPage() {
     if (requiresState && !selectedState) return;
 
     // Always update layers when geoLevel changes - shapes should update immediately
-    // Data coloring will show "no data" until homeValues loads
+    // Data coloring will show "no data" until mapData loads
     updateMapLayers();
-  }, [homeValues, geoLevel, selectedState, mapLoaded, updateMapLayers]);
+  }, [mapData, geoLevel, selectedState, mapLoaded, updateMapLayers]);
 
   // Initialize map
   useEffect(() => {
@@ -334,7 +334,7 @@ export default function MapPage() {
             selectedMetric={selectedMetric}
             forecastHorizon={forecastHorizon}
             geoLevel={geoLevel}
-            homeValues={homeValues}
+            mapData={mapData}
           />
 
           {selectedGeography && (
@@ -359,7 +359,7 @@ export default function MapPage() {
           <DataTableModal
             isOpen={showTableView}
             onClose={() => setShowTableView(false)}
-            homeValues={homeValues}
+            mapData={mapData}
             selectedMetric={selectedMetric}
             geoLevel={geoLevel}
             forecastHorizon={forecastHorizon}

@@ -6,12 +6,17 @@ export type GeoLevel = GeoLevelType;
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
-// Home values can be simple numbers or objects with value and date
-export type HomeValueEntry = number | { value: number; date?: string };
-export type HomeValues = Record<string, HomeValueEntry>;
 
-// Helper to extract numeric value from HomeValueEntry
-export function getValueFromEntry(entry: HomeValueEntry | undefined | null): number | null {
+// Map data entries can be simple numbers or objects with value and date
+export type MapDataEntry = number | { value: number; date?: string };
+export type MapData = Record<string, MapDataEntry>;
+
+// Legacy aliases for backward compatibility (deprecated - use MapData/MapDataEntry)
+export type HomeValueEntry = MapDataEntry;
+export type HomeValues = MapData;
+
+// Helper to extract numeric value from MapDataEntry
+export function getValueFromEntry(entry: MapDataEntry | undefined | null): number | null {
   if (entry == null) return null;
   if (typeof entry === 'number') return entry;
   return entry.value;

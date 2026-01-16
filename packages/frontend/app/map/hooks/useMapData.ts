@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api, MarketStats } from '@/lib/api/client';
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, HomeValues } from '../types';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MapData } from '../types';
 
 interface UseMapDataReturn {
-  homeValues: HomeValues;
+  mapData: MapData;
   stats: MarketStats | null;
   dataLoading: boolean;
-  fetchHomeValues: (
+  fetchMapData: (
     level: GeoLevel,
     state?: string,
     metric?: string,
@@ -87,7 +87,7 @@ async function fetchRealtorMetric(
   level: GeoLevel,
   metric: string,
   state?: string
-): Promise<HomeValues> {
+): Promise<MapData> {
   switch (metric) {
     // Home Value metrics - from Realtor median_listing_price (city from Zillow)
     case 'home_value':
@@ -385,7 +385,7 @@ async function fetchZillowMetric(
   rentType: string = 'all',
   demandType: string = 'all',
   horizon?: string
-): Promise<HomeValues> {
+): Promise<MapData> {
   // Metro-only Zillow metrics
   if (ZILLOW_METRO_ONLY.has(metric) && level !== 'metro') {
     return {};
@@ -489,13 +489,13 @@ async function fetchZillowMetric(
 }
 
 export function useMapData(): UseMapDataReturn {
-  const [homeValues, setHomeValues] = useState<HomeValues>({});
+  const [mapData, setMapData] = useState<MapData>({});
   const [stats, setStats] = useState<MarketStats | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Fetch home values based on geo level and metric
+  // Fetch map data based on geo level and metric
   // Uses Realtor as primary source, Zillow for specialty data only
-  const fetchHomeValues = useCallback(async (
+  const fetchMapData = useCallback(async (
     level: GeoLevel,
     state?: string,
     metric?: string,
@@ -505,7 +505,7 @@ export function useMapData(): UseMapDataReturn {
   ) => {
     setDataLoading(true);
     try {
-      let data: HomeValues = {};
+      let data: MapData = {};
       const currentMetric = metric || 'home_value';
 
       // Check if this is a Zillow-only metric
@@ -527,7 +527,7 @@ export function useMapData(): UseMapDataReturn {
         data = await fetchRealtorMetric(level, currentMetric, state);
       }
 
-      setHomeValues(data);
+      setMapData(data);
     } catch (err) {
       console.error('Error loading data for metric:', metric, err);
     } finally {
@@ -541,9 +541,9 @@ export function useMapData(): UseMapDataReturn {
   }, []);
 
   return {
-    homeValues,
+    mapData,
     stats,
     dataLoading,
-    fetchHomeValues,
+    fetchMapData,
   };
 }

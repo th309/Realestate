@@ -10,7 +10,7 @@
  * Re-exports getMetricFormat and getMetricTitle from central config for convenience.
  */
 
-import type { HomeValues, HomeValueEntry } from '../types';
+import type { MapData, MapDataEntry } from '../types';
 import { getValueFromEntry } from '../types';
 import { getMetricFormat as getFormat, getMetricConfig } from '../config';
 import {
@@ -41,19 +41,19 @@ export const NO_DATA_COLOR = 'rgba(200, 200, 200, 0.3)';
  * Calculate the value range for color scale mapping.
  * Uses percentile-based calculation to exclude outliers.
  *
- * @param homeValues - Object mapping region IDs to values
+ * @param mapData - Object mapping region IDs to values
  * @param metricFormat - The format type of the metric
  * @param metricId - Optional metric ID for special handling
  * @returns min and max values for the color scale
  */
 export function calculateValueRange(
-  homeValues: HomeValues,
+  mapData: MapData,
   metricFormat: ReturnType<typeof getFormat>,
   metricId?: string
 ): { min: number; max: number } {
   // Extract numeric values from both simple numbers and object entries
-  const allValues = Object.values(homeValues)
-    .map((entry: HomeValueEntry) => getValueFromEntry(entry))
+  const allValues = Object.values(mapData)
+    .map((entry: MapDataEntry) => getValueFromEntry(entry))
     .filter((v): v is number => v !== null && !isNaN(v));
 
   if (allValues.length === 0) {

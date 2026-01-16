@@ -1,6 +1,6 @@
 'use client';
 
-import type { GeoLevel, ForecastHorizon, HomeValues } from '../types';
+import type { GeoLevel, ForecastHorizon, MapData } from '../types';
 import {
   COLOR_SCALE,
   getMetricFormat,
@@ -14,14 +14,14 @@ interface LegendProps {
   selectedMetric: string;
   forecastHorizon: ForecastHorizon;
   geoLevel: GeoLevel;
-  homeValues: HomeValues;
+  mapData: MapData;
 }
 
 export function Legend({
   selectedMetric,
   forecastHorizon,
   geoLevel,
-  homeValues,
+  mapData,
 }: LegendProps) {
   const metricFormat = getMetricFormat(selectedMetric);
   const legendTitle = getMetricTitle(selectedMetric, forecastHorizon);
@@ -29,7 +29,7 @@ export function Legend({
 
   // Use shared range calculation - ensures consistency with map layer colors
   // Pass selectedMetric for special handling (e.g., market_heat uses full range)
-  const { min, max } = calculateValueRange(homeValues, metricFormat, selectedMetric);
+  const { min, max } = calculateValueRange(mapData, metricFormat, selectedMetric);
 
   // Use shared formatValue for labels - ensures consistency with map
   const minLabel = formatValue(min, metricFormat, 'min');
