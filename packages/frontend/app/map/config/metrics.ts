@@ -140,12 +140,12 @@ export const METRICS: Record<string, MetricConfig> = {
 
   home_value_5yr: {
     id: 'home_value_5yr',
-    title: '5-Year Growth (CAGR)',
+    title: '5-Year Growth',
     format: 'percent',
-    dataSource: 'calculated',
+    dataSource: 'realtor',
     apiEndpoint: '/api/metrics/home-value-5yr/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro'],
+    supportedGeos: ['state', 'metro', 'county', 'zip'],
     valueField: 'cagr_5yr',
   },
 

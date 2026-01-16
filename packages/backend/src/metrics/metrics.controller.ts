@@ -185,26 +185,25 @@ export class MetricsController {
 
   /**
    * Get 5-year home value growth for metros
-   * Calculated as: (current_zhvi / zhvi_5_years_ago)^(1/5) - 1
-   * Returns annual compound growth rate as percentage
+   * Uses Realtor median_listing_price data
+   * Formula: ((current - past) / past) * 100
    */
   @Get('home-value-5yr/metros')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
-    // Get current date (latest ZHVI data)
+    // Get current date (latest data from realtor_metro table)
     let targetDate = date;
     if (!targetDate) {
       const { data: latestDate } = await this.supabase
-        .from('zillow_zhvi')
-        .select('date')
-        .eq('geography', 'Metro')
-        .order('date', { ascending: false })
+        .from('realtor_metro')
+        .select('period_date')
+        .order('period_date', { ascending: false })
         .limit(1)
         .single();
-      targetDate = latestDate?.date;
+      targetDate = latestDate?.period_date;
     }
 
     if (!targetDate) {
-      return { success: false, error: 'No ZHVI data available', data: [] };
+      return { success: false, error: 'No Realtor data available', data: [] };
     }
 
     // Calculate 5 years ago date
@@ -213,57 +212,52 @@ export class MetricsController {
     fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
 
-    // Get current ZHVI data
+    // Get current data from realtor_metro
     const { data: currentData, error: currentError } = await this.supabase
-      .from('zillow_zhvi')
-      .select('region_id, region_name, value, cbsa_code')
-      .eq('geography', 'Metro')
-      .eq('date', targetDate)
-      .not('value', 'is', null);
+      .from('realtor_metro')
+      .select('cbsa_code, metro_name, median_listing_price')
+      .eq('period_date', targetDate)
+      .not('median_listing_price', 'is', null);
 
     if (currentError || !currentData) {
-      return { success: false, error: currentError?.message || 'Failed to fetch current ZHVI data', data: [] };
+      return { success: false, error: currentError?.message || 'Failed to fetch current data', data: [] };
     }
 
-    // Get historical ZHVI data (5 years ago)
-    // Try to get closest date within 3 months of 5 years ago
+    // Get historical data (5 years ago) - try to get closest date within 3 months
     const { data: pastData } = await this.supabase
-      .from('zillow_zhvi')
-      .select('region_id, value, date')
-      .eq('geography', 'Metro')
-      .gte('date', pastDateStr)
-      .lte('date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-      .not('value', 'is', null)
-      .order('date', { ascending: true });
+      .from('realtor_metro')
+      .select('cbsa_code, median_listing_price, period_date')
+      .gte('period_date', pastDateStr)
+      .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .not('median_listing_price', 'is', null)
+      .order('period_date', { ascending: true });
 
     // Create lookup for past values (use earliest available date per region)
     const pastByRegion: Record<string, { value: number; date: string }> = {};
     if (pastData) {
       for (const row of pastData) {
-        if (!pastByRegion[row.region_id]) {
-          pastByRegion[row.region_id] = { value: row.value, date: row.date };
+        if (!pastByRegion[row.cbsa_code]) {
+          pastByRegion[row.cbsa_code] = { value: row.median_listing_price, date: row.period_date };
         }
       }
     }
 
-    // Calculate 5-year CAGR for each metro
+    // Calculate 5-year growth for each metro: ((current - past) / past) * 100
     const results = currentData
-      .filter(metro => pastByRegion[metro.region_id])
+      .filter(metro => pastByRegion[metro.cbsa_code] && pastByRegion[metro.cbsa_code].value > 0)
       .map(metro => {
-        const currentValue = metro.value;
-        const pastValue = pastByRegion[metro.region_id].value;
+        const currentValue = metro.median_listing_price;
+        const pastValue = pastByRegion[metro.cbsa_code].value;
 
-        // Calculate CAGR: (current / past)^(1/5) - 1
-        const cagr = Math.pow(currentValue / pastValue, 1 / 5) - 1;
-        const cagrPercent = cagr * 100;
+        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
 
         return {
-          region_id: metro.region_id,
-          region_name: metro.region_name,
+          region_id: metro.cbsa_code,
+          region_name: metro.metro_name,
           cbsa_code: metro.cbsa_code,
-          current_zhvi: currentValue,
-          past_zhvi: pastValue,
-          cagr_5yr: Math.round(cagrPercent * 100) / 100, // Round to 2 decimal places
+          value: Math.round(growthPct * 100) / 100,
+          cagr_5yr: Math.round(growthPct * 100) / 100,
+          date: targetDate,
         };
       });
 
@@ -271,7 +265,7 @@ export class MetricsController {
       success: true,
       count: results.length,
       geography: 'Metro',
-      metric: 'home_value_5yr_cagr',
+      metric: 'home_value_5yr',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,
@@ -280,24 +274,24 @@ export class MetricsController {
 
   /**
    * Get 5-year home value growth for states
+   * Uses Realtor median_listing_price data
    */
   @Get('home-value-5yr/states')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
-    // Get current date (latest ZHVI data)
+    // Get current date
     let targetDate = date;
     if (!targetDate) {
       const { data: latestDate } = await this.supabase
-        .from('zillow_zhvi')
-        .select('date')
-        .eq('geography', 'State')
-        .order('date', { ascending: false })
+        .from('realtor_state')
+        .select('period_date')
+        .order('period_date', { ascending: false })
         .limit(1)
         .single();
-      targetDate = latestDate?.date;
+      targetDate = latestDate?.period_date;
     }
 
     if (!targetDate) {
-      return { success: false, error: 'No ZHVI data available', data: [] };
+      return { success: false, error: 'No Realtor data available', data: [] };
     }
 
     // Calculate 5 years ago date
@@ -306,54 +300,51 @@ export class MetricsController {
     fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
 
-    // Get current ZHVI data
+    // Get current data from realtor_state
     const { data: currentData, error: currentError } = await this.supabase
-      .from('zillow_zhvi')
-      .select('region_id, region_name, value')
-      .eq('geography', 'State')
-      .eq('date', targetDate)
-      .not('value', 'is', null);
+      .from('realtor_state')
+      .select('state_id, state_name, median_listing_price')
+      .eq('period_date', targetDate)
+      .not('median_listing_price', 'is', null);
 
     if (currentError || !currentData) {
-      return { success: false, error: currentError?.message || 'Failed to fetch current ZHVI data', data: [] };
+      return { success: false, error: currentError?.message || 'Failed to fetch current data', data: [] };
     }
 
-    // Get historical ZHVI data (5 years ago)
+    // Get historical data (5 years ago)
     const { data: pastData } = await this.supabase
-      .from('zillow_zhvi')
-      .select('region_id, value, date')
-      .eq('geography', 'State')
-      .gte('date', pastDateStr)
-      .lte('date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-      .not('value', 'is', null)
-      .order('date', { ascending: true });
+      .from('realtor_state')
+      .select('state_id, median_listing_price, period_date')
+      .gte('period_date', pastDateStr)
+      .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .not('median_listing_price', 'is', null)
+      .order('period_date', { ascending: true });
 
     // Create lookup for past values
     const pastByRegion: Record<string, { value: number; date: string }> = {};
     if (pastData) {
       for (const row of pastData) {
-        if (!pastByRegion[row.region_id]) {
-          pastByRegion[row.region_id] = { value: row.value, date: row.date };
+        if (!pastByRegion[row.state_id]) {
+          pastByRegion[row.state_id] = { value: row.median_listing_price, date: row.period_date };
         }
       }
     }
 
-    // Calculate 5-year CAGR for each state
+    // Calculate 5-year growth for each state
     const results = currentData
-      .filter(state => pastByRegion[state.region_id])
+      .filter(state => pastByRegion[state.state_id] && pastByRegion[state.state_id].value > 0)
       .map(state => {
-        const currentValue = state.value;
-        const pastValue = pastByRegion[state.region_id].value;
+        const currentValue = state.median_listing_price;
+        const pastValue = pastByRegion[state.state_id].value;
 
-        const cagr = Math.pow(currentValue / pastValue, 1 / 5) - 1;
-        const cagrPercent = cagr * 100;
+        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
 
         return {
-          region_id: state.region_id,
-          region_name: state.region_name,
-          current_zhvi: currentValue,
-          past_zhvi: pastValue,
-          cagr_5yr: Math.round(cagrPercent * 100) / 100,
+          region_id: state.state_id,
+          region_name: state.state_name,
+          value: Math.round(growthPct * 100) / 100,
+          cagr_5yr: Math.round(growthPct * 100) / 100,
+          date: targetDate,
         };
       });
 
@@ -361,7 +352,238 @@ export class MetricsController {
       success: true,
       count: results.length,
       geography: 'State',
-      metric: 'home_value_5yr_cagr',
+      metric: 'home_value_5yr',
+      current_date: targetDate,
+      past_date: pastDateStr,
+      data: results,
+    };
+  }
+
+  /**
+   * Get 5-year home value growth for counties
+   * Uses Realtor median_listing_price data
+   */
+  @Get('home-value-5yr/counties')
+  async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
+    // Get current date
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestDate } = await this.supabase
+        .from('realtor_county')
+        .select('period_date')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestDate?.period_date;
+    }
+
+    if (!targetDate) {
+      return { success: false, error: 'No Realtor data available', data: [] };
+    }
+
+    // Calculate 5 years ago date
+    const currentDate = new Date(targetDate);
+    const fiveYearsAgo = new Date(currentDate);
+    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+
+    // Get current data - paginate to get all counties
+    const allCurrentData: any[] = [];
+    let offset = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      const { data: pageData, error } = await this.supabase
+        .from('realtor_county')
+        .select('county_fips, county_name, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null)
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { success: false, error: error.message, data: [] };
+      }
+
+      if (!pageData || pageData.length === 0) break;
+      allCurrentData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Get historical data - paginate
+    const allPastData: any[] = [];
+    offset = 0;
+
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('realtor_county')
+        .select('county_fips, median_listing_price, period_date')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allPastData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Create lookup for past values
+    const pastByRegion: Record<string, { value: number; date: string }> = {};
+    for (const row of allPastData) {
+      if (!pastByRegion[row.county_fips]) {
+        pastByRegion[row.county_fips] = { value: row.median_listing_price, date: row.period_date };
+      }
+    }
+
+    // Calculate 5-year growth for each county
+    const results = allCurrentData
+      .filter(county => pastByRegion[county.county_fips] && pastByRegion[county.county_fips].value > 0)
+      .map(county => {
+        const currentValue = county.median_listing_price;
+        const pastValue = pastByRegion[county.county_fips].value;
+
+        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
+
+        return {
+          region_id: county.county_fips,
+          region_name: county.county_name,
+          county_fips: county.county_fips,
+          value: Math.round(growthPct * 100) / 100,
+          cagr_5yr: Math.round(growthPct * 100) / 100,
+          date: targetDate,
+        };
+      });
+
+    return {
+      success: true,
+      count: results.length,
+      geography: 'County',
+      metric: 'home_value_5yr',
+      current_date: targetDate,
+      past_date: pastDateStr,
+      data: results,
+    };
+  }
+
+  /**
+   * Get 5-year home value growth for zip codes
+   * Uses Realtor median_listing_price data
+   */
+  @Get('home-value-5yr/zips')
+  async getZipHomeValue5YrGrowth(@Query('state') state?: string, @Query('date') date?: string) {
+    // Get current date
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestDate } = await this.supabase
+        .from('realtor_zip')
+        .select('period_date')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestDate?.period_date;
+    }
+
+    if (!targetDate) {
+      return { success: false, error: 'No Realtor data available', data: [] };
+    }
+
+    // Calculate 5 years ago date
+    const currentDate = new Date(targetDate);
+    const fiveYearsAgo = new Date(currentDate);
+    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+
+    // Build state filter pattern (zip_name format: "city, ST")
+    const statePattern = state ? `%, ${state.toUpperCase()}` : null;
+
+    // Get current data - paginate
+    const allCurrentData: any[] = [];
+    let offset = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      let query = this.supabase
+        .from('realtor_zip')
+        .select('postal_code, zip_name, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null);
+
+      if (statePattern) {
+        query = query.ilike('zip_name', statePattern);
+      }
+
+      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { success: false, error: error.message, data: [] };
+      }
+
+      if (!pageData || pageData.length === 0) break;
+      allCurrentData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Get historical data - paginate
+    const allPastData: any[] = [];
+    offset = 0;
+
+    while (true) {
+      let query = this.supabase
+        .from('realtor_zip')
+        .select('postal_code, median_listing_price, period_date')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true });
+
+      if (statePattern) {
+        query = query.ilike('zip_name', statePattern);
+      }
+
+      const { data: pageData } = await query.range(offset, offset + pageSize - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allPastData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Create lookup for past values
+    const pastByRegion: Record<string, { value: number; date: string }> = {};
+    for (const row of allPastData) {
+      if (!pastByRegion[row.postal_code]) {
+        pastByRegion[row.postal_code] = { value: row.median_listing_price, date: row.period_date };
+      }
+    }
+
+    // Calculate 5-year growth for each zip
+    const results = allCurrentData
+      .filter(zip => pastByRegion[zip.postal_code] && pastByRegion[zip.postal_code].value > 0)
+      .map(zip => {
+        const currentValue = zip.median_listing_price;
+        const pastValue = pastByRegion[zip.postal_code].value;
+
+        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
+
+        return {
+          region_id: zip.postal_code,
+          region_name: zip.zip_name,
+          postal_code: zip.postal_code,
+          value: Math.round(growthPct * 100) / 100,
+          cagr_5yr: Math.round(growthPct * 100) / 100,
+          date: targetDate,
+        };
+      });
+
+    return {
+      success: true,
+      count: results.length,
+      geography: 'ZIP',
+      metric: 'home_value_5yr',
       current_date: targetDate,
       past_date: pastDateStr,
       data: results,
