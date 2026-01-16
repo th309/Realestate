@@ -11,7 +11,7 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel } from './components';
+import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel, DataTableModal } from './components';
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
@@ -40,6 +40,7 @@ export default function MapPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedGeography, setSelectedGeography] = useState<SelectedGeography | null>(null);
+  const [showTableView, setShowTableView] = useState(false);
   const isResizing = useRef(false);
   const pathname = usePathname();
 
@@ -346,10 +347,23 @@ export default function MapPage() {
           )}
 
           {/* M3 Extended FAB */}
-          <button className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container">
+          <button
+            onClick={() => setShowTableView(true)}
+            className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
+          >
             <TableIcon />
             <span className="hidden sm:inline font-medium">Table View</span>
           </button>
+
+          {/* Data Table Modal */}
+          <DataTableModal
+            isOpen={showTableView}
+            onClose={() => setShowTableView(false)}
+            homeValues={homeValues}
+            selectedMetric={selectedMetric}
+            geoLevel={geoLevel}
+            forecastHorizon={forecastHorizon}
+          />
         </main>
       </div>
     </div>
