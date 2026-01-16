@@ -26,6 +26,76 @@ export class RealtorController {
   }
 
   // ============================================================================
+  // National Data (all metrics from realtor_national table)
+  // ============================================================================
+
+  @Get('home-value/national')
+  async getNationalHomeValue(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_listing_price', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_listing_price', data };
+  }
+
+  @Get('home-value-yoy/national')
+  async getNationalHomeValueYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_listing_price_yy', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_listing_price_yy', data };
+  }
+
+  @Get('home-value-mom/national')
+  async getNationalHomeValueMom(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_listing_price_mm', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_listing_price_mm', data };
+  }
+
+  @Get('inventory/national')
+  async getNationalInventory(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('active_listing_count', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'active_listing_count', data };
+  }
+
+  @Get('inventory-yoy/national')
+  async getNationalInventoryYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('active_listing_count_yy', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'active_listing_count_yy', data };
+  }
+
+  @Get('dom/national')
+  async getNationalDom(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_days_on_market', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_days_on_market', data };
+  }
+
+  @Get('new-listings/national')
+  async getNationalNewListings(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('new_listing_count', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'new_listing_count', data };
+  }
+
+  @Get('pending-listings/national')
+  async getNationalPendingListings(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('pending_listing_count', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'pending_listing_count', data };
+  }
+
+  @Get('price-reduced/national')
+  async getNationalPriceReduced(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('price_reduced_share', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'price_reduced_share', data };
+  }
+
+  @Get('price-per-sqft/national')
+  async getNationalPricePerSqft(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_listing_price_per_square_foot', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_listing_price_per_square_foot', data };
+  }
+
+  @Get('pending-ratio/national')
+  async getNationalPendingRatio(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('pending_ratio', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'pending_ratio', data };
+  }
+
+  // ============================================================================
   // Home Value (median_listing_price)
   // ============================================================================
 

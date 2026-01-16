@@ -93,8 +93,9 @@ async function fetchRealtorMetric(
     case 'home_value':
     case 'list_price':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalHomeValues();
+        case 'state':
           return api.getRealtorStateHomeValues();
         case 'metro':
           return api.getRealtorMetroHomeValues();
@@ -111,8 +112,9 @@ async function fetchRealtorMetric(
     // Home Value YoY - from Realtor median_listing_price_yy (no city data)
     case 'home_value_yoy':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalHomeValueYoy();
+        case 'state':
           return api.getRealtorStateHomeValueYoy();
         case 'metro':
           return api.getRealtorMetroHomeValueYoy();
@@ -129,8 +131,9 @@ async function fetchRealtorMetric(
     // Home Value MoM - from Realtor median_listing_price_mm (no city data)
     case 'home_value_mom':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalHomeValueMom();
+        case 'state':
           return api.getRealtorStateHomeValueMom();
         case 'metro':
           return api.getRealtorMetroHomeValueMom();
@@ -147,8 +150,8 @@ async function fetchRealtorMetric(
     // Home Value 5-Year Growth (CAGR) - calculated from Zillow ZHVI
     case 'home_value_5yr':
       switch (level) {
-        case 'state':
         case 'national':
+        case 'state':
           return api.getStateHomeValue5Yr();
         case 'metro':
           return api.getMetroHomeValue5Yr();
@@ -163,8 +166,9 @@ async function fetchRealtorMetric(
     // Inventory - from Realtor active_listing_count (no city data)
     case 'for_sale_inventory':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalInventory();
+        case 'state':
           return api.getRealtorStateInventory();
         case 'metro':
           return api.getRealtorMetroInventory();
@@ -181,8 +185,9 @@ async function fetchRealtorMetric(
     // Inventory YoY - from Realtor active_listing_count_yy (no city data)
     case 'inventory_yoy':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalInventoryYoy();
+        case 'state':
           return api.getRealtorStateInventoryYoy();
         case 'metro':
           return api.getRealtorMetroInventoryYoy();
@@ -199,8 +204,9 @@ async function fetchRealtorMetric(
     // Days on Market - from Realtor median_days_on_market (no city data)
     case 'days_on_market':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalDom();
+        case 'state':
           return api.getRealtorStateDom();
         case 'metro':
           return api.getRealtorMetroDom();
@@ -217,8 +223,9 @@ async function fetchRealtorMetric(
     // New Listings - from Realtor new_listing_count (no city data)
     case 'new_listings':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalNewListings();
+        case 'state':
           return api.getRealtorStateNewListings();
         case 'metro':
           return api.getRealtorMetroNewListings();
@@ -235,8 +242,9 @@ async function fetchRealtorMetric(
     // Pending Listings - from Realtor pending_listing_count (no city data)
     case 'pending_listings':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalPendingListings();
+        case 'state':
           return api.getRealtorStatePendingListings();
         case 'metro':
           return api.getRealtorMetroPendingListings();
@@ -253,8 +261,9 @@ async function fetchRealtorMetric(
     // Price Cut % - from Realtor price_reduced_share (no city data)
     case 'price_cut_pct':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalPriceReduced();
+        case 'state':
           return api.getRealtorStatePriceReduced();
         case 'metro':
           return api.getRealtorMetroPriceReduced();
@@ -271,8 +280,9 @@ async function fetchRealtorMetric(
     // Price per Sq Ft - from Realtor median_listing_price_per_square_foot (no city data)
     case 'price_per_sqft':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalPricePerSqft();
+        case 'state':
           return api.getRealtorStatePricePerSqft();
         case 'metro':
           return api.getRealtorMetroPricePerSqft();
@@ -289,8 +299,9 @@ async function fetchRealtorMetric(
     // Pending Ratio - from Realtor pending_ratio (no city data)
     case 'pending_ratio':
       switch (level) {
-        case 'state':
         case 'national':
+          return api.getRealtorNationalPendingRatio();
+        case 'state':
           return api.getRealtorStatePendingRatio();
         case 'metro':
           return api.getRealtorMetroPendingRatio();

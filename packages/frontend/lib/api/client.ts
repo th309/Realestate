@@ -643,6 +643,63 @@ export const api = {
     return result;
   },
 
+  // --- National Data (from realtor_national table) ---
+  // Returns { 'United States': value } for national level display
+  getRealtorNationalHomeValues: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalHomeValueYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-yoy/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorNationalHomeValueMom: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value-mom/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorNationalInventory: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalInventoryYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/inventory-yoy/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorNationalDom: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/dom/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalNewListings: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalPendingListings: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalPriceReduced: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-reduced/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorNationalPricePerSqft: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/price-per-sqft/national');
+    return api.transformRealtorResponse(response, 'region_name');
+  },
+
+  getRealtorNationalPendingRatio: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-ratio/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
   // --- Home Value (median_listing_price) ---
   getRealtorStateHomeValues: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/home-value/states');
