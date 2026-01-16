@@ -134,7 +134,7 @@ export class RealtorService {
   }
 
   /**
-   * Fetch ZIP data filtered by state at database level (much faster than full fetch + JS filter)
+   * Fetch ZIP data filtered by state at database level with pagination
    * ZIP names are formatted as "city, ST" so we use ilike to match state suffix
    */
   private async fetchZipsByState(
@@ -150,18 +150,37 @@ export class RealtorService {
 
     // Query with state filter at database level - zip_name format is "city, ST"
     const statePattern = `%, ${state.toLowerCase()}`;
-    const { data, error } = await this.supabase
-      .from('realtor_zip')
-      .select('*')
-      .eq('period_date', periodDate)
-      .ilike('zip_name', statePattern);
+    const allData: RealtorRow[] = [];
+    let offset = 0;
+    let hasMore = true;
 
-    if (error) throw error;
-    const rows = (data || []) as RealtorRow[];
+    // Paginate to get all rows (bypasses Supabase 1000 row default limit)
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('realtor_zip')
+        .select('*')
+        .eq('period_date', periodDate)
+        .ilike('zip_name', statePattern)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error) throw error;
+      const rows = (data || []) as RealtorRow[];
+
+      if (rows.length > 0) {
+        allData.push(...rows);
+      }
+
+      // If we got fewer than PAGE_SIZE rows, we've fetched everything
+      if (rows.length < this.PAGE_SIZE) {
+        hasMore = false;
+      } else {
+        offset += this.PAGE_SIZE;
+      }
+    }
 
     // Cache state-specific results
-    this.setCache(cacheKey, rows);
-    return rows;
+    this.setCache(cacheKey, allData);
+    return allData;
   }
 
   /**
