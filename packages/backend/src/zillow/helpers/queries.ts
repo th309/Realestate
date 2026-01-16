@@ -15,7 +15,7 @@ export type GeographyType = 'state' | 'metro' | 'county' | 'city' | 'zip';
 export type MetricName = 'zhvi' | 'zhvi_yoy' | 'zori' | 'zori_sfr' | 'zori_mfr' | 'zori_yoy' | 'inventory' | 'inventory_yoy' |
   'dom' | 'sale_price' | 'list_price' | 'new_listings' | 'pending_sales' |
   'sale_to_list' | 'price_cuts' | 'zhvf_1m' | 'zhvf_3m' | 'zhvf_12m' | 'market_heat' |
-  'homeowner_income' | 'zordi';
+  'homeowner_income' | 'zordi' | 'zordi_sfr' | 'zordi_mfr';
 
 // Map geography string to table name
 function getTableForGeography(geography: string): string {
@@ -90,6 +90,7 @@ export async function getLatestDate(
 const tableToMetricForDate: Record<string, MetricName> = {
   'zillow_zhvi': 'zhvi',
   'zillow_zori': 'zori',
+  'zillow_zordi': 'zordi',
   'zillow_inventory': 'inventory',
   'zillow_new_listings': 'new_listings',
   'zillow_pending_listings': 'pending_sales',
@@ -380,6 +381,21 @@ export function mapRentPropertyType(type: string): MetricName {
 }
 
 /**
+ * Map frontend property type to database metric name for ZORDI (Renter Demand Index)
+ * - 'all' → 'zordi' (All Homes from Metro_zordi_uc_sfrcondomfr_month)
+ * - 'sfr' → 'zordi_sfr' (Single Family from Metro_zordi_uc_sfr_month)
+ * - 'mfr' → 'zordi_mfr' (Multi-Family from Metro_zordi_uc_mfr_month)
+ */
+export function mapDemandPropertyType(type: string): MetricName {
+  switch (type) {
+    case 'sfr': return 'zordi_sfr';
+    case 'mfr': return 'zordi_mfr';
+    case 'all':
+    default: return 'zordi';
+  }
+}
+
+/**
  * Get forecast value based on horizon
  */
 export function getForecastValue(forecast: any, horizon: string): number {
@@ -427,19 +443,22 @@ export async function queryZori(
 
 /**
  * Query ZORDI (renter demand) data (legacy-compatible)
- * Note: ZORDI not yet migrated, returns empty for now
+ * propertyType maps to metric_name:
+ * - 'all' → 'zordi' (All Homes)
+ * - 'sfr' → 'zordi_sfr' (Single Family)
+ * - 'mfr' → 'zordi_mfr' (Multi-Family)
  */
 export async function queryZordi(
   supabase: SupabaseClient,
   geography: string | string[],
   targetDate: string,
-  _propertyType: string,
+  propertyType: string = 'all',
   regionIds?: string[]
-): Promise<any[]> {
-  // ZORDI data not yet in new schema - return empty array
-  // TODO: Add zordi metric to new tables or keep separate table
-  console.warn('queryZordi: ZORDI data not yet migrated to new schema');
-  return [];
+) {
+  const geoType = (Array.isArray(geography) ? geography[0] : geography).toLowerCase() as GeographyType;
+  const numericIds = regionIds?.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+  const metricName = mapDemandPropertyType(propertyType);
+  return queryWithLegacyFormat(supabase, geoType, metricName, targetDate, numericIds);
 }
 
 /**

@@ -559,10 +559,11 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroRenterDemand(date?: string, propertyType: string = 'all'): Promise<HomeValueData[]> {
-    const dbPropertyType = mapRentPropertyType(propertyType);
+    // ZORDI data is in zillow_metro with metric_name = 'zordi', 'zordi_sfr', 'zordi_mfr'
     const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Metro');
 
-    const zillow = await queryZordi(this.supabase, ['Metro', 'US'], targetDate, dbPropertyType);
+    // Pass propertyType directly - queryZordi handles mapping to metric name
+    const zillow = await queryZordi(this.supabase, ['Metro', 'US'], targetDate, propertyType);
     if (!zillow.length) return [];
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
@@ -595,8 +596,7 @@ export class ZillowService {
   }
 
   async getZipRenterDemand(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
-    const dbPropertyType = mapRentPropertyType(propertyType);
-
+    // ZORDI data is in zillow_metro (metro only for now)
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
       date ? Promise.resolve(date) : getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'),
@@ -606,7 +606,8 @@ export class ZillowService {
     const zipCodes = [...zipMap.keys()];
     if (zipCodes.length === 0) return [];
 
-    const zillow = await queryZordi(this.supabase, 'Zip', targetDate, dbPropertyType, zipCodes);
+    // Pass propertyType directly - queryZordi handles mapping to metric name
+    const zillow = await queryZordi(this.supabase, 'Zip', targetDate, propertyType, zipCodes);
 
     return zillow.map(z => {
       const zip = zipMap.get(z.region_id);
