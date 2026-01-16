@@ -18,6 +18,49 @@ import { getMetricDataDate, formatDataDateForDisplay } from '../config/metrics';
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+/**
+ * Fetch with retry logic for large GeoJSON endpoints (county, zip)
+ * These can timeout on cold cache, so retry up to 3 times with backoff
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number = 3,
+  baseDelayMs: number = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+
+      // Retry on 500 errors (cold cache timeout)
+      if (response.status >= 500) {
+        lastError = new Error(`Server error: ${response.status}`);
+        if (attempt < maxRetries) {
+          const delay = baseDelayMs * attempt; // Linear backoff: 1s, 2s, 3s
+          console.warn(`GeoJSON fetch failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw lastError;
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (attempt < maxRetries) {
+        const delay = baseDelayMs * attempt;
+        console.warn(`GeoJSON fetch error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, err);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+    }
+  }
+
+  throw lastError || new Error('Fetch failed after retries');
+}
+
 interface UseMapLayersProps {
   map: React.MutableRefObject<mapboxgl.Map | null>;
   popup: React.MutableRefObject<mapboxgl.Popup | null>;
@@ -63,7 +106,11 @@ export function useMapLayers({
     if (!geojsonUrl) return;
 
     try {
-      const response = await fetch(geojsonUrl);
+      // Use retry logic for county and zip (large datasets that can timeout on cold cache)
+      const useRetry = geoLevel === 'county' || geoLevel === 'zip';
+      const response = useRetry
+        ? await fetchWithRetry(geojsonUrl, 3, 1000)
+        : await fetch(geojsonUrl);
       const geojson = await response.json();
 
       // Add values to features
