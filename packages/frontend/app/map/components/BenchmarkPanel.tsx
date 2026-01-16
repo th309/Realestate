@@ -8,6 +8,8 @@ import {
   VIEW_MODE_COLORS,
   getBenchmarkGradient,
   getComparisonColor,
+  DATA_DATES,
+  formatDataDateForDisplay,
 } from '../config';
 
 // API URL for backend
@@ -315,9 +317,9 @@ export function BenchmarkPanel({
                 ))}
               </div>
 
-              {/* Footer */}
+              {/* Footer with source and data date */}
               <div className="mt-3 pt-2 border-t border-outline-variant text-[10px] text-on-surface-variant">
-                Source: Realtor.com
+                Source: Realtor.com · as of {formatDataDateForDisplay(DATA_DATES.realtor)}
               </div>
             </>
           ) : (

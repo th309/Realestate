@@ -7,6 +7,7 @@ import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from 
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
 import { PropertyTypeSelector } from './PropertyTypeSelector';
 import { getMetricDefinition } from '../../data/metricDefinitions';
+import { getMetricDataDate, formatDataDateForDisplay } from '../../config';
 
 interface MetricItemProps {
   metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean };
@@ -125,6 +126,7 @@ export function MetricItem({
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-on-surface-variant border-t border-outline-variant pt-2 mt-2">
             <span><span className="font-medium">Source:</span> {metricDef.dataSource}</span>
             <span><span className="font-medium">Updates:</span> {metricDef.updateFrequency}</span>
+            <span><span className="font-medium">As of:</span> {formatDataDateForDisplay(getMetricDataDate(metric.id))}</span>
           </div>
 
           {metricDef.notes && (

@@ -39,6 +39,10 @@ export {
   getKeyFieldForGeo,
   getGeoPathSegment,
   isMetricSupportedForGeo,
+  // Data dates - central config for "as of" dates
+  DATA_DATES,
+  getMetricDataDate,
+  formatDataDateForDisplay,
   type MetricConfig,
   type MetricFormat,
   type DataSource,

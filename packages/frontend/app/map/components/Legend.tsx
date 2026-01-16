@@ -8,6 +8,7 @@ import {
   calculateValueRange,
   formatValue,
 } from '../utils';
+import { getMetricDataDate, formatDataDateForDisplay } from '../config';
 
 interface LegendProps {
   selectedMetric: string;
@@ -34,6 +35,9 @@ export function Legend({
   const minLabel = formatValue(min, metricFormat, 'min');
   const maxLabel = formatValue(max, metricFormat, 'max');
 
+  // Get "as of" date from central config
+  const dataDate = formatDataDateForDisplay(getMetricDataDate(selectedMetric));
+
   // Percent legend (forecasts, growth rates)
   if (metricFormat === 'percent') {
     return (
@@ -53,7 +57,7 @@ export function Legend({
             Forecast data available for Metro and ZIP levels
           </div>
         )}
-        <NoDataIndicator />
+        <NoDataIndicator dataDate={dataDate} />
       </div>
     );
   }
@@ -72,7 +76,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator />
+        <NoDataIndicator dataDate={dataDate} />
       </div>
     );
   }
@@ -91,7 +95,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator />
+        <NoDataIndicator dataDate={dataDate} />
       </div>
     );
   }
@@ -110,7 +114,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator />
+        <NoDataIndicator dataDate={dataDate} />
       </div>
     );
   }
@@ -129,7 +133,7 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        <NoDataIndicator />
+        <NoDataIndicator dataDate={dataDate} />
       </div>
     );
   }
@@ -148,16 +152,19 @@ export function Legend({
         <span>{minLabel}</span>
         <span>{maxLabel}</span>
       </div>
-      <NoDataIndicator />
+      <NoDataIndicator dataDate={dataDate} />
     </div>
   );
 }
 
-function NoDataIndicator() {
+function NoDataIndicator({ dataDate }: { dataDate: string }) {
   return (
-    <div className="flex items-center gap-1.5 md:gap-2 mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
-      <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
-      <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
+    <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
+      <div className="flex items-center gap-1.5 md:gap-2">
+        <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
+        <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
+      </div>
+      <div className="text-[9px] md:text-[10px] text-outline mt-1.5">as of {dataDate}</div>
     </div>
   );
 }
