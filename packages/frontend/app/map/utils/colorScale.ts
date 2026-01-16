@@ -16,6 +16,17 @@ export function getColorScale(
   min: number,
   max: number
 ): MapboxColorExpression {
+  // Handle single value case (e.g., national level with 1 data point)
+  // Mapbox interpolate requires strictly ascending values
+  if (min === max || max - min < 0.001) {
+    // Return middle color for single value
+    return [
+      'case',
+      ['==', ['get', 'value'], null], NO_DATA_COLOR,
+      COLOR_SCALE[3] // Use middle color (yellow-green)
+    ];
+  }
+
   // Calculate step size for 7-color interpolation
   const range = max - min;
   const step = range / 6;
