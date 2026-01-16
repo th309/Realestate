@@ -2,36 +2,7 @@
 
 import type { GeoLevel } from '../types';
 import { US_STATES } from '../types';
-
-// Metrics that have city-level data available (from Zillow ZHVI city data)
-// All other metrics do NOT have city data
-const CITY_AVAILABLE_METRICS = new Set([
-  'home_value',
-  'list_price',
-]);
-
-// Metrics that are ONLY available at metro level
-const METRO_ONLY_METRICS = new Set([
-  'income_to_buy',
-  'income_to_rent',
-  'affordable_home_price',
-  'years_to_save',
-  'homeowner_affordability',
-  'renter_affordability',
-  'new_construction_sales',
-  'new_construction_price',
-  'new_construction_ppsf',
-  'sale_price',
-  'sale_to_list',
-  'home_sales',
-  'sales_yoy',
-  'days_to_close',
-  'market_health',
-  'rent_for_houses',
-  'overvalued_pct',
-  'cap_rate',
-  'gross_yield',
-]);
+import { isMetricSupportedForGeo } from '../config';
 
 interface GeoLevelPillsProps {
   geoLevel: GeoLevel;
@@ -50,10 +21,6 @@ export function GeoLevelPills({
   onStateChange,
   isMobile = false,
 }: GeoLevelPillsProps) {
-  const isForecastMode = selectedMetric === 'home_price_forecast';
-  const isRentIndexMode = selectedMetric === 'rent_index';
-  const isMetroOnlyMode = METRO_ONLY_METRICS.has(selectedMetric);
-
   const levels = ['National', 'State', 'Metro', 'County', 'City', 'Zip'] as const;
 
   return (
@@ -62,13 +29,8 @@ export function GeoLevelPills({
         const levelKey = level.toLowerCase() as GeoLevel;
         const isActive = geoLevel === levelKey;
 
-        // Determine if this level is disabled based on selected metric
-        // City is only available for home_value and list_price metrics
-        const isCityDisabled = levelKey === 'city' && !CITY_AVAILABLE_METRICS.has(selectedMetric);
-        const isForecastDisabled = isForecastMode && !['metro', 'zip'].includes(levelKey);
-        const isRentIndexDisabled = isRentIndexMode && ['national', 'state'].includes(levelKey);
-        const isMetroOnlyDisabled = isMetroOnlyMode && levelKey !== 'metro';
-        const isDisabled = isCityDisabled || isForecastDisabled || isRentIndexDisabled || isMetroOnlyDisabled;
+        // Use central config to determine if metric supports this geography level
+        const isDisabled = !isMetricSupportedForGeo(selectedMetric, levelKey);
 
         // M3 Filter Chips: rounded-lg, border-outline, bg-surface
         return (
