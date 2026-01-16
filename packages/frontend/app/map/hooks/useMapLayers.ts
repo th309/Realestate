@@ -116,7 +116,9 @@ function removeExistingLayers(map: mapboxgl.Map): void {
 
 function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null {
   // All GeoJSON now comes from the backend API
-  if (geoLevel === 'state' || geoLevel === 'national') {
+  if (geoLevel === 'national') {
+    return `${API_URL}${GEOJSON_SOURCES.national}`;
+  } else if (geoLevel === 'state') {
     return `${API_URL}${GEOJSON_SOURCES.state}`;
   } else if (geoLevel === 'county') {
     // Use state-specific endpoint if state selected, otherwise all counties
@@ -139,7 +141,20 @@ function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null
 }
 
 function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, homeValues: HomeValues): void {
-  if (geoLevel === 'state' || geoLevel === 'national') {
+  if (geoLevel === 'national') {
+    // National geojson has NAME: "United States", GEOID: "US"
+    geojson.features.forEach((feature: any) => {
+      const name = feature.properties.NAME || feature.properties.name || 'United States';
+      // Try multiple keys: "United States", "US", name
+      const entry = homeValues['United States'] ?? homeValues['US'] ?? homeValues[name];
+      feature.properties.value = getValueFromEntry(entry) || 0;
+      feature.properties.dataDate = getDateFromEntry(entry);
+      feature.properties.id = feature.properties.GEOID || 'US';
+      feature.properties.displayName = name;
+      // Normalize property names for consistent tooltip display
+      feature.properties.name = name;
+    });
+  } else if (geoLevel === 'state') {
     geojson.features.forEach((feature: any) => {
       const name = feature.properties.name;
       const entry = homeValues[name];

@@ -9,6 +9,21 @@ export class GeographyController {
 
   constructor(private readonly geographyService: GeographyService) {}
 
+  @Get('national')
+  @ApiOperation({ summary: 'Get US national boundary as GeoJSON' })
+  @Header('Cache-Control', 'public, max-age=86400')
+  async getNational(): Promise<GeoJSONFeatureCollection> {
+    try {
+      return await this.geographyService.getNationalGeoJSON();
+    } catch (error: any) {
+      this.logger.error('Error fetching national GeoJSON', error);
+      throw new HttpException(
+        'Failed to fetch national GeoJSON',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('states')
   @ApiOperation({ summary: 'Get all US states as GeoJSON' })
   @Header('Cache-Control', 'public, max-age=86400')

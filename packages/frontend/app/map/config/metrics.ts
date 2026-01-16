@@ -36,6 +36,7 @@ export const GEO_ZOOM_LEVELS: Record<GeoLevel, number> = {
  * City and zip require state parameter: /api/geography/cities/:state
  */
 export const GEOJSON_SOURCES: Record<string, string> = {
+  national: '/api/geography/national',
   state: '/api/geography/states',
   county: '/api/geography/counties',
   metro: '/api/geography/metros',
