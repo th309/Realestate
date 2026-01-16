@@ -4,7 +4,7 @@
 
 # Use session pooler (works reliably)
 $script:SUPABASE_HOST = "aws-1-us-east-1.pooler.supabase.com"
-$script:SUPABASE_PORT = 5432
+$script:SUPABASE_PORT = 6543  # Transaction pooler port
 $script:SUPABASE_DB = "postgres"
 $script:SUPABASE_USER = "postgres.pysflbhpnqwoczyuaaif"
 $script:SUPABASE_PASSWORD = ""
@@ -21,7 +21,8 @@ function Get-SupabasePassword {
                 $envContent = Get-Content $envPath -Raw
                 if ($envContent -match 'SUPABASE_DB_PASSWORD=(.+)') {
                     $script:SUPABASE_PASSWORD = $matches[1].Trim()
-                } elseif ($envContent -match 'DATABASE_URL=postgresql://[^:]+:([^@]+)@') {
+                }
+                elseif ($envContent -match 'DATABASE_URL=postgresql://[^:]+:([^@]+)@') {
                     $script:SUPABASE_PASSWORD = $matches[1].Trim()
                 }
             }
@@ -39,11 +40,11 @@ function Get-SupabasePassword {
 
 function supabase-query {
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [string]$Query
     )
     
-    $password = "Ihatedoingpt$$12"
+    $password = "IHatedoingpt12"
     $env:PGPASSWORD = $password
     
     Write-Host "Executing query..." -ForegroundColor Cyan
@@ -56,14 +57,15 @@ function supabase-query {
     
     if ($exitCode -eq 0) {
         return $result
-    } else {
+    }
+    else {
         Write-Error "Query failed: $result"
         return $null
     }
 }
 
 function supabase-connect {
-    $password = "Ihatedoingpt$$12"
+    $password = "IHatedoingpt12"
     $env:PGPASSWORD = $password
     
     Write-Host "Connecting to Supabase..." -ForegroundColor Cyan
@@ -89,7 +91,8 @@ FROM information_schema.columns
 WHERE table_schema = 'public'
 ORDER BY table_name, ordinal_position;
 "@
-    } else {
+    }
+    else {
         $query = @"
 SELECT 
     column_name,

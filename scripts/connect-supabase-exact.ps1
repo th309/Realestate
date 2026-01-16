@@ -11,7 +11,7 @@ $hostname = "aws-1-us-east-1.pooler.supabase.com"
 $port = 5432
 $database = "postgres"
 $username = "postgres.pysflbhpnqwoczyuaaif"
-$password = "Ihatedoingpt$$12"
+$password = "IHatedoingpt12"
 
 Write-Host "🔌 Connecting to Supabase PostgreSQL via Session Pooler..." -ForegroundColor Cyan
 Write-Host "Using: psql -h $hostname -p $port -d $database -U $username" -ForegroundColor Gray
@@ -34,7 +34,8 @@ if (-not [string]::IsNullOrEmpty($Query)) {
     if ($exitCode -eq 0) {
         Write-Host $result
         Write-Host "`n✅ Query executed successfully" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "❌ Query failed" -ForegroundColor Red
         Write-Host $result
         Write-Host "`nTroubleshooting:" -ForegroundColor Yellow
@@ -43,7 +44,8 @@ if (-not [string]::IsNullOrEmpty($Query)) {
         Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
         exit $exitCode
     }
-} else {
+}
+else {
     Write-Host "Starting interactive psql session..." -ForegroundColor Yellow
     Write-Host "Type \q to exit`n" -ForegroundColor Gray
     

@@ -6,10 +6,10 @@ param(
     [string]$Query = ""
 )
 
-$password = "Ihatedoingpt$$12"
+$password = "IHatedoingpt12"
 
 # Session pooler connection (works reliably)
-$connString = "postgresql://postgres.pysflbhpnqwoczyuaaif:${password}@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+$connString = "postgresql://postgres.pysflbhpnqwoczyuaaif:${password}@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
 Write-Host "🔌 Connecting to Supabase via Session Pooler..." -ForegroundColor Cyan
 Write-Host ""
@@ -17,7 +17,8 @@ Write-Host ""
 if (-not [string]::IsNullOrEmpty($Query)) {
     Write-Host "Executing: $Query`n" -ForegroundColor Yellow
     & psql $connString -c $Query
-} else {
+}
+else {
     Write-Host "Starting interactive session (type \q to exit)..." -ForegroundColor Yellow
     Write-Host ""
     & psql $connString

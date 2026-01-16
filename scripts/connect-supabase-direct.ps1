@@ -5,7 +5,7 @@
 param(
     [string]$Query = "",
     [string]$ProjectRef = "pysflbhpnqwoczyuaaif",
-    [string]$Password = "Ihatedoingpt$$12",
+    [string]$Password = "IHatedoingpt12",
     [switch]$Interactive = $false
 )
 
@@ -37,14 +37,16 @@ if (-not [string]::IsNullOrEmpty($Query)) {
     if ($LASTEXITCODE -eq 0) {
         Write-Host $result
         Write-Host "`n✅ Query executed successfully" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "❌ Query failed" -ForegroundColor Red
         Write-Host $result
         Write-Host "`n💡 If this fails, the hostname may not be accessible from your network." -ForegroundColor Yellow
         Write-Host "   Try: .\scripts\execute-sql.ps1 (uses Supabase API instead)" -ForegroundColor Yellow
         exit $LASTEXITCODE
     }
-} else {
+}
+else {
     Write-Host "Starting interactive psql session..." -ForegroundColor Yellow
     Write-Host "Type \q to exit`n" -ForegroundColor Gray
     & psql $connectionString

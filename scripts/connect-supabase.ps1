@@ -17,9 +17,9 @@ param(
 # Connection details
 $projectRef = "pysflbhpnqwoczyuaaif"
 
-# Use session pooler (works reliably)
+# Use transaction pooler (port 6543 for transaction mode, 5432 for session mode)
 $poolerHost = "aws-1-us-east-1.pooler.supabase.com"
-$poolerPort = 5432
+$poolerPort = 6543  # Transaction pooler port
 $poolerUser = "postgres.${projectRef}"
 
 # Try to get password from environment or use default
@@ -42,10 +42,10 @@ if ([string]::IsNullOrEmpty($Password)) {
 
 # Set default password if not provided
 if ([string]::IsNullOrEmpty($Password)) {
-    $Password = "Ihatedoingpt$$12"
+    $Password = "IHatedoingpt12"
 }
 
-Write-Host "`n🔌 Connecting to Supabase PostgreSQL via Session Pooler..." -ForegroundColor Cyan
+Write-Host "`n🔌 Connecting to Supabase PostgreSQL via Transaction Pooler..." -ForegroundColor Cyan
 Write-Host "   Host: $poolerHost" -ForegroundColor Gray
 Write-Host "   Port: $poolerPort" -ForegroundColor Gray
 Write-Host "   Database: $Database" -ForegroundColor Gray
@@ -57,7 +57,7 @@ if (-not [string]::IsNullOrEmpty($Query)) {
     Write-Host "Executing query..." -ForegroundColor Yellow
     Write-Host "Query: $Query`n" -ForegroundColor Gray
     
-    # Use session pooler (works reliably) - set password right before command
+    # Use transaction pooler (port 6543) - set password right before command
     $env:PGPASSWORD = $Password
     $result = & psql -h $poolerHost -p $poolerPort -d $Database -U $poolerUser -c $Query 2>&1
     $exitCode = $LASTEXITCODE
@@ -79,7 +79,7 @@ elseif ($Interactive -or [string]::IsNullOrEmpty($Query)) {
     Write-Host "Starting interactive psql session..." -ForegroundColor Yellow
     Write-Host "Type \q to exit`n" -ForegroundColor Gray
     
-    # Use session pooler (most reliable)
+    # Use transaction pooler (most reliable)
     Write-Host "Using session pooler connection..." -ForegroundColor Gray
     $env:PGPASSWORD = $Password
     & psql -h $poolerHost -p $poolerPort -d $Database -U $poolerUser

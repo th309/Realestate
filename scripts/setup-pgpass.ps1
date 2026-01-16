@@ -2,10 +2,10 @@
 # This avoids password authentication issues
 
 $pgpassPath = "$env:USERPROFILE\.pgpass"
-$password = "Ihatedoingpt$$12"
+$password = "IHatedoingpt12"
 
 # Session pooler entry
-$pgpassEntry = "aws-1-us-east-1.pooler.supabase.com:5432:postgres:postgres.pysflbhpnqwoczyuaaif:${password}"
+$pgpassEntry = "aws-1-us-east-1.pooler.supabase.com:6543:postgres:postgres.pysflbhpnqwoczyuaaif:${password}"
 
 Write-Host "Setting up .pgpass file..." -ForegroundColor Cyan
 
@@ -24,7 +24,8 @@ if (-not $entryExists) {
     $allEntries = $existingEntries + $pgpassEntry
     $allEntries | Set-Content $pgpassPath -Encoding ASCII
     Write-Host "✅ Added Supabase session pooler entry to .pgpass" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "✅ Supabase entry already exists in .pgpass" -ForegroundColor Green
 }
 
@@ -41,5 +42,5 @@ if ($IsWindows -or $env:OS -match "Windows") {
 
 Write-Host ""
 Write-Host "Now you can connect without password:" -ForegroundColor Cyan
-Write-Host "  psql -h aws-1-us-east-1.pooler.supabase.com -p 5432 -d postgres -U postgres.pysflbhpnqwoczyuaaif" -ForegroundColor White
+Write-Host "  psql -h aws-1-us-east-1.pooler.supabase.com -p 6543 -d postgres -U postgres.pysflbhpnqwoczyuaaif" -ForegroundColor White
 

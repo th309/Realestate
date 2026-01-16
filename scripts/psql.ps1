@@ -6,12 +6,13 @@ param(
     [string]$Query = ""
 )
 
-$env:PGPASSWORD = 'Ihatedoingpt$$12'
+$env:PGPASSWORD = 'IHatedoingpt12'
 
 if ($Query) {
-    psql -h aws-1-us-east-1.pooler.supabase.com -p 5432 -d postgres -U postgres.pysflbhpnqwoczyuaaif -c $Query
-} else {
-    psql -h aws-1-us-east-1.pooler.supabase.com -p 5432 -d postgres -U postgres.pysflbhpnqwoczyuaaif
+    psql -h aws-1-us-east-1.pooler.supabase.com -p 6543 -d postgres -U postgres.pysflbhpnqwoczyuaaif -c $Query
+}
+else {
+    psql -h aws-1-us-east-1.pooler.supabase.com -p 6543 -d postgres -U postgres.pysflbhpnqwoczyuaaif
 }
 
 $env:PGPASSWORD = $null
