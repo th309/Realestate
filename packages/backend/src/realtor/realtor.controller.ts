@@ -320,6 +320,62 @@ export class RealtorController {
   }
 
   // ============================================================================
+  // Home Sales (pending_listing_count - proxy for sales activity)
+  // ============================================================================
+
+  @Get('home-sales/states')
+  async getStateHomeSales(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateHomeSales(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'pending_listing_count', data };
+  }
+
+  @Get('home-sales/metros')
+  async getMetroHomeSales(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroHomeSales(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'pending_listing_count', data };
+  }
+
+  @Get('home-sales/counties')
+  async getCountyHomeSales(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyHomeSales(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'pending_listing_count', data };
+  }
+
+  @Get('home-sales/zips')
+  async getZipHomeSales(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipHomeSales(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'pending_listing_count', data };
+  }
+
+  // ============================================================================
+  // Home Sales YoY (pending_listing_count_yy)
+  // ============================================================================
+
+  @Get('home-sales-yoy/states')
+  async getStateHomeSalesYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateHomeSalesYoy(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'pending_listing_count_yy', data };
+  }
+
+  @Get('home-sales-yoy/metros')
+  async getMetroHomeSalesYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroHomeSalesYoy(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'pending_listing_count_yy', data };
+  }
+
+  @Get('home-sales-yoy/counties')
+  async getCountyHomeSalesYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyHomeSalesYoy(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'pending_listing_count_yy', data };
+  }
+
+  @Get('home-sales-yoy/zips')
+  async getZipHomeSalesYoy(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipHomeSalesYoy(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'pending_listing_count_yy', data };
+  }
+
+  // ============================================================================
   // Price Reduced Share (price_reduced_share)
   // ============================================================================
 

@@ -121,16 +121,17 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
   home_sales: {
     id: 'home_sales',
     name: 'Home Sales',
-    description: 'Total number of home sales closed during the reporting period.',
-    dataSource: 'Zillow',
+    description: 'Number of homes that went under contract (pending) during the reporting period. A leading indicator of closed sales activity.',
+    dataSource: 'Realtor.com',
     updateFrequency: 'Monthly',
+    notes: 'Based on pending listings as a proxy for sales activity',
   },
-  sales_yoy: {
-    id: 'sales_yoy',
-    name: 'Sales Growth (YoY)',
-    description: 'Year-over-year percentage change in home sales volume.',
-    formula: '((Current Sales - Prior Year Sales) / Prior Year Sales) × 100',
-    dataSource: 'Zillow',
+  home_sales_yoy: {
+    id: 'home_sales_yoy',
+    name: 'Home Sales YoY',
+    description: 'Year-over-year percentage change in homes going under contract. Shows sales momentum trends.',
+    formula: '((Current Pending - Prior Year Pending) / Prior Year Pending) × 100',
+    dataSource: 'Realtor.com',
     updateFrequency: 'Monthly',
   },
   sale_to_list: {

@@ -216,6 +216,37 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['state', 'metro', 'county', 'zip'],
   },
 
+  home_sales: {
+    id: 'home_sales',
+    title: 'Home Sales',
+    format: 'number',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/home-sales/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'metro', 'county', 'zip'],
+  },
+
+  home_sales_yoy: {
+    id: 'home_sales_yoy',
+    title: 'Home Sales YoY',
+    format: 'percent',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/home-sales-yoy/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    asPercent: true,
+  },
+
+  pending_ratio: {
+    id: 'pending_ratio',
+    title: 'Pending Ratio',
+    format: 'percent_abs',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/pending-ratio/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'metro', 'county', 'zip'],
+  },
+
   days_on_market: {
     id: 'days_on_market',
     title: 'Days on Market',

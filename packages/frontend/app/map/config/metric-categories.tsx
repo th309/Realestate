@@ -114,9 +114,9 @@ export const SHARED_CATEGORIES: MetricCategory[] = [
         metrics: [
           metric('days_on_market'),
           metric('days_to_close', { isNew: true }),
-          metric('home_sales', { isPremium: true }),
-          metric('sales_yoy', { isPremium: true }),
-          metric('sale_to_list', { isPremium: true }),
+          metric('home_sales'),
+          metric('home_sales_yoy', { isPremium: true }),
+          metric('pending_ratio'),
         ],
       },
       {

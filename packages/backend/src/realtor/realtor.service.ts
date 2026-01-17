@@ -819,6 +819,40 @@ export class RealtorService {
     return this.getZipData('pending_listing_count', state, date);
   }
 
+  // Home Sales (pending_listing_count - proxy for sales activity)
+  async getStateHomeSales(date?: string) {
+    return this.getStateData('pending_listing_count', date);
+  }
+
+  async getMetroHomeSales(date?: string) {
+    return this.getMetroData('pending_listing_count', date);
+  }
+
+  async getCountyHomeSales(date?: string) {
+    return this.getCountyData('pending_listing_count', date);
+  }
+
+  async getZipHomeSales(state?: string, date?: string) {
+    return this.getZipData('pending_listing_count', state, date);
+  }
+
+  // Home Sales YoY (pending_listing_count_yy)
+  async getStateHomeSalesYoy(date?: string) {
+    return this.getStateData('pending_listing_count_yy', date);
+  }
+
+  async getMetroHomeSalesYoy(date?: string) {
+    return this.getMetroData('pending_listing_count_yy', date);
+  }
+
+  async getCountyHomeSalesYoy(date?: string) {
+    return this.getCountyData('pending_listing_count_yy', date);
+  }
+
+  async getZipHomeSalesYoy(state?: string, date?: string) {
+    return this.getZipData('pending_listing_count_yy', state, date);
+  }
+
   // Price Reduced Share (price_reduced_share)
   async getStatePriceReduced(date?: string) {
     return this.getStateData('price_reduced_share', date);
