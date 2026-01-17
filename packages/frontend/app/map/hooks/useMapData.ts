@@ -148,6 +148,24 @@ async function fetchRealtorMetric(
           return {};
       }
 
+    // Inventory Surplus - calculated: Current Inventory - 5-Year Average (no city data)
+    case 'inventory_surplus':
+      switch (level) {
+        case 'national':
+        case 'state':
+          return api.getStateInventorySurplus();
+        case 'metro':
+          return api.getMetroInventorySurplus();
+        case 'county':
+          return api.getCountyInventorySurplus();
+        case 'city':
+          return {}; // No city inventory surplus data
+        case 'zip':
+          return api.getZipInventorySurplus(state);
+        default:
+          return {};
+      }
+
     // Inventory - from Realtor active_listing_count (no city data)
     case 'for_sale_inventory':
       switch (level) {

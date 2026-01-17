@@ -320,6 +320,17 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro'],
     valueField: 'overvalued_pct',
   },
+
+  inventory_surplus: {
+    id: 'inventory_surplus',
+    title: 'Inventory Surplus/Deficit',
+    format: 'number',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/inventory-surplus/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    valueField: 'inventory_surplus',
+  },
 };
 
 /**

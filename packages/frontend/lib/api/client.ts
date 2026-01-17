@@ -1039,4 +1039,92 @@ export const api = {
     const response = await fetchAPI<RealtorApiResponse>(url);
     return api.transformRealtorResponse(response, 'postal_code');
   },
+
+  // ============================================================================
+  // INVENTORY SURPLUS (Calculated Metric)
+  // Formula: Current Inventory - 5-Year Historical Average
+  // ============================================================================
+
+  getStateInventorySurplus: async (): Promise<StateHomeValues> => {
+    interface SurplusResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        region_name?: string;
+        inventory_surplus: number;
+      }>;
+    }
+    const response = await fetchAPI<SurplusResponse>('/api/metrics/inventory-surplus/states');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.region_name || item.region_id;
+      if (key && item.inventory_surplus != null) {
+        result[key] = Number(item.inventory_surplus);
+      }
+    });
+    return result;
+  },
+
+  getMetroInventorySurplus: async (): Promise<MetroHomeValues> => {
+    interface SurplusResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        cbsa_code?: string;
+        inventory_surplus: number;
+      }>;
+    }
+    const response = await fetchAPI<SurplusResponse>('/api/metrics/inventory-surplus/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.cbsa_code || item.region_id;
+      if (key && item.inventory_surplus != null) {
+        result[key] = Number(item.inventory_surplus);
+      }
+    });
+    return result;
+  },
+
+  getCountyInventorySurplus: async (): Promise<CountyHomeValues> => {
+    interface SurplusResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        county_fips?: string;
+        inventory_surplus: number;
+      }>;
+    }
+    const response = await fetchAPI<SurplusResponse>('/api/metrics/inventory-surplus/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.county_fips || item.region_id;
+      if (key && item.inventory_surplus != null) {
+        result[key] = Number(item.inventory_surplus);
+      }
+    });
+    return result;
+  },
+
+  getZipInventorySurplus: async (state?: string): Promise<ZipHomeValues> => {
+    interface SurplusResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        postal_code?: string;
+        inventory_surplus: number;
+      }>;
+    }
+    const url = state
+      ? `/api/metrics/inventory-surplus/zips?state=${encodeURIComponent(state)}`
+      : '/api/metrics/inventory-surplus/zips';
+    const response = await fetchAPI<SurplusResponse>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.postal_code || item.region_id;
+      if (key && item.inventory_surplus != null) {
+        result[key] = Number(item.inventory_surplus);
+      }
+    });
+    return result;
+  },
 };
