@@ -328,6 +328,75 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'years_to_save',
   },
 
+  income_to_buy: {
+    id: 'income_to_buy',
+    title: 'Income to Buy',
+    format: 'currency',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/affordability/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'homeowner_income',
+  },
+
+  income_to_rent: {
+    id: 'income_to_rent',
+    title: 'Income to Rent',
+    format: 'currency',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/affordability/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'renter_income',
+  },
+
+  affordable_home_price: {
+    id: 'affordable_home_price',
+    title: 'Affordable Home Price',
+    format: 'currency',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/affordability/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'affordable_price',
+  },
+
+  // ============================================================================
+  // MARKET HEAT SCORES (Realtor Hotness)
+  // ============================================================================
+  hotness_score: {
+    id: 'hotness_score',
+    title: 'Hotness Score',
+    format: 'index',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/hotness/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    rangeType: 'full',
+  },
+
+  supply_score: {
+    id: 'supply_score',
+    title: 'Supply Score',
+    format: 'index',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/supply-score/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    rangeType: 'full',
+  },
+
+  demand_score: {
+    id: 'demand_score',
+    title: 'Demand Score',
+    format: 'index',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/demand-score/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    rangeType: 'full',
+  },
+
   // ============================================================================
   // INVESTOR METRICS
   // ============================================================================

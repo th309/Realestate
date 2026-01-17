@@ -36,6 +36,12 @@ export function MetricCategoryItem({
   onRentIndexTypeChange,
   onRenterDemandTypeChange,
 }: MetricCategoryItemProps) {
+  // Handle divider categories - render a simple horizontal line
+  if (category.isDivider) {
+    return (
+      <div className="my-3 border-t border-outline-variant" />
+    );
+  }
   // Track which sub-sections are expanded
   const [expandedSubSections, setExpandedSubSections] = useState<string[]>([]);
 
@@ -99,9 +105,16 @@ export function MetricCategoryItem({
         onClick={onToggle}
         className="w-full flex items-center justify-between p-2 hover:bg-surface-container rounded-lg transition-colors duration-200"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-on-surface-variant flex-shrink-0">{category.icon}</span>
-          <span className="font-medium text-xs text-on-surface truncate">{category.name}</span>
+          <div className="min-w-0 flex-1">
+            <span className="font-medium text-xs text-on-surface truncate block">{category.name}</span>
+            {category.subtext && (
+              <span className="text-[10px] text-on-surface-variant truncate block leading-tight">
+                {category.subtext}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {category.isNew && <span className="text-[10px] text-rose-500 font-medium">New</span>}

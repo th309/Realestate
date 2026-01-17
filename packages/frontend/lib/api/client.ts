@@ -1142,4 +1142,63 @@ export const api = {
     });
     return result;
   },
+
+  // ============================================================================
+  // SCORING API ENDPOINTS
+  // ============================================================================
+
+  // Get PropertyIQ score for a specific geography
+  getScore: async (geographyType: string, geographyId: string): Promise<ScoreResponse | null> => {
+    try {
+      const response = await fetchAPI<ScoreResponse>(`/api/scoring/${geographyType}/${geographyId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch score:', error);
+      return null;
+    }
+  },
+
+  // Get scores for multiple geographies
+  getBatchScores: async (geographyType: string, ids: string[]): Promise<BatchScoreResponse | null> => {
+    try {
+      const response = await fetchAPI<BatchScoreResponse>(
+        `/api/scoring/batch/${geographyType}?ids=${ids.join(',')}`
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch batch scores:', error);
+      return null;
+    }
+  },
 };
+
+// Scoring API response types
+export interface ScoreResponse {
+  geographyId: string;
+  geographyName?: string;
+  geographyType: string;
+  periodDate: string;
+  homereadyScore: number;
+  investoredgeScore: number;
+  confidenceLevel: 'high' | 'medium' | 'low';
+  components?: {
+    homeready?: {
+      affordability: number;
+      valueGrowth: number;
+      marketHealth: number;
+      inventoryHealth: number;
+    };
+    investoredge?: {
+      cashFlow: number;
+      appreciation: number;
+      demandRisk: number;
+      marketLiquidity: number;
+    };
+  };
+}
+
+export interface BatchScoreResponse {
+  geographyType: string;
+  periodDate?: string;
+  scores: (ScoreResponse | { geographyId: string; error: string })[];
+}

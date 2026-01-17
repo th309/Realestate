@@ -71,9 +71,8 @@ export function MetricItem({
     <div className="relative">
       <button
         onClick={onSelect}
-        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${
-          isSelected ? 'bg-primary-container text-on-primary-container font-medium' : 'text-on-surface-variant hover:bg-surface-container'
-        }`}
+        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${isSelected ? 'bg-primary-container text-on-primary-container font-medium' : 'text-on-surface-variant hover:bg-surface-container'
+          }`}
       >
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="truncate">{metric.name}</span>

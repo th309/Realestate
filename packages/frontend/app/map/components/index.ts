@@ -6,3 +6,4 @@ export * from './Legend';
 export * from './Sidebar';
 export * from './BenchmarkPanel';
 export * from './DataTableModal';
+export * from './RightDetailPanel';

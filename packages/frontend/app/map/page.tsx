@@ -11,10 +11,10 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel, DataTableModal } from './components';
+import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel, DataTableModal, RightDetailPanel } from './components';
 
 // Import hooks
-import { useMapData, useMapSearch, useMapLayers } from './hooks';
+import { useMapData, useMapSearch, useMapLayers, useRightPanelData } from './hooks';
 
 // Import config
 import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
@@ -41,6 +41,7 @@ export default function MapPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedGeography, setSelectedGeography] = useState<SelectedGeography | null>(null);
   const [showTableView, setShowTableView] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const isResizing = useRef(false);
   const pathname = usePathname();
 
@@ -67,10 +68,25 @@ export default function MapPage() {
     searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
     handleSearch, handleSelectSearchResult, setShowSearchResults
   } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
+  // Handle feature click - open right panel with geography details
+  const handleFeatureClick = useCallback((geography: SelectedGeography | null) => {
+    setSelectedGeography(geography);
+    if (geography) {
+      setRightPanelOpen(true);
+    }
+  }, []);
+
   const { updateMapLayers } = useMapLayers({
     map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
-    onFeatureClick: setSelectedGeography
+    onFeatureClick: handleFeatureClick
   });
+
+  // Fetch right panel data when a geography is selected
+  const { data: rightPanelData, isLoading: rightPanelLoading } = useRightPanelData(
+    selectedGeography,
+    geoLevel,
+    viewMode
+  );
 
   // Auto-switch geo level when metric doesn't support current level
   // Uses central config as single source of truth for metric/geo compatibility
@@ -363,6 +379,27 @@ export default function MapPage() {
             selectedMetric={selectedMetric}
             geoLevel={geoLevel}
             forecastHorizon={forecastHorizon}
+          />
+
+          {/* Right Detail Panel - shows when a region is clicked */}
+          <RightDetailPanel
+            isOpen={rightPanelOpen}
+            onClose={() => {
+              setRightPanelOpen(false);
+              setSelectedGeography(null);
+            }}
+            viewMode={viewMode}
+            geography={selectedGeography}
+            geoLevel={geoLevel}
+            score={rightPanelData?.score}
+            scoreTrend={rightPanelData?.scoreTrend}
+            marketCondition={rightPanelData?.marketCondition ?? 'balanced'}
+            summaryText={rightPanelData?.summaryText}
+            metrics={rightPanelData?.metrics ?? []}
+            isLoading={rightPanelLoading}
+            onViewFullReport={() => {
+              console.log('View full report for', selectedGeography?.name);
+            }}
           />
         </main>
       </div>

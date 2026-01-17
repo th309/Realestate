@@ -1,9 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory, ViewMode } from '../types';
-import { MetricCategoryItem, ViewToggle } from './sidebar-components';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory, ViewMode, SelectedGeography } from '../types';
+import { MetricCategoryItem, ViewToggle, SidebarScoreCard, MarketCondition, TrendDirection } from './sidebar-components';
 import { GeoLevelPills } from './GeoLevelPills';
+
+interface ScoreData {
+  score?: number;
+  scoreTrend?: {
+    direction: TrendDirection;
+    value: string;
+  };
+  marketCondition?: MarketCondition;
+  summaryText?: string;
+  isLoading?: boolean;
+}
 
 interface SidebarProps {
   pathname: string;
@@ -19,6 +30,7 @@ interface SidebarProps {
   sidebarWidth: number;
   viewMode: ViewMode;
   mobileMenuOpen: boolean;
+  scoreData?: ScoreData;
   onToggleCategory: (id: string) => void;
   onSelectMetric: (id: string) => void;
   onGeoLevelChange: (level: GeoLevel) => void;
@@ -29,6 +41,7 @@ interface SidebarProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onViewModeChange: (mode: ViewMode) => void;
   onCloseMobileMenu: () => void;
+  onScoreCardClick?: () => void;
 }
 
 export function Sidebar({
@@ -45,6 +58,7 @@ export function Sidebar({
   sidebarWidth,
   viewMode,
   mobileMenuOpen,
+  scoreData,
   onToggleCategory,
   onSelectMetric,
   onGeoLevelChange,
@@ -55,6 +69,7 @@ export function Sidebar({
   onMouseDown,
   onViewModeChange,
   onCloseMobileMenu,
+  onScoreCardClick,
 }: SidebarProps) {
   return (
     <aside
@@ -123,6 +138,17 @@ export function Sidebar({
 
         {/* View Mode Toggle */}
         <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+
+        {/* Score Card - leads with market score */}
+        <SidebarScoreCard
+          viewMode={viewMode}
+          score={scoreData?.score}
+          scoreTrend={scoreData?.scoreTrend}
+          marketCondition={scoreData?.marketCondition}
+          summaryText={scoreData?.summaryText}
+          isLoading={scoreData?.isLoading}
+          onClick={onScoreCardClick}
+        />
 
         {/* Metric Categories */}
         <div className="space-y-1">

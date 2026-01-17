@@ -63,6 +63,8 @@ export interface MetricCategory {
   metrics?: Metric[];
   subSections?: SubSection[];
   viewMode?: ViewMode; // If set, only shows in this view mode
+  subtext?: string; // User-centric question (e.g., "Can I afford to live here?")
+  isDivider?: boolean; // If true, renders as a visual divider
 }
 
 export interface SearchResult {

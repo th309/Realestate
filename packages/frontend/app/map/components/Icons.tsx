@@ -126,3 +126,65 @@ export const BuildingIcon = () => (
     <path d="M120-120v-560h200v-200h320v360h200v400H520v-200h-80v200H120Zm80-80h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 320h80v-80h-80v80Zm0-160h80v-80h-80v80Zm0-160h80v-80h-80v80Zm200 480h80v-80h-80v80Zm0-160h80v-80h-80v80Z"/>
   </svg>
 );
+
+// Market condition icons
+export const FireIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M240-400q0 52 21 98.5t60 81.5q-1-5-1-9v-9q0-32 12-60t35-51l113-111 113 111q23 23 35 51t12 60v9q0 4-1 9 39-35 60-81.5t21-98.5q0-50-18.5-94.5T648-574q-20 13-42 19.5t-45 6.5q-62 0-107.5-41T408-690q-39 33-69.5 68.5t-50.5 72Q268-513 254-471.5T240-400Zm240 52-57 56q-11 11-17 25t-6 29q0 32 23.5 55t56.5 23q33 0 56.5-23t23.5-55q0-16-6-29.5T537-292l-57-56Zm0-492v132q0 34 23.5 57t57.5 23q18 0 33.5-7.5T622-658l18-22q74 42 117 117t43 163q0 134-93 227T480-80q-134 0-227-93t-93-227q0-121 79.5-227T480-840Z"/>
+  </svg>
+);
+
+export const BalanceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M160-120v-80h280v-80H200v-80h240v-80H160v-80h280v-206q-54-14-87-57t-33-97q0-66 47-113t113-47q66 0 113 47t47 113q0 54-33 97t-87 57v206h280v80H520v80h240v80H520v80h280v80H160Zm320-600q33 0 56.5-23.5T560-800q0-33-23.5-56.5T480-880q-33 0-56.5 23.5T400-800q0 33 23.5 56.5T480-720Z"/>
+  </svg>
+);
+
+export const InsightsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M120-120v-80l80-80v160h-80Zm160 0v-240l80-80v320h-80Zm160 0v-320l80 81v239h-80Zm160 0v-239l80-80v319h-80Zm160 0v-400l80-80v480h-80ZM120-327v-113l280-280 160 160 280-280v113L560-447 400-607 120-327Z"/>
+  </svg>
+);
+
+export const CloseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+  </svg>
+);
+
+export const TrendDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Zm744 0v-80H640v-80h240v160Z"/>
+  </svg>
+);
+
+export const LockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/>
+  </svg>
+);
+
+export const SparkleIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+    <path d="m352-520 86-194 86 194 194 86-194 86-86 194-86-194-194-86 194-86Zm0-206-44-96-44 96-96 44 96 44 44 96 44-96 96-44-96-44Zm494 80-36-76-76-36 76-36 36-76 36 76 76 36-76 36-36 76ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
+  </svg>
+);
+
+// Smaller icon variants for compact use
+export const TrendUpSmallIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+    <path d="m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z"/>
+  </svg>
+);
+
+export const TrendDownSmallIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+    <path d="M640-240v-80h104L536-528 376-368 80-664l56-56 240 240 160-160 264 264v-104h80v240H640Z"/>
+  </svg>
+);
+
+export const TrendFlatIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 -960 960 960" width="16" fill="currentColor">
+    <path d="M160-440v-80h640v80H160Z"/>
+  </svg>
+);
