@@ -245,6 +245,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/pending-ratio/{geo}',
     keyField: 'auto',
     supportedGeos: ['state', 'metro', 'county', 'zip'],
+    asPercent: true, // Data stored as decimal (0.35 = 35%)
   },
 
   days_on_market: {
