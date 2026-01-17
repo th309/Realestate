@@ -28,7 +28,7 @@ export class InventorySurplusService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   // ============================================================================
   // CACHE HELPERS
@@ -671,12 +671,15 @@ export class InventorySurplusService {
         return { data: [], success: false, source: 'calculated_metrics' };
       }
       latestDate = latestRow.period_date;
-      this.setCachedDate(dateCacheKey, latestDate);
+      this.setCachedDate(dateCacheKey, latestDate!);
     }
+
+    // At this point latestDate is guaranteed to be a string
+    const effectiveDate: string = latestDate!;
 
     // For ZIP geography with state filter, query at database level
     if (geographyType === 'zip' && state) {
-      const results = await this.fetchZipsByState(latestDate, state);
+      const results = await this.fetchZipsByState(effectiveDate, state);
       this.setCache(cacheKey, results);
       return { data: results, success: true, source: 'calculated_metrics' };
     }
@@ -690,7 +693,7 @@ export class InventorySurplusService {
         .from('calculated_metrics')
         .select('geography_id, geography_name, inventory_surplus_pct, period_date')
         .eq('geography_type', geographyType)
-        .eq('period_date', latestDate)
+        .eq('period_date', effectiveDate)
         .not('inventory_surplus_pct', 'is', null)
         .range(offset, offset + this.PAGE_SIZE - 1);
 

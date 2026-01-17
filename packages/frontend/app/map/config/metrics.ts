@@ -363,6 +363,42 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'inventory_surplus',
   },
+
+  // ============================================================================
+  // NEW CONSTRUCTION (Zillow metro only)
+  // ============================================================================
+  new_construction_sales: {
+    id: 'new_construction_sales',
+    title: 'New Construction Sales',
+    format: 'number',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/new-construction/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'sales_count',
+  },
+
+  new_construction_price: {
+    id: 'new_construction_price',
+    title: 'New Construction Price',
+    format: 'currency',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/new-construction/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'median_sale_price',
+  },
+
+  new_construction_ppsf: {
+    id: 'new_construction_ppsf',
+    title: 'New Construction $/SqFt',
+    format: 'currency',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/new-construction/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'price_per_sqft',
+  },
 };
 
 /**

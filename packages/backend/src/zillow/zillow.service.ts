@@ -780,61 +780,68 @@ export class ZillowService {
   }
 
   // ============================================================================
-  // New Construction (Combined Metrics)
+  // New Construction (Combined Metrics from zillow_metro)
   // ============================================================================
 
   async getMetroNewConstruction(date?: string): Promise<NewConstructionData[]> {
-    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_new_construction_sales_count', 'Metro');
+    // Get latest date for new construction metrics
+    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'new_con_sales' as any);
 
-    const [salesCountData, salePriceData] = await Promise.all([
-      queryMarketIndicator(this.supabase, 'zillow_new_construction_sales_count', ['Metro', 'US'], targetDate),
-      queryMarketIndicator(this.supabase, 'zillow_new_construction_sale_price', ['Metro', 'US'], targetDate),
-    ]);
+    // Query all new construction metrics from zillow_metro in one call
+    const newConMetrics = ['new_con_sales', 'new_con_median_price', 'new_con_median_price_per_sqft'];
 
-    const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
+    const { data, error } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name, cbsa_code, state_code, period_date, metric_name, value')
+      .in('metric_name', newConMetrics)
+      .eq('period_date', targetDate)
+      .limit(5000);
 
-    // Combine the data by region_id
-    const combinedMap = new Map<string, NewConstructionData>();
-
-    for (const d of salesCountData) {
-      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
-      combinedMap.set(d.region_id, {
-        region_id: d.region_id,
-        region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
-        cbsa_code: cbsaCode,
-        state_abbrev: metro?.state || null,
-        date: d.date,
-        geography: d.geography,
-        sales_count: d.value,
-        median_sale_price: null,
-        price_per_sqft: null,
-      });
+    if (error) {
+      console.error('Error fetching new construction data:', error.message);
+      return [];
     }
 
-    for (const d of salePriceData) {
-      const existing = combinedMap.get(d.region_id);
-      if (existing) {
-        existing.median_sale_price = d.value;
-        existing.price_per_sqft = (d as any).price_per_sqft || null;
-      } else {
-        const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
-        combinedMap.set(d.region_id, {
-          region_id: d.region_id,
-          region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
-          cbsa_code: cbsaCode,
-          state_abbrev: metro?.state || null,
-          date: d.date,
-          geography: d.geography,
+    if (!data || data.length === 0) return [];
+
+    // Group by region_id to combine metrics
+    const combinedMap = new Map<string, NewConstructionData>();
+
+    for (const row of data) {
+      const regionId = String(row.region_id);
+
+      if (!combinedMap.has(regionId)) {
+        combinedMap.set(regionId, {
+          region_id: regionId,
+          region_name: row.region_name || 'Unknown',
+          cbsa_code: row.cbsa_code || null,
+          state_abbrev: row.state_code || null,
+          date: row.period_date,
+          geography: 'Metro',
           sales_count: null,
-          median_sale_price: d.value,
-          price_per_sqft: (d as any).price_per_sqft || null,
+          median_sale_price: null,
+          price_per_sqft: null,
         });
+      }
+
+      const entry = combinedMap.get(regionId)!;
+
+      // Map metric names to fields
+      if (row.metric_name === 'new_con_sales' || row.metric_name === 'new_con_sales_count') {
+        entry.sales_count = row.value;
+      }
+      if (row.metric_name === 'new_con_median_price') {
+        entry.median_sale_price = row.value;
+      }
+      if (row.metric_name === 'new_con_median_price_per_sqft') {
+        entry.price_per_sqft = row.value;
       }
     }
 
-    return Array.from(combinedMap.values()).sort((a, b) =>
-      (b.sales_count || 0) - (a.sales_count || 0)
-    );
+    // Filter out entries with no cbsa_code (can't be displayed on map)
+    return Array.from(combinedMap.values())
+      .filter(d => d.cbsa_code)
+      .sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
   }
 
   // ============================================================================

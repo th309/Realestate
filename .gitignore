@@ -93,3 +93,7 @@ redfin_downloads/raw_files/*.tmp.gz
 data/Realtor/*.csv
 
 data/zillow/*.csv
+
+# MCP Server configuration (contains access tokens)
+.gemini/settings.json
+.vscode/mcp.json
