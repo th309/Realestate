@@ -330,7 +330,6 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'inventory_surplus',
-    rangeType: 'full', // Use full data range for proper +/- display
   },
 };
 
