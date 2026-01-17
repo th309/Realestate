@@ -119,10 +119,12 @@ export class InventorySurplusController {
 
   /**
    * Get inventory surplus for zip codes
+   * Pass state query param to filter at database level for faster queries
    */
   @Get('zips')
   async getZipInventorySurplus(@Query('state') state?: string) {
-    const result = await this.inventorySurplusService.getForMap('zip');
+    // Pass state to service for database-level filtering (much faster)
+    const result = await this.inventorySurplusService.getForMap('zip', state);
 
     if (!result.success || result.data.length === 0) {
       return {
@@ -132,22 +134,13 @@ export class InventorySurplusController {
       };
     }
 
-    // Filter by state if provided (zip_name format: "city, st" - lowercase)
-    let filteredData = result.data;
-    if (state) {
-      const statePattern = `, ${state.toLowerCase()}`;
-      filteredData = result.data.filter(
-        (item: any) => item.region_name?.toLowerCase().endsWith(statePattern)
-      );
-    }
-
     return {
       success: true,
-      count: filteredData.length,
+      count: result.data.length,
       geography: 'ZIP',
       metric: 'inventory_surplus',
       source: result.source,
-      data: filteredData,
+      data: result.data,
     };
   }
 

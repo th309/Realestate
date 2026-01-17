@@ -2,6 +2,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.module';
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 /**
  * Inventory Surplus Calculation Service
  *
@@ -15,10 +20,51 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.module';
 export class InventorySurplusService {
   private readonly PAGE_SIZE = 1000;
   private readonly BATCH_SIZE = 100;
+  private readonly CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
+  // In-memory cache for fast repeated queries
+  private cache = new Map<string, CacheEntry<any[]>>();
+  private latestDateCache = new Map<string, CacheEntry<string>>();
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
   ) {}
+
+  // ============================================================================
+  // CACHE HELPERS
+  // ============================================================================
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > this.CACHE_TTL) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  private setCache<T>(key: string, data: T): void {
+    this.cache.set(key, { data: data as any, timestamp: Date.now() });
+  }
+
+  private getCachedDate(key: string): string | null {
+    const entry = this.latestDateCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > this.CACHE_TTL) {
+      this.latestDateCache.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
+  private setCachedDate(key: string, date: string): void {
+    this.latestDateCache.set(key, { data: date, timestamp: Date.now() });
+  }
+
+  // ============================================================================
+  // CALCULATION HELPERS
+  // ============================================================================
 
   /**
    * Calculate 5-year average inventory for a specific month
@@ -590,22 +636,49 @@ export class InventorySurplusService {
 
   /**
    * Get pre-calculated inventory surplus data for map display
+   * For ZIP geography, pass state to filter at database level for faster queries
    */
   async getForMap(
-    geographyType: 'national' | 'metro' | 'state' | 'county' | 'zip'
+    geographyType: 'national' | 'metro' | 'state' | 'county' | 'zip',
+    state?: string
   ): Promise<{ data: any[]; success: boolean; source: string }> {
-    // Get the latest period_date for this geography type
-    const { data: latestRow } = await this.supabase
-      .from('calculated_metrics')
-      .select('period_date')
-      .eq('geography_type', geographyType)
-      .not('inventory_surplus_pct', 'is', null)
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+    // Build cache key
+    const cacheKey = state
+      ? `inventory_surplus:${geographyType}:${state.toLowerCase()}`
+      : `inventory_surplus:${geographyType}`;
 
-    if (!latestRow?.period_date) {
-      return { data: [], success: false, source: 'calculated_metrics' };
+    // Check cache first
+    const cached = this.getCached<any[]>(cacheKey);
+    if (cached) {
+      return { data: cached, success: true, source: 'calculated_metrics (cached)' };
+    }
+
+    // Get the latest period_date for this geography type (with caching)
+    const dateCacheKey = `inventory_surplus_date:${geographyType}`;
+    let latestDate = this.getCachedDate(dateCacheKey);
+
+    if (!latestDate) {
+      const { data: latestRow } = await this.supabase
+        .from('calculated_metrics')
+        .select('period_date')
+        .eq('geography_type', geographyType)
+        .not('inventory_surplus_pct', 'is', null)
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!latestRow?.period_date) {
+        return { data: [], success: false, source: 'calculated_metrics' };
+      }
+      latestDate = latestRow.period_date;
+      this.setCachedDate(dateCacheKey, latestDate);
+    }
+
+    // For ZIP geography with state filter, query at database level
+    if (geographyType === 'zip' && state) {
+      const results = await this.fetchZipsByState(latestDate, state);
+      this.setCache(cacheKey, results);
+      return { data: results, success: true, source: 'calculated_metrics' };
     }
 
     // Get all data for that period (paginated for large datasets)
@@ -617,7 +690,7 @@ export class InventorySurplusService {
         .from('calculated_metrics')
         .select('geography_id, geography_name, inventory_surplus_pct, period_date')
         .eq('geography_type', geographyType)
-        .eq('period_date', latestRow.period_date)
+        .eq('period_date', latestDate)
         .not('inventory_surplus_pct', 'is', null)
         .range(offset, offset + this.PAGE_SIZE - 1);
 
@@ -628,8 +701,46 @@ export class InventorySurplusService {
     }
 
     // Transform to API format
-    // Note: DB column is inventory_surplus_pct, but API returns inventory_surplus for frontend
-    const results = allData.map(row => ({
+    const results = this.transformToApiFormat(allData, geographyType);
+    this.setCache(cacheKey, results);
+
+    return { data: results, success: true, source: 'calculated_metrics' };
+  }
+
+  /**
+   * Fetch ZIP inventory surplus data filtered by state at database level
+   * This is MUCH faster than loading all 28,000+ ZIPs and filtering in memory
+   */
+  private async fetchZipsByState(periodDate: string, state: string): Promise<any[]> {
+    // geography_name format is "city, ST" so we use ilike to match state suffix
+    const statePattern = `%, ${state.toLowerCase()}`;
+    const allData: any[] = [];
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData } = await this.supabase
+        .from('calculated_metrics')
+        .select('geography_id, geography_name, inventory_surplus_pct, period_date')
+        .eq('geography_type', 'zip')
+        .eq('period_date', periodDate)
+        .ilike('geography_name', statePattern)
+        .not('inventory_surplus_pct', 'is', null)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (!pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    return this.transformToApiFormat(allData, 'zip');
+  }
+
+  /**
+   * Transform database rows to API format
+   */
+  private transformToApiFormat(rows: any[], geographyType: string): any[] {
+    return rows.map(row => ({
       region_id: row.geography_id,
       region_name: row.geography_name,
       value: row.inventory_surplus_pct,
@@ -640,7 +751,5 @@ export class InventorySurplusService {
       ...(geographyType === 'county' ? { county_fips: row.geography_id } : {}),
       ...(geographyType === 'zip' ? { postal_code: row.geography_id } : {}),
     }));
-
-    return { data: results, success: true, source: 'calculated_metrics' };
   }
 }
