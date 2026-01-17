@@ -105,10 +105,11 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
   inventory_surplus: {
     id: 'inventory_surplus',
     name: 'Inventory Surplus/Deficit',
-    description: 'Difference between current inventory and historical average. Positive values indicate more homes available than typical.',
-    formula: 'Current Inventory - Historical Average Inventory',
+    description: 'Percentage difference between current inventory and the 5-year historical average for the same month. Positive values (surplus) indicate more homes available than typical, suggesting a buyer\'s market. Negative values (deficit) indicate fewer homes than typical, suggesting a seller\'s market.',
+    formula: '((Current Inventory - 5-Year Avg) / 5-Year Avg) × 100',
     dataSource: 'Calculated from Realtor.com',
     updateFrequency: 'Monthly',
+    notes: 'Uses same-month historical data to account for seasonal patterns',
   },
   days_to_close: {
     id: 'days_to_close',

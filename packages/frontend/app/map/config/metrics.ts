@@ -324,12 +324,13 @@ export const METRICS: Record<string, MetricConfig> = {
   inventory_surplus: {
     id: 'inventory_surplus',
     title: 'Inventory Surplus/Deficit',
-    format: 'number',
+    format: 'percent',
     dataSource: 'calculated',
     apiEndpoint: '/api/metrics/inventory-surplus/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'inventory_surplus',
+    rangeType: 'full', // Use full data range for proper +/- display
   },
 };
 
