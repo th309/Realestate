@@ -1045,6 +1045,21 @@ export const api = {
   // Formula: Current Inventory - 5-Year Historical Average
   // ============================================================================
 
+  getNationalInventorySurplus: async (): Promise<number | null> => {
+    interface SurplusResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        inventory_surplus: number;
+      }>;
+    }
+    const response = await fetchAPI<SurplusResponse>('/api/metrics/inventory-surplus/national');
+    if (response.data && response.data.length > 0) {
+      return response.data[0].inventory_surplus;
+    }
+    return null;
+  },
+
   getStateInventorySurplus: async (): Promise<StateHomeValues> => {
     interface SurplusResponse {
       success: boolean;

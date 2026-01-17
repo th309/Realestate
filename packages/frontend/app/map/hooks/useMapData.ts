@@ -151,7 +151,10 @@ async function fetchRealtorMetric(
     // Inventory Surplus - calculated: Current Inventory - 5-Year Average (no city data)
     case 'inventory_surplus':
       switch (level) {
-        case 'national':
+        case 'national': {
+          const nationalValue = await api.getNationalInventorySurplus();
+          return nationalValue != null ? { 'United States': nationalValue } : {};
+        }
         case 'state':
           return api.getStateInventorySurplus();
         case 'metro':

@@ -132,12 +132,12 @@ export class InventorySurplusController {
       };
     }
 
-    // Filter by state if provided (zip_name format: "City, ST")
+    // Filter by state if provided (zip_name format: "city, st" - lowercase)
     let filteredData = result.data;
     if (state) {
-      const statePattern = `, ${state.toUpperCase()}`;
+      const statePattern = `, ${state.toLowerCase()}`;
       filteredData = result.data.filter(
-        (item: any) => item.region_name?.endsWith(statePattern)
+        (item: any) => item.region_name?.toLowerCase().endsWith(statePattern)
       );
     }
 
