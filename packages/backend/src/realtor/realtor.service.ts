@@ -942,4 +942,55 @@ export class RealtorService {
   async getZipPendingRatio(state?: string, date?: string) {
     return this.getZipData('pending_ratio', state, date);
   }
+
+  // Price Increased Share (price_increased_share)
+  async getStatePriceIncreased(date?: string) {
+    return this.getStateData('price_increased_share', date);
+  }
+
+  async getMetroPriceIncreased(date?: string) {
+    return this.getMetroData('price_increased_share', date);
+  }
+
+  async getCountyPriceIncreased(date?: string) {
+    return this.getCountyData('price_increased_share', date);
+  }
+
+  async getZipPriceIncreased(state?: string, date?: string) {
+    return this.getZipData('price_increased_share', state, date);
+  }
+
+  // New Listings YoY (new_listing_count_yy)
+  async getStateNewListingsYoy(date?: string) {
+    return this.getStateData('new_listing_count_yy', date);
+  }
+
+  async getMetroNewListingsYoy(date?: string) {
+    return this.getMetroData('new_listing_count_yy', date);
+  }
+
+  async getCountyNewListingsYoy(date?: string) {
+    return this.getCountyData('new_listing_count_yy', date);
+  }
+
+  async getZipNewListingsYoy(state?: string, date?: string) {
+    return this.getZipData('new_listing_count_yy', state, date);
+  }
+
+  // Listing Price (median_listing_price) - alias for home value from Realtor
+  async getStateListingPrice(date?: string) {
+    return this.getStateData('median_listing_price', date);
+  }
+
+  async getMetroListingPrice(date?: string) {
+    return this.getMetroData('median_listing_price', date);
+  }
+
+  async getCountyListingPrice(date?: string) {
+    return this.getCountyData('median_listing_price', date);
+  }
+
+  async getZipListingPrice(state?: string, date?: string) {
+    return this.getZipData('median_listing_price', state, date);
+  }
 }

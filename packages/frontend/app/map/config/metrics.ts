@@ -182,7 +182,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/inventory/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   inventory_yoy: {
@@ -192,7 +192,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/inventory-yoy/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
   },
 
@@ -203,7 +203,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/new-listings/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   pending_listings: {
@@ -213,7 +213,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/pending-listings/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   home_sales: {
@@ -223,7 +223,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/home-sales/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   home_sales_yoy: {
@@ -233,7 +233,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/home-sales-yoy/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
   },
 
@@ -244,7 +244,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/pending-ratio/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true, // Data stored as decimal (0.35 = 35%)
   },
 
@@ -255,7 +255,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/dom/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   // ============================================================================
@@ -279,7 +279,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/realtor/price-reduced/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
   },
 
   sale_to_list: {
@@ -359,6 +359,50 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'affordable_price',
+  },
+
+  // ============================================================================
+  // LISTING PRICE (Realtor median_listing_price - broader coverage than Zillow)
+  // ============================================================================
+  listing_price: {
+    id: 'listing_price',
+    title: 'Listing Price',
+    format: 'currency',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/listing-price/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+  },
+
+  price_per_sqft: {
+    id: 'price_per_sqft',
+    title: 'Price Per Sq Ft',
+    format: 'currency',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/price-per-sqft/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+  },
+
+  price_increase_pct: {
+    id: 'price_increase_pct',
+    title: 'Price Increase %',
+    format: 'percent_abs',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/price-increased/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+  },
+
+  new_listings_yoy: {
+    id: 'new_listings_yoy',
+    title: 'New Listings YoY',
+    format: 'percent',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/realtor/new-listings-yoy/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    asPercent: true,
   },
 
   // ============================================================================
@@ -523,26 +567,33 @@ export function getGeoPathSegment(geoLevel: GeoLevel): string {
  * Metrics that only have data at the METRO level
  * Used by both UI (to disable geo pills) and data fetching
  * Single source of truth for metro-only constraints
+ *
+ * NOTE: Many Realtor metrics now support national/state/metro/county/zip
+ * Only Zillow-specific and calculated metrics remain metro-only
  */
 export const METRO_ONLY_METRICS = new Set([
-  'rent_index',              // Rent Index only available at metro level
-  'rent_for_houses',         // Renter Demand Index only available at metro level
+  // Zillow rent data (only available at metro/county/zip from ZORI)
+  'rent_index',
+  'rent_for_houses',         // Renter Demand Index (ZORDI)
+  // Zillow affordability (only metro)
   'income_to_buy',
   'income_to_rent',
   'affordable_home_price',
   'years_to_save',
   'homeowner_affordability',
   'renter_affordability',
+  // Zillow new construction (only metro)
   'new_construction_sales',
   'new_construction_price',
   'new_construction_ppsf',
+  // Zillow sales data (only metro)
   'sale_price',
   'sale_to_list',
-  'home_sales',
-  'sales_yoy',
   'days_to_close',
+  // Zillow market heat (only metro)
   'market_health',
   'market_heat',
+  // Calculated metrics (only metro for now)
   'cap_rate',
   'overvalued_pct',
 ]);

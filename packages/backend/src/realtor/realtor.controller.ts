@@ -524,4 +524,106 @@ export class RealtorController {
     const data = await this.realtorService.getZipPendingRatio(state, date);
     return { success: true, count: data.length, geography: 'ZIP', metric: 'pending_ratio', data };
   }
+
+  // ============================================================================
+  // Price Increased Share (price_increased_share)
+  // ============================================================================
+
+  @Get('price-increased/national')
+  async getNationalPriceIncreased(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('price_increased_share', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'price_increased_share', data };
+  }
+
+  @Get('price-increased/states')
+  async getStatePriceIncreased(@Query('date') date?: string) {
+    const data = await this.realtorService.getStatePriceIncreased(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'price_increased_share', data };
+  }
+
+  @Get('price-increased/metros')
+  async getMetroPriceIncreased(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroPriceIncreased(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'price_increased_share', data };
+  }
+
+  @Get('price-increased/counties')
+  async getCountyPriceIncreased(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyPriceIncreased(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'price_increased_share', data };
+  }
+
+  @Get('price-increased/zips')
+  async getZipPriceIncreased(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipPriceIncreased(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'price_increased_share', data };
+  }
+
+  // ============================================================================
+  // New Listings YoY (new_listing_count_yy)
+  // ============================================================================
+
+  @Get('new-listings-yoy/national')
+  async getNationalNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('new_listing_count_yy', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'new_listing_count_yy', data };
+  }
+
+  @Get('new-listings-yoy/states')
+  async getStateNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateNewListingsYoy(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'new_listing_count_yy', data };
+  }
+
+  @Get('new-listings-yoy/metros')
+  async getMetroNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroNewListingsYoy(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'new_listing_count_yy', data };
+  }
+
+  @Get('new-listings-yoy/counties')
+  async getCountyNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyNewListingsYoy(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'new_listing_count_yy', data };
+  }
+
+  @Get('new-listings-yoy/zips')
+  async getZipNewListingsYoy(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipNewListingsYoy(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'new_listing_count_yy', data };
+  }
+
+  // ============================================================================
+  // Listing Price (median_listing_price) - Realtor's home value
+  // ============================================================================
+
+  @Get('listing-price/national')
+  async getNationalListingPrice(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData('median_listing_price', date);
+    return { success: true, count: data.length, geography: 'National', metric: 'median_listing_price', data };
+  }
+
+  @Get('listing-price/states')
+  async getStateListingPrice(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateListingPrice(date);
+    return { success: true, count: data.length, geography: 'State', metric: 'median_listing_price', data };
+  }
+
+  @Get('listing-price/metros')
+  async getMetroListingPrice(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroListingPrice(date);
+    return { success: true, count: data.length, geography: 'Metro', metric: 'median_listing_price', data };
+  }
+
+  @Get('listing-price/counties')
+  async getCountyListingPrice(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyListingPrice(date);
+    return { success: true, count: data.length, geography: 'County', metric: 'median_listing_price', data };
+  }
+
+  @Get('listing-price/zips')
+  async getZipListingPrice(@Query('state') state?: string, @Query('date') date?: string) {
+    const data = await this.realtorService.getZipListingPrice(state, date);
+    return { success: true, count: data.length, geography: 'ZIP', metric: 'median_listing_price', data };
+  }
 }
