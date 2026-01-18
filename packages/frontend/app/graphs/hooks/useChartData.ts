@@ -7,8 +7,8 @@ import { timeSeriesApi } from '@/lib/api/client';
 import { GeoLevel } from '@/app/map/config/metrics';
 
 interface ChartDataItem {
-  year: number;
-  [key: string]: number | boolean | undefined;
+  date: string;
+  [key: string]: number | boolean | string | undefined;
 }
 
 interface UseChartDataParams {
@@ -78,9 +78,8 @@ export function useChartData({
 
         // Transform API response to chart format
         const chartData: ChartDataItem[] = primaryResponse.data.map(point => {
-          const year = new Date(point.date).getFullYear();
           return {
-            year,
+            date: point.date,
             [selectedArea]: point.value,
           };
         });
@@ -98,12 +97,21 @@ export function useChartData({
 
             // Merge comparison data
             comparisonResponse.data.forEach(point => {
-              const year = new Date(point.date).getFullYear();
-              const existingPoint = chartData.find(d => d.year === year);
+              const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
                 existingPoint[comparison.area] = point.value;
+              } else {
+                // If the comparison date doesn't exist in primary data, add a new point
+                // Note: For simplicity we usually assume same dates, but this is safer
+                const newPoint: ChartDataItem = {
+                  date: point.date,
+                  [comparison.area]: point.value
+                };
+                chartData.push(newPoint);
               }
             });
+            // Re-sort if we added new dates
+            chartData.sort((a, b) => a.date.localeCompare(b.date));
           } catch (err) {
             console.error('Failed to fetch comparison data:', err);
           }
@@ -123,8 +131,7 @@ export function useChartData({
             // Merge baseline data
             const baselineKey = `Baseline: ${baseline.area}`;
             baselineResponse.data.forEach(point => {
-              const year = new Date(point.date).getFullYear();
-              const existingPoint = chartData.find(d => d.year === year);
+              const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
                 existingPoint[baselineKey] = point.value;
               }
@@ -140,26 +147,35 @@ export function useChartData({
           const prev = chartData[chartData.length - 2];
           const primaryValue = last[selectedArea] as number;
           const prevPrimaryValue = prev[selectedArea] as number;
-          const growth = (primaryValue - prevPrimaryValue) * 0.8;
 
-          const forecastItem: ChartDataItem = {
-            year: last.year + 1,
-            [selectedArea]: Math.round(primaryValue + growth),
-            isForecast: true,
-          };
+          if (!isNaN(primaryValue) && !isNaN(prevPrimaryValue)) {
+            const growth = (primaryValue - prevPrimaryValue) * 0.8;
 
-          if (comparison.enabled && comparison.area) {
-            const compValue = (last[comparison.area] as number) || 0;
-            forecastItem[comparison.area] = Math.round(compValue + growth * 0.5);
+            // Generate next date (assuming monthly data)
+            const lastDate = new Date(last.date);
+            const nextDate = new Date(lastDate);
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            const nextDateStr = nextDate.toISOString().split('T')[0];
+
+            const forecastItem: ChartDataItem = {
+              date: nextDateStr,
+              [selectedArea]: Math.round(primaryValue + growth),
+              isForecast: 'true', // Use string to match index signature
+            };
+
+            if (comparison.enabled && comparison.area) {
+              const compValue = (last[comparison.area] as number) || 0;
+              forecastItem[comparison.area] = Math.round(compValue + growth * 0.5);
+            }
+
+            if (baseline.enabled) {
+              const baseKey = `Baseline: ${baseline.area}`;
+              const baseValue = (last[baseKey] as number) || 0;
+              forecastItem[baseKey] = Math.round(baseValue + growth * 0.3);
+            }
+
+            chartData.push(forecastItem);
           }
-
-          if (baseline.enabled) {
-            const baseKey = `Baseline: ${baseline.area}`;
-            const baseValue = (last[baseKey] as number) || 0;
-            forecastItem[baseKey] = Math.round(baseValue + growth * 0.3);
-          }
-
-          chartData.push(forecastItem);
         }
 
         if (isMounted) {

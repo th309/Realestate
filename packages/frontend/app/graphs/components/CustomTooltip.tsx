@@ -22,13 +22,15 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, l
     return null;
   }
 
-  const milestone = MILESTONES.find((m) => m.year === label);
+  const dateLabel = typeof label === 'string' ? label : '';
+  const year = dateLabel ? new Date(dateLabel).getFullYear() : (typeof label === 'number' ? label : 0);
+  const milestone = MILESTONES.find((m) => m.year === year);
 
   return (
     <div className="bg-surface-container-high p-3 md:p-4 border border-outline-variant elevation-2 rounded-2xl md:rounded-3xl min-w-[200px] md:min-w-[240px] animate-in fade-in zoom-in-95 duration-200">
       <div className="flex items-center justify-between mb-2 md:mb-3 pb-2 border-b border-outline-variant">
         <p className="text-[9px] md:text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em]">
-          {`Period: ${label}`}
+          {`Period: ${dateLabel || label}`}
         </p>
       </div>
 

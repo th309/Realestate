@@ -54,11 +54,14 @@ export class TimeSeriesService {
         }
 
         try {
+            // Census tables use 'year' field, others use 'period_date'
+            const dateField = mapping.source === 'census' ? 'year' : 'period_date';
+
             // Build and execute query
             let query = this.supabase
                 .from(table)
-                .select(`period_date, ${mapping.columnName}`)
-                .order('period_date', { ascending: true });
+                .select(`${dateField}, ${mapping.columnName}`)
+                .order(dateField, { ascending: true });
 
             // Add region filter
             query = this.addRegionFilter(query, geoLevel, regionId, mapping.source);
@@ -68,12 +71,23 @@ export class TimeSeriesService {
                 query = query.eq('metric_name', mapping.metricNameValue);
             }
 
-            // Add date filters
+            // Add date/year filters
             if (startDate) {
-                query = query.gte('period_date', startDate);
+                if (mapping.source === 'census') {
+                    // Extract year from date string (YYYY-MM-DD -> YYYY)
+                    const year = parseInt(startDate.split('-')[0]);
+                    query = query.gte(dateField, year);
+                } else {
+                    query = query.gte(dateField, startDate);
+                }
             }
             if (endDate) {
-                query = query.lte('period_date', endDate);
+                if (mapping.source === 'census') {
+                    const year = parseInt(endDate.split('-')[0]);
+                    query = query.lte(dateField, year);
+                } else {
+                    query = query.lte(dateField, endDate);
+                }
             }
 
             // Add limit
@@ -91,7 +105,8 @@ export class TimeSeriesService {
 
             // Transform to standard format
             return data.map(row => ({
-                date: row.period_date,
+                // Convert year to date string: 2023 -> "2023-01-01"
+                date: mapping.source === 'census' ? `${row[dateField]}-01-01` : row[dateField],
                 value: Number(row[mapping.columnName]) || 0,
             }));
         } catch (err) {
@@ -188,8 +203,8 @@ export class TimeSeriesService {
     }
 
     /**
-     * Get table name based on data source and geography level
-     */
+   * Get table name based on data source and geography level
+   */
     private getTableName(source: string, geoLevel: string): string | null {
         const level = geoLevel.toLowerCase();
 
@@ -207,6 +222,21 @@ export class TimeSeriesService {
             if (level === 'state') return 'realtor_state';
             if (level === 'county') return 'realtor_county';
             if (level === 'zip') return 'realtor_zip';
+        }
+
+        if (source === 'census') {
+            if (level === 'national') return 'census_national';
+            if (level === 'state') return 'census_state';
+            if (level === 'metro') return 'census_metro';
+            if (level === 'county') return 'census_county';
+            if (level === 'zip') return 'census_zip';
+        }
+
+        if (source === 'economic') {
+            if (level === 'national') return 'economic_national';
+            if (level === 'state') return 'economic_state';
+            if (level === 'metro') return 'economic_metro';
+            if (level === 'county') return 'economic_county';
         }
 
         return null;
@@ -383,6 +413,64 @@ export class TimeSeriesService {
                 columnName: 'value',
                 usesMetricName: true,
                 metricNameValue: 'new_con_median_price_per_sqft',
+            },
+
+            // ========================================================================
+            // CENSUS/DEMOGRAPHIC METRICS (Direct Column Names, uses 'year' not 'period_date')
+            // ========================================================================
+            'population': {
+                source: 'census',
+                columnName: 'total_population',
+                usesMetricName: false,
+            },
+            'population_growth': {
+                source: 'census',
+                columnName: 'population_yoy',
+                usesMetricName: false,
+            },
+            'median_income': {
+                source: 'census',
+                columnName: 'median_household_income',
+                usesMetricName: false,
+            },
+            'income_growth': {
+                source: 'census',
+                columnName: 'income_yoy',
+                usesMetricName: false,
+            },
+            'median_age': {
+                source: 'census',
+                columnName: 'median_age',
+                usesMetricName: false,
+            },
+            'homeownership_rate': {
+                source: 'census',
+                columnName: 'homeownership_rate',
+                usesMetricName: false,
+            },
+
+            // ========================================================================
+            // ECONOMIC METRICS (Direct Column Names)
+            // ========================================================================
+            'unemployment_rate': {
+                source: 'economic',
+                columnName: 'unemployment_rate',
+                usesMetricName: false,
+            },
+            'job_growth': {
+                source: 'economic',
+                columnName: 'employment_yoy',
+                usesMetricName: false,
+            },
+            'gdp_growth': {
+                source: 'economic',
+                columnName: 'gdp_yoy',
+                usesMetricName: false,
+            },
+            'cost_of_living': {
+                source: 'economic',
+                columnName: 'rpp_all_items',
+                usesMetricName: false,
             },
         };
 

@@ -347,15 +347,20 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
             <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
 
             <XAxis
-              dataKey="year"
+              dataKey="date"
               axisLine={{ stroke: CHART_COLORS.outlineVariant }}
               tickLine={true}
               tick={{ fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 }}
+              tickFormatter={(val) => {
+                if (!val) return '';
+                const date = new Date(val);
+                return date.getFullYear().toString();
+              }}
               dy={isMobile ? 5 : 10}
               label={
                 !isMobile
                   ? {
-                    value: 'Year',
+                    value: 'Time',
                     position: 'insideBottom',
                     offset: -35,
                     fill: CHART_COLORS.onSurfaceVariant,
@@ -373,7 +378,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               tickFormatter={(val) =>
                 val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString()
               }
-              domain={['dataMin - 15000', 'auto']}
+              domain={['auto', 'auto']}
               orientation={isMobile ? 'right' : 'left'}
               label={
                 !isMobile
@@ -399,7 +404,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               MILESTONES.map((m) => (
                 <ReferenceLine
                   key={m.label}
-                  x={m.year}
+                  x={`${m.year}-01-01`}
                   stroke={CHART_COLORS.tertiary}
                   strokeDasharray="3 3"
                   strokeWidth={1.5}
