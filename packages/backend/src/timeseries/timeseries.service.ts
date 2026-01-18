@@ -15,14 +15,16 @@ export interface DateRange {
 
 /**
  * TimeSeriesService
- * 
+ *
  * Provides unified historical time-series data access across all metrics and geographies.
  * This service replicates the exact query patterns used by the map page, but returns
  * ALL historical data instead of just the latest value.
- * 
+ *
  * Key Differences in Table Structures:
  * - Realtor tables: Each metric is a dedicated column (e.g., median_listing_price)
  * - Zillow tables: Use metric_name column + value column
+ *
+ * @version 2.0.0 - Fixed column name mappings for all data sources
  */
 @Injectable()
 export class TimeSeriesService {
