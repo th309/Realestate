@@ -10,7 +10,6 @@ import { useChartData } from './hooks/useChartData';
 import { FilterHeader } from './components/FilterHeader';
 import { InsightsPanel } from './components/InsightsPanel';
 import { ChartSection } from './components/ChartSection';
-import { DataFooter } from './components/DataFooter';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -170,9 +169,6 @@ export const Dashboard: React.FC = () => {
               />
             </div>
           </div>
-
-          {/* Footer Cards */}
-          <DataFooter metric={metric} />
         </div>
       </div>
     </div>
