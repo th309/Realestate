@@ -51,21 +51,27 @@ export function useGraphSearch() {
         setShowSearchResults(true);
 
         try {
-            // Fetch from both Mapbox and our backend metros API in parallel
-            const [mapboxResponse, metrosResponse] = await Promise.all([
-                fetch(
-                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-                    `access_token=${MAPBOX_TOKEN}&` +
-                    `country=US&` +
-                    `types=region,place,postcode,district&` +
-                    `limit=6`
-                ),
-                fetch(`${API_BASE_URL}/markets/metros/search?q=${encodeURIComponent(query)}&limit=4`)
-                    .catch(() => null) // Don't fail if backend is down
-            ]);
+            // Fetch from Mapbox first (faster), then optionally add metro results
+            const mapboxPromise = fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+                `access_token=${MAPBOX_TOKEN}&` +
+                `country=US&` +
+                `types=region,place,postcode,district&` +
+                `limit=6`
+            );
+
+            // Metro search with 2 second timeout - don't block on slow backend
+            const metroPromise = Promise.race([
+                fetch(`${API_BASE_URL}/markets/metros/search?q=${encodeURIComponent(query)}&limit=4`),
+                new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
+            ]).catch(() => null);
+
+            const [mapboxResponse, metrosResponse] = await Promise.all([mapboxPromise, metroPromise]);
 
             const mapboxData = await mapboxResponse.json();
-            const metrosData = metrosResponse ? await metrosResponse.json().catch(() => []) : [];
+            const metrosData = metrosResponse && metrosResponse instanceof Response
+                ? await metrosResponse.json().catch(() => [])
+                : [];
 
             // Process Mapbox results
             const features: MapboxFeature[] = mapboxData.features || [];
@@ -90,13 +96,17 @@ export function useGraphSearch() {
             });
 
             // Process metro results from our backend
-            const metroResults: SearchResult[] = (metrosData || []).map((metro: { regionId: number; name: string }) => ({
-                id: `metro-${metro.regionId}`,
-                name: metro.name,
-                type: 'metro' as const,
-                center: [0, 0] as [number, number], // We don't have coordinates for metros
-                state: '',
-            }));
+            // Filter out "United States" which incorrectly appears in metro results
+            const metroResults: SearchResult[] = (metrosData || [])
+                .filter((metro: { regionId: number; name: string }) =>
+                    !metro.name.toLowerCase().includes('united states'))
+                .map((metro: { regionId: number; name: string }) => ({
+                    id: `metro-${metro.regionId}`,
+                    name: metro.name,
+                    type: 'metro' as const,
+                    center: [0, 0] as [number, number], // We don't have coordinates for metros
+                    state: '',
+                }));
 
             // Combine results: metros first (since user is looking for them), then other results
             // Filter out duplicate names (case-insensitive)

@@ -42,9 +42,13 @@ function extractRegionId(area: string, level: GeoLevel): string {
       // "Florida, United States" -> "Florida"
       return area.split(',')[0].trim();
     }
-    case 'metro':
+    case 'metro': {
+      // For metros from our database, the name is stored as-is (e.g., "Bloomington, IL")
+      // Don't truncate - use the full name for database lookup
+      return area;
+    }
     case 'city': {
-      // For metros/cities, use the first part (city name)
+      // For cities from Mapbox, use the first part (city name)
       // "Miami, Florida, United States" -> "Miami"
       return area.split(',')[0].trim();
     }

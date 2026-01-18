@@ -43,15 +43,21 @@ export class TimeSeriesService {
         endDate?: string,
         limit?: number,
     ): Promise<TimeSeriesDataPoint[]> {
+        console.log('[TimeSeriesService] getTimeSeries called:', { metricId, geoLevel, regionId, startDate, endDate });
+
         const mapping = this.getMetricMapping(metricId);
         if (!mapping) {
+            console.log('[TimeSeriesService] No mapping found for metric:', metricId);
             return [];
         }
+        console.log('[TimeSeriesService] Mapping:', { source: mapping.source, columnName: mapping.columnName, usesMetricName: mapping.usesMetricName });
 
         const table = this.getTableName(mapping.source, geoLevel);
         if (!table) {
+            console.log('[TimeSeriesService] No table found for:', { source: mapping.source, geoLevel });
             return [];
         }
+        console.log('[TimeSeriesService] Using table:', table);
 
         try {
             // Census tables use 'year' field, others use 'period_date'
@@ -97,18 +103,29 @@ export class TimeSeriesService {
 
             const { data, error } = await query;
 
+            console.log('[TimeSeriesService] Query result:', {
+                rowCount: data?.length || 0,
+                error: error?.message,
+                sampleRow: data?.[0],
+            });
+
             if (error) {
                 throw new Error(`Error fetching time series for ${metricId}: ${error.message}`);
             }
 
-            if (!data || data.length === 0) return [];
+            if (!data || data.length === 0) {
+                console.log('[TimeSeriesService] No data returned');
+                return [];
+            }
 
             // Transform to standard format
-            return data.map(row => ({
+            const result = data.map(row => ({
                 // Convert year to date string: 2023 -> "2023-01-01"
                 date: mapping.source === 'census' ? `${row[dateField]}-01-01` : row[dateField],
                 value: Number(row[mapping.columnName]) || 0,
             }));
+            console.log('[TimeSeriesService] Returning', result.length, 'points, sample:', result[0]);
+            return result;
         } catch (err) {
             console.error(`[TimeSeriesService] Error for ${metricId}:`, err);
             return [];
@@ -200,7 +217,16 @@ export class TimeSeriesService {
                 }
 
             case 'metro':
-                // All sources use cbsa_code for metros
+                // Zillow: can use region_name (metro name like "Bloomington, IL")
+                // Realtor/Census: use cbsa_code
+                if (source === 'zillow') {
+                    // If regionId looks like a CBSA code (numeric), use cbsa_code
+                    // Otherwise use region_name (metro name from our search)
+                    if (/^\d+$/.test(regionId)) {
+                        return query.eq('cbsa_code', regionId);
+                    }
+                    return query.eq('region_name', regionId);
+                }
                 return query.eq('cbsa_code', regionId);
 
             case 'county':
