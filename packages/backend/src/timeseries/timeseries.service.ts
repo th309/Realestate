@@ -2,12 +2,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
-interface TimeSeriesDataPoint {
+export interface TimeSeriesDataPoint {
     date: string;
     value: number;
 }
 
-interface DateRange {
+export interface DateRange {
     minDate: string;
     maxDate: string;
     count: number;
