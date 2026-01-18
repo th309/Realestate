@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { GeoLevel, MetricType, ComparisonConfig } from '../types';
-import { STATES } from '../constants';
+import { ComparisonConfig } from '../types';
+import { GeoLevel } from '@/app/map/config/metrics';
+import { STATES, UNIQUE_METRICS } from '../constants';
 
 export interface BaselineConfig {
   enabled: boolean;
@@ -13,10 +14,20 @@ export interface BaselineConfig {
 export type TimeFrame = '1Y' | '3Y' | '5Y' | '10Y' | 'Max';
 export type ChartType = 'area' | 'line' | 'bar';
 
+// GeoLevel display names for the dropdown
+export const GEO_LEVEL_OPTIONS: { value: GeoLevel; label: string }[] = [
+  { value: 'national', label: 'National' },
+  { value: 'state', label: 'State' },
+  { value: 'metro', label: 'Metro' },
+  { value: 'county', label: 'County' },
+  { value: 'city', label: 'City' },
+  { value: 'zip', label: 'ZIP' },
+];
+
 export function useDashboardState() {
-  const [geoLevel, setGeoLevel] = useState<GeoLevel>(GeoLevel.STATE);
+  const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedArea, setSelectedArea] = useState('Florida');
-  const [metric, setMetric] = useState<MetricType>(MetricType.INVENTORY);
+  const [metric, setMetric] = useState('listing_price'); // Default to listing_price
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Max');
   const [chartType, setChartType] = useState<ChartType>('area');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
@@ -29,7 +40,7 @@ export function useDashboardState() {
   });
   const [baseline, setBaseline] = useState<BaselineConfig>({
     enabled: false,
-    level: GeoLevel.NATIONAL,
+    level: 'national',
     area: 'United States',
   });
 
@@ -42,13 +53,16 @@ export function useDashboardState() {
     baseline: true,
   });
 
+  // Get metric options for dropdown (unique metrics only)
+  const metricOptions = useMemo(() => UNIQUE_METRICS, []);
+
   const getOptionsForLevel = useCallback((level: GeoLevel) => {
     switch (level) {
-      case GeoLevel.NATIONAL:
+      case 'national':
         return ['United States'];
-      case GeoLevel.STATE:
+      case 'state':
         return STATES;
-      case GeoLevel.METRO:
+      case 'metro':
         return [
           'Miami-Fort Lauderdale',
           'New York-Newark',
@@ -56,11 +70,11 @@ export function useDashboardState() {
           'Chicago-Naperville',
           'Dallas-Fort Worth',
         ];
-      case GeoLevel.COUNTY:
+      case 'county':
         return ['Miami-Dade', 'Los Angeles', 'Cook', 'Harris', 'Maricopa'];
-      case GeoLevel.CITY:
+      case 'city':
         return ['Miami', 'San Francisco', 'Austin', 'Seattle', 'Nashville'];
-      case GeoLevel.ZIP:
+      case 'zip':
         return ['33139', '90210', '10001', '60611', '78701'];
       default:
         return STATES;
@@ -77,7 +91,7 @@ export function useDashboardState() {
   );
 
   useEffect(() => {
-    if (geoLevel === GeoLevel.NATIONAL) {
+    if (geoLevel === 'national') {
       setSelectedArea('United States');
       setComparison((prev) => ({ ...prev, enabled: false }));
     } else if (!primaryOptions.includes(selectedArea)) {
@@ -129,5 +143,6 @@ export function useDashboardState() {
     toggleSeries,
     primaryOptions,
     baselineOptions,
+    metricOptions,
   };
 }

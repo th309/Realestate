@@ -11,7 +11,9 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { GeoLevel, MetricType, ComparisonConfig } from '../types';
+import { ComparisonConfig, MetricOption } from '../types';
+import { GeoLevel } from '@/app/map/config/metrics';
+import { GEO_LEVEL_OPTIONS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
 
 interface BaselineConfig {
@@ -25,8 +27,9 @@ interface FilterHeaderProps {
   setGeoLevel: (level: GeoLevel) => void;
   selectedArea: string;
   setSelectedArea: (area: string) => void;
-  metric: MetricType;
-  setMetric: (metric: MetricType) => void;
+  metric: string;
+  setMetric: (metric: string) => void;
+  metricOptions: MetricOption[];
   primaryOptions: string[];
   comparison: ComparisonConfig;
   setComparison: React.Dispatch<React.SetStateAction<ComparisonConfig>>;
@@ -48,6 +51,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   setSelectedArea,
   metric,
   setMetric,
+  metricOptions,
   primaryOptions,
   comparison,
   setComparison,
@@ -61,15 +65,24 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   visibleSeries,
   toggleSeries,
 }) => {
+  // Get display label for current geo level
+  const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
+
+  // Get display name for current metric
+  const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
+
   return (
     <div className="p-4 md:p-8 bg-[#f1f5f1] border-b border-[#dee5dd]">
       <div className="flex flex-col gap-6 md:gap-8 mb-6 md:mb-8">
         <div className="grid grid-cols-1 md:flex md:flex-row gap-4">
           <M3Select
             label="Geography Level"
-            value={geoLevel}
-            onChange={(val) => setGeoLevel(val as GeoLevel)}
-            options={Object.values(GeoLevel)}
+            value={geoLevelLabel}
+            onChange={(val) => {
+              const level = GEO_LEVEL_OPTIONS.find((opt) => opt.label === val)?.value || 'state';
+              setGeoLevel(level);
+            }}
+            options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
             isPrimary
           />
           <M3Select
@@ -77,13 +90,16 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             value={selectedArea}
             onChange={setSelectedArea}
             options={primaryOptions}
-            disabled={geoLevel === GeoLevel.NATIONAL}
+            disabled={geoLevel === 'national'}
           />
           <M3Select
             label="Market Metric"
-            value={metric}
-            onChange={(val) => setMetric(val as MetricType)}
-            options={Object.values(MetricType)}
+            value={metricName}
+            onChange={(val) => {
+              const metricId = metricOptions.find((m) => m.name === val)?.id || 'listing_price';
+              setMetric(metricId);
+            }}
+            options={metricOptions.map((m) => m.name)}
           />
         </div>
       </div>
@@ -92,12 +108,12 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <button
             onClick={() => setComparison((prev) => ({ ...prev, enabled: !prev.enabled }))}
-            disabled={geoLevel === GeoLevel.NATIONAL}
+            disabled={geoLevel === 'national'}
             className={`flex items-center justify-center gap-2.5 px-4 md:px-6 py-3 md:py-3.5 rounded-2xl text-xs md:text-sm font-black transition-all border ${
               comparison.enabled
                 ? 'bg-[#006d3d] text-white border-[#006d3d] shadow-md'
                 : 'bg-white text-[#414941] border-[#717971] hover:bg-[#e7ece7]'
-            } ${geoLevel === GeoLevel.NATIONAL ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
+            } ${geoLevel === 'national' ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
           >
             {comparison.enabled ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {comparison.enabled ? 'Remove Comparison' : 'Compare Another'}
@@ -137,9 +153,12 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
               <div className="w-full md:w-[150px]">
                 <M3Select
                   label="Base Level"
-                  value={baseline.level}
-                  onChange={(val) => setBaseline((prev) => ({ ...prev, level: val as GeoLevel }))}
-                  options={Object.values(GeoLevel)}
+                  value={GEO_LEVEL_OPTIONS.find((opt) => opt.value === baseline.level)?.label || 'National'}
+                  onChange={(val) => {
+                    const level = GEO_LEVEL_OPTIONS.find((opt) => opt.label === val)?.value || 'national';
+                    setBaseline((prev) => ({ ...prev, level }));
+                  }}
+                  options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
                 />
               </div>
               <div className="w-full md:w-[150px]">

@@ -2,11 +2,10 @@
 
 import React from 'react';
 import { Share2, Database, FileJson, FileText, Image as ImageIcon, Map, TrendingUp } from 'lucide-react';
-import { MetricType } from '../types';
-import { SOURCES } from '../constants';
+import { getMetricSource } from '../constants';
 
 interface DataFooterProps {
-  metric: MetricType;
+  metric: string;
 }
 
 export const DataFooter: React.FC<DataFooterProps> = ({ metric }) => {
@@ -21,7 +20,7 @@ export const DataFooter: React.FC<DataFooterProps> = ({ metric }) => {
           <div className="flex flex-wrap items-center text-[11px] md:text-sm text-[#1a1c1a] gap-2 md:gap-3">
             <span className="font-black">Provider:</span>
             <span className="bg-[#e7ece7] px-3 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[#006d3d] border border-[#dee5dd] text-[9px] md:text-[11px] font-black shadow-sm truncate max-w-[200px] md:max-w-none">
-              {SOURCES[metric]}
+              {getMetricSource(metric)}
             </span>
             <span className="hidden md:inline text-[#dee5dd] mx-2">|</span>
             <span className="text-[#414941] text-[10px] md:text-xs font-bold flex items-center gap-2">

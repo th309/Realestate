@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { GeoLevel } from './types';
-import { DESCRIPTIONS } from './constants';
+import { DESCRIPTIONS, getMetricDescription } from './constants';
+import { getMetricTitle } from '@/app/map/config/metrics';
 import { getInsights } from './services/geminiService';
 import { useDashboardState } from './hooks/useDashboardState';
 import { useChartData } from './hooks/useChartData';
@@ -41,6 +41,7 @@ export const Dashboard: React.FC = () => {
     toggleSeries,
     primaryOptions,
     baselineOptions,
+    metricOptions,
   } = useDashboardState();
 
   const chartData = useChartData({
@@ -67,6 +68,9 @@ export const Dashboard: React.FC = () => {
     setIsInsightLoading(false);
   };
 
+  // Get display name for metric
+  const metricDisplayName = getMetricTitle(metric);
+
   return (
     <div className="max-w-7xl mx-auto px-2 md:px-8 py-4 md:py-6">
       <div className="bg-[#f7faf7] rounded-[24px] md:rounded-[32px] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.08)] overflow-hidden border border-[#dee5dd]">
@@ -77,6 +81,7 @@ export const Dashboard: React.FC = () => {
           setSelectedArea={setSelectedArea}
           metric={metric}
           setMetric={setMetric}
+          metricOptions={metricOptions}
           primaryOptions={primaryOptions}
           comparison={comparison}
           setComparison={setComparison}
@@ -110,10 +115,10 @@ export const Dashboard: React.FC = () => {
                 </>
               )}
               <span className="hidden md:inline text-[#dee5dd] mx-2">|</span>
-              <span className="w-full md:w-auto text-[#006d3d]">{metric}</span>
+              <span className="w-full md:w-auto text-[#006d3d]">{metricDisplayName}</span>
             </h1>
             <p className="text-[#414941] text-sm md:text-lg leading-relaxed max-w-2xl opacity-90">
-              {DESCRIPTIONS[metric]}
+              {getMetricDescription(metric)}
             </p>
           </div>
 

@@ -16,8 +16,9 @@ import {
   Bar,
   LineChart,
 } from 'recharts';
-import { MetricType, ComparisonConfig } from '../types';
+import { ComparisonConfig } from '../types';
 import { MILESTONES } from '../constants';
+import { getMetricTitle } from '@/app/map/config/metrics';
 import { CustomTooltip } from './CustomTooltip';
 
 type TimeFrame = '1Y' | '3Y' | '5Y' | '10Y' | 'Max';
@@ -34,7 +35,7 @@ interface ChartSectionProps {
   selectedArea: string;
   comparison: ComparisonConfig;
   baseline: BaselineConfig;
-  metric: MetricType;
+  metric: string;
   timeFrame: TimeFrame;
   setTimeFrame: (tf: TimeFrame) => void;
   chartType: ChartType;
@@ -273,7 +274,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               label={
                 !isMobile
                   ? {
-                      value: metric,
+                      value: getMetricTitle(metric),
                       angle: -90,
                       position: 'insideLeft',
                       offset: -55,
