@@ -206,6 +206,71 @@ export const MILESTONES: Milestone[] = [
   { year: 2022, label: 'Fed rate hikes begin' },
 ];
 
+// Data sources for metrics
+export const SOURCES: Record<string, string> = {
+  // Realtor.com metrics
+  listing_price: 'Realtor.com Market Data',
+  price_per_sqft: 'Realtor.com Market Data',
+  days_on_market: 'Realtor.com Market Data',
+  for_sale_inventory: 'Realtor.com Market Data',
+  inventory_yoy: 'Realtor.com Market Data',
+  pending_ratio: 'Realtor.com Market Data',
+  new_listings: 'Realtor.com Market Data',
+  new_listings_yoy: 'Realtor.com Market Data',
+  hotness_score: 'Realtor.com Hotness Index',
+  price_cut_pct: 'Realtor.com Market Data',
+  price_increase_pct: 'Realtor.com Market Data',
+  home_value_yoy: 'Realtor.com Market Data',
+  home_value_mom: 'Realtor.com Market Data',
+  home_sales: 'Realtor.com Market Data',
+  home_sales_yoy: 'Realtor.com Market Data',
+  pending_listings: 'Realtor.com Market Data',
+  demand_score: 'Realtor.com Market Data',
+  supply_score: 'Realtor.com Market Data',
+
+  // Zillow metrics
+  home_value: 'Zillow Home Value Index (ZHVI)',
+  home_value_5yr: 'Zillow Home Value Index (ZHVI)',
+  home_price_forecast: 'Zillow Home Price Forecast',
+  rent_index: 'Zillow Observed Rent Index (ZORI)',
+  rent_for_houses: 'Zillow Renter Demand Index',
+  market_heat: 'Zillow Market Heat Index',
+  sale_to_list: 'Zillow Market Data',
+  income_to_buy: 'Zillow Affordability Data',
+  income_to_rent: 'Zillow Affordability Data',
+  affordable_home_price: 'Zillow Affordability Data',
+  years_to_save: 'Zillow Affordability Data',
+  homeowner_affordability: 'Zillow Affordability Data',
+  renter_affordability: 'Zillow Affordability Data',
+  new_construction_sales: 'Zillow New Construction Data',
+  new_construction_price: 'Zillow New Construction Data',
+  new_construction_ppsf: 'Zillow New Construction Data',
+
+  // Calculated metrics
+  cap_rate: 'Calculated (Rent / Value)',
+  overvalued_pct: 'Calculated (Value vs Fundamentals)',
+  inventory_surplus: 'Calculated (Inventory vs Balanced)',
+
+  // Census metrics
+  population: 'U.S. Census Bureau ACS',
+  population_growth: 'U.S. Census Bureau ACS',
+  median_income: 'U.S. Census Bureau ACS',
+  income_growth: 'U.S. Census Bureau ACS',
+  median_age: 'U.S. Census Bureau ACS',
+  homeownership_rate: 'U.S. Census Bureau ACS',
+
+  // Economic metrics
+  unemployment_rate: 'Bureau of Labor Statistics',
+  job_growth: 'Bureau of Labor Statistics',
+  gdp_growth: 'Bureau of Economic Analysis',
+  cost_of_living: 'Bureau of Economic Analysis RPP',
+};
+
+// Helper function to get source for a metric
+export function getMetricSource(metricId: string): string {
+  return SOURCES[metricId] || 'Data source not specified';
+}
+
 // Helper function to get description for a metric
 export function getMetricDescription(metricId: string): string {
   return DESCRIPTIONS[metricId] || METRICS[metricId]?.title || 'No description available.';
