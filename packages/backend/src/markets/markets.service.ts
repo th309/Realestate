@@ -1,12 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
 @Injectable()
 export class MarketsService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   async getMarkets(limit = 100, offset = 0) {
     const { data, error, count } = await this.supabase

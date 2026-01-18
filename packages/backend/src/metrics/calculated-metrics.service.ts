@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
 export interface CalculatedMetricsInput {
   geography_id: string;
@@ -49,7 +49,7 @@ export class CalculatedMetricsService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Calculate Cap Rate: (ZORI × 12 × expense_ratio) / price × 100

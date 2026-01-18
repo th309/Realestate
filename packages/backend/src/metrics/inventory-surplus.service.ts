@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
 interface CacheEntry<T> {
   data: T;

@@ -5,7 +5,7 @@
  */
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
 export interface EconomicDataPoint {
   region_id: string;
@@ -33,7 +33,7 @@ export class EconomicService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   private getCached(key: string): EconomicRow[] | null {
     const entry = this.cache.get(key);

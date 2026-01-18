@@ -7,7 +7,7 @@
 
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { GeographyType } from './scoring.types';
 
 interface PercentileStats {
@@ -34,7 +34,7 @@ interface PercentileStats {
 export class PercentileService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Calculate percentiles for all metrics for a given geography type and date

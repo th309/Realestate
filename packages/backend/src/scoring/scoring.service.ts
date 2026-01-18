@@ -15,7 +15,7 @@
 
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import {
   GeographyType,
   MetricData,
@@ -39,7 +39,7 @@ const CALCULATION_VERSION = '1.0.0';
 export class ScoringService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Public API
@@ -593,13 +593,13 @@ export class ScoringService {
 
     // High: ≥90% metrics AND <60 days old
     if (ratio >= SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT &&
-        freshnessDays < SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS) {
+      freshnessDays < SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS) {
       return 'high';
     }
 
     // Medium: ≥70% metrics AND <120 days old
     if (ratio >= SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT &&
-        freshnessDays < SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS) {
+      freshnessDays < SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS) {
       return 'medium';
     }
 

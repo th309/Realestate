@@ -2,9 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { fetch as undiciFetch, Agent } from 'undici';
-import { SupabaseService } from './supabase.service';
-
-export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
+import { SupabaseService, SUPABASE_CLIENT } from './supabase.service';
 
 // Create a custom agent with connection handling for Railway
 const agent = new Agent({

@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_CLIENT } from '../supabase/supabase.module';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 
 // National median household income benchmark (approximate 2024 value)
@@ -14,7 +14,7 @@ export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly calculatedMetricsService: CalculatedMetricsService,
-  ) {}
+  ) { }
 
   /**
    * Get overvalued percentage for metros
@@ -301,9 +301,9 @@ export class MetricsController {
       },
       totals: {
         processed: results.metros.processed + results.states.processed +
-                   results.counties.processed + results.zips.processed,
+          results.counties.processed + results.zips.processed,
         stored: results.metros.stored + results.states.stored +
-                results.counties.stored + results.zips.stored,
+          results.counties.stored + results.zips.stored,
       },
     };
   }
