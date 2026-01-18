@@ -844,6 +844,14 @@ export class MetricsController {
   // ============================================================================
 
   /**
+   * Get income-to-buy for national
+   */
+  @Get('income-to-buy/national')
+  async getNationalIncomeToBuy() {
+    return this.getIncomeToBuyByGeo('national', 'National');
+  }
+
+  /**
    * Get income-to-buy for states
    * Returns the annual income required to afford the median-priced home
    */
@@ -964,6 +972,14 @@ export class MetricsController {
   // ============================================================================
   // AFFORDABLE-HOME-PRICE ENDPOINTS (from pre-calculated data)
   // ============================================================================
+
+  /**
+   * Get affordable-home-price for national
+   */
+  @Get('affordable-home-price/national')
+  async getNationalAffordableHomePrice() {
+    return this.getAffordableHomePriceByGeo('national', 'National');
+  }
 
   /**
    * Get affordable-home-price for states

@@ -437,8 +437,15 @@ async function fetchZillowMetric(
     case 'income_to_buy':
       // Income to Buy now supports all geography levels via calculated_metrics
       switch (level) {
+        case 'national': {
+          // Fetch both national and state data, merge them
+          const [nationalData, stateData] = await Promise.all([
+            api.getNationalIncomeToBuy(),
+            api.getStateIncomeToBuy()
+          ]);
+          return { ...stateData, ...nationalData };
+        }
         case 'state':
-        case 'national':
           return api.getStateIncomeToBuy();
         case 'metro':
           return api.getMetroIncomeToBuy();
@@ -454,8 +461,15 @@ async function fetchZillowMetric(
     case 'affordable_home_price':
       // Affordable Home Price now supports all geography levels via calculated_metrics
       switch (level) {
+        case 'national': {
+          // Fetch both national and state data, merge them
+          const [nationalData, stateData] = await Promise.all([
+            api.getNationalAffordableHomePrice(),
+            api.getStateAffordableHomePrice()
+          ]);
+          return { ...stateData, ...nationalData };
+        }
         case 'state':
-        case 'national':
           return api.getStateAffordableHomePrice();
         case 'metro':
           return api.getMetroAffordableHomePrice();

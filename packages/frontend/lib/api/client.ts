@@ -437,6 +437,17 @@ export const api = {
   // ============================================================================
 
   // Income Needed to Buy (income_to_buy) - from calculated_metrics
+  getNationalIncomeToBuy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; income_to_buy: number }> }>('/api/metrics/income-to-buy/national');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.region_name && item.income_to_buy != null) {
+        result[item.region_name] = Number(item.income_to_buy);
+      }
+    });
+    return result;
+  },
+
   getStateIncomeToBuy: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; income_to_buy: number }> }>('/api/metrics/income-to-buy/states');
     const result: Record<string, number> = {};
@@ -496,6 +507,17 @@ export const api = {
   },
 
   // Affordable Home Price (affordable_home_price) - from calculated_metrics
+  getNationalAffordableHomePrice: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; affordable_home_price: number }> }>('/api/metrics/affordable-home-price/national');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.region_name && item.affordable_home_price != null) {
+        result[item.region_name] = Number(item.affordable_home_price);
+      }
+    });
+    return result;
+  },
+
   getStateAffordableHomePrice: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; affordable_home_price: number }> }>('/api/metrics/affordable-home-price/states');
     const result: Record<string, number> = {};
