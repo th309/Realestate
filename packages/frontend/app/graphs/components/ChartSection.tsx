@@ -24,6 +24,7 @@ import {
   Bar,
   LineChart,
   Legend,
+  ComposedChart,
 } from 'recharts';
 import { ComparisonConfig } from '../types';
 import { MILESTONES, getMetricSource } from '../constants';
@@ -70,6 +71,7 @@ const chartTypeConfig = [
 const CHART_COLORS = {
   primary: '#6750a4',       // Purple - primary area
   comparison: '#0891b2',    // Cyan/Teal - comparison area (more distinct)
+  baseline: '#ea580c',      // Bright orange - baseline (highly visible)
   tertiary: '#7d5260',
   outline: '#79747e',
   surface: '#fef7ff',
@@ -177,17 +179,31 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     },
   };
 
-  const baselineKey = `Baseline: ${baseline.area}`;
+  // Use simple key format without special characters (matches useChartData)
+  const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
+  // Display name for legend
+  const baselineDisplayName = `Baseline: ${baseline.area}`;
 
-  // Debug: Check if baseline data exists in chartData
+  // Debug: Log chart data and baseline info
   if (baseline.enabled && chartData && chartData.length > 0) {
     const hasBaselineData = chartData.some(d => baselineKey in d);
     const sampleWithBaseline = chartData.find(d => baselineKey in d);
-    console.log('[ChartSection] Baseline check:', {
+    const allKeysInFirstItem = Object.keys(chartData[0]);
+
+    // Check data range
+    const primaryValues = chartData.map(d => d[selectedArea] as number).filter(v => v != null && !isNaN(v));
+    const baselineValues = chartData.map(d => d[baselineKey] as number).filter(v => v != null && !isNaN(v));
+
+    console.log('[ChartSection] DEBUG:', {
       baselineKey,
+      baselineDisplayName,
       hasBaselineData,
-      visibleSeries: visibleSeries.baseline,
-      sampleWithBaseline: sampleWithBaseline ? { date: sampleWithBaseline.date, value: sampleWithBaseline[baselineKey] } : null,
+      visibleSeriesBaseline: visibleSeries.baseline,
+      chartDataLength: chartData.length,
+      firstItemKeys: allKeysInFirstItem,
+      primaryRange: primaryValues.length > 0 ? `${Math.min(...primaryValues)} - ${Math.max(...primaryValues)} (${primaryValues.length} points)` : 'no data',
+      baselineRange: baselineValues.length > 0 ? `${Math.min(...baselineValues)} - ${Math.max(...baselineValues)} (${baselineValues.length} points)` : 'no data',
+      samplePoint: sampleWithBaseline,
     });
   }
 
@@ -226,58 +242,62 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     },
   };
 
-  // Render Area Chart
-  const renderAreaChart = () => (
-    <AreaChart data={chartData} margin={chartMargin}>
-      <defs>
-        <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
-          <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.05} />
-        </linearGradient>
-        <linearGradient id="comparisonGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%" stopColor={CHART_COLORS.comparison} stopOpacity={0.25} />
-          <stop offset="95%" stopColor={CHART_COLORS.comparison} stopOpacity={0.05} />
-        </linearGradient>
-      </defs>
-      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
-      <XAxis {...xAxisProps} />
-      <YAxis {...yAxisProps} />
-      <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
-      <Legend {...legendProps} />
-      {renderMilestones()}
-      {visibleSeries.primary && (
-        <Area
-          type="monotone"
-          dataKey={selectedArea}
-          name={selectedArea}
-          stroke={CHART_COLORS.primary}
-          strokeWidth={isMobile ? 2 : 3}
-          fill="url(#primaryGrad)"
-        />
-      )}
-      {comparison.enabled && visibleSeries.comparison && (
-        <Area
-          type="monotone"
-          dataKey={comparison.area}
-          name={comparison.area}
-          stroke={CHART_COLORS.comparison}
-          strokeWidth={isMobile ? 2 : 3}
-          fill="url(#comparisonGrad)"
-        />
-      )}
-      {baseline.enabled && visibleSeries.baseline && (
-        <Line
-          type="monotone"
-          dataKey={baselineKey}
-          name={baselineKey}
-          stroke={CHART_COLORS.outline}
-          strokeWidth={isMobile ? 1.5 : 2}
-          strokeDasharray="10 5"
-          dot={false}
-        />
-      )}
-    </AreaChart>
-  );
+  // Render Area Chart - use ComposedChart when baseline is enabled to properly mix Area and Line
+  const renderAreaChart = () => {
+    const ChartComponent = baseline.enabled ? ComposedChart : AreaChart;
+    return (
+      <ChartComponent data={chartData} margin={chartMargin}>
+        <defs>
+          <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.05} />
+          </linearGradient>
+          <linearGradient id="comparisonGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={CHART_COLORS.comparison} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={CHART_COLORS.comparison} stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
+        <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+        <Legend {...legendProps} />
+        {renderMilestones()}
+        {visibleSeries.primary && (
+          <Area
+            type="monotone"
+            dataKey={selectedArea}
+            name={selectedArea}
+            stroke={CHART_COLORS.primary}
+            strokeWidth={isMobile ? 2 : 3}
+            fill="url(#primaryGrad)"
+          />
+        )}
+        {comparison.enabled && visibleSeries.comparison && (
+          <Area
+            type="monotone"
+            dataKey={comparison.area}
+            name={comparison.area}
+            stroke={CHART_COLORS.comparison}
+            strokeWidth={isMobile ? 2 : 3}
+            fill="url(#comparisonGrad)"
+          />
+        )}
+        {baseline.enabled && visibleSeries.baseline && (
+          <Line
+            type="monotone"
+            dataKey={baselineKey}
+            name={baselineDisplayName}
+            stroke={CHART_COLORS.baseline}
+            strokeWidth={isMobile ? 2 : 3}
+            strokeDasharray="8 4"
+            dot={false}
+            connectNulls={true}
+          />
+        )}
+      </ChartComponent>
+    );
+  };
 
   // Render Line Chart
   const renderLineChart = () => (
@@ -314,54 +334,59 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         <Line
           type="monotone"
           dataKey={baselineKey}
-          name={baselineKey}
-          stroke={CHART_COLORS.outline}
-          strokeWidth={isMobile ? 1.5 : 2}
-          strokeDasharray="10 5"
+          name={baselineDisplayName}
+          stroke={CHART_COLORS.baseline}
+          strokeWidth={isMobile ? 2 : 3}
+          strokeDasharray="8 4"
           dot={false}
+          connectNulls={true}
         />
       )}
     </LineChart>
   );
 
-  // Render Bar Chart
-  const renderBarChart = () => (
-    <BarChart data={chartData} margin={chartMargin}>
-      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
-      <XAxis {...xAxisProps} />
-      <YAxis {...yAxisProps} />
-      <Tooltip content={<CustomTooltip />} cursor={{ fill: CHART_COLORS.surfaceContainer }} />
-      <Legend {...legendProps} />
-      {renderMilestones()}
-      {visibleSeries.primary && (
-        <Bar
-          dataKey={selectedArea}
-          name={selectedArea}
-          fill={CHART_COLORS.primary}
-          radius={[4, 4, 0, 0]}
-        />
-      )}
-      {comparison.enabled && visibleSeries.comparison && (
-        <Bar
-          dataKey={comparison.area}
-          name={comparison.area}
-          fill={CHART_COLORS.comparison}
-          radius={[4, 4, 0, 0]}
-        />
-      )}
-      {baseline.enabled && visibleSeries.baseline && (
-        <Line
-          type="monotone"
-          dataKey={baselineKey}
-          name={baselineKey}
-          stroke={CHART_COLORS.outline}
-          strokeWidth={isMobile ? 1.5 : 2}
-          strokeDasharray="10 5"
-          dot={false}
-        />
-      )}
-    </BarChart>
-  );
+  // Render Bar Chart - use ComposedChart when baseline is enabled to properly mix Bar and Line
+  const renderBarChart = () => {
+    const ChartComponent = baseline.enabled ? ComposedChart : BarChart;
+    return (
+      <ChartComponent data={chartData} margin={chartMargin}>
+        <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: CHART_COLORS.surfaceContainer }} />
+        <Legend {...legendProps} />
+        {renderMilestones()}
+        {visibleSeries.primary && (
+          <Bar
+            dataKey={selectedArea}
+            name={selectedArea}
+            fill={CHART_COLORS.primary}
+            radius={[4, 4, 0, 0]}
+          />
+        )}
+        {comparison.enabled && visibleSeries.comparison && (
+          <Bar
+            dataKey={comparison.area}
+            name={comparison.area}
+            fill={CHART_COLORS.comparison}
+            radius={[4, 4, 0, 0]}
+          />
+        )}
+        {baseline.enabled && visibleSeries.baseline && (
+          <Line
+            type="monotone"
+            dataKey={baselineKey}
+            name={baselineDisplayName}
+            stroke={CHART_COLORS.baseline}
+            strokeWidth={isMobile ? 2 : 3}
+            strokeDasharray="8 4"
+            dot={false}
+            connectNulls={true}
+          />
+        )}
+      </ChartComponent>
+    );
+  };
 
   return (
     <M3Card variant="elevated" size="lg" className="overflow-hidden">
@@ -455,7 +480,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               <button
                 onClick={() => toggleSeries('baseline')}
                 className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-200 ${visibleSeries.baseline
-                  ? 'text-outline bg-surface elevation-1'
+                  ? 'text-orange-600 bg-surface elevation-1'
                   : 'text-on-surface-variant opacity-50'
                   }`}
               >

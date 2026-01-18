@@ -45,13 +45,11 @@ export class TimeSeriesService {
     ): Promise<TimeSeriesDataPoint[]> {
         const mapping = this.getMetricMapping(metricId);
         if (!mapping) {
-            console.warn(`Metric ${metricId} not yet mapped in TimeSeriesService`);
             return [];
         }
 
         const table = this.getTableName(mapping.source, geoLevel);
         if (!table) {
-            console.warn(`No table found for ${mapping.source} at ${geoLevel} level`);
             return [];
         }
 
@@ -112,7 +110,7 @@ export class TimeSeriesService {
                 value: Number(row[mapping.columnName]) || 0,
             }));
         } catch (err) {
-            console.error(`TimeSeriesService error for ${metricId}:`, err);
+            console.error(`[TimeSeriesService] Error for ${metricId}:`, err);
             return [];
         }
     }
