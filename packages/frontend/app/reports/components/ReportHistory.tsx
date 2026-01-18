@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FileText, MapPin, Clock, MoreVertical, Eye, Download, Share2, Trash2 } from 'lucide-react';
 import { M3Card } from '@/app/graphs/components/M3Card';
 import { SCORE_INFO } from '../constants';
@@ -64,11 +64,13 @@ const STATUS_STYLES: Record<ReportStatus, { label: string; color: string; bgColo
 };
 
 export const ReportHistory: React.FC = () => {
-  const [menuOpen, setMenuOpen] = React.useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
+  // Format date consistently using UTC to avoid hydration mismatch
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
   };
 
   if (MOCK_REPORTS.length === 0) {
