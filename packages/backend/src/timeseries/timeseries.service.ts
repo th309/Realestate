@@ -17,12 +17,12 @@ export interface DateRange {
  * TimeSeriesService
  * 
  * Provides unified historical time-series data access across all metrics and geographies.
- * This service dynamically routes queries to the appropriate Supabase table based on
- * the metric ID and geography level.
+ * This service replicates the exact query patterns used by the map page, but returns
+ * ALL historical data instead of just the latest value.
  * 
- * EXPLANATION: Your backend uses Supabase (PostgreSQL) not TypeORM entities.
- * All data is queried using the Supabase client which provides a simple API for database operations.
- * The service maps frontend metric IDs to the correct database table and metric_name field.
+ * Key Differences in Table Structures:
+ * - Realtor tables: Each metric is a dedicated column (e.g., median_listing_price)
+ * - Zillow tables: Use metric_name column + value column
  */
 @Injectable()
 export class TimeSeriesService {
@@ -41,28 +41,63 @@ export class TimeSeriesService {
         endDate?: string,
         limit?: number,
     ): Promise<TimeSeriesDataPoint[]> {
-        // Map metric to source table and field
         const mapping = this.getMetricMapping(metricId);
         if (!mapping) {
-            throw new Error(`Unknown metric: ${metricId}`);
+            console.warn(`Metric ${metricId} not yet mapped in TimeSeriesService`);
+            return [];
         }
 
-        // Build query based on geography level and source
-        const query = this.buildQuery(mapping, geoLevel, regionId, startDate, endDate, limit);
-
-        const { data, error } = await query;
-
-        if (error) {
-            throw new Error(`Error fetching time series for ${metricId}: ${error.message}`);
+        const table = this.getTableName(mapping.source, geoLevel);
+        if (!table) {
+            console.warn(`No table found for ${mapping.source} at ${geoLevel} level`);
+            return [];
         }
 
-        if (!data || data.length === 0) return [];
+        try {
+            // Build and execute query
+            let query = this.supabase
+                .from(table)
+                .select(`period_date, ${mapping.columnName}`)
+                .order('period_date', { ascending: true });
 
-        // Transform to standard format
-        return data.map(row => ({
-            date: row.period_date,
-            value: Number(row.value),
-        }));
+            // Add region filter
+            query = this.addRegionFilter(query, geoLevel, regionId, mapping.source);
+
+            // For Zillow tables, add metric_name filter
+            if (mapping.usesMetricName) {
+                query = query.eq('metric_name', mapping.metricNameValue);
+            }
+
+            // Add date filters
+            if (startDate) {
+                query = query.gte('period_date', startDate);
+            }
+            if (endDate) {
+                query = query.lte('period_date', endDate);
+            }
+
+            // Add limit
+            if (limit) {
+                query = query.limit(limit);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                throw new Error(`Error fetching time series for ${metricId}: ${error.message}`);
+            }
+
+            if (!data || data.length === 0) return [];
+
+            // Transform to standard format
+            return data.map(row => ({
+                date: row.period_date,
+                value: Number(row[mapping.columnName]) || 0,
+            }));
+        } catch (err) {
+            console.error(`TimeSeriesService error for ${metricId}:`, err);
+            return [];
+        }
     }
 
     /**
@@ -71,97 +106,82 @@ export class TimeSeriesService {
     async getAvailableDates(metricId: string, geoLevel: string): Promise<DateRange> {
         const mapping = this.getMetricMapping(metricId);
         if (!mapping) {
-            throw new Error(`Unknown metric: ${metricId}`);
+            return { minDate: '', maxDate: '', count: 0 };
         }
 
         const table = this.getTableName(mapping.source, geoLevel);
         if (!table) {
-            throw new Error(`No data available for ${metricId} at ${geoLevel} level`);
+            return { minDate: '', maxDate: '', count: 0 };
         }
 
-        // Query for date range
-        const { data, error } = await this.supabase
-            .from(table)
-            .select('period_date')
-            .eq('metric_name', mapping.metricName)
-            .order('period_date', { ascending: true });
+        try {
+            let query = this.supabase
+                .from(table)
+                .select('period_date')
+                .order('period_date', { ascending: true });
 
-        if (error || !data || data.length === 0) {
+            // For Zillow tables, filter by metric_name
+            if (mapping.usesMetricName) {
+                query = query.eq('metric_name', mapping.metricNameValue);
+            }
+
+            const { data, error } = await query;
+
+            if (error || !data || data.length === 0) {
+                return { minDate: '', maxDate: '', count: 0 };
+            }
+
+            const dates = data.map(d => d.period_date);
+            const uniqueDates = [...new Set(dates)];
+
             return {
-                minDate: '',
-                maxDate: '',
-                count: 0,
+                minDate: uniqueDates[0],
+                maxDate: uniqueDates[uniqueDates.length - 1],
+                count: uniqueDates.length,
             };
+        } catch (err) {
+            console.error(`Error getting date range for ${metricId}:`, err);
+            return { minDate: '', maxDate: '', count: 0 };
         }
-
-        const dates = data.map(d => d.period_date);
-        const uniqueDates = [...new Set(dates)];
-
-        return {
-            minDate: uniqueDates[0],
-            maxDate: uniqueDates[uniqueDates.length - 1],
-            count: uniqueDates.length,
-        };
     }
 
     /**
-     * Build Supabase query based on metric mapping, geography, and filters
+     * Add region-specific filter based on geography level and data source
      */
-    private buildQuery(
-        mapping: { source: string; metricName: string; field: string },
-        geoLevel: string,
-        regionId: string,
-        startDate?: string,
-        endDate?: string,
-        limit?: number,
-    ) {
-        const table = this.getTableName(mapping.source, geoLevel);
-        if (!table) {
-            throw new Error(`No table found for ${mapping.source} at ${geoLevel} level`);
-        }
+    private addRegionFilter(query: any, geoLevel: string, regionId: string, source: string) {
+        const level = geoLevel.toLowerCase();
 
-        let query = this.supabase
-            .from(table)
-            .select('period_date, value')
-            .eq('metric_name', mapping.metricName)
-            .order('period_date', { ascending: true });
-
-        // Add region filter based on geography
-        query = this.addRegionFilter(query, geoLevel, regionId);
-
-        // Add date filters
-        if (startDate) {
-            query = query.gte('period_date', startDate);
-        }
-        if (endDate) {
-            query = query.lte('period_date', endDate);
-        }
-
-        // Add limit
-        if (limit) {
-            query = query.limit(limit);
-        }
-
-        return query;
-    }
-
-    /**
-     * Add region-specific filter to query based on geography level
-     */
-    private addRegionFilter(query: any, geoLevel: string, regionId: string) {
-        switch (geoLevel.toLowerCase()) {
+        switch (level) {
             case 'national':
                 return query.eq('region_name', 'United States');
+
             case 'state':
-                return query.eq('region_name', regionId);
+                // Realtor uses state_id (abbreviation like 'FL')
+                // Zillow uses region_name (full name like 'Florida')
+                if (source === 'realtor') {
+                    // If regionId is a full name, it will work with region_name
+                    // If it's an abbreviation, use state_id
+                    if (regionId.length === 2) {
+                        return query.eq('state_id', regionId.toUpperCase());
+                    }
+                    return query.eq('region_name', regionId);
+                } else {
+                    // Zillow uses full state name
+                    return query.eq('region_name', regionId);
+                }
+
             case 'metro':
                 return query.eq('cbsa_code', regionId);
+
             case 'county':
-                return query.eq('fips_code', regionId);
+                return query.eq('county_fips', regionId);
+
             case 'zip':
-                return query.eq('region_name', regionId); // ZIP codes use region_name
+                return query.eq('postal_code', regionId);
+
             case 'city':
                 return query.eq('region_name', regionId);
+
             default:
                 return query.eq('region_id', regionId);
         }
@@ -173,7 +193,6 @@ export class TimeSeriesService {
     private getTableName(source: string, geoLevel: string): string | null {
         const level = geoLevel.toLowerCase();
 
-        // Zillow tables
         if (source === 'zillow') {
             if (level === 'metro') return 'zillow_metro';
             if (level === 'state') return 'zillow_state';
@@ -182,7 +201,6 @@ export class TimeSeriesService {
             if (level === 'city') return 'zillow_city';
         }
 
-        // Realtor tables
         if (source === 'realtor') {
             if (level === 'national') return 'realtor_national';
             if (level === 'metro') return 'realtor_metro';
@@ -191,68 +209,181 @@ export class TimeSeriesService {
             if (level === 'zip') return 'realtor_zip';
         }
 
-        // TODO: Add support for:
-        // - Census demographics tables
-        // - Economic indicators tables  
-        // - Calculated metrics tables
-
         return null;
     }
 
     /**
-     * Map metric ID to database table source, metric_name field, and value field
+     * Map frontend metric ID to database table source and column name.
      * 
-     * In your database schema, most tables have:
-     * - metric_name: the specific metric identifier (e.g., 'zhvi', 'zori', 'median_listing_price')
-     * - value: the numeric value
-     * - period_date: the date
+     * This mapping EXACTLY matches what the map page uses:
+     * - Realtor tables: Direct column names (e.g., median_listing_price)
+     * - Zillow tables: metric_name filter + value column
      */
-    private getMetricMapping(metricId: string): { source: string; metricName: string; field: string } | null {
-        const mappings: Record<string, { source: string; metricName: string; field: string }> = {
-            // Zillow ZHVI (Home Value)
-            'home_value': { source: 'zillow', metricName: 'zhvi', field: 'value' },
+    private getMetricMapping(metricId: string): {
+        source: string;
+        columnName: string;
+        usesMetricName: boolean;
+        metricNameValue?: string;
+    } | null {
+        const mappings: Record<string, {
+            source: string;
+            columnName: string;
+            usesMetricName: boolean;
+            metricNameValue?: string;
+        }> = {
+            // ========================================================================
+            // REALTOR METRICS (Direct Column Names)
+            // ========================================================================
+            'listing_price': {
+                source: 'realtor',
+                columnName: 'median_listing_price',
+                usesMetricName: false,
+            },
+            'home_value_yoy': {
+                source: 'realtor',
+                columnName: 'median_listing_price_yy',
+                usesMetricName: false,
+            },
+            'home_value_mom': {
+                source: 'realtor',
+                columnName: 'median_listing_price_mm',
+                usesMetricName: false,
+            },
+            'for_sale_inventory': {
+                source: 'realtor',
+                columnName: 'active_listing_count',
+                usesMetricName: false,
+            },
+            'inventory_yoy': {
+                source: 'realtor',
+                columnName: 'active_listing_count_yy',
+                usesMetricName: false,
+            },
+            'days_on_market': {
+                source: 'realtor',
+                columnName: 'median_days_on_market',
+                usesMetricName: false,
+            },
+            'new_listings': {
+                source: 'realtor',
+                columnName: 'new_listing_count',
+                usesMetricName: false,
+            },
+            'pending_listings': {
+                source: 'realtor',
+                columnName: 'pending_listing_count',
+                usesMetricName: false,
+            },
+            'price_cut_pct': {
+                source: 'realtor',
+                columnName: 'price_reduced_share',
+                usesMetricName: false,
+            },
+            'price_per_sqft': {
+                source: 'realtor',
+                columnName: 'median_listing_price_per_square_foot',
+                usesMetricName: false,
+            },
+            'pending_ratio': {
+                source: 'realtor',
+                columnName: 'pending_ratio',
+                usesMetricName: false,
+            },
+            'hotness_score': {
+                source: 'realtor',
+                columnName: 'hotness_score',
+                usesMetricName: false,
+            },
+            'supply_score': {
+                source: 'realtor',
+                columnName: 'supply_score',
+                usesMetricName: false,
+            },
+            'demand_score': {
+                source: 'realtor',
+                columnName: 'demand_score',
+                usesMetricName: false,
+            },
+            'price_increase_pct': {
+                source: 'realtor',
+                columnName: 'price_increased_share',
+                usesMetricName: false,
+            },
+            'new_listings_yoy': {
+                source: 'realtor',
+                columnName: 'new_listing_count_yy',
+                usesMetricName: false,
+            },
 
-            // Zillow Forecast
-            'home_price_forecast': { source: 'zillow', metricName: 'zhvf_12m', field: 'value' },
-
-            // Zillow Rent (ZORI)
-            'rent_index': { source: 'zillow', metricName: 'zori', field: 'value' },
-
-            // Zillow Renter Demand (ZORDI)
-            'rent_for_houses': { source: 'zillow', metricName: 'zordi_sfr', field: 'value' },
-
-            // Zillow Market Indicators
-            'for_sale_inventory': { source: 'zillow', metricName: 'inventory', field: 'value' },
-            'new_listings': { source: 'zillow', metricName: 'new_listings', field: 'value' },
-            'pending_listings': { source: 'zillow', metricName: 'pending_listings', field: 'value' },
-            'home_sales': { source: 'zillow', metricName: 'sales_count', field: 'value' },
-            'days_on_market': { source: 'zillow', metricName: 'days_to_pending', field: 'value' },
-            'sale_to_list': { source: 'zillow', metricName: 'sale_to_list', field: 'value' },
-            'market_heat': { source: 'zillow', metricName: 'market_heat_index', field: 'value' },
-
-            // Zillow Price Cuts
-            'price_cut_pct': { source: 'zillow', metricName: 'price_cut_share', field: 'value' },
-
-            // Zillow New Construction
-            'new_construction_sales': { source: 'zillow', metricName: 'new_con_sales', field: 'value' },
-            'new_construction_price': { source: 'zillow', metricName: 'new_con_median_price', field: 'value' },
-            'new_construction_ppsf': { source: 'zillow', metricName: 'new_con_median_price_per_sqft', field: 'value' },
-
-            // Realtor Listing Price (uses median_listing_price from realtor tables)
-            'listing_price': { source: 'realtor', metricName: 'median_listing_price', field: 'value' },
-            'price_per_sqft': { source: 'realtor', metricName: 'median_listing_price_per_square_foot', field: 'value' },
-
-            // Realtor Growth Rates
-            'home_value_yoy': { source: 'realtor', metricName: 'median_listing_price_yy', field: 'value' },
-            'home_value_mom': { source: 'realtor', metricName: 'median_listing_price_mm', field: 'value' },
-
-            // Realtor Inventory
-            'inventory_yoy': { source: 'realtor', metricName: 'active_listing_count_yy', field: 'value' },
-            'new_listings_yoy': { source: 'realtor', metricName: 'new_listing_count_yy', field: 'value' },
-
-            // Realtor Market Metrics
-            'pending_ratio': { source: 'realtor', metricName: 'pending_ratio', field: 'value' },
-            'price_increase_pct': { source: 'realtor', metricName: 'price_increased_share', field: 'value' },
+            // ========================================================================
+            // ZILLOW METRICS (Uses metric_name + value column)
+            // ========================================================================
+            'home_value': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'zhvi',
+            },
+            'home_price_forecast': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'zhvf_12m',
+            },
+            'rent_index': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'zori',
+            },
+            'rent_for_houses': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'zordi_sfr',
+            },
+            'sale_price': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'sale_price',
+            },
+            'sale_to_list': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'sale_to_list',
+            },
+            'home_sales': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'sales_count',
+            },
+            'market_heat': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'market_heat_index',
+            },
+            'new_construction_sales': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'new_con_sales',
+            },
+            'new_construction_price': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'new_con_median_price',
+            },
+            'new_construction_ppsf': {
+                source: 'zillow',
+                columnName: 'value',
+                usesMetricName: true,
+                metricNameValue: 'new_con_median_price_per_sqft',
+            },
         };
 
         return mappings[metricId] || null;
