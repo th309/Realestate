@@ -23,13 +23,12 @@ import {
   BarChart,
   Bar,
   LineChart,
+  Legend,
 } from 'recharts';
 import { ComparisonConfig } from '../types';
-import { MILESTONES } from '../constants';
-import { getMetricTitle } from '@/app/map/config/metrics';
+import { MILESTONES, getMetricSource } from '../constants';
 import { CustomTooltip } from './CustomTooltip';
 import { M3Card } from './M3Card';
-import { DataFooter } from './DataFooter';
 
 type TimeFrame = '1Y' | '3Y' | '5Y' | '10Y' | 'Max';
 type ChartType = 'area' | 'line' | 'bar';
@@ -68,8 +67,8 @@ const chartTypeConfig = [
 
 // M3 Color tokens for chart
 const CHART_COLORS = {
-  primary: '#6750a4',
-  secondary: '#625b71',
+  primary: '#6750a4',       // Purple - primary area
+  comparison: '#0891b2',    // Cyan/Teal - comparison area (more distinct)
   tertiary: '#7d5260',
   outline: '#79747e',
   surface: '#fef7ff',
@@ -98,12 +97,12 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Common chart props
+  // Common chart props - compact margins for efficient space usage
   const chartMargin = {
-    top: 10,
-    right: 10,
-    left: isMobile ? 0 : 50,
-    bottom: isMobile ? 20 : 50,
+    top: 5,
+    right: 15,
+    left: isMobile ? 5 : 10,
+    bottom: isMobile ? 5 : 10,
   };
 
   // Format X-axis based on time frame
@@ -145,37 +144,20 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   const xAxisProps = {
     dataKey: 'date',
     axisLine: { stroke: CHART_COLORS.outlineVariant },
-    tickLine: true,
-    tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 },
+    tickLine: false,
+    tick: { fill: CHART_COLORS.onSurfaceVariant, fontSize: isMobile ? 9 : 10 },
     tickFormatter: formatXAxisTick,
-    dy: isMobile ? 5 : 10,
+    dy: 5,
     interval: getTickInterval(),
-    label: !isMobile ? {
-      value: 'Time',
-      position: 'insideBottom' as const,
-      offset: -35,
-      fill: CHART_COLORS.onSurfaceVariant,
-      fontSize: 11,
-      fontWeight: 500,
-    } : undefined,
   };
 
   const yAxisProps = {
     axisLine: { stroke: CHART_COLORS.outlineVariant },
-    tickLine: true,
-    tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 8 : 10, fontWeight: 500 },
+    tickLine: false,
+    tick: { fill: CHART_COLORS.onSurfaceVariant, fontSize: isMobile ? 9 : 10 },
     tickFormatter: (val: number) =>
       val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString(),
-    orientation: (isMobile ? 'right' : 'left') as 'left' | 'right',
-    label: !isMobile ? {
-      value: getMetricTitle(metric),
-      angle: -90,
-      position: 'insideLeft' as const,
-      offset: -35,
-      fill: CHART_COLORS.onSurfaceVariant,
-      fontSize: 11,
-      fontWeight: 500,
-    } : undefined,
+    width: isMobile ? 35 : 45,
   };
 
   const baselineKey = `Baseline: ${baseline.area}`;
@@ -202,6 +184,19 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     ));
   };
 
+  // Legend props
+  const legendProps = {
+    verticalAlign: 'top' as const,
+    align: 'right' as const,
+    iconType: 'line' as const,
+    iconSize: 14,
+    wrapperStyle: {
+      paddingBottom: 10,
+      fontSize: isMobile ? 10 : 12,
+      fontWeight: 500,
+    },
+  };
+
   // Render Area Chart
   const renderAreaChart = () => (
     <AreaChart data={chartData} margin={chartMargin}>
@@ -210,15 +205,16 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
           <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.05} />
         </linearGradient>
-        <linearGradient id="secondaryGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%" stopColor={CHART_COLORS.secondary} stopOpacity={0.25} />
-          <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0.05} />
+        <linearGradient id="comparisonGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor={CHART_COLORS.comparison} stopOpacity={0.25} />
+          <stop offset="95%" stopColor={CHART_COLORS.comparison} stopOpacity={0.05} />
         </linearGradient>
       </defs>
       <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+      <Legend {...legendProps} />
       {renderMilestones()}
       {visibleSeries.primary && (
         <Area
@@ -235,9 +231,9 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           type="monotone"
           dataKey={comparison.area}
           name={comparison.area}
-          stroke={CHART_COLORS.secondary}
+          stroke={CHART_COLORS.comparison}
           strokeWidth={isMobile ? 2 : 3}
-          fill="url(#secondaryGrad)"
+          fill="url(#comparisonGrad)"
         />
       )}
       {baseline.enabled && visibleSeries.baseline && (
@@ -261,6 +257,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+      <Legend {...legendProps} />
       {renderMilestones()}
       {visibleSeries.primary && (
         <Line
@@ -278,10 +275,10 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           type="monotone"
           dataKey={comparison.area}
           name={comparison.area}
-          stroke={CHART_COLORS.secondary}
+          stroke={CHART_COLORS.comparison}
           strokeWidth={isMobile ? 2 : 3}
-          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.secondary, strokeWidth: 2, stroke: '#fff' }}
-          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.secondary, strokeWidth: 2, stroke: '#fff' }}
+          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.comparison, strokeWidth: 2, stroke: '#fff' }}
+          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.comparison, strokeWidth: 2, stroke: '#fff' }}
         />
       )}
       {baseline.enabled && visibleSeries.baseline && (
@@ -305,6 +302,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       <XAxis {...xAxisProps} />
       <YAxis {...yAxisProps} />
       <Tooltip content={<CustomTooltip />} cursor={{ fill: CHART_COLORS.surfaceContainer }} />
+      <Legend {...legendProps} />
       {renderMilestones()}
       {visibleSeries.primary && (
         <Bar
@@ -318,7 +316,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         <Bar
           dataKey={comparison.area}
           name={comparison.area}
-          fill={CHART_COLORS.secondary}
+          fill={CHART_COLORS.comparison}
           radius={[4, 4, 0, 0]}
         />
       )}
@@ -441,14 +439,17 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       </div>
 
       {/* Chart Container */}
-      <div className="h-[350px] md:h-[500px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-3 md:p-6">
-        <ResponsiveContainer width="100%" height="100%">
-          {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
-        </ResponsiveContainer>
+      <div className="h-[400px] md:h-[550px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-2 md:p-4 flex flex-col">
+        <div className="flex-1">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
+          </ResponsiveContainer>
+        </div>
+        {/* Data Source - simple text line */}
+        <div className="text-[10px] text-on-surface-variant text-center pt-1">
+          Source: {getMetricSource(metric)}
+        </div>
       </div>
-
-      {/* Data Source Attribution */}
-      <DataFooter metric={metric} />
     </M3Card>
   );
 };
