@@ -1,0 +1,47 @@
+'use client';
+
+import React from 'react';
+import { ChevronDown } from 'lucide-react';
+
+interface M3SelectProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  isPrimary?: boolean;
+  disabled?: boolean;
+}
+
+export const M3Select: React.FC<M3SelectProps> = ({
+  label,
+  value,
+  onChange,
+  options,
+  isPrimary,
+  disabled,
+}) => (
+  <div
+    className={`relative w-full md:flex-1 transition-opacity ${disabled ? 'opacity-50 grayscale' : 'opacity-100'}`}
+  >
+    <label className="absolute -top-2 left-3 bg-[#f7faf7] px-1 text-[10px] md:text-[11px] font-medium text-[#414941] z-10">
+      {label}
+    </label>
+    <div className="relative">
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-full bg-transparent border ${isPrimary ? 'border-[#006d3d] border-2 shadow-sm' : 'border-[#717971]'} rounded-xl px-3 md:px-4 py-3 md:py-4 appearance-none focus:outline-none focus:ring-1 focus:ring-[#006d3d] text-[#1a1c1a] text-sm font-bold cursor-pointer transition-all`}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 pointer-events-none ${isPrimary ? 'text-[#006d3d]' : 'text-[#414941]'}`}
+      />
+    </div>
+  </div>
+);
