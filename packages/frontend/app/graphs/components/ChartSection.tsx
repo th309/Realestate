@@ -114,27 +114,31 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
     switch (timeFrame) {
       case '1Y':
-        // Show month + year for 1 year view
+        // Show month + short year for 1 year view
         return `${months[date.getMonth()]} '${date.getFullYear().toString().slice(-2)}`;
       case '3Y':
-        // Show quarter/month + year for 3 year view
-        const month = date.getMonth();
-        if (month === 0 || month === 6) {
-          return `${months[month]} '${date.getFullYear().toString().slice(-2)}`;
-        }
-        return '';
-      case '5Y':
-        // Show year for 5 year view, with Jan markers
-        if (date.getMonth() === 0) {
-          return date.getFullYear().toString();
-        }
-        return '';
+        // Show month + short year for 3 year view
+        return `${months[date.getMonth()]} '${date.getFullYear().toString().slice(-2)}`;
       default:
-        // 10Y and Max: Show years
-        if (date.getMonth() === 0) {
-          return date.getFullYear().toString();
-        }
-        return '';
+        // 5Y, 10Y, Max: Show full year
+        return date.getFullYear().toString();
+    }
+  };
+
+  // Calculate tick interval based on timeframe and data length
+  const getTickInterval = () => {
+    const dataLength = chartData?.length || 0;
+    switch (timeFrame) {
+      case '1Y':
+        return isMobile ? 2 : 1; // Show every 1-2 months
+      case '3Y':
+        return isMobile ? 6 : 3; // Show every 3-6 months
+      case '5Y':
+        return Math.max(1, Math.floor(dataLength / (isMobile ? 5 : 8))); // ~5-8 labels
+      case '10Y':
+        return Math.max(1, Math.floor(dataLength / (isMobile ? 5 : 10))); // ~5-10 labels
+      default: // Max
+        return Math.max(1, Math.floor(dataLength / (isMobile ? 6 : 12))); // ~6-12 labels
     }
   };
 
@@ -145,7 +149,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 },
     tickFormatter: formatXAxisTick,
     dy: isMobile ? 5 : 10,
-    interval: (timeFrame === '1Y' ? (isMobile ? 2 : 1) : timeFrame === '3Y' ? (isMobile ? 5 : 2) : 'preserveStartEnd') as number | 'preserveStart' | 'preserveEnd' | 'preserveStartEnd' | 'equidistantPreserveStart',
+    interval: getTickInterval(),
     label: !isMobile ? {
       value: 'Time',
       position: 'insideBottom' as const,
