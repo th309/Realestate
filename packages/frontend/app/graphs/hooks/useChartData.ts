@@ -76,11 +76,11 @@ export function useChartData({
 
         if (!isMounted) return;
 
-        // Transform API response to chart format
+        // Transform API response to chart format - ensure values are numbers
         const chartData: ChartDataItem[] = primaryResponse.data.map(point => {
           return {
             date: point.date,
-            [selectedArea]: point.value,
+            [selectedArea]: Number(point.value) || 0,
           };
         });
 
@@ -99,13 +99,13 @@ export function useChartData({
             comparisonResponse.data.forEach(point => {
               const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
-                existingPoint[comparison.area] = point.value;
+                existingPoint[comparison.area] = Number(point.value) || 0;
               } else {
                 // If the comparison date doesn't exist in primary data, add a new point
                 // Note: For simplicity we usually assume same dates, but this is safer
                 const newPoint: ChartDataItem = {
                   date: point.date,
-                  [comparison.area]: point.value
+                  [comparison.area]: Number(point.value) || 0
                 };
                 chartData.push(newPoint);
               }
@@ -133,7 +133,7 @@ export function useChartData({
             baselineResponse.data.forEach(point => {
               const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
-                existingPoint[baselineKey] = point.value;
+                existingPoint[baselineKey] = Number(point.value) || 0;
               }
             });
           } catch (err) {
