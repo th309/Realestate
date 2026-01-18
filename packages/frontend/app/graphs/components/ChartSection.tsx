@@ -373,14 +373,13 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
             />
 
             <YAxis
-              dataKey={selectedArea}
               axisLine={{ stroke: CHART_COLORS.outlineVariant }}
               tickLine={true}
               tick={{ fill: CHART_COLORS.onSurface, fontSize: isMobile ? 8 : 10, fontWeight: 500 }}
               tickFormatter={(val) =>
                 val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString()
               }
-              domain={['dataMin - 10000', 'dataMax + 10000']}
+              domain={['auto', 'auto']}
               orientation={isMobile ? 'right' : 'left'}
               label={
                 !isMobile
