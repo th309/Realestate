@@ -75,6 +75,7 @@ async function fetchRealtorMetric(
     // Home Value metrics - from Realtor median_listing_price (city from Zillow)
     case 'home_value':
     case 'list_price':
+    case 'listing_price':
       switch (level) {
         case 'national':
           return api.getRealtorNationalHomeValues();
