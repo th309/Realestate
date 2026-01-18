@@ -130,11 +130,6 @@ export function useChartData({
 
             // Merge baseline data - use simple key without special characters
             const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
-            console.log('[useChartData] Baseline merge:', {
-              baselineKey,
-              responseLength: baselineResponse.data.length,
-              sampleResponse: baselineResponse.data.slice(0, 2),
-            });
             baselineResponse.data.forEach(point => {
               const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
@@ -148,7 +143,6 @@ export function useChartData({
                 chartData.push(newPoint);
               }
             });
-            console.log('[useChartData] After merge, sample chartData:', chartData.slice(0, 3));
             // Re-sort if we added new dates
             chartData.sort((a, b) => a.date.localeCompare(b.date));
           } catch (err) {

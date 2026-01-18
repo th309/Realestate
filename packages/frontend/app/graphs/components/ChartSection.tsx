@@ -184,29 +184,6 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   // Display name for legend
   const baselineDisplayName = `Baseline: ${baseline.area}`;
 
-  // Debug: Log chart data and baseline info
-  if (baseline.enabled && chartData && chartData.length > 0) {
-    const hasBaselineData = chartData.some(d => baselineKey in d);
-    const sampleWithBaseline = chartData.find(d => baselineKey in d);
-    const allKeysInFirstItem = Object.keys(chartData[0]);
-
-    // Check data range
-    const primaryValues = chartData.map(d => d[selectedArea] as number).filter(v => v != null && !isNaN(v));
-    const baselineValues = chartData.map(d => d[baselineKey] as number).filter(v => v != null && !isNaN(v));
-
-    console.log('[ChartSection] DEBUG:', {
-      baselineKey,
-      baselineDisplayName,
-      hasBaselineData,
-      visibleSeriesBaseline: visibleSeries.baseline,
-      chartDataLength: chartData.length,
-      firstItemKeys: allKeysInFirstItem,
-      primaryRange: primaryValues.length > 0 ? `${Math.min(...primaryValues)} - ${Math.max(...primaryValues)} (${primaryValues.length} points)` : 'no data',
-      baselineRange: baselineValues.length > 0 ? `${Math.min(...baselineValues)} - ${Math.max(...baselineValues)} (${baselineValues.length} points)` : 'no data',
-      samplePoint: sampleWithBaseline,
-    });
-  }
-
   // Render milestone reference lines
   const renderMilestones = () => {
     if (!showMilestones) return null;

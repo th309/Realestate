@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MapPin, BarChart2, Globe } from 'lucide-react';
+import { MapPin, BarChart2, Globe, X } from 'lucide-react';
 import { ComparisonConfig, MetricOption } from '../types';
 import { GeoLevel } from '@/app/map/config/metrics';
 import { GEO_LEVEL_OPTIONS } from '../hooks/useDashboardState';
@@ -17,6 +17,28 @@ interface BaselineConfig {
   area: string;
 }
 
+// Map search result type to GeoLevel
+function searchTypeToGeoLevel(type: SearchResult['type']): GeoLevel {
+  switch (type) {
+    case 'state': return 'state';
+    case 'metro': return 'metro';
+    case 'city': return 'metro'; // Cities map to metro level
+    case 'county': return 'county';
+    case 'zip': return 'zip';
+    default: return 'state';
+  }
+}
+
+// Extract clean area name from search result
+function extractAreaName(result: SearchResult): string {
+  // For states, just use the state name without the country suffix
+  if (result.type === 'state') {
+    return result.name.split(',')[0].trim();
+  }
+  // For other types, use the full place name
+  return result.name;
+}
+
 interface FilterHeaderProps {
   geoLevel: GeoLevel;
   setGeoLevel: (level: GeoLevel) => void;
@@ -30,7 +52,6 @@ interface FilterHeaderProps {
   setComparison: React.Dispatch<React.SetStateAction<ComparisonConfig>>;
   baseline: BaselineConfig;
   setBaseline: React.Dispatch<React.SetStateAction<BaselineConfig>>;
-  baselineOptions: string[];
   showMilestones: boolean;
   setShowMilestones: (show: boolean) => void;
   showForecast: boolean;
@@ -52,11 +73,11 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   setComparison,
   baseline,
   setBaseline,
-  baselineOptions,
 }) => {
   const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
   const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
 
+  // Primary area search
   const {
     searchQuery,
     setSearchQuery,
@@ -69,11 +90,27 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
     clearSearch
   } = useGraphSearch();
 
+  // Baseline search (separate instance)
+  const baselineSearch = useGraphSearch();
+
   const handleSelectResult = (result: SearchResult) => {
     setSelectedArea(result.name);
-    // Optionally render the search query as the selected name temporarily
     setSearchQuery('');
     clearSearch();
+  };
+
+  // Handle baseline search result selection
+  const handleSelectBaselineResult = (result: SearchResult) => {
+    const level = searchTypeToGeoLevel(result.type);
+    const area = extractAreaName(result);
+    setBaseline(prev => ({ ...prev, level, area }));
+    baselineSearch.clearSearch();
+  };
+
+  // Set national baseline
+  const handleSetNationalBaseline = () => {
+    setBaseline(prev => ({ ...prev, level: 'national', area: 'United States' }));
+    baselineSearch.clearSearch();
   };
 
   const showSearch = ['metro', 'county', 'city', 'zip'].includes(geoLevel);
@@ -183,26 +220,51 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             />
           )}
           {baseline.enabled && (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <M3Select
-                  label="Base Level"
-                  value={GEO_LEVEL_OPTIONS.find((opt) => opt.value === baseline.level)?.label || 'National'}
-                  onChange={(val) => {
-                    const level = GEO_LEVEL_OPTIONS.find((opt) => opt.label === val)?.value || 'national';
-                    setBaseline((prev) => ({ ...prev, level }));
-                  }}
-                  options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
-                />
-              </div>
-              <div className="flex-1">
-                <M3Select
-                  label="Base Area"
-                  value={baseline.area}
-                  onChange={(val) => setBaseline((prev) => ({ ...prev, area: val }))}
-                  options={baselineOptions}
-                />
-              </div>
+            <div className="space-y-2">
+              {/* Show selected baseline or search */}
+              {baseline.area ? (
+                <div className="flex items-center gap-2 p-2 bg-tertiary-container rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-on-tertiary-container truncate">
+                      {baseline.area}
+                    </div>
+                    <div className="text-[10px] text-on-tertiary-container/70 capitalize">
+                      {baseline.level} baseline
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setBaseline(prev => ({ ...prev, area: '' }))}
+                    className="p-1 hover:bg-tertiary/20 rounded-full transition-colors"
+                  >
+                    <X className="w-3 h-3 text-on-tertiary-container" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <SearchBar
+                    className="w-full"
+                    searchRef={baselineSearch.searchRef}
+                    searchQuery={baselineSearch.searchQuery}
+                    searchResults={baselineSearch.searchResults}
+                    searchLoading={baselineSearch.searchLoading}
+                    showSearchResults={baselineSearch.showSearchResults}
+                    onSearch={baselineSearch.handleSearch}
+                    onSelectResult={handleSelectBaselineResult}
+                    onFocus={() => {
+                      if (baselineSearch.searchResults.length > 0) {
+                        baselineSearch.setShowSearchResults(true);
+                      }
+                    }}
+                  />
+                  {/* Quick select for National baseline */}
+                  <button
+                    onClick={handleSetNationalBaseline}
+                    className="w-full text-[10px] font-medium py-2 px-3 rounded-full border border-outline-variant bg-surface text-on-surface-variant hover:border-tertiary hover:text-tertiary transition-all duration-200"
+                  >
+                    Use National Average
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
