@@ -225,37 +225,38 @@ export default function MapPage() {
   return (
     <div className="h-screen flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif" }}>
       {/* M3 Top App Bar */}
-      <header className="bg-surface-container-lowest border-b border-outline-variant px-3 md:px-4 py-2 md:py-3 elevation-1">
-        {/* Mobile: stacked layout, Desktop: single row */}
-        <div className="flex items-center justify-between gap-2 md:gap-3">
-          {/* Left: Menu + Title */}
-          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+      {/* Map Controls Toolbar */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 z-20 shadow-sm">
+        <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center gap-4">
+
+          {/* Top Row (Desktop) or Only Row (Mobile) */}
+          <div className="flex items-center gap-4 w-full md:w-auto flex-1">
+            {/* Sidebar Toggle */}
             <button
-              className="p-2 hover:bg-surface-container rounded-full transition-colors duration-200"
+              className="p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-full transition-all duration-200 active:scale-95 flex-shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
+              aria-label="Toggle sidebar"
             >
               <MenuIcon />
             </button>
-            <h1 className="text-lg md:text-xl font-medium text-on-surface">PropertyIQ</h1>
+
+            {/* Search Bar - Flexible Width */}
+            <div className="flex-1 max-w-xl">
+              <SearchBar
+                searchRef={searchRef}
+                searchQuery={searchQuery}
+                searchResults={searchResults}
+                searchLoading={searchLoading}
+                showSearchResults={showSearchResults}
+                onSearch={handleSearch}
+                onSelectResult={handleSelectSearchResult}
+                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+              />
+            </div>
           </div>
 
-          {/* Search - hidden on mobile, shown on desktop */}
-          <div className="hidden md:block flex-1">
-            <SearchBar
-              searchRef={searchRef}
-              searchQuery={searchQuery}
-              searchResults={searchResults}
-              searchLoading={searchLoading}
-              showSearchResults={showSearchResults}
-              onSearch={handleSearch}
-              onSelectResult={handleSelectSearchResult}
-              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-            />
-          </div>
-
-          {/* Geo Pills - hidden on mobile, shown on desktop */}
-          <div className="hidden lg:block flex-shrink-0">
+          {/* Desktop Geo Pills */}
+          <div className="hidden md:block flex-shrink-0">
             <GeoLevelPills
               geoLevel={geoLevel}
               selectedMetric={selectedMetric}
@@ -264,33 +265,21 @@ export default function MapPage() {
               onStateChange={setSelectedState}
             />
           </div>
-        </div>
 
-        {/* Mobile: Search bar on second row */}
-        <div className="md:hidden mt-2">
-          <SearchBar
-            searchRef={searchRef}
-            searchQuery={searchQuery}
-            searchResults={searchResults}
-            searchLoading={searchLoading}
-            showSearchResults={showSearchResults}
-            onSearch={handleSearch}
-            onSelectResult={handleSelectSearchResult}
-            onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-          />
+          {/* Mobile Geo Pills (Stacked) */}
+          <div className="md:hidden w-full overflow-x-auto pb-1">
+            <div className="flex justify-center min-w-max px-2">
+              <GeoLevelPills
+                geoLevel={geoLevel}
+                selectedMetric={selectedMetric}
+                selectedState={selectedState}
+                onGeoLevelChange={handleGeoLevelChange}
+                onStateChange={setSelectedState}
+              />
+            </div>
+          </div>
         </div>
-
-        {/* Tablet: Geo pills on second row (hidden on mobile, shown on tablet, hidden on desktop) */}
-        <div className="hidden md:flex lg:hidden mt-2 justify-center">
-          <GeoLevelPills
-            geoLevel={geoLevel}
-            selectedMetric={selectedMetric}
-            selectedState={selectedState}
-            onGeoLevelChange={handleGeoLevelChange}
-            onStateChange={setSelectedState}
-          />
-        </div>
-      </header>
+      </div>
 
       <div className="flex-1 flex overflow-hidden relative">
         {/* M3 Scrim - Mobile overlay backdrop */}
