@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   BarChart3,
   AreaChart as AreaIcon,
@@ -98,140 +98,210 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Debug: Log chart data to verify structure
-  console.log('[ChartSection] Debug:', {
-    chartDataLength: chartData?.length,
-    selectedArea,
-    sampleData: chartData?.slice(0, 3),
-    hasSelectedAreaKey: chartData?.[0] ? selectedArea in chartData[0] : false,
-    firstValue: chartData?.[0]?.[selectedArea],
-    valueType: typeof chartData?.[0]?.[selectedArea],
-  });
-
-  const renderSeries = () => {
-
-    const primaryProps = {
-      name: selectedArea,
-      dataKey: selectedArea,
-      stroke: CHART_COLORS.primary,
-      strokeWidth: isMobile ? 3 : 5,
-      animationDuration: 1200,
-    };
-
-    const comparisonProps = {
-      name: comparison.area,
-      dataKey: comparison.area,
-      stroke: CHART_COLORS.secondary,
-      strokeWidth: isMobile ? 3 : 5,
-      animationDuration: 1200,
-    };
-
-    const baselineProps = {
-      name: `Baseline: ${baseline.area}`,
-      dataKey: `Baseline: ${baseline.area}`,
-      stroke: CHART_COLORS.outline,
-      strokeWidth: isMobile ? 1.5 : 2.5,
-      strokeDasharray: '10 5',
-    };
-
-    const dotProps = {
-      r: isMobile ? 3 : 5,
-      strokeWidth: 2,
-      stroke: '#fff',
-    };
-
-    const activeDotProps = {
-      r: isMobile ? 6 : 9,
-      strokeWidth: 3,
-      stroke: '#fff',
-    };
-
-    if (chartType === 'area') {
-      return (
-        <>
-          {visibleSeries.primary && (
-            <Area
-              type="monotone"
-              dataKey={selectedArea}
-              name={selectedArea}
-              stroke={CHART_COLORS.primary}
-              strokeWidth={3}
-              fill={CHART_COLORS.primary}
-              fillOpacity={0.3}
-              isAnimationActive={false}
-            />
-          )}
-          {comparison.enabled && visibleSeries.comparison && (
-            <Area
-              {...comparisonProps}
-              type="monotone"
-              fill="url(#secondaryGrad)"
-              dot={{ ...dotProps, fill: CHART_COLORS.secondary }}
-              activeDot={{ ...activeDotProps, fill: CHART_COLORS.secondary }}
-            />
-          )}
-          {baseline.enabled && visibleSeries.baseline && (
-            <Line {...baselineProps} type="monotone" dot={false} activeDot={{ r: 7 }} />
-          )}
-        </>
-      );
-    }
-
-    if (chartType === 'line') {
-      return (
-        <>
-          {visibleSeries.primary && (
-            <Line
-              {...primaryProps}
-              type="monotone"
-              dot={{ ...dotProps, fill: CHART_COLORS.primary }}
-              activeDot={{ ...activeDotProps, fill: CHART_COLORS.primary }}
-              isAnimationActive={false}
-            />
-          )}
-          {comparison.enabled && visibleSeries.comparison && (
-            <Line
-              {...comparisonProps}
-              type="monotone"
-              dot={{ ...dotProps, fill: CHART_COLORS.secondary }}
-              activeDot={{ ...activeDotProps, fill: CHART_COLORS.secondary }}
-            />
-          )}
-          {baseline.enabled && visibleSeries.baseline && (
-            <Line {...baselineProps} type="monotone" dot={false} activeDot={{ r: 7 }} />
-          )}
-        </>
-      );
-    }
-
-    if (chartType === 'bar') {
-      return (
-        <>
-          {visibleSeries.primary && (
-            <Bar {...primaryProps} fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
-          )}
-          {comparison.enabled && visibleSeries.comparison && (
-            <Bar {...comparisonProps} fill={CHART_COLORS.secondary} radius={[4, 4, 0, 0]} />
-          )}
-          {baseline.enabled && visibleSeries.baseline && (
-            <Line {...baselineProps} type="monotone" dot={false} activeDot={{ r: 7 }} />
-          )}
-        </>
-      );
-    }
+  // Common chart props
+  const chartMargin = {
+    top: 10,
+    right: 10,
+    left: isMobile ? 0 : 50,
+    bottom: isMobile ? 20 : 50,
   };
 
-  const ChartComponent = useMemo(() => {
-    switch (chartType) {
-      case 'bar':
-        return BarChart;
-      case 'line':
-        return LineChart;
-      case 'area':
-      default:
-        return AreaChart;
-    }
-  }, [chartType]);
+  const xAxisProps = {
+    dataKey: 'date',
+    axisLine: { stroke: CHART_COLORS.outlineVariant },
+    tickLine: true,
+    tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 },
+    tickFormatter: (val: string) => {
+      if (!val) return '';
+      const date = new Date(val);
+      return date.getFullYear().toString();
+    },
+    dy: isMobile ? 5 : 10,
+    label: !isMobile ? {
+      value: 'Time',
+      position: 'insideBottom' as const,
+      offset: -35,
+      fill: CHART_COLORS.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: 500,
+    } : undefined,
+  };
+
+  const yAxisProps = {
+    axisLine: { stroke: CHART_COLORS.outlineVariant },
+    tickLine: true,
+    tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 8 : 10, fontWeight: 500 },
+    tickFormatter: (val: number) =>
+      val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString(),
+    orientation: (isMobile ? 'right' : 'left') as 'left' | 'right',
+    label: !isMobile ? {
+      value: getMetricTitle(metric),
+      angle: -90,
+      position: 'insideLeft' as const,
+      offset: -35,
+      fill: CHART_COLORS.onSurfaceVariant,
+      fontSize: 11,
+      fontWeight: 500,
+    } : undefined,
+  };
+
+  const baselineKey = `Baseline: ${baseline.area}`;
+
+  // Render milestone reference lines
+  const renderMilestones = () => {
+    if (!showMilestones) return null;
+    return MILESTONES.map((m) => (
+      <ReferenceLine
+        key={m.label}
+        x={`${m.year}-01-01`}
+        stroke={CHART_COLORS.tertiary}
+        strokeDasharray="3 3"
+        strokeWidth={1.5}
+        label={!isMobile ? {
+          position: 'top',
+          value: '!',
+          fill: CHART_COLORS.tertiary,
+          fontSize: 12,
+          fontWeight: 600,
+          offset: 10,
+        } : undefined}
+      />
+    ));
+  };
+
+  // Render Area Chart
+  const renderAreaChart = () => (
+    <AreaChart data={chartData} margin={chartMargin}>
+      <defs>
+        <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
+          <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.05} />
+        </linearGradient>
+        <linearGradient id="secondaryGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor={CHART_COLORS.secondary} stopOpacity={0.25} />
+          <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0.05} />
+        </linearGradient>
+      </defs>
+      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+      <XAxis {...xAxisProps} />
+      <YAxis {...yAxisProps} />
+      <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+      {renderMilestones()}
+      {visibleSeries.primary && (
+        <Area
+          type="monotone"
+          dataKey={selectedArea}
+          name={selectedArea}
+          stroke={CHART_COLORS.primary}
+          strokeWidth={isMobile ? 2 : 3}
+          fill="url(#primaryGrad)"
+        />
+      )}
+      {comparison.enabled && visibleSeries.comparison && (
+        <Area
+          type="monotone"
+          dataKey={comparison.area}
+          name={comparison.area}
+          stroke={CHART_COLORS.secondary}
+          strokeWidth={isMobile ? 2 : 3}
+          fill="url(#secondaryGrad)"
+        />
+      )}
+      {baseline.enabled && visibleSeries.baseline && (
+        <Line
+          type="monotone"
+          dataKey={baselineKey}
+          name={baselineKey}
+          stroke={CHART_COLORS.outline}
+          strokeWidth={isMobile ? 1.5 : 2}
+          strokeDasharray="10 5"
+          dot={false}
+        />
+      )}
+    </AreaChart>
+  );
+
+  // Render Line Chart
+  const renderLineChart = () => (
+    <LineChart data={chartData} margin={chartMargin}>
+      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+      <XAxis {...xAxisProps} />
+      <YAxis {...yAxisProps} />
+      <Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }} />
+      {renderMilestones()}
+      {visibleSeries.primary && (
+        <Line
+          type="monotone"
+          dataKey={selectedArea}
+          name={selectedArea}
+          stroke={CHART_COLORS.primary}
+          strokeWidth={isMobile ? 2 : 3}
+          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.primary, strokeWidth: 2, stroke: '#fff' }}
+          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.primary, strokeWidth: 2, stroke: '#fff' }}
+        />
+      )}
+      {comparison.enabled && visibleSeries.comparison && (
+        <Line
+          type="monotone"
+          dataKey={comparison.area}
+          name={comparison.area}
+          stroke={CHART_COLORS.secondary}
+          strokeWidth={isMobile ? 2 : 3}
+          dot={{ r: isMobile ? 3 : 4, fill: CHART_COLORS.secondary, strokeWidth: 2, stroke: '#fff' }}
+          activeDot={{ r: isMobile ? 5 : 7, fill: CHART_COLORS.secondary, strokeWidth: 2, stroke: '#fff' }}
+        />
+      )}
+      {baseline.enabled && visibleSeries.baseline && (
+        <Line
+          type="monotone"
+          dataKey={baselineKey}
+          name={baselineKey}
+          stroke={CHART_COLORS.outline}
+          strokeWidth={isMobile ? 1.5 : 2}
+          strokeDasharray="10 5"
+          dot={false}
+        />
+      )}
+    </LineChart>
+  );
+
+  // Render Bar Chart
+  const renderBarChart = () => (
+    <BarChart data={chartData} margin={chartMargin}>
+      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
+      <XAxis {...xAxisProps} />
+      <YAxis {...yAxisProps} />
+      <Tooltip content={<CustomTooltip />} cursor={{ fill: CHART_COLORS.surfaceContainer }} />
+      {renderMilestones()}
+      {visibleSeries.primary && (
+        <Bar
+          dataKey={selectedArea}
+          name={selectedArea}
+          fill={CHART_COLORS.primary}
+          radius={[4, 4, 0, 0]}
+        />
+      )}
+      {comparison.enabled && visibleSeries.comparison && (
+        <Bar
+          dataKey={comparison.area}
+          name={comparison.area}
+          fill={CHART_COLORS.secondary}
+          radius={[4, 4, 0, 0]}
+        />
+      )}
+      {baseline.enabled && visibleSeries.baseline && (
+        <Line
+          type="monotone"
+          dataKey={baselineKey}
+          name={baselineKey}
+          stroke={CHART_COLORS.outline}
+          strokeWidth={isMobile ? 1.5 : 2}
+          strokeDasharray="10 5"
+          dot={false}
+        />
+      )}
+    </BarChart>
+  );
 
   return (
     <M3Card variant="elevated" size="lg" className="overflow-hidden">
@@ -340,38 +410,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       {/* Chart Container */}
       <div className="h-[350px] md:h-[500px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-3 md:p-6">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={chartData}
-            margin={{
-              top: 10,
-              right: 10,
-              left: isMobile ? 0 : 50,
-              bottom: isMobile ? 20 : 50,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(val) => {
-                if (!val) return '';
-                const date = new Date(val);
-                return date.getFullYear().toString();
-              }}
-            />
-            <YAxis
-              tickFormatter={(val) =>
-                val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString()
-              }
-            />
-            <Tooltip />
-            <Area
-              type="monotone"
-              dataKey={selectedArea}
-              stroke="#8884d8"
-              fill="#8884d8"
-              fillOpacity={0.6}
-            />
-          </AreaChart>
+          {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
         </ResponsiveContainer>
       </div>
 
