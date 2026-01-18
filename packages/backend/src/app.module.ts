@@ -9,6 +9,8 @@ import { RealtorModule } from './realtor/realtor.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { GeographyModule } from './geography/geography.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { CensusModule } from './census/census.module';
+import { EconomicModule } from './economic/economic.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { MetricsModule } from './metrics/metrics.module';
     ScoringModule,
     GeographyModule,
     MetricsModule,
+    CensusModule,
+    EconomicModule,
   ],
   controllers: [AppController],
   providers: [AppService],
