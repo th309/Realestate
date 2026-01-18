@@ -1,20 +1,12 @@
 'use client';
 
 import React from 'react';
-import {
-  Plus,
-  X,
-  Layers,
-  Activity,
-  History,
-  TrendingUp,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { MapPin, BarChart2, Globe } from 'lucide-react';
 import { ComparisonConfig, MetricOption } from '../types';
 import { GeoLevel } from '@/app/map/config/metrics';
 import { GEO_LEVEL_OPTIONS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
+import { M3Card, M3CardHeader } from './M3Card';
 
 interface BaselineConfig {
   enabled: boolean;
@@ -58,25 +50,22 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   baseline,
   setBaseline,
   baselineOptions,
-  showMilestones,
-  setShowMilestones,
-  showForecast,
-  setShowForecast,
-  visibleSeries,
-  toggleSeries,
 }) => {
-  // Get display label for current geo level
   const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
-
-  // Get display name for current metric
   const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
 
   return (
-    <div className="p-4 md:p-8 bg-[#f1f5f1] border-b border-[#dee5dd]">
-      <div className="flex flex-col gap-6 md:gap-8 mb-6 md:mb-8">
-        <div className="grid grid-cols-1 md:flex md:flex-row gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Geography Selection Card */}
+      <M3Card variant="elevated" size="md">
+        <M3CardHeader
+          icon={<Globe className="w-4 h-4 text-primary" />}
+          title="Geography Level"
+          subtitle="Select analysis scope"
+        />
+        <div className="mt-4">
           <M3Select
-            label="Geography Level"
+            label="Level"
             value={geoLevelLabel}
             onChange={(val) => {
               const level = GEO_LEVEL_OPTIONS.find((opt) => opt.label === val)?.value || 'state';
@@ -85,72 +74,59 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
             isPrimary
           />
+        </div>
+      </M3Card>
+
+      {/* Location Selection Card */}
+      <M3Card variant="elevated" size="md">
+        <M3CardHeader
+          icon={<MapPin className="w-4 h-4 text-primary" />}
+          title="Target Location"
+          subtitle={geoLevel === 'national' ? 'National view selected' : 'Choose primary area'}
+        />
+        <div className="mt-4 space-y-3">
           <M3Select
-            label="Primary Target"
+            label="Primary Area"
             value={selectedArea}
             onChange={setSelectedArea}
             options={primaryOptions}
             disabled={geoLevel === 'national'}
           />
-          <M3Select
-            label="Market Metric"
-            value={metricName}
-            onChange={(val) => {
-              const metricId = metricOptions.find((m) => m.name === val)?.id || 'listing_price';
-              setMetric(metricId);
-            }}
-            options={metricOptions.map((m) => m.name)}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <button
-            onClick={() => setComparison((prev) => ({ ...prev, enabled: !prev.enabled }))}
-            disabled={geoLevel === 'national'}
-            className={`flex items-center justify-center gap-2.5 px-4 md:px-6 py-3 md:py-3.5 rounded-2xl text-xs md:text-sm font-black transition-all border ${
-              comparison.enabled
-                ? 'bg-[#006d3d] text-white border-[#006d3d] shadow-md'
-                : 'bg-white text-[#414941] border-[#717971] hover:bg-[#e7ece7]'
-            } ${geoLevel === 'national' ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
-          >
-            {comparison.enabled ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {comparison.enabled ? 'Remove Comparison' : 'Compare Another'}
-          </button>
-
-          {comparison.enabled && (
-            <div className="w-full md:flex-1 md:max-w-[280px] animate-in slide-in-from-left-4 duration-300">
-              <M3Select
-                label="Secondary Target"
-                value={comparison.area}
-                onChange={(val) => setComparison((prev) => ({ ...prev, area: val }))}
-                options={primaryOptions.filter((s) => s !== selectedArea)}
-              />
+          {geoLevel !== 'national' && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setComparison((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${
+                  comparison.enabled
+                    ? 'bg-secondary text-on-secondary border-secondary'
+                    : 'bg-surface text-on-surface-variant border-outline-variant hover:border-secondary hover:text-secondary'
+                }`}
+              >
+                {comparison.enabled ? '✓ Comparing' : '+ Compare'}
+              </button>
+              <button
+                onClick={() => setBaseline((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${
+                  baseline.enabled
+                    ? 'bg-tertiary text-on-tertiary border-tertiary'
+                    : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary hover:text-tertiary'
+                }`}
+              >
+                {baseline.enabled ? '✓ Baseline' : '+ Baseline'}
+              </button>
             </div>
           )}
-
-          <div className="hidden md:block h-8 w-[1px] bg-[#dee5dd] mx-2" />
-
-          <button
-            onClick={() => setBaseline((prev) => ({ ...prev, enabled: !prev.enabled }))}
-            className={`flex items-center justify-center gap-2.5 px-4 md:px-6 py-3 md:py-3.5 rounded-2xl text-xs md:text-sm font-black transition-all border ${
-              baseline.enabled
-                ? 'bg-[#006a6a] text-white border-[#006a6a] shadow-md'
-                : 'bg-white text-[#414941] border-[#717971] hover:bg-[#e7ece7]'
-            }`}
-          >
-            {baseline.enabled ? (
-              <Layers className="w-4 h-4" />
-            ) : (
-              <Activity className="w-4 h-4" />
-            )}
-            {baseline.enabled ? 'Hide Baseline' : 'Overlay Baseline'}
-          </button>
-
+          {comparison.enabled && (
+            <M3Select
+              label="Compare To"
+              value={comparison.area}
+              onChange={(val) => setComparison((prev) => ({ ...prev, area: val }))}
+              options={primaryOptions.filter((s) => s !== selectedArea)}
+            />
+          )}
           {baseline.enabled && (
-            <div className="flex flex-col md:flex-row items-center gap-3 animate-in fade-in duration-300 w-full md:w-auto">
-              <div className="w-full md:w-[150px]">
+            <div className="flex gap-2">
+              <div className="flex-1">
                 <M3Select
                   label="Base Level"
                   value={GEO_LEVEL_OPTIONS.find((opt) => opt.value === baseline.level)?.label || 'National'}
@@ -161,7 +137,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
                   options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
                 />
               </div>
-              <div className="w-full md:w-[150px]">
+              <div className="flex-1">
                 <M3Select
                   label="Base Area"
                   value={baseline.area}
@@ -172,83 +148,27 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             </div>
           )}
         </div>
+      </M3Card>
 
-        <div className="flex flex-wrap items-center gap-3 md:gap-4 pt-2">
-          <span className="text-[9px] md:text-[10px] font-black uppercase text-[#717971] tracking-widest mr-1 md:mr-2">
-            Quick Toggles:
-          </span>
-          <button
-            onClick={() => setShowMilestones(!showMilestones)}
-            className={`px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[10px] md:text-[11px] font-black border transition-all flex items-center gap-2 ${
-              showMilestones
-                ? 'bg-[#9a6b00] text-white border-[#9a6b00]'
-                : 'bg-white text-[#414941] border-[#717971]'
-            }`}
-          >
-            <History className="w-3.5 md:w-4 h-3.5 md:h-4" />
-            Events
-          </button>
-          <button
-            onClick={() => setShowForecast(!showForecast)}
-            className={`px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[10px] md:text-[11px] font-black border transition-all flex items-center gap-2 ${
-              showForecast
-                ? 'bg-emerald-800 text-white border-emerald-800 shadow-sm'
-                : 'bg-white text-[#414941] border-[#717971]'
-            }`}
-          >
-            <TrendingUp className="w-3.5 md:w-4 h-3.5 md:h-4" />
-            Forecast
-          </button>
-
-          <div className="flex-1 md:flex-none" />
-
-          <div className="flex flex-wrap items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-[#dee5dd]">
-            <button
-              onClick={() => toggleSeries('primary')}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${
-                visibleSeries.primary ? 'text-[#006d3d]' : 'opacity-40'
-              }`}
-            >
-              {visibleSeries.primary ? (
-                <Eye className="w-3 h-3" />
-              ) : (
-                <EyeOff className="w-3 h-3" />
-              )}
-              {selectedArea}
-            </button>
-            {comparison.enabled && (
-              <button
-                onClick={() => toggleSeries('comparison')}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${
-                  visibleSeries.comparison ? 'text-[#006a6a]' : 'opacity-40'
-                }`}
-              >
-                {visibleSeries.comparison ? (
-                  <Eye className="w-3 h-3" />
-                ) : (
-                  <EyeOff className="w-3 h-3" />
-                )}
-                {comparison.area}
-              </button>
-            )}
-            {baseline.enabled && (
-              <button
-                onClick={() => toggleSeries('baseline')}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${
-                  visibleSeries.baseline ? 'text-[#717971]' : 'opacity-40'
-                }`}
-              >
-                {visibleSeries.baseline ? (
-                  <Eye className="w-3 h-3" />
-                ) : (
-                  <EyeOff className="w-3 h-3" />
-                )}
-                Baseline
-              </button>
-            )}
-          </div>
+      {/* Metric Selection Card */}
+      <M3Card variant="elevated" size="md">
+        <M3CardHeader
+          icon={<BarChart2 className="w-4 h-4 text-primary" />}
+          title="Market Metric"
+          subtitle="Data point to analyze"
+        />
+        <div className="mt-4">
+          <M3Select
+            label="Metric"
+            value={metricName}
+            onChange={(val) => {
+              const metricId = metricOptions.find((m) => m.name === val)?.id || 'listing_price';
+              setMetric(metricId);
+            }}
+            options={metricOptions.map((m) => m.name)}
+          />
         </div>
-      </div>
+      </M3Card>
     </div>
   );
 };

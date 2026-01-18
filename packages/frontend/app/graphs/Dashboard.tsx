@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Loader2 } from 'lucide-react';
-import { DESCRIPTIONS, getMetricDescription } from './constants';
+import { Loader2, TrendingUp } from 'lucide-react';
+import { getMetricDescription } from './constants';
 import { getMetricTitle } from '@/app/map/config/metrics';
 import { getInsights } from './services/geminiService';
 import { useDashboardState } from './hooks/useDashboardState';
@@ -68,80 +68,110 @@ export const Dashboard: React.FC = () => {
     setIsInsightLoading(false);
   };
 
-  // Get display name for metric
   const metricDisplayName = getMetricTitle(metric);
 
   return (
-    <div className="max-w-7xl mx-auto px-2 md:px-8 py-4 md:py-6">
-      <div className="bg-[#f7faf7] rounded-[24px] md:rounded-[32px] shadow-[0_8px_32px_-4px_rgba(0,0,0,0.08)] overflow-hidden border border-[#dee5dd]">
-        <FilterHeader
-          geoLevel={geoLevel}
-          setGeoLevel={setGeoLevel}
-          selectedArea={selectedArea}
-          setSelectedArea={setSelectedArea}
-          metric={metric}
-          setMetric={setMetric}
-          metricOptions={metricOptions}
-          primaryOptions={primaryOptions}
-          comparison={comparison}
-          setComparison={setComparison}
-          baseline={baseline}
-          setBaseline={setBaseline}
-          baselineOptions={baselineOptions}
-          showMilestones={showMilestones}
-          setShowMilestones={setShowMilestones}
-          showForecast={showForecast}
-          setShowForecast={setShowForecast}
-          visibleSeries={visibleSeries}
-          toggleSeries={toggleSeries}
-        />
-
-        <div className="p-4 md:p-10 relative">
-          {isDataLoading && (
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-20 flex items-center justify-center rounded-3xl">
-              <Loader2 className="w-12 h-12 text-[#006d3d] animate-spin" />
+    <div className="min-h-screen bg-surface">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
+        {/* Loading Overlay */}
+        {isDataLoading && (
+          <div className="fixed inset-0 bg-surface/60 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-surface-container-high rounded-[28px] elevation-3 p-6 flex items-center gap-4">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <span className="text-on-surface font-medium">Loading data...</span>
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="max-w-4xl mb-6 md:mb-10">
-            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-[#1a1c1a] mb-2 md:mb-3 flex flex-wrap items-center gap-2 md:gap-3">
-              {selectedArea}
-              {comparison.enabled && (
-                <>
-                  <span className="text-[#717971] font-normal text-lg md:text-2xl px-1">
-                    vs
-                  </span>
-                  <span className="text-[#006a6a]">{comparison.area}</span>
-                </>
-              )}
-              <span className="hidden md:inline text-[#dee5dd] mx-2">|</span>
-              <span className="w-full md:w-auto text-[#006d3d]">{metricDisplayName}</span>
-            </h1>
-            <p className="text-[#414941] text-sm md:text-lg leading-relaxed max-w-2xl opacity-90">
-              {getMetricDescription(metric)}
-            </p>
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-2">
+            <div>
+              <div className="flex items-center gap-2 text-primary mb-1">
+                <TrendingUp className="w-5 h-5" />
+                <span className="text-xs font-medium uppercase tracking-wider">Market Analytics</span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-medium text-on-surface tracking-tight">
+                {selectedArea}
+                {comparison.enabled && (
+                  <span className="text-on-surface-variant font-normal mx-2">vs</span>
+                )}
+                {comparison.enabled && (
+                  <span className="text-secondary">{comparison.area}</span>
+                )}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-on-surface-variant">Analyzing</span>
+              <span className="bg-primary text-on-primary px-4 py-1.5 rounded-full text-sm font-medium">
+                {metricDisplayName}
+              </span>
+            </div>
+          </div>
+          <p className="text-on-surface-variant text-sm md:text-base max-w-3xl">
+            {getMetricDescription(metric)}
+          </p>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="space-y-6">
+          {/* Filter Cards Row */}
+          <FilterHeader
+            geoLevel={geoLevel}
+            setGeoLevel={setGeoLevel}
+            selectedArea={selectedArea}
+            setSelectedArea={setSelectedArea}
+            metric={metric}
+            setMetric={setMetric}
+            metricOptions={metricOptions}
+            primaryOptions={primaryOptions}
+            comparison={comparison}
+            setComparison={setComparison}
+            baseline={baseline}
+            setBaseline={setBaseline}
+            baselineOptions={baselineOptions}
+            showMilestones={showMilestones}
+            setShowMilestones={setShowMilestones}
+            showForecast={showForecast}
+            setShowForecast={setShowForecast}
+            visibleSeries={visibleSeries}
+            toggleSeries={toggleSeries}
+          />
+
+          {/* Two Column Layout: Chart + Insights */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Chart Card - Takes 2 columns on xl */}
+            <div className="xl:col-span-2">
+              <ChartSection
+                chartData={chartData}
+                selectedArea={selectedArea}
+                comparison={comparison}
+                baseline={baseline}
+                metric={metric}
+                timeFrame={timeFrame}
+                setTimeFrame={setTimeFrame}
+                chartType={chartType}
+                setChartType={setChartType}
+                showMilestones={showMilestones}
+                setShowMilestones={setShowMilestones}
+                showForecast={showForecast}
+                setShowForecast={setShowForecast}
+                visibleSeries={visibleSeries}
+                toggleSeries={toggleSeries}
+              />
+            </div>
+
+            {/* Insights Panel - Takes 1 column on xl */}
+            <div className="xl:col-span-1">
+              <InsightsPanel
+                aiInsight={aiInsight}
+                isInsightLoading={isInsightLoading}
+                onFetchInsights={handleFetchInsights}
+              />
+            </div>
           </div>
 
-          <InsightsPanel
-            aiInsight={aiInsight}
-            isInsightLoading={isInsightLoading}
-            onFetchInsights={handleFetchInsights}
-          />
-
-          <ChartSection
-            chartData={chartData}
-            selectedArea={selectedArea}
-            comparison={comparison}
-            baseline={baseline}
-            metric={metric}
-            timeFrame={timeFrame}
-            setTimeFrame={setTimeFrame}
-            chartType={chartType}
-            setChartType={setChartType}
-            showMilestones={showMilestones}
-            visibleSeries={visibleSeries}
-          />
-
+          {/* Footer Cards */}
           <DataFooter metric={metric} />
         </div>
       </div>

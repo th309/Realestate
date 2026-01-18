@@ -23,7 +23,7 @@ export const M3Select: React.FC<M3SelectProps> = ({
   <div
     className={`relative w-full md:flex-1 transition-opacity ${disabled ? 'opacity-50 grayscale' : 'opacity-100'}`}
   >
-    <label className="absolute -top-2 left-3 bg-[#f7faf7] px-1 text-[10px] md:text-[11px] font-medium text-[#414941] z-10">
+    <label className="absolute -top-2 left-3 bg-surface-container-low px-1 text-[10px] md:text-[11px] font-medium text-on-surface-variant z-10">
       {label}
     </label>
     <div className="relative">
@@ -31,7 +31,7 @@ export const M3Select: React.FC<M3SelectProps> = ({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full bg-transparent border ${isPrimary ? 'border-[#006d3d] border-2 shadow-sm' : 'border-[#717971]'} rounded-xl px-3 md:px-4 py-3 md:py-4 appearance-none focus:outline-none focus:ring-1 focus:ring-[#006d3d] text-[#1a1c1a] text-sm font-bold cursor-pointer transition-all`}
+        className={`w-full bg-transparent border ${isPrimary ? 'border-primary border-2 shadow-sm' : 'border-outline'} rounded-xl px-3 md:px-4 py-3 md:py-4 appearance-none focus:outline-none focus:ring-1 focus:ring-primary text-on-surface text-sm font-medium cursor-pointer transition-all`}
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>
@@ -40,7 +40,7 @@ export const M3Select: React.FC<M3SelectProps> = ({
         ))}
       </select>
       <ChevronDown
-        className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 pointer-events-none ${isPrimary ? 'text-[#006d3d]' : 'text-[#414941]'}`}
+        className={`absolute right-3 md:right-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 pointer-events-none ${isPrimary ? 'text-primary' : 'text-on-surface-variant'}`}
       />
     </div>
   </div>

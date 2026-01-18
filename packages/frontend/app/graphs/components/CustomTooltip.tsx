@@ -25,9 +25,9 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, l
   const milestone = MILESTONES.find((m) => m.year === label);
 
   return (
-    <div className="bg-[#f7faf7] p-3 md:p-4 border border-[#dee5dd] shadow-[0_12px_32px_rgba(0,0,0,0.15)] rounded-[20px] md:rounded-[24px] min-w-[200px] md:min-w-[240px] animate-in fade-in zoom-in-95 duration-200">
-      <div className="flex items-center justify-between mb-2 md:mb-3 pb-2 border-b border-[#dee5dd]">
-        <p className="text-[9px] md:text-[10px] font-black text-[#414941] uppercase tracking-[0.2em]">
+    <div className="bg-surface-container-high p-3 md:p-4 border border-outline-variant elevation-2 rounded-2xl md:rounded-3xl min-w-[200px] md:min-w-[240px] animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex items-center justify-between mb-2 md:mb-3 pb-2 border-b border-outline-variant">
+        <p className="text-[9px] md:text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em]">
           {`Period: ${label}`}
         </p>
       </div>
@@ -44,11 +44,11 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, l
                     border: '2px solid white',
                   }}
                 />
-                <span className="text-[10px] md:text-xs font-bold text-[#1a1c1a] truncate max-w-[100px] md:max-w-none">
+                <span className="text-[10px] md:text-xs font-medium text-on-surface truncate max-w-[100px] md:max-w-none">
                   {entry.name}
                 </span>
               </div>
-              <span className="text-xs md:text-sm font-black text-[#1a1c1a]">
+              <span className="text-xs md:text-sm font-medium text-on-surface">
                 {entry.value.toLocaleString()}
               </span>
             </div>
@@ -57,14 +57,14 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, l
       </div>
 
       {milestone && (
-        <div className="mt-3 md:mt-4 p-2 md:p-3 bg-amber-50 border border-amber-100 rounded-lg md:rounded-xl">
-          <div className="flex items-center gap-2 text-amber-800 mb-1">
+        <div className="mt-3 md:mt-4 p-2 md:p-3 bg-tertiary-container border border-tertiary-container rounded-xl md:rounded-2xl">
+          <div className="flex items-center gap-2 text-on-tertiary-container mb-1">
             <History className="w-2.5 h-2.5 md:w-3 md:h-3" />
-            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tighter">
+            <span className="text-[9px] md:text-[10px] font-medium uppercase tracking-tight">
               Market Milestone
             </span>
           </div>
-          <p className="text-[10px] md:text-[11px] font-bold text-amber-900 leading-tight">
+          <p className="text-[10px] md:text-[11px] font-medium text-on-tertiary-container leading-tight">
             {milestone.label}
           </p>
         </div>

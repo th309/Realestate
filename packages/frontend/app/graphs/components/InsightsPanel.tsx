@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Loader2, TrendingUp } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp, Zap } from 'lucide-react';
+import { M3Card, M3CardHeader } from './M3Card';
 
 interface InsightsPanelProps {
   aiInsight: string | null;
@@ -15,48 +16,48 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
   onFetchInsights,
 }) => {
   return (
-    <div className="mb-6 md:mb-10 p-5 md:p-8 bg-[#d3e8d3] rounded-[24px] md:rounded-[32px] border border-[#b8ccb8] shadow-sm">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 text-[#00210e]">
-          <div className="p-2 md:p-2.5 bg-[#006d3d] rounded-xl md:rounded-2xl shadow-md shrink-0">
-            <Sparkles className="w-5 md:w-6 h-5 md:h-6 text-white" />
-          </div>
-          <div>
-            <span className="text-[11px] md:text-sm font-black tracking-[0.1em] md:tracking-[0.15em] uppercase block">
-              AI Economic Pulse
-            </span>
-            <span className="text-[9px] md:text-[11px] font-bold text-[#006d3d]/70">
-              Analysis powered by Gemini-3
-            </span>
-          </div>
-        </div>
+    <M3Card
+      variant="filled"
+      size="md"
+      className="bg-primary-container border-primary-container/50"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <M3CardHeader
+          icon={<Sparkles className="w-4 h-4 text-on-primary-container" />}
+          title="AI Market Analysis"
+          subtitle="Powered by Gemini"
+          badge="Beta"
+          badgeColor="secondary"
+        />
         <button
           onClick={onFetchInsights}
           disabled={isInsightLoading}
-          className="bg-[#006d3d] text-white px-6 md:px-8 py-2.5 md:py-3 rounded-full text-[10px] md:text-xs font-black hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-2 bg-primary text-on-primary px-5 py-2.5 rounded-full text-xs font-medium hover:shadow-md active:scale-[0.98] transition-all duration-200 disabled:opacity-50"
         >
           {isInsightLoading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <TrendingUp className="w-3.5 h-3.5" />
+            <Zap className="w-3.5 h-3.5" />
           )}
-          {isInsightLoading ? 'Calculating...' : 'Update Narrative'}
+          {isInsightLoading ? 'Analyzing...' : 'Generate Insight'}
         </button>
       </div>
 
       {aiInsight ? (
-        <div className="space-y-3 md:space-y-4">
-          <p className="text-[#00210e] text-sm md:text-lg leading-relaxed font-semibold italic">
-            &ldquo;{aiInsight}&rdquo;
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1 md:pt-2">
-            <span className="text-[9px] md:text-[11px] font-bold text-[#006d3d] uppercase tracking-wider mr-1 md:mr-2 self-center">
-              Focus Area:
+        <div className="space-y-4">
+          <div className="bg-surface/60 rounded-xl p-4 border border-outline-variant/30">
+            <p className="text-on-surface text-sm md:text-base leading-relaxed">
+              {aiInsight}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-medium text-on-primary-container uppercase tracking-wide">
+              Focus Areas:
             </span>
-            {['Sensitivity', 'Growth', 'Inventory'].map((chip) => (
+            {['Price Sensitivity', 'Growth Trajectory', 'Supply Trends'].map((chip) => (
               <button
                 key={chip}
-                className="px-2 md:px-3 py-1 md:py-1.5 bg-white/50 hover:bg-white text-[#00210e] text-[9px] md:text-[10px] font-black rounded-lg border border-[#006d3d]/20 transition-all active:scale-95"
+                className="px-3 py-1.5 bg-surface/50 hover:bg-surface text-on-surface text-[10px] font-medium rounded-full border border-outline-variant/30 transition-all duration-200 hover:shadow-sm"
               >
                 {chip}
               </button>
@@ -64,10 +65,13 @@ export const InsightsPanel: React.FC<InsightsPanelProps> = ({
           </div>
         </div>
       ) : (
-        <p className="text-[#414941] text-xs md:text-base font-medium">
-          Click &ldquo;Update Narrative&rdquo; for an AI summary of these market targets.
-        </p>
+        <div className="bg-surface/30 rounded-xl p-4 border border-dashed border-outline-variant/50">
+          <p className="text-on-primary-container/70 text-sm flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Click "Generate Insight" for an AI-powered market summary
+          </p>
+        </div>
       )}
-    </div>
+    </M3Card>
   );
 };
