@@ -77,9 +77,9 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section className="py-24 px-6 max-w-6xl mx-auto" id="features">
+    <section className="py-16 px-6 max-w-6xl mx-auto" id="features">
       {/* Header */}
-      <div className="text-center max-w-xl mx-auto mb-16">
+      <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-sm font-semibold text-primary uppercase tracking-widest">Features</span>
         <h2 className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
           Everything you need to invest with confidence

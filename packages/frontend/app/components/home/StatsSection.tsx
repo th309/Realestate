@@ -10,7 +10,7 @@ const STATS = [
 
 export function StatsSection() {
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-16 bg-surface-container-low border-y border-outline-variant">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6 py-12 bg-surface-container-low border-y border-outline-variant">
       {STATS.map((stat, i) => (
         <div key={i} className="text-center">
           <div className="text-3xl md:text-4xl lg:text-5xl font-bold font-mono text-on-surface">

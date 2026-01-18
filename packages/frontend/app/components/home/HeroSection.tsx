@@ -49,7 +49,7 @@ function MapVisualization() {
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center pt-28 pb-16 px-6 overflow-hidden">
+    <section className="relative flex items-center pt-24 pb-12 px-6 overflow-hidden">
       {/* Background gradient */}
       <div
         className="absolute inset-0 pointer-events-none"

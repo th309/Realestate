@@ -101,9 +101,9 @@ const PRICING_TIERS = [
 
 export function PricingSection() {
   return (
-    <section className="py-24 px-6 max-w-6xl mx-auto" id="pricing">
+    <section className="py-16 px-6 max-w-6xl mx-auto" id="pricing">
       {/* Header */}
-      <div className="text-center max-w-xl mx-auto mb-16">
+      <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-sm font-semibold text-primary uppercase tracking-widest">Pricing</span>
         <h2 className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
           Start free, upgrade when you&apos;re ready

@@ -2,7 +2,7 @@
 
 export function CTASection() {
   return (
-    <section className="text-center py-24 px-6 bg-surface-container-low border-t border-outline-variant">
+    <section className="text-center py-16 px-6 bg-surface-container-low border-t border-outline-variant">
       <h2 className="text-2xl md:text-3xl font-bold text-on-surface mb-4 tracking-tight">
         Ready to invest smarter?
       </h2>
