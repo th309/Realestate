@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { fetch as undiciFetch, Agent } from 'undici';
+import { SupabaseService } from './supabase.service';
 
 export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
 
@@ -55,7 +56,8 @@ const customFetch = (url: string | URL | Request, init?: RequestInit) => {
       },
       inject: [ConfigService],
     },
+    SupabaseService,
   ],
-  exports: [SUPABASE_CLIENT],
+  exports: [SUPABASE_CLIENT, SupabaseService],
 })
-export class SupabaseModule {}
+export class SupabaseModule { }

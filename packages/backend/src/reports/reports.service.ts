@@ -16,7 +16,7 @@ import { GeminiNewsService } from './gemini-news.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { randomBytes } from 'crypto';
 
-interface ReportTemplate {
+export interface ReportTemplate {
   id: string;
   slug: string;
   name: string;
@@ -36,7 +36,7 @@ export class ReportsService {
     private readonly scoringService: ScoringService,
     private readonly claudeService: ClaudeService,
     private readonly geminiNewsService: GeminiNewsService,
-  ) {}
+  ) { }
 
   /**
    * Get available report templates
@@ -166,28 +166,28 @@ export class ReportsService {
         scores: {
           homeready: scores
             ? {
-                score: scores.homeready_score,
-                trend: 'stable',
-                components: scores.homeready_details,
-              }
+              score: scores.homereadyScore,
+              trend: 'stable',
+              components: scores.homereadyComponents,
+            }
             : undefined,
           investoredge: scores
             ? {
-                score: scores.investoredge_score,
-                trend: 'stable',
-                components: scores.investoredge_details,
-              }
+              score: scores.investoredgeScore,
+              trend: 'stable',
+              components: scores.investoredgeComponents,
+            }
             : undefined,
         },
         realtime: newsResult
           ? {
-              news: newsResult.local_news,
-              indicators: newsResult.economic_indicators,
-              signals: newsResult.market_signals,
-              national_context: newsResult.national_context,
-              signal_summary: signalSummary,
-              fetched_at: newsResult.scout_metadata.search_timestamp,
-            }
+            news: newsResult.local_news,
+            indicators: newsResult.economic_indicators,
+            signals: newsResult.market_signals,
+            national_context: newsResult.national_context,
+            signal_summary: signalSummary,
+            fetched_at: newsResult.scout_metadata.search_timestamp,
+          }
           : null,
       };
 
@@ -197,11 +197,11 @@ export class ReportsService {
         // Format news for Claude prompt context
         const newsContext = newsResult
           ? this.geminiNewsService.formatNewsForPrompt(newsResult, {
-              maxNewsItems: 5,
-              includeIndicators: true,
-              includeSignals: true,
-              includeNational: true,
-            })
+            maxNewsItems: 5,
+            includeIndicators: true,
+            includeSignals: true,
+            includeNational: true,
+          })
           : 'No recent news available for this market.';
 
         aiNarratives = await this.claudeService.generateNarratives(
@@ -229,8 +229,8 @@ export class ReportsService {
           populated_data: populatedData,
           ai_narrative: aiNarratives,
           ai_model_used: 'claude-sonnet-4-20250514',
-          homeready_score: scores?.homeready_score || null,
-          investoredge_score: scores?.investoredge_score || null,
+          homeready_score: scores?.homereadyScore || null,
+          investoredge_score: scores?.investoredgeScore || null,
           scores_snapshot: scores,
           generation_completed_at: new Date().toISOString(),
           generation_time_ms: generationTime,
