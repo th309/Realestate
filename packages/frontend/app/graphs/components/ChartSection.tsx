@@ -27,6 +27,7 @@ import {
 } from 'recharts';
 import { ComparisonConfig } from '../types';
 import { MILESTONES, getMetricSource } from '../constants';
+import { getMetricTitle } from '@/app/map/config/metrics';
 import { CustomTooltip } from './CustomTooltip';
 import { M3Card } from './M3Card';
 
@@ -97,12 +98,12 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Common chart props - compact margins for efficient space usage
+  // Common chart props - compact margins with room for axis labels
   const chartMargin = {
     top: 5,
     right: 15,
-    left: isMobile ? 5 : 10,
-    bottom: isMobile ? 5 : 10,
+    left: isMobile ? 0 : 5,
+    bottom: isMobile ? 20 : 25,
   };
 
   // Format X-axis based on time frame
@@ -149,6 +150,13 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     tickFormatter: formatXAxisTick,
     dy: 5,
     interval: getTickInterval(),
+    label: {
+      value: 'Date',
+      position: 'insideBottom' as const,
+      offset: -5,
+      fill: CHART_COLORS.onSurfaceVariant,
+      fontSize: 10,
+    },
   };
 
   const yAxisProps = {
@@ -157,10 +165,31 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     tick: { fill: CHART_COLORS.onSurfaceVariant, fontSize: isMobile ? 9 : 10 },
     tickFormatter: (val: number) =>
       val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString(),
-    width: isMobile ? 35 : 45,
+    width: isMobile ? 40 : 55,
+    label: {
+      value: getMetricTitle(metric),
+      angle: -90,
+      position: 'insideLeft' as const,
+      offset: 10,
+      fill: CHART_COLORS.onSurfaceVariant,
+      fontSize: 10,
+      style: { textAnchor: 'middle' },
+    },
   };
 
   const baselineKey = `Baseline: ${baseline.area}`;
+
+  // Debug: Check if baseline data exists in chartData
+  if (baseline.enabled && chartData && chartData.length > 0) {
+    const hasBaselineData = chartData.some(d => baselineKey in d);
+    const sampleWithBaseline = chartData.find(d => baselineKey in d);
+    console.log('[ChartSection] Baseline check:', {
+      baselineKey,
+      hasBaselineData,
+      visibleSeries: visibleSeries.baseline,
+      sampleWithBaseline: sampleWithBaseline ? { date: sampleWithBaseline.date, value: sampleWithBaseline[baselineKey] } : null,
+    });
+  }
 
   // Render milestone reference lines
   const renderMilestones = () => {

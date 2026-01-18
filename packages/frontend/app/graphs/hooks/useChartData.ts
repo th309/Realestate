@@ -120,6 +120,7 @@ export function useChartData({
         // Fetch baseline data if enabled
         if (baseline.enabled && baseline.area) {
           try {
+            console.log('[Baseline] Fetching:', { metric, level: baseline.level, area: baseline.area });
             const baselineResponse = await timeSeriesApi.getTimeSeries(
               metric,
               baseline.level,
@@ -127,15 +128,30 @@ export function useChartData({
               formatDate(startDate),
               formatDate(endDate),
             );
+            console.log('[Baseline] Response:', { dataLength: baselineResponse.data.length, sample: baselineResponse.data.slice(0, 3) });
 
             // Merge baseline data
             const baselineKey = `Baseline: ${baseline.area}`;
+            let mergedCount = 0;
+            let addedCount = 0;
             baselineResponse.data.forEach(point => {
               const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
                 existingPoint[baselineKey] = Number(point.value) || 0;
+                mergedCount++;
+              } else {
+                // If the baseline date doesn't exist in primary data, add a new point
+                const newPoint: ChartDataItem = {
+                  date: point.date,
+                  [baselineKey]: Number(point.value) || 0
+                };
+                chartData.push(newPoint);
+                addedCount++;
               }
             });
+            console.log('[Baseline] Merged:', mergedCount, 'Added:', addedCount, 'Key:', baselineKey);
+            // Re-sort if we added new dates
+            chartData.sort((a, b) => a.date.localeCompare(b.date));
           } catch (err) {
             console.error('Failed to fetch baseline data:', err);
           }
