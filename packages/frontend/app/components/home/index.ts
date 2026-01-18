@@ -8,3 +8,4 @@ export { CTASection } from './CTASection';
 export { Footer } from './Footer';
 export { AnimatedCounter } from './AnimatedCounter';
 export { ScoreRing } from './ScoreRing';
+export { JsonLd } from './JsonLd';

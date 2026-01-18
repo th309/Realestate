@@ -14,7 +14,7 @@ function FeatureCard({ icon, title, description, delay = 0 }: FeatureCardProps) 
   const [setRef, inView] = useInView();
 
   return (
-    <div
+    <article
       ref={setRef}
       className="bg-surface-container-low rounded-xl p-6 elevation-1 transition-all duration-500"
       style={{
@@ -23,12 +23,12 @@ function FeatureCard({ icon, title, description, delay = 0 }: FeatureCardProps) 
         transitionDelay: `${delay}ms`,
       }}
     >
-      <div className="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center mb-4 text-on-primary-container">
+      <div className="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center mb-4 text-on-primary-container" aria-hidden="true">
         {icon}
       </div>
-      <h3 className="text-lg font-semibold text-on-surface mb-2">{title}</h3>
+      <h3 className="feature-title text-lg font-semibold text-on-surface mb-2">{title}</h3>
       <p className="text-sm text-on-surface-variant leading-relaxed">{description}</p>
-    </div>
+    </article>
   );
 }
 
@@ -66,31 +66,56 @@ const Icons = {
   ),
 };
 
+// SEO-optimized features targeting homebuyers, renters, investors, and agents
 const FEATURES = [
-  { icon: <Icons.Score />, title: 'Proprietary Scores', description: 'HomeReady and InvestorEdge scores distill dozens of metrics into actionable numbers you can trust.' },
-  { icon: <Icons.Map />, title: 'Interactive Maps', description: 'Explore markets visually with heat maps, overlays, and drill-down neighborhood analysis.' },
-  { icon: <Icons.Report />, title: 'AI Reports', description: 'Generate comprehensive market reports instantly. Export to PDF or share with stakeholders.' },
-  { icon: <Icons.Data />, title: 'Deep Data', description: 'Census, economic indicators, Zillow metrics, and more—all normalized and ready to query.' },
-  { icon: <Icons.Trend />, title: 'Trend Forecasting', description: 'Machine learning models predict price movements, rental demand, and market cycles.' },
-  { icon: <Icons.Shield />, title: 'Risk Assessment', description: 'Understand downside scenarios with volatility metrics and economic sensitivity analysis.' },
+  {
+    icon: <Icons.Score />,
+    title: 'Neighborhood & Investment Scores',
+    description: 'HomeReady Score helps homebuyers evaluate livability. InvestorEdge Score helps investors analyze cap rates, cash flow, and ROI potential—all in one number.'
+  },
+  {
+    icon: <Icons.Map />,
+    title: 'Interactive Market Heat Maps',
+    description: 'Visualize home values, rental prices, and market trends across metros. Drill down from state to ZIP code to find the best neighborhoods for buying or investing.'
+  },
+  {
+    icon: <Icons.Report />,
+    title: 'AI-Generated Market Reports',
+    description: 'Generate professional market analysis reports for clients instantly. Perfect for real estate agents presenting to buyers or investors sharing with partners.'
+  },
+  {
+    icon: <Icons.Data />,
+    title: 'Comprehensive Real Estate Data',
+    description: 'Access Census demographics, employment data, Zillow home values, rental estimates, and economic indicators—all normalized across 384 US metro areas.'
+  },
+  {
+    icon: <Icons.Trend />,
+    title: 'Price & Rental Trend Forecasts',
+    description: 'Machine learning models predict home appreciation, rental demand, and market cycles. Know when to buy, sell, or hold investment properties.'
+  },
+  {
+    icon: <Icons.Shield />,
+    title: 'Investment Risk Analysis',
+    description: 'Evaluate downside scenarios for rental properties with vacancy risk, economic sensitivity, and market volatility metrics before you invest.'
+  },
 ];
 
 export function FeaturesSection() {
   return (
-    <section className="py-16 px-6 max-w-6xl mx-auto" id="features">
+    <section className="py-16 px-6 max-w-6xl mx-auto" id="features" aria-labelledby="features-heading">
       {/* Header */}
-      <div className="text-center max-w-xl mx-auto mb-10">
-        <span className="text-sm font-semibold text-primary uppercase tracking-widest">Features</span>
-        <h2 className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
-          Everything you need to invest with confidence
+      <header className="text-center max-w-xl mx-auto mb-10">
+        <span className="text-sm font-semibold text-primary uppercase tracking-widest">Platform Features</span>
+        <h2 id="features-heading" className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
+          Tools for homebuyers, renters, investors & agents
         </h2>
         <p className="text-on-surface-variant">
-          From proprietary scoring to AI-generated reports, PropertyIQ gives you institutional-grade tools.
+          From neighborhood scores for first-time buyers to ROI analysis for seasoned investors—PropertyIQ delivers institutional-grade real estate intelligence.
         </p>
-      </div>
+      </header>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Feature Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="list">
         {FEATURES.map((feature, i) => (
           <FeatureCard key={feature.title} {...feature} delay={i * 100} />
         ))}
