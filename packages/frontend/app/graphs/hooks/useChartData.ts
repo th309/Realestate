@@ -74,12 +74,6 @@ export function useChartData({
           formatDate(endDate),
         );
 
-        console.log('[useChartData] Primary response:', {
-          dataLength: primaryResponse?.data?.length,
-          sampleData: primaryResponse?.data?.slice(0, 2),
-          fullResponse: primaryResponse,
-        });
-
         if (!isMounted) return;
 
         // Transform API response to chart format
@@ -88,12 +82,6 @@ export function useChartData({
             date: point.date,
             [selectedArea]: point.value,
           };
-        });
-
-        console.log('[useChartData] Transformed chartData:', {
-          length: chartData.length,
-          sample: chartData.slice(0, 2),
-          selectedArea,
         });
 
         // Fetch comparison data if enabled

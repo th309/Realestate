@@ -59,16 +59,6 @@ export class TimeSeriesService {
             // Census tables use 'year' field, others use 'period_date'
             const dateField = mapping.source === 'census' ? 'year' : 'period_date';
 
-            console.log(`[TimeSeriesService] Query params:`, {
-                metricId,
-                geoLevel,
-                regionId,
-                table,
-                source: mapping.source,
-                columnName: mapping.columnName,
-                dateField,
-            });
-
             // Build and execute query
             let query = this.supabase
                 .from(table)
@@ -108,12 +98,6 @@ export class TimeSeriesService {
             }
 
             const { data, error } = await query;
-
-            console.log(`[TimeSeriesService] Query result:`, {
-                error: error?.message || null,
-                rowCount: data?.length || 0,
-                sampleData: data?.slice(0, 2) || [],
-            });
 
             if (error) {
                 throw new Error(`Error fetching time series for ${metricId}: ${error.message}`);

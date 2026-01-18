@@ -3,22 +3,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  console.log('Fetching:', url);
-  try {
-    const response = await fetch(url);
-    console.log('Response status:', response.status, 'for', endpoint);
-    if (!response.ok) {
-      const text = await response.text();
-      console.error('API error response:', text);
-      throw new Error(`API error: ${response.status}`);
-    }
-    const data = await response.json();
-    console.log('Response data count:', Array.isArray(data?.data) ? data.data.length : 'N/A', 'for', endpoint);
-    return data;
-  } catch (error) {
-    console.error('Fetch failed for', endpoint, error);
-    throw error;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
   }
+  return response.json();
 }
 
 export interface MarketStats {
