@@ -98,7 +98,30 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Debug logging
+  console.log('[ChartSection] Received data:', {
+    chartDataLength: chartData?.length,
+    selectedArea,
+    firstItem: chartData?.[0],
+    lastItem: chartData?.[chartData?.length - 1],
+    visibleSeries,
+    chartType,
+    hasDataKey: chartData?.[0] ? selectedArea in chartData[0] : false,
+    valueRange: chartData?.length ? {
+      min: Math.min(...chartData.map(d => Number(d[selectedArea]) || 0)),
+      max: Math.max(...chartData.map(d => Number(d[selectedArea]) || 0)),
+    } : null,
+  });
+
   const renderSeries = () => {
+    console.log('[ChartSection] renderSeries called:', {
+      chartType,
+      visibleSeriesPrimary: visibleSeries.primary,
+      comparisonEnabled: comparison.enabled,
+      baselineEnabled: baseline.enabled,
+      selectedArea,
+    });
+
     const primaryProps = {
       name: selectedArea,
       dataKey: selectedArea,
