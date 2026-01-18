@@ -682,9 +682,8 @@ export const METRO_ONLY_METRICS = new Set([
   // Zillow rent data (only available at metro/county/zip from ZORI)
   'rent_index',
   'rent_for_houses',         // Renter Demand Index (ZORDI)
-  // Zillow affordability (only metro) - NOTE: income_to_buy now supports all geos via calculated metrics
+  // Zillow affordability (only metro) - NOTE: income_to_buy and affordable_home_price now support all geos via calculated metrics
   'income_to_rent',
-  'affordable_home_price',
   'years_to_save',
   'homeowner_affordability',
   'renter_affordability',
