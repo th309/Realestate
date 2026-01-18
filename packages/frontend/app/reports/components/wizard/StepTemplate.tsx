@@ -154,8 +154,8 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
     return aRelevance - bRelevance;
   });
 
-  // Mock current tier (would come from user context)
-  const currentTier: SubscriptionTier = 'free';
+  // TODO: Get from user authentication context
+  const currentTier: SubscriptionTier = 'pro';
   const tierOrder: SubscriptionTier[] = ['free', 'basic', 'pro', 'enterprise'];
 
   const canAccessTemplate = (template: ReportTemplate): boolean => {
