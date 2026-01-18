@@ -198,6 +198,14 @@ export const DESCRIPTIONS: Record<string, string> = {
   new_construction_ppsf: 'Price per square foot for new construction.',
 };
 
+// Market milestones for chart annotations
+export const MILESTONES: Milestone[] = [
+  { year: 2008, label: 'Financial Crisis begins' },
+  { year: 2012, label: 'Housing market recovery starts' },
+  { year: 2020, label: 'COVID-19 Pandemic begins' },
+  { year: 2022, label: 'Fed rate hikes begin' },
+];
+
 // Helper function to get description for a metric
 export function getMetricDescription(metricId: string): string {
   return DESCRIPTIONS[metricId] || METRICS[metricId]?.title || 'No description available.';
