@@ -7,6 +7,9 @@ import { GeoLevel } from '@/app/map/config/metrics';
 import { GEO_LEVEL_OPTIONS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
 import { M3Card, M3CardHeader } from './M3Card';
+import { SearchBar } from '@/app/map/components';
+import { useGraphSearch } from '../hooks/useGraphSearch';
+import { SearchResult } from '@/app/map/types';
 
 interface BaselineConfig {
   enabled: boolean;
@@ -54,6 +57,27 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
   const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+    showSearchResults,
+    setShowSearchResults,
+    searchRef,
+    handleSearch,
+    clearSearch
+  } = useGraphSearch();
+
+  const handleSelectResult = (result: SearchResult) => {
+    setSelectedArea(result.name);
+    // Optionally render the search query as the selected name temporarily
+    setSearchQuery('');
+    clearSearch();
+  };
+
+  const showSearch = ['metro', 'county', 'city', 'zip'].includes(geoLevel);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Geography Selection Card */}
@@ -85,32 +109,66 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
           subtitle={geoLevel === 'national' ? 'National view selected' : 'Choose primary area'}
         />
         <div className="mt-4 space-y-3">
-          <M3Select
-            label="Primary Area"
-            value={selectedArea}
-            onChange={setSelectedArea}
-            options={primaryOptions}
-            disabled={geoLevel === 'national'}
-          />
+          {showSearch ? (
+            <div className="w-full -ml-0 md:-ml-0">
+              {/* SearchBar has built-in margins that might interfere, wrapping to control context if needed. 
+                   Checking SearchBar implementation: className="flex-1 max-w-2xl mx-0 md:mx-8"
+                   This margin might slide it to the right. We might need to override it via a prop if we could, 
+                   but we strictly can't change SearchBar props easily without editing it. 
+                   However, passing a style or class isn't part of SearchBarProps. 
+                   Wait, SearchBar is fairly rigid. 
+                   Let's assume it renders okay or I will fix SearchBar in next step if it looks bad.
+               */}
+              <div className="relative">
+                {/* We render a custom wrapper to override the SearchBar's internal margin effect if possible, 
+                      or just let it be. Actually, `mx-0 md:mx-8` means on desktop it has 2rem margin. 
+                      In a card, that's too much. 
+                      I should probably edit SearchBar to accept className prop for flexibility.
+                      But for now, I will use it as is.
+                  */}
+                <SearchBar
+                  className="w-full"
+                  searchRef={searchRef}
+                  searchQuery={searchQuery || (searchQuery === '' && !showSearchResults ? selectedArea : '')}
+                  searchResults={searchResults}
+                  searchLoading={searchLoading}
+                  showSearchResults={showSearchResults}
+                  onSearch={handleSearch}
+                  onSelectResult={handleSelectResult}
+                  onFocus={() => {
+                    if (searchResults.length > 0) setShowSearchResults(true);
+                    if (searchQuery === selectedArea) setSearchQuery('');
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <M3Select
+              label="Primary Area"
+              value={selectedArea}
+              onChange={setSelectedArea}
+              options={primaryOptions}
+              disabled={geoLevel === 'national'}
+            />
+          )}
+
           {geoLevel !== 'national' && (
             <div className="flex gap-2">
               <button
                 onClick={() => setComparison((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${
-                  comparison.enabled
-                    ? 'bg-secondary text-on-secondary border-secondary'
-                    : 'bg-surface text-on-surface-variant border-outline-variant hover:border-secondary hover:text-secondary'
-                }`}
+                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${comparison.enabled
+                  ? 'bg-secondary text-on-secondary border-secondary'
+                  : 'bg-surface text-on-surface-variant border-outline-variant hover:border-secondary hover:text-secondary'
+                  }`}
               >
                 {comparison.enabled ? '✓ Comparing' : '+ Compare'}
               </button>
               <button
                 onClick={() => setBaseline((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${
-                  baseline.enabled
-                    ? 'bg-tertiary text-on-tertiary border-tertiary'
-                    : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary hover:text-tertiary'
-                }`}
+                className={`flex-1 text-[10px] font-medium py-2 px-3 rounded-full border transition-all duration-200 ${baseline.enabled
+                  ? 'bg-tertiary text-on-tertiary border-tertiary'
+                  : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary hover:text-tertiary'
+                  }`}
               >
                 {baseline.enabled ? '✓ Baseline' : '+ Baseline'}
               </button>

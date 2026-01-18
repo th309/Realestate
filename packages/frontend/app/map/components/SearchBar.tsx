@@ -12,6 +12,7 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   onSelectResult: (result: SearchResult) => void;
   onFocus: () => void;
+  className?: string; // Allow styling overrides
 }
 
 export function SearchBar({
@@ -23,9 +24,10 @@ export function SearchBar({
   onSearch,
   onSelectResult,
   onFocus,
+  className,
 }: SearchBarProps) {
   return (
-    <div className="flex-1 max-w-2xl mx-0 md:mx-8" ref={searchRef}>
+    <div className={className ?? "flex-1 max-w-2xl mx-0 md:mx-8"} ref={searchRef}>
       <div className="relative">
         <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
           <SearchIcon />
