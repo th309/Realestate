@@ -340,7 +340,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       {/* Chart Container */}
       <div className="h-[350px] md:h-[500px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-3 md:p-6">
         <ResponsiveContainer width="100%" height="100%">
-          <ChartComponent
+          <AreaChart
             data={chartData}
             margin={{
               top: 10,
@@ -349,97 +349,29 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               bottom: isMobile ? 20 : 50,
             }}
           >
-            <defs>
-              <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.2} />
-                <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="secondaryGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={CHART_COLORS.secondary} stopOpacity={0.15} />
-                <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} strokeDasharray="4 4" stroke={CHART_COLORS.outlineVariant} />
-
+            <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              axisLine={{ stroke: CHART_COLORS.outlineVariant }}
-              tickLine={true}
-              tick={{ fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 }}
               tickFormatter={(val) => {
                 if (!val) return '';
                 const date = new Date(val);
                 return date.getFullYear().toString();
               }}
-              dy={isMobile ? 5 : 10}
-              label={
-                !isMobile
-                  ? {
-                    value: 'Time',
-                    position: 'insideBottom',
-                    offset: -35,
-                    fill: CHART_COLORS.onSurfaceVariant,
-                    fontSize: 11,
-                    fontWeight: 500,
-                  }
-                  : undefined
-              }
             />
-
             <YAxis
-              axisLine={{ stroke: CHART_COLORS.outlineVariant }}
-              tickLine={true}
-              tick={{ fill: CHART_COLORS.onSurface, fontSize: isMobile ? 8 : 10, fontWeight: 500 }}
               tickFormatter={(val) =>
                 val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString()
               }
-              domain={['auto', 'auto']}
-              orientation={isMobile ? 'right' : 'left'}
-              label={
-                !isMobile
-                  ? {
-                    value: getMetricTitle(metric),
-                    angle: -90,
-                    position: 'insideLeft',
-                    offset: -35,
-                    fill: CHART_COLORS.onSurfaceVariant,
-                    fontSize: 11,
-                    fontWeight: 500,
-                  }
-                  : undefined
-              }
             />
-
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ stroke: CHART_COLORS.primary, strokeWidth: 1.5, strokeDasharray: '6 6' }}
+            <Tooltip />
+            <Area
+              type="monotone"
+              dataKey={selectedArea}
+              stroke="#8884d8"
+              fill="#8884d8"
+              fillOpacity={0.6}
             />
-
-            {showMilestones &&
-              MILESTONES.map((m) => (
-                <ReferenceLine
-                  key={m.label}
-                  x={`${m.year}-01-01`}
-                  stroke={CHART_COLORS.tertiary}
-                  strokeDasharray="3 3"
-                  strokeWidth={1.5}
-                  label={
-                    !isMobile
-                      ? {
-                        position: 'top',
-                        value: '!',
-                        fill: CHART_COLORS.tertiary,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        offset: 10,
-                      }
-                      : undefined
-                  }
-                />
-              ))}
-
-            {renderSeries()}
-          </ChartComponent>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 
