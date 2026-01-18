@@ -43,7 +43,9 @@ export const Dashboard: React.FC = () => {
     metricOptions,
   } = useDashboardState();
 
-  const chartData = useChartData({
+  const { data: chartData, loading: chartLoading, error: chartError } = useChartData({
+    metric,
+    geoLevel,
     timeFrame,
     selectedArea,
     comparison,

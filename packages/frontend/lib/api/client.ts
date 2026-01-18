@@ -1202,3 +1202,68 @@ export interface BatchScoreResponse {
   periodDate?: string;
   scores: (ScoreResponse | { geographyId: string; error: string })[];
 }
+
+// ============================================================================
+// TIME SERIES API - Historical data for graphs
+// ============================================================================
+
+export interface TimeSeriesDataPoint {
+  date: string;
+  value: number;
+}
+
+export interface TimeSeriesResponse {
+  success: boolean;
+  metric: string;
+  geoLevel: string;
+  regionId: string;
+  count: number;
+  data: TimeSeriesDataPoint[];
+}
+
+export interface DateRangeResponse {
+  success: boolean;
+  metric: string;
+  geoLevel: string;
+  minDate: string;
+  maxDate: string;
+  count: number;
+}
+
+// Add to api export object
+export const timeSeriesApi = {
+  /**
+   * Get historical time-series data for a specific metric/geography/region
+   * @param metric - Metric ID (e.g., 'listing_price', 'home_value', etc.)
+   * @param geoLevel - Geography level (national, state, metro, county, city, zip)
+   * @param regionId - Region identifier (state name, CBSA code, FIPS, ZIP, etc.)
+   * @param startDate - Optional start date filter (YYYY-MM-DD)
+   * @param endDate - Optional end date filter (YYYY-MM-DD)
+   * @param limit - Optional limit on number of data points
+   */
+  getTimeSeries: async (
+    metric: string,
+    geoLevel: string,
+    regionId: string,
+    startDate?: string,
+    endDate?: string,
+    limit?: number,
+  ): Promise<TimeSeriesResponse> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (limit) params.append('limit', limit.toString());
+
+    const queryString = params.toString();
+    const url = `/api/timeseries/${metric}/${geoLevel}/${encodeURIComponent(regionId)}${queryString ? `?${queryString}` : ''}`;
+
+    return fetchAPI<TimeSeriesResponse>(url);
+  },
+
+  /**
+   * Get available date range for a metric/geography combination
+   */
+  getAvailableDates: async (metric: string, geoLevel: string): Promise<DateRangeResponse> => {
+    return fetchAPI<DateRangeResponse>(`/api/timeseries/dates/${metric}/${geoLevel}`);
+  },
+};
