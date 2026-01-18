@@ -354,7 +354,7 @@ export default function MapPage() {
           {/* M3 Extended FAB */}
           <button
             onClick={() => setShowTableView(true)}
-            className="absolute bottom-3 right-3 md:bottom-6 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
+            className="absolute bottom-16 right-3 md:bottom-20 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
           >
             <TableIcon />
             <span className="hidden sm:inline font-medium">Table View</span>
