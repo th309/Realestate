@@ -86,6 +86,11 @@ export function useDashboardState() {
     [geoLevel, getOptionsForLevel]
   );
 
+  const baselineOptions = useMemo(
+    () => getOptionsForLevel(baseline.level),
+    [baseline.level, getOptionsForLevel]
+  );
+
   useEffect(() => {
     if (geoLevel === 'national') {
       setSelectedArea('United States');
@@ -94,6 +99,12 @@ export function useDashboardState() {
       setSelectedArea(primaryOptions[0]);
     }
   }, [geoLevel, primaryOptions, selectedArea]);
+
+  useEffect(() => {
+    if (!baselineOptions.includes(baseline.area)) {
+      setBaseline((prev) => ({ ...prev, area: baselineOptions[0] }));
+    }
+  }, [baselineOptions, baseline.area]);
 
   useEffect(() => {
     setIsDataLoading(true);
@@ -132,6 +143,7 @@ export function useDashboardState() {
     visibleSeries,
     toggleSeries,
     primaryOptions,
+    baselineOptions,
     metricOptions,
   };
 }

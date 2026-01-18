@@ -40,6 +40,7 @@ export const Dashboard: React.FC = () => {
     visibleSeries,
     toggleSeries,
     primaryOptions,
+    baselineOptions,
     metricOptions,
   } = useDashboardState();
 
@@ -130,6 +131,7 @@ export const Dashboard: React.FC = () => {
             setComparison={setComparison}
             baseline={baseline}
             setBaseline={setBaseline}
+            baselineOptions={baselineOptions}
             showMilestones={showMilestones}
             setShowMilestones={setShowMilestones}
             showForecast={showForecast}
