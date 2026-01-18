@@ -85,7 +85,6 @@ const HOMEBUYER_AFFORDABILITY: MetricCategory = {
   subtext: 'Can I afford to live here?',
   icon: <AttachMoneyIcon />,
   metrics: [
-    metric('home_value'),
     metric('listing_price', { isNew: true }),
     metric('income_to_buy', { isNew: true }),
     metric('affordable_home_price', { isNew: true }),
