@@ -106,17 +106,46 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     bottom: isMobile ? 20 : 50,
   };
 
+  // Format X-axis based on time frame
+  const formatXAxisTick = (val: string) => {
+    if (!val) return '';
+    const date = new Date(val);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    switch (timeFrame) {
+      case '1Y':
+        // Show month + year for 1 year view
+        return `${months[date.getMonth()]} '${date.getFullYear().toString().slice(-2)}`;
+      case '3Y':
+        // Show quarter/month + year for 3 year view
+        const month = date.getMonth();
+        if (month === 0 || month === 6) {
+          return `${months[month]} '${date.getFullYear().toString().slice(-2)}`;
+        }
+        return '';
+      case '5Y':
+        // Show year for 5 year view, with Jan markers
+        if (date.getMonth() === 0) {
+          return date.getFullYear().toString();
+        }
+        return '';
+      default:
+        // 10Y and Max: Show years
+        if (date.getMonth() === 0) {
+          return date.getFullYear().toString();
+        }
+        return '';
+    }
+  };
+
   const xAxisProps = {
     dataKey: 'date',
     axisLine: { stroke: CHART_COLORS.outlineVariant },
     tickLine: true,
     tick: { fill: CHART_COLORS.onSurface, fontSize: isMobile ? 9 : 11, fontWeight: 500 },
-    tickFormatter: (val: string) => {
-      if (!val) return '';
-      const date = new Date(val);
-      return date.getFullYear().toString();
-    },
+    tickFormatter: formatXAxisTick,
     dy: isMobile ? 5 : 10,
+    interval: (timeFrame === '1Y' ? (isMobile ? 2 : 1) : timeFrame === '3Y' ? (isMobile ? 5 : 2) : 'preserveStartEnd') as number | 'preserveStart' | 'preserveEnd' | 'preserveStartEnd' | 'equidistantPreserveStart',
     label: !isMobile ? {
       value: 'Time',
       position: 'insideBottom' as const,
