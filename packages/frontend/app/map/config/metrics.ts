@@ -332,11 +332,11 @@ export const METRICS: Record<string, MetricConfig> = {
     id: 'income_to_buy',
     title: 'Income to Buy',
     format: 'currency',
-    dataSource: 'zillow',
-    apiEndpoint: '/api/zillow/affordability/{geo}',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/income-to-buy/{geo}',
     keyField: 'auto',
-    supportedGeos: ['metro'],
-    valueField: 'homeowner_income',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    valueField: 'income_to_buy',
   },
 
   income_to_rent: {
@@ -682,8 +682,7 @@ export const METRO_ONLY_METRICS = new Set([
   // Zillow rent data (only available at metro/county/zip from ZORI)
   'rent_index',
   'rent_for_houses',         // Renter Demand Index (ZORDI)
-  // Zillow affordability (only metro)
-  'income_to_buy',
+  // Zillow affordability (only metro) - NOTE: income_to_buy now supports all geos via calculated metrics
   'income_to_rent',
   'affordable_home_price',
   'years_to_save',
@@ -766,7 +765,7 @@ export const DATA_DATES: Record<DataSource, string> = {
   zillow: '2025-11-30',      // Zillow ZHVI, forecasts, rent indices
   realtor: '2025-12-01',     // Realtor.com inventory and market metrics
   census: '2024',            // Census ACS data (annual)
-  calculated: '2025-11-30',  // Derived metrics (uses underlying data date)
+  calculated: '2025-12-01',  // Derived metrics (income_to_buy uses Realtor data)
   fred: '2025-09-01',        // FRED economic indicators
 };
 

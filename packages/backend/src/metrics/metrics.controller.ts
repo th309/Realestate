@@ -838,4 +838,126 @@ export class MetricsController {
       data: results,
     };
   }
+
+  // ============================================================================
+  // INCOME-TO-BUY ENDPOINTS (from pre-calculated data)
+  // ============================================================================
+
+  /**
+   * Get income-to-buy for states
+   * Returns the annual income required to afford the median-priced home
+   */
+  @Get('income-to-buy/states')
+  async getStateIncomeToBuy() {
+    return this.getIncomeToBuyByGeo('state', 'State');
+  }
+
+  /**
+   * Get income-to-buy for metros
+   */
+  @Get('income-to-buy/metros')
+  async getMetroIncomeToBuy() {
+    return this.getIncomeToBuyByGeo('metro', 'Metro');
+  }
+
+  /**
+   * Get income-to-buy for counties
+   */
+  @Get('income-to-buy/counties')
+  async getCountyIncomeToBuy() {
+    return this.getIncomeToBuyByGeo('county', 'County');
+  }
+
+  /**
+   * Get income-to-buy for zip codes
+   */
+  @Get('income-to-buy/zips')
+  async getZipIncomeToBuy(@Query('state') state?: string) {
+    return this.getIncomeToBuyByGeo('zip', 'ZIP', state);
+  }
+
+  /**
+   * Generic income-to-buy fetcher for all geography types
+   */
+  private async getIncomeToBuyByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+    // Get latest date from calculated_metrics
+    const { data: latestRow } = await this.supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geoType)
+      .not('income_to_buy', 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestRow?.period_date) {
+      return { success: false, error: `No income_to_buy data available for ${geoLabel}`, data: [] };
+    }
+
+    const targetDate = latestRow.period_date;
+
+    // Build query
+    let query = this.supabase
+      .from('calculated_metrics')
+      .select('geography_id, geography_name, income_to_buy, period_date')
+      .eq('geography_type', geoType)
+      .eq('period_date', targetDate)
+      .not('income_to_buy', 'is', null);
+
+    // Handle state filter for ZIP codes
+    if (stateFilter && geoType === 'zip') {
+      const statePattern = `%, ${stateFilter.toUpperCase()}`;
+      query = query.ilike('geography_name', statePattern);
+    }
+
+    // Paginate for large datasets (county and zip)
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { success: false, error: error.message, data: [] };
+      }
+
+      if (!pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Transform to map-friendly format
+    const results = allData.map(row => {
+      const result: any = {
+        region_id: row.geography_id,
+        region_name: row.geography_name,
+        income_to_buy: row.income_to_buy,
+        value: row.income_to_buy,
+        date: row.period_date,
+      };
+
+      // Add geography-specific ID fields
+      if (geoType === 'metro') {
+        result.cbsa_code = row.geography_id;
+      } else if (geoType === 'county') {
+        result.county_fips = row.geography_id;
+      } else if (geoType === 'zip') {
+        result.postal_code = row.geography_id;
+      }
+
+      return result;
+    });
+
+    return {
+      success: true,
+      count: results.length,
+      geography: geoLabel,
+      metric: 'income_to_buy',
+      source: 'pre-calculated',
+      date: targetDate,
+      data: results,
+    };
+  }
 }

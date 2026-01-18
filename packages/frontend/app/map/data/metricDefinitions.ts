@@ -286,11 +286,11 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
   income_to_buy: {
     id: 'income_to_buy',
     name: 'Income Needed to Buy',
-    description: 'The annual household income required to afford the median-priced home, assuming standard mortgage terms and 28% housing cost ratio.',
-    formula: '(Monthly Mortgage + Taxes + Insurance) × 12 / 0.28',
-    dataSource: 'Zillow',
+    description: 'The annual household income required to afford the median-priced home, based on the 28% front-end debt-to-income ratio standard used by mortgage lenders.',
+    formula: '(Monthly PITI × 12) / 0.28, where PITI = Principal + Interest + Taxes + Insurance',
+    dataSource: 'Calculated from Realtor.com (listing prices) and FRED/Freddie Mac (mortgage rates)',
     updateFrequency: 'Monthly',
-    notes: 'Covers 400+ metro areas.',
+    notes: 'Assumes 20% down payment, 30-year fixed mortgage at current FRED rate (or 7% default), 1.1% property tax, 0.35% insurance. Available for National, 51 States, 900+ Metros, 3,100+ Counties, 28,000+ ZIP codes with 114 months of historical data.',
   },
   income_to_rent: {
     id: 'income_to_rent',
