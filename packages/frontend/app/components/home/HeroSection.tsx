@@ -102,16 +102,16 @@ export function HeroSection() {
           </a>
         </div>
 
-        {/* Score Rings with descriptive labels */}
+        {/* Score Rings - colors auto-calculated from score (red=0, green=100) */}
         <div className="flex gap-8" role="list" aria-label="PropertyIQ scoring metrics">
           <div role="listitem">
-            <ScoreRing score={87} label="HomeReady Score" colorClass="text-primary" delay={300} />
+            <ScoreRing score={87} label="HomeReady Score" delay={300} />
           </div>
           <div role="listitem">
-            <ScoreRing score={72} label="InvestorEdge Score" colorClass="text-secondary" delay={450} />
+            <ScoreRing score={72} label="InvestorEdge Score" delay={450} />
           </div>
           <div role="listitem">
-            <ScoreRing score={94} label="Market Health Index" colorClass="text-tertiary" delay={600} />
+            <ScoreRing score={94} label="Market Health Index" delay={600} />
           </div>
         </div>
       </article>
