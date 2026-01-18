@@ -21,6 +21,39 @@ interface UseChartDataParams {
   showForecast: boolean;
 }
 
+// Extract the region ID from baseline area name based on geo level
+// The area name from Mapbox search may include full address, we need to extract just the ID
+function extractRegionId(area: string, level: GeoLevel): string {
+  switch (level) {
+    case 'zip': {
+      // Extract 5-digit ZIP code from strings like "Frederick, Maryland 21701, United States"
+      const zipMatch = area.match(/\b(\d{5})\b/);
+      return zipMatch ? zipMatch[1] : area;
+    }
+    case 'county': {
+      // For counties, extract just the county name (first part before comma)
+      // "Miami-Dade County, Florida, United States" -> "Miami-Dade"
+      const countyPart = area.split(',')[0].trim();
+      // Remove " County" suffix if present
+      return countyPart.replace(/\s+County$/i, '');
+    }
+    case 'state': {
+      // For states, extract just the state name (first part before comma)
+      // "Florida, United States" -> "Florida"
+      return area.split(',')[0].trim();
+    }
+    case 'metro':
+    case 'city': {
+      // For metros/cities, use the first part (city name)
+      // "Miami, Florida, United States" -> "Miami"
+      return area.split(',')[0].trim();
+    }
+    case 'national':
+    default:
+      return area;
+  }
+}
+
 export function useChartData({
   metric,
   geoLevel,
@@ -120,10 +153,12 @@ export function useChartData({
         // Fetch baseline data if enabled
         if (baseline.enabled && baseline.area) {
           try {
+            // Extract the proper region ID from the display name
+            const baselineRegionId = extractRegionId(baseline.area, baseline.level);
             const baselineResponse = await timeSeriesApi.getTimeSeries(
               metric,
               baseline.level,
-              baseline.area,
+              baselineRegionId,
               formatDate(startDate),
               formatDate(endDate),
             );
