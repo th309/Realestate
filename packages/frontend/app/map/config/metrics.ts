@@ -354,11 +354,11 @@ export const METRICS: Record<string, MetricConfig> = {
     id: 'affordable_home_price',
     title: 'Affordable Home Price',
     format: 'currency',
-    dataSource: 'zillow',
-    apiEndpoint: '/api/zillow/affordability/{geo}',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/affordable-home-price/{geo}',
     keyField: 'auto',
-    supportedGeos: ['metro'],
-    valueField: 'affordable_price',
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    valueField: 'affordable_home_price',
   },
 
   // ============================================================================
