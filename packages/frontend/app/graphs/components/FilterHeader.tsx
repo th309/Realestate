@@ -223,7 +223,11 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
               const metricId = metricOptions.find((m) => m.name === val)?.id || 'listing_price';
               setMetric(metricId);
             }}
-            options={metricOptions.map((m) => m.name)}
+            options={metricOptions.map((m) => ({
+              label: m.name,
+              value: m.name,
+              isPremium: m.isPremium
+            }))}
           />
         </div>
       </M3Card>

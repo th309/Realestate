@@ -16,6 +16,7 @@ export interface MetricOption {
   id: string;
   name: string;
   category: string;
+  isPremium?: boolean;
 }
 
 export interface MetricCategory {

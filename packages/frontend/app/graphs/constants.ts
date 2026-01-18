@@ -1,167 +1,143 @@
 import { MetricOption, MetricCategory, Milestone } from './types';
-import { getMetricTitle } from '@/app/map/config/metrics';
+import { getMetricTitle, METRICS } from '@/app/map/config/metrics';
 
-// Mock data for chart display (will be replaced with real API data)
+// Mock data for chart display (placeholder)
 export const MOCK_INVENTORY_DATA = [
-  { year: 2015, value: 45000 },
-  { year: 2016, value: 48000 },
-  { year: 2017, value: 52000 },
-  { year: 2018, value: 55000 },
-  { year: 2019, value: 58000 },
-  { year: 2020, value: 42000 },
-  { year: 2021, value: 35000 },
-  { year: 2022, value: 48000 },
-  { year: 2023, value: 62000 },
-  { year: 2024, value: 72000 },
-  { year: 2025, value: 78000 },
+  { year: 2015, value: 45000 }, { year: 2016, value: 48000 }, { year: 2017, value: 52000 },
+  { year: 2018, value: 55000 }, { year: 2019, value: 58000 }, { year: 2020, value: 42000 },
+  { year: 2021, value: 35000 }, { year: 2022, value: 48000 }, { year: 2023, value: 62000 },
+  { year: 2024, value: 72000 }, { year: 2025, value: 78000 },
 ];
 
 export const MOCK_COMPARISON_DATA = [
-  { year: 2015, value: 52000 },
-  { year: 2016, value: 54000 },
-  { year: 2017, value: 58000 },
-  { year: 2018, value: 61000 },
-  { year: 2019, value: 65000 },
-  { year: 2020, value: 48000 },
-  { year: 2021, value: 40000 },
-  { year: 2022, value: 55000 },
-  { year: 2023, value: 68000 },
-  { year: 2024, value: 75000 },
-  { year: 2025, value: 82000 },
+  { year: 2015, value: 52000 }, { year: 2016, value: 54000 }, { year: 2017, value: 58000 },
+  { year: 2018, value: 61000 }, { year: 2019, value: 65000 }, { year: 2020, value: 48000 },
+  { year: 2021, value: 40000 }, { year: 2022, value: 55000 }, { year: 2023, value: 68000 },
+  { year: 2024, value: 75000 }, { year: 2025, value: 82000 },
 ];
 
 export const NATIONAL_AVG_DATA = [
-  { year: 2015, value: 48000 },
-  { year: 2016, value: 50000 },
-  { year: 2017, value: 54000 },
-  { year: 2018, value: 57000 },
-  { year: 2019, value: 60000 },
-  { year: 2020, value: 44000 },
-  { year: 2021, value: 36000 },
-  { year: 2022, value: 50000 },
-  { year: 2023, value: 64000 },
-  { year: 2024, value: 73000 },
-  { year: 2025, value: 79000 },
+  { year: 2015, value: 48000 }, { year: 2016, value: 50000 }, { year: 2017, value: 54000 },
+  { year: 2018, value: 57000 }, { year: 2019, value: 60000 }, { year: 2020, value: 44000 },
+  { year: 2021, value: 36000 }, { year: 2022, value: 50000 }, { year: 2023, value: 64000 },
+  { year: 2024, value: 79000 }, { year: 2025, value: 79000 },
 ];
 
 export const STATES = [
-  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
-  'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
-  'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan',
-  'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
-  'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
-  'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+  'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts',
+  'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+  'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island',
+  'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
   'Wisconsin', 'Wyoming',
 ];
 
-// Build metric categories matching the sidebar structure
-export const METRIC_CATEGORIES: MetricCategory[] = [
-  {
-    id: 'affordability',
-    name: 'Affordability',
-    metrics: [
-      { id: 'listing_price', name: getMetricTitle('listing_price'), category: 'affordability' },
-      { id: 'income_to_buy', name: getMetricTitle('income_to_buy'), category: 'affordability' },
-      { id: 'affordable_home_price', name: getMetricTitle('affordable_home_price'), category: 'affordability' },
-      { id: 'price_per_sqft', name: getMetricTitle('price_per_sqft'), category: 'affordability' },
-      { id: 'years_to_save', name: getMetricTitle('years_to_save'), category: 'affordability' },
-      { id: 'homeowner_affordability', name: getMetricTitle('homeowner_affordability'), category: 'affordability' },
-      { id: 'home_value_yoy', name: getMetricTitle('home_value_yoy'), category: 'affordability' },
-      { id: 'home_value_5yr', name: getMetricTitle('home_value_5yr'), category: 'affordability' },
-    ],
-  },
-  {
-    id: 'market_competition',
-    name: 'Market Competition',
-    metrics: [
-      { id: 'days_on_market', name: getMetricTitle('days_on_market'), category: 'market_competition' },
-      { id: 'for_sale_inventory', name: getMetricTitle('for_sale_inventory'), category: 'market_competition' },
-      { id: 'inventory_yoy', name: getMetricTitle('inventory_yoy'), category: 'market_competition' },
-      { id: 'pending_ratio', name: getMetricTitle('pending_ratio'), category: 'market_competition' },
-      { id: 'new_listings_yoy', name: getMetricTitle('new_listings_yoy'), category: 'market_competition' },
-      { id: 'hotness_score', name: getMetricTitle('hotness_score'), category: 'market_competition' },
-      { id: 'market_heat', name: getMetricTitle('market_heat'), category: 'market_competition' },
-      { id: 'sale_to_list', name: getMetricTitle('sale_to_list'), category: 'market_competition' },
-    ],
-  },
-  {
-    id: 'pricing_deals',
-    name: 'Pricing & Deals',
-    metrics: [
-      { id: 'home_value_yoy', name: getMetricTitle('home_value_yoy'), category: 'pricing_deals' },
-      { id: 'home_value_mom', name: getMetricTitle('home_value_mom'), category: 'pricing_deals' },
-      { id: 'home_price_forecast', name: getMetricTitle('home_price_forecast'), category: 'pricing_deals' },
-      { id: 'price_cut_pct', name: getMetricTitle('price_cut_pct'), category: 'pricing_deals' },
-      { id: 'price_increase_pct', name: getMetricTitle('price_increase_pct'), category: 'pricing_deals' },
-      { id: 'new_listings', name: getMetricTitle('new_listings'), category: 'pricing_deals' },
-      { id: 'inventory_surplus', name: getMetricTitle('inventory_surplus'), category: 'pricing_deals' },
-    ],
-  },
-  {
-    id: 'cash_flow',
-    name: 'Cash Flow',
-    metrics: [
-      { id: 'cap_rate', name: getMetricTitle('cap_rate'), category: 'cash_flow' },
-      { id: 'rent_index', name: getMetricTitle('rent_index'), category: 'cash_flow' },
-      { id: 'rent_for_houses', name: getMetricTitle('rent_for_houses'), category: 'cash_flow' },
-      { id: 'income_to_rent', name: getMetricTitle('income_to_rent'), category: 'cash_flow' },
-      { id: 'renter_affordability', name: getMetricTitle('renter_affordability'), category: 'cash_flow' },
-    ],
-  },
-  {
-    id: 'appreciation',
-    name: 'Appreciation',
-    metrics: [
-      { id: 'home_value', name: getMetricTitle('home_value'), category: 'appreciation' },
-      { id: 'home_value_yoy', name: getMetricTitle('home_value_yoy'), category: 'appreciation' },
-      { id: 'home_value_5yr', name: getMetricTitle('home_value_5yr'), category: 'appreciation' },
-      { id: 'home_price_forecast', name: getMetricTitle('home_price_forecast'), category: 'appreciation' },
-      { id: 'overvalued_pct', name: getMetricTitle('overvalued_pct'), category: 'appreciation' },
-    ],
-  },
-  {
-    id: 'area_profile',
-    name: 'Area Profile',
-    metrics: [
-      { id: 'population', name: getMetricTitle('population'), category: 'area_profile' },
-      { id: 'population_growth', name: getMetricTitle('population_growth'), category: 'area_profile' },
-      { id: 'median_income', name: getMetricTitle('median_income'), category: 'area_profile' },
-      { id: 'income_growth', name: getMetricTitle('income_growth'), category: 'area_profile' },
-      { id: 'median_age', name: getMetricTitle('median_age'), category: 'area_profile' },
-      { id: 'homeownership_rate', name: getMetricTitle('homeownership_rate'), category: 'area_profile' },
-    ],
-  },
-  {
-    id: 'local_economy',
-    name: 'Local Economy',
-    metrics: [
-      { id: 'unemployment_rate', name: getMetricTitle('unemployment_rate'), category: 'local_economy' },
-      { id: 'job_growth', name: getMetricTitle('job_growth'), category: 'local_economy' },
-      { id: 'gdp_growth', name: getMetricTitle('gdp_growth'), category: 'local_economy' },
-      { id: 'cost_of_living', name: getMetricTitle('cost_of_living'), category: 'local_economy' },
-    ],
-  },
-  {
-    id: 'new_construction',
-    name: 'New Construction',
-    metrics: [
-      { id: 'new_construction_sales', name: getMetricTitle('new_construction_sales'), category: 'new_construction' },
-      { id: 'new_construction_price', name: getMetricTitle('new_construction_price'), category: 'new_construction' },
-      { id: 'new_construction_ppsf', name: getMetricTitle('new_construction_ppsf'), category: 'new_construction' },
-    ],
-  },
+// 1. Define the Master Order based on the Map Page Sidebar
+const ORDERED_IDS = [
+  // Affordability
+  'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
+  'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
+
+  // Market Competition
+  'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
+  'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
+
+  // Pricing & Deals
+  'home_value_mom', 'home_price_forecast', 'price_cut_pct', 'price_increase_pct',
+  'new_listings', 'inventory_surplus',
+
+  // Cash Flow
+  'cap_rate', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',
+  // 'gross_yield', // Not in current METRICS config, excluded to prevent errors
+
+  // Appreciation
+  'home_value', 'overvalued_pct',
+
+  // Demand & Risk (duplicates removed: DOM, Inventory, etc.)
+  // 'vacancy_rate', // Not in METRICS
+  'demand_score', 'supply_score',
+
+  // Area Profile
+  'population', 'population_growth', 'median_income', 'income_growth',
+  'median_age', 'homeownership_rate',
+
+  // Local Economy
+  'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
+
+  // New Construction
+  'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
+
+  // Scores
+  // 'homeready_score', // Not in METRICS
+  // 'investoredge_score', // Not in METRICS
 ];
 
-// Flatten all metrics for dropdown display
-export const ALL_METRICS: MetricOption[] = METRIC_CATEGORIES.flatMap((cat) => cat.metrics);
+// 2. Define Pro Metrics
+// 2. Define Pro Metrics (Dynamic)
+// TODO: This should eventually be fetched from an Admin Configuration API
+function getProMetrics(): Set<string> {
+  return new Set([
+    'years_to_save', 'homeowner_affordability', 'home_value_5yr',
+    'sale_to_list', 'home_value_mom', 'home_price_forecast', 'inventory_surplus',
+    'cap_rate', 'renter_affordability', 'overvalued_pct',
+    'population_growth', 'income_growth', 'median_age', 'homeownership_rate',
+    'job_growth', 'gdp_growth', 'cost_of_living',
+    'new_construction_ppsf'
+  ]);
+}
 
-// Get unique metrics (some appear in multiple categories)
-export const UNIQUE_METRICS: MetricOption[] = ALL_METRICS.filter(
-  (metric, index, self) => index === self.findIndex((m) => m.id === metric.id)
-);
+const PRO_IDS = getProMetrics();
 
-// Descriptions for metrics
+// 3. Construct the comprehensive list
+const buildMetricList = (): MetricOption[] => {
+  const seenIds = new Set<string>();
+  const options: MetricOption[] = [];
+
+  // Helper to add metric
+  const addMetric = (id: string, isFromOrder = false) => {
+    // Check if valid in METRICS or is a known ID we want even if missing (handled gracefully by titles)
+    // We only add if it's in METRICS or explicitly in our ordered list (though if missing in METRICS, title lookup falls back)
+    if (seenIds.has(id)) return;
+    seenIds.add(id);
+
+    const title = getMetricTitle(id);
+    const isPremium = PRO_IDS.has(id);
+
+    options.push({
+      id,
+      name: title,
+      category: 'general', // Simplified category for this flat list
+      isPremium
+    });
+  };
+
+  // Add ordered metrics
+  ORDERED_IDS.forEach(id => addMetric(id, true));
+
+  // Add remaining metrics from METRICS config
+  const allMetricKeys = Object.keys(METRICS);
+  const remaining = allMetricKeys.filter(id => !seenIds.has(id));
+  remaining.sort(); // Alphabetical sort for remainder
+  remaining.forEach(id => addMetric(id));
+
+  return options;
+};
+
+export const ALL_METRICS: MetricOption[] = buildMetricList();
+
+// Keep UNIQUE_METRICS as alias for ALL_METRICS since we de-duped already
+export const UNIQUE_METRICS = ALL_METRICS;
+
+// Legacy support if needed, though we primarily use ALL_METRICS now
+export const METRIC_CATEGORIES: MetricCategory[] = [
+  {
+    id: 'all_metrics',
+    name: 'All Metrics',
+    metrics: ALL_METRICS
+  }
+];
+
+// Descriptions for metrics (Legacy/Helper)
 export const DESCRIPTIONS: Record<string, string> = {
   // Affordability
   listing_price: 'Median listing price of homes currently on the market.',
@@ -222,75 +198,7 @@ export const DESCRIPTIONS: Record<string, string> = {
   new_construction_ppsf: 'Price per square foot for new construction.',
 };
 
-// Data sources for metrics
-export const SOURCES: Record<string, string> = {
-  // Realtor.com metrics
-  listing_price: 'Realtor.com Market Data',
-  price_per_sqft: 'Realtor.com Market Data',
-  days_on_market: 'Realtor.com Market Data',
-  for_sale_inventory: 'Realtor.com Market Data',
-  inventory_yoy: 'Realtor.com Market Data',
-  pending_ratio: 'Realtor.com Market Data',
-  new_listings: 'Realtor.com Market Data',
-  new_listings_yoy: 'Realtor.com Market Data',
-  hotness_score: 'Realtor.com Hotness Index',
-  price_cut_pct: 'Realtor.com Market Data',
-  price_increase_pct: 'Realtor.com Market Data',
-  home_value_yoy: 'Realtor.com Market Data',
-  home_value_mom: 'Realtor.com Market Data',
-
-  // Zillow metrics
-  home_value: 'Zillow Home Value Index (ZHVI)',
-  home_value_5yr: 'Zillow Home Value Index (ZHVI)',
-  home_price_forecast: 'Zillow Home Price Forecast',
-  rent_index: 'Zillow Observed Rent Index (ZORI)',
-  rent_for_houses: 'Zillow Renter Demand Index',
-  market_heat: 'Zillow Market Heat Index',
-  sale_to_list: 'Zillow Market Data',
-  income_to_buy: 'Zillow Affordability Data',
-  income_to_rent: 'Zillow Affordability Data',
-  affordable_home_price: 'Zillow Affordability Data',
-  years_to_save: 'Zillow Affordability Data',
-  homeowner_affordability: 'Zillow Affordability Data',
-  renter_affordability: 'Zillow Affordability Data',
-  new_construction_sales: 'Zillow New Construction Data',
-  new_construction_price: 'Zillow New Construction Data',
-  new_construction_ppsf: 'Zillow New Construction Data',
-
-  // Calculated metrics
-  cap_rate: 'Calculated (Rent / Value)',
-  overvalued_pct: 'Calculated (Value vs Fundamentals)',
-  inventory_surplus: 'Calculated (Inventory vs Balanced)',
-
-  // Census metrics
-  population: 'U.S. Census Bureau ACS',
-  population_growth: 'U.S. Census Bureau ACS',
-  median_income: 'U.S. Census Bureau ACS',
-  income_growth: 'U.S. Census Bureau ACS',
-  median_age: 'U.S. Census Bureau ACS',
-  homeownership_rate: 'U.S. Census Bureau ACS',
-
-  // Economic metrics
-  unemployment_rate: 'Bureau of Labor Statistics',
-  job_growth: 'Bureau of Labor Statistics',
-  gdp_growth: 'Bureau of Economic Analysis',
-  cost_of_living: 'Bureau of Economic Analysis RPP',
-};
-
-// Market milestones for chart annotations
-export const MILESTONES: Milestone[] = [
-  { year: 2008, label: 'Financial Crisis begins' },
-  { year: 2012, label: 'Housing market recovery starts' },
-  { year: 2020, label: 'COVID-19 Pandemic begins' },
-  { year: 2022, label: 'Fed rate hikes begin' },
-];
-
 // Helper function to get description for a metric
 export function getMetricDescription(metricId: string): string {
-  return DESCRIPTIONS[metricId] || 'No description available.';
-}
-
-// Helper function to get source for a metric
-export function getMetricSource(metricId: string): string {
-  return SOURCES[metricId] || 'Data source not specified';
+  return DESCRIPTIONS[metricId] || METRICS[metricId]?.title || 'No description available.';
 }
