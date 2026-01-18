@@ -21,7 +21,7 @@ const MOCK_TEMPLATES: ReportTemplate[] = [
     is_public: true,
     config: {
       report_type: 'snapshot',
-      supported_geography_types: ['metro', 'county', 'zip'],
+      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
       user_inputs: [],
       pages: [],
       ai_config: { narrative_sections: [], conversation_starter: '', initial_questions: [] },
@@ -44,7 +44,7 @@ const MOCK_TEMPLATES: ReportTemplate[] = [
     is_public: true,
     config: {
       report_type: 'comparison',
-      supported_geography_types: ['metro', 'county'],
+      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
       comparison: { min_geographies: 2, max_geographies: 5 },
       user_inputs: [],
       pages: [],
@@ -68,7 +68,7 @@ const MOCK_TEMPLATES: ReportTemplate[] = [
     is_public: true,
     config: {
       report_type: 'investment',
-      supported_geography_types: ['metro', 'county', 'zip'],
+      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
       user_inputs: [
         { field_name: 'purchase_price', label: 'Purchase Price', type: 'number', required: true },
         { field_name: 'down_payment_pct', label: 'Down Payment %', type: 'number', default: 20 },
@@ -94,7 +94,7 @@ const MOCK_TEMPLATES: ReportTemplate[] = [
     is_public: true,
     config: {
       report_type: 'affordability',
-      supported_geography_types: ['metro', 'county'],
+      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
       user_inputs: [
         { field_name: 'household_income', label: 'Household Income', type: 'number' },
       ],
@@ -119,7 +119,7 @@ const MOCK_TEMPLATES: ReportTemplate[] = [
     is_public: true,
     config: {
       report_type: 'cycle',
-      supported_geography_types: ['metro'],
+      supported_geography_types: ['national', 'state', 'metro', 'county', 'city', 'zip'],
       user_inputs: [],
       pages: [],
       ai_config: { narrative_sections: [], conversation_starter: '', initial_questions: [] },

@@ -11,7 +11,7 @@ const initialState: WizardState = {
   step: 1,
   userType: 'homebuyer',
   selectedTemplate: null,
-  geoLevel: 'metro',
+  geoLevel: 'city', // Default to city for most common use case
   primaryGeography: null,
   comparisonGeographies: [],
   userInputs: {},

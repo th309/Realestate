@@ -141,9 +141,12 @@ export const SCORE_INFO: Record<string, {
   },
 };
 
-// Geography level options
+// Geography level options (matching map/graphs pages)
 export const GEO_LEVEL_OPTIONS = [
-  { value: 'metro', label: 'Metro Area' },
+  { value: 'national', label: 'National' },
+  { value: 'state', label: 'State' },
+  { value: 'metro', label: 'Metro' },
   { value: 'county', label: 'County' },
+  { value: 'city', label: 'City' },
   { value: 'zip', label: 'ZIP Code' },
 ] as const;

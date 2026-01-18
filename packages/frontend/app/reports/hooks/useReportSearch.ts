@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Geography, GeographyType } from '../types';
 
 // TODO: move to env or shared config
@@ -24,16 +24,39 @@ interface MapboxFeature {
  * Map Mapbox place types to our GeographyType
  */
 function mapPlaceType(placeTypes: string[]): GeographyType | null {
+  if (placeTypes.includes('country')) return 'national';
+  if (placeTypes.includes('region')) return 'state';
   if (placeTypes.includes('postcode')) return 'zip';
   if (placeTypes.includes('district')) return 'county';
-  // place (city) maps to metro for our purposes
-  if (placeTypes.includes('place')) return 'metro';
+  if (placeTypes.includes('place')) return 'city';
   return null;
 }
 
 /**
+ * Get Mapbox types string based on geography filter
+ */
+function getMapboxTypes(filterByGeoLevel?: GeographyType): string {
+  switch (filterByGeoLevel) {
+    case 'national':
+      return 'country';
+    case 'state':
+      return 'region';
+    case 'metro':
+    case 'city':
+      return 'place';
+    case 'county':
+      return 'district';
+    case 'zip':
+      return 'postcode';
+    default:
+      // All types for general search
+      return 'country,region,place,district,postcode';
+  }
+}
+
+/**
  * Hook for searching geographies using Mapbox Geocoding API
- * Similar to useGraphSearch but returns Geography type for reports
+ * Returns Geography objects with center/bbox for map rendering
  */
 export function useReportSearch(filterByGeoLevel?: GeographyType) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,18 +89,7 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
     setShowSearchResults(true);
 
     try {
-      // Build types parameter based on filter
-      // place = city (we'll map to metro)
-      // district = county
-      // postcode = zip
-      let types = 'place,postcode,district';
-      if (filterByGeoLevel === 'metro') {
-        types = 'place';
-      } else if (filterByGeoLevel === 'county') {
-        types = 'district';
-      } else if (filterByGeoLevel === 'zip') {
-        types = 'postcode';
-      }
+      const types = getMapboxTypes(filterByGeoLevel);
 
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
@@ -91,7 +103,15 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
       const features: MapboxFeature[] = data.features || [];
       const results: Geography[] = features
         .map((feature: MapboxFeature): Geography | null => {
-          const geoType = mapPlaceType(feature.place_type);
+          let geoType = mapPlaceType(feature.place_type);
+
+          // Override with filter if specified (e.g., city -> metro when filtering by metro)
+          if (filterByGeoLevel && (filterByGeoLevel === 'metro' || filterByGeoLevel === 'city')) {
+            geoType = filterByGeoLevel;
+          } else if (filterByGeoLevel) {
+            geoType = filterByGeoLevel;
+          }
+
           if (!geoType) return null;
 
           // Extract state from context
@@ -100,6 +120,7 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
 
           // Build a readable name
           let name = feature.text || feature.place_name;
+
           if (geoType === 'zip') {
             // For zip codes, include city name if available
             const placeContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('place'));
@@ -107,14 +128,19 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
               name = `${feature.text} - ${placeContext.text}`;
             }
           } else if (geoType === 'county') {
-            // For counties, append "County" if not present and add state
+            // For counties, ensure "County" is in the name
             if (!name.toLowerCase().includes('county')) {
               name = `${name} County`;
             }
+          } else if (geoType === 'state') {
+            // For states, use full name
+            name = feature.place_name.split(',')[0];
+          } else if (geoType === 'national') {
+            name = 'United States';
           }
 
-          // Add state suffix if we have it
-          if (stateAbbrev && !name.includes(stateAbbrev)) {
+          // Add state suffix for non-state, non-national types
+          if (stateAbbrev && geoType !== 'state' && geoType !== 'national' && !name.includes(stateAbbrev)) {
             name = `${name}, ${stateAbbrev}`;
           }
 
@@ -123,6 +149,8 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
             type: geoType,
             name,
             state: stateAbbrev,
+            center: feature.center,
+            bbox: feature.bbox,
           };
         })
         .filter((geo): geo is Geography => geo !== null);
@@ -153,4 +181,37 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
     handleSearch,
     clearSearch,
   };
+}
+
+/**
+ * Generate a Mapbox Static Map URL for a geography
+ */
+export function getStaticMapUrl(
+  geography: Geography,
+  width: number = 400,
+  height: number = 200,
+  style: string = 'mapbox/light-v11'
+): string {
+  if (!geography.center) return '';
+
+  const [lng, lat] = geography.center;
+
+  // Determine zoom based on geography type
+  let zoom = 10;
+  switch (geography.type) {
+    case 'national': zoom = 3; break;
+    case 'state': zoom = 5; break;
+    case 'metro': zoom = 8; break;
+    case 'county': zoom = 9; break;
+    case 'city': zoom = 11; break;
+    case 'zip': zoom = 13; break;
+  }
+
+  // If bbox is available, use auto zoom
+  if (geography.bbox) {
+    const [minLng, minLat, maxLng, maxLat] = geography.bbox;
+    return `https://api.mapbox.com/styles/v1/${style}/static/[${minLng},${minLat},${maxLng},${maxLat}]/${width}x${height}@2x?access_token=${MAPBOX_TOKEN}`;
+  }
+
+  return `https://api.mapbox.com/styles/v1/${style}/static/${lng},${lat},${zoom}/${width}x${height}@2x?access_token=${MAPBOX_TOKEN}`;
 }

@@ -6,7 +6,7 @@
 // GEOGRAPHY
 // -----------------------------------------------------------------------------
 
-export type GeographyType = 'metro' | 'county' | 'zip';
+export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
 
 export interface Geography {
   id: string;
@@ -14,6 +14,9 @@ export interface Geography {
   name: string;
   state?: string;
   parent_id?: string;
+  // Mapbox data for static map rendering
+  center?: [number, number]; // [lng, lat]
+  bbox?: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]
 }
 
 // -----------------------------------------------------------------------------
