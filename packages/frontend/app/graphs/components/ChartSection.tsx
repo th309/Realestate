@@ -151,11 +151,13 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         <>
           {visibleSeries.primary && (
             <Area
-              {...primaryProps}
               type="monotone"
-              fill="url(#primaryGrad)"
-              dot={{ ...dotProps, fill: CHART_COLORS.primary }}
-              activeDot={{ ...activeDotProps, fill: CHART_COLORS.primary }}
+              dataKey={selectedArea}
+              name={selectedArea}
+              stroke={CHART_COLORS.primary}
+              strokeWidth={3}
+              fill={CHART_COLORS.primary}
+              fillOpacity={0.3}
               isAnimationActive={false}
             />
           )}
