@@ -10,6 +10,7 @@ import { useChartData } from './hooks/useChartData';
 import { FilterHeader } from './components/FilterHeader';
 import { InsightsPanel } from './components/InsightsPanel';
 import { ChartSection } from './components/ChartSection';
+import { ScoreCards } from './components/ScoreCards';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -162,8 +163,9 @@ export const Dashboard: React.FC = () => {
               />
             </div>
 
-            {/* Insights Panel - Takes 1 column on xl */}
-            <div className="xl:col-span-1">
+            {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
+            <div className="xl:col-span-1 flex flex-col gap-4">
+              <ScoreCards geoLevel={geoLevel} selectedArea={selectedArea} />
               <InsightsPanel
                 aiInsight={aiInsight}
                 isInsightLoading={isInsightLoading}
