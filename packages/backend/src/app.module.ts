@@ -11,6 +11,7 @@ import { GeographyModule } from './geography/geography.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { CensusModule } from './census/census.module';
 import { EconomicModule } from './economic/economic.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { EconomicModule } from './economic/economic.module';
     MetricsModule,
     CensusModule,
     EconomicModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

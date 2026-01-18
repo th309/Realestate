@@ -1,13 +1,23 @@
-export default function ReportsPage() {
+'use client';
+
+import React, { Suspense } from 'react';
+import { Dashboard } from './Dashboard';
+
+function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="flex items-center justify-center h-screen bg-surface">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Reports</h1>
-        <p className="text-gray-600 mb-8">Detailed market analysis reports coming soon.</p>
-        <a href="/map" className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
-          Back to Map
-        </a>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-on-surface-variant font-medium">Loading reports...</p>
       </div>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Dashboard />
+    </Suspense>
   );
 }
