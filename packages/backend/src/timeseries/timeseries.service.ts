@@ -162,39 +162,75 @@ export class TimeSeriesService {
 
     /**
      * Add region-specific filter based on geography level and data source
+     *
+     * Column names vary by data source:
+     * - Realtor: state_name, county_fips, postal_code, country
+     * - Zillow: region_name (for state/city/zip), cbsa_code, fips_code
+     * - Census: state_name, cbsa_code, fips_code, zcta, place_name
+     * - Economic: state_name, cbsa_code, fips_code
      */
     private addRegionFilter(query: any, geoLevel: string, regionId: string, source: string) {
         const level = geoLevel.toLowerCase();
 
         switch (level) {
             case 'national':
-                return query.eq('region_name', 'United States');
+                // Realtor national uses 'country' column
+                // Census/Economic national tables have only one row per period, no region filter needed
+                if (source === 'realtor') {
+                    return query.eq('country', 'United States');
+                }
+                // Census and Economic national tables don't need a region filter
+                // They have only one row per period_date/year
+                return query;
 
             case 'state':
-                // Realtor uses state_id (abbreviation like 'FL')
-                // Zillow uses region_name (full name like 'Florida')
+                // Realtor: state_name (full name) or state_id (2-letter abbrev)
+                // Zillow: region_name (full name)
+                // Census/Economic: state_name (full name) or state_fips
                 if (source === 'realtor') {
-                    // If regionId is a full name, it will work with region_name
-                    // If it's an abbreviation, use state_id
                     if (regionId.length === 2) {
                         return query.eq('state_id', regionId.toUpperCase());
                     }
+                    return query.eq('state_name', regionId);
+                } else if (source === 'zillow') {
                     return query.eq('region_name', regionId);
                 } else {
-                    // Zillow uses full state name
-                    return query.eq('region_name', regionId);
+                    // Census and Economic use state_name
+                    return query.eq('state_name', regionId);
                 }
 
             case 'metro':
+                // All sources use cbsa_code for metros
                 return query.eq('cbsa_code', regionId);
 
             case 'county':
-                return query.eq('county_fips', regionId);
+                // Realtor: county_fips
+                // Zillow: fips_code
+                // Census/Economic: fips_code
+                if (source === 'realtor') {
+                    return query.eq('county_fips', regionId);
+                }
+                return query.eq('fips_code', regionId);
 
             case 'zip':
+                // Realtor: postal_code
+                // Zillow: region_name (ZIP code as string)
+                // Census: zcta
+                if (source === 'realtor') {
+                    return query.eq('postal_code', regionId);
+                } else if (source === 'zillow') {
+                    return query.eq('region_name', regionId);
+                } else if (source === 'census') {
+                    return query.eq('zcta', regionId);
+                }
                 return query.eq('postal_code', regionId);
 
             case 'city':
+                // Zillow: region_name
+                // Census: place_name
+                if (source === 'census') {
+                    return query.eq('place_name', regionId);
+                }
                 return query.eq('region_name', regionId);
 
             default:
@@ -229,6 +265,7 @@ export class TimeSeriesService {
             if (level === 'state') return 'census_state';
             if (level === 'metro') return 'census_metro';
             if (level === 'county') return 'census_county';
+            if (level === 'city') return 'census_city';
             if (level === 'zip') return 'census_zip';
         }
 
