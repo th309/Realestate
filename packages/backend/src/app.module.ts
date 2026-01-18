@@ -12,6 +12,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { CensusModule } from './census/census.module';
 import { EconomicModule } from './economic/economic.module';
 import { ReportsModule } from './reports/reports.module';
+import { TimeSeriesModule } from './timeseries/timeseries.module';
 
 @Module({
   imports: [
@@ -29,8 +30,9 @@ import { ReportsModule } from './reports/reports.module';
     CensusModule,
     EconomicModule,
     ReportsModule,
+    TimeSeriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
