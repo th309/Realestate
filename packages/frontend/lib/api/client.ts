@@ -436,14 +436,47 @@ export const api = {
   // Affordability Endpoints
   // ============================================================================
 
-  // Income Needed to Buy (income_to_buy)
-  getMetroIncomeToBuy: async (): Promise<MetroHomeValues> => {
-    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+  // Income Needed to Buy (income_to_buy) - from calculated_metrics
+  getStateIncomeToBuy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; income_to_buy: number }> }>('/api/metrics/income-to-buy/states');
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      const key = item.cbsa_code || item.region_id;
-      if (key && item.homeowner_income_needed != null) {
-        result[key] = Number(item.homeowner_income_needed);
+      if (item.region_name && item.income_to_buy != null) {
+        result[item.region_name] = Number(item.income_to_buy);
+      }
+    });
+    return result;
+  },
+
+  getMetroIncomeToBuy: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ cbsa_code: string; income_to_buy: number }> }>('/api/metrics/income-to-buy/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.cbsa_code && item.income_to_buy != null) {
+        result[item.cbsa_code] = Number(item.income_to_buy);
+      }
+    });
+    return result;
+  },
+
+  getCountyIncomeToBuy: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ county_fips: string; income_to_buy: number }> }>('/api/metrics/income-to-buy/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.county_fips && item.income_to_buy != null) {
+        result[item.county_fips] = Number(item.income_to_buy);
+      }
+    });
+    return result;
+  },
+
+  getZipIncomeToBuy: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/metrics/income-to-buy/zips?state=${state}` : '/api/metrics/income-to-buy/zips';
+    const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; income_to_buy: number }> }>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.postal_code && item.income_to_buy != null) {
+        result[item.postal_code] = Number(item.income_to_buy);
       }
     });
     return result;

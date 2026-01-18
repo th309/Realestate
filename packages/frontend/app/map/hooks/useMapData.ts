@@ -433,9 +433,22 @@ async function fetchZillowMetric(
           return {};
       }
 
-    // Affordability metrics (Zillow metro only)
+    // Affordability metrics
     case 'income_to_buy':
-      return api.getMetroIncomeToBuy();
+      // Income to Buy now supports all geography levels via calculated_metrics
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getStateIncomeToBuy();
+        case 'metro':
+          return api.getMetroIncomeToBuy();
+        case 'county':
+          return api.getCountyIncomeToBuy();
+        case 'zip':
+          return state ? api.getZipIncomeToBuy(state) : {};
+        default:
+          return {};
+      }
     case 'income_to_rent':
       return api.getMetroIncomeToRent();
     case 'affordable_home_price':
