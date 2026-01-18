@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import mapboxgl from 'mapbox-gl';
 import type { SearchResult } from '@/app/map/types';
 
 // TODO: move to env or shared config
 const MAPBOX_TOKEN = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface MapboxContext {
     id: string;
@@ -51,17 +51,25 @@ export function useGraphSearch() {
         setShowSearchResults(true);
 
         try {
-            const response = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-                `access_token=${MAPBOX_TOKEN}&` +
-                `country=US&` +
-                `types=region,place,postcode,district&` +
-                `limit=8`
-            );
-            const data = await response.json();
+            // Fetch from both Mapbox and our backend metros API in parallel
+            const [mapboxResponse, metrosResponse] = await Promise.all([
+                fetch(
+                    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+                    `access_token=${MAPBOX_TOKEN}&` +
+                    `country=US&` +
+                    `types=region,place,postcode,district&` +
+                    `limit=6`
+                ),
+                fetch(`${API_BASE_URL}/markets/metros/search?q=${encodeURIComponent(query)}&limit=4`)
+                    .catch(() => null) // Don't fail if backend is down
+            ]);
 
-            const features: MapboxFeature[] = data.features || [];
-            const results: SearchResult[] = features.map((feature: MapboxFeature) => {
+            const mapboxData = await mapboxResponse.json();
+            const metrosData = metrosResponse ? await metrosResponse.json().catch(() => []) : [];
+
+            // Process Mapbox results
+            const features: MapboxFeature[] = mapboxData.features || [];
+            const mapboxResults: SearchResult[] = features.map((feature: MapboxFeature) => {
                 let type: SearchResult['type'] = 'city';
                 if (feature.place_type.includes('region')) type = 'state';
                 else if (feature.place_type.includes('postcode')) type = 'zip';
@@ -81,7 +89,39 @@ export function useGraphSearch() {
                 };
             });
 
-            setSearchResults(results);
+            // Process metro results from our backend
+            const metroResults: SearchResult[] = (metrosData || []).map((metro: { regionId: number; name: string }) => ({
+                id: `metro-${metro.regionId}`,
+                name: metro.name,
+                type: 'metro' as const,
+                center: [0, 0] as [number, number], // We don't have coordinates for metros
+                state: '',
+            }));
+
+            // Combine results: metros first (since user is looking for them), then other results
+            // Filter out duplicate names (case-insensitive)
+            const seenNames = new Set<string>();
+            const combinedResults: SearchResult[] = [];
+
+            // Add metro results first
+            for (const result of metroResults) {
+                const normalizedName = result.name.toLowerCase();
+                if (!seenNames.has(normalizedName)) {
+                    seenNames.add(normalizedName);
+                    combinedResults.push(result);
+                }
+            }
+
+            // Add Mapbox results
+            for (const result of mapboxResults) {
+                const normalizedName = result.name.toLowerCase();
+                if (!seenNames.has(normalizedName)) {
+                    seenNames.add(normalizedName);
+                    combinedResults.push(result);
+                }
+            }
+
+            setSearchResults(combinedResults.slice(0, 8));
         } catch (err) {
             console.error('Search error:', err);
             setSearchResults([]);

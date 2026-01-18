@@ -31,6 +31,17 @@ export class MarketsController {
     return this.marketsService.getMetroHomeValues();
   }
 
+  @Get('metros/search')
+  @ApiOperation({ summary: 'Search metro areas by name' })
+  @ApiQuery({ name: 'q', required: true, description: 'Search query' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max results (default 10)' })
+  async searchMetros(
+    @Query('q') query: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.marketsService.searchMetros(query, limit ? parseInt(limit, 10) : 10);
+  }
+
   @Get('counties/home-values')
   @ApiOperation({ summary: 'Get median home values by county' })
   async getCountyHomeValues() {

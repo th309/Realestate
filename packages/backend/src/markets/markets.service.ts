@@ -313,4 +313,29 @@ export class MarketsService {
 
     return Array.from(metroMap.values());
   }
+
+  async searchMetros(query: string, limit = 10) {
+    // Search metros by name using ilike for case-insensitive partial match
+    const { data, error } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name')
+      .ilike('region_name', `%${query}%`)
+      .order('region_name')
+      .limit(limit * 3); // Fetch more to account for duplicates
+
+    if (error) throw error;
+
+    // Dedupe metros by region_id
+    const metroMap = new Map<number, { regionId: number; name: string }>();
+    for (const row of data || []) {
+      if (row.region_name && !metroMap.has(row.region_id)) {
+        metroMap.set(row.region_id, {
+          regionId: row.region_id,
+          name: row.region_name,
+        });
+      }
+    }
+
+    return Array.from(metroMap.values()).slice(0, limit);
+  }
 }
