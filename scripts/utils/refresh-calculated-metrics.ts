@@ -97,6 +97,39 @@ function calculateIncomeToBuy(price: number, mortgageRate: number): number | nul
   return Math.round(annualIncome);
 }
 
+/**
+ * Calculate Affordable Home Price (max home price affordable given income)
+ * Formula: Solve for home price given income and 28% DTI
+ *
+ * PITI = Home_Price × (0.80 × PMT_factor + (tax_rate + insurance_rate) / 12)
+ * Max Monthly PITI = (Annual Income × 0.28) / 12
+ * Home_Price = Max Monthly PITI / (0.80 × PMT_factor + (tax_rate + insurance_rate) / 12)
+ */
+function calculateAffordableHomePrice(annualIncome: number, mortgageRate: number): number | null {
+  if (!annualIncome || annualIncome === 0) return null;
+
+  const monthlyRate = mortgageRate / 12;
+
+  // PMT factor for 30-year mortgage: r(1+r)^n / ((1+r)^n - 1)
+  const factor = Math.pow(1 + monthlyRate, MORTGAGE_TERM_MONTHS);
+  const pmtFactor = (monthlyRate * factor) / (factor - 1);
+
+  // Max monthly housing payment (28% DTI)
+  const maxMonthlyPITI = (annualIncome * FRONT_END_DTI) / 12;
+
+  // Combined monthly rate factor for taxes and insurance as % of home price
+  const taxInsuranceMonthlyRate = (PROPERTY_TAX_RATE + INSURANCE_RATE) / 12;
+
+  // Solve for home price:
+  // maxMonthlyPITI = HomePrice × 0.80 × pmtFactor + HomePrice × taxInsuranceMonthlyRate
+  // maxMonthlyPITI = HomePrice × (0.80 × pmtFactor + taxInsuranceMonthlyRate)
+  // HomePrice = maxMonthlyPITI / (0.80 × pmtFactor + taxInsuranceMonthlyRate)
+  const denominator = (1 - DOWN_PAYMENT_PCT) * pmtFactor + taxInsuranceMonthlyRate;
+  const homePrice = maxMonthlyPITI / denominator;
+
+  return Math.round(homePrice);
+}
+
 function calculateCapRate(zori: number, price: number): number | null {
   if (!zori || !price || price === 0) return null;
   return (zori * 12 * EXPENSE_RATIO) / price * 100;
@@ -262,19 +295,18 @@ async function calculateOvervaluedMetrics(
     return { processed: 0, stored: 0, errors: [zhviError?.message || 'Failed to fetch ZHVI'] };
   }
 
-  // Get Census income data
+  // Get Census income data from census_metro table
   const { data: incomeData } = await supabase
-    .from('census_data')
-    .select('geography_id, value')
-    .eq('geography_type', 'metro')
-    .eq('metric_name', 'median_income')
+    .from('census_metro')
+    .select('cbsa_code, median_household_income, year')
+    .not('median_household_income', 'is', null)
     .order('year', { ascending: false });
 
   const incomeByGeo: Record<string, number> = {};
   if (incomeData) {
     for (const row of incomeData) {
-      if (row.value && !incomeByGeo[row.geography_id]) {
-        incomeByGeo[row.geography_id] = Number(row.value);
+      if (row.median_household_income && !incomeByGeo[row.cbsa_code]) {
+        incomeByGeo[row.cbsa_code] = Number(row.median_household_income);
       }
     }
   }
@@ -477,6 +509,168 @@ async function calculateAllIncomeToBuy(
 }
 
 // ============================================================================
+// AFFORDABLE HOME PRICE CALCULATION (ALL GEOGRAPHIES)
+// ============================================================================
+
+interface CensusIncomeConfig {
+  tableName: string;
+  geoType: string;
+  idField: string;
+  nameField: string;
+}
+
+const CENSUS_INCOME_CONFIGS: CensusIncomeConfig[] = [
+  { tableName: 'census_national', geoType: 'national', idField: "'US'", nameField: "'United States'" },
+  { tableName: 'census_state', geoType: 'state', idField: 'state_fips', nameField: 'state_name' },
+  { tableName: 'census_metro', geoType: 'metro', idField: 'cbsa_code', nameField: 'cbsa_title' },
+  { tableName: 'census_county', geoType: 'county', idField: 'fips_code', nameField: 'county_name' },
+  { tableName: 'census_zip', geoType: 'zip', idField: 'zcta', nameField: 'zcta' },
+];
+
+async function calculateAffordableHomePriceForGeo(
+  supabase: SupabaseClient,
+  config: CensusIncomeConfig,
+  mortgageRate: number
+): Promise<{ processed: number; stored: number; errors: string[] }> {
+  const errors: string[] = [];
+  const PAGE_SIZE = 1000;
+
+  // Paginated fetch for Census income data (latest year only)
+  let allData: any[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query;
+    if (config.geoType === 'national') {
+      query = supabase
+        .from(config.tableName)
+        .select('year, median_household_income')
+        .not('median_household_income', 'is', null)
+        .order('year', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+    } else {
+      query = supabase
+        .from(config.tableName)
+        .select(`${config.idField}, ${config.nameField}, year, median_household_income`)
+        .not('median_household_income', 'is', null)
+        .order('year', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      errors.push(error.message);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      offset += data.length;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  if (allData.length === 0) {
+    return { processed: 0, stored: 0, errors: errors.length > 0 ? errors : [`No income data for ${config.tableName}`] };
+  }
+
+  // Get only the most recent year's data for each geography
+  const latestByGeo: Record<string, any> = {};
+  for (const row of allData) {
+    let geoId: string;
+    if (config.geoType === 'national') {
+      geoId = 'US';
+    } else {
+      geoId = String(row[config.idField]);
+    }
+    if (!latestByGeo[geoId]) {
+      latestByGeo[geoId] = row;
+    }
+  }
+
+  // Get current date for period_date (use same as income_to_buy)
+  const { data: latestDateRow } = await supabase
+    .from('realtor_metro')
+    .select('period_date')
+    .order('period_date', { ascending: false })
+    .limit(1)
+    .single();
+
+  const targetDate = latestDateRow?.period_date || new Date().toISOString().split('T')[0];
+
+  let stored = 0;
+  const records: any[] = [];
+
+  for (const [geoId, row] of Object.entries(latestByGeo)) {
+    const income = row.median_household_income;
+    const affordablePrice = calculateAffordableHomePrice(income, mortgageRate);
+
+    if (affordablePrice === null) continue;
+
+    let geoName: string;
+    if (config.geoType === 'national') {
+      geoName = 'United States';
+    } else if (config.geoType === 'zip') {
+      geoName = `ZIP ${geoId}`;
+    } else {
+      geoName = row[config.nameField] || geoId;
+    }
+
+    records.push({
+      geography_id: geoId,
+      geography_type: config.geoType,
+      geography_name: geoName,
+      period_date: targetDate,
+      affordable_home_price: affordablePrice,
+      calculated_at: new Date().toISOString(),
+    });
+
+    if (records.length >= BATCH_SIZE) {
+      const { error: upsertError } = await supabase
+        .from('calculated_metrics')
+        .upsert(records, { onConflict: 'geography_id,geography_type,period_date' });
+      if (upsertError) errors.push(upsertError.message);
+      else stored += records.length;
+      records.length = 0;
+    }
+  }
+
+  if (records.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('calculated_metrics')
+      .upsert(records, { onConflict: 'geography_id,geography_type,period_date' });
+    if (upsertError) errors.push(upsertError.message);
+    else stored += records.length;
+  }
+
+  return { processed: Object.keys(latestByGeo).length, stored, errors };
+}
+
+async function calculateAllAffordableHomePrice(
+  supabase: SupabaseClient
+): Promise<{ total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> }> {
+  // Fetch current mortgage rate from FRED (reuse from income_to_buy)
+  const mortgageRate = await fetchMortgageRateFromFRED();
+
+  const byGeo: Record<string, { processed: number; stored: number }> = {};
+  let totalProcessed = 0;
+  let totalStored = 0;
+
+  for (const config of CENSUS_INCOME_CONFIGS) {
+    const result = await calculateAffordableHomePriceForGeo(supabase, config, mortgageRate);
+    byGeo[config.geoType] = { processed: result.processed, stored: result.stored };
+    totalProcessed += result.processed;
+    totalStored += result.stored;
+  }
+
+  return { total: { processed: totalProcessed, stored: totalStored }, byGeo };
+}
+
+// ============================================================================
 // 5-YEAR GROWTH CALCULATION
 // ============================================================================
 
@@ -562,6 +756,7 @@ export interface RefreshResult {
   growth5YrMetros: { processed: number; stored: number };
   growth5YrStates: { processed: number; stored: number };
   incomeToBuy: { total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> };
+  affordableHomePrice: { total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> };
   totalProcessed: number;
   totalStored: number;
   duration: number;
@@ -592,19 +787,24 @@ export async function refreshCalculatedMetrics(
   log('   Calculating income-to-buy...');
   const incomeToBuy = await calculateAllIncomeToBuy(supabase);
 
+  // Affordable Home Price calculation (all geographies)
+  log('   Calculating affordable-home-price...');
+  const affordableHomePrice = await calculateAllAffordableHomePrice(supabase);
+
   const duration = Date.now() - startTime;
   const totalProcessed = investmentMetrics.processed + overvalued.processed +
                          growth5YrMetros.processed + growth5YrStates.processed +
-                         incomeToBuy.total.processed;
+                         incomeToBuy.total.processed + affordableHomePrice.total.processed;
   const totalStored = investmentMetrics.stored + overvalued.stored +
                       growth5YrMetros.stored + growth5YrStates.stored +
-                      incomeToBuy.total.stored;
+                      incomeToBuy.total.stored + affordableHomePrice.total.stored;
 
   log(`   Investment metrics: ${investmentMetrics.stored} stored`);
   log(`   Overvalued %: ${overvalued.stored} stored`);
   log(`   5-yr growth metros: ${growth5YrMetros.stored} stored`);
   log(`   5-yr growth states: ${growth5YrStates.stored} stored`);
   log(`   Income-to-buy: ${incomeToBuy.total.stored} stored (${Object.keys(incomeToBuy.byGeo).map(g => `${g}:${incomeToBuy.byGeo[g].stored}`).join(', ')})`);
+  log(`   Affordable-home-price: ${affordableHomePrice.total.stored} stored (${Object.keys(affordableHomePrice.byGeo).map(g => `${g}:${affordableHomePrice.byGeo[g].stored}`).join(', ')})`);
   log(`   Total: ${totalStored} records in ${(duration / 1000).toFixed(1)}s`);
 
   return {
@@ -613,6 +813,7 @@ export async function refreshCalculatedMetrics(
     growth5YrMetros,
     growth5YrStates,
     incomeToBuy,
+    affordableHomePrice,
     totalProcessed,
     totalStored,
     duration,

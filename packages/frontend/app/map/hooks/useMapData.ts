@@ -452,7 +452,20 @@ async function fetchZillowMetric(
     case 'income_to_rent':
       return api.getMetroIncomeToRent();
     case 'affordable_home_price':
-      return api.getMetroAffordableHomePrice();
+      // Affordable Home Price now supports all geography levels via calculated_metrics
+      switch (level) {
+        case 'state':
+        case 'national':
+          return api.getStateAffordableHomePrice();
+        case 'metro':
+          return api.getMetroAffordableHomePrice();
+        case 'county':
+          return api.getCountyAffordableHomePrice();
+        case 'zip':
+          return state ? api.getZipAffordableHomePrice(state) : {};
+        default:
+          return {};
+      }
     case 'years_to_save':
       return api.getMetroYearsToSave();
     case 'homeowner_affordability':

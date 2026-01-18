@@ -960,4 +960,126 @@ export class MetricsController {
       data: results,
     };
   }
+
+  // ============================================================================
+  // AFFORDABLE-HOME-PRICE ENDPOINTS (from pre-calculated data)
+  // ============================================================================
+
+  /**
+   * Get affordable-home-price for states
+   * Returns the maximum home price affordable based on median household income
+   */
+  @Get('affordable-home-price/states')
+  async getStateAffordableHomePrice() {
+    return this.getAffordableHomePriceByGeo('state', 'State');
+  }
+
+  /**
+   * Get affordable-home-price for metros
+   */
+  @Get('affordable-home-price/metros')
+  async getMetroAffordableHomePrice() {
+    return this.getAffordableHomePriceByGeo('metro', 'Metro');
+  }
+
+  /**
+   * Get affordable-home-price for counties
+   */
+  @Get('affordable-home-price/counties')
+  async getCountyAffordableHomePrice() {
+    return this.getAffordableHomePriceByGeo('county', 'County');
+  }
+
+  /**
+   * Get affordable-home-price for zip codes
+   */
+  @Get('affordable-home-price/zips')
+  async getZipAffordableHomePrice(@Query('state') state?: string) {
+    return this.getAffordableHomePriceByGeo('zip', 'ZIP', state);
+  }
+
+  /**
+   * Generic affordable-home-price fetcher for all geography types
+   */
+  private async getAffordableHomePriceByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+    // Get latest date from calculated_metrics
+    const { data: latestRow } = await this.supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geoType)
+      .not('affordable_home_price', 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestRow?.period_date) {
+      return { success: false, error: `No affordable_home_price data available for ${geoLabel}`, data: [] };
+    }
+
+    const targetDate = latestRow.period_date;
+
+    // Build query
+    let query = this.supabase
+      .from('calculated_metrics')
+      .select('geography_id, geography_name, affordable_home_price, period_date')
+      .eq('geography_type', geoType)
+      .eq('period_date', targetDate)
+      .not('affordable_home_price', 'is', null);
+
+    // Handle state filter for ZIP codes
+    if (stateFilter && geoType === 'zip') {
+      const statePattern = `ZIP ${stateFilter.toUpperCase()}%`;
+      query = query.ilike('geography_name', statePattern);
+    }
+
+    // Paginate for large datasets (county and zip)
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { success: false, error: error.message, data: [] };
+      }
+
+      if (!pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Transform to map-friendly format
+    const results = allData.map(row => {
+      const result: any = {
+        region_id: row.geography_id,
+        region_name: row.geography_name,
+        affordable_home_price: row.affordable_home_price,
+        value: row.affordable_home_price,
+        date: row.period_date,
+      };
+
+      // Add geography-specific ID fields
+      if (geoType === 'metro') {
+        result.cbsa_code = row.geography_id;
+      } else if (geoType === 'county') {
+        result.county_fips = row.geography_id;
+      } else if (geoType === 'zip') {
+        result.postal_code = row.geography_id;
+      }
+
+      return result;
+    });
+
+    return {
+      success: true,
+      count: results.length,
+      geography: geoLabel,
+      metric: 'affordable_home_price',
+      source: 'pre-calculated',
+      date: targetDate,
+      data: results,
+    };
+  }
 }

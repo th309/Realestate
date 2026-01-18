@@ -495,14 +495,47 @@ export const api = {
     return result;
   },
 
-  // Affordable Home Price (affordable_home_price)
-  getMetroAffordableHomePrice: async (): Promise<MetroHomeValues> => {
-    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+  // Affordable Home Price (affordable_home_price) - from calculated_metrics
+  getStateAffordableHomePrice: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; affordable_home_price: number }> }>('/api/metrics/affordable-home-price/states');
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      const key = item.cbsa_code || item.region_id;
-      if (key && item.affordable_home_price != null) {
-        result[key] = Number(item.affordable_home_price);
+      if (item.region_name && item.affordable_home_price != null) {
+        result[item.region_name] = Number(item.affordable_home_price);
+      }
+    });
+    return result;
+  },
+
+  getMetroAffordableHomePrice: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ cbsa_code: string; affordable_home_price: number }> }>('/api/metrics/affordable-home-price/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.cbsa_code && item.affordable_home_price != null) {
+        result[item.cbsa_code] = Number(item.affordable_home_price);
+      }
+    });
+    return result;
+  },
+
+  getCountyAffordableHomePrice: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ county_fips: string; affordable_home_price: number }> }>('/api/metrics/affordable-home-price/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.county_fips && item.affordable_home_price != null) {
+        result[item.county_fips] = Number(item.affordable_home_price);
+      }
+    });
+    return result;
+  },
+
+  getZipAffordableHomePrice: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/metrics/affordable-home-price/zips?state=${state}` : '/api/metrics/affordable-home-price/zips';
+    const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; affordable_home_price: number }> }>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.postal_code && item.affordable_home_price != null) {
+        result[item.postal_code] = Number(item.affordable_home_price);
       }
     });
     return result;
