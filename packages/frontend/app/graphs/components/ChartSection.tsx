@@ -98,6 +98,16 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Debug: Log chart data to verify structure
+  console.log('[ChartSection] Debug:', {
+    chartDataLength: chartData?.length,
+    selectedArea,
+    sampleData: chartData?.slice(0, 3),
+    hasSelectedAreaKey: chartData?.[0] ? selectedArea in chartData[0] : false,
+    firstValue: chartData?.[0]?.[selectedArea],
+    valueType: typeof chartData?.[0]?.[selectedArea],
+  });
+
   const renderSeries = () => {
 
     const primaryProps = {
@@ -146,6 +156,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               fill="url(#primaryGrad)"
               dot={{ ...dotProps, fill: CHART_COLORS.primary }}
               activeDot={{ ...activeDotProps, fill: CHART_COLORS.primary }}
+              isAnimationActive={false}
             />
           )}
           {comparison.enabled && visibleSeries.comparison && (
@@ -173,6 +184,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               type="monotone"
               dot={{ ...dotProps, fill: CHART_COLORS.primary }}
               activeDot={{ ...activeDotProps, fill: CHART_COLORS.primary }}
+              isAnimationActive={false}
             />
           )}
           {comparison.enabled && visibleSeries.comparison && (
