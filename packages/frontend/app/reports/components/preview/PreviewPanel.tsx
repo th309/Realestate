@@ -64,12 +64,12 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ wizardState }) => {
         {/* Hero Score Preview */}
         <div className="p-4 bg-surface-container rounded-xl">
           <div className="flex items-center justify-between mb-3">
-            <span className={`text-sm font-medium ${heroScore.colorClass}`}>{heroScore.name}</span>
+            <span className={`text-sm font-medium ${heroScore.color}`}>{heroScore.name}</span>
             <span className="text-xs text-on-surface-variant">Hero Metric</span>
           </div>
           <div className="flex items-center gap-4">
             <div className={`w-20 h-20 rounded-full ${heroScore.bgClass}/20 flex items-center justify-center`}>
-              <span className={`text-2xl font-bold ${heroScore.colorClass}`}>
+              <span className={`text-2xl font-bold ${heroScore.color}`}>
                 {primaryGeography ? '--' : '?'}
               </span>
             </div>
