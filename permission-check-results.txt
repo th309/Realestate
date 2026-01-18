@@ -1,0 +1,26 @@
+=== Checking Database Permissions ===
+
+
+Table: markets
+  SELECT: OK (142331 rows)
+  INSERT: OK
+  UPDATE: OK
+  DELETE: FAIL - permission denied for table markets
+
+Table: zillow_metro
+  SELECT: OK (2222506 rows)
+  INSERT: FAIL - Could not find the 'zhvi' column of 'zillow_metro' in the schema cache
+
+Table: zillow_county
+  SELECT: OK (766181 rows)
+  INSERT: FAIL - null value in column "period_date" of relation "zillow_county" violates not-null constraint
+
+Table: zillow_zip
+  SELECT: OK (77186 rows)
+  INSERT: FAIL - null value in column "period_date" of relation "zillow_zip" violates not-null constraint
+
+Table: zillow_state
+  SELECT: OK (15633 rows)
+  INSERT: FAIL - null value in column "state_code" of relation "zillow_state" violates not-null constraint
+
+=== Permission Summary ===

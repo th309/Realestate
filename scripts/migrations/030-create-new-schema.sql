@@ -64,6 +64,11 @@ CREATE TABLE IF NOT EXISTS zillow_zip (
   UNIQUE(region_id, period_date, metric_name)
 );
 
+-- Ensure columns exist (handling schema drift from legacy tables)
+ALTER TABLE zillow_zip ADD COLUMN IF NOT EXISTS zip_code TEXT;
+ALTER TABLE zillow_zip ADD COLUMN IF NOT EXISTS metro_region_id INTEGER;
+ALTER TABLE zillow_zip ADD COLUMN IF NOT EXISTS county_fips TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_zillow_zip_region ON zillow_zip(region_id);
 CREATE INDEX IF NOT EXISTS idx_zillow_zip_date ON zillow_zip(period_date);
 CREATE INDEX IF NOT EXISTS idx_zillow_zip_metric ON zillow_zip(metric_name);
@@ -722,44 +727,60 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_alerts ENABLE ROW LEVEL SECURITY;
 
 -- Policies for reports
+DROP POLICY IF EXISTS "Users can view own reports" ON reports;
 CREATE POLICY "Users can view own reports" ON reports
     FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own reports" ON reports;
 CREATE POLICY "Users can insert own reports" ON reports
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own reports" ON reports;
 CREATE POLICY "Users can update own reports" ON reports
     FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own reports" ON reports;
 CREATE POLICY "Users can delete own reports" ON reports
     FOR DELETE USING (auth.uid() = user_id);
 
 -- Policies for report_conversations
+DROP POLICY IF EXISTS "Users can view own conversations" ON report_conversations;
 CREATE POLICY "Users can view own conversations" ON report_conversations
     FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own conversations" ON report_conversations;
 CREATE POLICY "Users can insert own conversations" ON report_conversations
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own conversations" ON report_conversations;
 CREATE POLICY "Users can update own conversations" ON report_conversations
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Policies for user_report_memory
+DROP POLICY IF EXISTS "Users can view own memory" ON user_report_memory;
 CREATE POLICY "Users can view own memory" ON user_report_memory
     FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own memory" ON user_report_memory;
 CREATE POLICY "Users can insert own memory" ON user_report_memory
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own memory" ON user_report_memory;
 CREATE POLICY "Users can update own memory" ON user_report_memory
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Policies for user_profiles
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 CREATE POLICY "Users can view own profile" ON user_profiles
     FOR SELECT USING (auth.uid() = id);
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 CREATE POLICY "Users can update own profile" ON user_profiles
     FOR UPDATE USING (auth.uid() = id);
 
 -- Policies for user_alerts
+DROP POLICY IF EXISTS "Users can view own alerts" ON user_alerts;
 CREATE POLICY "Users can view own alerts" ON user_alerts
     FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own alerts" ON user_alerts;
 CREATE POLICY "Users can insert own alerts" ON user_alerts
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own alerts" ON user_alerts;
 CREATE POLICY "Users can update own alerts" ON user_alerts
     FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own alerts" ON user_alerts;
 CREATE POLICY "Users can delete own alerts" ON user_alerts
     FOR DELETE USING (auth.uid() = user_id);
 
@@ -780,19 +801,33 @@ ALTER TABLE propertyiq_score_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE news_cache ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read for data tables
+DROP POLICY IF EXISTS "Public read zillow_metro" ON zillow_metro;
 CREATE POLICY "Public read zillow_metro" ON zillow_metro FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read zillow_county" ON zillow_county;
 CREATE POLICY "Public read zillow_county" ON zillow_county FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read zillow_zip" ON zillow_zip;
 CREATE POLICY "Public read zillow_zip" ON zillow_zip FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read zillow_state" ON zillow_state;
 CREATE POLICY "Public read zillow_state" ON zillow_state FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read census_data" ON census_data;
 CREATE POLICY "Public read census_data" ON census_data FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read fred_data" ON fred_data;
 CREATE POLICY "Public read fred_data" ON fred_data FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read geographies" ON geographies;
 CREATE POLICY "Public read geographies" ON geographies FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read metric_definitions" ON metric_definitions;
 CREATE POLICY "Public read metric_definitions" ON metric_definitions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read metric_percentiles" ON metric_percentiles;
 CREATE POLICY "Public read metric_percentiles" ON metric_percentiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read calculated_metrics" ON calculated_metrics;
 CREATE POLICY "Public read calculated_metrics" ON calculated_metrics FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read propertyiq_scores" ON propertyiq_scores;
 CREATE POLICY "Public read propertyiq_scores" ON propertyiq_scores FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read propertyiq_score_details" ON propertyiq_score_details;
 CREATE POLICY "Public read propertyiq_score_details" ON propertyiq_score_details FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read propertyiq_score_history" ON propertyiq_score_history;
 CREATE POLICY "Public read propertyiq_score_history" ON propertyiq_score_history FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read news_cache" ON news_cache;
 CREATE POLICY "Public read news_cache" ON news_cache FOR SELECT USING (true);
 
 COMMIT;

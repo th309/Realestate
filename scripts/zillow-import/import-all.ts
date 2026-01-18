@@ -22,6 +22,7 @@ import { ZillowImporter, printResult, ImportResult, GeographyLevel, MetricName }
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { join } from 'path';
+import { refreshCalculatedMetrics } from '../utils/refresh-calculated-metrics';
 
 config({ path: join(__dirname, '../../packages/backend/.env') });
 
@@ -249,6 +250,16 @@ async function main() {
   for (const r of results) {
     const status = r.errors.length > 0 ? '[ERR]' : '[OK]';
     console.log(`  ${status} ${r.geography} ${r.metricName}: ${r.recordsInserted.toLocaleString()} records (${(r.duration / 1000).toFixed(1)}s)`);
+  }
+
+  // Refresh calculated metrics after import
+  if (totalRecords > 0) {
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    await refreshCalculatedMetrics(supabase);
   }
 
   process.exit(totalErrors > 0 ? 1 : 0);

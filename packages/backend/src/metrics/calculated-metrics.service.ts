@@ -13,6 +13,8 @@ export interface CalculatedMetricsInput {
   median_days_on_market?: number;
   price_reduced_share?: number;
   pending_ratio?: number;
+  pending_listing_count?: number;
+  new_listing_count?: number;
   // From Zillow
   zori?: number;
   zhvi?: number;
@@ -21,12 +23,17 @@ export interface CalculatedMetricsInput {
   inventory_5yr_avg?: number;
   // For overvalued
   median_income?: number;
+  // For months of supply
+  monthly_sales?: number;
 }
 
 export interface CalculatedMetricsOutput {
   cap_rate: number | null;
   gross_yield: number | null;
   rent_to_price_ratio: number | null;
+  grm: number | null;
+  months_of_supply: number | null;
+  absorption_rate: number | null;
   market_health_score: number | null;
   investment_score: number | null;
   long_term_growth_score: number | null;
@@ -66,6 +73,38 @@ export class CalculatedMetricsService {
   calculateRentToPriceRatio(zori: number | undefined, price: number | undefined): number | null {
     if (!zori || !price || price === 0) return null;
     return zori / price;
+  }
+
+  /**
+   * Calculate Gross Rent Multiplier (GRM): price / (ZORI × 12)
+   * Lower GRM indicates potentially better investment value
+   * Typical range: 8-20 years
+   */
+  calculateGRM(price: number | undefined, zori: number | undefined): number | null {
+    if (!price || !zori || zori === 0) return null;
+    const annualRent = zori * 12;
+    return price / annualRent;
+  }
+
+  /**
+   * Calculate Months of Supply: inventory / monthly_sales
+   * Balanced market: 4-6 months
+   * Seller's market: < 4 months
+   * Buyer's market: > 6 months
+   */
+  calculateMonthsOfSupply(inventory: number | undefined, monthlySales: number | undefined): number | null {
+    if (!inventory || !monthlySales || monthlySales === 0) return null;
+    return inventory / monthlySales;
+  }
+
+  /**
+   * Calculate Absorption Rate: (monthly_sales / inventory) × 100
+   * Percentage of available inventory sold per month
+   * Higher rate indicates stronger demand
+   */
+  calculateAbsorptionRate(monthlySales: number | undefined, inventory: number | undefined): number | null {
+    if (!monthlySales || !inventory || inventory === 0) return null;
+    return (monthlySales / inventory) * 100;
   }
 
   /**
@@ -214,6 +253,9 @@ export class CalculatedMetricsService {
     const capRate = this.calculateCapRate(input.zori, input.median_listing_price);
     const grossYield = this.calculateGrossYield(input.zori, input.median_listing_price);
     const rentToPriceRatio = this.calculateRentToPriceRatio(input.zori, input.median_listing_price);
+    const grm = this.calculateGRM(input.median_listing_price, input.zori);
+    const monthsOfSupply = this.calculateMonthsOfSupply(input.active_listing_count, input.monthly_sales);
+    const absorptionRate = this.calculateAbsorptionRate(input.monthly_sales, input.active_listing_count);
     const homeValue5yrCagr = this.calculate5YearCagr(
       input.median_listing_price,
       input.listing_price_5yr_ago
@@ -238,6 +280,9 @@ export class CalculatedMetricsService {
       cap_rate: capRate,
       gross_yield: grossYield,
       rent_to_price_ratio: rentToPriceRatio,
+      grm,
+      months_of_supply: monthsOfSupply,
+      absorption_rate: absorptionRate,
       market_health_score: marketHealthScore,
       investment_score: investmentScore,
       long_term_growth_score: longTermGrowthScore,
@@ -302,6 +347,9 @@ export class CalculatedMetricsService {
       cap_rate: data.cap_rate,
       gross_yield: data.gross_yield,
       rent_to_price_ratio: data.rent_to_price_ratio,
+      grm: data.grm,
+      months_of_supply: data.months_of_supply,
+      absorption_rate: data.absorption_rate,
       market_health_score: data.market_health_score,
       investment_score: data.investment_score,
       long_term_growth_score: data.long_term_growth_score,
@@ -795,5 +843,291 @@ export class CalculatedMetricsService {
     }));
 
     return { data: results, success: true, source: 'calculated_metrics' };
+  }
+
+  // ============================================================================
+  // INVESTMENT METRICS BATCH CALCULATION
+  // ============================================================================
+
+  /**
+   * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
+   * Combines Zillow ZORI data with Realtor median_listing_price
+   */
+  async calculateInvestmentMetricsForMetros(): Promise<{ processed: number; stored: number; errors: string[] }> {
+    const errors: string[] = [];
+
+    // Get latest ZORI date from zillow_metro table (long format)
+    const { data: zoriDateRow } = await this.supabase
+      .from('zillow_metro')
+      .select('period_date')
+      .eq('metric_name', 'zori')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!zoriDateRow?.period_date) {
+      return { processed: 0, stored: 0, errors: ['No ZORI data available'] };
+    }
+
+    const targetDate = zoriDateRow.period_date;
+
+    // Get ZORI (rent) data for all metros from zillow_metro table
+    const { data: zoriData, error: zoriError } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name, value, cbsa_code')
+      .eq('metric_name', 'zori')
+      .eq('period_date', targetDate)
+      .not('value', 'is', null);
+
+    if (zoriError || !zoriData) {
+      return { processed: 0, stored: 0, errors: [zoriError?.message || 'Failed to fetch ZORI data'] };
+    }
+
+    // Get Realtor listing price data (closest date)
+    const { data: realtorDateRow } = await this.supabase
+      .from('realtor_metro')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    const realtorDate = realtorDateRow?.period_date || targetDate;
+
+    const { data: realtorData } = await this.supabase
+      .from('realtor_metro')
+      .select('cbsa_code, median_listing_price')
+      .eq('period_date', realtorDate)
+      .not('median_listing_price', 'is', null);
+
+    // Build price lookup by CBSA code
+    const priceByCode: Record<string, number> = {};
+    if (realtorData) {
+      for (const row of realtorData) {
+        if (row.cbsa_code && row.median_listing_price) {
+          priceByCode[row.cbsa_code] = row.median_listing_price;
+        }
+      }
+    }
+
+    // Calculate and batch upsert
+    let stored = 0;
+    const batchSize = 100;
+    const recordsToUpsert: any[] = [];
+
+    for (const metro of zoriData) {
+      const cbsaCode = metro.cbsa_code;
+      const zori = metro.value;
+      const price = cbsaCode ? priceByCode[cbsaCode] : null;
+
+      if (!zori || !price) continue;
+
+      const capRate = this.calculateCapRate(zori, price);
+      const grossYield = this.calculateGrossYield(zori, price);
+      const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
+      const grm = this.calculateGRM(price, zori);
+
+      recordsToUpsert.push({
+        geography_id: cbsaCode,
+        geography_type: 'metro',
+        geography_name: metro.region_name,
+        period_date: targetDate,
+        cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
+        gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
+        rent_to_price_ratio: rentToPriceRatio ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
+        grm: grm ? Math.round(grm * 100) / 100 : null,
+        calculated_at: new Date().toISOString(),
+      });
+
+      if (recordsToUpsert.length >= batchSize) {
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        if (error) {
+          errors.push(error.message);
+        } else {
+          stored += recordsToUpsert.length;
+        }
+        recordsToUpsert.length = 0;
+      }
+    }
+
+    // Upsert remaining
+    if (recordsToUpsert.length > 0) {
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+      if (error) {
+        errors.push(error.message);
+      } else {
+        stored += recordsToUpsert.length;
+      }
+    }
+
+    return { processed: zoriData.length, stored, errors };
+  }
+
+  /**
+   * Calculate and store overvalued percentage for all metros
+   * Uses ZHVI and Census median income data
+   */
+  async calculateOvervaluedForMetros(): Promise<{ processed: number; stored: number; errors: string[] }> {
+    const errors: string[] = [];
+    const NATIONAL_MEDIAN_INCOME = 75000;
+
+    // Get latest ZHVI date from zillow_metro table (long format)
+    const { data: zhviDateRow } = await this.supabase
+      .from('zillow_metro')
+      .select('period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!zhviDateRow?.period_date) {
+      return { processed: 0, stored: 0, errors: ['No ZHVI data available'] };
+    }
+
+    const targetDate = zhviDateRow.period_date;
+
+    // Get ZHVI data for all metros from zillow_metro table
+    const { data: zhviData, error: zhviError } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name, value, cbsa_code')
+      .eq('metric_name', 'zhvi')
+      .eq('period_date', targetDate)
+      .not('value', 'is', null);
+
+    if (zhviError || !zhviData) {
+      return { processed: 0, stored: 0, errors: [zhviError?.message || 'Failed to fetch ZHVI data'] };
+    }
+
+    // Get Census median income data
+    const { data: incomeData } = await this.supabase
+      .from('census_data')
+      .select('geography_id, value')
+      .eq('geography_type', 'metro')
+      .eq('metric_name', 'median_income')
+      .order('year', { ascending: false });
+
+    // Build income lookup
+    const incomeByGeo: Record<string, number> = {};
+    if (incomeData) {
+      for (const row of incomeData) {
+        if (row.value && !incomeByGeo[row.geography_id]) {
+          incomeByGeo[row.geography_id] = Number(row.value);
+        }
+      }
+    }
+
+    // Calculate and batch upsert
+    let stored = 0;
+    const batchSize = 100;
+    const recordsToUpsert: any[] = [];
+
+    for (const metro of zhviData) {
+      const cbsaCode = metro.cbsa_code;
+      const zhvi = metro.value;
+      const medianIncome = (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
+
+      const overvaluedPct = this.calculateOvervalued(zhvi, medianIncome);
+
+      if (overvaluedPct === null) continue;
+
+      recordsToUpsert.push({
+        geography_id: cbsaCode,
+        geography_type: 'metro',
+        geography_name: metro.region_name,
+        period_date: targetDate,
+        overvalued_pct: Math.round(overvaluedPct * 10) / 10,
+        calculated_at: new Date().toISOString(),
+      });
+
+      if (recordsToUpsert.length >= batchSize) {
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        if (error) {
+          errors.push(error.message);
+        } else {
+          stored += recordsToUpsert.length;
+        }
+        recordsToUpsert.length = 0;
+      }
+    }
+
+    // Upsert remaining
+    if (recordsToUpsert.length > 0) {
+      const { error } = await this.supabase
+        .from('calculated_metrics')
+        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+      if (error) {
+        errors.push(error.message);
+      } else {
+        stored += recordsToUpsert.length;
+      }
+    }
+
+    return { processed: zhviData.length, stored, errors };
+  }
+
+  /**
+   * Get pre-calculated investment metrics for map display
+   */
+  async getInvestmentMetricsForMap(
+    metricName: 'cap_rate' | 'gross_yield' | 'rent_to_price_ratio' | 'grm' | 'overvalued_pct',
+    geographyType: 'metro' = 'metro'
+  ): Promise<{ data: any[]; success: boolean; source: string }> {
+    // Get latest period_date for this metric
+    const { data: latestRow } = await this.supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geographyType)
+      .not(metricName, 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestRow?.period_date) {
+      return { data: [], success: false, source: 'calculated_metrics' };
+    }
+
+    // Get all data for that period
+    const { data: allData, error } = await this.supabase
+      .from('calculated_metrics')
+      .select(`geography_id, geography_name, ${metricName}, period_date`)
+      .eq('geography_type', geographyType)
+      .eq('period_date', latestRow.period_date)
+      .not(metricName, 'is', null);
+
+    if (error || !allData) {
+      return { data: [], success: false, source: 'calculated_metrics' };
+    }
+
+    // Transform to API format
+    const results = allData.map(row => ({
+      region_id: row.geography_id,
+      region_name: row.geography_name,
+      cbsa_code: row.geography_id,
+      value: row[metricName],
+      [metricName]: row[metricName],
+      date: row.period_date,
+    }));
+
+    return { data: results, success: true, source: 'calculated_metrics' };
+  }
+
+  /**
+   * Calculate all investment metrics for all metros (master batch)
+   */
+  async calculateAllInvestmentMetrics(): Promise<{
+    investmentMetrics: { processed: number; stored: number; errors: string[] };
+    overvalued: { processed: number; stored: number; errors: string[] };
+  }> {
+    const [investmentMetrics, overvalued] = await Promise.all([
+      this.calculateInvestmentMetricsForMetros(),
+      this.calculateOvervaluedForMetros(),
+    ]);
+
+    return { investmentMetrics, overvalued };
   }
 }

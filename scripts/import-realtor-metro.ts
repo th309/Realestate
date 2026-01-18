@@ -17,6 +17,7 @@ import {
   importMetroRecords
 } from './realtor-import/csv-processor';
 import { REALTOR_DATASETS } from './realtor-import/types';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-metro')!;
 
@@ -85,6 +86,9 @@ async function main() {
 
   if (result.success) {
     console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
+
+    // Refresh calculated metrics after import
+    await refreshCalculatedMetrics(supabase);
   } else {
     console.log('❌ IMPORT COMPLETED WITH ERRORS');
     process.exit(1);

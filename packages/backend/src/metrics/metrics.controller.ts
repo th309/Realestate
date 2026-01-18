@@ -186,8 +186,102 @@ export class MetricsController {
   }
 
   // ============================================================================
+  // INVESTMENT METRICS ENDPOINTS (from pre-calculated data)
+  // ============================================================================
+
+  /**
+   * Get gross yield for metros (from pre-calculated data, with fallback)
+   */
+  @Get('gross-yield/metros')
+  async getMetroGrossYield() {
+    // Try pre-calculated data first
+    const preCalculated = await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'gross_yield',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fall back to on-the-fly calculation (similar to cap-rate endpoint)
+    return this.getMetroCapRate(); // Uses same data sources
+  }
+
+  /**
+   * Get GRM (Gross Rent Multiplier) for metros
+   */
+  @Get('grm/metros')
+  async getMetroGRM() {
+    const preCalculated = await this.calculatedMetricsService.getInvestmentMetricsForMap('grm');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'grm',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    return { success: false, error: 'No GRM data available. Run batch calculation first.', data: [] };
+  }
+
+  /**
+   * Get all investment metrics for a specific metro
+   */
+  @Get('investment/:geoType/:geoId')
+  async getInvestmentMetrics(
+    @Param('geoType') geoType: string,
+    @Param('geoId') geoId: string
+  ) {
+    const metrics = await this.calculatedMetricsService.getMetrics(geoId, geoType);
+
+    if (!metrics) {
+      return { success: false, error: 'No calculated metrics found for this geography', data: null };
+    }
+
+    return {
+      success: true,
+      geography_type: geoType,
+      geography_id: geoId,
+      data: {
+        cap_rate: metrics.cap_rate,
+        gross_yield: metrics.gross_yield,
+        rent_to_price_ratio: metrics.rent_to_price_ratio,
+        grm: metrics.grm,
+        overvalued_pct: metrics.overvalued_pct,
+        months_of_supply: metrics.months_of_supply,
+        absorption_rate: metrics.absorption_rate,
+      },
+    };
+  }
+
+  // ============================================================================
   // BATCH CALCULATION ENDPOINTS
   // ============================================================================
+
+  /**
+   * Trigger batch calculation of investment metrics for all metros
+   * Should be called monthly after new data is imported
+   */
+  @Post('calculate-investment-metrics')
+  async calculateInvestmentMetricsBatch() {
+    const results = await this.calculatedMetricsService.calculateAllInvestmentMetrics();
+    return {
+      success: true,
+      message: 'Investment metrics batch calculation completed',
+      results,
+      totals: {
+        processed: results.investmentMetrics.processed + results.overvalued.processed,
+        stored: results.investmentMetrics.stored + results.overvalued.stored,
+      },
+    };
+  }
 
   /**
    * Trigger batch calculation of 5-year growth for all geographies

@@ -13,6 +13,7 @@ import { join } from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { parse as parseSync } from 'csv-parse/sync';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 // Load environment variables
 config({ path: join(__dirname, '../packages/backend/.env') });
@@ -149,6 +150,8 @@ function getMetricName(datasetType: string): string {
   const metricMap: Record<string, string> = {
     'zhvi': 'zhvi',
     'zori': 'zori',
+    'zori_sfr': 'zori_sfr',
+    'zori_mfr': 'zori_mfr',
     'zordi': 'zordi',
     'invt_fs': 'inventory',
     'new_listings': 'new_listings',
@@ -342,12 +345,26 @@ const METRO_DATASETS = [
     datasetType: 'zhvi',
     description: 'ZHVI - Home Values'
   },
-  // ZORI
+  // ZORI - All (SFR + Condo + MFR)
   {
     id: 'zori-metro',
     url: `${ZILLOW_CSV_BASE}/zori/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv`,
     datasetType: 'zori',
-    description: 'ZORI - Rental Index'
+    description: 'ZORI - Rental Index (All)'
+  },
+  // ZORI - Single Family Only
+  {
+    id: 'zori-sfr-metro',
+    url: `${ZILLOW_CSV_BASE}/zori/Metro_zori_uc_sfr_sm_month.csv`,
+    datasetType: 'zori_sfr',
+    description: 'ZORI - Single Family Rentals'
+  },
+  // ZORI - Multifamily Only
+  {
+    id: 'zori-mfr-metro',
+    url: `${ZILLOW_CSV_BASE}/zori/Metro_zori_uc_mfr_sm_month.csv`,
+    datasetType: 'zori_mfr',
+    description: 'ZORI - Multifamily Rentals'
   },
   // Inventory
   {
@@ -521,6 +538,9 @@ async function main() {
   console.log(`Total errors: ${totalErrors}`);
   console.log(`Duration: ${minutes}m ${seconds}s`);
   console.log(`End Time: ${new Date().toISOString()}`);
+
+  // Refresh calculated metrics after import
+  await refreshCalculatedMetrics(supabase);
 }
 
 main().catch(error => {

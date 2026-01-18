@@ -1,37 +1,108 @@
 # REI Platform - Project Instructions
 
-## Overview
+## 1. CRITICAL BEHAVIORAL STANDARDS
 
-Real estate investment platform with interactive maps displaying various metrics across different geography levels (state, metro, county, city, zip).
+### 1.1 The "Don'ts" (Strict Constraints)
+* **NEVER** duplicate metric names/formats. `config/metrics.ts` is the **ONLY** source of truth.
+* **NEVER** hardcode color scale breakpoints; use dynamic min/max calculations.
+* **NEVER** create separate API methods for each metric; always use the unified `fetchMetricData`.
+* **NEVER** format values manually; use `formatValue()` or `formatTooltipValue()` from utils.
+* **NEVER** hardcode zoom levels; use `GEO_ZOOM_LEVELS` from `config/metrics.ts`.
 
-## Architecture
+### 1.2 Security & Data Protection (Strict)
+* **Authentication & Authorization:**
+    * **RLS is Supreme:** NEVER implement row-level security logic in the application layer if it can be done in Supabase RLS policies. Do not manually filter by `user_id` in the frontend.
+    * **Client vs. Server:** NEVER fetch sensitive data (PII, billing) in Client Components (`'use client'`). Always fetch in Server Components or via the NestJS backend.
+* **Input Validation:**
+    * **Trust No One:** Every API endpoint (NestJS) and Server Action (Next.js) MUST validate input using Zod or `class-validator`.
+* **Secrets Management:**
+    * **No Defaults:** NEVER hardcode fallback values for secrets (e.g., `process.env.KEY || 'default'`). The app MUST crash if a secret is missing.
+    * **Exposure:** NEVER expose `service_role` keys to the client.
 
-### Frontend: Next.js App Router
-- `/packages/frontend/app/map/` - Main map application
-
-### Backend: NestJS
-- `/packages/backend/src/` - API services
-
-### Database: Supabase (PostgreSQL)
-- Long-format tables: `zillow_state`, `zillow_metro`, `zillow_county`, `zillow_zip`
-- Each table has: `region_id`, `region_name`, `period_date`, `metric_name`, `value`
+### 1.3 Architecture & Modularity (The "300-Line Rule")
+* **Modular by Default:** Prefer small, single-purpose files.
+* **File Size Limit:**
+    * **Target:** Keep source files under **300 lines**.
+    * **Trigger:** If editing a file exceeds 300 lines, you MUST:
+        1.  **Analyze** logical components.
+        2.  **Propose** a refactor plan.
+        3.  **Execute** the split into `/utils/`, `/hooks/`, or sub-components.
+* **Colocation:** Keep related utils/types in the same feature folder.
+    ```text
+    src/features/UserProfile/
+    ├── UserProfile.tsx
+    ├── userProfile.utils.ts
+    └── userProfile.types.ts
+    ```
 
 ---
 
-## Central Metric Configuration
+## 2. PROJECT ARCHITECTURE & STACK
 
-**IMPORTANT: All metric properties are defined in ONE place.**
+### 2.1 Technology Stack
 
-### Single Source of Truth: `config/metrics.ts`
+| Layer | Technology | Version |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js (App Router) | 16.1.1 |
+| **UI Library** | React | 19.2.0 |
+| **Styling** | Tailwind CSS | 4.0 |
+| **Mapping** | Mapbox GL + react-map-gl | 3.17.0 |
+| **Backend** | NestJS | 11.0.1 |
+| **Database** | Supabase (PostgreSQL) | Cloud-hosted |
+| **Caching** | Redis (ioredis) | 5.9.1 |
+| **State Management** | TanStack React Query | 5.90.7 |
 
-```typescript
-// packages/frontend/app/map/config/metrics.ts
-export const METRICS: Record<string, MetricConfig> = {
+### 2.2 Third-Party Services
+* **Mapbox:** Map tiles and geocoding.
+* **Supabase:** Database + Auth.
+* **Zillow/Realtor/Redfin:** Real estate data feeds.
+* **Census/FRED/BLS:** Economic indicators.
+* **Anthropic Claude:** AI integration (backend SDK).
+* **Stripe:** Payments (Phase 1).
+
+### 2.3 Architecture Style: Full-Stack Monorepo
+**Pattern:** Modular monolith with clear frontend/backend separation.
+
+```text
+rei-platform/
+├── packages/
+│   ├── frontend/    # Next.js App Router
+│   └── backend/     # NestJS API (port 3001)
+├── scripts/         # Data import pipelines
+└── data/            # Raw data files
+Backend Pattern: NestJS modules with dependency injection (Controllers → Services → Supabase).
+Frontend Pattern: React hooks + React Query for server state; component composition.
+2.4 Data Flow DiagramFlow: Client → DatabaseCode snippetsequenceDiagram
+    participant User
+    participant Frontend as Frontend (React Query)
+    participant API as Backend (NestJS)
+    participant DB as Supabase (Postgres)
+
+    User->>Frontend: Selects metric (triggers useMapData)
+    Frontend->>API: GET request (via client.ts)
+    API->>API: Controller routes to Service
+    API->>DB: Service queries with filters
+    DB-->>API: Returns Data
+    API-->>Frontend: Returns JSON
+    Frontend-->>Frontend: React Query caches response
+    Frontend-->>Frontend: useMapLayers applies to GeoJSON
+    Frontend-->>User: Map & Legend render
+Detailed Execution Flow:
+User selects metric → triggers useMapData hook.
+API Client (client.ts) sends GET request to backend.NestJS Controller routes to appropriate service (e.g., zillow.controller.ts).
+Service queries Supabase with filters (queryLatestPerRegion) → returns JSON.
+React Query caches response; transforms to HomeValues format.
+useMapLayers applies data to GeoJSON features.
+Map + Legend render with consistent color scales.
+### 2.5 Database Schema (Long Format)
+Each geography level has its own table. All follow the same schema pattern: region_id, region_name, period_date, metric_name, value.
+TableRegion ID Formatzillow_stateState FIPSzillow_metroCBSA codezillow_countyCounty FIPSzillow_zipZIP code
+##  3. METRIC CONFIGURATION (SOURCE OF TRUTH)IMPORTANT: All metric properties are defined in ONE place.File: packages/frontend/app/map/config/metrics.tsTypeScriptexport const METRICS: Record<string, MetricConfig> = {
   market_heat: {
     id: 'market_heat',
     title: 'Market Heat Index',      // Display name everywhere
-    format: 'index',                  // How to format values
-    dataSource: 'zillow',            // Data provider badge
+    format: 'index',                 // currency | percent | percent_abs | number | index | days
+    dataSource: 'zillow',            // zillow | realtor | calculated | census | fred
     apiEndpoint: '/api/zillow/market-heat/{geo}',
     keyField: 'auto',                // How to match to GeoJSON
     supportedGeos: ['metro'],        // Which geo levels have data
@@ -39,189 +110,77 @@ export const METRICS: Record<string, MetricConfig> = {
   },
   // ... all other metrics
 };
-```
+Key Configuration FilesFilePurposeGets from METRICSconfig/metrics.tsTHE source of truthN/A - defines everythingconfig/metric-categories.tsxSidebar category organizationtitle, dataSourceconfig/fetchMetricData.tsUnified API fetchingapiEndpoint, keyField, asPercentlib/api/client.tsAPI ClientN/Autils/metricUtils.tsFormatting & color scaleformat, rangeTypecomponents/Legend.tsxMap legend displayvia getMetricFormat(), getMetricTitle()hooks/useMapLayers.tsMap renderingvia calculateValueRange()packages/backend/src/main.tsBackend EntryN/A
 
-### What Each File Does
-
-| File | Purpose | Gets from METRICS |
-|------|---------|-------------------|
-| `config/metrics.ts` | **THE source of truth** | N/A - defines everything |
-| `config/metric-categories.tsx` | Sidebar category organization | `title`, `dataSource` |
-| `config/fetchMetricData.ts` | Unified API fetching | `apiEndpoint`, `keyField`, `asPercent` |
-| `utils/metricUtils.ts` | Formatting & color scale | `format`, `rangeType` |
-| `components/Legend.tsx` | Map legend display | via `getMetricFormat()`, `getMetricTitle()` |
-| `hooks/useMapLayers.ts` | Map rendering | via `calculateValueRange()` |
-
-### Adding a New Metric
-
-1. **Add to `config/metrics.ts`:**
-```typescript
-new_metric: {
+##4. IMPLEMENTATION GUIDESWorkflow: Adding a New Metric
+### 4.1 Define in config/metrics.ts:TypeScriptnew_metric: {
   id: 'new_metric',
   title: 'New Metric Name',
-  format: 'currency',  // currency | percent | percent_abs | number | index | days
-  dataSource: 'zillow', // zillow | realtor | calculated | census | fred
+  format: 'currency',
+  dataSource: 'zillow',
   apiEndpoint: '/api/zillow/new-metric/{geo}',
   keyField: 'auto',
   supportedGeos: ['state', 'metro', 'county'],
 },
-```
+### 4.2Add to Category in config/metric-categories.tsx:
+TypeScriptmetric('new_metric', { isPremium: true, isNew: true }),
+### 4.3 Backend: Ensure the endpoint exists.Color Scale LogicPalette: 7 colors (Violet #7c3aed to Dark Red #b91c1c).Range Calculation:percent: 5th to 95th percentile.percent_abs: 5th to 95th percentile (positive values).currency / number / days: Min to 95th percentile.index (with rangeType: 'full'): Actual Min to Max.Backend Query Pattern (NestJS)Use queryLatestPerRegion() to get the most recent data point for each region, rather than a single global date.TypeScriptconst data = await queryMarketIndicatorLatest(supabase, table, geography);
+// Returns rows with: region_id, value, period_date
 
-2. **Add to category in `config/metric-categories.tsx`:**
-```typescript
-metric('new_metric', { isPremium: true, isNew: true }),
-```
+## 5. DESIGN SYSTEM: MATERIAL DESIGN 3 (M3)
 
-3. **Ensure backend endpoint exists** - that's it!
+### 5.1 Core Authority
+* **Source of Truth:** All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
+* **Strict Adherence:** Do NOT mix "Vercel/Geist" aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
 
----
+### 5.2 Visual Foundation (Tailwind Implementation)
 
-## Data Flow
+**Typography (M3 Type Scale)**
+* **Font Family:** Use `Roboto` (via `next/font/google`) for all text.
+* **Scale Implementation:**
+    * **Display:** `text-4xl` to `text-6xl` (tracking-tight)
+    * **Headline:** `text-2xl` to `text-3xl`
+    * **Title:** `text-lg` to `text-xl` (font-medium)
+    * **Body:** `text-base` (tracking-wide)
+    * **Label:** `text-sm` (font-medium, tracking-wide)
 
-### How Data Gets to the Map
+**Color System (Semantic Roles)**
+Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind colors:
+* **Primary:** Key actions (FABs, Active States) → `bg-primary` / `text-on-primary`
+* **Surface:**
+    * `bg-surface` (Main background)
+    * `bg-surface-container-low` (Sidebar/Drawer)
+    * `bg-surface-container-high` (Modals/Dialogs)
+* **Outline:** `border-outline` (dividers) and `border-outline-variant`.
 
-1. **User selects metric** → `selectedMetric` state
-2. **useMapData hook** fetches from API → returns `HomeValues`
-3. **HomeValues format:** `Record<string, { value: number; date?: string }>`
-4. **useMapLayers** applies to GeoJSON features
-5. **Legend** and **Map** both call `calculateValueRange(homeValues, metricFormat, metricId)`
-6. **Same min/max** → consistent colors between legend and map
+**Shape & Elevation**
+* **Corner Radius:**
+    * **Cards:** `rounded-xl` (M3 Medium) or `rounded-3xl` (M3 Large)
+    * **Buttons/Chips:** `rounded-full` (M3 Full)
+    * **Dialogs:** `rounded-[28px]` (M3 Extra Large)
+* **Elevation (Shadows):**
+    * Use Surface Tones + Shadow, NOT Glassmorphism.
+    * Level 1 (Cards): `shadow-sm bg-surface-container-low`
+    * Level 3 (Dialogs/FABs): `shadow-lg bg-surface-container-high`
 
-### Key Types
+### 5.3 UI Components (M3 Mapping)
 
-```typescript
-// HomeValues can be simple numbers OR objects with dates
-type HomeValueEntry = number | { value: number; date?: string };
-type HomeValues = Record<string, HomeValueEntry>;
+| Current Concept | Material 3 Replacement | Tailwind Spec |
+| :--- | :--- | :--- |
+| **Sidebar** | **Navigation Drawer** (Standard) | Fixed left, `bg-surface-container-low`, rounded-r-2xl |
+| **Pill Selectors** | **Filter Chips** | `rounded-lg`, `border-outline`, `bg-surface` |
+| **Stat Cards** | **Elevated Card** | `bg-surface-container-low`, `rounded-xl`, `shadow-sm` |
+| **Search Bar** | **Search Bar (View)** | `rounded-full`, `h-14`, `bg-surface-container-high` |
+| **Benchmark Panel** | **Standard Side Sheet** | Fixed right, `bg-surface-container-low`, `border-l` |
+| **Floating Map Details** | **Bottom Sheet** | `rounded-t-xl`, `bg-surface-container` |
 
-// Helpers to extract values
-getValueFromEntry(entry) → number | null
-getDateFromEntry(entry) → string | undefined
-```
+### 5.4 Iconography
+* **Set:** Material Symbols (Rounded or Sharp).
+* **Implementation:** Use a consistent SVG set that matches Material Symbols.
 
----
-
-## Color Scale
-
-### How It Works
-
-1. `calculateValueRange()` computes min/max from actual data
-2. `getColorScale(min, max)` creates Mapbox interpolation expression
-3. Both Legend and Map use the SAME min/max values
-
-### Color Palette (7 colors, violet to red)
-```typescript
-const COLOR_SCALE = [
-  '#7c3aed', // Violet (lowest)
-  '#3b82f6', // Blue
-  '#22c55e', // Green
-  '#eab308', // Yellow
-  '#f97316', // Orange
-  '#ef4444', // Red
-  '#b91c1c', // Dark red (highest)
-];
-```
-
-### Range Calculation by Format
-
-| Format | Range Calculation |
-|--------|-------------------|
-| `percent` | 5th to 95th percentile |
-| `percent_abs` | 5th to 95th percentile (positive values) |
-| `currency`, `number`, `days` | min to 95th percentile |
-| `index` with `rangeType: 'full'` | actual min to max |
-
----
-
-## Tooltips & "As Of" Dates
-
-All tooltips show "as of [Month Year]" when data includes dates:
-
-```typescript
-// Centralized formatting
-const { displayValue, valueColor } = formatTooltipValue(value, metricFormat);
-const asOfText = formatAsOfDate(dataDate); // "as of Nov 2025"
-```
-
----
-
-## Backend Query Pattern
-
-### Latest-Per-Region Queries
-
-The backend uses `queryLatestPerRegion()` to get each region's most recent data:
-
-```typescript
-// Returns latest available data for each region (not a single global date)
-const data = await queryMarketIndicatorLatest(supabase, table, geography);
-// Each row includes: region_id, value, date (period_date)
-```
-
-This ensures regions with data through different dates all show their latest values.
-
----
-
-## File Structure
-
-```
-packages/frontend/app/map/
-├── config/
-│   ├── metrics.ts           # SINGLE SOURCE OF TRUTH
-│   ├── metric-categories.tsx # Sidebar organization
-│   ├── fetchMetricData.ts   # Unified API fetching
-│   └── index.ts             # Barrel exports
-├── utils/
-│   ├── metricUtils.ts       # Formatting, range calculation
-│   ├── colorScale.ts        # Mapbox color expressions
-│   └── index.ts
-├── hooks/
-│   ├── useMapLayers.ts      # Map rendering logic
-│   └── useMapData.ts        # Data fetching
-├── components/
-│   ├── Legend.tsx           # Map legend
-│   └── ...
-└── types.ts                 # TypeScript types
-```
-
----
-
-## Common Patterns
-
-### Fetching Metric Data
-
-```typescript
-import { fetchMetricData } from '../config';
-
-const data = await fetchMetricData('market_heat', 'metro');
-// Returns: { [cbsaCode]: { value: number, date?: string } }
-```
-
-### Getting Metric Info
-
-```typescript
-import { getMetricConfig, getMetricFormat, getMetricTitle } from '../config';
-
-const config = getMetricConfig('market_heat');
-const format = getMetricFormat('market_heat'); // 'index'
-const title = getMetricTitle('market_heat');   // 'Market Heat Index'
-```
-
-### Checking Geo Support
-
-```typescript
-import { isMetricSupportedForGeo } from '../config';
-
-if (isMetricSupportedForGeo('market_heat', 'metro')) {
-  // Metric is available for this geography
-}
-```
-
----
-
-## Don't
-
-- Don't duplicate metric names/formats in multiple files
-- Don't hardcode color scale breakpoints (use dynamic min/max)
-- Don't create separate API methods for each metric (use `fetchMetricData`)
-- Don't format values manually (use `formatValue()` or `formatTooltipValue()`)
-- Don't hardcode zoom levels - use `GEO_ZOOM_LEVELS` from `config/metrics.ts`
+### 5.5 Motion
+* **Easing:** Use M3 Standard Easing (`ease-[0.2, 0.0, 0, 1.0]`).
+* **Durations:**
+    * Short: `duration-200` (icons, selection)
+    * Medium: `duration-400` (sheets, dialogs)
+    * Long: `duration-600` (page transitions)
