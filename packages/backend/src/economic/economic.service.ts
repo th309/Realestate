@@ -1,3 +1,8 @@
+/**
+ * Economic Service
+ * Provides unemployment rate, job growth, GDP growth, and cost of living data
+ * Data sources: BLS (369 metros), BEA, FRED
+ */
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.module';
