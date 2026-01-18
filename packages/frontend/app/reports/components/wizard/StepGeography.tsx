@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, X, Plus } from 'lucide-react';
 import { SearchIcon, LocationPinIcon, MailboxIcon, BuildingIcon } from '@/app/map/components/Icons';
 import { GEO_LEVEL_OPTIONS } from '../../constants';
@@ -25,16 +25,20 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   } = wizardState;
 
   const [searchingFor, setSearchingFor] = useState<'primary' | 'comparison'>('primary');
+  const prevGeoLevel = useRef(geoLevel);
 
   // Use the Mapbox search hook with geo level filter
   const primarySearch = useReportSearch(geoLevel);
   const comparisonSearch = useReportSearch(geoLevel);
 
-  // Reset search when geo level changes
+  // Reset search when geo level changes (skip initial mount)
   useEffect(() => {
-    primarySearch.clearSearch();
-    comparisonSearch.clearSearch();
-  }, [geoLevel]);
+    if (prevGeoLevel.current !== geoLevel) {
+      primarySearch.clearSearch();
+      comparisonSearch.clearSearch();
+      prevGeoLevel.current = geoLevel;
+    }
+  }, [geoLevel, primarySearch, comparisonSearch]);
 
   const isComparison = selectedTemplate?.config.comparison !== undefined;
   const maxComparisons = selectedTemplate?.config.comparison?.max_geographies || 5;

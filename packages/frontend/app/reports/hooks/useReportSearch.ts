@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import type { Geography, GeographyType } from '../types';
 
 // TODO: move to env or shared config
@@ -136,11 +136,11 @@ export function useReportSearch(filterByGeoLevel?: GeographyType) {
     }
   }, [filterByGeoLevel]);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
     setShowSearchResults(false);
-  };
+  }, []);
 
   return {
     searchQuery,
