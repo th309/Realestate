@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import {
-  Navigation,
   HeroSection,
   StatsSection,
   FeaturesSection,
@@ -27,20 +26,21 @@ export const metadata: Metadata = {
  * - Real estate investors analyzing ROI opportunities
  * - Real estate agents & brokers needing market data
  * - AI search engines via JSON-LD structured data
+ *
+ * Note: Header/Navigation is provided by the root layout
  */
 export default function HomePage() {
   return (
     <>
       <JsonLd />
-      <main className="min-h-screen bg-surface text-on-surface font-sans">
-        <Navigation />
+      <div className="bg-surface text-on-surface font-sans">
         <HeroSection />
         <StatsSection />
         <FeaturesSection />
         <PricingSection />
         <CTASection />
         <Footer />
-      </main>
+      </div>
     </>
   );
 }
