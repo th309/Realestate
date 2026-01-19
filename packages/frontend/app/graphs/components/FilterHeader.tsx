@@ -4,7 +4,7 @@ import React from 'react';
 import { MapPin, BarChart2, Globe } from 'lucide-react';
 import { ComparisonConfig, MetricOption } from '../types';
 import { GeoLevel } from '@/app/map/config/metrics';
-import { GEO_LEVEL_OPTIONS } from '../hooks/useDashboardState';
+import { GEO_LEVEL_OPTIONS, BASELINE_GEO_LEVELS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
 import { M3Card, M3CardHeader } from './M3Card';
 import { SearchBar } from '@/app/map/components';
@@ -187,12 +187,12 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
               <div className="flex-1">
                 <M3Select
                   label="Base Level"
-                  value={GEO_LEVEL_OPTIONS.find((opt) => opt.value === baseline.level)?.label || 'National'}
+                  value={BASELINE_GEO_LEVELS.find((opt) => opt.value === baseline.level)?.label || 'National'}
                   onChange={(val) => {
-                    const level = GEO_LEVEL_OPTIONS.find((opt) => opt.label === val)?.value || 'national';
+                    const level = BASELINE_GEO_LEVELS.find((opt) => opt.label === val)?.value || 'national';
                     setBaseline((prev) => ({ ...prev, level }));
                   }}
-                  options={GEO_LEVEL_OPTIONS.map((opt) => opt.label)}
+                  options={BASELINE_GEO_LEVELS.map((opt) => opt.label)}
                 />
               </div>
               <div className="flex-1">

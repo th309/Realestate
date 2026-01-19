@@ -24,6 +24,13 @@ export const GEO_LEVEL_OPTIONS: { value: GeoLevel; label: string }[] = [
   { value: 'zip', label: 'ZIP' },
 ];
 
+// Baseline levels are limited to National and State only
+// (metros, counties, cities, ZIPs have too many options for dropdown)
+export const BASELINE_GEO_LEVELS: { value: GeoLevel; label: string }[] = [
+  { value: 'national', label: 'National' },
+  { value: 'state', label: 'State' },
+];
+
 export function useDashboardState() {
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedArea, setSelectedArea] = useState('Florida');
