@@ -340,4 +340,31 @@ export class MarketsService {
 
     return Array.from(metroMap.values()).slice(0, limit);
   }
+
+  // Get all metros for client-side filtering (fast search)
+  async getAllMetros() {
+    const { data, error } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name')
+      .order('region_name');
+
+    if (error) throw error;
+
+    // Dedupe metros by region_id, filter out "United States"
+    const metroMap = new Map<number, { regionId: number; name: string }>();
+    for (const row of data || []) {
+      if (
+        row.region_name &&
+        !metroMap.has(row.region_id) &&
+        !row.region_name.toLowerCase().includes('united states')
+      ) {
+        metroMap.set(row.region_id, {
+          regionId: row.region_id,
+          name: row.region_name,
+        });
+      }
+    }
+
+    return Array.from(metroMap.values());
+  }
 }

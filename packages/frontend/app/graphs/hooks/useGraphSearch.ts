@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
+import type { GeoLevel } from '@/app/map/config/metrics';
 
-// TODO: move to env or shared config
 const MAPBOX_TOKEN = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -20,12 +20,49 @@ interface MapboxFeature {
     context?: MapboxContext[];
 }
 
-export function useGraphSearch() {
+interface Metro {
+    regionId: number;
+    name: string;
+}
+
+// Cache for all metros (loaded once, used for instant filtering)
+let metrosCache: Metro[] | null = null;
+let metrosLoadingPromise: Promise<Metro[]> | null = null;
+
+async function loadAllMetros(): Promise<Metro[]> {
+    if (metrosCache) return metrosCache;
+
+    if (metrosLoadingPromise) return metrosLoadingPromise;
+
+    metrosLoadingPromise = fetch(`${API_BASE_URL}/markets/metros`)
+        .then(res => res.json())
+        .then((data: Metro[]) => {
+            metrosCache = data;
+            return data;
+        })
+        .catch(err => {
+            console.error('Failed to load metros:', err);
+            metrosLoadingPromise = null;
+            return [];
+        });
+
+    return metrosLoadingPromise;
+}
+
+export function useGraphSearch(geoLevel?: GeoLevel) {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
+    const [metrosLoaded, setMetrosLoaded] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
+
+    // Preload metros when metro level is selected
+    useEffect(() => {
+        if (geoLevel === 'metro' && !metrosLoaded) {
+            loadAllMetros().then(() => setMetrosLoaded(true));
+        }
+    }, [geoLevel, metrosLoaded]);
 
     // Close search results when clicking outside
     useEffect(() => {
@@ -51,31 +88,41 @@ export function useGraphSearch() {
         setShowSearchResults(true);
 
         try {
-            // Fetch from Mapbox first (faster), then optionally add metro results
-            const mapboxPromise = fetch(
+            // For metro level: use cached data for instant filtering
+            if (geoLevel === 'metro') {
+                const metros = await loadAllMetros();
+                const lowerQuery = query.toLowerCase();
+
+                const filtered = metros
+                    .filter(m => m.name.toLowerCase().includes(lowerQuery))
+                    .slice(0, 10)
+                    .map(metro => ({
+                        id: `metro-${metro.regionId}`,
+                        name: metro.name,
+                        type: 'metro' as const,
+                        center: [0, 0] as [number, number],
+                        state: '',
+                    }));
+
+                setSearchResults(filtered);
+                setSearchLoading(false);
+                return;
+            }
+
+            // For other levels: use Mapbox API
+            const mapboxTypes = getMapboxTypes(geoLevel);
+            const mapboxResponse = await fetch(
                 `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
                 `access_token=${MAPBOX_TOKEN}&` +
                 `country=US&` +
-                `types=region,place,postcode,district&` +
-                `limit=6`
+                `types=${mapboxTypes}&` +
+                `limit=8`
             );
 
-            // Metro search with 2 second timeout - don't block on slow backend
-            const metroPromise = Promise.race([
-                fetch(`${API_BASE_URL}/markets/metros/search?q=${encodeURIComponent(query)}&limit=4`),
-                new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
-            ]).catch(() => null);
-
-            const [mapboxResponse, metrosResponse] = await Promise.all([mapboxPromise, metroPromise]);
-
             const mapboxData = await mapboxResponse.json();
-            const metrosData = metrosResponse && metrosResponse instanceof Response
-                ? await metrosResponse.json().catch(() => [])
-                : [];
-
-            // Process Mapbox results
             const features: MapboxFeature[] = mapboxData.features || [];
-            const mapboxResults: SearchResult[] = features.map((feature: MapboxFeature) => {
+
+            const results: SearchResult[] = features.map((feature: MapboxFeature) => {
                 let type: SearchResult['type'] = 'city';
                 if (feature.place_type.includes('region')) type = 'state';
                 else if (feature.place_type.includes('postcode')) type = 'zip';
@@ -95,50 +142,14 @@ export function useGraphSearch() {
                 };
             });
 
-            // Process metro results from our backend
-            // Filter out "United States" which incorrectly appears in metro results
-            const metroResults: SearchResult[] = (metrosData || [])
-                .filter((metro: { regionId: number; name: string }) =>
-                    !metro.name.toLowerCase().includes('united states'))
-                .map((metro: { regionId: number; name: string }) => ({
-                    id: `metro-${metro.regionId}`,
-                    name: metro.name,
-                    type: 'metro' as const,
-                    center: [0, 0] as [number, number], // We don't have coordinates for metros
-                    state: '',
-                }));
-
-            // Combine results: metros first (since user is looking for them), then other results
-            // Filter out duplicate names (case-insensitive)
-            const seenNames = new Set<string>();
-            const combinedResults: SearchResult[] = [];
-
-            // Add metro results first
-            for (const result of metroResults) {
-                const normalizedName = result.name.toLowerCase();
-                if (!seenNames.has(normalizedName)) {
-                    seenNames.add(normalizedName);
-                    combinedResults.push(result);
-                }
-            }
-
-            // Add Mapbox results
-            for (const result of mapboxResults) {
-                const normalizedName = result.name.toLowerCase();
-                if (!seenNames.has(normalizedName)) {
-                    seenNames.add(normalizedName);
-                    combinedResults.push(result);
-                }
-            }
-
-            setSearchResults(combinedResults.slice(0, 8));
+            setSearchResults(results);
         } catch (err) {
             console.error('Search error:', err);
             setSearchResults([]);
         } finally {
             setSearchLoading(false);
         }
-    }, []);
+    }, [geoLevel]);
 
     const clearSearch = () => {
         setSearchQuery('');
@@ -157,4 +168,20 @@ export function useGraphSearch() {
         handleSearch,
         clearSearch
     };
+}
+
+// Get appropriate Mapbox types based on geo level
+function getMapboxTypes(geoLevel?: GeoLevel): string {
+    switch (geoLevel) {
+        case 'state':
+            return 'region';
+        case 'county':
+            return 'district';
+        case 'city':
+            return 'place';
+        case 'zip':
+            return 'postcode';
+        default:
+            return 'region,place,postcode,district';
+    }
 }

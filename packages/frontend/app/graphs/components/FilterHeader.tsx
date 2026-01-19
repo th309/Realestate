@@ -57,7 +57,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
   const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
 
-  // Primary area search
+  // Primary area search - pass geoLevel for optimized metro search
   const {
     searchQuery,
     setSearchQuery,
@@ -68,7 +68,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
     searchRef,
     handleSearch,
     clearSearch
-  } = useGraphSearch();
+  } = useGraphSearch(geoLevel);
 
   const handleSelectResult = (result: SearchResult) => {
     setSelectedArea(result.name);

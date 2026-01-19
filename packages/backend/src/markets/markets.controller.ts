@@ -25,6 +25,12 @@ export class MarketsController {
     return this.marketsService.getStateHomeValues();
   }
 
+  @Get('metros')
+  @ApiOperation({ summary: 'Get all metro areas (for client-side search)' })
+  async getAllMetros() {
+    return this.marketsService.getAllMetros();
+  }
+
   @Get('metros/home-values')
   @ApiOperation({ summary: 'Get median home values by metro area (MSA)' })
   async getMetroHomeValues() {
