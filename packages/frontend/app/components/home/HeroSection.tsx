@@ -6,7 +6,7 @@ import { FeatureCarousel } from './FeatureCarousel';
 export function HeroSection() {
   return (
     <section
-      className="relative pt-24 pb-20 px-6 overflow-hidden"
+      className="relative pt-20 pb-28 px-6 overflow-hidden"
       aria-labelledby="hero-heading"
     >
       {/* Background gradient */}
@@ -19,9 +19,9 @@ export function HeroSection() {
       />
 
       {/* Two-column layout */}
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-12">
         {/* Left column - Text content */}
-        <article className="relative flex-1 max-w-2xl z-10">
+        <article className="relative flex-1 max-w-xl z-10">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 mb-6 rounded-full bg-primary-container text-on-primary-container text-sm font-medium">
           <span aria-hidden="true">✦</span>
@@ -47,7 +47,7 @@ export function HeroSection() {
         {/* CTAs with accessible labels */}
         <div className="flex flex-wrap gap-4 mb-12" role="group" aria-label="Get started options">
           <a
-            href="/signup"
+            href="/map"
             className="px-6 py-3 rounded-full text-base font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200 elevation-2"
           >
             Start Free Analysis
