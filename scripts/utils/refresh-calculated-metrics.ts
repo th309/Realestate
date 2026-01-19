@@ -157,17 +157,55 @@ function calculateOvervalued(price: number, income: number): number | null {
 }
 
 // ============================================================================
-// INVESTMENT METRICS CALCULATION
+// INVESTMENT METRICS CALCULATION (CAP RATE, GROSS YIELD, ETC.)
 // ============================================================================
 
-async function calculateInvestmentMetrics(
-  supabase: SupabaseClient
+interface InvestmentGeoConfig {
+  zillowTable: string;
+  realtorTable: string;
+  geoType: 'metro' | 'county' | 'zip';
+  zillowIdField: string;
+  zillowNameField: string;
+  realtorIdField: string;
+}
+
+const INVESTMENT_GEO_CONFIGS: InvestmentGeoConfig[] = [
+  {
+    zillowTable: 'zillow_metro',
+    realtorTable: 'realtor_metro',
+    geoType: 'metro',
+    zillowIdField: 'cbsa_code',
+    zillowNameField: 'region_name',
+    realtorIdField: 'cbsa_code',
+  },
+  {
+    zillowTable: 'zillow_county',
+    realtorTable: 'realtor_county',
+    geoType: 'county',
+    zillowIdField: 'fips_code',       // zillow_county uses fips_code
+    zillowNameField: 'region_name',
+    realtorIdField: 'county_fips',    // realtor_county uses county_fips
+  },
+  {
+    zillowTable: 'zillow_zip',
+    realtorTable: 'realtor_zip',
+    geoType: 'zip',
+    zillowIdField: 'region_name',     // zillow_zip stores ZIP code in region_name
+    zillowNameField: 'region_name',
+    realtorIdField: 'postal_code',    // realtor_zip uses postal_code
+  },
+];
+
+async function calculateInvestmentMetricsForGeo(
+  supabase: SupabaseClient,
+  config: InvestmentGeoConfig
 ): Promise<{ processed: number; stored: number; errors: string[] }> {
   const errors: string[] = [];
+  const PAGE_SIZE = 1000;
 
-  // Get latest ZORI date
+  // Get latest ZORI date for this geo level
   const { data: zoriDateRow } = await supabase
-    .from('zillow_metro')
+    .from(config.zillowTable)
     .select('period_date')
     .eq('metric_name', 'zori')
     .order('period_date', { ascending: false })
@@ -175,26 +213,41 @@ async function calculateInvestmentMetrics(
     .single();
 
   if (!zoriDateRow?.period_date) {
-    return { processed: 0, stored: 0, errors: ['No ZORI data available'] };
+    return { processed: 0, stored: 0, errors: [`No ZORI data for ${config.geoType}`] };
   }
 
   const targetDate = zoriDateRow.period_date;
 
-  // Get ZORI data
-  const { data: zoriData, error: zoriError } = await supabase
-    .from('zillow_metro')
-    .select('region_id, region_name, value, cbsa_code')
-    .eq('metric_name', 'zori')
-    .eq('period_date', targetDate)
-    .not('value', 'is', null);
+  // Get ZORI data (paginated for large tables)
+  let zoriData: any[] = [];
+  let offset = 0;
 
-  if (zoriError || !zoriData) {
-    return { processed: 0, stored: 0, errors: [zoriError?.message || 'Failed to fetch ZORI'] };
+  while (true) {
+    const { data, error } = await supabase
+      .from(config.zillowTable)
+      .select(`region_id, region_name, value, ${config.zillowIdField}`)
+      .eq('metric_name', 'zori')
+      .eq('period_date', targetDate)
+      .not('value', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      errors.push(error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    zoriData = zoriData.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    offset += data.length;
+  }
+
+  if (zoriData.length === 0) {
+    return { processed: 0, stored: 0, errors: errors.length > 0 ? errors : [`No ZORI data for ${config.geoType}`] };
   }
 
   // Get Realtor listing prices
   const { data: realtorDateRow } = await supabase
-    .from('realtor_metro')
+    .from(config.realtorTable)
     .select('period_date')
     .order('period_date', { ascending: false })
     .limit(1)
@@ -202,36 +255,55 @@ async function calculateInvestmentMetrics(
 
   const realtorDate = realtorDateRow?.period_date || targetDate;
 
-  const { data: realtorData } = await supabase
-    .from('realtor_metro')
-    .select('cbsa_code, median_listing_price')
-    .eq('period_date', realtorDate)
-    .not('median_listing_price', 'is', null);
-
+  // Paginated fetch for Realtor prices
   const priceByCode: Record<string, number> = {};
-  if (realtorData) {
-    for (const row of realtorData) {
-      if (row.cbsa_code && row.median_listing_price) {
-        priceByCode[row.cbsa_code] = row.median_listing_price;
+  offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(config.realtorTable)
+      .select(`${config.realtorIdField}, median_listing_price`)
+      .eq('period_date', realtorDate)
+      .not('median_listing_price', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      errors.push(error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    for (const row of data) {
+      const id = row[config.realtorIdField];
+      if (id && row.median_listing_price) {
+        priceByCode[id] = row.median_listing_price;
       }
     }
+
+    if (data.length < PAGE_SIZE) break;
+    offset += data.length;
   }
 
   // Calculate and upsert
   let stored = 0;
   const records: any[] = [];
 
-  for (const metro of zoriData) {
-    const cbsaCode = metro.cbsa_code;
-    const zori = metro.value;
-    const price = cbsaCode ? priceByCode[cbsaCode] : null;
+  for (const row of zoriData) {
+    const geoId = row[config.zillowIdField];
+    const zori = row.value;
+    const price = geoId ? priceByCode[geoId] : null;
 
     if (!zori || !price) continue;
 
+    let geoName = row.region_name || row[config.zillowNameField];
+    if (config.geoType === 'zip') {
+      geoName = geoName || `ZIP ${geoId}`;
+    }
+
     records.push({
-      geography_id: cbsaCode,
-      geography_type: 'metro',
-      geography_name: metro.region_name,
+      geography_id: geoId,
+      geography_type: config.geoType,
+      geography_name: geoName,
       period_date: targetDate,
       cap_rate: calculateCapRate(zori, price) ? Math.round(calculateCapRate(zori, price)! * 100) / 100 : null,
       gross_yield: calculateGrossYield(zori, price) ? Math.round(calculateGrossYield(zori, price)! * 100) / 100 : null,
@@ -259,6 +331,25 @@ async function calculateInvestmentMetrics(
   }
 
   return { processed: zoriData.length, stored, errors };
+}
+
+async function calculateInvestmentMetrics(
+  supabase: SupabaseClient
+): Promise<{ processed: number; stored: number; errors: string[]; byGeo: Record<string, { processed: number; stored: number }> }> {
+  const byGeo: Record<string, { processed: number; stored: number }> = {};
+  let totalProcessed = 0;
+  let totalStored = 0;
+  const allErrors: string[] = [];
+
+  for (const config of INVESTMENT_GEO_CONFIGS) {
+    const result = await calculateInvestmentMetricsForGeo(supabase, config);
+    byGeo[config.geoType] = { processed: result.processed, stored: result.stored };
+    totalProcessed += result.processed;
+    totalStored += result.stored;
+    allErrors.push(...result.errors);
+  }
+
+  return { processed: totalProcessed, stored: totalStored, errors: allErrors, byGeo };
 }
 
 // ============================================================================
@@ -967,7 +1058,7 @@ async function calculate5YrGrowth(
 // ============================================================================
 
 export interface RefreshResult {
-  investmentMetrics: { processed: number; stored: number; errors: string[] };
+  investmentMetrics: { processed: number; stored: number; errors: string[]; byGeo: Record<string, { processed: number; stored: number }> };
   overvalued: { processed: number; stored: number; errors: string[] };
   growth5YrMetros: { processed: number; stored: number };
   growth5YrStates: { processed: number; stored: number };
@@ -1022,7 +1113,7 @@ export async function refreshCalculatedMetrics(
                       incomeToBuy.total.stored + affordableHomePrice.total.stored +
                       yearsToSave.total.stored;
 
-  log(`   Investment metrics: ${investmentMetrics.stored} stored`);
+  log(`   Investment metrics (cap_rate, gross_yield): ${investmentMetrics.stored} stored (${Object.keys(investmentMetrics.byGeo).map(g => `${g}:${investmentMetrics.byGeo[g].stored}`).join(', ')})`);
   log(`   Overvalued %: ${overvalued.stored} stored`);
   log(`   5-yr growth metros: ${growth5YrMetros.stored} stored`);
   log(`   5-yr growth states: ${growth5YrStates.stored} stored`);
