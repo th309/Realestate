@@ -343,6 +343,7 @@ export class MarketsService {
 
   // Get all metros for client-side filtering (fast search)
   // Uses realtor_metro which has metros we actually have data for
+  // Returns deduped list sorted by name - used by frontend for instant search
   async getAllMetros() {
     const { data, error } = await this.supabase
       .from('realtor_metro')

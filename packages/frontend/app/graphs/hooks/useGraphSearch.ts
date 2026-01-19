@@ -106,6 +106,72 @@ const FALLBACK_METROS: Metro[] = [
     { regionId: 73, name: 'Boise', fullName: 'Boise City', state: 'ID' },
     { regionId: 74, name: 'Colorado Springs', fullName: 'Colorado Springs', state: 'CO' },
     { regionId: 75, name: 'Charleston', fullName: 'Charleston-North Charleston', state: 'SC' },
+    // Additional smaller metros
+    { regionId: 76, name: 'Casper', fullName: 'Casper', state: 'WY' },
+    { regionId: 77, name: 'Cheyenne', fullName: 'Cheyenne', state: 'WY' },
+    { regionId: 78, name: 'Spokane', fullName: 'Spokane-Spokane Valley', state: 'WA' },
+    { regionId: 79, name: 'Wichita', fullName: 'Wichita', state: 'KS' },
+    { regionId: 80, name: 'Des Moines', fullName: 'Des Moines-West Des Moines', state: 'IA' },
+    { regionId: 81, name: 'Madison', fullName: 'Madison', state: 'WI' },
+    { regionId: 82, name: 'Lexington', fullName: 'Lexington-Fayette', state: 'KY' },
+    { regionId: 83, name: 'Chattanooga', fullName: 'Chattanooga', state: 'TN' },
+    { regionId: 84, name: 'Provo', fullName: 'Provo-Orem', state: 'UT' },
+    { regionId: 85, name: 'Ogden', fullName: 'Ogden-Clearfield', state: 'UT' },
+    { regionId: 86, name: 'Huntsville', fullName: 'Huntsville', state: 'AL' },
+    { regionId: 87, name: 'Mobile', fullName: 'Mobile', state: 'AL' },
+    { regionId: 88, name: 'Shreveport', fullName: 'Shreveport-Bossier City', state: 'LA' },
+    { regionId: 89, name: 'Pensacola', fullName: 'Pensacola-Ferry Pass-Brent', state: 'FL' },
+    { regionId: 90, name: 'Savannah', fullName: 'Savannah', state: 'GA' },
+    { regionId: 91, name: 'Greenville', fullName: 'Greenville-Anderson', state: 'SC' },
+    { regionId: 92, name: 'Fayetteville', fullName: 'Fayetteville-Springdale-Rogers', state: 'AR' },
+    { regionId: 93, name: 'Akron', fullName: 'Akron', state: 'OH' },
+    { regionId: 94, name: 'Toledo', fullName: 'Toledo', state: 'OH' },
+    { regionId: 95, name: 'Durham', fullName: 'Durham-Chapel Hill', state: 'NC' },
+    { regionId: 96, name: 'Cape Coral', fullName: 'Cape Coral-Fort Myers', state: 'FL' },
+    { regionId: 97, name: 'Lakeland', fullName: 'Lakeland-Winter Haven', state: 'FL' },
+    { regionId: 98, name: 'Sarasota', fullName: 'Sarasota-Bradenton', state: 'FL' },
+    { regionId: 99, name: 'Palm Bay', fullName: 'Palm Bay-Melbourne-Titusville', state: 'FL' },
+    { regionId: 100, name: 'Deltona', fullName: 'Deltona-Daytona Beach-Ormond Beach', state: 'FL' },
+    { regionId: 101, name: 'North Port', fullName: 'North Port-Sarasota-Bradenton', state: 'FL' },
+    { regionId: 102, name: 'Modesto', fullName: 'Modesto', state: 'CA' },
+    { regionId: 103, name: 'Oxnard', fullName: 'Oxnard-Thousand Oaks-Ventura', state: 'CA' },
+    { regionId: 104, name: 'Santa Rosa', fullName: 'Santa Rosa-Petaluma', state: 'CA' },
+    { regionId: 105, name: 'Visalia', fullName: 'Visalia', state: 'CA' },
+    { regionId: 106, name: 'Salem', fullName: 'Salem', state: 'OR' },
+    { regionId: 107, name: 'Eugene', fullName: 'Eugene-Springfield', state: 'OR' },
+    { regionId: 108, name: 'Fort Collins', fullName: 'Fort Collins', state: 'CO' },
+    { regionId: 109, name: 'Reno', fullName: 'Reno', state: 'NV' },
+    { regionId: 110, name: 'Anchorage', fullName: 'Anchorage', state: 'AK' },
+    { regionId: 111, name: 'Honolulu', fullName: 'Honolulu', state: 'HI' },
+    { regionId: 112, name: 'Springfield', fullName: 'Springfield', state: 'MO' },
+    { regionId: 113, name: 'Youngstown', fullName: 'Youngstown-Warren-Boardman', state: 'OH' },
+    { regionId: 114, name: 'Scranton', fullName: 'Scranton-Wilkes-Barre', state: 'PA' },
+    { regionId: 115, name: 'Harrisburg', fullName: 'Harrisburg-Carlisle', state: 'PA' },
+    { regionId: 116, name: 'Lancaster', fullName: 'Lancaster', state: 'PA' },
+    { regionId: 117, name: 'Reading', fullName: 'Reading', state: 'PA' },
+    { regionId: 118, name: 'Winston-Salem', fullName: 'Winston-Salem', state: 'NC' },
+    { regionId: 119, name: 'Asheville', fullName: 'Asheville', state: 'NC' },
+    { regionId: 120, name: 'Fargo', fullName: 'Fargo', state: 'ND' },
+    { regionId: 121, name: 'Sioux Falls', fullName: 'Sioux Falls', state: 'SD' },
+    { regionId: 122, name: 'Billings', fullName: 'Billings', state: 'MT' },
+    { regionId: 123, name: 'Missoula', fullName: 'Missoula', state: 'MT' },
+    { regionId: 124, name: 'Lincoln', fullName: 'Lincoln', state: 'NE' },
+    { regionId: 125, name: 'Topeka', fullName: 'Topeka', state: 'KS' },
+    { regionId: 126, name: 'Cedar Rapids', fullName: 'Cedar Rapids', state: 'IA' },
+    { regionId: 127, name: 'Davenport', fullName: 'Davenport-Moline-Rock Island', state: 'IA' },
+    { regionId: 128, name: 'Green Bay', fullName: 'Green Bay', state: 'WI' },
+    { regionId: 129, name: 'Appleton', fullName: 'Appleton', state: 'WI' },
+    { regionId: 130, name: 'Duluth', fullName: 'Duluth', state: 'MN' },
+    { regionId: 131, name: 'Peoria', fullName: 'Peoria', state: 'IL' },
+    { regionId: 132, name: 'Rockford', fullName: 'Rockford', state: 'IL' },
+    { regionId: 133, name: 'South Bend', fullName: 'South Bend-Mishawaka', state: 'IN' },
+    { regionId: 134, name: 'Fort Wayne', fullName: 'Fort Wayne', state: 'IN' },
+    { regionId: 135, name: 'Evansville', fullName: 'Evansville', state: 'IN' },
+    { regionId: 136, name: 'Lansing', fullName: 'Lansing-East Lansing', state: 'MI' },
+    { regionId: 137, name: 'Ann Arbor', fullName: 'Ann Arbor', state: 'MI' },
+    { regionId: 138, name: 'Flint', fullName: 'Flint', state: 'MI' },
+    { regionId: 139, name: 'Kalamazoo', fullName: 'Kalamazoo-Portage', state: 'MI' },
+    { regionId: 140, name: 'Canton', fullName: 'Canton-Massillon', state: 'OH' },
 ];
 
 // Cache for all metros (loaded once, used for instant filtering)
@@ -137,8 +203,8 @@ async function loadAllMetros(): Promise<Metro[]> {
     }
 
     // Try to load from API, fall back to static list on any error
-    // Minimum threshold - API should return at least 50 metros to be considered valid
-    const MIN_METRO_COUNT = 50;
+    // Minimum threshold - API should return at least 10 metros to be considered valid
+    const MIN_METRO_COUNT = 10;
 
     metrosLoadingPromise = (async () => {
         try {
@@ -174,7 +240,7 @@ async function loadAllMetros(): Promise<Metro[]> {
             console.warn('[Metro Load] API unavailable, using fallback list:', err);
         }
 
-        // Fallback to static list (75 major metros with full search data)
+        // Fallback to static list (140 metros with full search data)
         console.log(`[Metro Load] Using fallback list with ${FALLBACK_METROS.length} metros`);
         metrosCache = FALLBACK_METROS;
         return FALLBACK_METROS;
