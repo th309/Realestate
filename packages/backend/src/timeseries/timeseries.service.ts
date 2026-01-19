@@ -248,17 +248,21 @@ export class TimeSeriesService {
         }
 
       case 'metro':
-        // Zillow: can use region_name (metro name like "Bloomington, IL")
-        // Realtor/Census: use cbsa_code
+        // If regionId is numeric, use cbsa_code for all sources
+        if (/^\d+$/.test(regionId)) {
+          return query.eq('cbsa_code', regionId);
+        }
+        // Zillow: use region_name for text-based lookup
         if (source === 'zillow') {
-          // If regionId looks like a CBSA code (numeric), use cbsa_code
-          // Otherwise use region_name (metro name from our search)
-          if (/^\d+$/.test(regionId)) {
-            return query.eq('cbsa_code', regionId);
-          }
           return query.eq('region_name', regionId);
         }
-        return query.eq('cbsa_code', regionId);
+        // Realtor: use cbsa_title with ILIKE for fuzzy matching
+        // This allows matching "Chicago" to "Chicago-Naperville-Elgin, IL-IN"
+        if (source === 'realtor') {
+          return query.ilike('cbsa_title', `${regionId}%`);
+        }
+        // Census/Economic: try cbsa_title first (text), fall back to cbsa_code
+        return query.ilike('cbsa_title', `${regionId}%`);
 
       case 'county':
         // Realtor: county_fips
