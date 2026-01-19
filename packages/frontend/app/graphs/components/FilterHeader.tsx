@@ -82,9 +82,9 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   const getSearchPlaceholder = () => {
     switch (geoLevel) {
       case 'metro': return 'Search metros (e.g., Chicago, Miami)';
-      case 'county': return 'Search counties';
-      case 'city': return 'Search cities';
-      case 'zip': return 'Search ZIP codes';
+      case 'county': return 'Search counties (e.g., Cook, Harris)';
+      case 'city': return 'Search cities (e.g., Austin, Denver)';
+      case 'zip': return 'Search ZIP codes (e.g., 90210, 33139)';
       default: return 'Search location';
     }
   };
