@@ -370,4 +370,56 @@ export class MarketsService {
 
     return Array.from(metroMap.values());
   }
+
+  // Get all counties for client-side filtering (fast search)
+  // Uses realtor_county which has counties we actually have data for
+  async getAllCounties() {
+    const { data, error } = await this.supabase
+      .from('realtor_county')
+      .select('county_fips, county_name, state_id')
+      .order('county_name');
+
+    if (error) throw error;
+
+    // Dedupe by county_fips
+    const countyMap = new Map<
+      string,
+      { fips: string; name: string; state: string }
+    >();
+    for (const row of data || []) {
+      if (row.county_name && row.county_fips && !countyMap.has(row.county_fips)) {
+        countyMap.set(row.county_fips, {
+          fips: row.county_fips,
+          name: row.county_name,
+          state: row.state_id || '',
+        });
+      }
+    }
+
+    return Array.from(countyMap.values());
+  }
+
+  // Get all ZIP codes for client-side filtering (fast search)
+  // Uses realtor_zip which has ZIPs we actually have data for
+  async getAllZips() {
+    const { data, error } = await this.supabase
+      .from('realtor_zip')
+      .select('postal_code, zip_name')
+      .order('postal_code');
+
+    if (error) throw error;
+
+    // Dedupe by postal_code
+    const zipMap = new Map<string, { code: string; name: string }>();
+    for (const row of data || []) {
+      if (row.postal_code && !zipMap.has(row.postal_code)) {
+        zipMap.set(row.postal_code, {
+          code: row.postal_code,
+          name: row.zip_name || row.postal_code,
+        });
+      }
+    }
+
+    return Array.from(zipMap.values());
+  }
 }

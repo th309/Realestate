@@ -28,6 +28,17 @@ interface Metro {
     state?: string; // Primary state for display
 }
 
+interface County {
+    fips: string;
+    name: string;
+    state: string;
+}
+
+interface ZipCode {
+    code: string;
+    name: string;
+}
+
 // Static fallback list of major metros (used when backend is unavailable)
 // Includes fullName for better search matching (e.g., searching "arlington" finds "Washington, DC")
 const FALLBACK_METROS: Metro[] = [
@@ -174,9 +185,15 @@ const FALLBACK_METROS: Metro[] = [
     { regionId: 140, name: 'Canton', fullName: 'Canton-Massillon', state: 'OH' },
 ];
 
-// Cache for all metros (loaded once, used for instant filtering)
+// Caches for client-side filtering (loaded once per session)
 let metrosCache: Metro[] | null = null;
 let metrosLoadingPromise: Promise<Metro[]> | null = null;
+
+let countiesCache: County[] | null = null;
+let countiesLoadingPromise: Promise<County[]> | null = null;
+
+let zipsCache: ZipCode[] | null = null;
+let zipsLoadingPromise: Promise<ZipCode[]> | null = null;
 
 // Parse metro name to extract primary state abbreviation
 // "Chicago-Naperville-Elgin, IL-IN-WI" -> "IL"
@@ -249,20 +266,90 @@ async function loadAllMetros(): Promise<Metro[]> {
     return metrosLoadingPromise;
 }
 
+async function loadAllCounties(): Promise<County[]> {
+    if (countiesCache && countiesCache.length > 0) {
+        return countiesCache;
+    }
+
+    if (countiesLoadingPromise) {
+        return countiesLoadingPromise;
+    }
+
+    countiesLoadingPromise = (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/markets/counties`);
+            if (!res.ok) {
+                throw new Error(`API returned ${res.status}`);
+            }
+            const data = await res.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                console.log(`[County Load] API returned ${data.length} counties`);
+                countiesCache = data;
+                return data;
+            }
+        } catch (err) {
+            console.warn('[County Load] API unavailable:', err);
+        }
+
+        countiesCache = [];
+        return [];
+    })();
+
+    return countiesLoadingPromise;
+}
+
+async function loadAllZips(): Promise<ZipCode[]> {
+    if (zipsCache && zipsCache.length > 0) {
+        return zipsCache;
+    }
+
+    if (zipsLoadingPromise) {
+        return zipsLoadingPromise;
+    }
+
+    zipsLoadingPromise = (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/markets/zips`);
+            if (!res.ok) {
+                throw new Error(`API returned ${res.status}`);
+            }
+            const data = await res.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                console.log(`[ZIP Load] API returned ${data.length} ZIP codes`);
+                zipsCache = data;
+                return data;
+            }
+        } catch (err) {
+            console.warn('[ZIP Load] API unavailable:', err);
+        }
+
+        zipsCache = [];
+        return [];
+    })();
+
+    return zipsLoadingPromise;
+}
+
 export function useGraphSearch(geoLevel?: GeoLevel) {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
-    const [metrosLoaded, setMetrosLoaded] = useState(false);
+    const [dataLoaded, setDataLoaded] = useState<Record<string, boolean>>({});
     const searchRef = useRef<HTMLDivElement>(null);
 
-    // Preload metros when metro level is selected
+    // Preload data when geo level is selected
     useEffect(() => {
-        if (geoLevel === 'metro' && !metrosLoaded) {
-            loadAllMetros().then(() => setMetrosLoaded(true));
+        if (geoLevel === 'metro' && !dataLoaded.metro) {
+            loadAllMetros().then(() => setDataLoaded(prev => ({ ...prev, metro: true })));
+        } else if (geoLevel === 'county' && !dataLoaded.county) {
+            loadAllCounties().then(() => setDataLoaded(prev => ({ ...prev, county: true })));
+        } else if (geoLevel === 'zip' && !dataLoaded.zip) {
+            loadAllZips().then(() => setDataLoaded(prev => ({ ...prev, zip: true })));
         }
-    }, [geoLevel, metrosLoaded]);
+    }, [geoLevel, dataLoaded]);
 
     // Close search results when clicking outside
     useEffect(() => {
@@ -340,7 +427,88 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                 return;
             }
 
-            // For other levels: use Mapbox API
+            // For county level: use cached data for instant filtering
+            if (geoLevel === 'county') {
+                const counties = await loadAllCounties();
+                const lowerQuery = query.toLowerCase();
+
+                console.log(`[County Search] Query: "${query}", Counties loaded: ${counties.length}`);
+
+                const scored = counties
+                    .map(c => {
+                        const name = c.name?.toLowerCase() || '';
+                        const state = c.state?.toLowerCase() || '';
+
+                        let score = 0;
+                        if (name.startsWith(lowerQuery)) score = 100;
+                        else if (name.split(/[\s-]/).some(word => word.startsWith(lowerQuery))) score = 80;
+                        else if (name.includes(lowerQuery)) score = 50;
+                        else if (state.startsWith(lowerQuery)) score = 30;
+
+                        return { county: c, score };
+                    })
+                    .filter(({ score }) => score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                const filtered = scored.map(({ county }) => ({
+                    id: `county-${county.fips}`,
+                    name: county.name,
+                    subtitle: county.state ? `${county.state} County` : 'County',
+                    value: county.name, // Use county name for API calls
+                    type: 'county' as const,
+                    center: [0, 0] as [number, number],
+                    state: county.state,
+                }));
+
+                console.log(`[County Search] Found ${filtered.length} results`);
+                setSearchResults(filtered);
+                setSearchLoading(false);
+                return;
+            }
+
+            // For ZIP level: use cached data for instant filtering
+            if (geoLevel === 'zip') {
+                const zips = await loadAllZips();
+                const lowerQuery = query.toLowerCase();
+
+                console.log(`[ZIP Search] Query: "${query}", ZIPs loaded: ${zips.length}`);
+
+                const scored = zips
+                    .map(z => {
+                        const code = z.code?.toLowerCase() || '';
+                        const name = z.name?.toLowerCase() || '';
+
+                        let score = 0;
+                        if (code.startsWith(lowerQuery)) score = 100; // ZIP code starts with query
+                        else if (name.startsWith(lowerQuery)) score = 90; // City name starts with query
+                        else if (name.split(/[\s,]/).some(word => word.startsWith(lowerQuery))) score = 70;
+                        else if (code.includes(lowerQuery)) score = 50;
+                        else if (name.includes(lowerQuery)) score = 40;
+
+                        return { zip: z, score };
+                    })
+                    .filter(({ score }) => score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                const filtered = scored.map(({ zip }) => ({
+                    id: `zip-${zip.code}`,
+                    name: zip.name || zip.code,
+                    subtitle: `ZIP ${zip.code}`,
+                    value: zip.code, // Use ZIP code for API calls
+                    type: 'zip' as const,
+                    center: [0, 0] as [number, number],
+                    state: '',
+                }));
+
+                console.log(`[ZIP Search] Found ${filtered.length} results`);
+                setSearchResults(filtered);
+                setSearchLoading(false);
+                return;
+            }
+
+            // For city level: use Mapbox API (we don't have city data in our DB)
             const mapboxTypes = getMapboxTypes(geoLevel);
             const mapboxResponse = await fetch(
                 `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +

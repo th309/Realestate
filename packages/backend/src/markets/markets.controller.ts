@@ -56,10 +56,22 @@ export class MarketsController {
     );
   }
 
+  @Get('counties')
+  @ApiOperation({ summary: 'Get all counties (for client-side search)' })
+  async getAllCounties() {
+    return this.marketsService.getAllCounties();
+  }
+
   @Get('counties/home-values')
   @ApiOperation({ summary: 'Get median home values by county' })
   async getCountyHomeValues() {
     return this.marketsService.getCountyHomeValues();
+  }
+
+  @Get('zips')
+  @ApiOperation({ summary: 'Get all ZIP codes (for client-side search)' })
+  async getAllZips() {
+    return this.marketsService.getAllZips();
   }
 
   @Get('zips/home-values')
