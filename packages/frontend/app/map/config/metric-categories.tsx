@@ -171,10 +171,7 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
     metric('inventory_yoy'),
     metric('pending_ratio'),
     metric('new_listings_yoy', { isNew: true }),
-    metric('vacancy_rate', { isPremium: true }),
     metric('hotness_score', { isNew: true }),
-    metric('demand_score', { isNew: true }),
-    metric('supply_score', { isNew: true }),
   ],
 };
 
