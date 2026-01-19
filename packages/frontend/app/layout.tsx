@@ -114,6 +114,11 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
+        <footer className="bg-surface-container border-t border-outline-variant py-3 px-4">
+          <p className="text-center text-xs text-on-surface-variant">
+            Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
+          </p>
+        </footer>
       </body>
     </html>
   );
