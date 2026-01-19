@@ -126,30 +126,50 @@ function parseMetroState(fullName: string): string {
 }
 
 async function loadAllMetros(): Promise<Metro[]> {
-    if (metrosCache) return metrosCache;
+    // Return cached data immediately if available
+    if (metrosCache && metrosCache.length > 0) {
+        return metrosCache;
+    }
 
-    if (metrosLoadingPromise) return metrosLoadingPromise;
+    // If a load is in progress, wait for it
+    if (metrosLoadingPromise) {
+        return metrosLoadingPromise;
+    }
 
-    metrosLoadingPromise = fetch(`${API_BASE_URL}/markets/metros`)
-        .then(res => {
-            if (!res.ok) throw new Error('API not available');
-            return res.json();
-        })
-        .then((data: Metro[]) => {
-            if (data && data.length > 0) {
-                metrosCache = data;
-                return data;
+    // Try to load from API, fall back to static list on any error
+    metrosLoadingPromise = (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/markets/metros`);
+            if (!res.ok) {
+                throw new Error(`API returned ${res.status}`);
             }
-            // Use fallback if API returns empty
-            metrosCache = FALLBACK_METROS;
-            return FALLBACK_METROS;
-        })
-        .catch(err => {
-            console.warn('Using fallback metros list:', err.message);
-            metrosLoadingPromise = null;
-            metrosCache = FALLBACK_METROS;
-            return FALLBACK_METROS;
-        });
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                // Merge with fallback data to ensure we have fullName for search
+                const apiMetros = data.map((m: { regionId: number; name: string }) => {
+                    // Try to find matching fallback metro for additional fields
+                    const fallback = FALLBACK_METROS.find(
+                        f => f.name.toLowerCase() === m.name.toLowerCase() ||
+                             m.name.toLowerCase().startsWith(f.name.toLowerCase())
+                    );
+                    return {
+                        regionId: m.regionId,
+                        name: m.name,
+                        fullName: fallback?.fullName || m.name,
+                        state: fallback?.state || parseMetroState(m.name),
+                    };
+                });
+                metrosCache = apiMetros;
+                return apiMetros;
+            }
+        } catch (err) {
+            console.warn('Metro API unavailable, using fallback list:', err);
+        }
+
+        // Fallback to static list
+        metrosCache = FALLBACK_METROS;
+        return FALLBACK_METROS;
+    })();
 
     return metrosLoadingPromise;
 }
@@ -198,11 +218,13 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                 const metros = await loadAllMetros();
                 const lowerQuery = query.toLowerCase();
 
+                console.log(`[Metro Search] Query: "${query}", Metros loaded: ${metros.length}`);
+
                 // Search against both name and fullName (for broader matching)
                 // e.g., searching "arlington" will find "Washington-Arlington-Alexandria" metro
                 const filtered = metros
                     .filter(m => {
-                        const nameMatch = m.name.toLowerCase().includes(lowerQuery);
+                        const nameMatch = m.name?.toLowerCase().includes(lowerQuery);
                         const fullNameMatch = m.fullName?.toLowerCase().includes(lowerQuery);
                         return nameMatch || fullNameMatch;
                     })
@@ -219,6 +241,7 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                         };
                     });
 
+                console.log(`[Metro Search] Found ${filtered.length} results`);
                 setSearchResults(filtered);
                 setSearchLoading(false);
                 return;
