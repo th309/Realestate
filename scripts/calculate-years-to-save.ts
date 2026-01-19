@@ -35,7 +35,7 @@ interface RealtorConfig {
 }
 
 const REALTOR_CONFIGS: RealtorConfig[] = [
-  { tableName: 'realtor_national', geoType: 'national', idField: 'region_id', nameField: 'region_name' },
+  { tableName: 'realtor_national', geoType: 'national', idField: 'country', nameField: 'country' },
   { tableName: 'realtor_state', geoType: 'state', idField: 'state_id', nameField: 'state_name' },
   { tableName: 'realtor_metro', geoType: 'metro', idField: 'cbsa_code', nameField: 'cbsa_title' },
   { tableName: 'realtor_county', geoType: 'county', idField: 'county_fips', nameField: 'county_name' },
