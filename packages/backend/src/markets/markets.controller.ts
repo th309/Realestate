@@ -74,6 +74,12 @@ export class MarketsController {
     return this.marketsService.getAllZips();
   }
 
+  @Get('cities')
+  @ApiOperation({ summary: 'Get all cities (for client-side search)' })
+  async getAllCities() {
+    return this.marketsService.getAllCities();
+  }
+
   @Get('zips/home-values')
   @ApiOperation({ summary: 'Get median home values by ZIP code' })
   async getZipHomeValues() {

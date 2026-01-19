@@ -422,4 +422,32 @@ export class MarketsService {
 
     return Array.from(zipMap.values());
   }
+
+  // Get all cities for client-side filtering (fast search)
+  // Uses zillow_city which has cities we have data for
+  async getAllCities() {
+    const { data, error } = await this.supabase
+      .from('zillow_city')
+      .select('region_id, region_name, state_code')
+      .order('region_name');
+
+    if (error) throw error;
+
+    // Dedupe by region_id
+    const cityMap = new Map<
+      number,
+      { id: number; name: string; state: string }
+    >();
+    for (const row of data || []) {
+      if (row.region_name && row.region_id && !cityMap.has(row.region_id)) {
+        cityMap.set(row.region_id, {
+          id: row.region_id,
+          name: row.region_name,
+          state: row.state_code || '',
+        });
+      }
+    }
+
+    return Array.from(cityMap.values());
+  }
 }

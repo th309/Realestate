@@ -2,24 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
 import type { GeoLevel } from '@/app/map/config/metrics';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-interface MapboxContext {
-    id: string;
-    short_code?: string;
-    text?: string;
-}
-
-interface MapboxFeature {
-    id: string;
-    text: string; // Short name (e.g., "Hagerstown" or "21740")
-    place_name: string; // Full formatted name (e.g., "21740, Hagerstown, Maryland, United States")
-    place_type: string[];
-    center: [number, number];
-    bbox?: [number, number, number, number];
-    context?: MapboxContext[];
-}
 
 interface Metro {
     regionId: number;
@@ -37,6 +20,12 @@ interface County {
 interface ZipCode {
     code: string;
     name: string;
+}
+
+interface City {
+    id: number;
+    name: string;
+    state: string;
 }
 
 // Static fallback list of major metros (used when backend is unavailable)
@@ -195,6 +184,9 @@ let countiesLoadingPromise: Promise<County[]> | null = null;
 let zipsCache: ZipCode[] | null = null;
 let zipsLoadingPromise: Promise<ZipCode[]> | null = null;
 
+let citiesCache: City[] | null = null;
+let citiesLoadingPromise: Promise<City[]> | null = null;
+
 // Parse metro name to extract primary state abbreviation
 // "Chicago-Naperville-Elgin, IL-IN-WI" -> "IL"
 // "Washington" -> ""
@@ -332,6 +324,39 @@ async function loadAllZips(): Promise<ZipCode[]> {
     return zipsLoadingPromise;
 }
 
+async function loadAllCities(): Promise<City[]> {
+    if (citiesCache && citiesCache.length > 0) {
+        return citiesCache;
+    }
+
+    if (citiesLoadingPromise) {
+        return citiesLoadingPromise;
+    }
+
+    citiesLoadingPromise = (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/markets/cities`);
+            if (!res.ok) {
+                throw new Error(`API returned ${res.status}`);
+            }
+            const data = await res.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                console.log(`[City Load] API returned ${data.length} cities`);
+                citiesCache = data;
+                return data;
+            }
+        } catch (err) {
+            console.warn('[City Load] API unavailable:', err);
+        }
+
+        citiesCache = [];
+        return [];
+    })();
+
+    return citiesLoadingPromise;
+}
+
 export function useGraphSearch(geoLevel?: GeoLevel) {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -348,6 +373,8 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
             loadAllCounties().then(() => setDataLoaded(prev => ({ ...prev, county: true })));
         } else if (geoLevel === 'zip' && !dataLoaded.zip) {
             loadAllZips().then(() => setDataLoaded(prev => ({ ...prev, zip: true })));
+        } else if (geoLevel === 'city' && !dataLoaded.city) {
+            loadAllCities().then(() => setDataLoaded(prev => ({ ...prev, city: true })));
         }
     }, [geoLevel, dataLoaded]);
 
@@ -508,67 +535,48 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                 return;
             }
 
-            // For city level: use Mapbox API (we don't have city data in our DB)
-            const mapboxTypes = getMapboxTypes(geoLevel);
-            const mapboxResponse = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-                `access_token=${MAPBOX_TOKEN}&` +
-                `country=US&` +
-                `types=${mapboxTypes}&` +
-                `limit=8`
-            );
+            // For city level: use cached data for instant filtering
+            if (geoLevel === 'city') {
+                const cities = await loadAllCities();
+                const lowerQuery = query.toLowerCase();
 
-            const mapboxData = await mapboxResponse.json();
-            const features: MapboxFeature[] = mapboxData.features || [];
+                console.log(`[City Search] Query: "${query}", Cities loaded: ${cities.length}`);
 
-            const results: SearchResult[] = features.map((feature: MapboxFeature) => {
-                let type: SearchResult['type'] = 'city';
-                if (feature.place_type.includes('region')) type = 'state';
-                else if (feature.place_type.includes('postcode')) type = 'zip';
-                else if (feature.place_type.includes('district')) type = 'county';
-                else if (feature.place_type.includes('place')) type = 'city';
+                const scored = cities
+                    .map(c => {
+                        const name = c.name?.toLowerCase() || '';
+                        const state = c.state?.toLowerCase() || '';
 
-                // Extract context for building subtitle
-                const stateContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('region'));
-                const placeContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('place'));
-                const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
-                const stateName = stateContext?.text || stateAbbrev;
+                        let score = 0;
+                        if (name.startsWith(lowerQuery)) score = 100;
+                        else if (name.split(/[\s-]/).some(word => word.startsWith(lowerQuery))) score = 80;
+                        else if (name.includes(lowerQuery)) score = 50;
+                        else if (state.startsWith(lowerQuery)) score = 30;
 
-                // Build name and subtitle based on type
-                let name = feature.text;
-                let subtitle = '';
+                        return { city: c, score };
+                    })
+                    .filter(({ score }) => score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
 
-                if (type === 'zip') {
-                    // For ZIP codes: show city name as primary, state + ZIP as subtitle
-                    name = placeContext?.text || feature.text;
-                    subtitle = `${stateName} ${feature.text}, United States`;
-                } else if (type === 'county') {
-                    // For counties: show county name, state as subtitle
-                    name = feature.text;
-                    subtitle = `${stateName}, United States`;
-                } else if (type === 'city') {
-                    // For cities: show city name, state as subtitle
-                    name = feature.text;
-                    subtitle = `${stateName}, United States`;
-                } else if (type === 'state') {
-                    // For states: show state name, country as subtitle
-                    name = feature.text;
-                    subtitle = 'United States';
-                }
+                const filtered = scored.map(({ city }) => ({
+                    id: `city-${city.id}`,
+                    name: city.name,
+                    subtitle: city.state ? `${city.state}, United States` : 'United States',
+                    value: city.name, // Use city name for API calls
+                    type: 'city' as const,
+                    center: [0, 0] as [number, number],
+                    state: city.state,
+                }));
 
-                return {
-                    id: feature.id,
-                    name,
-                    subtitle,
-                    value: feature.place_name, // Full name for API calls
-                    type,
-                    center: feature.center,
-                    bbox: feature.bbox,
-                    state: stateAbbrev,
-                };
-            });
+                console.log(`[City Search] Found ${filtered.length} results`);
+                setSearchResults(filtered);
+                setSearchLoading(false);
+                return;
+            }
 
-            setSearchResults(results);
+            // Fallback: no results for unknown geo levels
+            setSearchResults([]);
         } catch (err) {
             console.error('Search error:', err);
             setSearchResults([]);
@@ -594,20 +602,4 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
         handleSearch,
         clearSearch
     };
-}
-
-// Get appropriate Mapbox types based on geo level
-function getMapboxTypes(geoLevel?: GeoLevel): string {
-    switch (geoLevel) {
-        case 'state':
-            return 'region';
-        case 'county':
-            return 'district';
-        case 'city':
-            return 'place';
-        case 'zip':
-            return 'postcode';
-        default:
-            return 'region,place,postcode,district';
-    }
 }
