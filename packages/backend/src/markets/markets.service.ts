@@ -342,23 +342,31 @@ export class MarketsService {
   }
 
   // Get all metros for client-side filtering (fast search)
-  // Uses tiger_cbsa which has all 900+ US metro areas from Census TIGER data
+  // Uses realtor_metro which has metros we actually have data for
   async getAllMetros() {
     const { data, error } = await this.supabase
-      .from('tiger_cbsa')
-      .select('geoid, name')
-      .order('name');
+      .from('realtor_metro')
+      .select('cbsa_code, cbsa_title')
+      .order('cbsa_title');
 
     if (error) throw error;
 
-    // Map to expected format, filter out any null names
-    const metros = (data || [])
-      .filter((row) => row.name && !row.name.toLowerCase().includes('united states'))
-      .map((row) => ({
-        regionId: parseInt(row.geoid, 10) || 0,
-        name: row.name,
-      }));
+    // Dedupe by cbsa_code, filter out nulls and "United States"
+    const metroMap = new Map<string, { regionId: number; name: string }>();
+    for (const row of data || []) {
+      if (
+        row.cbsa_title &&
+        row.cbsa_code &&
+        !metroMap.has(row.cbsa_code) &&
+        !row.cbsa_title.toLowerCase().includes('united states')
+      ) {
+        metroMap.set(row.cbsa_code, {
+          regionId: parseInt(row.cbsa_code, 10) || 0,
+          name: row.cbsa_title,
+        });
+      }
+    }
 
-    return metros;
+    return Array.from(metroMap.values());
   }
 }
