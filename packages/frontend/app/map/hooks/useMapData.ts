@@ -53,6 +53,10 @@ const ZILLOW_ONLY_METRICS = new Set([
   'sfh_value_yoy',
   'condo_value',
   'condo_value_yoy',
+  // Calculated metrics (from calculated_metrics table)
+  'cap_rate',
+  'gross_yield',
+  'overvalued_pct',
 ]);
 
 // METRO_ONLY_METRICS is imported from ../config (single source of truth)
