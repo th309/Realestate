@@ -90,7 +90,6 @@ const HOMEBUYER_AFFORDABILITY: MetricCategory = {
     metric('affordable_home_price', { isNew: true }),
     metric('price_per_sqft', { isNew: true }),
     metric('years_to_save', { isPremium: true, isNew: true }),
-    metric('homeowner_affordability', { isPremium: true }),
     metric('home_value_yoy'),
     metric('home_value_5yr', { isPremium: true }),
   ],

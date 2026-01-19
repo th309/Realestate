@@ -14,7 +14,7 @@ export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly calculatedMetricsService: CalculatedMetricsService,
-  ) { }
+  ) {}
 
   /**
    * Get overvalued percentage for metros
@@ -49,7 +49,11 @@ export class MetricsController {
       .not('value', 'is', null);
 
     if (zhviError || !zhviData) {
-      return { success: false, error: zhviError?.message || 'Failed to fetch ZHVI data', data: [] };
+      return {
+        success: false,
+        error: zhviError?.message || 'Failed to fetch ZHVI data',
+        data: [],
+      };
     }
 
     // Try to get Census median income data for metros
@@ -71,16 +75,20 @@ export class MetricsController {
     }
 
     // Calculate overvalued percentage for each metro
-    const results = zhviData.map(metro => {
+    const results = zhviData.map((metro) => {
       const zhvi = metro.value;
       const cbsaCode = metro.cbsa_code;
 
       // Use local median income if available, otherwise national benchmark
-      const medianIncome = (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
+      const medianIncome =
+        (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
 
       // Calculate overvalued percentage
       const priceToIncome = zhvi / medianIncome;
-      const overvaluedPct = ((priceToIncome - PRICE_TO_INCOME_BENCHMARK) / PRICE_TO_INCOME_BENCHMARK) * 100;
+      const overvaluedPct =
+        ((priceToIncome - PRICE_TO_INCOME_BENCHMARK) /
+          PRICE_TO_INCOME_BENCHMARK) *
+        100;
 
       return {
         region_id: metro.region_id,
@@ -138,7 +146,11 @@ export class MetricsController {
       .not('value', 'is', null);
 
     if (zoriError || !zoriData) {
-      return { success: false, error: zoriError?.message || 'Failed to fetch ZORI data', data: [] };
+      return {
+        success: false,
+        error: zoriError?.message || 'Failed to fetch ZORI data',
+        data: [],
+      };
     }
 
     // Get ZHVI data for the same metros
@@ -160,11 +172,11 @@ export class MetricsController {
     // Calculate cap rate for each metro
     const EXPENSE_RATIO = 0.6; // NOI ratio
     const results = zoriData
-      .filter(metro => zhviByRegion[metro.region_id])
-      .map(metro => {
+      .filter((metro) => zhviByRegion[metro.region_id])
+      .map((metro) => {
         const zori = metro.value;
         const zhvi = zhviByRegion[metro.region_id];
-        const capRate = (zori * 12 * EXPENSE_RATIO) / zhvi * 100;
+        const capRate = ((zori * 12 * EXPENSE_RATIO) / zhvi) * 100;
 
         return {
           region_id: metro.region_id,
@@ -195,7 +207,10 @@ export class MetricsController {
   @Get('gross-yield/metros')
   async getMetroGrossYield() {
     // Try pre-calculated data first
-    const preCalculated = await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield');
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'gross_yield',
+      );
     if (preCalculated.success && preCalculated.data.length > 0) {
       return {
         success: true,
@@ -216,7 +231,8 @@ export class MetricsController {
    */
   @Get('grm/metros')
   async getMetroGRM() {
-    const preCalculated = await this.calculatedMetricsService.getInvestmentMetricsForMap('grm');
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap('grm');
     if (preCalculated.success && preCalculated.data.length > 0) {
       return {
         success: true,
@@ -228,7 +244,11 @@ export class MetricsController {
       };
     }
 
-    return { success: false, error: 'No GRM data available. Run batch calculation first.', data: [] };
+    return {
+      success: false,
+      error: 'No GRM data available. Run batch calculation first.',
+      data: [],
+    };
   }
 
   /**
@@ -237,12 +257,19 @@ export class MetricsController {
   @Get('investment/:geoType/:geoId')
   async getInvestmentMetrics(
     @Param('geoType') geoType: string,
-    @Param('geoId') geoId: string
+    @Param('geoId') geoId: string,
   ) {
-    const metrics = await this.calculatedMetricsService.getMetrics(geoId, geoType);
+    const metrics = await this.calculatedMetricsService.getMetrics(
+      geoId,
+      geoType,
+    );
 
     if (!metrics) {
-      return { success: false, error: 'No calculated metrics found for this geography', data: null };
+      return {
+        success: false,
+        error: 'No calculated metrics found for this geography',
+        data: null,
+      };
     }
 
     return {
@@ -271,13 +298,15 @@ export class MetricsController {
    */
   @Post('calculate-investment-metrics')
   async calculateInvestmentMetricsBatch() {
-    const results = await this.calculatedMetricsService.calculateAllInvestmentMetrics();
+    const results =
+      await this.calculatedMetricsService.calculateAllInvestmentMetrics();
     return {
       success: true,
       message: 'Investment metrics batch calculation completed',
       results,
       totals: {
-        processed: results.investmentMetrics.processed + results.overvalued.processed,
+        processed:
+          results.investmentMetrics.processed + results.overvalued.processed,
         stored: results.investmentMetrics.stored + results.overvalued.stored,
       },
     };
@@ -289,7 +318,8 @@ export class MetricsController {
    */
   @Post('calculate-5yr-growth')
   async calculate5YrGrowthBatch() {
-    const results = await this.calculatedMetricsService.calculate5YrGrowthForAll();
+    const results =
+      await this.calculatedMetricsService.calculate5YrGrowthForAll();
     return {
       success: true,
       message: 'Batch calculation completed',
@@ -300,10 +330,16 @@ export class MetricsController {
         zips: results.zips,
       },
       totals: {
-        processed: results.metros.processed + results.states.processed +
-          results.counties.processed + results.zips.processed,
-        stored: results.metros.stored + results.states.stored +
-          results.counties.stored + results.zips.stored,
+        processed:
+          results.metros.processed +
+          results.states.processed +
+          results.counties.processed +
+          results.zips.processed,
+        stored:
+          results.metros.stored +
+          results.states.stored +
+          results.counties.stored +
+          results.zips.stored,
       },
     };
   }
@@ -317,16 +353,24 @@ export class MetricsController {
 
     switch (geoType) {
       case 'metros':
-        result = await this.calculatedMetricsService.calculate5YrGrowthForMetros();
+        result =
+          await this.calculatedMetricsService.calculate5YrGrowthForMetros();
         break;
       case 'states':
-        result = await this.calculatedMetricsService.calculate5YrGrowthForStates();
+        result =
+          await this.calculatedMetricsService.calculate5YrGrowthForStates();
         break;
       case 'counties':
-        result = await this.calculatedMetricsService.calculate5YrGrowthForCounties();
+        result =
+          await this.calculatedMetricsService.calculate5YrGrowthForCounties();
         break;
       case 'zips':
-        result = await this.calculatedMetricsService.calculate5YrGrowthForZips();
+        result =
+          await this.calculatedMetricsService.calculate5YrGrowthForZips();
+        break;
+      case 'national':
+        result =
+          await this.calculatedMetricsService.calculate5YrGrowthForNational();
         break;
       default:
         return { success: false, error: `Invalid geography type: ${geoType}` };
@@ -350,7 +394,8 @@ export class MetricsController {
   @Get('home-value-5yr/metros')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
     // First try pre-calculated data
-    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('metro');
+    const preCalculated =
+      await this.calculatedMetricsService.get5YrGrowthForMap('metro');
     if (preCalculated.success && preCalculated.data.length > 0) {
       return {
         success: true,
@@ -400,7 +445,11 @@ export class MetricsController {
       .not('median_listing_price', 'is', null);
 
     if (currentError || !currentData) {
-      return { success: false, error: currentError?.message || 'Failed to fetch current data', data: [] };
+      return {
+        success: false,
+        error: currentError?.message || 'Failed to fetch current data',
+        data: [],
+      };
     }
 
     // Get historical data (5 years ago) - try to get closest date within 3 months
@@ -408,7 +457,12 @@ export class MetricsController {
       .from('realtor_metro')
       .select('cbsa_code, median_listing_price, period_date')
       .gte('period_date', pastDateStr)
-      .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .lte(
+        'period_date',
+        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+      )
       .not('median_listing_price', 'is', null)
       .order('period_date', { ascending: true });
 
@@ -417,15 +471,22 @@ export class MetricsController {
     if (pastData) {
       for (const row of pastData) {
         if (!pastByRegion[row.cbsa_code]) {
-          pastByRegion[row.cbsa_code] = { value: row.median_listing_price, date: row.period_date };
+          pastByRegion[row.cbsa_code] = {
+            value: row.median_listing_price,
+            date: row.period_date,
+          };
         }
       }
     }
 
     // Calculate 5-year growth for each metro: ((current - past) / past) * 100
     const results = currentData
-      .filter(metro => pastByRegion[metro.cbsa_code] && pastByRegion[metro.cbsa_code].value > 0)
-      .map(metro => {
+      .filter(
+        (metro) =>
+          pastByRegion[metro.cbsa_code] &&
+          pastByRegion[metro.cbsa_code].value > 0,
+      )
+      .map((metro) => {
         const currentValue = metro.median_listing_price;
         const pastValue = pastByRegion[metro.cbsa_code].value;
 
@@ -454,13 +515,134 @@ export class MetricsController {
   }
 
   /**
+   * Get 5-year home value growth for national
+   * First tries pre-calculated table, falls back to on-the-fly calculation
+   */
+  @Get('home-value-5yr/national')
+  async getNationalHomeValue5YrGrowth(@Query('date') date?: string) {
+    // First try pre-calculated data
+    const preCalculated =
+      await this.calculatedMetricsService.get5YrGrowthForMap('national');
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'National',
+        metric: 'home_value_5yr',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fall back to on-the-fly calculation
+    return this.calculateNationalHomeValue5YrGrowth(date);
+  }
+
+  /**
+   * On-the-fly calculation for national 5-year growth (fallback)
+   */
+  private async calculateNationalHomeValue5YrGrowth(date?: string) {
+    // Get current date
+    let targetDate = date;
+    if (!targetDate) {
+      const { data: latestDate } = await this.supabase
+        .from('realtor_national')
+        .select('period_date')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      targetDate = latestDate?.period_date;
+    }
+
+    if (!targetDate) {
+      return { success: false, error: 'No Realtor data available', data: [] };
+    }
+
+    // Calculate 5 years ago date
+    const currentDate = new Date(targetDate);
+    const fiveYearsAgo = new Date(currentDate);
+    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+
+    // Get current data from realtor_national
+    const { data: currentData, error: currentError } = await this.supabase
+      .from('realtor_national')
+      .select('median_listing_price')
+      .eq('period_date', targetDate)
+      .eq('country', 'United States')
+      .single();
+
+    if (currentError || !currentData) {
+      return {
+        success: false,
+        error: currentError?.message || 'Failed to fetch current data',
+        data: [],
+      };
+    }
+
+    // Get historical data (5 years ago)
+    const { data: pastData } = await this.supabase
+      .from('realtor_national')
+      .select('median_listing_price, period_date')
+      .gte('period_date', pastDateStr)
+      .lte(
+        'period_date',
+        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+      )
+      .not('median_listing_price', 'is', null)
+      .eq('country', 'United States')
+      .order('period_date', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!pastData || !pastData.median_listing_price) {
+      // Return empty results if no history
+      return {
+        success: true,
+        count: 0,
+        geography: 'National',
+        metric: 'home_value_5yr',
+        source: 'calculated',
+        data: [],
+      };
+    }
+
+    // Calculate 5-year growth
+    const currentValue = currentData.median_listing_price;
+    const pastValue = pastData.median_listing_price;
+    const growthPct = ((currentValue - pastValue) / pastValue) * 100;
+
+    const result = {
+      region_id: 'usa',
+      region_name: 'United States',
+      value: Math.round(growthPct * 100) / 100,
+      cagr_5yr: Math.round(growthPct * 100) / 100,
+      date: targetDate,
+    };
+
+    return {
+      success: true,
+      count: 1,
+      geography: 'National',
+      metric: 'home_value_5yr',
+      source: 'calculated',
+      current_date: targetDate,
+      past_date: pastData.period_date,
+      data: [result],
+    };
+  }
+
+  /**
    * Get 5-year home value growth for states
    * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/states')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
     // First try pre-calculated data
-    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('state');
+    const preCalculated =
+      await this.calculatedMetricsService.get5YrGrowthForMap('state');
     if (preCalculated.success && preCalculated.data.length > 0) {
       return {
         success: true,
@@ -510,7 +692,11 @@ export class MetricsController {
       .not('median_listing_price', 'is', null);
 
     if (currentError || !currentData) {
-      return { success: false, error: currentError?.message || 'Failed to fetch current data', data: [] };
+      return {
+        success: false,
+        error: currentError?.message || 'Failed to fetch current data',
+        data: [],
+      };
     }
 
     // Get historical data (5 years ago)
@@ -518,7 +704,12 @@ export class MetricsController {
       .from('realtor_state')
       .select('state_id, median_listing_price, period_date')
       .gte('period_date', pastDateStr)
-      .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .lte(
+        'period_date',
+        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+      )
       .not('median_listing_price', 'is', null)
       .order('period_date', { ascending: true });
 
@@ -527,15 +718,22 @@ export class MetricsController {
     if (pastData) {
       for (const row of pastData) {
         if (!pastByRegion[row.state_id]) {
-          pastByRegion[row.state_id] = { value: row.median_listing_price, date: row.period_date };
+          pastByRegion[row.state_id] = {
+            value: row.median_listing_price,
+            date: row.period_date,
+          };
         }
       }
     }
 
     // Calculate 5-year growth for each state
     const results = currentData
-      .filter(state => pastByRegion[state.state_id] && pastByRegion[state.state_id].value > 0)
-      .map(state => {
+      .filter(
+        (state) =>
+          pastByRegion[state.state_id] &&
+          pastByRegion[state.state_id].value > 0,
+      )
+      .map((state) => {
         const currentValue = state.median_listing_price;
         const pastValue = pastByRegion[state.state_id].value;
 
@@ -569,7 +767,8 @@ export class MetricsController {
   @Get('home-value-5yr/counties')
   async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
     // First try pre-calculated data
-    const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('county');
+    const preCalculated =
+      await this.calculatedMetricsService.get5YrGrowthForMap('county');
     if (preCalculated.success && preCalculated.data.length > 0) {
       return {
         success: true,
@@ -643,7 +842,12 @@ export class MetricsController {
         .from('realtor_county')
         .select('county_fips, median_listing_price, period_date')
         .gte('period_date', pastDateStr)
-        .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .lte(
+          'period_date',
+          new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0],
+        )
         .not('median_listing_price', 'is', null)
         .order('period_date', { ascending: true })
         .range(offset, offset + pageSize - 1);
@@ -658,14 +862,21 @@ export class MetricsController {
     const pastByRegion: Record<string, { value: number; date: string }> = {};
     for (const row of allPastData) {
       if (!pastByRegion[row.county_fips]) {
-        pastByRegion[row.county_fips] = { value: row.median_listing_price, date: row.period_date };
+        pastByRegion[row.county_fips] = {
+          value: row.median_listing_price,
+          date: row.period_date,
+        };
       }
     }
 
     // Calculate 5-year growth for each county
     const results = allCurrentData
-      .filter(county => pastByRegion[county.county_fips] && pastByRegion[county.county_fips].value > 0)
-      .map(county => {
+      .filter(
+        (county) =>
+          pastByRegion[county.county_fips] &&
+          pastByRegion[county.county_fips].value > 0,
+      )
+      .map((county) => {
         const currentValue = county.median_listing_price;
         const pastValue = pastByRegion[county.county_fips].value;
 
@@ -698,10 +909,14 @@ export class MetricsController {
    * First tries pre-calculated table, falls back to on-the-fly calculation
    */
   @Get('home-value-5yr/zips')
-  async getZipHomeValue5YrGrowth(@Query('state') state?: string, @Query('date') date?: string) {
+  async getZipHomeValue5YrGrowth(
+    @Query('state') state?: string,
+    @Query('date') date?: string,
+  ) {
     // First try pre-calculated data (if no state filter)
     if (!state) {
-      const preCalculated = await this.calculatedMetricsService.get5YrGrowthForMap('zip');
+      const preCalculated =
+        await this.calculatedMetricsService.get5YrGrowthForMap('zip');
       if (preCalculated.success && preCalculated.data.length > 0) {
         return {
           success: true,
@@ -763,7 +978,10 @@ export class MetricsController {
         query = query.ilike('zip_name', statePattern);
       }
 
-      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        offset,
+        offset + pageSize - 1,
+      );
 
       if (error) {
         return { success: false, error: error.message, data: [] };
@@ -784,7 +1002,12 @@ export class MetricsController {
         .from('realtor_zip')
         .select('postal_code, median_listing_price, period_date')
         .gte('period_date', pastDateStr)
-        .lte('period_date', new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .lte(
+          'period_date',
+          new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0],
+        )
         .not('median_listing_price', 'is', null)
         .order('period_date', { ascending: true });
 
@@ -792,7 +1015,10 @@ export class MetricsController {
         query = query.ilike('zip_name', statePattern);
       }
 
-      const { data: pageData } = await query.range(offset, offset + pageSize - 1);
+      const { data: pageData } = await query.range(
+        offset,
+        offset + pageSize - 1,
+      );
 
       if (!pageData || pageData.length === 0) break;
       allPastData.push(...pageData);
@@ -804,14 +1030,21 @@ export class MetricsController {
     const pastByRegion: Record<string, { value: number; date: string }> = {};
     for (const row of allPastData) {
       if (!pastByRegion[row.postal_code]) {
-        pastByRegion[row.postal_code] = { value: row.median_listing_price, date: row.period_date };
+        pastByRegion[row.postal_code] = {
+          value: row.median_listing_price,
+          date: row.period_date,
+        };
       }
     }
 
     // Calculate 5-year growth for each zip
     const results = allCurrentData
-      .filter(zip => pastByRegion[zip.postal_code] && pastByRegion[zip.postal_code].value > 0)
-      .map(zip => {
+      .filter(
+        (zip) =>
+          pastByRegion[zip.postal_code] &&
+          pastByRegion[zip.postal_code].value > 0,
+      )
+      .map((zip) => {
         const currentValue = zip.median_listing_price;
         const pastValue = pastByRegion[zip.postal_code].value;
 
@@ -887,7 +1120,11 @@ export class MetricsController {
   /**
    * Generic income-to-buy fetcher for all geography types
    */
-  private async getIncomeToBuyByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+  private async getIncomeToBuyByGeo(
+    geoType: string,
+    geoLabel: string,
+    stateFilter?: string,
+  ) {
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
@@ -899,7 +1136,11 @@ export class MetricsController {
       .single();
 
     if (!latestRow?.period_date) {
-      return { success: false, error: `No income_to_buy data available for ${geoLabel}`, data: [] };
+      return {
+        success: false,
+        error: `No income_to_buy data available for ${geoLabel}`,
+        data: [],
+      };
     }
 
     const targetDate = latestRow.period_date;
@@ -924,7 +1165,10 @@ export class MetricsController {
     let offset = 0;
 
     while (true) {
-      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        offset,
+        offset + pageSize - 1,
+      );
 
       if (error) {
         return { success: false, error: error.message, data: [] };
@@ -937,7 +1181,7 @@ export class MetricsController {
     }
 
     // Transform to map-friendly format
-    const results = allData.map(row => {
+    const results = allData.map((row) => {
       const result: any = {
         region_id: row.geography_id,
         region_name: row.geography_name,
@@ -1017,7 +1261,11 @@ export class MetricsController {
   /**
    * Generic affordable-home-price fetcher for all geography types
    */
-  private async getAffordableHomePriceByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+  private async getAffordableHomePriceByGeo(
+    geoType: string,
+    geoLabel: string,
+    stateFilter?: string,
+  ) {
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
@@ -1029,7 +1277,11 @@ export class MetricsController {
       .single();
 
     if (!latestRow?.period_date) {
-      return { success: false, error: `No affordable_home_price data available for ${geoLabel}`, data: [] };
+      return {
+        success: false,
+        error: `No affordable_home_price data available for ${geoLabel}`,
+        data: [],
+      };
     }
 
     const targetDate = latestRow.period_date;
@@ -1037,7 +1289,9 @@ export class MetricsController {
     // Build query
     let query = this.supabase
       .from('calculated_metrics')
-      .select('geography_id, geography_name, affordable_home_price, period_date')
+      .select(
+        'geography_id, geography_name, affordable_home_price, period_date',
+      )
       .eq('geography_type', geoType)
       .eq('period_date', targetDate)
       .not('affordable_home_price', 'is', null);
@@ -1054,7 +1308,10 @@ export class MetricsController {
     let offset = 0;
 
     while (true) {
-      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        offset,
+        offset + pageSize - 1,
+      );
 
       if (error) {
         return { success: false, error: error.message, data: [] };
@@ -1067,7 +1324,7 @@ export class MetricsController {
     }
 
     // Transform to map-friendly format
-    const results = allData.map(row => {
+    const results = allData.map((row) => {
       const result: any = {
         region_id: row.geography_id,
         region_name: row.geography_name,
@@ -1148,7 +1405,11 @@ export class MetricsController {
   /**
    * Generic years-to-save fetcher for all geography types
    */
-  private async getYearsToSaveByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+  private async getYearsToSaveByGeo(
+    geoType: string,
+    geoLabel: string,
+    stateFilter?: string,
+  ) {
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
@@ -1160,7 +1421,11 @@ export class MetricsController {
       .single();
 
     if (!latestRow?.period_date) {
-      return { success: false, error: `No years_to_save data available for ${geoLabel}`, data: [] };
+      return {
+        success: false,
+        error: `No years_to_save data available for ${geoLabel}`,
+        data: [],
+      };
     }
 
     const targetDate = latestRow.period_date;
@@ -1185,7 +1450,10 @@ export class MetricsController {
     let offset = 0;
 
     while (true) {
-      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        offset,
+        offset + pageSize - 1,
+      );
 
       if (error) {
         return { success: false, error: error.message, data: [] };
@@ -1198,7 +1466,7 @@ export class MetricsController {
     }
 
     // Transform to map-friendly format
-    const results = allData.map(row => {
+    const results = allData.map((row) => {
       const result: any = {
         region_id: row.geography_id,
         region_name: row.geography_name,

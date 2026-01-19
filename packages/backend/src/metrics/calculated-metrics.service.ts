@@ -49,28 +49,37 @@ export class CalculatedMetricsService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Calculate Cap Rate: (ZORI × 12 × expense_ratio) / price × 100
    */
-  calculateCapRate(zori: number | undefined, price: number | undefined): number | null {
+  calculateCapRate(
+    zori: number | undefined,
+    price: number | undefined,
+  ): number | null {
     if (!zori || !price || price === 0) return null;
-    return (zori * 12 * this.EXPENSE_RATIO) / price * 100;
+    return ((zori * 12 * this.EXPENSE_RATIO) / price) * 100;
   }
 
   /**
    * Calculate Gross Yield: (ZORI × 12) / price × 100
    */
-  calculateGrossYield(zori: number | undefined, price: number | undefined): number | null {
+  calculateGrossYield(
+    zori: number | undefined,
+    price: number | undefined,
+  ): number | null {
     if (!zori || !price || price === 0) return null;
-    return (zori * 12) / price * 100;
+    return ((zori * 12) / price) * 100;
   }
 
   /**
    * Calculate Rent-to-Price Ratio: ZORI / price
    */
-  calculateRentToPriceRatio(zori: number | undefined, price: number | undefined): number | null {
+  calculateRentToPriceRatio(
+    zori: number | undefined,
+    price: number | undefined,
+  ): number | null {
     if (!zori || !price || price === 0) return null;
     return zori / price;
   }
@@ -80,7 +89,10 @@ export class CalculatedMetricsService {
    * Lower GRM indicates potentially better investment value
    * Typical range: 8-20 years
    */
-  calculateGRM(price: number | undefined, zori: number | undefined): number | null {
+  calculateGRM(
+    price: number | undefined,
+    zori: number | undefined,
+  ): number | null {
     if (!price || !zori || zori === 0) return null;
     const annualRent = zori * 12;
     return price / annualRent;
@@ -92,7 +104,10 @@ export class CalculatedMetricsService {
    * Seller's market: < 4 months
    * Buyer's market: > 6 months
    */
-  calculateMonthsOfSupply(inventory: number | undefined, monthlySales: number | undefined): number | null {
+  calculateMonthsOfSupply(
+    inventory: number | undefined,
+    monthlySales: number | undefined,
+  ): number | null {
     if (!inventory || !monthlySales || monthlySales === 0) return null;
     return inventory / monthlySales;
   }
@@ -102,7 +117,10 @@ export class CalculatedMetricsService {
    * Percentage of available inventory sold per month
    * Higher rate indicates stronger demand
    */
-  calculateAbsorptionRate(monthlySales: number | undefined, inventory: number | undefined): number | null {
+  calculateAbsorptionRate(
+    monthlySales: number | undefined,
+    inventory: number | undefined,
+  ): number | null {
     if (!monthlySales || !inventory || inventory === 0) return null;
     return (monthlySales / inventory) * 100;
   }
@@ -110,7 +128,10 @@ export class CalculatedMetricsService {
   /**
    * Calculate 5-Year CAGR: (current / past)^(1/5) - 1
    */
-  calculate5YearCagr(current: number | undefined, past: number | undefined): number | null {
+  calculate5YearCagr(
+    current: number | undefined,
+    past: number | undefined,
+  ): number | null {
     if (!current || !past || past === 0) return null;
     return Math.pow(current / past, 1 / 5) - 1;
   }
@@ -120,7 +141,10 @@ export class CalculatedMetricsService {
    * Positive values indicate more homes available than typical (buyer's market)
    * Negative values indicate fewer homes than typical (seller's market)
    */
-  calculateInventorySurplus(current: number | undefined, avg: number | undefined): number | null {
+  calculateInventorySurplus(
+    current: number | undefined,
+    avg: number | undefined,
+  ): number | null {
     if (!current || !avg) return null;
     return current - avg;
   }
@@ -128,10 +152,17 @@ export class CalculatedMetricsService {
   /**
    * Calculate Overvalued %: (price_to_income - benchmark) / benchmark × 100
    */
-  calculateOvervalued(price: number | undefined, income: number | undefined): number | null {
+  calculateOvervalued(
+    price: number | undefined,
+    income: number | undefined,
+  ): number | null {
     if (!price || !income || income === 0) return null;
     const priceToIncome = price / income;
-    return (priceToIncome - this.PRICE_TO_INCOME_BENCHMARK) / this.PRICE_TO_INCOME_BENCHMARK * 100;
+    return (
+      ((priceToIncome - this.PRICE_TO_INCOME_BENCHMARK) /
+        this.PRICE_TO_INCOME_BENCHMARK) *
+      100
+    );
   }
 
   /**
@@ -142,7 +173,7 @@ export class CalculatedMetricsService {
     dom: number | undefined,
     inventoryYoy: number | undefined,
     priceCutShare: number | undefined,
-    pendingRatio: number | undefined
+    pendingRatio: number | undefined,
   ): number | null {
     let score = 50; // Base score
     let factors = 0;
@@ -157,14 +188,20 @@ export class CalculatedMetricsService {
     // Inventory YoY (moderate increase is healthy, but not too much)
     if (inventoryYoy !== undefined && inventoryYoy !== null) {
       // -20% to +20% is healthy zone
-      const inventoryScore = Math.max(0, Math.min(100, 50 + inventoryYoy * 2.5));
+      const inventoryScore = Math.max(
+        0,
+        Math.min(100, 50 + inventoryYoy * 2.5),
+      );
       score += inventoryScore - 50;
       factors++;
     }
 
     // Price cut share (lower is better, typical range 0-30%)
     if (priceCutShare !== undefined && priceCutShare !== null) {
-      const priceCutScore = Math.max(0, Math.min(100, 100 - (priceCutShare / 0.30) * 100));
+      const priceCutScore = Math.max(
+        0,
+        Math.min(100, 100 - (priceCutShare / 0.3) * 100),
+      );
       score += priceCutScore - 50;
       factors++;
     }
@@ -177,7 +214,7 @@ export class CalculatedMetricsService {
     }
 
     if (factors === 0) return null;
-    return Math.max(0, Math.min(100, score / factors * 2));
+    return Math.max(0, Math.min(100, (score / factors) * 2));
   }
 
   /**
@@ -187,7 +224,7 @@ export class CalculatedMetricsService {
   calculateInvestmentScore(
     capRate: number | null,
     grossYield: number | null,
-    rentGrowth?: number
+    rentGrowth?: number,
   ): number | null {
     let score = 0;
     let factors = 0;
@@ -223,7 +260,7 @@ export class CalculatedMetricsService {
    */
   calculateLongTermGrowthScore(
     cagr5yr: number | null,
-    priceYoy: number | undefined
+    priceYoy: number | undefined,
   ): number | null {
     let score = 0;
     let factors = 0;
@@ -250,31 +287,52 @@ export class CalculatedMetricsService {
    * Calculate all metrics for a geography
    */
   calculateAll(input: CalculatedMetricsInput): CalculatedMetricsOutput {
-    const capRate = this.calculateCapRate(input.zori, input.median_listing_price);
-    const grossYield = this.calculateGrossYield(input.zori, input.median_listing_price);
-    const rentToPriceRatio = this.calculateRentToPriceRatio(input.zori, input.median_listing_price);
+    const capRate = this.calculateCapRate(
+      input.zori,
+      input.median_listing_price,
+    );
+    const grossYield = this.calculateGrossYield(
+      input.zori,
+      input.median_listing_price,
+    );
+    const rentToPriceRatio = this.calculateRentToPriceRatio(
+      input.zori,
+      input.median_listing_price,
+    );
     const grm = this.calculateGRM(input.median_listing_price, input.zori);
-    const monthsOfSupply = this.calculateMonthsOfSupply(input.active_listing_count, input.monthly_sales);
-    const absorptionRate = this.calculateAbsorptionRate(input.monthly_sales, input.active_listing_count);
+    const monthsOfSupply = this.calculateMonthsOfSupply(
+      input.active_listing_count,
+      input.monthly_sales,
+    );
+    const absorptionRate = this.calculateAbsorptionRate(
+      input.monthly_sales,
+      input.active_listing_count,
+    );
     const homeValue5yrCagr = this.calculate5YearCagr(
       input.median_listing_price,
-      input.listing_price_5yr_ago
+      input.listing_price_5yr_ago,
     );
     const inventorySurplusPct = this.calculateInventorySurplus(
       input.active_listing_count,
-      input.inventory_5yr_avg
+      input.inventory_5yr_avg,
     );
-    const overvaluedPct = this.calculateOvervalued(input.median_listing_price, input.median_income);
+    const overvaluedPct = this.calculateOvervalued(
+      input.median_listing_price,
+      input.median_income,
+    );
 
     const marketHealthScore = this.calculateMarketHealthScore(
       input.median_days_on_market,
       undefined, // inventory YoY would need to be calculated separately
       input.price_reduced_share,
-      input.pending_ratio
+      input.pending_ratio,
     );
 
     const investmentScore = this.calculateInvestmentScore(capRate, grossYield);
-    const longTermGrowthScore = this.calculateLongTermGrowthScore(homeValue5yrCagr, undefined);
+    const longTermGrowthScore = this.calculateLongTermGrowthScore(
+      homeValue5yrCagr,
+      undefined,
+    );
 
     return {
       cap_rate: capRate,
@@ -297,20 +355,21 @@ export class CalculatedMetricsService {
    */
   async storeMetrics(
     input: CalculatedMetricsInput,
-    metrics: CalculatedMetricsOutput
+    metrics: CalculatedMetricsOutput,
   ): Promise<void> {
-    const { error } = await this.supabase
-      .from('calculated_metrics')
-      .upsert({
+    const { error } = await this.supabase.from('calculated_metrics').upsert(
+      {
         geography_id: input.geography_id,
         geography_type: input.geography_type,
         geography_name: input.geography_name,
         period_date: input.period_date,
         ...metrics,
         calculated_at: new Date().toISOString(),
-      }, {
+      },
+      {
         onConflict: 'geography_id,geography_type,period_date',
-      });
+      },
+    );
 
     if (error) {
       throw new Error(`Failed to store calculated metrics: ${error.message}`);
@@ -323,7 +382,7 @@ export class CalculatedMetricsService {
   async getMetrics(
     geographyId: string,
     geographyType: string,
-    periodDate?: string
+    periodDate?: string,
   ): Promise<CalculatedMetricsOutput | null> {
     let query = this.supabase
       .from('calculated_metrics')
@@ -365,7 +424,7 @@ export class CalculatedMetricsService {
   async getMetricsForMap(
     geographyType: string,
     metricName: keyof CalculatedMetricsOutput,
-    periodDate?: string
+    periodDate?: string,
   ): Promise<Record<string, number>> {
     let query = this.supabase
       .from('calculated_metrics')
@@ -402,7 +461,10 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for all metros
    */
-  async calculate5YrGrowthForMetros(): Promise<{ processed: number; stored: number }> {
+  async calculate5YrGrowthForMetros(): Promise<{
+    processed: number;
+    stored: number;
+  }> {
     // Get current date (latest data)
     const { data: latestDateRow } = await this.supabase
       .from('realtor_metro')
@@ -419,7 +481,11 @@ export class CalculatedMetricsService {
     const fiveYearsAgo = new Date(targetDate);
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const pastDateMax = new Date(
+      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split('T')[0];
 
     // Get current data
     const { data: currentData } = await this.supabase
@@ -457,20 +523,22 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[metro.cbsa_code];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct = ((metro.median_listing_price - pastValue) / pastValue) * 100;
+      const growthPct =
+        ((metro.median_listing_price - pastValue) / pastValue) * 100;
 
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert({
+      const { error } = await this.supabase.from('calculated_metrics').upsert(
+        {
           geography_id: metro.cbsa_code,
           geography_type: 'metro',
           geography_name: metro.cbsa_title,
           period_date: targetDate,
           home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        }, {
+        },
+        {
           onConflict: 'geography_id,geography_type,period_date',
-        });
+        },
+      );
 
       if (!error) stored++;
     }
@@ -481,7 +549,10 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for all states
    */
-  async calculate5YrGrowthForStates(): Promise<{ processed: number; stored: number }> {
+  async calculate5YrGrowthForStates(): Promise<{
+    processed: number;
+    stored: number;
+  }> {
     // Get current date
     const { data: latestDateRow } = await this.supabase
       .from('realtor_state')
@@ -498,7 +569,11 @@ export class CalculatedMetricsService {
     const fiveYearsAgo = new Date(targetDate);
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const pastDateMax = new Date(
+      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split('T')[0];
 
     // Get current data
     const { data: currentData } = await this.supabase
@@ -534,20 +609,22 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[state.state_id];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct = ((state.median_listing_price - pastValue) / pastValue) * 100;
+      const growthPct =
+        ((state.median_listing_price - pastValue) / pastValue) * 100;
 
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert({
+      const { error } = await this.supabase.from('calculated_metrics').upsert(
+        {
           geography_id: state.state_id,
           geography_type: 'state',
           geography_name: state.state_name,
           period_date: targetDate,
           home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        }, {
+        },
+        {
           onConflict: 'geography_id,geography_type,period_date',
-        });
+        },
+      );
 
       if (!error) stored++;
     }
@@ -558,7 +635,10 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for all counties (paginated)
    */
-  async calculate5YrGrowthForCounties(): Promise<{ processed: number; stored: number }> {
+  async calculate5YrGrowthForCounties(): Promise<{
+    processed: number;
+    stored: number;
+  }> {
     // Get current date
     const { data: latestDateRow } = await this.supabase
       .from('realtor_county')
@@ -575,7 +655,11 @@ export class CalculatedMetricsService {
     const fiveYearsAgo = new Date(targetDate);
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const pastDateMax = new Date(
+      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split('T')[0];
 
     // Get all current data (paginated)
     const allCurrentData: any[] = [];
@@ -633,7 +717,8 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[county.county_fips];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct = ((county.median_listing_price - pastValue) / pastValue) * 100;
+      const growthPct =
+        ((county.median_listing_price - pastValue) / pastValue) * 100;
       recordsToUpsert.push({
         geography_id: county.county_fips,
         geography_type: 'county',
@@ -647,7 +732,9 @@ export class CalculatedMetricsService {
       if (recordsToUpsert.length >= batchSize) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (!error) stored += recordsToUpsert.length;
         recordsToUpsert.length = 0;
       }
@@ -657,7 +744,9 @@ export class CalculatedMetricsService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (!error) stored += recordsToUpsert.length;
     }
 
@@ -667,7 +756,10 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for all zip codes (paginated)
    */
-  async calculate5YrGrowthForZips(): Promise<{ processed: number; stored: number }> {
+  async calculate5YrGrowthForZips(): Promise<{
+    processed: number;
+    stored: number;
+  }> {
     // Get current date
     const { data: latestDateRow } = await this.supabase
       .from('realtor_zip')
@@ -684,7 +776,11 @@ export class CalculatedMetricsService {
     const fiveYearsAgo = new Date(targetDate);
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
     const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const pastDateMax = new Date(
+      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split('T')[0];
 
     // Get all current data (paginated)
     const allCurrentData: any[] = [];
@@ -742,7 +838,8 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[zip.postal_code];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct = ((zip.median_listing_price - pastValue) / pastValue) * 100;
+      const growthPct =
+        ((zip.median_listing_price - pastValue) / pastValue) * 100;
       recordsToUpsert.push({
         geography_id: zip.postal_code,
         geography_type: 'zip',
@@ -755,7 +852,9 @@ export class CalculatedMetricsService {
       if (recordsToUpsert.length >= batchSize) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (!error) stored += recordsToUpsert.length;
         recordsToUpsert.length = 0;
       }
@@ -764,11 +863,91 @@ export class CalculatedMetricsService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (!error) stored += recordsToUpsert.length;
     }
 
     return { processed: allCurrentData.length, stored };
+  }
+
+  /**
+   * Calculate and store 5-year home value growth for national level
+   */
+  async calculate5YrGrowthForNational(): Promise<{
+    processed: number;
+    stored: number;
+  }> {
+    // Get current date
+    const { data: latestDateRow } = await this.supabase
+      .from('realtor_national')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestDateRow?.period_date) {
+      return { processed: 0, stored: 0 };
+    }
+
+    const targetDate = latestDateRow.period_date;
+    const fiveYearsAgo = new Date(targetDate);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+    const pastDateMax = new Date(
+      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .split('T')[0];
+
+    // Get current data
+    const { data: currentData } = await this.supabase
+      .from('realtor_national')
+      .select('median_listing_price')
+      .eq('period_date', targetDate)
+      .eq('country', 'United States')
+      .single();
+
+    if (!currentData) {
+      return { processed: 0, stored: 0 };
+    }
+
+    // Get historical data
+    const { data: pastData } = await this.supabase
+      .from('realtor_national')
+      .select('median_listing_price')
+      .eq('country', 'United States')
+      .gte('period_date', pastDateStr)
+      .lte('period_date', pastDateMax)
+      .not('median_listing_price', 'is', null)
+      .order('period_date', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!pastData || !pastData.median_listing_price) {
+      return { processed: 1, stored: 0 };
+    }
+
+    const pastValue = pastData.median_listing_price;
+    const growthPct =
+      ((currentData.median_listing_price - pastValue) / pastValue) * 100;
+
+    const { error } = await this.supabase.from('calculated_metrics').upsert(
+      {
+        geography_id: 'usa', // Standardize ID for National
+        geography_type: 'national',
+        geography_name: 'United States',
+        period_date: targetDate,
+        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+        calculated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'geography_id,geography_type,period_date',
+      },
+    );
+
+    return { processed: 1, stored: error ? 0 : 1 };
   }
 
   /**
@@ -779,22 +958,24 @@ export class CalculatedMetricsService {
     states: { processed: number; stored: number };
     counties: { processed: number; stored: number };
     zips: { processed: number; stored: number };
+    national: { processed: number; stored: number };
   }> {
-    const [metros, states, counties, zips] = await Promise.all([
+    const [metros, states, counties, zips, national] = await Promise.all([
       this.calculate5YrGrowthForMetros(),
       this.calculate5YrGrowthForStates(),
       this.calculate5YrGrowthForCounties(),
       this.calculate5YrGrowthForZips(),
+      this.calculate5YrGrowthForNational(),
     ]);
 
-    return { metros, states, counties, zips };
+    return { metros, states, counties, zips, national };
   }
 
   /**
    * Get pre-calculated 5-year growth data for map display
    */
   async get5YrGrowthForMap(
-    geographyType: 'metro' | 'state' | 'county' | 'zip'
+    geographyType: 'metro' | 'state' | 'county' | 'zip' | 'national',
   ): Promise<{ data: any[]; success: boolean; source: string }> {
     // Get the latest period_date for this geography type
     const { data: latestRow } = await this.supabase
@@ -817,7 +998,9 @@ export class CalculatedMetricsService {
     while (true) {
       const { data: pageData } = await this.supabase
         .from('calculated_metrics')
-        .select('geography_id, geography_name, home_value_5yr_cagr, period_date')
+        .select(
+          'geography_id, geography_name, home_value_5yr_cagr, period_date',
+        )
         .eq('geography_type', geographyType)
         .eq('period_date', latestRow.period_date)
         .not('home_value_5yr_cagr', 'is', null)
@@ -830,7 +1013,7 @@ export class CalculatedMetricsService {
     }
 
     // Transform to API format
-    const results = allData.map(row => ({
+    const results = allData.map((row) => ({
       region_id: row.geography_id,
       region_name: row.geography_name,
       value: row.home_value_5yr_cagr,
@@ -853,7 +1036,11 @@ export class CalculatedMetricsService {
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
    * Combines Zillow ZORI data with Realtor median_listing_price
    */
-  async calculateInvestmentMetricsForMetros(): Promise<{ processed: number; stored: number; errors: string[] }> {
+  async calculateInvestmentMetricsForMetros(): Promise<{
+    processed: number;
+    stored: number;
+    errors: string[];
+  }> {
     const errors: string[] = [];
 
     // Get latest ZORI date from zillow_metro table (long format)
@@ -880,7 +1067,11 @@ export class CalculatedMetricsService {
       .not('value', 'is', null);
 
     if (zoriError || !zoriData) {
-      return { processed: 0, stored: 0, errors: [zoriError?.message || 'Failed to fetch ZORI data'] };
+      return {
+        processed: 0,
+        stored: 0,
+        errors: [zoriError?.message || 'Failed to fetch ZORI data'],
+      };
     }
 
     // Get Realtor listing price data (closest date)
@@ -933,7 +1124,9 @@ export class CalculatedMetricsService {
         period_date: targetDate,
         cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
         gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
-        rent_to_price_ratio: rentToPriceRatio ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
+        rent_to_price_ratio: rentToPriceRatio
+          ? Math.round(rentToPriceRatio * 10000) / 10000
+          : null,
         grm: grm ? Math.round(grm * 100) / 100 : null,
         calculated_at: new Date().toISOString(),
       });
@@ -941,7 +1134,9 @@ export class CalculatedMetricsService {
       if (recordsToUpsert.length >= batchSize) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (error) {
           errors.push(error.message);
         } else {
@@ -955,7 +1150,9 @@ export class CalculatedMetricsService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (error) {
         errors.push(error.message);
       } else {
@@ -970,7 +1167,11 @@ export class CalculatedMetricsService {
    * Calculate and store overvalued percentage for all metros
    * Uses ZHVI and Census median income data
    */
-  async calculateOvervaluedForMetros(): Promise<{ processed: number; stored: number; errors: string[] }> {
+  async calculateOvervaluedForMetros(): Promise<{
+    processed: number;
+    stored: number;
+    errors: string[];
+  }> {
     const errors: string[] = [];
     const NATIONAL_MEDIAN_INCOME = 75000;
 
@@ -998,7 +1199,11 @@ export class CalculatedMetricsService {
       .not('value', 'is', null);
 
     if (zhviError || !zhviData) {
-      return { processed: 0, stored: 0, errors: [zhviError?.message || 'Failed to fetch ZHVI data'] };
+      return {
+        processed: 0,
+        stored: 0,
+        errors: [zhviError?.message || 'Failed to fetch ZHVI data'],
+      };
     }
 
     // Get Census median income data
@@ -1027,7 +1232,8 @@ export class CalculatedMetricsService {
     for (const metro of zhviData) {
       const cbsaCode = metro.cbsa_code;
       const zhvi = metro.value;
-      const medianIncome = (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
+      const medianIncome =
+        (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
 
       const overvaluedPct = this.calculateOvervalued(zhvi, medianIncome);
 
@@ -1045,7 +1251,9 @@ export class CalculatedMetricsService {
       if (recordsToUpsert.length >= batchSize) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (error) {
           errors.push(error.message);
         } else {
@@ -1059,7 +1267,9 @@ export class CalculatedMetricsService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (error) {
         errors.push(error.message);
       } else {
@@ -1074,8 +1284,13 @@ export class CalculatedMetricsService {
    * Get pre-calculated investment metrics for map display
    */
   async getInvestmentMetricsForMap(
-    metricName: 'cap_rate' | 'gross_yield' | 'rent_to_price_ratio' | 'grm' | 'overvalued_pct',
-    geographyType: 'metro' = 'metro'
+    metricName:
+      | 'cap_rate'
+      | 'gross_yield'
+      | 'rent_to_price_ratio'
+      | 'grm'
+      | 'overvalued_pct',
+    geographyType: 'metro' = 'metro',
   ): Promise<{ data: any[]; success: boolean; source: string }> {
     // Get latest period_date for this metric
     const { data: latestRow } = await this.supabase
@@ -1104,7 +1319,7 @@ export class CalculatedMetricsService {
     }
 
     // Transform to API format
-    const results = allData.map(row => ({
+    const results = allData.map((row) => ({
       region_id: row.geography_id,
       region_name: row.geography_name,
       cbsa_code: row.geography_id,

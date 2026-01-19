@@ -145,7 +145,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'realtor',
     apiEndpoint: '/api/metrics/home-value-5yr/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro', 'county', 'zip'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'cagr_5yr',
   },
 
