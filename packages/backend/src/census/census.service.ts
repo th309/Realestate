@@ -237,20 +237,34 @@ export class CensusService {
 
     const latestYear = year || (await this.getLatestYear('census_city'));
 
-    let query = this.supabase
-      .from('census_city')
-      .select('*')
-      .eq('year', latestYear);
+    // Paginate to handle states with >1000 cities (Supabase default limit)
+    const allData: CensusRow[] = [];
+    const batchSize = 1000;
+    let offset = 0;
 
-    if (state) {
-      query = query.eq('state_fips', toStateFips(state));
+    while (true) {
+      let query = this.supabase
+        .from('census_city')
+        .select('*')
+        .eq('year', latestYear)
+        .range(offset, offset + batchSize - 1);
+
+      if (state) {
+        query = query.eq('state_fips', toStateFips(state));
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      allData.push(...(data as CensusRow[]));
+      if (data.length < batchSize) break;
+      offset += batchSize;
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    this.setCache(cacheKey, data as CensusRow[]);
+    this.setCache(cacheKey, allData);
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+    return allData.map((row) => ({
       region_id: String(row.place_fips || ''),
       region_name: String(row.place_name || ''),
       value: Number(row[metric]) || 0,
@@ -279,20 +293,34 @@ export class CensusService {
 
     const latestYear = year || (await this.getLatestYear('census_zip'));
 
-    let query = this.supabase
-      .from('census_zip')
-      .select('*')
-      .eq('year', latestYear);
+    // Paginate to handle states with >1000 ZCTAs (Supabase default limit)
+    const allData: CensusRow[] = [];
+    const batchSize = 1000;
+    let offset = 0;
 
-    if (state) {
-      query = query.eq('state_fips', toStateFips(state));
+    while (true) {
+      let query = this.supabase
+        .from('census_zip')
+        .select('*')
+        .eq('year', latestYear)
+        .range(offset, offset + batchSize - 1);
+
+      if (state) {
+        query = query.eq('state_fips', toStateFips(state));
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      allData.push(...(data as CensusRow[]));
+      if (data.length < batchSize) break;
+      offset += batchSize;
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    this.setCache(cacheKey, data as CensusRow[]);
+    this.setCache(cacheKey, allData);
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+    return allData.map((row) => ({
       region_id: String(row.zcta || ''),
       region_name: String(row.zcta || ''),
       value: Number(row[metric]) || 0,
