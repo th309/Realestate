@@ -6,9 +6,11 @@ import { WizardContainer } from './components/wizard/WizardContainer';
 import { PreviewPanel } from './components/preview/PreviewPanel';
 import { ReportHistory } from './components/ReportHistory';
 import { useWizardState } from './hooks/useWizardState';
+import { useReportGeneration } from './hooks/useReportGeneration';
 
 export const Dashboard: React.FC = () => {
   const wizardState = useWizardState();
+  const reportGeneration = useReportGeneration();
 
   return (
     <div className="min-h-screen bg-surface">
@@ -33,7 +35,7 @@ export const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-8">
           {/* Wizard - Left Side (60%) */}
           <div className="xl:col-span-3">
-            <WizardContainer wizardState={wizardState} />
+            <WizardContainer wizardState={wizardState} reportGeneration={reportGeneration} />
           </div>
 
           {/* Preview - Right Side (40%) */}

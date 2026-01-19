@@ -10,7 +10,7 @@
 // Core Types
 // ============================================================================
 
-export type GeographyType = 'state' | 'metro' | 'county' | 'zip';
+export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
 
 export interface MetricValue {
   value: number | null;

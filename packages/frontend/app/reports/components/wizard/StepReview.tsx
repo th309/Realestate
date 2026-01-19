@@ -40,7 +40,7 @@ export const StepReview: React.FC<StepReviewProps> = ({ wizardState }) => {
           <div className="pl-8">
             <div className="font-medium text-on-surface">{userTypeConfig.label}</div>
             <div className="text-xs text-on-surface-variant mt-1">
-              Hero Score: <span className={heroScore.colorClass}>{heroScore.name}</span>
+              Hero Score: <span className={heroScore.color}>{heroScore.name}</span>
             </div>
           </div>
         </div>

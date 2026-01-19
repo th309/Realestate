@@ -193,7 +193,7 @@ export class GeminiNewsService {
    */
   async getOrScoutNews(
     geographyId: string,
-    geographyType: 'metro' | 'county' | 'zip',
+    geographyType: 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip',
     geographyName: string,
     state: string,
     options: {
@@ -243,7 +243,7 @@ export class GeminiNewsService {
    */
   async scoutNewsForGeography(
     geographyId: string,
-    geographyType: 'metro' | 'county' | 'zip',
+    geographyType: 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip',
     geographyName: string,
     state: string,
     options: {

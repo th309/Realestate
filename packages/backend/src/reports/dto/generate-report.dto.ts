@@ -13,8 +13,8 @@ export class GeographyDto {
   @IsNotEmpty()
   id: string;
 
-  @IsEnum(['metro', 'county', 'zip'])
-  type: 'metro' | 'county' | 'zip';
+  @IsEnum(['national', 'state', 'metro', 'county', 'city', 'zip'])
+  type: 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
 
   @IsString()
   @IsNotEmpty()
