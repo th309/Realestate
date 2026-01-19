@@ -255,10 +255,13 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
 
                 const filtered = scored.map(({ metro }) => {
                         const stateAbbrev = metro.state || parseMetroState(metro.name);
+                        // Show full census name (e.g., "Los Angeles-Long Beach-Anaheim")
+                        const displayName = metro.fullName || metro.name;
                         return {
                             id: `metro-${metro.regionId}`,
-                            name: metro.name, // Show full metro name
+                            name: displayName,
                             subtitle: stateAbbrev ? `${stateAbbrev} Metro Area` : 'Metro Area',
+                            value: metro.name, // Use short name for API calls
                             type: 'metro' as const,
                             center: [0, 0] as [number, number],
                             state: stateAbbrev,
