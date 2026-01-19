@@ -4,7 +4,12 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import type { StateMapping, MetroMapping, CountyMapping, ZipMapping } from '../types';
+import type {
+  StateMapping,
+  MetroMapping,
+  CountyMapping,
+  ZipMapping,
+} from '../types';
 
 // ============================================================================
 // In-memory cache for crosswalk data (rarely changes, expensive to fetch)
@@ -19,20 +24,74 @@ let metroMappingsCache: MetroMappingsCache | null = null;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // Cache for ZIP mappings by state (key: stateFilter, value: cached result)
-const zipMappingsCache = new Map<string, { data: Map<string, ZipMapping>; timestamp: number }>();
+const zipMappingsCache = new Map<
+  string,
+  { data: Map<string, ZipMapping>; timestamp: number }
+>();
 
 const US_STATE_ABBREVS = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN',
-  'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH',
-  'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT',
-  'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'VI', 'PR'
+  'AL',
+  'AK',
+  'AZ',
+  'AR',
+  'CA',
+  'CO',
+  'CT',
+  'DE',
+  'DC',
+  'FL',
+  'GA',
+  'HI',
+  'ID',
+  'IL',
+  'IN',
+  'IA',
+  'KS',
+  'KY',
+  'LA',
+  'ME',
+  'MD',
+  'MA',
+  'MI',
+  'MN',
+  'MS',
+  'MO',
+  'MT',
+  'NE',
+  'NV',
+  'NH',
+  'NJ',
+  'NM',
+  'NY',
+  'NC',
+  'ND',
+  'OH',
+  'OK',
+  'OR',
+  'PA',
+  'RI',
+  'SC',
+  'SD',
+  'TN',
+  'TX',
+  'UT',
+  'VT',
+  'VA',
+  'WA',
+  'WV',
+  'WI',
+  'WY',
+  'VI',
+  'PR',
 ];
 
 /**
  * Build state mappings from Zillow region IDs to state info
  * Optimized: Single query instead of 53 separate queries
  */
-export async function buildStateMappings(supabase: SupabaseClient): Promise<Map<string, StateMapping>> {
+export async function buildStateMappings(
+  supabase: SupabaseClient,
+): Promise<Map<string, StateMapping>> {
   const stateMap = new Map<string, StateMapping>();
 
   // Single query to get all state mappings
@@ -45,13 +104,13 @@ export async function buildStateMappings(supabase: SupabaseClient): Promise<Map<
 
   // Deduplicate by zillow_state_region_id
   const seen = new Set<number>();
-  data?.forEach(row => {
+  data?.forEach((row) => {
     if (row.zillow_state_region_id && !seen.has(row.zillow_state_region_id)) {
       seen.add(row.zillow_state_region_id);
-      stateMap.set(
-        String(row.zillow_state_region_id),
-        { abbrev: row.state_abbrev, name: row.state_name }
-      );
+      stateMap.set(String(row.zillow_state_region_id), {
+        abbrev: row.state_abbrev,
+        name: row.state_name,
+      });
     }
   });
 
@@ -75,10 +134,16 @@ function extractStateFromCbsaTitle(cbsaTitle: string | null): string | null {
  */
 export async function buildMetroMappings(
   supabase: SupabaseClient,
-  stateFilter?: string
-): Promise<{ byZillowId: Map<string, MetroMapping>; byCbsaCode: Map<string, MetroMapping> }> {
+  stateFilter?: string,
+): Promise<{
+  byZillowId: Map<string, MetroMapping>;
+  byCbsaCode: Map<string, MetroMapping>;
+}> {
   // Return cached data if still valid (stateFilter not used, so cache is global)
-  if (metroMappingsCache && Date.now() - metroMappingsCache.timestamp < CACHE_TTL_MS) {
+  if (
+    metroMappingsCache &&
+    Date.now() - metroMappingsCache.timestamp < CACHE_TTL_MS
+  ) {
     return {
       byZillowId: metroMappingsCache.byZillowId,
       byCbsaCode: metroMappingsCache.byCbsaCode,
@@ -92,7 +157,7 @@ export async function buildMetroMappings(
   const pageSize = 1000;
 
   while (true) {
-    let query = supabase
+    const query = supabase
       .from('zillow_metro_crosswalk')
       .select('cbsa_code, cbsa_title, zillow_region_id, zillow_state_name')
       .not('cbsa_code', 'is', null);
@@ -100,20 +165,26 @@ export async function buildMetroMappings(
     // Note: stateFilter expects abbreviation but zillow_state_name is full name
     // For now, skip state filtering on this table - it's only ~900 metros anyway
 
-    const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+    const { data: crosswalk } = await query.range(
+      page * pageSize,
+      (page + 1) * pageSize - 1,
+    );
 
     if (!crosswalk || crosswalk.length === 0) break;
 
-    crosswalk.forEach(row => {
+    crosswalk.forEach((row) => {
       const stateAbbrev = extractStateFromCbsaTitle(row.cbsa_title);
 
       const metroInfo: MetroMapping = {
         cbsa_code: row.cbsa_code,
         cbsa_name: row.cbsa_title,
-        state: stateAbbrev
+        state: stateAbbrev,
       };
 
-      if (row.zillow_region_id && !byZillowId.has(String(row.zillow_region_id))) {
+      if (
+        row.zillow_region_id &&
+        !byZillowId.has(String(row.zillow_region_id))
+      ) {
         byZillowId.set(String(row.zillow_region_id), metroInfo);
       }
       if (row.cbsa_code && !byCbsaCode.has(row.cbsa_code)) {
@@ -136,7 +207,7 @@ export async function buildMetroMappings(
  */
 export async function buildCountyMappings(
   supabase: SupabaseClient,
-  stateFilter?: string
+  stateFilter?: string,
 ): Promise<Map<string, CountyMapping>> {
   const countyMap = new Map<string, CountyMapping>();
   let page = 0;
@@ -152,17 +223,20 @@ export async function buildCountyMappings(
       query = query.eq('state_abbrev', stateFilter);
     }
 
-    const { data: crosswalk } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+    const { data: crosswalk } = await query.range(
+      page * pageSize,
+      (page + 1) * pageSize - 1,
+    );
 
     if (!crosswalk || crosswalk.length === 0) break;
 
-    crosswalk.forEach(row => {
+    crosswalk.forEach((row) => {
       if (row.county_fips && !countyMap.has(row.county_fips)) {
         countyMap.set(row.county_fips, {
           fips: row.county_fips,
           name: row.county_name,
           state_abbrev: row.state_abbrev,
-          state_name: row.state_name
+          state_name: row.state_name,
         });
       }
     });
@@ -180,10 +254,12 @@ export async function buildCountyMappings(
 export async function buildZipMappings(
   supabase: SupabaseClient,
   stateFilter: string,
-  countyFilter?: string
+  countyFilter?: string,
 ): Promise<Map<string, ZipMapping>> {
   // Check cache (only for state-only queries, not county-filtered)
-  const cacheKey = countyFilter ? `${stateFilter}:${countyFilter}` : stateFilter;
+  const cacheKey = countyFilter
+    ? `${stateFilter}:${countyFilter}`
+    : stateFilter;
   const cached = zipMappingsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
@@ -202,13 +278,13 @@ export async function buildZipMappings(
 
   const zipMap = new Map<string, ZipMapping>();
 
-  crosswalk?.forEach(row => {
+  crosswalk?.forEach((row) => {
     if (row.zip_code) {
       zipMap.set(row.zip_code, {
         city: row.zip_default_city,
         county: row.county_name,
         state_abbrev: row.state_abbrev,
-        state_name: row.state_name
+        state_name: row.state_name,
       });
     }
   });
@@ -225,7 +301,7 @@ export async function buildZipMappings(
 export function lookupMetro(
   regionId: string,
   byZillowId: Map<string, MetroMapping>,
-  byCbsaCode: Map<string, MetroMapping>
+  byCbsaCode: Map<string, MetroMapping>,
 ): { metro: MetroMapping | undefined; cbsaCode: string | null } {
   const is5DigitCode = /^\d{5}$/.test(regionId);
 

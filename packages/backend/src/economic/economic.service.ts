@@ -33,7 +33,7 @@ export class EconomicService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   private getCached(key: string): EconomicRow[] | null {
     const entry = this.cache.get(key);
@@ -51,7 +51,10 @@ export class EconomicService {
     });
   }
 
-  private async getLatestDate(table: string, metric?: string): Promise<string | null> {
+  private async getLatestDate(
+    table: string,
+    metric?: string,
+  ): Promise<string | null> {
     let query = this.supabase
       .from(table)
       .select('period_date')
@@ -71,9 +74,13 @@ export class EconomicService {
   // Generic Data Fetchers
   // ============================================================================
 
-  private async getNationalData(metric: string, date?: string): Promise<EconomicDataPoint[]> {
+  private async getNationalData(
+    metric: string,
+    date?: string,
+  ): Promise<EconomicDataPoint[]> {
     // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate = date || await this.getLatestDate('economic_national', metric);
+    const latestDate =
+      date || (await this.getLatestDate('economic_national', metric));
 
     const { data, error } = await this.supabase
       .from('economic_national')
@@ -83,7 +90,7 @@ export class EconomicService {
 
     if (error) throw error;
 
-    return ((data || []) as EconomicRow[]).map(row => ({
+    return ((data || []) as EconomicRow[]).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
       value: Number(row[metric]) || 0,
@@ -91,11 +98,14 @@ export class EconomicService {
     }));
   }
 
-  private async getStateData(metric: string, date?: string): Promise<EconomicDataPoint[]> {
+  private async getStateData(
+    metric: string,
+    date?: string,
+  ): Promise<EconomicDataPoint[]> {
     const cacheKey = `economic_state:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map(row => ({
+      return cached.map((row) => ({
         region_id: String(row.state_fips || ''),
         region_name: String(row.state_name || ''),
         value: Number(row[metric]) || 0,
@@ -105,7 +115,8 @@ export class EconomicService {
     }
 
     // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate = date || await this.getLatestDate('economic_state', metric);
+    const latestDate =
+      date || (await this.getLatestDate('economic_state', metric));
 
     const { data, error } = await this.supabase
       .from('economic_state')
@@ -115,7 +126,7 @@ export class EconomicService {
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map(row => ({
+    return ((data || []) as EconomicRow[]).map((row) => ({
       region_id: String(row.state_fips || ''),
       region_name: String(row.state_name || ''),
       value: Number(row[metric]) || 0,
@@ -124,11 +135,14 @@ export class EconomicService {
     }));
   }
 
-  private async getMetroData(metric: string, date?: string): Promise<EconomicDataPoint[]> {
+  private async getMetroData(
+    metric: string,
+    date?: string,
+  ): Promise<EconomicDataPoint[]> {
     const cacheKey = `economic_metro:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map(row => ({
+      return cached.map((row) => ({
         region_id: String(row.cbsa_code || ''),
         region_name: String(row.cbsa_title || ''),
         value: Number(row[metric]) || 0,
@@ -138,7 +152,8 @@ export class EconomicService {
     }
 
     // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate = date || await this.getLatestDate('economic_metro', metric);
+    const latestDate =
+      date || (await this.getLatestDate('economic_metro', metric));
 
     const { data, error } = await this.supabase
       .from('economic_metro')
@@ -148,7 +163,7 @@ export class EconomicService {
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map(row => ({
+    return ((data || []) as EconomicRow[]).map((row) => ({
       region_id: String(row.cbsa_code || ''),
       region_name: String(row.cbsa_title || ''),
       value: Number(row[metric]) || 0,
@@ -157,11 +172,14 @@ export class EconomicService {
     }));
   }
 
-  private async getCountyData(metric: string, date?: string): Promise<EconomicDataPoint[]> {
+  private async getCountyData(
+    metric: string,
+    date?: string,
+  ): Promise<EconomicDataPoint[]> {
     const cacheKey = `economic_county:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map(row => ({
+      return cached.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
         value: Number(row[metric]) || 0,
@@ -172,7 +190,8 @@ export class EconomicService {
     }
 
     // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate = date || await this.getLatestDate('economic_county', metric);
+    const latestDate =
+      date || (await this.getLatestDate('economic_county', metric));
 
     const { data, error } = await this.supabase
       .from('economic_county')
@@ -182,7 +201,7 @@ export class EconomicService {
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map(row => ({
+    return ((data || []) as EconomicRow[]).map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
       value: Number(row[metric]) || 0,
@@ -195,30 +214,58 @@ export class EconomicService {
   // ============================================================================
   // Unemployment Rate
   // ============================================================================
-  async getNationalUnemployment(date?: string) { return this.getNationalData('unemployment_rate', date); }
-  async getStateUnemployment(date?: string) { return this.getStateData('unemployment_rate', date); }
-  async getMetroUnemployment(date?: string) { return this.getMetroData('unemployment_rate', date); }
-  async getCountyUnemployment(date?: string) { return this.getCountyData('unemployment_rate', date); }
+  async getNationalUnemployment(date?: string) {
+    return this.getNationalData('unemployment_rate', date);
+  }
+  async getStateUnemployment(date?: string) {
+    return this.getStateData('unemployment_rate', date);
+  }
+  async getMetroUnemployment(date?: string) {
+    return this.getMetroData('unemployment_rate', date);
+  }
+  async getCountyUnemployment(date?: string) {
+    return this.getCountyData('unemployment_rate', date);
+  }
 
   // ============================================================================
   // Job Growth (Employment YoY)
   // ============================================================================
-  async getNationalJobGrowth(date?: string) { return this.getNationalData('employment_yoy', date); }
-  async getStateJobGrowth(date?: string) { return this.getStateData('employment_yoy', date); }
-  async getMetroJobGrowth(date?: string) { return this.getMetroData('employment_yoy', date); }
-  async getCountyJobGrowth(date?: string) { return this.getCountyData('employment_yoy', date); }
+  async getNationalJobGrowth(date?: string) {
+    return this.getNationalData('employment_yoy', date);
+  }
+  async getStateJobGrowth(date?: string) {
+    return this.getStateData('employment_yoy', date);
+  }
+  async getMetroJobGrowth(date?: string) {
+    return this.getMetroData('employment_yoy', date);
+  }
+  async getCountyJobGrowth(date?: string) {
+    return this.getCountyData('employment_yoy', date);
+  }
 
   // ============================================================================
   // GDP Growth
   // ============================================================================
-  async getNationalGdpGrowth(date?: string) { return this.getNationalData('gdp_yoy', date); }
-  async getStateGdpGrowth(date?: string) { return this.getStateData('gdp_yoy', date); }
-  async getMetroGdpGrowth(date?: string) { return this.getMetroData('gdp_yoy', date); }
-  async getCountyGdpGrowth(date?: string) { return this.getCountyData('gdp_yoy', date); }
+  async getNationalGdpGrowth(date?: string) {
+    return this.getNationalData('gdp_yoy', date);
+  }
+  async getStateGdpGrowth(date?: string) {
+    return this.getStateData('gdp_yoy', date);
+  }
+  async getMetroGdpGrowth(date?: string) {
+    return this.getMetroData('gdp_yoy', date);
+  }
+  async getCountyGdpGrowth(date?: string) {
+    return this.getCountyData('gdp_yoy', date);
+  }
 
   // ============================================================================
   // Cost of Living (RPP)
   // ============================================================================
-  async getStateCostOfLiving(date?: string) { return this.getStateData('rpp_all_items', date); }
-  async getMetroCostOfLiving(date?: string) { return this.getMetroData('rpp_all_items', date); }
+  async getStateCostOfLiving(date?: string) {
+    return this.getStateData('rpp_all_items', date);
+  }
+  async getMetroCostOfLiving(date?: string) {
+    return this.getMetroData('rpp_all_items', date);
+  }
 }

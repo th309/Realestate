@@ -692,6 +692,47 @@ export const api = {
     return result;
   },
 
+  getCountyCapRate: async (): Promise<CountyHomeValues> => {
+    interface CapRateResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        county_fips?: string;
+        cap_rate: number;
+      }>;
+    }
+    const response = await fetchAPI<CapRateResponse>('/api/metrics/cap-rate/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.county_fips || item.region_id;
+      if (key && item.cap_rate != null) {
+        result[key] = Number(item.cap_rate);
+      }
+    });
+    return result;
+  },
+
+  getZipCapRate: async (state?: string): Promise<ZipHomeValues> => {
+    interface CapRateResponse {
+      success: boolean;
+      data?: Array<{
+        region_id: string;
+        postal_code?: string;
+        cap_rate: number;
+      }>;
+    }
+    const url = state ? `/api/metrics/cap-rate/zips?state=${state}` : '/api/metrics/cap-rate/zips';
+    const response = await fetchAPI<CapRateResponse>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      const key = item.postal_code || item.region_id;
+      if (key && item.cap_rate != null) {
+        result[key] = Number(item.cap_rate);
+      }
+    });
+    return result;
+  },
+
   // 5-Year Home Value Growth (CAGR from Zillow ZHVI)
   getMetroHomeValue5Yr: async (): Promise<MetroHomeValues> => {
     interface GrowthResponse {

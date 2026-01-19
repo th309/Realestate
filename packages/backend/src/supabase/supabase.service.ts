@@ -5,11 +5,11 @@ export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
 
 @Injectable()
 export class SupabaseService {
-    constructor(
-        @Inject(SUPABASE_CLIENT) private readonly supabaseClient: SupabaseClient,
-    ) { }
+  constructor(
+    @Inject(SUPABASE_CLIENT) private readonly supabaseClient: SupabaseClient,
+  ) {}
 
-    getClient(): SupabaseClient {
-        return this.supabaseClient;
-    }
+  getClient(): SupabaseClient {
+    return this.supabaseClient;
+  }
 }

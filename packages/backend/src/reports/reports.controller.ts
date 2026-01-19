@@ -17,7 +17,11 @@ import {
   Headers,
 } from '@nestjs/common';
 import { ReportsService } from './reports.service';
-import { GenerateReportDto, SendMessageDto, CreateShareDto } from './dto/generate-report.dto';
+import {
+  GenerateReportDto,
+  SendMessageDto,
+  CreateShareDto,
+} from './dto/generate-report.dto';
 
 @Controller('reports')
 export class ReportsController {
@@ -42,7 +46,10 @@ export class ReportsController {
   async getTemplate(@Param('slug') slug: string) {
     const template = await this.reportsService.getTemplateBySlug(slug);
     if (!template) {
-      throw new HttpException(`Template not found: ${slug}`, HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        `Template not found: ${slug}`,
+        HttpStatus.NOT_FOUND,
+      );
     }
     return template;
   }
@@ -140,7 +147,11 @@ export class ReportsController {
       throw new HttpException('User ID required', HttpStatus.UNAUTHORIZED);
     }
 
-    return this.reportsService.sendConversationMessage(reportId, userId, dto.content);
+    return this.reportsService.sendConversationMessage(
+      reportId,
+      userId,
+      dto.content,
+    );
   }
 
   /**
@@ -190,7 +201,10 @@ export class ReportsController {
   async getSharedReport(@Param('token') token: string) {
     const report = await this.reportsService.getSharedReport(token);
     if (!report) {
-      throw new HttpException('Shared report not found or expired', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Shared report not found or expired',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return report;
   }

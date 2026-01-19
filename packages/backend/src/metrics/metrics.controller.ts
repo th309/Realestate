@@ -120,6 +120,24 @@ export class MetricsController {
    */
   @Get('cap-rate/metros')
   async getMetroCapRate(@Query('date') date?: string) {
+    // Try pre-calculated data first
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'cap_rate',
+        'metro',
+      );
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'cap_rate',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fallback to on-the-fly calculation
     // Get latest date from ZORI data
     let targetDate = date;
     if (!targetDate) {
@@ -194,6 +212,66 @@ export class MetricsController {
       geography: 'Metro',
       metric: 'cap_rate',
       data: results,
+    };
+  }
+
+  /**
+   * Get cap rate for counties
+   */
+  @Get('cap-rate/counties')
+  async getCountyCapRate() {
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'cap_rate',
+        'county',
+      );
+
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'County',
+        metric: 'cap_rate',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        'No calculated Cap Rate data available for counties. Run batch calculation.',
+      data: [],
+    };
+  }
+
+  /**
+   * Get cap rate for zip codes
+   */
+  @Get('cap-rate/zips')
+  async getZipCapRate() {
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'cap_rate',
+        'zip',
+      );
+
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Zip',
+        metric: 'cap_rate',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    return {
+      success: false,
+      error:
+        'No calculated Cap Rate data available for ZIPs. Run batch calculation.',
+      data: [],
     };
   }
 

@@ -28,7 +28,7 @@ export class InventorySurplusService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   // ============================================================================
   // CACHE HELPERS
@@ -108,7 +108,7 @@ export class InventorySurplusService {
         .not('active_listing_count', 'is', null);
 
       if (data) {
-        for (const row of data as any[]) {
+        for (const row of data) {
           const regionId = row[idField];
           const count = row.active_listing_count;
 
@@ -126,7 +126,11 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all metros
    */
-  async calculateForMetros(): Promise<{ processed: number; stored: number; debug?: any }> {
+  async calculateForMetros(): Promise<{
+    processed: number;
+    stored: number;
+    debug?: any;
+  }> {
     // Get latest period date
     const { data: latestDateRow } = await this.supabase
       .from('realtor_metro')
@@ -136,7 +140,11 @@ export class InventorySurplusService {
       .single();
 
     if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0, debug: { error: 'No latest date found' } };
+      return {
+        processed: 0,
+        stored: 0,
+        debug: { error: 'No latest date found' },
+      };
     }
 
     const targetDate = new Date(latestDateRow.period_date);
@@ -144,7 +152,9 @@ export class InventorySurplusService {
     const targetMonth = targetDate.getUTCMonth() + 1;
     const targetDay = targetDate.getUTCDate();
 
-    console.log(`[InventorySurplus] Target date: ${latestDateRow.period_date}, Year: ${targetYear}, Month: ${targetMonth}, Day: ${targetDay}`);
+    console.log(
+      `[InventorySurplus] Target date: ${latestDateRow.period_date}, Year: ${targetYear}, Month: ${targetMonth}, Day: ${targetDay}`,
+    );
 
     // Get current inventory data
     const { data: currentData } = await this.supabase
@@ -154,10 +164,16 @@ export class InventorySurplusService {
       .not('active_listing_count', 'is', null);
 
     if (!currentData || currentData.length === 0) {
-      return { processed: 0, stored: 0, debug: { error: 'No current data found' } };
+      return {
+        processed: 0,
+        stored: 0,
+        debug: { error: 'No current data found' },
+      };
     }
 
-    console.log(`[InventorySurplus] Found ${currentData.length} metros with current data`);
+    console.log(
+      `[InventorySurplus] Found ${currentData.length} metros with current data`,
+    );
 
     // Get historical data (same month in previous 5 years)
     const historicalByRegion = await this.getHistoricalInventory(
@@ -168,12 +184,14 @@ export class InventorySurplusService {
       targetDay,
     );
 
-    console.log(`[InventorySurplus] Historical data for ${historicalByRegion.size} regions`);
+    console.log(
+      `[InventorySurplus] Historical data for ${historicalByRegion.size} regions`,
+    );
 
     // Calculate and store
     let stored = 0;
     let skippedNoHistory = 0;
-    let upsertErrors: string[] = [];
+    const upsertErrors: string[] = [];
     const recordsToUpsert: any[] = [];
 
     for (const metro of currentData) {
@@ -200,7 +218,9 @@ export class InventorySurplusService {
       if (recordsToUpsert.length >= this.BATCH_SIZE) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (error) {
           upsertErrors.push(error.message);
           console.error(`[InventorySurplus] Upsert error: ${error.message}`);
@@ -215,16 +235,22 @@ export class InventorySurplusService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (error) {
         upsertErrors.push(error.message);
-        console.error(`[InventorySurplus] Final upsert error: ${error.message}`);
+        console.error(
+          `[InventorySurplus] Final upsert error: ${error.message}`,
+        );
       } else {
         stored += recordsToUpsert.length;
       }
     }
 
-    console.log(`[InventorySurplus] Processed: ${currentData.length}, Stored: ${stored}, SkippedNoHistory: ${skippedNoHistory}`);
+    console.log(
+      `[InventorySurplus] Processed: ${currentData.length}, Stored: ${stored}, SkippedNoHistory: ${skippedNoHistory}`,
+    );
 
     return {
       processed: currentData.length,
@@ -237,7 +263,7 @@ export class InventorySurplusService {
         historicalRegions: historicalByRegion.size,
         skippedNoHistory,
         upsertErrors: upsertErrors.length > 0 ? upsertErrors : undefined,
-      }
+      },
     };
   }
 
@@ -301,16 +327,17 @@ export class InventorySurplusService {
       // Calculate as percentage: ((current - avg) / avg) * 100
       const surplusPct = ((national.active_listing_count - avg) / avg) * 100;
 
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert({
+      const { error } = await this.supabase.from('calculated_metrics').upsert(
+        {
           geography_id: 'US',
           geography_type: 'national',
           geography_name: national.country || 'United States',
           period_date: latestDateRow.period_date,
           inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        }, { onConflict: 'geography_id,geography_type,period_date' });
+        },
+        { onConflict: 'geography_id,geography_type,period_date' },
+      );
 
       if (!error) stored++;
     }
@@ -366,16 +393,17 @@ export class InventorySurplusService {
       // Calculate as percentage: ((current - avg) / avg) * 100
       const surplusPct = ((state.active_listing_count - avg) / avg) * 100;
 
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert({
+      const { error } = await this.supabase.from('calculated_metrics').upsert(
+        {
           geography_id: state.state_id,
           geography_type: 'state',
           geography_name: state.state_name,
           period_date: latestDateRow.period_date,
           inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        }, { onConflict: 'geography_id,geography_type,period_date' });
+        },
+        { onConflict: 'geography_id,geography_type,period_date' },
+      );
 
       if (!error) stored++;
     }
@@ -458,7 +486,9 @@ export class InventorySurplusService {
       if (recordsToUpsert.length >= this.BATCH_SIZE) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (!error) stored += recordsToUpsert.length;
         recordsToUpsert.length = 0;
       }
@@ -467,7 +497,9 @@ export class InventorySurplusService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (!error) stored += recordsToUpsert.length;
     }
 
@@ -549,7 +581,9 @@ export class InventorySurplusService {
       if (recordsToUpsert.length >= this.BATCH_SIZE) {
         const { error } = await this.supabase
           .from('calculated_metrics')
-          .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
         if (!error) stored += recordsToUpsert.length;
         recordsToUpsert.length = 0;
       }
@@ -558,7 +592,9 @@ export class InventorySurplusService {
     if (recordsToUpsert.length > 0) {
       const { error } = await this.supabase
         .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+        .upsert(recordsToUpsert, {
+          onConflict: 'geography_id,geography_type,period_date',
+        });
       if (!error) stored += recordsToUpsert.length;
     }
 
@@ -595,7 +631,7 @@ export class InventorySurplusService {
 
         if (!data || data.length === 0) break;
 
-        for (const row of data as any[]) {
+        for (const row of data) {
           const regionId = row[idField];
           const count = row.active_listing_count;
 
@@ -640,7 +676,7 @@ export class InventorySurplusService {
    */
   async getForMap(
     geographyType: 'national' | 'metro' | 'state' | 'county' | 'zip',
-    state?: string
+    state?: string,
   ): Promise<{ data: any[]; success: boolean; source: string }> {
     // Build cache key
     const cacheKey = state
@@ -650,7 +686,11 @@ export class InventorySurplusService {
     // Check cache first
     const cached = this.getCached<any[]>(cacheKey);
     if (cached) {
-      return { data: cached, success: true, source: 'calculated_metrics (cached)' };
+      return {
+        data: cached,
+        success: true,
+        source: 'calculated_metrics (cached)',
+      };
     }
 
     // Get the latest period_date for this geography type (with caching)
@@ -691,7 +731,9 @@ export class InventorySurplusService {
     while (true) {
       const { data: pageData } = await this.supabase
         .from('calculated_metrics')
-        .select('geography_id, geography_name, inventory_surplus_pct, period_date')
+        .select(
+          'geography_id, geography_name, inventory_surplus_pct, period_date',
+        )
         .eq('geography_type', geographyType)
         .eq('period_date', effectiveDate)
         .not('inventory_surplus_pct', 'is', null)
@@ -714,7 +756,10 @@ export class InventorySurplusService {
    * Fetch ZIP inventory surplus data filtered by state at database level
    * This is MUCH faster than loading all 28,000+ ZIPs and filtering in memory
    */
-  private async fetchZipsByState(periodDate: string, state: string): Promise<any[]> {
+  private async fetchZipsByState(
+    periodDate: string,
+    state: string,
+  ): Promise<any[]> {
     // geography_name format is "city, ST" so we use ilike to match state suffix
     const statePattern = `%, ${state.toLowerCase()}`;
     const allData: any[] = [];
@@ -723,7 +768,9 @@ export class InventorySurplusService {
     while (true) {
       const { data: pageData } = await this.supabase
         .from('calculated_metrics')
-        .select('geography_id, geography_name, inventory_surplus_pct, period_date')
+        .select(
+          'geography_id, geography_name, inventory_surplus_pct, period_date',
+        )
         .eq('geography_type', 'zip')
         .eq('period_date', periodDate)
         .ilike('geography_name', statePattern)
@@ -743,7 +790,7 @@ export class InventorySurplusService {
    * Transform database rows to API format
    */
   private transformToApiFormat(rows: any[], geographyType: string): any[] {
-    return rows.map(row => ({
+    return rows.map((row) => ({
       region_id: row.geography_id,
       region_name: row.geography_name,
       value: row.inventory_surplus_pct,

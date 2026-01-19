@@ -3,7 +3,7 @@ import { ZillowService } from './zillow.service';
 
 @Controller('api/zillow')
 export class ZillowController {
-  constructor(private readonly zillowService: ZillowService) { }
+  constructor(private readonly zillowService: ZillowService) {}
 
   @Get('states')
   async getStateHomeValues(@Query('date') date?: string) {
@@ -157,7 +157,11 @@ export class ZillowController {
     @Query('state') state?: string,
     @Query('propertyType') propertyType: string = 'all',
   ) {
-    const data = await this.zillowService.getCountyRent(date, propertyType, state);
+    const data = await this.zillowService.getCountyRent(
+      date,
+      propertyType,
+      state,
+    );
     return {
       success: true,
       count: data.length,
@@ -198,7 +202,10 @@ export class ZillowController {
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
   ) {
-    const data = await this.zillowService.getMetroRenterDemand(date, propertyType);
+    const data = await this.zillowService.getMetroRenterDemand(
+      date,
+      propertyType,
+    );
     return {
       success: true,
       count: data.length,
@@ -220,7 +227,11 @@ export class ZillowController {
         error: 'State parameter is required for ZIP-level data',
       };
     }
-    const data = await this.zillowService.getZipRenterDemand(state, propertyType, date);
+    const data = await this.zillowService.getZipRenterDemand(
+      state,
+      propertyType,
+      date,
+    );
     return {
       success: true,
       count: data.length,

@@ -40,7 +40,9 @@ export class ClaudeService {
       this.claudeClient = new Anthropic({ apiKey: anthropicKey });
       this.logger.log('Claude initialized for analysis and narratives');
     } else {
-      this.logger.warn('ANTHROPIC_API_KEY not configured - AI features limited');
+      this.logger.warn(
+        'ANTHROPIC_API_KEY not configured - AI features limited',
+      );
     }
   }
 
@@ -59,10 +61,19 @@ export class ClaudeService {
 
     for (const section of sections) {
       try {
-        const prompt = this.interpolateTemplate(section.prompt_template, context);
-        const response = await this.generateCompletion(prompt, section.max_tokens);
+        const prompt = this.interpolateTemplate(
+          section.prompt_template,
+          context,
+        );
+        const response = await this.generateCompletion(
+          prompt,
+          section.max_tokens,
+        );
 
-        if (section.output_format === 'json_array' || section.output_format === 'json_object') {
+        if (
+          section.output_format === 'json_array' ||
+          section.output_format === 'json_object'
+        ) {
           try {
             results[section.id] = JSON.parse(response);
           } catch {
@@ -72,7 +83,10 @@ export class ClaudeService {
           results[section.id] = response;
         }
       } catch (error) {
-        this.logger.error(`Failed to generate narrative for ${section.id}:`, error);
+        this.logger.error(
+          `Failed to generate narrative for ${section.id}:`,
+          error,
+        );
         results[section.id] = this.getFallbackNarrative(section.id);
       }
     }
@@ -143,7 +157,10 @@ Keep the analysis under 400 words and be specific with numbers.`;
   // PRIVATE METHODS
   // ============================================================================
 
-  private async generateCompletion(prompt: string, maxTokens: number): Promise<string> {
+  private async generateCompletion(
+    prompt: string,
+    maxTokens: number,
+  ): Promise<string> {
     if (!this.claudeClient) {
       throw new Error('Claude client not initialized');
     }
@@ -174,10 +191,15 @@ Keep the analysis under 400 words and be specific with numbers.`;
     });
 
     const textBlock = response.content.find((block) => block.type === 'text');
-    return textBlock?.text || 'I apologize, but I was unable to generate a response.';
+    return (
+      textBlock?.text || 'I apologize, but I was unable to generate a response.'
+    );
   }
 
-  private interpolateTemplate(template: string, context: Record<string, any>): string {
+  private interpolateTemplate(
+    template: string,
+    context: Record<string, any>,
+  ): string {
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       const value = context[key];
       if (value === undefined || value === null) return match;
@@ -189,10 +211,13 @@ Keep the analysis under 400 words and be specific with numbers.`;
   private buildConversationSystemPrompt(report: any): string {
     const userType = report.user_type || 'homebuyer';
     const heroScore = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
-    const geographyName = report.primary_geography_name || 'the selected market';
+    const geographyName =
+      report.primary_geography_name || 'the selected market';
 
     return `You are an expert real estate market analyst for PropertyIQ, helping ${
-      userType === 'investor' ? 'real estate investors' : 'homebuyers and renters'
+      userType === 'investor'
+        ? 'real estate investors'
+        : 'homebuyers and renters'
     } make informed decisions.
 
 You are discussing a ${report.template?.name || 'Market'} report for ${geographyName}.
@@ -228,11 +253,15 @@ Guidelines:
 
   private getFallbackNarrative(sectionId: string): string {
     const fallbacks: Record<string, string> = {
-      market_summary: 'Market analysis is being processed. Please check back shortly.',
+      market_summary:
+        'Market analysis is being processed. Please check back shortly.',
       trend_observations: 'Trend analysis is being compiled from market data.',
       investment_assessment: 'Investment potential is being calculated.',
       affordability_analysis: 'Affordability metrics are being processed.',
     };
-    return fallbacks[sectionId] || 'Analysis pending. Please refresh to see updated insights.';
+    return (
+      fallbacks[sectionId] ||
+      'Analysis pending. Please refresh to see updated insights.'
+    );
   }
 }

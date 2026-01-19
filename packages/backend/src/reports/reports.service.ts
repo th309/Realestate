@@ -36,14 +36,14 @@ export class ReportsService {
     private readonly scoringService: ScoringService,
     private readonly claudeService: ClaudeService,
     private readonly geminiNewsService: GeminiNewsService,
-  ) { }
+  ) {}
 
   /**
    * Get available report templates
    */
   async getTemplates(tier?: string): Promise<ReportTemplate[]> {
     const client = this.supabase.getClient();
-    let query = client
+    const query = client
       .from('report_templates')
       .select('*')
       .eq('is_active', true)
@@ -80,7 +80,10 @@ export class ReportsService {
   /**
    * Generate a new report
    */
-  async generateReport(userId: string, dto: GenerateReportDto): Promise<string> {
+  async generateReport(
+    userId: string,
+    dto: GenerateReportDto,
+  ): Promise<string> {
     const client = this.supabase.getClient();
     const startTime = Date.now();
 
@@ -91,7 +94,10 @@ export class ReportsService {
     }
 
     // 2. Create report record in 'pending' status
-    const reportTitle = this.generateReportTitle(template.name, dto.primary_geography.name);
+    const reportTitle = this.generateReportTitle(
+      template.name,
+      dto.primary_geography.name,
+    );
 
     const { data: report, error: insertError } = await client
       .from('reports')
@@ -137,8 +143,11 @@ export class ReportsService {
 
     try {
       // 1. Fetch PropertyIQ scores
-      const geoType = dto.primary_geography.type as 'metro' | 'county' | 'zip';
-      const scores = await this.scoringService.getScore(dto.primary_geography.id, geoType);
+      const geoType = dto.primary_geography.type;
+      const scores = await this.scoringService.getScore(
+        dto.primary_geography.id,
+        geoType,
+      );
 
       // 2. Scout news via Gemini (with caching)
       const newsResult = await this.geminiNewsService.getOrScoutNews(
@@ -166,28 +175,28 @@ export class ReportsService {
         scores: {
           homeready: scores
             ? {
-              score: scores.homereadyScore,
-              trend: 'stable',
-              components: scores.homereadyComponents,
-            }
+                score: scores.homereadyScore,
+                trend: 'stable',
+                components: scores.homereadyComponents,
+              }
             : undefined,
           investoredge: scores
             ? {
-              score: scores.investoredgeScore,
-              trend: 'stable',
-              components: scores.investoredgeComponents,
-            }
+                score: scores.investoredgeScore,
+                trend: 'stable',
+                components: scores.investoredgeComponents,
+              }
             : undefined,
         },
         realtime: newsResult
           ? {
-            news: newsResult.local_news,
-            indicators: newsResult.economic_indicators,
-            signals: newsResult.market_signals,
-            national_context: newsResult.national_context,
-            signal_summary: signalSummary,
-            fetched_at: newsResult.scout_metadata.search_timestamp,
-          }
+              news: newsResult.local_news,
+              indicators: newsResult.economic_indicators,
+              signals: newsResult.market_signals,
+              national_context: newsResult.national_context,
+              signal_summary: signalSummary,
+              fetched_at: newsResult.scout_metadata.search_timestamp,
+            }
           : null,
       };
 
@@ -197,11 +206,11 @@ export class ReportsService {
         // Format news for Claude prompt context
         const newsContext = newsResult
           ? this.geminiNewsService.formatNewsForPrompt(newsResult, {
-            maxNewsItems: 5,
-            includeIndicators: true,
-            includeSignals: true,
-            includeNational: true,
-          })
+              maxNewsItems: 5,
+              includeIndicators: true,
+              includeSignals: true,
+              includeNational: true,
+            })
           : 'No recent news available for this market.';
 
         aiNarratives = await this.claudeService.generateNarratives(
@@ -265,10 +274,12 @@ export class ReportsService {
     const client = this.supabase.getClient();
     let query = client
       .from('reports')
-      .select(`
+      .select(
+        `
         *,
         template:report_templates(slug, name, icon, config)
-      `)
+      `,
+      )
       .eq('id', reportId);
 
     if (userId) {
@@ -293,11 +304,16 @@ export class ReportsService {
   /**
    * Get user's report history
    */
-  async getReportHistory(userId: string, limit: number = 20, offset: number = 0): Promise<any[]> {
+  async getReportHistory(
+    userId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<any[]> {
     const client = this.supabase.getClient();
     const { data, error } = await client
       .from('reports')
-      .select(`
+      .select(
+        `
         id,
         title,
         report_type,
@@ -310,7 +326,8 @@ export class ReportsService {
         data_as_of_date,
         created_at,
         template:report_templates(slug, name, icon)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -387,8 +404,18 @@ export class ReportsService {
     // Update conversation
     const messages = [
       ...(conversation.messages || []),
-      { id: Date.now().toString(), role: 'user', content, timestamp: new Date().toISOString() },
-      { id: (Date.now() + 1).toString(), role: 'assistant', content: response, timestamp: new Date().toISOString() },
+      {
+        id: Date.now().toString(),
+        role: 'user',
+        content,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response,
+        timestamp: new Date().toISOString(),
+      },
     ];
 
     await client
@@ -458,10 +485,12 @@ export class ReportsService {
     const client = this.supabase.getClient();
     const { data, error } = await client
       .from('reports')
-      .select(`
+      .select(
+        `
         *,
         template:report_templates(slug, name, icon, config)
-      `)
+      `,
+      )
       .eq('share_token', token)
       .or('share_expires_at.is.null,share_expires_at.gt.now()')
       .single();
@@ -480,11 +509,13 @@ export class ReportsService {
   /**
    * Generate report title
    */
-  private generateReportTitle(templateName: string, geographyName: string): string {
+  private generateReportTitle(
+    templateName: string,
+    geographyName: string,
+  ): string {
     // Shorten geography name if too long
-    const shortGeoName = geographyName.length > 30
-      ? geographyName.split(',')[0]
-      : geographyName;
+    const shortGeoName =
+      geographyName.length > 30 ? geographyName.split(',')[0] : geographyName;
     return `${shortGeoName} - ${templateName}`;
   }
 }

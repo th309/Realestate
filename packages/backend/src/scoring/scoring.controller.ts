@@ -4,7 +4,15 @@
  * API endpoints for PropertyIQ score calculation and retrieval.
  */
 
-import { Controller, Get, Post, Param, Query, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ScoringService } from './scoring.service';
 import { PercentileService } from './percentile.service';
 import { GeographyType } from './scoring.types';
@@ -34,7 +42,11 @@ export class ScoringController {
     const geoType = this.validateGeographyType(geographyType);
 
     if (recalculate === 'true') {
-      const score = await this.scoringService.calculateScore(geographyId, geoType, periodDate);
+      const score = await this.scoringService.calculateScore(
+        geographyId,
+        geoType,
+        periodDate,
+      );
       if (!score) {
         throw new HttpException(
           `Unable to calculate score for ${geographyType}/${geographyId}`,
@@ -45,13 +57,21 @@ export class ScoringController {
     }
 
     // Try to get cached score first
-    const cachedScore = await this.scoringService.getScore(geographyId, geoType, periodDate);
+    const cachedScore = await this.scoringService.getScore(
+      geographyId,
+      geoType,
+      periodDate,
+    );
     if (cachedScore) {
       return cachedScore;
     }
 
     // If no cached score, calculate it
-    const score = await this.scoringService.calculateScore(geographyId, geoType, periodDate);
+    const score = await this.scoringService.calculateScore(
+      geographyId,
+      geoType,
+      periodDate,
+    );
     if (!score) {
       throw new HttpException(
         `Unable to calculate score for ${geographyType}/${geographyId}`,
@@ -74,7 +94,10 @@ export class ScoringController {
     @Query('periodDate') periodDate?: string,
   ) {
     const geoType = this.validateGeographyType(geographyType);
-    const result = await this.scoringService.calculateAllScores(geoType, periodDate);
+    const result = await this.scoringService.calculateAllScores(
+      geoType,
+      periodDate,
+    );
     return {
       success: true,
       geographyType: geoType,
@@ -98,24 +121,40 @@ export class ScoringController {
     @Query('periodDate') periodDate?: string,
   ) {
     if (!ids) {
-      throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'ids query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoType = this.validateGeographyType(geographyType);
-    const geographyIds = ids.split(',').map(id => id.trim()).filter(id => id);
+    const geographyIds = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id);
 
     if (geographyIds.length === 0) {
-      throw new HttpException('At least one geography ID is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'At least one geography ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     if (geographyIds.length > 100) {
-      throw new HttpException('Maximum 100 geographies per batch request', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Maximum 100 geographies per batch request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const scores = await Promise.all(
       geographyIds.map(async (id) => {
         try {
-          const score = await this.scoringService.getScore(id, geoType, periodDate);
+          const score = await this.scoringService.getScore(
+            id,
+            geoType,
+            periodDate,
+          );
           if (!score) {
             return { geographyId: id, error: 'Score not found' };
           }
@@ -148,25 +187,39 @@ export class ScoringController {
     @Query('periodDate') periodDate?: string,
   ) {
     if (!ids) {
-      throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'ids query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoType = this.validateGeographyType(geographyType);
-    const geographyIds = ids.split(',').map(id => id.trim()).filter(id => id);
+    const geographyIds = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id);
 
     if (geographyIds.length < 2) {
-      throw new HttpException('At least 2 geography IDs required for comparison', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'At least 2 geography IDs required for comparison',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     if (geographyIds.length > 5) {
-      throw new HttpException('Maximum 5 geographies per comparison', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Maximum 5 geographies per comparison',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const scores = await Promise.all(
-      geographyIds.map(id => this.scoringService.getScore(id, geoType, periodDate)),
+      geographyIds.map((id) =>
+        this.scoringService.getScore(id, geoType, periodDate),
+      ),
     );
 
-    const validScores = scores.filter(s => s !== null);
+    const validScores = scores.filter((s) => s !== null);
 
     if (validScores.length < 2) {
       throw new HttpException(
@@ -176,31 +229,41 @@ export class ScoringController {
     }
 
     // Calculate rankings
-    const homereadyRanked = [...validScores].sort((a, b) => b!.homereadyScore - a!.homereadyScore);
-    const investoredgeRanked = [...validScores].sort((a, b) => b!.investoredgeScore - a!.investoredgeScore);
+    const homereadyRanked = [...validScores].sort(
+      (a, b) => b.homereadyScore - a.homereadyScore,
+    );
+    const investoredgeRanked = [...validScores].sort(
+      (a, b) => b.investoredgeScore - a.investoredgeScore,
+    );
 
     return {
       geographyType: geoType,
       periodDate,
-      comparison: validScores.map(score => ({
-        geographyId: score!.geographyId,
-        geographyName: score!.geographyName,
-        homereadyScore: score!.homereadyScore,
-        homereadyRank: homereadyRanked.findIndex(s => s!.geographyId === score!.geographyId) + 1,
-        investoredgeScore: score!.investoredgeScore,
-        investoredgeRank: investoredgeRanked.findIndex(s => s!.geographyId === score!.geographyId) + 1,
-        confidenceLevel: score!.confidenceLevel,
+      comparison: validScores.map((score) => ({
+        geographyId: score.geographyId,
+        geographyName: score.geographyName,
+        homereadyScore: score.homereadyScore,
+        homereadyRank:
+          homereadyRanked.findIndex(
+            (s) => s.geographyId === score.geographyId,
+          ) + 1,
+        investoredgeScore: score.investoredgeScore,
+        investoredgeRank:
+          investoredgeRanked.findIndex(
+            (s) => s.geographyId === score.geographyId,
+          ) + 1,
+        confidenceLevel: score.confidenceLevel,
       })),
       rankings: {
-        homeready: homereadyRanked.map(s => ({
-          geographyId: s!.geographyId,
-          geographyName: s!.geographyName,
-          score: s!.homereadyScore,
+        homeready: homereadyRanked.map((s) => ({
+          geographyId: s.geographyId,
+          geographyName: s.geographyName,
+          score: s.homereadyScore,
         })),
-        investoredge: investoredgeRanked.map(s => ({
-          geographyId: s!.geographyId,
-          geographyName: s!.geographyName,
-          score: s!.investoredgeScore,
+        investoredge: investoredgeRanked.map((s) => ({
+          geographyId: s.geographyId,
+          geographyName: s.geographyName,
+          score: s.investoredgeScore,
         })),
       },
     };
@@ -222,7 +285,10 @@ export class ScoringController {
 
     let result;
     if (periodDate) {
-      result = await this.percentileService.calculatePercentilesForDate(geoType, periodDate);
+      result = await this.percentileService.calculatePercentilesForDate(
+        geoType,
+        periodDate,
+      );
     } else {
       result = await this.percentileService.calculateLatestPercentiles(geoType);
     }
@@ -241,11 +307,10 @@ export class ScoringController {
    * POST /scoring/percentiles-all/:geographyType
    */
   @Post('percentiles-all/:geographyType')
-  async calculateAllPercentiles(
-    @Param('geographyType') geographyType: string,
-  ) {
+  async calculateAllPercentiles(@Param('geographyType') geographyType: string) {
     const geoType = this.validateGeographyType(geographyType);
-    const result = await this.percentileService.calculateAllPercentiles(geoType);
+    const result =
+      await this.percentileService.calculateAllPercentiles(geoType);
 
     return {
       success: true,
@@ -271,13 +336,21 @@ export class ScoringController {
     // Step 1: Calculate percentiles
     let percentileResult;
     if (periodDate) {
-      percentileResult = await this.percentileService.calculatePercentilesForDate(geoType, periodDate);
+      percentileResult =
+        await this.percentileService.calculatePercentilesForDate(
+          geoType,
+          periodDate,
+        );
     } else {
-      percentileResult = await this.percentileService.calculateLatestPercentiles(geoType);
+      percentileResult =
+        await this.percentileService.calculateLatestPercentiles(geoType);
     }
 
     // Step 2: Calculate scores
-    const scoreResult = await this.scoringService.calculateAllScores(geoType, periodDate);
+    const scoreResult = await this.scoringService.calculateAllScores(
+      geoType,
+      periodDate,
+    );
 
     return {
       success: true,

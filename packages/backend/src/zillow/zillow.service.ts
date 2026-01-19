@@ -19,7 +19,7 @@ import {
   buildMetroMappings,
   buildCountyMappings,
   buildZipMappings,
-  lookupMetro
+  lookupMetro,
 } from './helpers/crosswalk';
 
 import {
@@ -34,16 +34,22 @@ import {
   queryZhvf,
   queryMarketIndicator,
   queryMarketIndicatorLatest,
-  queryAffordability
+  queryAffordability,
 } from './helpers/queries';
 
-import type { MarketIndicatorData, AffordabilityData, PriceCutsData, NewConstructionData, MarketIndicatorTable } from './types';
+import type {
+  MarketIndicatorData,
+  AffordabilityData,
+  PriceCutsData,
+  NewConstructionData,
+  MarketIndicatorTable,
+} from './types';
 
 @Injectable()
 export class ZillowService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   // ============================================================================
   // ZHVI (Home Value) Methods
@@ -86,14 +92,20 @@ export class ZillowService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getMetroHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
+  async getMetroHomeValues(
+    date?: string,
+    stateFilter?: string,
+  ): Promise<HomeValueData[]> {
     // Use cached latest date if not provided
-    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'zhvi');
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'metro', 'zhvi'));
 
     // Query zillow_metro table directly - filter by date for efficiency
     let query = this.supabase
       .from('zillow_metro')
-      .select('region_id, region_name, state_code, cbsa_code, value, period_date')
+      .select(
+        'region_id, region_name, state_code, cbsa_code, value, period_date',
+      )
       .eq('metric_name', 'zhvi');
 
     if (targetDate) {
@@ -114,8 +126,8 @@ export class ZillowService {
 
     // Map results (already filtered by date, no dedup needed)
     const results: HomeValueData[] = metroData
-      .filter(record => record.cbsa_code) // Skip records without cbsa_code
-      .map(record => ({
+      .filter((record) => record.cbsa_code) // Skip records without cbsa_code
+      .map((record) => ({
         region_id: String(record.region_id),
         region_name: record.region_name,
         cbsa_code: record.cbsa_code,
@@ -129,9 +141,13 @@ export class ZillowService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getCountyHomeValues(date?: string, stateFilter?: string): Promise<HomeValueData[]> {
+  async getCountyHomeValues(
+    date?: string,
+    stateFilter?: string,
+  ): Promise<HomeValueData[]> {
     // Use cached latest date if not provided
-    const targetDate = date || await getLatestDate(this.supabase, 'county', 'zhvi');
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'county', 'zhvi'));
 
     // Supabase has a 1000 row limit per request, so we need to paginate
     // to get all ~3200 counties
@@ -142,7 +158,9 @@ export class ZillowService {
     while (true) {
       let query = this.supabase
         .from('zillow_county')
-        .select('region_id, region_name, state_code, fips_code, value, period_date')
+        .select(
+          'region_id, region_name, state_code, fips_code, value, period_date',
+        )
         .eq('metric_name', 'zhvi');
 
       if (targetDate) {
@@ -153,7 +171,10 @@ export class ZillowService {
         query = query.eq('state_code', stateFilter.toUpperCase());
       }
 
-      const { data: pageData, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        page * pageSize,
+        (page + 1) * pageSize - 1,
+      );
 
       if (error) {
         throw new Error(`Error fetching county home values: ${error.message}`);
@@ -171,8 +192,8 @@ export class ZillowService {
 
     // Map results (already filtered by date, no dedup needed)
     const results: HomeValueData[] = allData
-      .filter(record => record.fips_code) // Skip records without fips_code
-      .map(record => ({
+      .filter((record) => record.fips_code) // Skip records without fips_code
+      .map((record) => ({
         region_id: String(record.region_id),
         region_name: record.region_name,
         county_fips: record.fips_code,
@@ -187,14 +208,19 @@ export class ZillowService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getZipHomeValues(stateFilter: string, countyFilter?: string, date?: string): Promise<HomeValueData[]> {
+  async getZipHomeValues(
+    stateFilter: string,
+    countyFilter?: string,
+    date?: string,
+  ): Promise<HomeValueData[]> {
     // State filter is required for ZIP data
     if (!stateFilter) {
       return [];
     }
 
     // Use cached latest date if not provided
-    const targetDate = date || await getLatestDate(this.supabase, 'zip', 'zhvi');
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'zip', 'zhvi'));
 
     // Supabase has a 1000 row limit per request, so we need to paginate
     // for states with many ZIPs (CA has ~1700)
@@ -205,7 +231,9 @@ export class ZillowService {
     while (true) {
       let query = this.supabase
         .from('zillow_zip')
-        .select('region_id, region_name, state_code, county_fips, value, period_date')
+        .select(
+          'region_id, region_name, state_code, county_fips, value, period_date',
+        )
         .eq('metric_name', 'zhvi')
         .eq('state_code', stateFilter.toUpperCase());
 
@@ -213,7 +241,10 @@ export class ZillowService {
         query = query.eq('period_date', targetDate);
       }
 
-      const { data: pageData, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+      const { data: pageData, error } = await query.range(
+        page * pageSize,
+        (page + 1) * pageSize - 1,
+      );
 
       if (error) {
         throw new Error(`Error fetching ZIP home values: ${error.message}`);
@@ -230,7 +261,7 @@ export class ZillowService {
     if (allData.length === 0) return [];
 
     // Map results (already filtered by date, no dedup needed)
-    const results: HomeValueData[] = allData.map(record => ({
+    const results: HomeValueData[] = allData.map((record) => ({
       region_id: String(record.region_id),
       region_name: record.region_name,
       zip_code: record.region_name,
@@ -258,7 +289,9 @@ export class ZillowService {
     // Query zillow_city table - filter by state AND date for efficiency
     const { data: cityData, error } = await this.supabase
       .from('zillow_city')
-      .select('region_id, region_name, state_code, metro_region_id, value, period_date')
+      .select(
+        'region_id, region_name, state_code, metro_region_id, value, period_date',
+      )
       .eq('metric_name', 'zhvi')
       .eq('state_code', stateFilter.toUpperCase())
       .eq('period_date', targetDate)
@@ -271,7 +304,7 @@ export class ZillowService {
     if (!cityData || cityData.length === 0) return [];
 
     // Map results (already filtered by date, no dedup needed)
-    const results: HomeValueData[] = cityData.map(record => ({
+    const results: HomeValueData[] = cityData.map((record) => ({
       region_id: String(record.region_id),
       region_name: record.region_name,
       state_abbrev: record.state_code,
@@ -297,7 +330,7 @@ export class ZillowService {
       .order('date', { ascending: false })
       .limit(100);
 
-    const dates = data?.map(d => d.date as string) || [];
+    const dates = data?.map((d) => d.date as string) || [];
     return [...new Set(dates)];
   }
 
@@ -334,7 +367,9 @@ export class ZillowService {
     while (true) {
       const { data: pageData, error } = await this.supabase
         .from('zillow_metro')
-        .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
+        .select(
+          'region_id, region_name, cbsa_code, state_code, metric_name, value, period_date',
+        )
         .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
         .eq('period_date', latestDate)
         .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -378,11 +413,16 @@ export class ZillowService {
     }
 
     return [...byRegion.values()]
-      .map(f => ({ ...f, value: getForecastValue(f, horizon) }))
-      .sort((a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon));
+      .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
+      .sort(
+        (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
+      );
   }
 
-  async getZipForecast(stateFilter?: string, horizon: string = '12m'): Promise<ForecastData[]> {
+  async getZipForecast(
+    stateFilter?: string,
+    horizon: string = '12m',
+  ): Promise<ForecastData[]> {
     // Use cached latest date for forecast data
     const latestDate = await getLatestDate(this.supabase, 'zip', 'zhvf_12m');
     if (!latestDate) return [];
@@ -395,7 +435,9 @@ export class ZillowService {
     while (true) {
       let query = this.supabase
         .from('zillow_zip')
-        .select('region_id, region_name, state_code, metric_name, value, period_date')
+        .select(
+          'region_id, region_name, state_code, metric_name, value, period_date',
+        )
         .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
         .eq('period_date', latestDate)
         .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -445,52 +487,76 @@ export class ZillowService {
     }
 
     return [...byRegion.values()]
-      .map(f => ({ ...f, value: getForecastValue(f, horizon) }))
-      .sort((a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon));
+      .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
+      .sort(
+        (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
+      );
   }
 
   // ============================================================================
   // ZORI (Rent Index) Methods
   // ============================================================================
 
-  async getMetroRent(date?: string, propertyType: string = 'all'): Promise<HomeValueData[]> {
-    const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zori', 'Metro');
+  async getMetroRent(
+    date?: string,
+    propertyType: string = 'all',
+  ): Promise<HomeValueData[]> {
+    const targetDate =
+      date ||
+      (await getLatestDateForTable(this.supabase, 'zillow_zori', 'Metro'));
 
     // Pass propertyType directly - queryZori handles mapping to metric name
-    const zillow = await queryZori(this.supabase, ['Metro', 'US'], targetDate, propertyType);
+    const zillow = await queryZori(
+      this.supabase,
+      ['Metro', 'US'],
+      targetDate,
+      propertyType,
+    );
     if (!zillow.length) return [];
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 
-    return zillow.map(z => {
-      if (z.geography === 'US') {
+    return zillow
+      .map((z) => {
+        if (z.geography === 'US') {
+          return {
+            region_id: z.region_id,
+            region_name: 'United States',
+            value: z.value,
+            date: z.date,
+            property_type: z.property_type,
+            geography: 'US',
+          };
+        }
+
+        const { metro, cbsaCode } = lookupMetro(
+          z.region_id,
+          byZillowId,
+          byCbsaCode,
+        );
+
         return {
           region_id: z.region_id,
-          region_name: 'United States',
+          region_name: metro?.cbsa_name || 'Unknown',
+          cbsa_code: cbsaCode,
+          state_abbrev: metro?.state || null,
           value: z.value,
           date: z.date,
           property_type: z.property_type,
-          geography: 'US',
+          geography: 'Metro',
         };
-      }
-
-      const { metro, cbsaCode } = lookupMetro(z.region_id, byZillowId, byCbsaCode);
-
-      return {
-        region_id: z.region_id,
-        region_name: metro?.cbsa_name || 'Unknown',
-        cbsa_code: cbsaCode,
-        state_abbrev: metro?.state || null,
-        value: z.value,
-        date: z.date,
-        property_type: z.property_type,
-        geography: 'Metro',
-      };
-    }).sort((a, b) => b.value - a.value);
+      })
+      .sort((a, b) => b.value - a.value);
   }
 
-  async getCountyRent(date?: string, propertyType: string = 'all', stateFilter?: string): Promise<HomeValueData[]> {
-    const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zori', 'County');
+  async getCountyRent(
+    date?: string,
+    propertyType: string = 'all',
+    stateFilter?: string,
+  ): Promise<HomeValueData[]> {
+    const targetDate =
+      date ||
+      (await getLatestDateForTable(this.supabase, 'zillow_zori', 'County'));
 
     const countyMap = await buildCountyMappings(this.supabase, stateFilter);
     const fipsCodes = [...countyMap.keys()];
@@ -502,9 +568,15 @@ export class ZillowService {
     for (let i = 0; i < fipsCodes.length; i += chunkSize) {
       const chunk = fipsCodes.slice(i, i + chunkSize);
       // Pass propertyType directly - queryZori handles mapping to metric name
-      const zillow = await queryZori(this.supabase, 'County', targetDate, propertyType, chunk);
+      const zillow = await queryZori(
+        this.supabase,
+        'County',
+        targetDate,
+        propertyType,
+        chunk,
+      );
 
-      zillow.forEach(z => {
+      zillow.forEach((z) => {
         const county = countyMap.get(z.region_id);
         results.push({
           region_id: z.region_id,
@@ -523,108 +595,152 @@ export class ZillowService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getZipRent(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
+  async getZipRent(
+    stateFilter: string,
+    propertyType: string = 'all',
+    date?: string,
+  ): Promise<HomeValueData[]> {
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
-      date ? Promise.resolve(date) : getLatestDateForTable(this.supabase, 'zillow_zori', 'Zip'),
-      buildZipMappings(this.supabase, stateFilter)
+      date
+        ? Promise.resolve(date)
+        : getLatestDateForTable(this.supabase, 'zillow_zori', 'Zip'),
+      buildZipMappings(this.supabase, stateFilter),
     ]);
 
     const zipCodes = [...zipMap.keys()];
     if (zipCodes.length === 0) return [];
 
     // Pass propertyType directly - queryZori handles mapping to metric name
-    const zillow = await queryZori(this.supabase, 'Zip', targetDate, propertyType, zipCodes);
+    const zillow = await queryZori(
+      this.supabase,
+      'Zip',
+      targetDate,
+      propertyType,
+      zipCodes,
+    );
 
-    return zillow.map(z => {
-      const zip = zipMap.get(z.region_id);
-      return {
-        region_id: z.region_id,
-        region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
-        zip_code: z.region_id,
-        city: zip?.city || null,
-        county_name: zip?.county || null,
-        state_abbrev: zip?.state_abbrev || null,
-        state_name: zip?.state_name || null,
-        value: z.value,
-        date: z.date,
-        property_type: z.property_type,
-        geography: 'ZIP',
-      };
-    }).sort((a, b) => b.value - a.value);
+    return zillow
+      .map((z) => {
+        const zip = zipMap.get(z.region_id);
+        return {
+          region_id: z.region_id,
+          region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
+          zip_code: z.region_id,
+          city: zip?.city || null,
+          county_name: zip?.county || null,
+          state_abbrev: zip?.state_abbrev || null,
+          state_name: zip?.state_name || null,
+          value: z.value,
+          date: z.date,
+          property_type: z.property_type,
+          geography: 'ZIP',
+        };
+      })
+      .sort((a, b) => b.value - a.value);
   }
 
   // ============================================================================
   // ZORDI (Renter Demand Index) Methods
   // ============================================================================
 
-  async getMetroRenterDemand(date?: string, propertyType: string = 'all'): Promise<HomeValueData[]> {
+  async getMetroRenterDemand(
+    date?: string,
+    propertyType: string = 'all',
+  ): Promise<HomeValueData[]> {
     // ZORDI data is in zillow_metro with metric_name = 'zordi', 'zordi_sfr', 'zordi_mfr'
-    const targetDate = date || await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Metro');
+    const targetDate =
+      date ||
+      (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Metro'));
 
     // Pass propertyType directly - queryZordi handles mapping to metric name
-    const zillow = await queryZordi(this.supabase, ['Metro', 'US'], targetDate, propertyType);
+    const zillow = await queryZordi(
+      this.supabase,
+      ['Metro', 'US'],
+      targetDate,
+      propertyType,
+    );
     if (!zillow.length) return [];
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 
-    return zillow.map(z => {
-      if (z.geography === 'US') {
+    return zillow
+      .map((z) => {
+        if (z.geography === 'US') {
+          return {
+            region_id: z.region_id,
+            region_name: 'United States',
+            value: z.value,
+            date: z.date,
+            property_type: z.property_type,
+            geography: 'US',
+          };
+        }
+
+        const { metro, cbsaCode } = lookupMetro(
+          z.region_id,
+          byZillowId,
+          byCbsaCode,
+        );
+
         return {
           region_id: z.region_id,
-          region_name: 'United States',
+          region_name: metro?.cbsa_name || 'Unknown',
+          cbsa_code: cbsaCode,
+          state_abbrev: metro?.state || null,
           value: z.value,
           date: z.date,
           property_type: z.property_type,
-          geography: 'US',
+          geography: 'Metro',
         };
-      }
-
-      const { metro, cbsaCode } = lookupMetro(z.region_id, byZillowId, byCbsaCode);
-
-      return {
-        region_id: z.region_id,
-        region_name: metro?.cbsa_name || 'Unknown',
-        cbsa_code: cbsaCode,
-        state_abbrev: metro?.state || null,
-        value: z.value,
-        date: z.date,
-        property_type: z.property_type,
-        geography: 'Metro',
-      };
-    }).sort((a, b) => b.value - a.value);
+      })
+      .sort((a, b) => b.value - a.value);
   }
 
-  async getZipRenterDemand(stateFilter: string, propertyType: string = 'all', date?: string): Promise<HomeValueData[]> {
+  async getZipRenterDemand(
+    stateFilter: string,
+    propertyType: string = 'all',
+    date?: string,
+  ): Promise<HomeValueData[]> {
     // ZORDI data is in zillow_metro (metro only for now)
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
-      date ? Promise.resolve(date) : getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'),
-      buildZipMappings(this.supabase, stateFilter)
+      date
+        ? Promise.resolve(date)
+        : getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'),
+      buildZipMappings(this.supabase, stateFilter),
     ]);
 
     const zipCodes = [...zipMap.keys()];
     if (zipCodes.length === 0) return [];
 
     // Pass propertyType directly - queryZordi handles mapping to metric name
-    const zillow = await queryZordi(this.supabase, 'Zip', targetDate, propertyType, zipCodes);
+    const zillow = await queryZordi(
+      this.supabase,
+      'Zip',
+      targetDate,
+      propertyType,
+      zipCodes,
+    );
 
-    return zillow.map(z => {
-      const zip = zipMap.get(z.region_id);
-      return {
-        region_id: z.region_id,
-        region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
-        zip_code: z.region_id,
-        city: zip?.city || null,
-        county_name: zip?.county || null,
-        state_abbrev: zip?.state_abbrev || null,
-        state_name: zip?.state_name || null,
-        value: z.value,
-        date: z.date,
-        property_type: z.property_type,
-        geography: 'ZIP',
-      };
-    }).sort((a, b) => b.value - a.value);
+    return zillow
+      .map((z) => {
+        const zip = zipMap.get(z.region_id);
+        return {
+          region_id: z.region_id,
+          region_name: zip ? `${z.region_id} - ${zip.city}` : z.region_id,
+          zip_code: z.region_id,
+          city: zip?.city || null,
+          county_name: zip?.county || null,
+          state_abbrev: zip?.state_abbrev || null,
+          state_name: zip?.state_name || null,
+          value: z.value,
+          date: z.date,
+          property_type: z.property_type,
+          geography: 'ZIP',
+        };
+      })
+      .sort((a, b) => b.value - a.value);
   }
 
   // ============================================================================
@@ -638,43 +754,55 @@ export class ZillowService {
   async getMetroMarketIndicator(
     table: MarketIndicatorTable,
     date?: string,
-    propertyType: string = 'sfrcondo'
+    propertyType: string = 'sfrcondo',
   ): Promise<MarketIndicatorData[]> {
     // Use latest-per-region when no specific date requested
     const data = date
-      ? await queryMarketIndicator(this.supabase, table, ['Metro', 'US'], date, propertyType)
+      ? await queryMarketIndicator(
+          this.supabase,
+          table,
+          ['Metro', 'US'],
+          date,
+          propertyType,
+        )
       : await queryMarketIndicatorLatest(this.supabase, table, ['Metro', 'US']);
 
     if (!data.length) return [];
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 
-    return data.map((d: any) => {
-      if (d.geography === 'US') {
+    return data
+      .map((d: any) => {
+        if (d.geography === 'US') {
+          return {
+            region_id: d.region_id,
+            region_name: 'United States',
+            value: d.value,
+            date: d.date,
+            property_type: d.property_type,
+            geography: 'US',
+          };
+        }
+
+        // Use data from query if available, fallback to crosswalk lookup
+        const { metro, cbsaCode } = lookupMetro(
+          d.region_id,
+          byZillowId,
+          byCbsaCode,
+        );
+
         return {
           region_id: d.region_id,
-          region_name: 'United States',
+          region_name: d.region_name || metro?.cbsa_name || 'Unknown',
+          cbsa_code: d.cbsa_code || cbsaCode,
+          state_abbrev: d.state_code || metro?.state || null,
           value: d.value,
           date: d.date,
           property_type: d.property_type,
-          geography: 'US',
+          geography: 'Metro',
         };
-      }
-
-      // Use data from query if available, fallback to crosswalk lookup
-      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
-
-      return {
-        region_id: d.region_id,
-        region_name: d.region_name || metro?.cbsa_name || 'Unknown',
-        cbsa_code: d.cbsa_code || cbsaCode,
-        state_abbrev: d.state_code || metro?.state || null,
-        value: d.value,
-        date: d.date,
-        property_type: d.property_type,
-        geography: 'Metro',
-      };
-    }).sort((a, b) => b.value - a.value);
+      })
+      .sort((a, b) => b.value - a.value);
   }
 
   // Inventory
@@ -732,12 +860,33 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroPriceCuts(date?: string): Promise<PriceCutsData[]> {
-    const targetDate = date || await getLatestDateForMarketTable(this.supabase, 'zillow_price_cut_share', 'Metro');
+    const targetDate =
+      date ||
+      (await getLatestDateForMarketTable(
+        this.supabase,
+        'zillow_price_cut_share',
+        'Metro',
+      ));
 
     const [shareData, amtData, pctData] = await Promise.all([
-      queryMarketIndicator(this.supabase, 'zillow_price_cut_share', ['Metro', 'US'], targetDate),
-      queryMarketIndicator(this.supabase, 'zillow_price_cut_amt', ['Metro', 'US'], targetDate),
-      queryMarketIndicator(this.supabase, 'zillow_price_cut_pct', ['Metro', 'US'], targetDate),
+      queryMarketIndicator(
+        this.supabase,
+        'zillow_price_cut_share',
+        ['Metro', 'US'],
+        targetDate,
+      ),
+      queryMarketIndicator(
+        this.supabase,
+        'zillow_price_cut_amt',
+        ['Metro', 'US'],
+        targetDate,
+      ),
+      queryMarketIndicator(
+        this.supabase,
+        'zillow_price_cut_pct',
+        ['Metro', 'US'],
+        targetDate,
+      ),
     ]);
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
@@ -746,10 +895,17 @@ export class ZillowService {
     const combinedMap = new Map<string, PriceCutsData>();
 
     for (const d of shareData) {
-      const { metro, cbsaCode } = lookupMetro(d.region_id, byZillowId, byCbsaCode);
+      const { metro, cbsaCode } = lookupMetro(
+        d.region_id,
+        byZillowId,
+        byCbsaCode,
+      );
       combinedMap.set(d.region_id, {
         region_id: d.region_id,
-        region_name: d.geography === 'US' ? 'United States' : (metro?.cbsa_name || 'Unknown'),
+        region_name:
+          d.geography === 'US'
+            ? 'United States'
+            : metro?.cbsa_name || 'Unknown',
         cbsa_code: cbsaCode,
         state_abbrev: metro?.state || null,
         date: d.date,
@@ -774,8 +930,8 @@ export class ZillowService {
       }
     }
 
-    return Array.from(combinedMap.values()).sort((a, b) =>
-      (b.share_with_price_cut || 0) - (a.share_with_price_cut || 0)
+    return Array.from(combinedMap.values()).sort(
+      (a, b) => (b.share_with_price_cut || 0) - (a.share_with_price_cut || 0),
     );
   }
 
@@ -785,14 +941,22 @@ export class ZillowService {
 
   async getMetroNewConstruction(date?: string): Promise<NewConstructionData[]> {
     // Get latest date for new construction metrics
-    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'new_con_sales' as any);
+    const targetDate =
+      date ||
+      (await getLatestDate(this.supabase, 'metro', 'new_con_sales' as any));
 
     // Query all new construction metrics from zillow_metro in one call
-    const newConMetrics = ['new_con_sales', 'new_con_median_price', 'new_con_median_price_per_sqft'];
+    const newConMetrics = [
+      'new_con_sales',
+      'new_con_median_price',
+      'new_con_median_price_per_sqft',
+    ];
 
     const { data, error } = await this.supabase
       .from('zillow_metro')
-      .select('region_id, region_name, cbsa_code, state_code, period_date, metric_name, value')
+      .select(
+        'region_id, region_name, cbsa_code, state_code, period_date, metric_name, value',
+      )
       .in('metric_name', newConMetrics)
       .eq('period_date', targetDate)
       .limit(5000);
@@ -827,7 +991,10 @@ export class ZillowService {
       const entry = combinedMap.get(regionId)!;
 
       // Map metric names to fields
-      if (row.metric_name === 'new_con_sales' || row.metric_name === 'new_con_sales_count') {
+      if (
+        row.metric_name === 'new_con_sales' ||
+        row.metric_name === 'new_con_sales_count'
+      ) {
         entry.sales_count = row.value;
       }
       if (row.metric_name === 'new_con_median_price') {
@@ -840,7 +1007,7 @@ export class ZillowService {
 
     // Filter out entries with no cbsa_code (can't be displayed on map)
     return Array.from(combinedMap.values())
-      .filter(d => d.cbsa_code)
+      .filter((d) => d.cbsa_code)
       .sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0));
   }
 
@@ -850,7 +1017,8 @@ export class ZillowService {
 
   async getMetroAffordability(date?: string): Promise<AffordabilityData[]> {
     // Use cached latest date for affordability metrics
-    const targetDate = date || await getLatestDate(this.supabase, 'metro', 'homeowner_income');
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'metro', 'homeowner_income'));
     if (!targetDate) return [];
 
     const data = await queryAffordability(this.supabase, ['Metro'], targetDate);
@@ -860,8 +1028,8 @@ export class ZillowService {
     // Use cbsa_code directly from zillow_metro data (same approach as getMetroHomeValues)
     // Filter out records without cbsa_code - they can't be displayed on the map
     return data
-      .filter(d => d.cbsa_code) // Skip records without cbsa_code
-      .map(d => ({
+      .filter((d) => d.cbsa_code) // Skip records without cbsa_code
+      .map((d) => ({
         region_id: d.region_id,
         region_name: d.region_name || 'Unknown',
         cbsa_code: d.cbsa_code,
@@ -877,6 +1045,9 @@ export class ZillowService {
         down_payment_percent: d.down_payment_percent,
         property_type: d.property_type,
       }))
-      .sort((a, b) => (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0));
+      .sort(
+        (a, b) =>
+          (b.homeowner_income_needed || 0) - (a.homeowner_income_needed || 0),
+      );
   }
 }

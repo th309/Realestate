@@ -18,10 +18,13 @@ const agent = new Agent({
 
 // Custom fetch wrapper using undici
 const customFetch = (url: string | URL | Request, init?: RequestInit) => {
-  return undiciFetch(url as any, {
-    ...init,
-    dispatcher: agent,
-  } as any);
+  return undiciFetch(
+    url as any,
+    {
+      ...init,
+      dispatcher: agent,
+    } as any,
+  );
 };
 
 @Global()
@@ -36,7 +39,10 @@ const customFetch = (url: string | URL | Request, init?: RequestInit) => {
 
         console.log('=== Supabase Configuration ===');
         console.log('SUPABASE_URL:', supabaseUrl);
-        console.log('SUPABASE_SERVICE_KEY:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'NOT SET');
+        console.log(
+          'SUPABASE_SERVICE_KEY:',
+          supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'NOT SET',
+        );
 
         if (!supabaseUrl || !supabaseKey) {
           throw new Error('Missing Supabase configuration');
@@ -58,4 +64,4 @@ const customFetch = (url: string | URL | Request, init?: RequestInit) => {
   ],
   exports: [SUPABASE_CLIENT, SupabaseService],
 })
-export class SupabaseModule { }
+export class SupabaseModule {}

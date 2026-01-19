@@ -508,7 +508,16 @@ async function fetchZillowMetric(
       return api.getMetroOvervalued();
     case 'cap_rate':
     case 'gross_yield':
-      return api.getMetroCapRate();
+      switch (level) {
+        case 'metro':
+          return api.getMetroCapRate();
+        case 'county':
+          return api.getCountyCapRate();
+        case 'zip':
+          return state ? api.getZipCapRate(state) : {};
+        default:
+          return {};
+      }
     case 'renter_affordability':
       return api.getMetroRenterAffordability();
 

@@ -6,7 +6,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 export class MarketsService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   async getMarkets(limit = 100, offset = 0) {
     const { data, error, count } = await this.supabase
@@ -38,7 +38,7 @@ export class MarketsService {
       .order('name');
 
     if (error) throw error;
-    return (data || []).map(row => ({
+    return (data || []).map((row) => ({
       geoid: row.geography_id,
       name: row.name,
       state_abbreviation: row.state_code,
@@ -56,7 +56,7 @@ export class MarketsService {
       .order('name');
 
     if (error) throw error;
-    return (data || []).map(row => ({
+    return (data || []).map((row) => ({
       geoid: row.fips_code || row.geography_id,
       name: row.name,
       state_abbreviation: row.state_code,
@@ -87,7 +87,9 @@ export class MarketsService {
       }
     }
 
-    return Array.from(metroMap.values()).sort((a, b) => a.name?.localeCompare(b.name));
+    return Array.from(metroMap.values()).sort((a, b) =>
+      a.name?.localeCompare(b.name),
+    );
   }
 
   async getMarketStats() {

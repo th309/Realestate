@@ -19,7 +19,7 @@ const ZORI_URLS: Record<GeographyLevel, string | null> = {
   State: null, // State ZORI not available from Zillow
   Metro: `${ZORI_BASE_URL}/Metro_zori_uc_sfrcondomfr_sm_sa_month.csv`,
   County: `${ZORI_BASE_URL}/County_zori_uc_sfrcondomfr_sm_sa_month.csv`,
-  Zip: `${ZORI_BASE_URL}/Zip_zori_uc_sfrcondomfr_sm_sa_month.csv`,
+  Zip: `https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv?t=1768780772`,
   City: null, // City ZORI not available
 };
 
@@ -58,7 +58,7 @@ async function main() {
   const forceFullImport = process.argv.includes('--force');
 
   // Geographies that have ZORI data
-  const geographies: GeographyLevel[] = ['Metro', 'County', 'Zip'];
+  const geographies: GeographyLevel[] = ['Zip'];
 
   console.log('=== Zillow ZORI Import ===');
   console.log(`Mode: ${forceFullImport ? 'Full Import' : 'Incremental Update'}`);

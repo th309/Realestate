@@ -34,7 +34,7 @@ interface PercentileStats {
 export class PercentileService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Calculate percentiles for all metrics for a given geography type and date
@@ -57,15 +57,22 @@ export class PercentileService {
       return { calculated: 0, errors: 1 };
     }
 
-    const uniqueMetrics = [...new Set(metrics.map(m => m.metric_name))];
-    console.log(`Found ${uniqueMetrics.length} unique metrics for ${geographyType} on ${periodDate}`);
+    const uniqueMetrics = [...new Set(metrics.map((m) => m.metric_name))];
+    console.log(
+      `Found ${uniqueMetrics.length} unique metrics for ${geographyType} on ${periodDate}`,
+    );
 
     let calculated = 0;
     let errors = 0;
 
     for (const metricName of uniqueMetrics) {
       try {
-        const stats = await this.calculateMetricPercentiles(table, metricName, geographyType, periodDate);
+        const stats = await this.calculateMetricPercentiles(
+          table,
+          metricName,
+          geographyType,
+          periodDate,
+        );
         if (stats) {
           await this.savePercentiles(stats);
           calculated++;
@@ -82,7 +89,9 @@ export class PercentileService {
   /**
    * Calculate percentiles for all metrics across all dates (full recalculation)
    */
-  async calculateAllPercentiles(geographyType: GeographyType): Promise<{ calculated: number; errors: number }> {
+  async calculateAllPercentiles(
+    geographyType: GeographyType,
+  ): Promise<{ calculated: number; errors: number }> {
     const table = this.getTableForGeography(geographyType);
 
     // Get all unique dates
@@ -93,14 +102,19 @@ export class PercentileService {
 
     if (!dates) return { calculated: 0, errors: 0 };
 
-    const uniqueDates = [...new Set(dates.map(d => d.period_date))];
-    console.log(`Found ${uniqueDates.length} unique dates for ${geographyType}`);
+    const uniqueDates = [...new Set(dates.map((d) => d.period_date))];
+    console.log(
+      `Found ${uniqueDates.length} unique dates for ${geographyType}`,
+    );
 
     let totalCalculated = 0;
     let totalErrors = 0;
 
     for (const periodDate of uniqueDates) {
-      const { calculated, errors } = await this.calculatePercentilesForDate(geographyType, periodDate);
+      const { calculated, errors } = await this.calculatePercentilesForDate(
+        geographyType,
+        periodDate,
+      );
       totalCalculated += calculated;
       totalErrors += errors;
     }
@@ -111,7 +125,9 @@ export class PercentileService {
   /**
    * Calculate percentiles for the latest available date
    */
-  async calculateLatestPercentiles(geographyType: GeographyType): Promise<{ calculated: number; errors: number }> {
+  async calculateLatestPercentiles(
+    geographyType: GeographyType,
+  ): Promise<{ calculated: number; errors: number }> {
     const table = this.getTableForGeography(geographyType);
 
     // Get latest date
@@ -149,7 +165,7 @@ export class PercentileService {
       return null;
     }
 
-    const numericValues = values.map(v => v.value as number);
+    const numericValues = values.map((v) => v.value as number);
     const count = numericValues.length;
 
     // Calculate percentiles
@@ -163,7 +179,7 @@ export class PercentileService {
     const mean = sum / count;
 
     // Calculate standard deviation
-    const squaredDiffs = numericValues.map(v => Math.pow(v - mean, 2));
+    const squaredDiffs = numericValues.map((v) => Math.pow(v - mean, 2));
     const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / count;
     const stddev = Math.sqrt(avgSquaredDiff);
 
@@ -189,9 +205,8 @@ export class PercentileService {
   }
 
   private async savePercentiles(stats: PercentileStats): Promise<void> {
-    const { error } = await this.supabase
-      .from('metric_percentiles')
-      .upsert({
+    const { error } = await this.supabase.from('metric_percentiles').upsert(
+      {
         metric_name: stats.metricName,
         geography_type: stats.geographyType,
         period_date: stats.periodDate,
@@ -210,9 +225,11 @@ export class PercentileService {
         mean_value: stats.mean,
         stddev_value: stats.stddev,
         calculated_at: new Date().toISOString(),
-      }, {
+      },
+      {
         onConflict: 'metric_name,geography_type,period_date',
-      });
+      },
+    );
 
     if (error) {
       console.error('Error saving percentiles:', error);
@@ -222,11 +239,16 @@ export class PercentileService {
 
   private getTableForGeography(geographyType: GeographyType): string {
     switch (geographyType) {
-      case 'state': return 'zillow_state';
-      case 'metro': return 'zillow_metro';
-      case 'county': return 'zillow_county';
-      case 'zip': return 'zillow_zip';
-      default: return 'zillow_metro';
+      case 'state':
+        return 'zillow_state';
+      case 'metro':
+        return 'zillow_metro';
+      case 'county':
+        return 'zillow_county';
+      case 'zip':
+        return 'zillow_zip';
+      default:
+        return 'zillow_metro';
     }
   }
 }

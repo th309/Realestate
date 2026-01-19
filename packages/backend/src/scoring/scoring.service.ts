@@ -39,7 +39,7 @@ const CALCULATION_VERSION = '1.0.0';
 export class ScoringService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   // ============================================================================
   // Public API
@@ -54,7 +54,7 @@ export class ScoringService {
     periodDate?: string,
   ): Promise<PropertyIQScore | null> {
     // Default to most recent data
-    const targetDate = periodDate || await this.getLatestDate(geographyType);
+    const targetDate = periodDate || (await this.getLatestDate(geographyType));
     if (!targetDate) return null;
 
     // Get geography info
@@ -62,7 +62,11 @@ export class ScoringService {
     if (!geography) return null;
 
     // Fetch all metrics for this geography
-    const metrics = await this.fetchMetrics(geography, geographyType, targetDate);
+    const metrics = await this.fetchMetrics(
+      geography,
+      geographyType,
+      targetDate,
+    );
     if (Object.keys(metrics).length === 0) return null;
 
     // Calculate derived metrics
@@ -76,38 +80,101 @@ export class ScoringService {
     // Merge raw and calculated metrics
     const allMetrics = { ...metrics };
     if (calculatedMetrics) {
-      if (calculatedMetrics.grm) allMetrics.grm = { value: calculatedMetrics.grm, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.rentPriceRatio) allMetrics.rent_yield = { value: calculatedMetrics.rentPriceRatio * 100, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.capRateProxy) allMetrics.cap_rate_proxy = { value: calculatedMetrics.capRateProxy, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.zhviYoyChange) allMetrics.zhvi_yoy = { value: calculatedMetrics.zhviYoyChange, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.zoriYoyChange) allMetrics.zori_yoy = { value: calculatedMetrics.zoriYoyChange, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.zhviStddev12m) allMetrics.zhvi_volatility = { value: calculatedMetrics.zhviStddev12m, date: targetDate, source: 'calculated' };
-      if (calculatedMetrics.monthsOfSupply) allMetrics.months_supply = { value: calculatedMetrics.monthsOfSupply, date: targetDate, source: 'calculated' };
+      if (calculatedMetrics.grm)
+        allMetrics.grm = {
+          value: calculatedMetrics.grm,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.rentPriceRatio)
+        allMetrics.rent_yield = {
+          value: calculatedMetrics.rentPriceRatio * 100,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.capRateProxy)
+        allMetrics.cap_rate_proxy = {
+          value: calculatedMetrics.capRateProxy,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.zhviYoyChange)
+        allMetrics.zhvi_yoy = {
+          value: calculatedMetrics.zhviYoyChange,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.zoriYoyChange)
+        allMetrics.zori_yoy = {
+          value: calculatedMetrics.zoriYoyChange,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.zhviStddev12m)
+        allMetrics.zhvi_volatility = {
+          value: calculatedMetrics.zhviStddev12m,
+          date: targetDate,
+          source: 'calculated',
+        };
+      if (calculatedMetrics.monthsOfSupply)
+        allMetrics.months_supply = {
+          value: calculatedMetrics.monthsOfSupply,
+          date: targetDate,
+          source: 'calculated',
+        };
     }
 
     // Get percentiles for normalization
     const percentiles = await this.fetchPercentiles(geographyType, targetDate);
 
     // Calculate HomeReady score
-    const homereadyComponents = this.calculateHomeReadyComponents(allMetrics, percentiles);
-    const homereadyScore = this.aggregateScore(homereadyComponents, HOMEREADY_WEIGHTS);
+    const homereadyComponents = this.calculateHomeReadyComponents(
+      allMetrics,
+      percentiles,
+    );
+    const homereadyScore = this.aggregateScore(
+      homereadyComponents,
+      HOMEREADY_WEIGHTS,
+    );
 
     // Calculate InvestorEdge score
-    const investoredgeComponents = this.calculateInvestorEdgeComponents(allMetrics, percentiles);
-    const investoredgeScore = this.aggregateScore(investoredgeComponents, INVESTOREDGE_WEIGHTS);
+    const investoredgeComponents = this.calculateInvestorEdgeComponents(
+      allMetrics,
+      percentiles,
+    );
+    const investoredgeScore = this.aggregateScore(
+      investoredgeComponents,
+      INVESTOREDGE_WEIGHTS,
+    );
 
     // Calculate trends (compare to previous month)
-    const { homereadyTrend, homereadyTrendChange, investoredgeTrend, investoredgeTrendChange } =
-      await this.calculateTrends(geographyId, geographyType, targetDate, homereadyScore, investoredgeScore);
+    const {
+      homereadyTrend,
+      homereadyTrendChange,
+      investoredgeTrend,
+      investoredgeTrendChange,
+    } = await this.calculateTrends(
+      geographyId,
+      geographyType,
+      targetDate,
+      homereadyScore,
+      investoredgeScore,
+    );
 
     // Determine confidence level
-    const metricsAvailable = Object.values(allMetrics).filter(m => m.value !== null).length;
+    const metricsAvailable = Object.values(allMetrics).filter(
+      (m) => m.value !== null,
+    ).length;
     const metricsTotal = Object.values(HOMEREADY_DETAILED_METRICS).reduce(
       (acc, metrics) => acc + metrics.length,
       0,
     );
     const dataFreshnessDays = this.calculateFreshness(targetDate);
-    const confidenceLevel = this.determineConfidence(metricsAvailable, metricsTotal, dataFreshnessDays);
+    const confidenceLevel = this.determineConfidence(
+      metricsAvailable,
+      metricsTotal,
+      dataFreshnessDays,
+    );
 
     const score: PropertyIQScore = {
       geographyId,
@@ -148,7 +215,7 @@ export class ScoringService {
     geographyType: GeographyType,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number }> {
-    const targetDate = periodDate || await this.getLatestDate(geographyType);
+    const targetDate = periodDate || (await this.getLatestDate(geographyType));
     if (!targetDate) return { calculated: 0, errors: 0 };
 
     // Get all geographies of this type
@@ -164,7 +231,11 @@ export class ScoringService {
 
     for (const geo of geographies) {
       try {
-        const score = await this.calculateScore(geo.geography_id, geographyType, targetDate);
+        const score = await this.calculateScore(
+          geo.geography_id,
+          geographyType,
+          targetDate,
+        );
         if (score) calculated++;
       } catch (err) {
         errors++;
@@ -183,7 +254,7 @@ export class ScoringService {
     geographyType: GeographyType,
     periodDate?: string,
   ): Promise<PropertyIQScore | null> {
-    const targetDate = periodDate || await this.getLatestDate(geographyType);
+    const targetDate = periodDate || (await this.getLatestDate(geographyType));
     if (!targetDate) return null;
 
     const { data } = await this.supabase
@@ -203,7 +274,9 @@ export class ScoringService {
   // Private: Data Fetching
   // ============================================================================
 
-  private async getLatestDate(geographyType: GeographyType): Promise<string | null> {
+  private async getLatestDate(
+    geographyType: GeographyType,
+  ): Promise<string | null> {
     const table = this.getTableForGeography(geographyType);
 
     const { data } = await this.supabase
@@ -217,15 +290,23 @@ export class ScoringService {
 
   private getTableForGeography(geographyType: GeographyType): string {
     switch (geographyType) {
-      case 'state': return 'zillow_state';
-      case 'metro': return 'zillow_metro';
-      case 'county': return 'zillow_county';
-      case 'zip': return 'zillow_zip';
-      default: return 'zillow_metro';
+      case 'state':
+        return 'zillow_state';
+      case 'metro':
+        return 'zillow_metro';
+      case 'county':
+        return 'zillow_county';
+      case 'zip':
+        return 'zillow_zip';
+      default:
+        return 'zillow_metro';
     }
   }
 
-  private async getGeography(geographyId: string, geographyType: GeographyType) {
+  private async getGeography(
+    geographyId: string,
+    geographyType: GeographyType,
+  ) {
     const { data } = await this.supabase
       .from('geographies')
       .select('*')
@@ -344,7 +425,8 @@ export class ScoringService {
     // Would need pending_sales or sales_count data
     const inventory = metrics.inventory?.value;
     const pendingSales = metrics.pending_sales?.value;
-    const monthsOfSupply = inventory && pendingSales ? inventory / pendingSales : null;
+    const monthsOfSupply =
+      inventory && pendingSales ? inventory / pendingSales : null;
 
     return {
       geographyId,
@@ -381,11 +463,31 @@ export class ScoringService {
     percentiles: Map<string, MetricPercentiles>,
   ): Record<keyof HomeReadyComponents, ComponentScore> {
     const components: Record<keyof HomeReadyComponents, ComponentScore> = {
-      affordability: this.calculateComponentWithDefinitions(HOMEREADY_DETAILED_METRICS.affordability, metrics, percentiles),
-      stability: this.calculateComponentWithDefinitions(HOMEREADY_DETAILED_METRICS.stability, metrics, percentiles),
-      value: this.calculateComponentWithDefinitions(HOMEREADY_DETAILED_METRICS.value, metrics, percentiles),
-      livability: this.calculateComponentWithDefinitions(HOMEREADY_DETAILED_METRICS.livability, metrics, percentiles),
-      momentum: this.calculateComponentWithDefinitions(HOMEREADY_DETAILED_METRICS.momentum, metrics, percentiles),
+      affordability: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.affordability,
+        metrics,
+        percentiles,
+      ),
+      stability: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.stability,
+        metrics,
+        percentiles,
+      ),
+      value: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.value,
+        metrics,
+        percentiles,
+      ),
+      livability: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.livability,
+        metrics,
+        percentiles,
+      ),
+      momentum: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.momentum,
+        metrics,
+        percentiles,
+      ),
     };
 
     return components;
@@ -396,11 +498,31 @@ export class ScoringService {
     percentiles: Map<string, MetricPercentiles>,
   ): Record<keyof InvestorEdgeComponents, ComponentScore> {
     const components: Record<keyof InvestorEdgeComponents, ComponentScore> = {
-      cashflow: this.calculateComponentWithDefinitions(INVESTOREDGE_DETAILED_METRICS.cashflow, metrics, percentiles),
-      growth: this.calculateComponentWithDefinitions(INVESTOREDGE_DETAILED_METRICS.growth, metrics, percentiles),
-      demand: this.calculateComponentWithDefinitions(INVESTOREDGE_DETAILED_METRICS.demand, metrics, percentiles),
-      entrypoint: this.calculateComponentWithDefinitions(INVESTOREDGE_DETAILED_METRICS.entrypoint, metrics, percentiles),
-      risk: this.calculateComponentWithDefinitions(INVESTOREDGE_DETAILED_METRICS.risk, metrics, percentiles),
+      cashflow: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.cashflow,
+        metrics,
+        percentiles,
+      ),
+      growth: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.growth,
+        metrics,
+        percentiles,
+      ),
+      demand: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.demand,
+        metrics,
+        percentiles,
+      ),
+      entrypoint: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.entrypoint,
+        metrics,
+        percentiles,
+      ),
+      risk: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.risk,
+        metrics,
+        percentiles,
+      ),
     };
 
     return components;
@@ -450,7 +572,7 @@ export class ScoringService {
       }
 
       // Normalize value to 0-100 percentile
-      const normalizedScore = this.valueToPercentile(metric.value!, percentile);
+      const normalizedScore = this.valueToPercentile(metric.value, percentile);
 
       // Apply direction transformation
       let adjustedScore: number;
@@ -463,8 +585,10 @@ export class ScoringService {
           break;
         case 'moderate_better':
           // Score highest at 50th percentile, drops off on both ends
-          const deviation = Math.abs(normalizedScore - SCORING_CONSTANTS.MODERATE_TARGET_PERCENTILE);
-          adjustedScore = 100 - (deviation * 2);
+          const deviation = Math.abs(
+            normalizedScore - SCORING_CONSTANTS.MODERATE_TARGET_PERCENTILE,
+          );
+          adjustedScore = 100 - deviation * 2;
           break;
         case 'neutral':
         default:
@@ -473,7 +597,10 @@ export class ScoringService {
       }
 
       // Clamp to valid range
-      adjustedScore = Math.max(SCORING_CONSTANTS.MIN_SCORE, Math.min(SCORING_CONSTANTS.MAX_SCORE, adjustedScore));
+      adjustedScore = Math.max(
+        SCORING_CONSTANTS.MIN_SCORE,
+        Math.min(SCORING_CONSTANTS.MAX_SCORE, adjustedScore),
+      );
 
       // Use the defined weight for this metric
       totalWeight += metricDef.weight;
@@ -501,7 +628,10 @@ export class ScoringService {
     };
   }
 
-  private valueToPercentile(value: number, percentiles: MetricPercentiles): number {
+  private valueToPercentile(
+    value: number,
+    percentiles: MetricPercentiles,
+  ): number {
     // Find which percentile bucket the value falls into
     if (value <= percentiles.p10) return 10;
     if (value <= percentiles.p20) return 20;
@@ -522,7 +652,10 @@ export class ScoringService {
     let totalWeight = 0;
     let weightedSum = 0;
 
-    for (const [key, component] of Object.entries(components) as [T, ComponentScore][]) {
+    for (const [key, component] of Object.entries(components) as [
+      T,
+      ComponentScore,
+    ][]) {
       const weight = weights[key];
       component.weight = weight;
       component.weightedContribution = component.score * weight;
@@ -531,7 +664,9 @@ export class ScoringService {
       totalWeight += weight;
     }
 
-    return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) / 100 : 50;
+    return totalWeight > 0
+      ? Math.round((weightedSum / totalWeight) * 100) / 100
+      : 50;
   }
 
   // ============================================================================
@@ -546,7 +681,10 @@ export class ScoringService {
     currentInvestoredge: number,
   ) {
     // Get score from 6 months ago for trend calculation
-    const trendDate = this.getDateMonthsAgo(currentDate, SCORING_CONSTANTS.TREND_MONTHS);
+    const trendDate = this.getDateMonthsAgo(
+      currentDate,
+      SCORING_CONSTANTS.TREND_MONTHS,
+    );
 
     const { data: previousScore } = await this.supabase
       .from('propertyiq_scores')
@@ -563,15 +701,31 @@ export class ScoringService {
 
     if (previousScore) {
       homereadyTrendChange = currentHomeready - previousScore.homeready_score;
-      investoredgeTrendChange = currentInvestoredge - previousScore.investoredge_score;
+      investoredgeTrendChange =
+        currentInvestoredge - previousScore.investoredge_score;
 
       // Use configurable threshold for trend classification
       const threshold = SCORING_CONSTANTS.TREND_THRESHOLD;
-      homereadyTrend = homereadyTrendChange > threshold ? 'up' : homereadyTrendChange < -threshold ? 'down' : 'stable';
-      investoredgeTrend = investoredgeTrendChange > threshold ? 'up' : investoredgeTrendChange < -threshold ? 'down' : 'stable';
+      homereadyTrend =
+        homereadyTrendChange > threshold
+          ? 'up'
+          : homereadyTrendChange < -threshold
+            ? 'down'
+            : 'stable';
+      investoredgeTrend =
+        investoredgeTrendChange > threshold
+          ? 'up'
+          : investoredgeTrendChange < -threshold
+            ? 'down'
+            : 'stable';
     }
 
-    return { homereadyTrend, homereadyTrendChange, investoredgeTrend, investoredgeTrendChange };
+    return {
+      homereadyTrend,
+      homereadyTrendChange,
+      investoredgeTrend,
+      investoredgeTrendChange,
+    };
   }
 
   private getDateMonthsAgo(date: string, months: number): string {
@@ -587,19 +741,23 @@ export class ScoringService {
   private determineConfidence(
     available: number,
     total: number,
-    freshnessDays: number
+    freshnessDays: number,
   ): 'high' | 'medium' | 'low' {
     const ratio = available / total;
 
     // High: ≥90% metrics AND <60 days old
-    if (ratio >= SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT &&
-      freshnessDays < SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS) {
+    if (
+      ratio >= SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT &&
+      freshnessDays < SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS
+    ) {
       return 'high';
     }
 
     // Medium: ≥70% metrics AND <120 days old
-    if (ratio >= SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT &&
-      freshnessDays < SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS) {
+    if (
+      ratio >= SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT &&
+      freshnessDays < SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS
+    ) {
       return 'medium';
     }
 
@@ -618,9 +776,8 @@ export class ScoringService {
   // ============================================================================
 
   private async saveScore(score: PropertyIQScore): Promise<void> {
-    const { error } = await this.supabase
-      .from('propertyiq_scores')
-      .upsert({
+    const { error } = await this.supabase.from('propertyiq_scores').upsert(
+      {
         geography_id: score.geographyId,
         geography_type: score.geographyType,
         geography_name: score.geographyName,
@@ -652,9 +809,11 @@ export class ScoringService {
 
         calculated_at: score.calculatedAt,
         calculation_version: score.calculationVersion,
-      }, {
+      },
+      {
         onConflict: 'geography_id,geography_type,period_date',
-      });
+      },
+    );
 
     if (error) {
       console.error('Error saving PropertyIQ score:', error);
@@ -684,36 +843,34 @@ export class ScoringService {
 
     // Insert HomeReady component details
     for (const [component, data] of Object.entries(score.homereadyComponents)) {
-      await this.supabase
-        .from('propertyiq_score_details')
-        .insert({
-          score_id: scoreRecord.id,
-          score_type: 'homeready',
-          component,
-          component_score: data.score,
-          component_weight: data.weight,
-          weighted_contribution: data.weightedContribution,
-          metrics: { used: data.metricsUsed },
-          helping_factors: data.helpingFactors,
-          hurting_factors: data.hurtingFactors,
-        });
+      await this.supabase.from('propertyiq_score_details').insert({
+        score_id: scoreRecord.id,
+        score_type: 'homeready',
+        component,
+        component_score: data.score,
+        component_weight: data.weight,
+        weighted_contribution: data.weightedContribution,
+        metrics: { used: data.metricsUsed },
+        helping_factors: data.helpingFactors,
+        hurting_factors: data.hurtingFactors,
+      });
     }
 
     // Insert InvestorEdge component details
-    for (const [component, data] of Object.entries(score.investoredgeComponents)) {
-      await this.supabase
-        .from('propertyiq_score_details')
-        .insert({
-          score_id: scoreRecord.id,
-          score_type: 'investoredge',
-          component,
-          component_score: data.score,
-          component_weight: data.weight,
-          weighted_contribution: data.weightedContribution,
-          metrics: { used: data.metricsUsed },
-          helping_factors: data.helpingFactors,
-          hurting_factors: data.hurtingFactors,
-        });
+    for (const [component, data] of Object.entries(
+      score.investoredgeComponents,
+    )) {
+      await this.supabase.from('propertyiq_score_details').insert({
+        score_id: scoreRecord.id,
+        score_type: 'investoredge',
+        component,
+        component_score: data.score,
+        component_weight: data.weight,
+        weighted_contribution: data.weightedContribution,
+        metrics: { used: data.metricsUsed },
+        helping_factors: data.helpingFactors,
+        hurting_factors: data.hurtingFactors,
+      });
     }
   }
 
@@ -727,22 +884,92 @@ export class ScoringService {
 
       homereadyScore: data.homeready_score,
       homereadyComponents: {
-        affordability: { score: data.homeready_affordability, weight: HOMEREADY_WEIGHTS.affordability, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        stability: { score: data.homeready_stability, weight: HOMEREADY_WEIGHTS.stability, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        value: { score: data.homeready_value, weight: HOMEREADY_WEIGHTS.value, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        livability: { score: data.homeready_livability, weight: HOMEREADY_WEIGHTS.livability, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        momentum: { score: data.homeready_momentum, weight: HOMEREADY_WEIGHTS.momentum, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
+        affordability: {
+          score: data.homeready_affordability,
+          weight: HOMEREADY_WEIGHTS.affordability,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        stability: {
+          score: data.homeready_stability,
+          weight: HOMEREADY_WEIGHTS.stability,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        value: {
+          score: data.homeready_value,
+          weight: HOMEREADY_WEIGHTS.value,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        livability: {
+          score: data.homeready_livability,
+          weight: HOMEREADY_WEIGHTS.livability,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        momentum: {
+          score: data.homeready_momentum,
+          weight: HOMEREADY_WEIGHTS.momentum,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
       },
       homereadyTrend: data.homeready_trend || 'stable',
       homereadyTrendChange: data.homeready_trend_change || 0,
 
       investoredgeScore: data.investoredge_score,
       investoredgeComponents: {
-        cashflow: { score: data.investoredge_cashflow, weight: INVESTOREDGE_WEIGHTS.cashflow, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        growth: { score: data.investoredge_growth, weight: INVESTOREDGE_WEIGHTS.growth, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        demand: { score: data.investoredge_demand, weight: INVESTOREDGE_WEIGHTS.demand, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        entrypoint: { score: data.investoredge_entrypoint, weight: INVESTOREDGE_WEIGHTS.entrypoint, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-        risk: { score: data.investoredge_risk, weight: INVESTOREDGE_WEIGHTS.risk, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
+        cashflow: {
+          score: data.investoredge_cashflow,
+          weight: INVESTOREDGE_WEIGHTS.cashflow,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        growth: {
+          score: data.investoredge_growth,
+          weight: INVESTOREDGE_WEIGHTS.growth,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        demand: {
+          score: data.investoredge_demand,
+          weight: INVESTOREDGE_WEIGHTS.demand,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        entrypoint: {
+          score: data.investoredge_entrypoint,
+          weight: INVESTOREDGE_WEIGHTS.entrypoint,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        risk: {
+          score: data.investoredge_risk,
+          weight: INVESTOREDGE_WEIGHTS.risk,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
       },
       investoredgeTrend: data.investoredge_trend || 'stable',
       investoredgeTrendChange: data.investoredge_trend_change || 0,

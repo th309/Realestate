@@ -24,7 +24,7 @@ export class GeographyService implements OnModuleInit {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Pre-warm the cache on module initialization for frequently accessed data
@@ -84,7 +84,10 @@ export class GeographyService implements OnModuleInit {
       }
     }
 
-    throw lastError || new Error(`RPC ${rpcName} failed after ${this.MAX_RETRIES} attempts`);
+    throw (
+      lastError ||
+      new Error(`RPC ${rpcName} failed after ${this.MAX_RETRIES} attempts`)
+    );
   }
 
   /**
@@ -116,7 +119,9 @@ export class GeographyService implements OnModuleInit {
     if (cached) return cached;
 
     this.logger.log('Fetching national GeoJSON from database');
-    const data = await this.executeWithRetry<GeoJSONFeatureCollection>('get_national_geojson');
+    const data = await this.executeWithRetry<GeoJSONFeatureCollection>(
+      'get_national_geojson',
+    );
     this.setCache(cacheKey, data);
     return data;
   }
@@ -127,7 +132,10 @@ export class GeographyService implements OnModuleInit {
     if (cached) return cached;
 
     this.logger.log('Fetching states GeoJSON from database');
-    const data = await this.executeWithRetry<GeoJSONFeatureCollection>('get_states_geojson');
+    const data =
+      await this.executeWithRetry<GeoJSONFeatureCollection>(
+        'get_states_geojson',
+      );
     this.setCache(cacheKey, data);
     return data;
   }
@@ -138,18 +146,24 @@ export class GeographyService implements OnModuleInit {
     if (cached) return cached;
 
     this.logger.log('Fetching all counties GeoJSON from database');
-    const data = await this.executeWithRetry<GeoJSONFeatureCollection>('get_counties_geojson');
+    const data = await this.executeWithRetry<GeoJSONFeatureCollection>(
+      'get_counties_geojson',
+    );
     this.setCache(cacheKey, data);
     return data;
   }
 
-  async getCountiesGeoJSONByState(stateAbbrev: string): Promise<GeoJSONFeatureCollection> {
+  async getCountiesGeoJSONByState(
+    stateAbbrev: string,
+  ): Promise<GeoJSONFeatureCollection> {
     const normalizedState = stateAbbrev.toUpperCase();
     const cacheKey = `counties:${normalizedState}`;
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    this.logger.log(`Fetching counties GeoJSON for ${normalizedState} from database`);
+    this.logger.log(
+      `Fetching counties GeoJSON for ${normalizedState} from database`,
+    );
     const data = await this.executeWithRetry<GeoJSONFeatureCollection>(
       'get_counties_geojson_by_state',
       { p_state_abbrev: normalizedState },
@@ -164,12 +178,17 @@ export class GeographyService implements OnModuleInit {
     if (cached) return cached;
 
     this.logger.log('Fetching metros GeoJSON from database');
-    const data = await this.executeWithRetry<GeoJSONFeatureCollection>('get_metros_geojson');
+    const data =
+      await this.executeWithRetry<GeoJSONFeatureCollection>(
+        'get_metros_geojson',
+      );
     this.setCache(cacheKey, data);
     return data;
   }
 
-  async getZCTAByStateGeoJSON(stateAbbrev: string): Promise<GeoJSONFeatureCollection> {
+  async getZCTAByStateGeoJSON(
+    stateAbbrev: string,
+  ): Promise<GeoJSONFeatureCollection> {
     const normalizedState = stateAbbrev.toUpperCase();
     const cacheKey = `zcta:${normalizedState}`;
     const cached = this.getCached(cacheKey);
@@ -184,7 +203,9 @@ export class GeographyService implements OnModuleInit {
     return data;
   }
 
-  async getPlacesByStateGeoJSON(stateAbbrev: string): Promise<GeoJSONFeatureCollection> {
+  async getPlacesByStateGeoJSON(
+    stateAbbrev: string,
+  ): Promise<GeoJSONFeatureCollection> {
     const normalizedState = stateAbbrev.toUpperCase();
     const cacheKey = `places:${normalizedState}`;
     const cached = this.getCached(cacheKey);

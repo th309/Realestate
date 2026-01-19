@@ -130,8 +130,17 @@ export const CATEGORY_GROUPS = {
     'employer_relocation',
     'employer_new_facility',
   ],
-  development: ['development_residential', 'development_commercial', 'development_industrial'],
-  policy: ['policy_zoning', 'policy_taxes', 'policy_housing', 'policy_short_term'],
+  development: [
+    'development_residential',
+    'development_commercial',
+    'development_industrial',
+  ],
+  policy: [
+    'policy_zoning',
+    'policy_taxes',
+    'policy_housing',
+    'policy_short_term',
+  ],
   infrastructure: [
     'infrastructure_transit',
     'infrastructure_roads',
@@ -139,8 +148,18 @@ export const CATEGORY_GROUPS = {
     'infrastructure_airport',
   ],
   climate: ['climate_disaster', 'climate_risk', 'climate_insurance'],
-  community: ['crime_trends', 'education_schools', 'education_university', 'healthcare'],
-  market: ['market_report', 'market_investment', 'demographic_migration', 'demographic_growth'],
+  community: [
+    'crime_trends',
+    'education_schools',
+    'education_university',
+    'healthcare',
+  ],
+  market: [
+    'market_report',
+    'market_investment',
+    'demographic_migration',
+    'demographic_growth',
+  ],
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -158,11 +177,14 @@ export class GeminiNewsService {
     private readonly configService: ConfigService,
     private readonly supabase: SupabaseService,
   ) {
-    this.geminiApiKey = this.configService.get<string>('GOOGLE_AI_API_KEY') || null;
+    this.geminiApiKey =
+      this.configService.get<string>('GOOGLE_AI_API_KEY') || null;
     if (this.geminiApiKey) {
       this.logger.log('Gemini News Service initialized');
     } else {
-      this.logger.warn('GOOGLE_AI_API_KEY not configured - news scouting disabled');
+      this.logger.warn(
+        'GOOGLE_AI_API_KEY not configured - news scouting disabled',
+      );
     }
   }
 
@@ -233,9 +255,19 @@ export class GeminiNewsService {
     if (!this.geminiApiKey) return null;
 
     const startTime = Date.now();
-    const { includeNationalContext = true, maxNewsItems = 10, lookbackDays = 90 } = options;
+    const {
+      includeNationalContext = true,
+      maxNewsItems = 10,
+      lookbackDays = 90,
+    } = options;
 
-    const prompt = this.buildScoutPrompt(geographyName, state, geographyType, lookbackDays, maxNewsItems);
+    const prompt = this.buildScoutPrompt(
+      geographyName,
+      state,
+      geographyType,
+      lookbackDays,
+      maxNewsItems,
+    );
 
     try {
       const response = await fetch(
@@ -593,10 +625,14 @@ Search and compile results for ${locationContext}:`;
     if (news.length > 0) {
       parts.push('## RECENT LOCAL NEWS\n');
       news.forEach((item) => {
-        parts.push(`**${item.headline}** (${item.source}, ${item.published_date})`);
+        parts.push(
+          `**${item.headline}** (${item.source}, ${item.published_date})`,
+        );
         parts.push(`${item.summary}`);
         parts.push(`Impact: ${item.impact_on_real_estate}`);
-        parts.push(`Sentiment: ${item.sentiment} | Category: ${item.category}\n`);
+        parts.push(
+          `Sentiment: ${item.sentiment} | Category: ${item.category}\n`,
+        );
       });
     }
 
@@ -604,19 +640,29 @@ Search and compile results for ${locationContext}:`;
     if (includeIndicators && result.economic_indicators.length > 0) {
       parts.push('\n## ECONOMIC INDICATORS\n');
       result.economic_indicators.forEach((ind) => {
-        parts.push(`**${ind.indicator_name}** (${ind.geography_level}): ${ind.current_value}`);
+        parts.push(
+          `**${ind.indicator_name}** (${ind.geography_level}): ${ind.current_value}`,
+        );
         parts.push(`${ind.change_description}`);
-        parts.push(`Housing impact: ${ind.impact_on_housing} - ${ind.impact_explanation}\n`);
+        parts.push(
+          `Housing impact: ${ind.impact_on_housing} - ${ind.impact_explanation}\n`,
+        );
       });
     }
 
     // Market signals
     if (includeSignals && result.market_signals.length > 0) {
       const summary = this.summarizeSignals(result);
-      parts.push(`\n## MARKET SIGNALS (Overall: ${summary.overall.toUpperCase()})\n`);
+      parts.push(
+        `\n## MARKET SIGNALS (Overall: ${summary.overall.toUpperCase()})\n`,
+      );
       result.market_signals.forEach((signal) => {
         const emoji =
-          signal.signal_type === 'bullish' ? '📈' : signal.signal_type === 'bearish' ? '📉' : '➡️';
+          signal.signal_type === 'bullish'
+            ? '📈'
+            : signal.signal_type === 'bearish'
+              ? '📉'
+              : '➡️';
         parts.push(`${emoji} **${signal.headline}**`);
         parts.push(`${signal.description}`);
         parts.push(`Confidence: ${signal.confidence}\n`);

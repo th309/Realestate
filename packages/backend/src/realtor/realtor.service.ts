@@ -35,17 +35,58 @@ export class RealtorService {
 
   // FIPS code to state abbreviation mapping (realtor_state uses abbreviations, not FIPS)
   private readonly fipsToAbbr: Record<string, string> = {
-    '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
-    '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
-    '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
-    '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
-    '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
-    '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
-    '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
-    '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
-    '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
-    '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
-    '56': 'WY', '72': 'PR'
+    '01': 'AL',
+    '02': 'AK',
+    '04': 'AZ',
+    '05': 'AR',
+    '06': 'CA',
+    '08': 'CO',
+    '09': 'CT',
+    '10': 'DE',
+    '11': 'DC',
+    '12': 'FL',
+    '13': 'GA',
+    '15': 'HI',
+    '16': 'ID',
+    '17': 'IL',
+    '18': 'IN',
+    '19': 'IA',
+    '20': 'KS',
+    '21': 'KY',
+    '22': 'LA',
+    '23': 'ME',
+    '24': 'MD',
+    '25': 'MA',
+    '26': 'MI',
+    '27': 'MN',
+    '28': 'MS',
+    '29': 'MO',
+    '30': 'MT',
+    '31': 'NE',
+    '32': 'NV',
+    '33': 'NH',
+    '34': 'NJ',
+    '35': 'NM',
+    '36': 'NY',
+    '37': 'NC',
+    '38': 'ND',
+    '39': 'OH',
+    '40': 'OK',
+    '41': 'OR',
+    '42': 'PA',
+    '44': 'RI',
+    '45': 'SC',
+    '46': 'SD',
+    '47': 'TN',
+    '48': 'TX',
+    '49': 'UT',
+    '50': 'VT',
+    '51': 'VA',
+    '53': 'WA',
+    '54': 'WV',
+    '55': 'WI',
+    '56': 'WY',
+    '72': 'PR',
   };
 
   /**
@@ -63,7 +104,7 @@ export class RealtorService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) { }
+  ) {}
 
   /**
    * Get cached data or fetch fresh
@@ -121,7 +162,7 @@ export class RealtorService {
   private async fetchPage(
     table: string,
     periodDate: string,
-    offset: number
+    offset: number,
   ): Promise<RealtorRow[]> {
     const { data, error } = await this.supabase
       .from(table)
@@ -139,7 +180,7 @@ export class RealtorService {
    */
   private async fetchZipsByState(
     periodDate: string,
-    state: string
+    state: string,
   ): Promise<RealtorRow[]> {
     // Check cache with state-specific key
     const cacheKey = `realtor_zip:${periodDate}:${state.toLowerCase()}`;
@@ -188,7 +229,7 @@ export class RealtorService {
    */
   private async fetchAllRows(
     table: string,
-    periodDate: string
+    periodDate: string,
   ): Promise<RealtorRow[]> {
     // Check cache first
     const cacheKey = `${table}:${periodDate}`;
@@ -205,7 +246,9 @@ export class RealtorService {
       // Fetch multiple pages in parallel
       const pagePromises: Promise<RealtorRow[]>[] = [];
       for (let i = 0; i < this.PARALLEL_PAGES; i++) {
-        pagePromises.push(this.fetchPage(table, periodDate, offset + i * this.PAGE_SIZE));
+        pagePromises.push(
+          this.fetchPage(table, periodDate, offset + i * this.PAGE_SIZE),
+        );
       }
 
       const results = await Promise.all(pagePromises);
@@ -220,7 +263,10 @@ export class RealtorService {
       const lastPageSize = results[results.length - 1].length;
       const totalFetched = results.reduce((sum, r) => sum + r.length, 0);
 
-      if (totalFetched < this.PARALLEL_PAGES * this.PAGE_SIZE || lastPageSize < this.PAGE_SIZE) {
+      if (
+        totalFetched < this.PARALLEL_PAGES * this.PAGE_SIZE ||
+        lastPageSize < this.PAGE_SIZE
+      ) {
         hasMore = false;
       } else {
         offset += this.PARALLEL_PAGES * this.PAGE_SIZE;
@@ -236,7 +282,10 @@ export class RealtorService {
   // National Data
   // ============================================================================
 
-  async getNationalData(metric: string, date?: string): Promise<RealtorDataPoint[]> {
+  async getNationalData(
+    metric: string,
+    date?: string,
+  ): Promise<RealtorDataPoint[]> {
     let query = this.supabase
       .from('realtor_national')
       .select('*')
@@ -249,7 +298,7 @@ export class RealtorService {
     const { data, error } = await query.limit(1);
     if (error) throw error;
 
-    return (data || []).map(row => ({
+    return (data || []).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
       value: row[metric],
@@ -258,16 +307,16 @@ export class RealtorService {
 
   // Map frontend metric IDs to Realtor column names
   private readonly metricColumnMap: Record<string, string> = {
-    'home_value': 'median_listing_price',
-    'home_value_yoy': 'median_listing_price_yy',
-    'home_value_mom': 'median_listing_price_mm',
-    'for_sale_inventory': 'active_listing_count',
-    'inventory_yoy': 'active_listing_count_yy',
-    'days_on_market': 'median_days_on_market',
-    'new_listings': 'new_listing_count',
-    'pending_listings': 'pending_listing_count',
-    'price_cut_pct': 'price_reduced_share',
-    'price_per_sqft': 'median_listing_price_per_square_foot',
+    home_value: 'median_listing_price',
+    home_value_yoy: 'median_listing_price_yy',
+    home_value_mom: 'median_listing_price_mm',
+    for_sale_inventory: 'active_listing_count',
+    inventory_yoy: 'active_listing_count_yy',
+    days_on_market: 'median_days_on_market',
+    new_listings: 'new_listing_count',
+    pending_listings: 'pending_listing_count',
+    price_cut_pct: 'price_reduced_share',
+    price_per_sqft: 'median_listing_price_per_square_foot',
   };
 
   // Metrics that are stored as decimals and need to be converted to percentages
@@ -285,7 +334,10 @@ export class RealtorService {
    * - Filters out corrupt data for growth metrics
    * - Rounds non-percentage values to integers
    */
-  private processMetricValue(metricId: string, rawValue: unknown): number | null {
+  private processMetricValue(
+    metricId: string,
+    rawValue: unknown,
+  ): number | null {
     if (rawValue === null || rawValue === undefined) return null;
 
     let value = Number(rawValue);
@@ -293,7 +345,8 @@ export class RealtorService {
 
     // Check for corrupt data in growth metrics (values stored as decimals)
     // Values > 100 or < -100 as decimals would mean >10,000% which is corrupt
-    const isGrowthMetric = metricId.endsWith('_yoy') || metricId.endsWith('_mom');
+    const isGrowthMetric =
+      metricId.endsWith('_yoy') || metricId.endsWith('_mom');
     if (isGrowthMetric && (value > 100 || value < -100)) {
       return null; // Treat as corrupt data
     }
@@ -314,7 +367,9 @@ export class RealtorService {
    * Get national average for a given frontend metric ID
    * Maps frontend metric IDs to Realtor column names
    */
-  async getNationalAverage(metricId: string): Promise<{ value: number | null; metricId: string }> {
+  async getNationalAverage(
+    metricId: string,
+  ): Promise<{ value: number | null; metricId: string }> {
     const columnName = this.metricColumnMap[metricId];
     if (!columnName) {
       return { value: null, metricId };
@@ -335,7 +390,7 @@ export class RealtorService {
 
     return {
       value: this.processMetricValue(metricId, row?.[columnName]),
-      metricId
+      metricId,
     };
   }
 
@@ -370,11 +425,15 @@ export class RealtorService {
    * Get state average for a given state
    * @param stateId - Can be FIPS code (e.g., "32") or abbreviation (e.g., "NV")
    */
-  async getStateAverages(stateId: string): Promise<Record<string, number | null>> {
+  async getStateAverages(
+    stateId: string,
+  ): Promise<Record<string, number | null>> {
     const columns = ['state_id', ...Object.values(this.metricColumnMap)];
     // Convert FIPS to state abbreviation (database stores abbreviations like "NV", not FIPS "32")
     const stateAbbr = this.toStateAbbr(stateId);
-    console.log(`[getStateAverages] Input stateId=${stateId}, converted to stateAbbr=${stateAbbr}`);
+    console.log(
+      `[getStateAverages] Input stateId=${stateId}, converted to stateAbbr=${stateAbbr}`,
+    );
 
     const { data, error } = await this.supabase
       .from('realtor_state')
@@ -397,7 +456,9 @@ export class RealtorService {
       result[metricId] = this.processMetricValue(metricId, row[column]);
     }
 
-    console.log(`[getStateAverages] Returning ${Object.values(result).filter(v => v !== null).length} metrics with values`);
+    console.log(
+      `[getStateAverages] Returning ${Object.values(result).filter((v) => v !== null).length} metrics with values`,
+    );
     return result;
   }
 
@@ -408,7 +469,7 @@ export class RealtorService {
   async getBenchmarks(
     geoLevel: string,
     regionId: string,
-    stateId?: string
+    stateId?: string,
   ): Promise<{
     location: Record<string, number | null>;
     state: Record<string, number | null>;
@@ -416,12 +477,18 @@ export class RealtorService {
     locationName: string;
     stateName: string | null;
   }> {
-    console.log(`[getBenchmarks] geoLevel=${geoLevel}, regionId=${regionId}, stateId=${stateId}`);
+    console.log(
+      `[getBenchmarks] geoLevel=${geoLevel}, regionId=${regionId}, stateId=${stateId}`,
+    );
     const columns = Object.values(this.metricColumnMap);
 
     // Get national averages
     const national = await this.getAllNationalAverages();
-    console.log(`[getBenchmarks] National averages:`, Object.keys(national).length, 'metrics');
+    console.log(
+      `[getBenchmarks] National averages:`,
+      Object.keys(national).length,
+      'metrics',
+    );
 
     // Get state averages if applicable
     let state: Record<string, number | null> = {};
@@ -430,10 +497,16 @@ export class RealtorService {
     if (stateId && geoLevel !== 'state') {
       // Convert FIPS to abbreviation (database stores "NV" not "32")
       const stateAbbr = this.toStateAbbr(stateId);
-      console.log(`[getBenchmarks] Fetching state averages for stateId=${stateId} (abbr=${stateAbbr})`);
+      console.log(
+        `[getBenchmarks] Fetching state averages for stateId=${stateId} (abbr=${stateAbbr})`,
+      );
       state = await this.getStateAverages(stateId);
-      const stateMetricsWithValues = Object.values(state).filter(v => v !== null).length;
-      console.log(`[getBenchmarks] State averages received: ${stateMetricsWithValues} metrics with values`);
+      const stateMetricsWithValues = Object.values(state).filter(
+        (v) => v !== null,
+      ).length;
+      console.log(
+        `[getBenchmarks] State averages received: ${stateMetricsWithValues} metrics with values`,
+      );
 
       // Get state name using abbreviation
       const { data: stateData } = await this.supabase
@@ -445,7 +518,9 @@ export class RealtorService {
       stateName = stateData?.[0]?.state_name || stateAbbr;
       console.log(`[getBenchmarks] State name: ${stateName}`);
     } else {
-      console.log(`[getBenchmarks] Skipping state averages: stateId=${stateId}, geoLevel=${geoLevel}`);
+      console.log(
+        `[getBenchmarks] Skipping state averages: stateId=${stateId}, geoLevel=${geoLevel}`,
+      );
     }
 
     // Get location values based on geo level
@@ -455,7 +530,9 @@ export class RealtorService {
     if (geoLevel === 'state') {
       // Convert FIPS to abbreviation (database stores "NV" not "32")
       const stateAbbr = this.toStateAbbr(regionId);
-      console.log(`[getBenchmarks] State query for regionId=${regionId} (abbr=${stateAbbr})`);
+      console.log(
+        `[getBenchmarks] State query for regionId=${regionId} (abbr=${stateAbbr})`,
+      );
 
       const { data, error } = await this.supabase
         .from('realtor_state')
@@ -464,7 +541,12 @@ export class RealtorService {
         .order('period_date', { ascending: false })
         .limit(1);
 
-      console.log(`[getBenchmarks] State query result:`, data?.length || 0, 'rows', error ? `Error: ${error.message}` : '');
+      console.log(
+        `[getBenchmarks] State query result:`,
+        data?.length || 0,
+        'rows',
+        error ? `Error: ${error.message}` : '',
+      );
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
@@ -472,7 +554,10 @@ export class RealtorService {
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
           location[metricId] = this.processMetricValue(metricId, row[column]);
         }
-        console.log(`[getBenchmarks] Found state: ${locationName}, metrics with values:`, Object.values(location).filter(v => v !== null).length);
+        console.log(
+          `[getBenchmarks] Found state: ${locationName}, metrics with values:`,
+          Object.values(location).filter((v) => v !== null).length,
+        );
       }
     } else if (geoLevel === 'metro') {
       const { data } = await this.supabase
@@ -526,7 +611,7 @@ export class RealtorService {
       state,
       national,
       locationName,
-      stateName
+      stateName,
     };
   }
 
@@ -534,9 +619,12 @@ export class RealtorService {
   // State Data
   // ============================================================================
 
-  async getStateData(metric: string, date?: string): Promise<RealtorDataPoint[]> {
+  async getStateData(
+    metric: string,
+    date?: string,
+  ): Promise<RealtorDataPoint[]> {
     // Use cached latest date if not specified
-    const latestDate = date || await this.getLatestDate('realtor_state');
+    const latestDate = date || (await this.getLatestDate('realtor_state'));
 
     const { data, error } = await this.supabase
       .from('realtor_state')
@@ -548,7 +636,7 @@ export class RealtorService {
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return ((data || []) as RealtorRow[]).map(row => {
+    return ((data || []) as RealtorRow[]).map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)
@@ -571,9 +659,13 @@ export class RealtorService {
   // Metro Data
   // ============================================================================
 
-  async getMetroData(metric: string, date?: string, state?: string): Promise<RealtorDataPoint[]> {
+  async getMetroData(
+    metric: string,
+    date?: string,
+    state?: string,
+  ): Promise<RealtorDataPoint[]> {
     // Use cached latest date if not specified
-    const latestDate = date || await this.getLatestDate('realtor_metro');
+    const latestDate = date || (await this.getLatestDate('realtor_metro'));
 
     // Use high limit to get all metros (~1000)
     const { data, error } = await this.supabase
@@ -587,7 +679,7 @@ export class RealtorService {
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return ((data || []) as RealtorRow[]).map(row => {
+    return ((data || []) as RealtorRow[]).map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)
@@ -610,17 +702,24 @@ export class RealtorService {
   // County Data
   // ============================================================================
 
-  async getCountyData(metric: string, date?: string, state?: string): Promise<RealtorDataPoint[]> {
+  async getCountyData(
+    metric: string,
+    date?: string,
+    state?: string,
+  ): Promise<RealtorDataPoint[]> {
     // Use cached latest date if not specified
-    const latestDate = date || await this.getLatestDate('realtor_county');
+    const latestDate = date || (await this.getLatestDate('realtor_county'));
 
     // Use pagination to get all counties (~3200)
-    const data = await this.fetchAllRows('realtor_county', latestDate as string);
+    const data = await this.fetchAllRows(
+      'realtor_county',
+      latestDate as string,
+    );
 
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return data.map(row => {
+    return data.map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)
@@ -643,9 +742,13 @@ export class RealtorService {
   // ZIP Data
   // ============================================================================
 
-  async getZipData(metric: string, state?: string, date?: string): Promise<RealtorDataPoint[]> {
+  async getZipData(
+    metric: string,
+    state?: string,
+    date?: string,
+  ): Promise<RealtorDataPoint[]> {
     // Get latest date from cache if not specified
-    const latestDate = date || await this.getLatestDate('realtor_zip');
+    const latestDate = date || (await this.getLatestDate('realtor_zip'));
 
     // OPTIMIZATION: When state is provided, query database directly with filter
     // This fetches ~500-2000 ZIPs per state instead of all 28,000
@@ -660,7 +763,7 @@ export class RealtorService {
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return data.map(row => {
+    return data.map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)

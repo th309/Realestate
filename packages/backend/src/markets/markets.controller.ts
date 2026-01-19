@@ -34,12 +34,20 @@ export class MarketsController {
   @Get('metros/search')
   @ApiOperation({ summary: 'Search metro areas by name' })
   @ApiQuery({ name: 'q', required: true, description: 'Search query' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Max results (default 10)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max results (default 10)',
+  })
   async searchMetros(
     @Query('q') query: string,
     @Query('limit') limit?: string,
   ) {
-    return this.marketsService.searchMetros(query, limit ? parseInt(limit, 10) : 10);
+    return this.marketsService.searchMetros(
+      query,
+      limit ? parseInt(limit, 10) : 10,
+    );
   }
 
   @Get('counties/home-values')
@@ -56,7 +64,10 @@ export class MarketsController {
 
   @Get('states/:stateFp/counties')
   @ApiOperation({ summary: 'Get counties by state FIPS code' })
-  @ApiParam({ name: 'stateFp', description: 'State FIPS code (e.g., 17 for Illinois)' })
+  @ApiParam({
+    name: 'stateFp',
+    description: 'State FIPS code (e.g., 17 for Illinois)',
+  })
   async getCountiesByState(@Param('stateFp') stateFp: string) {
     return this.marketsService.getCountiesByState(stateFp);
   }
