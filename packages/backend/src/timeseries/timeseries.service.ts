@@ -265,13 +265,30 @@ export class TimeSeriesService {
         return query.ilike('cbsa_title', `${regionId}%`);
 
       case 'county':
-        // Realtor: county_fips
-        // Zillow: fips_code
-        // Census/Economic: fips_code
-        if (source === 'realtor') {
-          return query.eq('county_fips', regionId);
+        // If regionId is numeric (FIPS code), use fips_code columns
+        if (/^\d+$/.test(regionId)) {
+          if (source === 'realtor') {
+            return query.eq('county_fips', regionId);
+          }
+          return query.eq('fips_code', regionId);
         }
-        return query.eq('fips_code', regionId);
+        // Parse "County, State" format if present (e.g., "Cook, IL")
+        const countyParts = regionId.split(',').map(s => s.trim());
+        const countyName = countyParts[0];
+        const countyState = countyParts[1]; // May be undefined
+
+        // Realtor: county_name is lowercase "cook, il" format
+        if (source === 'realtor') {
+          // Realtor format includes state, so we can match directly
+          // e.g., "Cook, IL" -> "cook, il"
+          const searchPattern = countyState
+            ? `${countyName.toLowerCase()}, ${countyState.toLowerCase()}`
+            : countyName.toLowerCase();
+          return query.ilike('county_name', `${searchPattern}%`);
+        }
+        // Census/Economic: county_name is "Cook County, Illinois" format
+        // Just match on county name prefix
+        return query.ilike('county_name', `${countyName}%`);
 
       case 'zip':
         // Realtor: postal_code
@@ -287,12 +304,21 @@ export class TimeSeriesService {
         return query.eq('postal_code', regionId);
 
       case 'city':
-        // Zillow: region_name
-        // Census: place_name
-        if (source === 'census') {
-          return query.eq('place_name', regionId);
+        // Parse "City, State" format if present (e.g., "Miami, FL")
+        const cityParts = regionId.split(',').map(s => s.trim());
+        const cityName = cityParts[0];
+        const stateCode = cityParts[1]; // May be undefined
+
+        // Zillow: has separate region_name and state_code columns
+        if (source === 'zillow') {
+          if (stateCode) {
+            return query.eq('region_name', cityName).eq('state_code', stateCode);
+          }
+          return query.eq('region_name', cityName);
         }
-        return query.eq('region_name', regionId);
+        // Census: place_name has suffix like "Miami city", "Miami Beach city"
+        // Use ILIKE to match "Miami" to "Miami city"
+        return query.ilike('place_name', `${cityName}%`);
 
       default:
         return query.eq('region_id', regionId);

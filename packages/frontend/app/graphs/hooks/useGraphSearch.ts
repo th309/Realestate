@@ -482,7 +482,8 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     id: `county-${county.fips}`,
                     name: county.name,
                     subtitle: county.state ? `${county.state} County` : 'County',
-                    value: county.name, // Use county name for API calls
+                    // Include state to disambiguate counties with same name (e.g., "Cook, IL" vs "Cook, MN")
+                    value: county.state ? `${county.name}, ${county.state}` : county.name,
                     type: 'county' as const,
                     center: [0, 0] as [number, number],
                     state: county.state,
@@ -563,7 +564,8 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     id: `city-${city.id}`,
                     name: city.name,
                     subtitle: city.state ? `${city.state}, United States` : 'United States',
-                    value: city.name, // Use city name for API calls
+                    // Include state to disambiguate cities with same name (e.g., "Miami, FL" vs "Miami, OK")
+                    value: city.state ? `${city.name}, ${city.state}` : city.name,
                     type: 'city' as const,
                     center: [0, 0] as [number, number],
                     state: city.state,
