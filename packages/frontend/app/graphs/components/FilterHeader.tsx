@@ -71,12 +71,26 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   } = useGraphSearch(geoLevel);
 
   const handleSelectResult = (result: SearchResult) => {
-    setSelectedArea(result.name);
-    setSearchQuery('');
+    // Use result.value if available (full name for API), otherwise use display name
+    setSelectedArea(result.value || result.name);
     clearSearch();
   };
 
   const showSearch = ['metro', 'county', 'city', 'zip'].includes(geoLevel);
+
+  // Get placeholder text based on geo level
+  const getSearchPlaceholder = () => {
+    switch (geoLevel) {
+      case 'metro': return 'Search metros (e.g., Chicago, Miami)';
+      case 'county': return 'Search counties';
+      case 'city': return 'Search cities';
+      case 'zip': return 'Search ZIP codes';
+      default: return 'Search location';
+    }
+  };
+
+  // Show selectedArea in input when not actively searching
+  const displayValue = showSearchResults ? searchQuery : (searchQuery || selectedArea);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -129,7 +143,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
                 <SearchBar
                   className="w-full"
                   searchRef={searchRef}
-                  searchQuery={searchQuery || (searchQuery === '' && !showSearchResults ? selectedArea : '')}
+                  searchQuery={displayValue}
                   searchResults={searchResults}
                   searchLoading={searchLoading}
                   showSearchResults={showSearchResults}
@@ -137,8 +151,10 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
                   onSelectResult={handleSelectResult}
                   onFocus={() => {
                     if (searchResults.length > 0) setShowSearchResults(true);
-                    if (searchQuery === selectedArea) setSearchQuery('');
+                    // Clear displayed selectedArea when user focuses to search
+                    if (!searchQuery && selectedArea) setSearchQuery('');
                   }}
+                  placeholder={getSearchPlaceholder()}
                 />
               </div>
             </div>

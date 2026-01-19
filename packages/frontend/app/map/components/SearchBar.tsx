@@ -13,6 +13,7 @@ interface SearchBarProps {
   onSelectResult: (result: SearchResult) => void;
   onFocus: () => void;
   className?: string; // Allow styling overrides
+  placeholder?: string; // Custom placeholder text
 }
 
 export function SearchBar({
@@ -25,6 +26,7 @@ export function SearchBar({
   onSelectResult,
   onFocus,
   className,
+  placeholder = "Search city, zip, or county",
 }: SearchBarProps) {
   return (
     <div className={className ?? "flex-1 max-w-2xl mx-0 md:mx-8"} ref={searchRef}>
@@ -38,7 +40,7 @@ export function SearchBar({
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           onFocus={onFocus}
-          placeholder="Search city, zip, or county"
+          placeholder={placeholder}
           className="w-full h-14 pl-10 md:pl-12 pr-3 md:pr-4 bg-surface-container-high rounded-full text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all duration-200"
         />
         {/* Search Results Dropdown - M3 Menu styling */}
@@ -68,7 +70,9 @@ export function SearchBar({
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-on-surface truncate">{result.name}</div>
-                        <div className="text-xs text-on-surface-variant capitalize">{result.type}</div>
+                        <div className="text-xs text-on-surface-variant">
+                          {result.subtitle || <span className="capitalize">{result.type}</span>}
+                        </div>
                       </div>
                     </button>
                   </li>

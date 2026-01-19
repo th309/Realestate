@@ -69,7 +69,9 @@ export interface MetricCategory {
 
 export interface SearchResult {
   id: string;
-  name: string;
+  name: string; // Display name (clean, short)
+  subtitle?: string; // Additional location context (e.g., "Maryland 21740, United States")
+  value?: string; // The value to use when selected (defaults to name if not provided)
   type: 'state' | 'metro' | 'county' | 'zip' | 'city';
   center?: [number, number];
   bbox?: [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]

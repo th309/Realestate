@@ -98,14 +98,29 @@ export function useDashboardState() {
     [baseline.level, getOptionsForLevel]
   );
 
+  // Track previous geoLevel to detect changes
+  const [prevGeoLevel, setPrevGeoLevel] = useState<GeoLevel>(geoLevel);
+
   useEffect(() => {
-    if (geoLevel === 'national') {
-      setSelectedArea('United States');
-      setComparison((prev) => ({ ...prev, enabled: false }));
-    } else if (!primaryOptions.includes(selectedArea)) {
-      setSelectedArea(primaryOptions[0]);
+    // Only reset selectedArea when geoLevel actually changes
+    if (geoLevel !== prevGeoLevel) {
+      setPrevGeoLevel(geoLevel);
+
+      if (geoLevel === 'national') {
+        setSelectedArea('United States');
+        setComparison((prev) => ({ ...prev, enabled: false }));
+      } else if (geoLevel === 'state') {
+        // For state, use dropdown options
+        if (!primaryOptions.includes(selectedArea)) {
+          setSelectedArea(primaryOptions[0]);
+        }
+      } else {
+        // For metro, county, city, zip - clear the area so user can search
+        // Set a placeholder that prompts search
+        setSelectedArea('');
+      }
     }
-  }, [geoLevel, primaryOptions, selectedArea]);
+  }, [geoLevel, prevGeoLevel, primaryOptions, selectedArea]);
 
   useEffect(() => {
     if (!baselineOptions.includes(baseline.area)) {
