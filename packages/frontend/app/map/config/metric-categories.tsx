@@ -143,9 +143,6 @@ const INVESTOR_CASHFLOW: MetricCategory = {
     metric('rent_for_houses'),
     metric('listing_price', { isNew: true }),
     metric('price_per_sqft', { isNew: true }),
-    metric('income_to_rent', { isNew: true }),
-    metric('renter_affordability', { isPremium: true }),
-    metric('gross_yield', { isPremium: true }),
   ],
 };
 
