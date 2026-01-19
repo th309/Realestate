@@ -267,7 +267,42 @@ All Realtor tables share a common schema with geography-specific identifiers:
 | `income_to_rent` | `zillow_affordability` | `renter_income_needed` | **Calculated** | 30% income rule |
 | `renter_affordability` | `zillow_affordability` | `renter_affordability_percent` | - | % who can afford |
 
-### 3.7 PropertyIQ Scores Mappings
+### 3.7 Area Profile (Census) Mappings
+
+| Card ID | Primary Source | Column/Metric | Notes |
+|---------|---------------|---------------|-------|
+| `population` | `census_[geo]` | `total_population` | All geographies |
+| `population_growth` | `census_[geo]` | `population_yoy` | Calculated YoY |
+| `median_income` | `census_[geo]` | `median_household_income` | ACS 5-Year |
+| `income_growth` | `census_[geo]` | `income_yoy` | Calculated YoY |
+| `median_age` | `census_[geo]` | `median_age` | ACS 5-Year |
+| `homeownership_rate` | `census_[geo]` | `homeownership_rate` | Owner/Total ratio |
+
+**Geographic Coverage:**
+- `census_national`, `census_state`, `census_metro`, `census_county`, `census_city`, `census_zip`
+
+### 3.8 Local Economy (FRED/BEA) Mappings
+
+| Card ID | Primary Source | Column/Metric | Notes |
+|---------|---------------|---------------|-------|
+| `unemployment_rate` | `economic_[geo]` | `unemployment_rate` | FRED/BLS monthly |
+| `job_growth` | `economic_[geo]` | `employment_yoy` | Calculated YoY |
+| `gdp_growth` | `economic_[geo]` | `gdp_yoy` | BEA annual |
+| `cost_of_living` | `economic_[geo]` | `rpp_all_items` | BEA RPP (100 = US avg) |
+
+**Geographic Coverage:**
+- `unemployment_rate`: national, state, metro, county (3,083 counties with monthly data)
+- `job_growth`: national, state, metro (major metros only)
+- `gdp_growth`: national, state, metro, county
+- `cost_of_living`: state, metro only (BEA Regional Price Parities)
+
+**Data Sources:**
+- Unemployment: BLS via FRED (metros), BLS API directly (counties - monthly data)
+- Employment: FRED payroll employment series
+- GDP: BEA Regional GDP tables
+- Cost of Living: BEA Regional Price Parities (RPP)
+
+### 3.9 PropertyIQ Scores Mappings
 
 | Card ID | Primary Source | Column/Metric | Calculation Method |
 |---------|---------------|---------------|-------------------|

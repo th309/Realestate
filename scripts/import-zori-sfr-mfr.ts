@@ -7,6 +7,7 @@ import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { parse as parseSync } from 'csv-parse/sync';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 // Load environment variables
 config({ path: join(__dirname, '../packages/backend/.env') });
@@ -247,6 +248,11 @@ async function main() {
   console.log(`Total errors: ${totalErrors}`);
   console.log(`Duration: ${minutes}m ${seconds}s`);
   console.log(`End Time: ${new Date().toISOString()}`);
+
+  // Refresh calculated metrics after successful import
+  if (totalInserted > 0) {
+    await refreshCalculatedMetrics(supabase);
+  }
 }
 
 main().catch(error => {

@@ -16,6 +16,7 @@ import { createRealtorImportClient } from './realtor-import/db-client';
 import { loadFromFile } from './realtor-import/download';
 import { parseZipHotnessCSV } from './realtor-import/csv-processor';
 import { REALTOR_DATASETS, RealtorCombinedRecord } from './realtor-import/types';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 const DATA_DIR = join(__dirname, '../data/realtor');
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-zip')!;
@@ -233,6 +234,10 @@ async function main() {
   console.log('='.repeat(60));
 
   if (result.errors === 0) {
+    // Refresh calculated metrics after successful import
+    if (result.recordsInserted > 0) {
+      await refreshCalculatedMetrics(supabase);
+    }
     console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
   } else {
     console.log('❌ IMPORT COMPLETED WITH ERRORS');

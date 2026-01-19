@@ -15,6 +15,7 @@ import { createRealtorImportClient } from './realtor-import/db-client';
 import { downloadDataset, loadFromFile } from './realtor-import/download';
 import { parseNationalCSV, importNationalRecords } from './realtor-import/csv-processor';
 import { REALTOR_DATASETS } from './realtor-import/types';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-national')!;
 
@@ -80,6 +81,10 @@ async function main() {
   console.log('='.repeat(60));
 
   if (result.success) {
+    // Refresh calculated metrics after successful import
+    if (result.recordsInserted > 0) {
+      await refreshCalculatedMetrics(supabase);
+    }
     console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
   } else {
     console.log('❌ IMPORT COMPLETED WITH ERRORS');

@@ -6,9 +6,9 @@ import {
   AreaChart as AreaIcon,
   History,
   TrendingUp,
+  LineChart as LineIcon,
   Eye,
   EyeOff,
-  LineChart as LineIcon,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -403,12 +403,15 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     );
   };
 
+  // Check if we need stacked layout (both comparison and baseline enabled)
+  const isStackedLayout = comparison.enabled && baseline.enabled;
+
   return (
     <M3Card variant="elevated" size="lg" className="overflow-hidden">
-      {/* Chart Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      {/* Chart Controls */}
+      <div className="flex justify-between items-start gap-4 mb-4">
         {/* Left: Chart Type & Timeframe */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Chart Type Selector */}
           <div className="flex bg-surface-container p-1 rounded-xl">
             {chartTypeConfig.map(({ type, icon: Icon, label }) => (
@@ -416,7 +419,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
                 key={type}
                 onClick={() => setChartType(type)}
                 title={label}
-                className={`p-2.5 rounded-lg transition-all duration-200 ${chartType === type
+                className={`p-2 rounded-lg transition-all duration-200 ${chartType === type
                   ? 'bg-surface text-primary elevation-1'
                   : 'text-on-surface-variant hover:text-primary'
                   }`}
@@ -432,7 +435,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
               <button
                 key={opt}
                 onClick={() => setTimeFrame(opt)}
-                className={`px-3 md:px-4 py-2 text-[10px] md:text-xs font-medium rounded-lg transition-all duration-200 ${timeFrame === opt
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${timeFrame === opt
                   ? 'bg-surface text-primary elevation-1'
                   : 'text-on-surface-variant hover:text-primary'
                   }`}
@@ -443,67 +446,70 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           </div>
         </div>
 
-        {/* Right: Toggles & Series Visibility */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Data Toggles */}
-          <button
-            onClick={() => setShowMilestones(!showMilestones)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium border transition-all duration-200 ${showMilestones
-              ? 'bg-tertiary-container text-on-tertiary-container border-tertiary-container'
-              : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary'
-              }`}
-          >
-            <History className="w-3.5 h-3.5" />
-            Events
-          </button>
-          <button
-            onClick={() => setShowForecast(!showForecast)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10px] font-medium border transition-all duration-200 ${showForecast
-              ? 'bg-primary-container text-on-primary-container border-primary-container'
-              : 'bg-surface text-on-surface-variant border-outline-variant hover:border-primary'
-              }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            Forecast
-          </button>
-
-          {/* Series Visibility */}
-          <div className="flex items-center gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant">
+        {/* Right: Events, Forecast, Series */}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => toggleSeries('primary')}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-200 ${visibleSeries.primary
-                ? 'text-primary bg-surface elevation-1'
-                : 'text-on-surface-variant opacity-50'
+              onClick={() => setShowMilestones(!showMilestones)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${showMilestones
+                ? 'bg-tertiary-container text-on-tertiary-container border-tertiary-container'
+                : 'bg-surface text-on-surface-variant border-outline-variant hover:border-tertiary'
                 }`}
             >
-              {visibleSeries.primary ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-              <span className="hidden sm:inline max-w-[60px] truncate">{selectedArea}</span>
+              <History className="w-3.5 h-3.5" />
+              Events
             </button>
-            {comparison.enabled && (
-              <button
-                onClick={() => toggleSeries('comparison')}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-200 ${visibleSeries.comparison
-                  ? 'text-secondary bg-surface elevation-1'
-                  : 'text-on-surface-variant opacity-50'
-                  }`}
-              >
-                {visibleSeries.comparison ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                <span className="hidden sm:inline max-w-[60px] truncate">{comparison.area}</span>
-              </button>
-            )}
-            {baseline.enabled && (
-              <button
-                onClick={() => toggleSeries('baseline')}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px] font-medium transition-all duration-200 ${visibleSeries.baseline
-                  ? 'text-orange-600 bg-surface elevation-1'
-                  : 'text-on-surface-variant opacity-50'
-                  }`}
-              >
-                {visibleSeries.baseline ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                <span className="hidden sm:inline">Base</span>
-              </button>
-            )}
+            <button
+              onClick={() => setShowForecast(!showForecast)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${showForecast
+                ? 'bg-primary-container text-on-primary-container border-primary-container'
+                : 'bg-surface text-on-surface-variant border-outline-variant hover:border-primary'
+                }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              Forecast
+            </button>
           </div>
+
+          {/* Series Visibility - Always shown here if active */}
+          {(comparison.enabled || baseline.enabled) && (
+            <div className="flex items-center gap-1 bg-surface-container p-1 rounded-xl border border-outline-variant">
+              <button
+                onClick={() => toggleSeries('primary')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.primary
+                  ? 'text-primary bg-surface elevation-1'
+                  : 'text-on-surface-variant opacity-50'
+                  }`}
+              >
+                {visibleSeries.primary ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                <span className="max-w-[60px] truncate">{selectedArea}</span>
+              </button>
+              {comparison.enabled && (
+                <button
+                  onClick={() => toggleSeries('comparison')}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.comparison
+                    ? 'text-cyan-600 bg-surface elevation-1'
+                    : 'text-on-surface-variant opacity-50'
+                    }`}
+                >
+                  {visibleSeries.comparison ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  <span className="max-w-[60px] truncate">{comparison.area}</span>
+                </button>
+              )}
+              {baseline.enabled && (
+                <button
+                  onClick={() => toggleSeries('baseline')}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${visibleSeries.baseline
+                    ? 'text-orange-600 bg-surface elevation-1'
+                    : 'text-on-surface-variant opacity-50'
+                    }`}
+                >
+                  {visibleSeries.baseline ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  <span>Base</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

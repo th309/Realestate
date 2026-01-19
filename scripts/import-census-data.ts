@@ -31,6 +31,7 @@ import {
   importCensusZipRecords
 } from './census-economic-import/csv-processor';
 import type { ImportResult } from './census-economic-import/types';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 const DATA_DIR = join(__dirname, '../data/economic');
 
@@ -207,9 +208,14 @@ async function main() {
   if (totalErrors > 0) {
     console.log('\nImport completed with errors');
     process.exit(1);
-  } else {
-    console.log('\nImport completed successfully');
   }
+
+  // Refresh calculated metrics after successful import
+  if (totalRecords > 0) {
+    await refreshCalculatedMetrics(supabase);
+  }
+
+  console.log('\nImport completed successfully');
 }
 
 main().catch(error => {

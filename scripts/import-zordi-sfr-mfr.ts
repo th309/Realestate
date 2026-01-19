@@ -12,6 +12,7 @@ import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { parse as parseSync } from 'csv-parse/sync';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 // Load environment variables
 config({ path: join(__dirname, '../packages/backend/.env') });
@@ -267,6 +268,11 @@ async function main() {
       .select('*', { count: 'exact', head: true })
       .eq('metric_name', metricName);
     console.log(`  ${metricName}: ${count?.toLocaleString()} records`);
+  }
+
+  // Refresh calculated metrics after successful import
+  if (totalInserted > 0) {
+    await refreshCalculatedMetrics(supabase);
   }
 }
 

@@ -17,6 +17,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { parse as parseSync } from 'csv-parse/sync';
 import https from 'https';
+import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
 const DATA_DIR = join(__dirname, '../data/zillow');
 if (!existsSync(DATA_DIR)) {
@@ -307,6 +308,11 @@ async function main() {
   console.log(`Total inserted: ${totalInserted}`);
   console.log(`Total errors: ${totalErrors}`);
   console.log('='.repeat(60));
+
+  // Refresh calculated metrics after successful import
+  if (totalInserted > 0) {
+    await refreshCalculatedMetrics(supabase);
+  }
 }
 
 main().catch(console.error);

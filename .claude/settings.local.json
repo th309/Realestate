@@ -76,7 +76,27 @@
       "Bash(railway deploy --help:*)",
       "Bash(railway logs --help:*)",
       "Bash(railway logs:*)",
-      "Bash(railway help:*)"
+      "Bash(railway help:*)",
+      "Bash(tree:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint)",
+      "Bash(npx eslint:*)",
+      "Bash(npx dotenv:*)",
+      "Bash(node test_match.js:*)",
+      "Bash(echo:*)",
+      "Bash(for i in 1 2 3)",
+      "Bash(do curl -s -k -w \"Request $i: HTTP %{http_code}, %{time_total}s\\\\n\" -o /dev/null \"https://backend-production-ee4d.up.railway.app/api/geography/counties\")",
+      "Bash(done)",
+      "Bash(node check_missing_counties.js:*)",
+      "Bash(node check_il_zips.js:*)",
+      "Bash(cmd.exe /c \"del /f /q \"\"\\\\?\\\\D:\\\\Projects\\\\rei-platform\\\\nul\"\"\")",
+      "Bash(git show:*)",
+      "Bash(del \"d:\\\\Projects\\\\rei-platform\\\\scripts\\\\economic_data_downloader.py\")",
+      "Bash(for:*)",
+      "Bash(npm run import:economic:*)",
+      "Bash(test:*)",
+      "Bash(supabase --version:*)",
+      "Bash(npm run build:frontend:*)"
     ]
   }
 }
