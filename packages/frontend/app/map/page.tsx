@@ -223,7 +223,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif" }}>
+    <div className="flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif", height: 'calc(100dvh - 64px - 44px)' }}>
       {/* M3 Top App Bar */}
       {/* Map Controls Toolbar */}
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 z-20 shadow-sm">

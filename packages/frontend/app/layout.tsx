@@ -108,7 +108,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.variable} ${robotoMono.variable} antialiased h-screen flex flex-col overflow-hidden`}
+        className={`${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <Header />
         <main className="flex-1 min-h-0">
