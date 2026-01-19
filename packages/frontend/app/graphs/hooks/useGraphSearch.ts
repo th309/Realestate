@@ -137,6 +137,9 @@ async function loadAllMetros(): Promise<Metro[]> {
     }
 
     // Try to load from API, fall back to static list on any error
+    // Minimum threshold - API should return at least 50 metros to be considered valid
+    const MIN_METRO_COUNT = 50;
+
     metrosLoadingPromise = (async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/markets/metros`);
@@ -144,7 +147,10 @@ async function loadAllMetros(): Promise<Metro[]> {
                 throw new Error(`API returned ${res.status}`);
             }
             const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
+
+            // Only use API data if it has a reasonable number of metros
+            if (Array.isArray(data) && data.length >= MIN_METRO_COUNT) {
+                console.log(`[Metro Load] API returned ${data.length} metros, using API data`);
                 // Merge with fallback data to ensure we have fullName for search
                 const apiMetros = data.map((m: { regionId: number; name: string }) => {
                     // Try to find matching fallback metro for additional fields
@@ -161,12 +167,15 @@ async function loadAllMetros(): Promise<Metro[]> {
                 });
                 metrosCache = apiMetros;
                 return apiMetros;
+            } else {
+                console.warn(`[Metro Load] API returned only ${data?.length || 0} metros, using fallback list`);
             }
         } catch (err) {
-            console.warn('Metro API unavailable, using fallback list:', err);
+            console.warn('[Metro Load] API unavailable, using fallback list:', err);
         }
 
-        // Fallback to static list
+        // Fallback to static list (75 major metros with full search data)
+        console.log(`[Metro Load] Using fallback list with ${FALLBACK_METROS.length} metros`);
         metrosCache = FALLBACK_METROS;
         return FALLBACK_METROS;
     })();
