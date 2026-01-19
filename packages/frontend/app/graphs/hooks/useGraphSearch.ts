@@ -232,15 +232,28 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                 console.log(`[Metro Search] Query: "${query}", Metros loaded: ${metros.length}`);
 
                 // Search against both name and fullName (for broader matching)
-                // e.g., searching "arlington" will find "Washington-Arlington-Alexandria" metro
-                const filtered = metros
-                    .filter(m => {
-                        const nameMatch = m.name?.toLowerCase().includes(lowerQuery);
-                        const fullNameMatch = m.fullName?.toLowerCase().includes(lowerQuery);
-                        return nameMatch || fullNameMatch;
+                // Prioritize: 1) starts with query, 2) word starts with query, 3) contains query
+                const scored = metros
+                    .map(m => {
+                        const name = m.name?.toLowerCase() || '';
+                        const fullName = m.fullName?.toLowerCase() || '';
+
+                        // Score: higher = better match
+                        let score = 0;
+                        if (name.startsWith(lowerQuery)) score = 100; // Exact start match
+                        else if (fullName.startsWith(lowerQuery)) score = 90;
+                        else if (name.split(/[-\s]/).some(word => word.startsWith(lowerQuery))) score = 80; // Word starts with
+                        else if (fullName.split(/[-\s]/).some(word => word.startsWith(lowerQuery))) score = 70;
+                        else if (name.includes(lowerQuery)) score = 50; // Contains anywhere
+                        else if (fullName.includes(lowerQuery)) score = 40;
+
+                        return { metro: m, score };
                     })
-                    .slice(0, 10)
-                    .map(metro => {
+                    .filter(({ score }) => score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                const filtered = scored.map(({ metro }) => {
                         const stateAbbrev = metro.state || parseMetroState(metro.name);
                         return {
                             id: `metro-${metro.regionId}`,
