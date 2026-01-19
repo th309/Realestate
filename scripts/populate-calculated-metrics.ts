@@ -156,7 +156,7 @@ async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Pr
   console.log(`  Total ZORI records: ${allZoriData.length}`);
 
   // Keep only the most recent ZORI value for each geography
-  const rentByGeo: Record<string, { value: number; name: string; date: string; source: 'zori' | 'census' }> = {};
+  const rentByGeo: Record<string, { value: number; name: string; date: string; source: 'zori' | 'hud_fmr' | 'census' }> = {};
   let zoriSkippedInvalid = 0;
   for (const row of allZoriData) {
     const geoId = row[config.zillowIdField];
@@ -186,7 +186,69 @@ async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Pr
   console.log(`  Unique ${config.geoType}s with ZORI data: ${zoriCount}`);
 
   // ============================================
-  // STEP 2: Get Census median_gross_rent as fallback
+  // STEP 2: Get HUD FMR data (secondary rent source for counties)
+  // ============================================
+  if (config.geoType === 'county') {
+    console.log(`  Fetching HUD FMR data (secondary rent source)...`);
+
+    // Get the most recent year of HUD FMR data
+    const { data: hudYearRow } = await supabase
+      .from('hud_fmr')
+      .select('year')
+      .order('year', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (hudYearRow?.year) {
+      const { data: hudData, error: hudError } = await supabase
+        .from('hud_fmr')
+        .select('fips_code, county_name, state_name, fmr_2br, year')
+        .eq('year', hudYearRow.year)
+        .not('fmr_2br', 'is', null);
+
+      if (hudError) {
+        console.log(`    HUD FMR query error: ${hudError.message}`);
+        errors.push(hudError.message);
+      } else if (hudData && hudData.length > 0) {
+        console.log(`  Total HUD FMR records (FY${hudYearRow.year}): ${hudData.length}`);
+
+        let hudAddedCount = 0;
+        let hudSkippedInvalid = 0;
+        for (const row of hudData) {
+          const geoId = row.fips_code;
+          if (!geoId) continue;
+
+          // Use 2BR FMR as the rent value (most commonly used for calculations)
+          const rentValue = row.fmr_2br;
+          if (!isValidRent(rentValue)) {
+            hudSkippedInvalid++;
+            continue;
+          }
+
+          // Only add if we don't already have rent data (ZORI takes priority)
+          if (!rentByGeo[geoId]) {
+            rentByGeo[geoId] = {
+              value: rentValue,
+              name: row.county_name ? `${row.county_name}` : `County ${geoId}`,
+              date: `${row.year}-10-01`, // HUD FMR effective date
+              source: 'hud_fmr',
+            };
+            hudAddedCount++;
+          }
+        }
+
+        if (hudSkippedInvalid > 0) {
+          console.log(`    ⚠️ Skipped ${hudSkippedInvalid} HUD FMR records with invalid rent values`);
+        }
+        console.log(`  Added ${hudAddedCount} counties from HUD FMR (no ZORI coverage)`);
+      }
+    } else {
+      console.log(`  No HUD FMR data available (table may be empty)`);
+    }
+  }
+
+  // ============================================
+  // STEP 3: Get Census median_gross_rent as fallback
   // ============================================
   console.log(`  Fetching Census median_gross_rent (fallback rent source)...`);
   let allCensusRent: any[] = [];
@@ -333,6 +395,7 @@ async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Pr
   let stored = 0;
   let matched = 0;
   let zoriMatched = 0;
+  let hudFmrMatched = 0;
   let censusMatched = 0;
   let skippedNoValidMetric = 0;
   const recordsToUpsert: any[] = [];
@@ -344,6 +407,7 @@ async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Pr
     if (!rent || !price) continue;
     matched++;
     if (rentInfo.source === 'zori') zoriMatched++;
+    else if (rentInfo.source === 'hud_fmr') hudFmrMatched++;
     else censusMatched++;
 
     let geoName = rentInfo.name;
@@ -389,6 +453,9 @@ async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Pr
 
   console.log(`  Matched ${matched} ${config.geoType}s with both rent and price data`);
   console.log(`    - ${zoriMatched} using ZORI (current rent)`);
+  if (hudFmrMatched > 0) {
+    console.log(`    - ${hudFmrMatched} using HUD FMR (county FMR)`);
+  }
   console.log(`    - ${censusMatched} using Census median_gross_rent (fallback)`);
   if (skippedNoValidMetric > 0) {
     console.log(`    ⚠️ Skipped ${skippedNoValidMetric} records with data outside valid bounds`);

@@ -1309,6 +1309,7 @@ export class CalculatedMetricsService {
 
   /**
    * Get pre-calculated investment metrics for map display
+   * Uses pagination to fetch all records (Supabase default limit is 1000)
    */
   async getInvestmentMetricsForMap(
     metricName:
@@ -1333,15 +1334,26 @@ export class CalculatedMetricsService {
       return { data: [], success: false, source: 'calculated_metrics' };
     }
 
-    // Get all data for that period
-    const { data: allData, error } = await this.supabase
-      .from('calculated_metrics')
-      .select(`geography_id, geography_name, ${metricName}, period_date`)
-      .eq('geography_type', geographyType)
-      .eq('period_date', latestRow.period_date)
-      .not(metricName, 'is', null);
+    // Get all data for that period (paginated to avoid Supabase 1000 row limit)
+    const allData: any[] = [];
+    let offset = 0;
 
-    if (error || !allData) {
+    while (true) {
+      const { data: pageData, error } = await this.supabase
+        .from('calculated_metrics')
+        .select(`geography_id, geography_name, ${metricName}, period_date`)
+        .eq('geography_type', geographyType)
+        .eq('period_date', latestRow.period_date)
+        .not(metricName, 'is', null)
+        .range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error || !pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
+    }
+
+    if (allData.length === 0) {
       return { data: [], success: false, source: 'calculated_metrics' };
     }
 
