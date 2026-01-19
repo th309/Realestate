@@ -100,6 +100,43 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Calculate Y-axis domain based on data to avoid wasted space
+  const getYAxisDomain = (): [number | 'auto', number | 'auto'] => {
+    if (!chartData || chartData.length === 0) return ['auto', 'auto'];
+
+    // Get all numeric values from the chart data
+    const allValues: number[] = [];
+    const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
+
+    chartData.forEach((point) => {
+      // Primary area
+      if (visibleSeries.primary && typeof point[selectedArea] === 'number') {
+        allValues.push(point[selectedArea] as number);
+      }
+      // Comparison area
+      if (comparison.enabled && visibleSeries.comparison && typeof point[comparison.area] === 'number') {
+        allValues.push(point[comparison.area] as number);
+      }
+      // Baseline
+      if (baseline.enabled && visibleSeries.baseline && typeof point[baselineKey] === 'number') {
+        allValues.push(point[baselineKey] as number);
+      }
+    });
+
+    if (allValues.length === 0) return ['auto', 'auto'];
+
+    const minVal = Math.min(...allValues);
+    const maxVal = Math.max(...allValues);
+    const range = maxVal - minVal;
+
+    // Add 5% padding on each side
+    const padding = range * 0.05;
+    const paddedMin = Math.max(0, minVal - padding); // Don't go below 0 for price data
+    const paddedMax = maxVal + padding;
+
+    return [paddedMin, paddedMax];
+  };
+
   // Common chart props - compact margins with room for axis labels
   const chartMargin = {
     top: 5,
@@ -168,6 +205,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     tickFormatter: (val: number) =>
       val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toLocaleString(),
     width: isMobile ? 40 : 55,
+    domain: getYAxisDomain(),
     label: {
       value: getMetricTitle(metric),
       angle: -90,
