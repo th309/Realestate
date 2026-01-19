@@ -23,6 +23,32 @@ interface CacheEntry<T> {
   expiry: number;
 }
 
+// State abbreviation to FIPS code mapping
+const STATE_ABBREV_TO_FIPS: Record<string, string> = {
+  AL: '01', AK: '02', AZ: '04', AR: '05', CA: '06', CO: '08', CT: '09',
+  DE: '10', DC: '11', FL: '12', GA: '13', HI: '15', ID: '16', IL: '17',
+  IN: '18', IA: '19', KS: '20', KY: '21', LA: '22', ME: '23', MD: '24',
+  MA: '25', MI: '26', MN: '27', MS: '28', MO: '29', MT: '30', NE: '31',
+  NV: '32', NH: '33', NJ: '34', NM: '35', NY: '36', NC: '37', ND: '38',
+  OH: '39', OK: '40', OR: '41', PA: '42', RI: '44', SC: '45', SD: '46',
+  TN: '47', TX: '48', UT: '49', VT: '50', VA: '51', WA: '53', WV: '54',
+  WI: '55', WY: '56', PR: '72', VI: '78', GU: '66', AS: '60', MP: '69',
+};
+
+/**
+ * Convert state parameter to FIPS code
+ * Accepts either state abbreviation (CA) or FIPS code (06)
+ */
+function toStateFips(state: string): string {
+  const upper = state.toUpperCase();
+  // If it's a 2-letter abbreviation, convert to FIPS
+  if (STATE_ABBREV_TO_FIPS[upper]) {
+    return STATE_ABBREV_TO_FIPS[upper];
+  }
+  // Otherwise assume it's already a FIPS code, pad to 2 digits
+  return state.padStart(2, '0');
+}
+
 @Injectable()
 export class CensusService {
   private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (census data changes annually)
@@ -191,6 +217,49 @@ export class CensusService {
     }));
   }
 
+  private async getCityData(
+    metric: string,
+    year?: number,
+    state?: string,
+  ): Promise<CensusDataPoint[]> {
+    const cacheKey = `census_city:${metric}:${year || 'latest'}:${state || 'all'}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) {
+      return cached.map((row) => ({
+        region_id: String(row.place_fips || ''),
+        region_name: String(row.place_name || ''),
+        value: Number(row[metric]) || 0,
+        year: row.year as number,
+        place_fips: String(row.place_fips || ''),
+        state_fips: String(row.state_fips || ''),
+      }));
+    }
+
+    const latestYear = year || (await this.getLatestYear('census_city'));
+
+    let query = this.supabase
+      .from('census_city')
+      .select('*')
+      .eq('year', latestYear);
+
+    if (state) {
+      query = query.eq('state_fips', toStateFips(state));
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    this.setCache(cacheKey, data as CensusRow[]);
+
+    return ((data || []) as CensusRow[]).map((row) => ({
+      region_id: String(row.place_fips || ''),
+      region_name: String(row.place_name || ''),
+      value: Number(row[metric]) || 0,
+      year: latestYear ?? undefined,
+      place_fips: String(row.place_fips || ''),
+      state_fips: String(row.state_fips || ''),
+    }));
+  }
+
   private async getZipData(
     metric: string,
     year?: number,
@@ -216,7 +285,7 @@ export class CensusService {
       .eq('year', latestYear);
 
     if (state) {
-      query = query.eq('state_fips', state.padStart(2, '0'));
+      query = query.eq('state_fips', toStateFips(state));
     }
 
     const { data, error } = await query;
@@ -247,6 +316,9 @@ export class CensusService {
   async getCountyPopulation(year?: number) {
     return this.getCountyData('total_population', year);
   }
+  async getCityPopulation(year?: number, state?: string) {
+    return this.getCityData('total_population', year, state);
+  }
   async getZipPopulation(year?: number, state?: string) {
     return this.getZipData('total_population', year, state);
   }
@@ -265,6 +337,9 @@ export class CensusService {
   }
   async getCountyPopulationGrowth(year?: number) {
     return this.getCountyData('population_yoy', year);
+  }
+  async getCityPopulationGrowth(year?: number, state?: string) {
+    return this.getCityData('population_yoy', year, state);
   }
   async getZipPopulationGrowth(year?: number, state?: string) {
     return this.getZipData('population_yoy', year, state);
@@ -285,6 +360,9 @@ export class CensusService {
   async getCountyMedianIncome(year?: number) {
     return this.getCountyData('median_household_income', year);
   }
+  async getCityMedianIncome(year?: number, state?: string) {
+    return this.getCityData('median_household_income', year, state);
+  }
   async getZipMedianIncome(year?: number, state?: string) {
     return this.getZipData('median_household_income', year, state);
   }
@@ -303,6 +381,9 @@ export class CensusService {
   }
   async getCountyIncomeGrowth(year?: number) {
     return this.getCountyData('income_yoy', year);
+  }
+  async getCityIncomeGrowth(year?: number, state?: string) {
+    return this.getCityData('income_yoy', year, state);
   }
   async getZipIncomeGrowth(year?: number, state?: string) {
     return this.getZipData('income_yoy', year, state);
@@ -323,6 +404,9 @@ export class CensusService {
   async getCountyMedianAge(year?: number) {
     return this.getCountyData('median_age', year);
   }
+  async getCityMedianAge(year?: number, state?: string) {
+    return this.getCityData('median_age', year, state);
+  }
   async getZipMedianAge(year?: number, state?: string) {
     return this.getZipData('median_age', year, state);
   }
@@ -341,6 +425,9 @@ export class CensusService {
   }
   async getCountyHomeownership(year?: number) {
     return this.getCountyData('homeownership_rate', year);
+  }
+  async getCityHomeownership(year?: number, state?: string) {
+    return this.getCityData('homeownership_rate', year, state);
   }
   async getZipHomeownership(year?: number, state?: string) {
     return this.getZipData('homeownership_rate', year, state);

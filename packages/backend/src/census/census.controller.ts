@@ -37,6 +37,17 @@ export class CensusController {
     );
   }
 
+  @Get('population/cities')
+  async getPopulationCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityPopulation(
+      year ? parseInt(year) : undefined,
+      state,
+    );
+  }
+
   @Get('population/zips')
   async getPopulationZips(
     @Query('year') year?: string,
@@ -77,6 +88,17 @@ export class CensusController {
   async getPopulationGrowthCounties(@Query('year') year?: string) {
     return this.censusService.getCountyPopulationGrowth(
       year ? parseInt(year) : undefined,
+    );
+  }
+
+  @Get('population-growth/cities')
+  async getPopulationGrowthCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityPopulationGrowth(
+      year ? parseInt(year) : undefined,
+      state,
     );
   }
 
@@ -123,6 +145,17 @@ export class CensusController {
     );
   }
 
+  @Get('median-income/cities')
+  async getMedianIncomeCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityMedianIncome(
+      year ? parseInt(year) : undefined,
+      state,
+    );
+  }
+
   @Get('median-income/zips')
   async getMedianIncomeZips(
     @Query('year') year?: string,
@@ -163,6 +196,17 @@ export class CensusController {
   async getIncomeGrowthCounties(@Query('year') year?: string) {
     return this.censusService.getCountyIncomeGrowth(
       year ? parseInt(year) : undefined,
+    );
+  }
+
+  @Get('income-growth/cities')
+  async getIncomeGrowthCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityIncomeGrowth(
+      year ? parseInt(year) : undefined,
+      state,
     );
   }
 
@@ -209,6 +253,17 @@ export class CensusController {
     );
   }
 
+  @Get('median-age/cities')
+  async getMedianAgeCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityMedianAge(
+      year ? parseInt(year) : undefined,
+      state,
+    );
+  }
+
   @Get('median-age/zips')
   async getMedianAgeZips(
     @Query('year') year?: string,
@@ -249,6 +304,17 @@ export class CensusController {
   async getHomeownershipCounties(@Query('year') year?: string) {
     return this.censusService.getCountyHomeownership(
       year ? parseInt(year) : undefined,
+    );
+  }
+
+  @Get('homeownership-rate/cities')
+  async getHomeownershipCities(
+    @Query('year') year?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.censusService.getCityHomeownership(
+      year ? parseInt(year) : undefined,
+      state,
     );
   }
 

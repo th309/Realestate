@@ -643,7 +643,7 @@ export function getKeyFieldForGeo(geoLevel: GeoLevel): string {
     case 'zip':
       return 'postal_code';
     case 'city':
-      return 'region_name';
+      return 'place_fips';
     default:
       return 'region_id';
   }

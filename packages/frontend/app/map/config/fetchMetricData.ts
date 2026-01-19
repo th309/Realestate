@@ -130,6 +130,10 @@ function transformResponse(
         // Census uses zcta, other sources use postal_code
         key = item.postal_code || item.zcta || item.region_id;
         break;
+      case 'place_fips':
+        // Census cities use place_fips
+        key = item.place_fips || item.region_id;
+        break;
       default:
         key = item.region_id;
     }
