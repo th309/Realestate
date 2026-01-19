@@ -246,6 +246,25 @@ async function fetchRealtorMetric(
           return {};
       }
 
+    // New Listings YoY - from Realtor new_listing_count_yy
+    case 'new_listings_yoy':
+      switch (level) {
+        case 'national':
+          return api.getRealtorNationalNewListingsYoy();
+        case 'state':
+          return api.getRealtorStateNewListingsYoy();
+        case 'metro':
+          return api.getRealtorMetroNewListingsYoy();
+        case 'county':
+          return api.getRealtorCountyNewListingsYoy();
+        case 'city':
+          return {}; // No city data
+        case 'zip':
+          return api.getRealtorZipNewListingsYoy(state);
+        default:
+          return {};
+      }
+
     // Pending Listings - from Realtor pending_listing_count (no city data)
     case 'pending_listings':
       switch (level) {

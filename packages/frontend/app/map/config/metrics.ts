@@ -451,7 +451,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'calculated',
     apiEndpoint: '/api/metrics/cap-rate/{geo}',
     keyField: 'auto',
-    supportedGeos: ['metro'],
+    supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'cap_rate',
   },
 
@@ -698,7 +698,6 @@ export const METRO_ONLY_METRICS = new Set([
   'market_health',
   'market_heat',
   // Calculated metrics (only metro for now)
-  'cap_rate',
   'overvalued_pct',
 ]);
 
