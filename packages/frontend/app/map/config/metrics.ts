@@ -654,8 +654,9 @@ export function getKeyFieldForGeo(geoLevel: GeoLevel): string {
  */
 export function getGeoPathSegment(geoLevel: GeoLevel): string {
   switch (geoLevel) {
-    case 'state':
     case 'national':
+      return 'national';
+    case 'state':
       return 'states';
     case 'metro':
       return 'metros';

@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { EconomicService } from './economic.service';
 
-@Controller('economic')
+@Controller('api/economic')
 export class EconomicController {
   constructor(private readonly economicService: EconomicService) {}
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, MarketStats } from '@/lib/api/client';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MapData } from '../types';
-import { METRO_ONLY_METRICS } from '../config';
+import { METRO_ONLY_METRICS, fetchMetricData, toHomeValues } from '../config';
 
 interface UseMapDataReturn {
   mapData: MapData;
@@ -67,6 +67,23 @@ const REALTOR_HOTNESS_METRICS = new Set([
   'hotness_rank',
   'supply_score',
   'demand_score',
+]);
+
+// Census/Economic metrics that use the generic fetchMetricData function
+const CENSUS_METRICS = new Set([
+  'population',
+  'population_growth',
+  'median_income',
+  'income_growth',
+  'median_age',
+  'homeownership_rate',
+]);
+
+const ECONOMIC_METRICS = new Set([
+  'unemployment_rate',
+  'job_growth',
+  'gdp_growth',
+  'cost_of_living',
 ]);
 
 // Fetch Realtor data based on metric and geographic level
@@ -605,8 +622,10 @@ export function useMapData(): UseMapDataReturn {
       let data: MapData = {};
       const currentMetric = metric || 'home_value';
 
-      // Check if this is a Zillow-only metric
+      // Check metric type
       const isZillowOnly = ZILLOW_ONLY_METRICS.has(currentMetric);
+      const isCensusMetric = CENSUS_METRICS.has(currentMetric);
+      const isEconomicMetric = ECONOMIC_METRICS.has(currentMetric);
 
       // Check if hotness metric at unsupported level
       const isHotnessAtUnsupportedLevel =
@@ -616,6 +635,10 @@ export function useMapData(): UseMapDataReturn {
       if (isHotnessAtUnsupportedLevel) {
         // Hotness metrics not available at state/national level
         data = {};
+      } else if (isCensusMetric || isEconomicMetric) {
+        // Use generic fetchMetricData for census/economic metrics
+        const metricData = await fetchMetricData(currentMetric, level, { state });
+        data = toHomeValues(metricData);
       } else if (isZillowOnly) {
         // Use Zillow for specialty metrics
         data = await fetchZillowMetric(level, currentMetric, state, rentType, demandType, horizon);

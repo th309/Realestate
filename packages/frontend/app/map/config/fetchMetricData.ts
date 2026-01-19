@@ -77,8 +77,15 @@ export async function fetchMetricData(
       return {};
     }
 
-    const data: ApiResponse = await response.json();
-    return transformResponse(data, geoLevel, config);
+    const rawData = await response.json();
+
+    // Normalize response format: some endpoints return arrays directly,
+    // others return { success, count, data } wrapper
+    const normalizedData: ApiResponse = Array.isArray(rawData)
+      ? { success: true, count: rawData.length, data: rawData }
+      : rawData;
+
+    return transformResponse(normalizedData, geoLevel, config);
   } catch (error) {
     console.error(`Failed to fetch ${metricId}:`, error);
     return {};
@@ -106,6 +113,7 @@ function transformResponse(
 
   response.data?.forEach(item => {
     // Get the key based on keyField
+    // Handle field name variations from different data sources
     let key: string | undefined;
     switch (keyField) {
       case 'region_name':
@@ -115,10 +123,12 @@ function transformResponse(
         key = item.cbsa_code || item.region_id;
         break;
       case 'county_fips':
-        key = item.county_fips || item.region_id;
+        // Census uses fips_code, other sources use county_fips
+        key = item.county_fips || item.fips_code || item.region_id;
         break;
       case 'postal_code':
-        key = item.postal_code || item.region_id;
+        // Census uses zcta, other sources use postal_code
+        key = item.postal_code || item.zcta || item.region_id;
         break;
       default:
         key = item.region_id;
