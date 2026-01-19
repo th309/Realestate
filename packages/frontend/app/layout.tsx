@@ -108,13 +108,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.variable} ${robotoMono.variable} antialiased`}
+        className={`${roboto.variable} ${robotoMono.variable} antialiased h-screen flex flex-col overflow-hidden`}
       >
         <Header />
-        <main className="min-h-screen">
+        <main className="flex-1 min-h-0">
           {children}
         </main>
-        <footer className="bg-surface-container border-t border-outline-variant py-3 px-4">
+        <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4">
           <p className="text-center text-xs text-on-surface-variant">
             Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
           </p>
