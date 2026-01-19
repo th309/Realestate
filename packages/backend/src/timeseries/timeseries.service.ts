@@ -30,7 +30,7 @@ export interface DateRange {
 export class TimeSeriesService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Get time series data for a specific metric/geography/region
@@ -445,6 +445,7 @@ export class TimeSeriesService {
         columnName: 'new_listing_count_yy',
         usesMetricName: false,
       },
+
 
       // ========================================================================
       // ZILLOW METRICS (Uses metric_name + value column)

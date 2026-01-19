@@ -1073,6 +1073,33 @@ export const api = {
     return api.transformRealtorResponse(response, 'postal_code');
   },
 
+  // --- New Listings YoY (new_listing_count_yy) ---
+  getRealtorStateNewListingsYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings-yoy/states');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorMetroNewListingsYoy: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings-yoy/metros');
+    return api.transformRealtorResponse(response, 'cbsa_code', true);
+  },
+
+  getRealtorCountyNewListingsYoy: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings-yoy/counties');
+    return api.transformRealtorResponse(response, 'county_fips', true);
+  },
+
+  getRealtorNationalNewListingsYoy: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<RealtorApiResponse>('/api/realtor/new-listings-yoy/national');
+    return api.transformRealtorResponse(response, 'region_name', true);
+  },
+
+  getRealtorZipNewListingsYoy: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/realtor/new-listings-yoy/zips?state=${state}` : '/api/realtor/new-listings-yoy/zips';
+    const response = await fetchAPI<RealtorApiResponse>(url);
+    return api.transformRealtorResponse(response, 'postal_code', true);
+  },
+
   // --- Pending Listings (pending_listing_count) ---
   getRealtorStatePendingListings: async (): Promise<StateHomeValues> => {
     const response = await fetchAPI<RealtorApiResponse>('/api/realtor/pending-listings/states');

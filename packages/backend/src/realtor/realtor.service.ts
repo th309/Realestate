@@ -104,7 +104,7 @@ export class RealtorService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Get cached data or fetch fresh
@@ -278,6 +278,14 @@ export class RealtorService {
     return allData;
   }
 
+  /**
+   * Safe string conversion helper that handles null/undefined
+   */
+  private safeString(val: unknown): string {
+    if (val === null || val === undefined) return '';
+    return String(val);
+  }
+
   // ============================================================================
   // National Data
   // ============================================================================
@@ -314,6 +322,7 @@ export class RealtorService {
     inventory_yoy: 'active_listing_count_yy',
     days_on_market: 'median_days_on_market',
     new_listings: 'new_listing_count',
+    new_listings_yoy: 'new_listing_count_yy',
     pending_listings: 'pending_listing_count',
     price_cut_pct: 'price_reduced_share',
     price_per_sqft: 'median_listing_price_per_square_foot',
@@ -325,6 +334,7 @@ export class RealtorService {
     'home_value_yoy',
     'home_value_mom',
     'inventory_yoy',
+    'new_listings_yoy',
     'price_cut_pct',
   ]);
 
@@ -550,7 +560,7 @@ export class RealtorService {
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
-        locationName = String(row.state_name || '');
+        locationName = this.safeString(row.state_name);
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
           location[metricId] = this.processMetricValue(metricId, row[column]);
         }
@@ -569,7 +579,7 @@ export class RealtorService {
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
-        locationName = String(row.cbsa_title || '');
+        locationName = this.safeString(row.cbsa_title);
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
           location[metricId] = this.processMetricValue(metricId, row[column]);
         }
@@ -584,7 +594,7 @@ export class RealtorService {
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
-        locationName = String(row.county_name || '');
+        locationName = this.safeString(row.county_name);
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
           location[metricId] = this.processMetricValue(metricId, row[column]);
         }
@@ -599,7 +609,7 @@ export class RealtorService {
 
       const row = (data as RealtorRow[] | null)?.[0];
       if (row) {
-        locationName = String(row.zip_name || '');
+        locationName = this.safeString(row.zip_name);
         for (const [metricId, column] of Object.entries(this.metricColumnMap)) {
           location[metricId] = this.processMetricValue(metricId, row[column]);
         }
@@ -646,9 +656,9 @@ export class RealtorService {
       }
 
       return {
-        region_id: String(row.state_id || ''),
-        region_name: String(row.state_name || ''),
-        state_id: String(row.state_id || ''),
+        region_id: this.safeString(row.state_id),
+        region_name: this.safeString(row.state_name),
+        state_id: this.safeString(row.state_id),
         value,
         date: latestDate ? String(latestDate) : undefined,
       };
@@ -662,7 +672,7 @@ export class RealtorService {
   async getMetroData(
     metric: string,
     date?: string,
-    state?: string,
+    _state?: string,
   ): Promise<RealtorDataPoint[]> {
     // Use cached latest date if not specified
     const latestDate = date || (await this.getLatestDate('realtor_metro'));
@@ -689,9 +699,9 @@ export class RealtorService {
       }
 
       return {
-        region_id: String(row.cbsa_code || ''),
-        region_name: String(row.cbsa_title || ''),
-        cbsa_code: String(row.cbsa_code || ''),
+        region_id: this.safeString(row.cbsa_code),
+        region_name: this.safeString(row.cbsa_title),
+        cbsa_code: this.safeString(row.cbsa_code),
         value,
         date: latestDate ? String(latestDate) : undefined,
       };
@@ -705,7 +715,7 @@ export class RealtorService {
   async getCountyData(
     metric: string,
     date?: string,
-    state?: string,
+    _state?: string,
   ): Promise<RealtorDataPoint[]> {
     // Use cached latest date if not specified
     const latestDate = date || (await this.getLatestDate('realtor_county'));
@@ -729,9 +739,9 @@ export class RealtorService {
       }
 
       return {
-        region_id: String(row.county_fips || ''),
-        region_name: String(row.county_name || ''),
-        county_fips: String(row.county_fips || ''),
+        region_id: this.safeString(row.county_fips),
+        region_name: this.safeString(row.county_name),
+        county_fips: this.safeString(row.county_fips),
         value,
         date: latestDate ? String(latestDate) : undefined,
       };
@@ -773,9 +783,9 @@ export class RealtorService {
       }
 
       return {
-        region_id: String(row.postal_code || ''),
-        region_name: String(row.zip_name || ''),
-        postal_code: String(row.postal_code || ''),
+        region_id: this.safeString(row.postal_code),
+        region_name: this.safeString(row.zip_name),
+        postal_code: this.safeString(row.postal_code),
         value,
         date: latestDate ? String(latestDate) : undefined,
       };
@@ -903,6 +913,23 @@ export class RealtorService {
 
   async getZipNewListings(state?: string, date?: string) {
     return this.getZipData('new_listing_count', state, date);
+  }
+
+  // New Listings YoY (new_listing_count_yy)
+  async getStateNewListingsYoy(date?: string) {
+    return this.getStateData('new_listing_count_yy', date);
+  }
+
+  async getMetroNewListingsYoy(date?: string, state?: string) {
+    return this.getMetroData('new_listing_count_yy', date, state);
+  }
+
+  async getCountyNewListingsYoy(date?: string, state?: string) {
+    return this.getCountyData('new_listing_count_yy', date, state);
+  }
+
+  async getZipNewListingsYoy(state?: string, date?: string) {
+    return this.getZipData('new_listing_count_yy', state, date);
   }
 
   // Pending Listings (pending_listing_count)
@@ -1061,23 +1088,6 @@ export class RealtorService {
 
   async getZipPriceIncreased(state?: string, date?: string) {
     return this.getZipData('price_increased_share', state, date);
-  }
-
-  // New Listings YoY (new_listing_count_yy)
-  async getStateNewListingsYoy(date?: string) {
-    return this.getStateData('new_listing_count_yy', date);
-  }
-
-  async getMetroNewListingsYoy(date?: string) {
-    return this.getMetroData('new_listing_count_yy', date);
-  }
-
-  async getCountyNewListingsYoy(date?: string) {
-    return this.getCountyData('new_listing_count_yy', date);
-  }
-
-  async getZipNewListingsYoy(state?: string, date?: string) {
-    return this.getZipData('new_listing_count_yy', state, date);
   }
 
   // Listing Price (median_listing_price) - alias for home value from Realtor

@@ -584,6 +584,76 @@ export class RealtorController {
   }
 
   // ============================================================================
+  // New Listings YoY (new_listing_count_yy)
+  // ============================================================================
+
+  @Get('new-listings-yoy/national')
+  async getNationalNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData(
+      'new_listing_count_yy',
+      date,
+    );
+    return {
+      success: true,
+      count: data.length,
+      geography: 'National',
+      metric: 'new_listing_count_yy',
+      data,
+    };
+  }
+
+  @Get('new-listings-yoy/states')
+  async getStateNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getStateNewListingsYoy(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'State',
+      metric: 'new_listing_count_yy',
+      data,
+    };
+  }
+
+  @Get('new-listings-yoy/metros')
+  async getMetroNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getMetroNewListingsYoy(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'Metro',
+      metric: 'new_listing_count_yy',
+      data,
+    };
+  }
+
+  @Get('new-listings-yoy/counties')
+  async getCountyNewListingsYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getCountyNewListingsYoy(date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'County',
+      metric: 'new_listing_count_yy',
+      data,
+    };
+  }
+
+  @Get('new-listings-yoy/zips')
+  async getZipNewListingsYoy(
+    @Query('state') state?: string,
+    @Query('date') date?: string,
+  ) {
+    const data = await this.realtorService.getZipNewListingsYoy(state, date);
+    return {
+      success: true,
+      count: data.length,
+      geography: 'ZIP',
+      metric: 'new_listing_count_yy',
+      data,
+    };
+  }
+
+  // ============================================================================
   // Pending Listings (pending_listing_count)
   // ============================================================================
 
@@ -1115,72 +1185,6 @@ export class RealtorController {
   // ============================================================================
   // New Listings YoY (new_listing_count_yy)
   // ============================================================================
-
-  @Get('new-listings-yoy/national')
-  async getNationalNewListingsYoy(@Query('date') date?: string) {
-    const data = await this.realtorService.getNationalData(
-      'new_listing_count_yy',
-      date,
-    );
-    return {
-      success: true,
-      count: data.length,
-      geography: 'National',
-      metric: 'new_listing_count_yy',
-      data,
-    };
-  }
-
-  @Get('new-listings-yoy/states')
-  async getStateNewListingsYoy(@Query('date') date?: string) {
-    const data = await this.realtorService.getStateNewListingsYoy(date);
-    return {
-      success: true,
-      count: data.length,
-      geography: 'State',
-      metric: 'new_listing_count_yy',
-      data,
-    };
-  }
-
-  @Get('new-listings-yoy/metros')
-  async getMetroNewListingsYoy(@Query('date') date?: string) {
-    const data = await this.realtorService.getMetroNewListingsYoy(date);
-    return {
-      success: true,
-      count: data.length,
-      geography: 'Metro',
-      metric: 'new_listing_count_yy',
-      data,
-    };
-  }
-
-  @Get('new-listings-yoy/counties')
-  async getCountyNewListingsYoy(@Query('date') date?: string) {
-    const data = await this.realtorService.getCountyNewListingsYoy(date);
-    return {
-      success: true,
-      count: data.length,
-      geography: 'County',
-      metric: 'new_listing_count_yy',
-      data,
-    };
-  }
-
-  @Get('new-listings-yoy/zips')
-  async getZipNewListingsYoy(
-    @Query('state') state?: string,
-    @Query('date') date?: string,
-  ) {
-    const data = await this.realtorService.getZipNewListingsYoy(state, date);
-    return {
-      success: true,
-      count: data.length,
-      geography: 'ZIP',
-      metric: 'new_listing_count_yy',
-      data,
-    };
-  }
 
   // ============================================================================
   // Listing Price (median_listing_price) - Realtor's home value
