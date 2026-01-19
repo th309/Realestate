@@ -481,7 +481,27 @@ async function fetchZillowMetric(
           return {};
       }
     case 'years_to_save':
-      return api.getMetroYearsToSave();
+      // Years to Save now supports all geography levels via calculated_metrics
+      switch (level) {
+        case 'national': {
+          // Fetch both national and state data, merge them
+          const [nationalData, stateData] = await Promise.all([
+            api.getNationalYearsToSave(),
+            api.getStateYearsToSave()
+          ]);
+          return { ...stateData, ...nationalData };
+        }
+        case 'state':
+          return api.getStateYearsToSave();
+        case 'metro':
+          return api.getMetroYearsToSave();
+        case 'county':
+          return api.getCountyYearsToSave();
+        case 'zip':
+          return state ? api.getZipYearsToSave(state) : {};
+        default:
+          return {};
+      }
     case 'homeowner_affordability':
       return api.getMetroHomeownerAffordability();
     case 'overvalued_pct':

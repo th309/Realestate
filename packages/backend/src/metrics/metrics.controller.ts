@@ -1098,4 +1098,135 @@ export class MetricsController {
       data: results,
     };
   }
+
+  // ============================================================================
+  // YEARS-TO-SAVE ENDPOINTS (from pre-calculated data)
+  // Formula: (Median listing price × 0.20) / (Median Income × 0.10)
+  // ============================================================================
+
+  /**
+   * Get years-to-save for national
+   */
+  @Get('years-to-save/national')
+  async getNationalYearsToSave() {
+    return this.getYearsToSaveByGeo('national', 'National');
+  }
+
+  /**
+   * Get years-to-save for states
+   * Returns the number of years needed to save for a 20% down payment
+   */
+  @Get('years-to-save/states')
+  async getStateYearsToSave() {
+    return this.getYearsToSaveByGeo('state', 'State');
+  }
+
+  /**
+   * Get years-to-save for metros
+   */
+  @Get('years-to-save/metros')
+  async getMetroYearsToSave() {
+    return this.getYearsToSaveByGeo('metro', 'Metro');
+  }
+
+  /**
+   * Get years-to-save for counties
+   */
+  @Get('years-to-save/counties')
+  async getCountyYearsToSave() {
+    return this.getYearsToSaveByGeo('county', 'County');
+  }
+
+  /**
+   * Get years-to-save for zip codes
+   */
+  @Get('years-to-save/zips')
+  async getZipYearsToSave(@Query('state') state?: string) {
+    return this.getYearsToSaveByGeo('zip', 'ZIP', state);
+  }
+
+  /**
+   * Generic years-to-save fetcher for all geography types
+   */
+  private async getYearsToSaveByGeo(geoType: string, geoLabel: string, stateFilter?: string) {
+    // Get latest date from calculated_metrics
+    const { data: latestRow } = await this.supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geoType)
+      .not('years_to_save', 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!latestRow?.period_date) {
+      return { success: false, error: `No years_to_save data available for ${geoLabel}`, data: [] };
+    }
+
+    const targetDate = latestRow.period_date;
+
+    // Build query
+    let query = this.supabase
+      .from('calculated_metrics')
+      .select('geography_id, geography_name, years_to_save, period_date')
+      .eq('geography_type', geoType)
+      .eq('period_date', targetDate)
+      .not('years_to_save', 'is', null);
+
+    // Handle state filter for ZIP codes
+    if (stateFilter && geoType === 'zip') {
+      const statePattern = `ZIP ${stateFilter.toUpperCase()}%`;
+      query = query.ilike('geography_name', statePattern);
+    }
+
+    // Paginate for large datasets (county and zip)
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData, error } = await query.range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { success: false, error: error.message, data: [] };
+      }
+
+      if (!pageData || pageData.length === 0) break;
+      allData.push(...pageData);
+      if (pageData.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Transform to map-friendly format
+    const results = allData.map(row => {
+      const result: any = {
+        region_id: row.geography_id,
+        region_name: row.geography_name,
+        years_to_save: row.years_to_save,
+        value: row.years_to_save,
+        date: row.period_date,
+      };
+
+      // Add geography-specific ID fields
+      if (geoType === 'metro') {
+        result.cbsa_code = row.geography_id;
+      } else if (geoType === 'county') {
+        result.county_fips = row.geography_id;
+      } else if (geoType === 'zip') {
+        result.postal_code = row.geography_id;
+      }
+
+      return result;
+    });
+
+    return {
+      success: true,
+      count: results.length,
+      geography: geoLabel,
+      metric: 'years_to_save',
+      source: 'pre-calculated',
+      date: targetDate,
+      data: results,
+    };
+  }
 }

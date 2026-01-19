@@ -563,14 +563,58 @@ export const api = {
     return result;
   },
 
-  // Years to Save (years_to_save)
-  getMetroYearsToSave: async (): Promise<MetroHomeValues> => {
-    const response = await fetchAPI<ZillowAffordabilityResponse>('/api/zillow/affordability/metros');
+  // Years to Save (years_to_save) - from calculated_metrics
+  getNationalYearsToSave: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; years_to_save: number }> }>('/api/metrics/years-to-save/national');
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      const key = item.cbsa_code || item.region_id;
-      if (key && item.years_to_save != null) {
-        result[key] = Number(item.years_to_save);
+      if (item.region_name && item.years_to_save != null) {
+        result[item.region_name] = Number(item.years_to_save);
+      }
+    });
+    return result;
+  },
+
+  getStateYearsToSave: async (): Promise<StateHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ region_name: string; years_to_save: number }> }>('/api/metrics/years-to-save/states');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.region_name && item.years_to_save != null) {
+        result[item.region_name] = Number(item.years_to_save);
+      }
+    });
+    return result;
+  },
+
+  getMetroYearsToSave: async (): Promise<MetroHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ cbsa_code: string; years_to_save: number }> }>('/api/metrics/years-to-save/metros');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.cbsa_code && item.years_to_save != null) {
+        result[item.cbsa_code] = Number(item.years_to_save);
+      }
+    });
+    return result;
+  },
+
+  getCountyYearsToSave: async (): Promise<CountyHomeValues> => {
+    const response = await fetchAPI<{ success: boolean; data: Array<{ county_fips: string; years_to_save: number }> }>('/api/metrics/years-to-save/counties');
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.county_fips && item.years_to_save != null) {
+        result[item.county_fips] = Number(item.years_to_save);
+      }
+    });
+    return result;
+  },
+
+  getZipYearsToSave: async (state?: string): Promise<ZipHomeValues> => {
+    const url = state ? `/api/metrics/years-to-save/zips?state=${state}` : '/api/metrics/years-to-save/zips';
+    const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; years_to_save: number }> }>(url);
+    const result: Record<string, number> = {};
+    response.data?.forEach(item => {
+      if (item.postal_code && item.years_to_save != null) {
+        result[item.postal_code] = Number(item.years_to_save);
       }
     });
     return result;

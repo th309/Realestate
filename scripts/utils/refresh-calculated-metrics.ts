@@ -671,6 +671,222 @@ async function calculateAllAffordableHomePrice(
 }
 
 // ============================================================================
+// YEARS TO SAVE CALCULATION (ALL GEOGRAPHIES)
+// Formula: (Median listing price × 0.20) / (Median Income × Savings Rate)
+// ============================================================================
+
+const SAVINGS_RATE = 0.10; // 10% savings rate
+const DOWN_PAYMENT_RATE = 0.20; // 20% down payment
+
+interface RealtorConfig {
+  tableName: string;
+  geoType: string;
+  idField: string;
+  nameField: string;
+}
+
+const REALTOR_CONFIGS: RealtorConfig[] = [
+  { tableName: 'realtor_national', geoType: 'national', idField: 'region_id', nameField: 'region_name' },
+  { tableName: 'realtor_state', geoType: 'state', idField: 'state_id', nameField: 'state_name' },
+  { tableName: 'realtor_metro', geoType: 'metro', idField: 'cbsa_code', nameField: 'cbsa_title' },
+  { tableName: 'realtor_county', geoType: 'county', idField: 'county_fips', nameField: 'county_name' },
+  { tableName: 'realtor_zip', geoType: 'zip', idField: 'postal_code', nameField: 'postal_code' },
+];
+
+// Census table mapping for income lookup
+const CENSUS_TABLE_MAP: Record<string, { tableName: string; idField: string }> = {
+  national: { tableName: 'census_national', idField: 'id' },
+  state: { tableName: 'census_state', idField: 'state_fips' },
+  metro: { tableName: 'census_metro', idField: 'cbsa_code' },
+  county: { tableName: 'census_county', idField: 'fips_code' },
+  zip: { tableName: 'census_zip', idField: 'zcta' },
+};
+
+function calculateYearsToSave(price: number, income: number): number | null {
+  if (!price || price === 0 || !income || income === 0) return null;
+
+  const downPayment = price * DOWN_PAYMENT_RATE;
+  const annualSavings = income * SAVINGS_RATE;
+  const years = downPayment / annualSavings;
+
+  return Math.round(years * 10) / 10; // Round to 1 decimal place
+}
+
+async function calculateYearsToSaveForGeo(
+  supabase: SupabaseClient,
+  config: RealtorConfig
+): Promise<{ processed: number; stored: number; errors: string[] }> {
+  const errors: string[] = [];
+  const censusConfig = CENSUS_TABLE_MAP[config.geoType];
+
+  // Get latest Realtor data with median_listing_price
+  const { data: latestDateRow } = await supabase
+    .from(config.tableName)
+    .select('period_date')
+    .not('median_listing_price', 'is', null)
+    .order('period_date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!latestDateRow?.period_date) {
+    return { processed: 0, stored: 0, errors: [`No listing price data for ${config.geoType}`] };
+  }
+
+  const targetDate = latestDateRow.period_date;
+
+  // Fetch Realtor listing prices (paginated)
+  const PAGE_SIZE = 1000;
+  let realtorData: any[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(config.tableName)
+      .select(`${config.idField}, ${config.nameField}, median_listing_price`)
+      .eq('period_date', targetDate)
+      .not('median_listing_price', 'is', null)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      errors.push(error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+    realtorData = realtorData.concat(data);
+    if (data.length < PAGE_SIZE) break;
+    offset += data.length;
+  }
+
+  if (realtorData.length === 0) {
+    return { processed: 0, stored: 0, errors: [`No Realtor data for ${config.geoType}`] };
+  }
+
+  // Fetch Census income data (latest year per geography)
+  const incomeByGeo: Record<string, number> = {};
+  offset = 0;
+
+  while (true) {
+    let query;
+    if (config.geoType === 'national') {
+      query = supabase
+        .from(censusConfig.tableName)
+        .select('year, median_household_income')
+        .not('median_household_income', 'is', null)
+        .order('year', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+    } else {
+      query = supabase
+        .from(censusConfig.tableName)
+        .select(`${censusConfig.idField}, year, median_household_income`)
+        .not('median_household_income', 'is', null)
+        .order('year', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      errors.push(error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    for (const row of data) {
+      let geoId: string;
+      if (config.geoType === 'national') {
+        geoId = 'US';
+      } else {
+        geoId = String(row[censusConfig.idField]);
+      }
+      // Keep only the most recent year's data
+      if (!incomeByGeo[geoId]) {
+        incomeByGeo[geoId] = Number(row.median_household_income);
+      }
+    }
+
+    offset += data.length;
+    if (data.length < PAGE_SIZE) break;
+  }
+
+  // Calculate years_to_save for each geography
+  let stored = 0;
+  const records: any[] = [];
+
+  for (const row of realtorData) {
+    let geoId: string;
+    let geoName: string;
+
+    if (config.geoType === 'national') {
+      geoId = 'US';
+      geoName = 'United States';
+    } else if (config.geoType === 'state') {
+      // State ID mapping: realtor uses state_id (e.g., "CA"), census uses state_fips (e.g., "06")
+      geoId = row[config.idField];
+      geoName = row[config.nameField];
+    } else if (config.geoType === 'zip') {
+      geoId = row[config.idField];
+      geoName = `ZIP ${geoId}`;
+    } else {
+      geoId = row[config.idField];
+      geoName = row[config.nameField] || geoId;
+    }
+
+    const price = row.median_listing_price;
+    const income = incomeByGeo[geoId];
+
+    if (!income) continue;
+
+    const yearsToSave = calculateYearsToSave(price, income);
+    if (yearsToSave === null) continue;
+
+    records.push({
+      geography_id: geoId,
+      geography_type: config.geoType,
+      geography_name: geoName,
+      period_date: targetDate,
+      years_to_save: yearsToSave,
+      calculated_at: new Date().toISOString(),
+    });
+
+    if (records.length >= BATCH_SIZE) {
+      const { error: upsertError } = await supabase
+        .from('calculated_metrics')
+        .upsert(records, { onConflict: 'geography_id,geography_type,period_date' });
+      if (upsertError) errors.push(upsertError.message);
+      else stored += records.length;
+      records.length = 0;
+    }
+  }
+
+  // Final batch
+  if (records.length > 0) {
+    const { error: upsertError } = await supabase
+      .from('calculated_metrics')
+      .upsert(records, { onConflict: 'geography_id,geography_type,period_date' });
+    if (upsertError) errors.push(upsertError.message);
+    else stored += records.length;
+  }
+
+  return { processed: realtorData.length, stored, errors };
+}
+
+async function calculateAllYearsToSave(
+  supabase: SupabaseClient
+): Promise<{ total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> }> {
+  const byGeo: Record<string, { processed: number; stored: number }> = {};
+  let totalProcessed = 0;
+  let totalStored = 0;
+
+  for (const config of REALTOR_CONFIGS) {
+    const result = await calculateYearsToSaveForGeo(supabase, config);
+    byGeo[config.geoType] = { processed: result.processed, stored: result.stored };
+    totalProcessed += result.processed;
+    totalStored += result.stored;
+  }
+
+  return { total: { processed: totalProcessed, stored: totalStored }, byGeo };
+}
+
+// ============================================================================
 // 5-YEAR GROWTH CALCULATION
 // ============================================================================
 
@@ -757,6 +973,7 @@ export interface RefreshResult {
   growth5YrStates: { processed: number; stored: number };
   incomeToBuy: { total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> };
   affordableHomePrice: { total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> };
+  yearsToSave: { total: { processed: number; stored: number }; byGeo: Record<string, { processed: number; stored: number }> };
   totalProcessed: number;
   totalStored: number;
   duration: number;
@@ -791,13 +1008,19 @@ export async function refreshCalculatedMetrics(
   log('   Calculating affordable-home-price...');
   const affordableHomePrice = await calculateAllAffordableHomePrice(supabase);
 
+  // Years to Save calculation (all geographies)
+  log('   Calculating years-to-save...');
+  const yearsToSave = await calculateAllYearsToSave(supabase);
+
   const duration = Date.now() - startTime;
   const totalProcessed = investmentMetrics.processed + overvalued.processed +
                          growth5YrMetros.processed + growth5YrStates.processed +
-                         incomeToBuy.total.processed + affordableHomePrice.total.processed;
+                         incomeToBuy.total.processed + affordableHomePrice.total.processed +
+                         yearsToSave.total.processed;
   const totalStored = investmentMetrics.stored + overvalued.stored +
                       growth5YrMetros.stored + growth5YrStates.stored +
-                      incomeToBuy.total.stored + affordableHomePrice.total.stored;
+                      incomeToBuy.total.stored + affordableHomePrice.total.stored +
+                      yearsToSave.total.stored;
 
   log(`   Investment metrics: ${investmentMetrics.stored} stored`);
   log(`   Overvalued %: ${overvalued.stored} stored`);
@@ -805,6 +1028,7 @@ export async function refreshCalculatedMetrics(
   log(`   5-yr growth states: ${growth5YrStates.stored} stored`);
   log(`   Income-to-buy: ${incomeToBuy.total.stored} stored (${Object.keys(incomeToBuy.byGeo).map(g => `${g}:${incomeToBuy.byGeo[g].stored}`).join(', ')})`);
   log(`   Affordable-home-price: ${affordableHomePrice.total.stored} stored (${Object.keys(affordableHomePrice.byGeo).map(g => `${g}:${affordableHomePrice.byGeo[g].stored}`).join(', ')})`);
+  log(`   Years-to-save: ${yearsToSave.total.stored} stored (${Object.keys(yearsToSave.byGeo).map(g => `${g}:${yearsToSave.byGeo[g].stored}`).join(', ')})`);
   log(`   Total: ${totalStored} records in ${(duration / 1000).toFixed(1)}s`);
 
   return {
@@ -814,6 +1038,7 @@ export async function refreshCalculatedMetrics(
     growth5YrStates,
     incomeToBuy,
     affordableHomePrice,
+    yearsToSave,
     totalProcessed,
     totalStored,
     duration,

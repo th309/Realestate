@@ -321,10 +321,10 @@ export const METRICS: Record<string, MetricConfig> = {
     id: 'years_to_save',
     title: 'Years to Save',
     format: 'number',
-    dataSource: 'zillow',
-    apiEndpoint: '/api/zillow/affordability/{geo}',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/years-to-save/{geo}',
     keyField: 'auto',
-    supportedGeos: ['metro'],
+    supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'years_to_save',
   },
 
@@ -682,9 +682,8 @@ export const METRO_ONLY_METRICS = new Set([
   // Zillow rent data (only available at metro/county/zip from ZORI)
   'rent_index',
   'rent_for_houses',         // Renter Demand Index (ZORDI)
-  // Zillow affordability (only metro) - NOTE: income_to_buy and affordable_home_price now support all geos via calculated metrics
+  // Zillow affordability (only metro) - NOTE: income_to_buy, affordable_home_price, and years_to_save now support all geos via calculated metrics
   'income_to_rent',
-  'years_to_save',
   'homeowner_affordability',
   'renter_affordability',
   // Zillow new construction (only metro)
