@@ -201,6 +201,7 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
     }, []);
 
     const handleSearch = useCallback(async (query: string) => {
+        console.log(`[Search] handleSearch called with query="${query}", geoLevel="${geoLevel}"`);
         setSearchQuery(query);
 
         if (query.length < 2) {
@@ -214,6 +215,7 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
 
         try {
             // For metro level: use cached data for instant filtering
+            console.log(`[Search] Checking geoLevel: "${geoLevel}" === "metro" ? ${geoLevel === 'metro'}`);
             if (geoLevel === 'metro') {
                 const metros = await loadAllMetros();
                 const lowerQuery = query.toLowerCase();
