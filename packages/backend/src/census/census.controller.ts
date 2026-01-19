@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { CensusService } from './census.service';
 
-@Controller('census')
+@Controller('api/census')
 export class CensusController {
   constructor(private readonly censusService: CensusService) {}
 
