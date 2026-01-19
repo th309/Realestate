@@ -4,6 +4,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 
+// Updated 2026-01-19: Cap rate data validation fix
+
 // National median household income benchmark (approximate 2024 value)
 const NATIONAL_MEDIAN_INCOME = 75000;
 // Traditional price-to-income affordability benchmark

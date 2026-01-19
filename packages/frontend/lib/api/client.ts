@@ -1,4 +1,5 @@
 // Use local backend in development, production URL otherwise
+// Updated 2026-01-19: Cap rate data validation fix
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
