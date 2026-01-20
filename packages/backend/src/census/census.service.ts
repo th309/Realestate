@@ -5,7 +5,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 export interface CensusDataPoint {
   region_id: string;
   region_name: string;
-  value: number;
+  value: number | null;  // null indicates no data (vs 0 which is a valid value)
   year?: number;
   state_fips?: string;
   cbsa_code?: string;
@@ -47,6 +47,20 @@ function toStateFips(state: string): string {
   }
   // Otherwise assume it's already a FIPS code, pad to 2 digits
   return state.padStart(2, '0');
+}
+
+/**
+ * Safely convert a metric value to number, returning null for missing data.
+ * Unlike `Number(x) || 0`, this preserves the distinction between:
+ * - 0 (actual zero value, e.g., 0% growth)
+ * - null (no data available)
+ */
+function toMetricValue(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const num = Number(value);
+  return isNaN(num) ? null : num;
 }
 
 @Injectable()
@@ -105,7 +119,7 @@ export class CensusService {
     return ((data || []) as CensusRow[]).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
     }));
   }
@@ -120,7 +134,7 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.state_fips || ''),
         region_name: String(row.state_name || ''),
-        value: Number(row[metric]) || 0,
+        value: toMetricValue(row[metric]),
         year: row.year as number,
         state_fips: String(row.state_fips || ''),
       }));
@@ -139,7 +153,7 @@ export class CensusService {
     return ((data || []) as CensusRow[]).map((row) => ({
       region_id: String(row.state_fips || ''),
       region_name: String(row.state_name || ''),
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
       state_fips: String(row.state_fips || ''),
     }));
@@ -155,7 +169,7 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.cbsa_code || ''),
         region_name: String(row.cbsa_title || ''),
-        value: Number(row[metric]) || 0,
+        value: toMetricValue(row[metric]),
         year: row.year as number,
         cbsa_code: String(row.cbsa_code || ''),
       }));
@@ -174,7 +188,7 @@ export class CensusService {
     return ((data || []) as CensusRow[]).map((row) => ({
       region_id: String(row.cbsa_code || ''),
       region_name: String(row.cbsa_title || ''),
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
       cbsa_code: String(row.cbsa_code || ''),
     }));
@@ -190,7 +204,7 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
-        value: Number(row[metric]) || 0,
+        value: toMetricValue(row[metric]),
         year: row.year as number,
         fips_code: String(row.fips_code || ''),
         state_fips: String(row.state_fips || ''),
@@ -224,7 +238,7 @@ export class CensusService {
     return allData.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
       fips_code: String(row.fips_code || ''),
       state_fips: String(row.state_fips || ''),
@@ -242,7 +256,7 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.place_fips || ''),
         region_name: String(row.place_name || ''),
-        value: Number(row[metric]) || 0,
+        value: toMetricValue(row[metric]),
         year: row.year as number,
         place_fips: String(row.place_fips || ''),
         state_fips: String(row.state_fips || ''),
@@ -281,7 +295,7 @@ export class CensusService {
     return allData.map((row) => ({
       region_id: String(row.place_fips || ''),
       region_name: String(row.place_name || ''),
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
       place_fips: String(row.place_fips || ''),
       state_fips: String(row.state_fips || ''),
@@ -300,7 +314,7 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.zcta || ''),
         region_name: String(row.zcta || ''),
-        value: Number(row[metric]) || 0,
+        value: toMetricValue(row[metric]),
         year: row.year as number,
         zcta: String(row.zcta || ''),
       }));
@@ -335,7 +349,7 @@ export class CensusService {
     return allData.map((row) => ({
       region_id: String(row.zcta || ''),
       region_name: String(row.zcta || ''),
-      value: Number(row[metric]) || 0,
+      value: toMetricValue(row[metric]),
       year: latestYear ?? undefined,
       zcta: String(row.zcta || ''),
     }));
