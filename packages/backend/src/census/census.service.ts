@@ -199,15 +199,29 @@ export class CensusService {
 
     const latestYear = year || (await this.getLatestYear('census_county'));
 
-    const { data, error } = await this.supabase
-      .from('census_county')
-      .select('*')
-      .eq('year', latestYear);
+    // Paginate to handle all ~3,200 US counties (Supabase default limit is 1000)
+    const allData: CensusRow[] = [];
+    const batchSize = 1000;
+    let offset = 0;
 
-    if (error) throw error;
-    this.setCache(cacheKey, data as CensusRow[]);
+    while (true) {
+      const { data, error } = await this.supabase
+        .from('census_county')
+        .select('*')
+        .eq('year', latestYear)
+        .range(offset, offset + batchSize - 1);
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+
+      allData.push(...(data as CensusRow[]));
+      if (data.length < batchSize) break;
+      offset += batchSize;
+    }
+
+    this.setCache(cacheKey, allData);
+
+    return allData.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
       value: Number(row[metric]) || 0,
