@@ -21,6 +21,8 @@ import { CloseIcon, LockIcon } from '../Icons';
 import { ScoreRing } from './ScoreRing';
 import { MetricCard, MetricCardGrid } from './MetricCard';
 import { MarketConditionBadge, MarketCondition, TrendArrow, TrendDirection } from '../sidebar-components';
+import { ScoresSection } from './ScoresSection';
+import type { GeographyType } from '../../hooks/useScoreData';
 
 interface MetricData {
   value: string;
@@ -207,6 +209,13 @@ export function RightDetailPanel({
               ))}
             </MetricCardGrid>
           )}
+
+          {/* PropertyIQ Scores Section */}
+          <ScoresSection
+            geographyType={geoLevel as GeographyType}
+            geographyId={geography.id}
+            className="mt-6 pt-4 border-t border-outline-variant"
+          />
 
           {/* Action Buttons */}
           <div className="mt-6 space-y-2">
