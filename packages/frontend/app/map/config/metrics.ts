@@ -514,7 +514,7 @@ export const METRICS: Record<string, MetricConfig> = {
   },
 
   // ============================================================================
-  // BUILDING PERMITS (Census Bureau BPS - state/county)
+  // BUILDING PERMITS (Census Bureau BPS - national/state/county)
   // ============================================================================
   sf_permits: {
     id: 'sf_permits',
@@ -523,7 +523,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'sf_units',
   },
 
@@ -534,7 +534,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'large_multi_units',
   },
 
@@ -545,7 +545,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'total_units',
   },
 
@@ -556,7 +556,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'total_units_yoy',
   },
 
@@ -567,7 +567,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/sf-ratio/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'sf_ratio',
   },
 
@@ -578,7 +578,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'census',
     apiEndpoint: '/api/permits/value-per-unit/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'county'],
+    supportedGeos: ['national', 'state', 'county'],
     valueField: 'value_per_unit',
   },
 

@@ -9,6 +9,11 @@ export class PermitsController {
   // Base Permits Data (sf_units, large_multi_units, total_units)
   // ============================================================================
 
+  @Get('national')
+  async getNationalPermits() {
+    return this.permitsService.getNationalPermits();
+  }
+
   @Get('states')
   async getStatePermits() {
     return this.permitsService.getStatePermits();
@@ -23,6 +28,11 @@ export class PermitsController {
   // SF/MF Ratio (calculated)
   // ============================================================================
 
+  @Get('sf-ratio/national')
+  async getNationalSfRatio() {
+    return this.permitsService.getNationalSfRatio();
+  }
+
   @Get('sf-ratio/states')
   async getStateSfRatio() {
     return this.permitsService.getStateSfRatio();
@@ -36,6 +46,11 @@ export class PermitsController {
   // ============================================================================
   // Value Per Unit (calculated)
   // ============================================================================
+
+  @Get('value-per-unit/national')
+  async getNationalValuePerUnit() {
+    return this.permitsService.getNationalValuePerUnit();
+  }
 
   @Get('value-per-unit/states')
   async getStateValuePerUnit() {

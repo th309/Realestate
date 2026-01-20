@@ -10,6 +10,8 @@ export interface PermitsDataPoint {
   state_fips?: string;
   fips_code?: string;
   county_fips?: string;
+  sf_ratio?: number | null;
+  value_per_unit?: number | null;
 }
 
 interface PermitsRow {
@@ -100,6 +102,129 @@ export class PermitsService {
       .limit(1);
 
     return (data?.[0] as PermitsRow)?.period_date as string | null;
+  }
+
+  // ============================================================================
+  // National-Level Permits (aggregated from state data)
+  // ============================================================================
+
+  async getNationalPermits(): Promise<{
+    success: boolean;
+    count: number;
+    data: any[];
+  }> {
+    const latestPeriod = await this.getLatestPeriod('permits_state');
+
+    const { data, error } = await this.supabase
+      .from('permits_state')
+      .select('*')
+      .eq('period_date', latestPeriod);
+
+    if (error) throw error;
+
+    const rows = (data || []) as PermitsRow[];
+
+    // Aggregate all states into national totals
+    let sfUnits = 0;
+    let largeMultiUnits = 0;
+    let totalUnits = 0;
+    let sfBuildings = 0;
+    let totalBuildings = 0;
+    let totalValue = 0;
+
+    rows.forEach((row) => {
+      sfUnits += toMetricValue(row.sf_units) || 0;
+      largeMultiUnits += toMetricValue(row.large_multi_units) || 0;
+      totalUnits += toMetricValue(row.total_units) || 0;
+      sfBuildings += toMetricValue(row.sf_buildings) || 0;
+      totalBuildings += toMetricValue(row.total_buildings) || 0;
+      totalValue += toMetricValue(row.total_value) || 0;
+    });
+
+    // Calculate YoY by comparing to previous year's same month
+    const currentDate = new Date(latestPeriod as string);
+    const prevYear = new Date(currentDate);
+    prevYear.setFullYear(prevYear.getFullYear() - 1);
+    const prevPeriod = prevYear.toISOString().split('T')[0].slice(0, 7) + '-01';
+
+    const { data: prevData } = await this.supabase
+      .from('permits_state')
+      .select('total_units')
+      .eq('period_date', prevPeriod);
+
+    let prevTotalUnits = 0;
+    ((prevData || []) as PermitsRow[]).forEach((row) => {
+      prevTotalUnits += toMetricValue(row.total_units) || 0;
+    });
+
+    const totalUnitsYoy = prevTotalUnits > 0
+      ? ((totalUnits - prevTotalUnits) / prevTotalUnits) * 100
+      : null;
+
+    const result = [{
+      region_id: 'US',
+      region_name: 'United States',
+      period_date: latestPeriod,
+      sf_units: sfUnits,
+      large_multi_units: largeMultiUnits,
+      total_units: totalUnits,
+      total_units_yoy: totalUnitsYoy,
+      sf_buildings: sfBuildings,
+      total_buildings: totalBuildings,
+      total_value: totalValue,
+    }];
+
+    return { success: true, count: 1, data: result };
+  }
+
+  async getNationalSfRatio(): Promise<{
+    success: boolean;
+    count: number;
+    data: PermitsDataPoint[];
+  }> {
+    const { data: permitsData } = await this.getNationalPermits();
+    const national = permitsData[0];
+
+    const sfRatio = national.sf_units && national.total_units && national.total_units > 0
+      ? (national.sf_units / national.total_units) * 100
+      : null;
+
+    return {
+      success: true,
+      count: 1,
+      data: [{
+        region_id: 'US',
+        region_name: 'United States',
+        value: sfRatio,
+        period_date: national.period_date,
+        sf_ratio: sfRatio,
+      }],
+    };
+  }
+
+  async getNationalValuePerUnit(): Promise<{
+    success: boolean;
+    count: number;
+    data: PermitsDataPoint[];
+  }> {
+    const { data: permitsData } = await this.getNationalPermits();
+    const national = permitsData[0];
+
+    const valuePerUnit = national.total_value && national.total_units && national.total_units > 0
+      ? national.total_value / national.total_units
+      : null;
+
+    return {
+      success: true,
+      count: 1,
+      data: [{
+        region_id: 'US',
+        region_name: 'United States',
+        value: valuePerUnit,
+        period_date: national.period_date,
+        value_per_unit: valuePerUnit,
+      }],
+    };
   }
 
   // ============================================================================
