@@ -291,9 +291,10 @@ export class CensusService {
   private async getZipData(
     metric: string,
     year?: number,
-    state?: string,
+    _state?: string, // Note: state filter ignored - ZCTAs can span state boundaries and Census API doesn't provide state info
   ): Promise<CensusDataPoint[]> {
-    const cacheKey = `census_zip:${metric}:${year || 'latest'}:${state || 'all'}`;
+    // Cache key ignores state since we always load all ZCTAs (map handles geographic filtering)
+    const cacheKey = `census_zip:${metric}:${year || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
       return cached.map((row) => ({
@@ -307,23 +308,20 @@ export class CensusService {
 
     const latestYear = year || (await this.getLatestYear('census_zip'));
 
-    // Paginate to handle states with >1000 ZCTAs (Supabase default limit)
+    // Paginate to handle all ~33,000 ZCTAs nationwide (Supabase default limit is 1000)
+    // Note: We load all ZCTAs and let the frontend/map handle geographic filtering
+    // because ZCTAs can span state boundaries and the Census API doesn't provide state info
     const allData: CensusRow[] = [];
     const batchSize = 1000;
     let offset = 0;
 
     while (true) {
-      let query = this.supabase
+      const { data, error } = await this.supabase
         .from('census_zip')
         .select('*')
         .eq('year', latestYear)
         .range(offset, offset + batchSize - 1);
 
-      if (state) {
-        query = query.eq('state_fips', toStateFips(state));
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       if (!data || data.length === 0) break;
 
