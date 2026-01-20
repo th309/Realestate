@@ -225,8 +225,10 @@ async function downloadAllCensusData(years: number[]): Promise<void> {
       }
     }
 
-    // ZCTAs - only for latest year (too much data otherwise)
-    if (year === years[0]) {
+    // ZCTAs - fetch for multiple years to enable YoY calculations
+    // Limit to most recent 3 years to balance data coverage vs API load
+    const zipYearsToFetch = years.slice(0, 3); // e.g., [2023, 2022, 2021]
+    if (zipYearsToFetch.includes(year)) {
       console.log('  ZIP Codes...');
       const zipResult = await fetchCensusACS(year, 'zip code tabulation area');
       if (zipResult.success && zipResult.data) {
