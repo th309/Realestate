@@ -314,43 +314,28 @@ export class CensusService {
       return cached.map((row) => ({
         region_id: String(row.zcta || ''),
         region_name: String(row.zcta || ''),
-        value: toMetricValue(row[metric]),
+        value: toMetricValue(row.metric_value),
         year: row.year as number,
         zcta: String(row.zcta || ''),
       }));
     }
 
-    const latestYear = year || (await this.getLatestYear('census_zip'));
+    // Use optimized database function to get only latest data per ZCTA
+    // This returns ~33,000 rows in a single query instead of 33+ paginated API calls
+    const { data, error } = await this.supabase.rpc('get_latest_census_zip', {
+      p_metric: metric,
+    });
 
-    // Paginate to handle all ~33,000 ZCTAs nationwide (Supabase default limit is 1000)
-    // Note: We load all ZCTAs and let the frontend/map handle geographic filtering
-    // because ZCTAs can span state boundaries and the Census API doesn't provide state info
-    const allData: CensusRow[] = [];
-    const batchSize = 1000;
-    let offset = 0;
+    if (error) throw error;
 
-    while (true) {
-      const { data, error } = await this.supabase
-        .from('census_zip')
-        .select('*')
-        .eq('year', latestYear)
-        .range(offset, offset + batchSize - 1);
+    const rows = (data || []) as CensusRow[];
+    this.setCache(cacheKey, rows);
 
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-
-      allData.push(...(data as CensusRow[]));
-      if (data.length < batchSize) break;
-      offset += batchSize;
-    }
-
-    this.setCache(cacheKey, allData);
-
-    return allData.map((row) => ({
+    return rows.map((row) => ({
       region_id: String(row.zcta || ''),
       region_name: String(row.zcta || ''),
-      value: toMetricValue(row[metric]),
-      year: latestYear ?? undefined,
+      value: toMetricValue(row.metric_value),
+      year: row.year as number,
       zcta: String(row.zcta || ''),
     }));
   }
