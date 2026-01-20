@@ -57,6 +57,16 @@ function calculateYoY(currentValue: number | null, previousValue: number | null)
   return ((currentValue - previousValue) / previousValue) * 100;
 }
 
+/**
+ * Safely parse a numeric value, returning null for empty/invalid values
+ * This prevents converting missing data to 0
+ */
+function parseNumericOrNull(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : parseFloat(value);
+  return isNaN(parsed) ? null : parsed;
+}
+
 // ============================================================================
 // CENSUS YOY CALCULATIONS
 // ============================================================================
@@ -138,6 +148,20 @@ function processCensusFiles(): void {
   if (county.length > 0) {
     const withYoY = addCensusYoY(county, 'fips_code');
     writeCSV('census_county.csv', withYoY);
+  }
+
+  // Census City
+  const city = readCSV('census_city.csv');
+  if (city.length > 0) {
+    const withYoY = addCensusYoY(city, 'place_fips');
+    writeCSV('census_city.csv', withYoY);
+  }
+
+  // Census ZIP (ZCTA)
+  const zip = readCSV('census_zip.csv');
+  if (zip.length > 0) {
+    const withYoY = addCensusYoY(zip, 'zcta');
+    writeCSV('census_zip.csv', withYoY);
   }
 }
 
@@ -226,17 +250,17 @@ function combineStateData(): void {
   }
 
   // Calculate unemployment YoY (compare same month previous year)
-  const unempByStateMonth = new Map<string, number>();
+  const unempByStateMonth = new Map<string, number | null>();
   for (const row of unemployment) {
     const key = `${row.period_date}|${row.state_fips}`;
-    unempByStateMonth.set(key, parseFloat(row.unemployment_rate) || 0);
+    unempByStateMonth.set(key, parseNumericOrNull(row.unemployment_rate));
   }
 
   // Employment data by state+date
-  const empByStateMonth = new Map<string, number>();
+  const empByStateMonth = new Map<string, number | null>();
   for (const row of employment) {
     const key = `${row.period_date}|${row.state_fips}`;
-    empByStateMonth.set(key, parseFloat(row.total_nonfarm_employment) || 0);
+    empByStateMonth.set(key, parseNumericOrNull(row.total_nonfarm_employment));
   }
 
   // Combine data
@@ -249,12 +273,12 @@ function combineStateData(): void {
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
 
-    const currentUnemp = parseFloat(row.unemployment_rate) || null;
+    const currentUnemp = parseNumericOrNull(row.unemployment_rate);
 
     // YoY for unemployment - same month previous year
     const prevDate = getPreviousYearDate(row.period_date);
     const prevKey = `${prevDate}|${row.state_fips}`;
-    const prevUnemp = unempByStateMonth.get(prevKey) || null;
+    const prevUnemp = unempByStateMonth.get(prevKey) ?? null;
     const unempYoY = (currentUnemp && prevUnemp)
       ? (currentUnemp - prevUnemp).toFixed(2)
       : null;
@@ -267,8 +291,8 @@ function combineStateData(): void {
     const gdpYoY = calculateYoY(currentGdp, prevGdp);
 
     // Employment YoY (same month previous year)
-    const currentEmp = empByStateMonth.get(key) || null;
-    const prevEmp = empByStateMonth.get(prevKey) || null;
+    const currentEmp = empByStateMonth.get(key) ?? null;
+    const prevEmp = empByStateMonth.get(prevKey) ?? null;
     const empYoY = calculateYoY(currentEmp, prevEmp);
 
     combined.push({
@@ -336,17 +360,17 @@ function combineMetroData(): void {
   console.log(`  RPP records: ${rpp.length}`);
 
   // Unemployment by CBSA+date
-  const unempByCbsaMonth = new Map<string, number>();
+  const unempByCbsaMonth = new Map<string, number | null>();
   for (const row of unemployment) {
     const key = `${row.period_date}|${row.cbsa_code}`;
-    unempByCbsaMonth.set(key, parseFloat(row.unemployment_rate) || 0);
+    unempByCbsaMonth.set(key, parseNumericOrNull(row.unemployment_rate));
   }
 
   // Employment by CBSA+date for YoY
-  const empByCbsaMonth = new Map<string, number>();
+  const empByCbsaMonth = new Map<string, number | null>();
   for (const row of employment) {
     const key = `${row.period_date}|${row.cbsa_code}`;
-    empByCbsaMonth.set(key, parseFloat(row.total_nonfarm_employment) || 0);
+    empByCbsaMonth.set(key, parseNumericOrNull(row.total_nonfarm_employment));
   }
 
   // GDP by CBSA+year for YoY
@@ -387,14 +411,14 @@ function combineMetroData(): void {
     const prevDate = getPreviousYearDate(row.period_date);
     const prevKey = `${prevDate}|${row.cbsa_code}`;
 
-    const currentUnemp = parseFloat(row.unemployment_rate) || null;
-    const prevUnemp = unempByCbsaMonth.get(prevKey) || null;
+    const currentUnemp = parseNumericOrNull(row.unemployment_rate);
+    const prevUnemp = unempByCbsaMonth.get(prevKey) ?? null;
     const unempYoY = (currentUnemp && prevUnemp)
       ? (currentUnemp - prevUnemp).toFixed(2)
       : null;
 
-    const currentEmp = empByCbsaMonth.get(key) || null;
-    const prevEmp = empByCbsaMonth.get(prevKey) || null;
+    const currentEmp = empByCbsaMonth.get(key) ?? null;
+    const prevEmp = empByCbsaMonth.get(prevKey) ?? null;
     const empYoY = calculateYoY(currentEmp, prevEmp);
 
     const year = row.period_date?.substring(0, 4);
@@ -429,14 +453,14 @@ function combineMetroData(): void {
     const prevDate = getPreviousYearDate(row.period_date);
     const prevKey = `${prevDate}|${row.cbsa_code}`;
 
-    const currentEmp = empByCbsaMonth.get(key) || null;
-    const prevEmp = empByCbsaMonth.get(prevKey) || null;
+    const currentEmp = empByCbsaMonth.get(key) ?? null;
+    const prevEmp = empByCbsaMonth.get(prevKey) ?? null;
     const empYoY = calculateYoY(currentEmp, prevEmp);
 
     const year = row.period_date?.substring(0, 4);
     const prevYear = String(parseInt(year) - 1);
-    const currentGdp = gdpByCbsaYear.get(`${year}|${row.cbsa_code}`)?.gdp || null;
-    const prevGdp = gdpByCbsaYear.get(`${prevYear}|${row.cbsa_code}`)?.gdp || null;
+    const currentGdp = gdpByCbsaYear.get(`${year}|${row.cbsa_code}`)?.gdp ?? null;
+    const prevGdp = gdpByCbsaYear.get(`${prevYear}|${row.cbsa_code}`)?.gdp ?? null;
     const gdpYoY = calculateYoY(currentGdp, prevGdp);
 
     const gdpKey = `${year}-01-01|${row.cbsa_code}`;
@@ -450,7 +474,7 @@ function combineMetroData(): void {
       employment_yoy: empYoY ? parseFloat(empYoY.toFixed(2)) : null,
       gdp_millions: currentGdp,
       gdp_yoy: gdpYoY ? parseFloat(gdpYoY.toFixed(2)) : null,
-      rpp_all_items: rppData?.rpp || null
+      rpp_all_items: rppData?.rpp ?? null
     });
   }
 
@@ -511,11 +535,11 @@ function combineCountyData(): void {
   console.log(`  GDP records: ${gdp.length}`);
 
   // Unemployment by FIPS+date for YoY
-  const unempByFipsMonth = new Map<string, { rate: number; countyName: string }>();
+  const unempByFipsMonth = new Map<string, { rate: number | null; countyName: string }>();
   for (const row of unemployment) {
     const key = `${row.period_date}|${row.fips_code}`;
     unempByFipsMonth.set(key, {
-      rate: parseFloat(row.unemployment_rate) || 0,
+      rate: parseNumericOrNull(row.unemployment_rate),
       countyName: row.county_name || ''
     });
   }
@@ -543,8 +567,8 @@ function combineCountyData(): void {
     const prevDate = getPreviousYearDate(row.period_date);
     const prevKey = `${prevDate}|${row.fips_code}`;
 
-    const currentUnemp = parseFloat(row.unemployment_rate) || null;
-    const prevUnemp = unempByFipsMonth.get(prevKey)?.rate || null;
+    const currentUnemp = parseNumericOrNull(row.unemployment_rate);
+    const prevUnemp = unempByFipsMonth.get(prevKey)?.rate ?? null;
     const unempYoY = (currentUnemp && prevUnemp)
       ? (currentUnemp - prevUnemp).toFixed(2)
       : null;
@@ -622,15 +646,15 @@ function combineNationalData(): void {
   console.log(`  Employment records: ${employment.length}`);
 
   // Employment by date
-  const empByDate = new Map<string, number>();
+  const empByDate = new Map<string, number | null>();
   for (const row of employment) {
-    empByDate.set(row.period_date, parseFloat(row.total_nonfarm_employment) || 0);
+    empByDate.set(row.period_date, parseNumericOrNull(row.total_nonfarm_employment));
   }
 
   // Unemployment by date for YoY
-  const unempByDate = new Map<string, number>();
+  const unempByDate = new Map<string, number | null>();
   for (const row of unemployment) {
-    unempByDate.set(row.period_date, parseFloat(row.unemployment_rate) || 0);
+    unempByDate.set(row.period_date, parseNumericOrNull(row.unemployment_rate));
   }
 
   const combined: NationalEconomicData[] = [];
@@ -642,15 +666,15 @@ function combineNationalData(): void {
     if (seenDates.has(date)) continue;
     seenDates.add(date);
 
-    const currentUnemp = parseFloat(row.unemployment_rate) || null;
+    const currentUnemp = parseNumericOrNull(row.unemployment_rate);
     const prevDate = getPreviousYearDate(date);
-    const prevUnemp = unempByDate.get(prevDate) || null;
+    const prevUnemp = unempByDate.get(prevDate) ?? null;
     const unempYoY = (currentUnemp && prevUnemp)
       ? (currentUnemp - prevUnemp).toFixed(2)
       : null;
 
-    const currentEmp = empByDate.get(date) || null;
-    const prevEmp = empByDate.get(prevDate) || null;
+    const currentEmp = empByDate.get(date) ?? null;
+    const prevEmp = empByDate.get(prevDate) ?? null;
     const empYoY = calculateYoY(currentEmp, prevEmp);
 
     combined.push({
@@ -668,9 +692,9 @@ function combineNationalData(): void {
     if (seenDates.has(date)) continue;
     seenDates.add(date);
 
-    const currentEmp = parseFloat(row.total_nonfarm_employment) || null;
+    const currentEmp = parseNumericOrNull(row.total_nonfarm_employment);
     const prevDate = getPreviousYearDate(date);
-    const prevEmp = empByDate.get(prevDate) || null;
+    const prevEmp = empByDate.get(prevDate) ?? null;
     const empYoY = calculateYoY(currentEmp, prevEmp);
 
     combined.push({

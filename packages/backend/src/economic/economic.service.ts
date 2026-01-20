@@ -10,7 +10,7 @@ import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 export interface EconomicDataPoint {
   region_id: string;
   region_name: string;
-  value: number;
+  value: number | null;
   date?: string;
   state_fips?: string;
   cbsa_code?: string;
@@ -24,6 +24,16 @@ interface EconomicRow {
 interface CacheEntry<T> {
   data: T;
   expiry: number;
+}
+
+/**
+ * Safely convert a value to number, returning null for missing/invalid values.
+ * This prevents converting missing data (null/undefined) to 0.
+ */
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const num = Number(value);
+  return isNaN(num) ? null : num;
 }
 
 @Injectable()
@@ -51,50 +61,90 @@ export class EconomicService {
     });
   }
 
-  private async getLatestDate(
-    table: string,
-    metric?: string,
-  ): Promise<string | null> {
-    let query = this.supabase
-      .from(table)
-      .select('period_date')
-      .order('period_date', { ascending: false });
+  /**
+   * Get the latest available value for each region by fetching recent data
+   * and selecting the most recent non-null value per region.
+   * This ensures we always show data even if the "latest" date has gaps.
+   */
+  private getLatestPerRegion<T extends EconomicRow>(
+    data: T[],
+    regionKey: string,
+    metric: string,
+  ): T[] {
+    // Group by region, keeping the most recent record with non-null metric
+    const latestByRegion = new Map<string, T>();
 
-    // For metrics that might be NULL on many dates (like GDP, RPP),
-    // filter to only dates where the metric has data
-    if (metric) {
-      query = query.not(metric, 'is', null);
+    // Data should already be sorted by date desc from the query
+    for (const row of data) {
+      const regionId = String(row[regionKey] || '');
+      if (!regionId) continue;
+
+      // Skip if we already have data for this region (first one is most recent)
+      if (latestByRegion.has(regionId)) continue;
+
+      // Only keep if the metric value is not null
+      const value = toNumberOrNull(row[metric]);
+      if (value !== null) {
+        latestByRegion.set(regionId, row);
+      }
     }
 
-    const { data } = await query.limit(1);
-    return (data?.[0] as EconomicRow)?.period_date as string | null;
+    return Array.from(latestByRegion.values());
   }
 
   // ============================================================================
-  // Generic Data Fetchers
+  // Generic Data Fetchers - Now fetches latest available per region
   // ============================================================================
 
   private async getNationalData(
     metric: string,
     date?: string,
   ): Promise<EconomicDataPoint[]> {
-    // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate =
-      date || (await this.getLatestDate('economic_national', metric));
-
-    const { data, error } = await this.supabase
+    // For national, just get the most recent record with non-null metric value
+    let query = this.supabase
       .from('economic_national')
       .select('*')
-      .eq('period_date', latestDate)
+      .not(metric, 'is', null)
+      .order('period_date', { ascending: false })
       .limit(1);
 
+    if (date) {
+      query = this.supabase
+        .from('economic_national')
+        .select('*')
+        .eq('period_date', date)
+        .limit(1);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
+
+    // If specific date was requested but had no data, fall back to latest available
+    if (date && (!data || data.length === 0 || toNumberOrNull((data[0] as EconomicRow)[metric]) === null)) {
+      const { data: fallbackData, error: fallbackError } = await this.supabase
+        .from('economic_national')
+        .select('*')
+        .not(metric, 'is', null)
+        .order('period_date', { ascending: false })
+        .limit(1);
+
+      if (fallbackError) throw fallbackError;
+      if (fallbackData && fallbackData.length > 0) {
+        const row = fallbackData[0] as EconomicRow;
+        return [{
+          region_id: 'US',
+          region_name: 'United States',
+          value: toNumberOrNull(row[metric]),
+          date: row.period_date as string,
+        }];
+      }
+    }
 
     return ((data || []) as EconomicRow[]).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
-      value: Number(row[metric]) || 0,
-      date: latestDate ?? undefined,
+      value: toNumberOrNull(row[metric]),
+      date: row.period_date as string,
     }));
   }
 
@@ -105,32 +155,33 @@ export class EconomicService {
     const cacheKey = `economic_state:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map((row) => ({
+      const latestRows = this.getLatestPerRegion(cached, 'state_fips', metric);
+      return latestRows.map((row) => ({
         region_id: String(row.state_fips || ''),
         region_name: String(row.state_name || ''),
-        value: Number(row[metric]) || 0,
+        value: toNumberOrNull(row[metric]),
         date: row.period_date as string,
         state_fips: String(row.state_fips || ''),
       }));
     }
 
-    // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate =
-      date || (await this.getLatestDate('economic_state', metric));
-
+    // Fetch recent data (last 24 months) to ensure we get latest per region
     const { data, error } = await this.supabase
       .from('economic_state')
       .select('*')
-      .eq('period_date', latestDate);
+      .not(metric, 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(5000); // ~50 states * 24 months + buffer
 
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map((row) => ({
+    const latestRows = this.getLatestPerRegion(data as EconomicRow[], 'state_fips', metric);
+    return latestRows.map((row) => ({
       region_id: String(row.state_fips || ''),
       region_name: String(row.state_name || ''),
-      value: Number(row[metric]) || 0,
-      date: latestDate ?? undefined,
+      value: toNumberOrNull(row[metric]),
+      date: row.period_date as string,
       state_fips: String(row.state_fips || ''),
     }));
   }
@@ -142,32 +193,33 @@ export class EconomicService {
     const cacheKey = `economic_metro:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map((row) => ({
+      const latestRows = this.getLatestPerRegion(cached, 'cbsa_code', metric);
+      return latestRows.map((row) => ({
         region_id: String(row.cbsa_code || ''),
         region_name: String(row.cbsa_title || ''),
-        value: Number(row[metric]) || 0,
+        value: toNumberOrNull(row[metric]),
         date: row.period_date as string,
         cbsa_code: String(row.cbsa_code || ''),
       }));
     }
 
-    // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate =
-      date || (await this.getLatestDate('economic_metro', metric));
-
+    // Fetch recent data to ensure we get latest per region
     const { data, error } = await this.supabase
       .from('economic_metro')
       .select('*')
-      .eq('period_date', latestDate);
+      .not(metric, 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(15000); // ~400 metros * 24 months + buffer
 
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map((row) => ({
+    const latestRows = this.getLatestPerRegion(data as EconomicRow[], 'cbsa_code', metric);
+    return latestRows.map((row) => ({
       region_id: String(row.cbsa_code || ''),
       region_name: String(row.cbsa_title || ''),
-      value: Number(row[metric]) || 0,
-      date: latestDate ?? undefined,
+      value: toNumberOrNull(row[metric]),
+      date: row.period_date as string,
       cbsa_code: String(row.cbsa_code || ''),
     }));
   }
@@ -179,33 +231,35 @@ export class EconomicService {
     const cacheKey = `economic_county:${metric}:${date || 'latest'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
-      return cached.map((row) => ({
+      const latestRows = this.getLatestPerRegion(cached, 'fips_code', metric);
+      return latestRows.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
-        value: Number(row[metric]) || 0,
+        value: toNumberOrNull(row[metric]),
         date: row.period_date as string,
         fips_code: String(row.fips_code || ''),
         state_fips: String(row.state_fips || ''),
       }));
     }
 
-    // Pass metric to getLatestDate so it finds the latest date with non-null data for this metric
-    const latestDate =
-      date || (await this.getLatestDate('economic_county', metric));
-
+    // Fetch recent data to ensure we get latest per region
+    // For counties we need more data due to higher count (~3100 counties)
     const { data, error } = await this.supabase
       .from('economic_county')
       .select('*')
-      .eq('period_date', latestDate);
+      .not(metric, 'is', null)
+      .order('period_date', { ascending: false })
+      .limit(80000); // ~3100 counties * 24 months + buffer
 
     if (error) throw error;
     this.setCache(cacheKey, data as EconomicRow[]);
 
-    return ((data || []) as EconomicRow[]).map((row) => ({
+    const latestRows = this.getLatestPerRegion(data as EconomicRow[], 'fips_code', metric);
+    return latestRows.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
-      value: Number(row[metric]) || 0,
-      date: latestDate ?? undefined,
+      value: toNumberOrNull(row[metric]),
+      date: row.period_date as string,
       fips_code: String(row.fips_code || ''),
       state_fips: String(row.state_fips || ''),
     }));
