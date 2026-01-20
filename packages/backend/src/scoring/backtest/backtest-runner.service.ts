@@ -6,9 +6,9 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { SupabaseService } from '../../supabase/supabase.service';
 import type { ScoreType, GeographyType } from '../scoring.types';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface BacktestParams {
   scoreType: ScoreType;
@@ -69,7 +69,7 @@ export class BacktestRunnerService {
    * Run a backtest for given parameters
    */
   async runBacktest(params: BacktestParams): Promise<BacktestResult> {
-    const runId = uuidv4();
+    const runId = randomUUID();
 
     this.logger.log(`Starting backtest ${runId} for ${params.scoreType} ${params.geographyType}`);
 
@@ -152,8 +152,11 @@ export class BacktestRunnerService {
       return [];
     }
 
-    return data.map((d) => ({
-      geographyId: d.geography_id,
+    // Cast to Record type for dynamic column access
+    const rows = data as unknown as Array<Record<string, unknown>>;
+
+    return rows.map((d) => ({
+      geographyId: d.geography_id as string,
       score: d.score_value as number,
       outcome: d[outcomeColumn] as number,
     }));

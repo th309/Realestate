@@ -55,24 +55,21 @@ export class AlertService {
     previousConfidence: ConfidenceScore | null,
   ): Promise<Alert | null> {
     // Check for threshold crossing
-    const thresholdAlert = this.checkThresholdCrossing(newConfidence, previousConfidence);
-    if (thresholdAlert) {
-      await this.createAlert(thresholdAlert);
-      return thresholdAlert;
+    const thresholdAlertData = this.checkThresholdCrossing(newConfidence, previousConfidence);
+    if (thresholdAlertData) {
+      return await this.createAlert(thresholdAlertData);
     }
 
     // Check for significant degradation
-    const degradationAlert = this.checkDegradation(newConfidence, previousConfidence);
-    if (degradationAlert) {
-      await this.createAlert(degradationAlert);
-      return degradationAlert;
+    const degradationAlertData = this.checkDegradation(newConfidence, previousConfidence);
+    if (degradationAlertData) {
+      return await this.createAlert(degradationAlertData);
     }
 
     // Check for anomalies
-    const anomalyAlert = this.checkAnomalies(newConfidence);
-    if (anomalyAlert) {
-      await this.createAlert(anomalyAlert);
-      return anomalyAlert;
+    const anomalyAlertData = this.checkAnomalies(newConfidence);
+    if (anomalyAlertData) {
+      return await this.createAlert(anomalyAlertData);
     }
 
     // Check for recovery (auto-resolve existing alerts)
@@ -411,32 +408,38 @@ export class AlertService {
     return [...new Set(recommendations)];
   }
 
-  private async createAlert(alert: Omit<Alert, 'id' | 'createdAt'>): Promise<void> {
+  private async createAlert(alert: Omit<Alert, 'id' | 'createdAt'>): Promise<Alert> {
     const client = this.supabase.getClient();
 
-    const { error } = await client.from('propertyiq_confidence_alerts').insert({
-      confidence_id: alert.confidenceId,
-      score_type: alert.scoreType,
-      geography_type: alert.geographyType,
-      formula_version: alert.formulaVersion,
-      alert_type: alert.alertType,
-      severity: alert.severity,
-      previous_confidence: alert.previousConfidence,
-      current_confidence: alert.currentConfidence,
-      threshold_crossed: alert.thresholdCrossed,
-      diagnostic_signals: alert.diagnosticSignals,
-      recommended_actions: alert.recommendedActions,
-      status: alert.status,
-    });
+    const { data, error } = await client
+      .from('propertyiq_confidence_alerts')
+      .insert({
+        confidence_id: alert.confidenceId,
+        score_type: alert.scoreType,
+        geography_type: alert.geographyType,
+        formula_version: alert.formulaVersion,
+        alert_type: alert.alertType,
+        severity: alert.severity,
+        previous_confidence: alert.previousConfidence,
+        current_confidence: alert.currentConfidence,
+        threshold_crossed: alert.thresholdCrossed,
+        diagnostic_signals: alert.diagnosticSignals,
+        recommended_actions: alert.recommendedActions,
+        status: alert.status,
+      })
+      .select()
+      .single();
 
-    if (error) {
-      this.logger.error(`Error creating alert: ${error.message}`);
+    if (error || !data) {
+      this.logger.error(`Error creating alert: ${error?.message}`);
       throw error;
     }
 
     this.logger.warn(
       `Created ${alert.severity} ${alert.alertType} alert for ${alert.scoreType}/${alert.geographyType}`,
     );
+
+    return this.mapDbToAlert(data);
   }
 
   private mapDbToAlert(row: Record<string, unknown>): Alert {

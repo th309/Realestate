@@ -6,10 +6,10 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { FormulaVersionService } from './formula-version.service';
 import type { ScoreType, GeographyType } from '../scoring.types';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface ABTest {
   id: string;
@@ -97,7 +97,7 @@ export class ABTestService {
       throw new Error('Control or treatment version not found');
     }
 
-    const testId = uuidv4();
+    const testId = randomUUID();
 
     const { data, error } = await client
       .from('propertyiq_ab_tests')
