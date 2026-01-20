@@ -322,9 +322,10 @@ export class CensusService {
 
     // Use optimized database function to get only latest data per ZCTA
     // This returns ~33,000 rows in a single query instead of 33+ paginated API calls
-    const { data, error } = await this.supabase.rpc('get_latest_census_zip', {
-      p_metric: metric,
-    });
+    // Must set limit > 1000 (Supabase default) to get all ~33,000 US ZCTAs
+    const { data, error } = await this.supabase
+      .rpc('get_latest_census_zip', { p_metric: metric })
+      .limit(50000);
 
     if (error) throw error;
 

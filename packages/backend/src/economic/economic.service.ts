@@ -206,9 +206,10 @@ export class EconomicService {
 
     // Use optimized database function to get only latest data per county
     // This returns ~3100 rows instead of 443K, making it much faster
-    const { data, error } = await this.supabase.rpc('get_latest_economic_county', {
-      p_metric: metric,
-    });
+    // Must set limit > 1000 (Supabase default) to get all ~3100 US counties
+    const { data, error } = await this.supabase
+      .rpc('get_latest_economic_county', { p_metric: metric })
+      .limit(5000);
 
     if (error) throw error;
 
