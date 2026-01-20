@@ -204,6 +204,8 @@ interface CountyEconomicData {
   state_fips: string;
   unemployment_rate?: number | null;
   unemployment_rate_yoy?: number | null;
+  total_nonfarm_employment?: number | null;
+  employment_yoy?: number | null;
   gdp_millions?: number | null;
   gdp_yoy?: number | null;
 }
@@ -350,12 +352,15 @@ function combineMetroData(): void {
 
   // Use BLS metro unemployment (all metros) instead of FRED (limited metros)
   const unemployment = readCSV('bls_metro_unemployment.csv');
-  const employment = readCSV('fred_metro_employment.csv');
+  // Use QCEW employment data (all metros) instead of FRED (only 3 metros)
+  const qcewEmployment = readCSV('qcew_metro_employment.csv');
+  const fredEmployment = readCSV('fred_metro_employment.csv');
   const gdp = readCSV('bea_metro_gdp.csv');
   const rpp = readCSV('bea_metro_rpp.csv');
 
   console.log(`  Unemployment records: ${unemployment.length}`);
-  console.log(`  Employment records: ${employment.length}`);
+  console.log(`  QCEW Employment records: ${qcewEmployment.length}`);
+  console.log(`  FRED Employment records (legacy): ${fredEmployment.length}`);
   console.log(`  GDP records: ${gdp.length}`);
   console.log(`  RPP records: ${rpp.length}`);
 
@@ -366,11 +371,21 @@ function combineMetroData(): void {
     unempByCbsaMonth.set(key, parseNumericOrNull(row.unemployment_rate));
   }
 
-  // Employment by CBSA+date for YoY
+  // Employment by CBSA+date for YoY - prefer QCEW (all metros) over FRED (3 metros)
   const empByCbsaMonth = new Map<string, number | null>();
-  for (const row of employment) {
+  // First load FRED data (legacy, only 3 metros)
+  for (const row of fredEmployment) {
     const key = `${row.period_date}|${row.cbsa_code}`;
     empByCbsaMonth.set(key, parseNumericOrNull(row.total_nonfarm_employment));
+  }
+  // Then overlay QCEW data (all metros) - this will add data for metros FRED doesn't cover
+  for (const row of qcewEmployment) {
+    const key = `${row.period_date}|${row.cbsa_code}`;
+    const emp = parseNumericOrNull(row.total_nonfarm_employment);
+    // Only set if we have valid data (QCEW may have gaps)
+    if (emp !== null) {
+      empByCbsaMonth.set(key, emp);
+    }
   }
 
   // GDP by CBSA+year for YoY
@@ -529,9 +544,11 @@ function combineCountyData(): void {
   console.log('\nCombining county economic data with YoY calculations...');
 
   const unemployment = readCSV('fred_county_unemployment.csv');
+  const qcewEmployment = readCSV('qcew_county_employment.csv');
   const gdp = readCSV('bea_county_gdp.csv');
 
   console.log(`  Unemployment records: ${unemployment.length}`);
+  console.log(`  QCEW Employment records: ${qcewEmployment.length}`);
   console.log(`  GDP records: ${gdp.length}`);
 
   // Unemployment by FIPS+date for YoY
@@ -542,6 +559,13 @@ function combineCountyData(): void {
       rate: parseNumericOrNull(row.unemployment_rate),
       countyName: row.county_name || ''
     });
+  }
+
+  // QCEW Employment by FIPS+date for YoY (all counties)
+  const empByFipsMonth = new Map<string, number | null>();
+  for (const row of qcewEmployment) {
+    const key = `${row.period_date}|${row.fips_code}`;
+    empByFipsMonth.set(key, parseNumericOrNull(row.total_nonfarm_employment));
   }
 
   // GDP by FIPS+year for YoY
@@ -579,6 +603,11 @@ function combineCountyData(): void {
     const prevGdp = gdpByFipsYear.get(`${prevYear}|${row.fips_code}`)?.gdp || null;
     const gdpYoY = calculateYoY(currentGdp, prevGdp);
 
+    // Get employment data from QCEW
+    const currentEmp = empByFipsMonth.get(key) ?? null;
+    const prevEmp = empByFipsMonth.get(prevKey) ?? null;
+    const empYoY = calculateYoY(currentEmp, prevEmp);
+
     combined.push({
       period_date: row.period_date,
       fips_code: row.fips_code,
@@ -586,12 +615,45 @@ function combineCountyData(): void {
       state_fips: row.state_fips || row.fips_code?.substring(0, 2) || '',
       unemployment_rate: currentUnemp,
       unemployment_rate_yoy: unempYoY ? parseFloat(unempYoY) : null,
+      total_nonfarm_employment: currentEmp,
+      employment_yoy: empYoY ? parseFloat(empYoY.toFixed(2)) : null,
       gdp_millions: currentGdp,
       gdp_yoy: gdpYoY ? parseFloat(gdpYoY.toFixed(2)) : null
     });
   }
 
-  // Add GDP records not covered by unemployment (annual dates)
+  // Add employment records not covered by unemployment
+  for (const row of qcewEmployment) {
+    const key = `${row.period_date}|${row.fips_code}`;
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+
+    const prevDate = getPreviousYearDate(row.period_date);
+    const prevKey = `${prevDate}|${row.fips_code}`;
+
+    const currentEmp = empByFipsMonth.get(key) ?? null;
+    const prevEmp = empByFipsMonth.get(prevKey) ?? null;
+    const empYoY = calculateYoY(currentEmp, prevEmp);
+
+    const year = row.period_date?.substring(0, 4);
+    const prevYear = String(parseInt(year) - 1);
+    const currentGdp = gdpByFipsYear.get(`${year}|${row.fips_code}`)?.gdp || null;
+    const prevGdp = gdpByFipsYear.get(`${prevYear}|${row.fips_code}`)?.gdp || null;
+    const gdpYoY = calculateYoY(currentGdp, prevGdp);
+
+    combined.push({
+      period_date: row.period_date,
+      fips_code: row.fips_code,
+      county_name: gdpByFipsYear.get(`${year}|${row.fips_code}`)?.countyName || '',
+      state_fips: row.fips_code?.substring(0, 2) || '',
+      total_nonfarm_employment: currentEmp,
+      employment_yoy: empYoY ? parseFloat(empYoY.toFixed(2)) : null,
+      gdp_millions: currentGdp,
+      gdp_yoy: gdpYoY ? parseFloat(gdpYoY.toFixed(2)) : null
+    });
+  }
+
+  // Add GDP records not covered by unemployment or employment (annual dates)
   for (const row of gdp) {
     const key = `${row.period_date}|${row.fips_code}`;
     if (seenKeys.has(key)) continue;

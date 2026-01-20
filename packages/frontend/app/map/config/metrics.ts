@@ -596,9 +596,8 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'fred',
     apiEndpoint: '/api/economic/job-growth/{geo}',
     keyField: 'auto',
-    // FRED only has employment data for national, state, and 3 metros (Boston, LA, NYC)
-    // No county-level employment data available
-    supportedGeos: ['national', 'state'],
+    // QCEW provides employment data for all metros and counties
+    supportedGeos: ['national', 'state', 'metro', 'county'],
   },
 
   gdp_growth: {
