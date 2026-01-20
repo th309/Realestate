@@ -8,6 +8,12 @@
  * - InheritanceService: Handles geographic data inheritance
  * - MarketHealthService: Calculates Market Health Index (free tier)
  * - MissingMetricsService: Handles missing data scenarios
+ *
+ * Backtest services:
+ * - OutcomeGeneratorService: Generates actual outcomes from historical data
+ * - BacktestRunnerService: Runs backtests comparing scores to outcomes
+ * - ConfidenceCalculatorService: Calculates confidence scores
+ * - AlertService: Manages confidence alerts
  */
 
 import { Module } from '@nestjs/common';
@@ -19,6 +25,10 @@ import { InheritanceService } from './inheritance.service';
 import { MarketHealthService } from './market-health.service';
 import { MissingMetricsService } from './missing-metrics.service';
 import { ScoreAccessService, ScoreAccessGuard } from './scoring.guard';
+import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
+import { BacktestRunnerService } from './backtest/backtest-runner.service';
+import { ConfidenceCalculatorService } from './backtest/confidence-calculator.service';
+import { AlertService } from './backtest/alert.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
@@ -32,6 +42,11 @@ import { SupabaseModule } from '../supabase/supabase.module';
     MissingMetricsService,
     ScoreAccessService,
     ScoreAccessGuard,
+    // Backtest services
+    OutcomeGeneratorService,
+    BacktestRunnerService,
+    ConfidenceCalculatorService,
+    AlertService,
   ],
   controllers: [ScoringController],
   exports: [
@@ -43,6 +58,11 @@ import { SupabaseModule } from '../supabase/supabase.module';
     MissingMetricsService,
     ScoreAccessService,
     ScoreAccessGuard,
+    // Backtest services
+    OutcomeGeneratorService,
+    BacktestRunnerService,
+    ConfidenceCalculatorService,
+    AlertService,
   ],
 })
 export class ScoringModule {}
