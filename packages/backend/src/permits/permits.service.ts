@@ -69,6 +69,7 @@ function toMetricValue(value: unknown): number | null {
 @Injectable()
 export class PermitsService {
   private readonly CACHE_TTL = 60 * 60 * 1000; // 1 hour
+  private readonly PAGE_SIZE = 1000; // Supabase default limit
   private cache = new Map<string, CacheEntry<PermitsRow[]>>();
 
   constructor(
@@ -193,24 +194,35 @@ export class PermitsService {
 
     const latestPeriod = await this.getLatestPeriod('permits_county');
 
-    let query = this.supabase
-      .from('permits_county')
-      .select('*')
-      .eq('period_date', latestPeriod);
+    // Paginate to get all counties (Supabase has 1000 row default limit)
+    const allRows: PermitsRow[] = [];
+    let offset = 0;
 
-    if (state) {
-      const stateFips = toStateFips(state);
-      query = query.eq('state_fips', stateFips);
+    while (true) {
+      let query = this.supabase
+        .from('permits_county')
+        .select('*')
+        .eq('period_date', latestPeriod);
+
+      if (state) {
+        const stateFips = toStateFips(state);
+        query = query.eq('state_fips', stateFips);
+      }
+
+      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const pageData = (data || []) as PermitsRow[];
+      allRows.push(...pageData);
+
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
     }
 
-    const { data, error } = await query;
+    this.setCache(cacheKey, allRows);
 
-    if (error) throw error;
-
-    const rows = (data || []) as PermitsRow[];
-    this.setCache(cacheKey, rows);
-
-    const result = rows.map((row) => ({
+    const result = allRows.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
       period_date: String(row.period_date || ''),
@@ -276,39 +288,50 @@ export class PermitsService {
   }> {
     const latestPeriod = await this.getLatestPeriod('permits_county');
 
-    let query = this.supabase
-      .from('permits_county')
-      .select('fips_code, county_name, state_fips, period_date, sf_units, total_units')
-      .eq('period_date', latestPeriod);
+    // Paginate to get all counties
+    const allRows: PermitsRow[] = [];
+    let offset = 0;
 
-    if (state) {
-      const stateFips = toStateFips(state);
-      query = query.eq('state_fips', stateFips);
+    while (true) {
+      let query = this.supabase
+        .from('permits_county')
+        .select('fips_code, county_name, state_fips, period_date, sf_units, total_units')
+        .eq('period_date', latestPeriod);
+
+      if (state) {
+        const stateFips = toStateFips(state);
+        query = query.eq('state_fips', stateFips);
+      }
+
+      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const pageData = (data || []) as PermitsRow[];
+      allRows.push(...pageData);
+
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
     }
 
-    const { data, error } = await query;
+    const result = allRows.map((row) => {
+      const sfUnits = toMetricValue(row.sf_units);
+      const totalUnits = toMetricValue(row.total_units);
+      const sfRatio = sfUnits && totalUnits && totalUnits > 0
+        ? (sfUnits / totalUnits) * 100
+        : null;
 
-    if (error) throw error;
-
-    const result = ((data || []) as PermitsRow[])
-      .map((row) => {
-        const sfUnits = toMetricValue(row.sf_units);
-        const totalUnits = toMetricValue(row.total_units);
-        const sfRatio = sfUnits && totalUnits && totalUnits > 0
-          ? (sfUnits / totalUnits) * 100
-          : null;
-
-        return {
-          region_id: String(row.fips_code || ''),
-          region_name: String(row.county_name || ''),
-          value: sfRatio,
-          period_date: String(row.period_date || ''),
-          fips_code: String(row.fips_code || ''),
-          county_fips: String(row.fips_code || ''),
-          state_fips: String(row.state_fips || ''),
-          sf_ratio: sfRatio,
-        };
-      });
+      return {
+        region_id: String(row.fips_code || ''),
+        region_name: String(row.county_name || ''),
+        value: sfRatio,
+        period_date: String(row.period_date || ''),
+        fips_code: String(row.fips_code || ''),
+        county_fips: String(row.fips_code || ''),
+        state_fips: String(row.state_fips || ''),
+        sf_ratio: sfRatio,
+      };
+    });
 
     return { success: true, count: result.length, data: result };
   }
@@ -355,39 +378,50 @@ export class PermitsService {
   }> {
     const latestPeriod = await this.getLatestPeriod('permits_county');
 
-    let query = this.supabase
-      .from('permits_county')
-      .select('fips_code, county_name, state_fips, period_date, total_value, total_units')
-      .eq('period_date', latestPeriod);
+    // Paginate to get all counties
+    const allRows: PermitsRow[] = [];
+    let offset = 0;
 
-    if (state) {
-      const stateFips = toStateFips(state);
-      query = query.eq('state_fips', stateFips);
+    while (true) {
+      let query = this.supabase
+        .from('permits_county')
+        .select('fips_code, county_name, state_fips, period_date, total_value, total_units')
+        .eq('period_date', latestPeriod);
+
+      if (state) {
+        const stateFips = toStateFips(state);
+        query = query.eq('state_fips', stateFips);
+      }
+
+      const { data, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const pageData = (data || []) as PermitsRow[];
+      allRows.push(...pageData);
+
+      if (pageData.length < this.PAGE_SIZE) break;
+      offset += this.PAGE_SIZE;
     }
 
-    const { data, error } = await query;
+    const result = allRows.map((row) => {
+      const totalValue = toMetricValue(row.total_value);
+      const totalUnits = toMetricValue(row.total_units);
+      const valuePerUnit = totalValue && totalUnits && totalUnits > 0
+        ? totalValue / totalUnits
+        : null;
 
-    if (error) throw error;
-
-    const result = ((data || []) as PermitsRow[])
-      .map((row) => {
-        const totalValue = toMetricValue(row.total_value);
-        const totalUnits = toMetricValue(row.total_units);
-        const valuePerUnit = totalValue && totalUnits && totalUnits > 0
-          ? totalValue / totalUnits
-          : null;
-
-        return {
-          region_id: String(row.fips_code || ''),
-          region_name: String(row.county_name || ''),
-          value: valuePerUnit,
-          period_date: String(row.period_date || ''),
-          fips_code: String(row.fips_code || ''),
-          county_fips: String(row.fips_code || ''),
-          state_fips: String(row.state_fips || ''),
-          value_per_unit: valuePerUnit,
-        };
-      });
+      return {
+        region_id: String(row.fips_code || ''),
+        region_name: String(row.county_name || ''),
+        value: valuePerUnit,
+        period_date: String(row.period_date || ''),
+        fips_code: String(row.fips_code || ''),
+        county_fips: String(row.fips_code || ''),
+        state_fips: String(row.state_fips || ''),
+        value_per_unit: valuePerUnit,
+      };
+    });
 
     return { success: true, count: result.length, data: result };
   }
