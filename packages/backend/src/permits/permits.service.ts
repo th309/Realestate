@@ -68,6 +68,22 @@ function toMetricValue(value: unknown): number | null {
   return isNaN(num) ? null : num;
 }
 
+// Calculate total_units from component parts when null
+// total = sf + duplex + small_multi + large_multi
+function calculateTotalUnits(row: PermitsRow): number | null {
+  const storedTotal = toMetricValue(row.total_units);
+  if (storedTotal !== null) return storedTotal;
+
+  // If total is null, compute from parts
+  const sf = toMetricValue(row.sf_units) ?? 0;
+  const duplex = toMetricValue(row.duplex_units) ?? 0;
+  const smallMulti = toMetricValue(row.small_multi_units) ?? 0;
+  const largeMf = toMetricValue(row.large_multi_units) ?? 0;
+
+  // If all parts are 0 or null, return 0 (not null) since we have data for this county
+  return sf + duplex + smallMulti + largeMf;
+}
+
 @Injectable()
 export class PermitsService {
   private readonly CACHE_TTL = 60 * 60 * 1000; // 1 hour
@@ -135,7 +151,7 @@ export class PermitsService {
     rows.forEach((row) => {
       sfUnits += toMetricValue(row.sf_units) || 0;
       largeMultiUnits += toMetricValue(row.large_multi_units) || 0;
-      totalUnits += toMetricValue(row.total_units) || 0;
+      totalUnits += calculateTotalUnits(row) || 0;
       sfBuildings += toMetricValue(row.sf_buildings) || 0;
       totalBuildings += toMetricValue(row.total_buildings) || 0;
       totalValue += toMetricValue(row.total_value) || 0;
@@ -149,12 +165,12 @@ export class PermitsService {
 
     const { data: prevData } = await this.supabase
       .from('permits_state')
-      .select('total_units')
+      .select('total_units, sf_units, duplex_units, small_multi_units, large_multi_units')
       .eq('period_date', prevPeriod);
 
     let prevTotalUnits = 0;
     ((prevData || []) as PermitsRow[]).forEach((row) => {
-      prevTotalUnits += toMetricValue(row.total_units) || 0;
+      prevTotalUnits += calculateTotalUnits(row) || 0;
     });
 
     const totalUnitsYoy = prevTotalUnits > 0
@@ -247,7 +263,7 @@ export class PermitsService {
         // Include all metric fields for valueField extraction
         sf_units: toMetricValue(row.sf_units),
         large_multi_units: toMetricValue(row.large_multi_units),
-        total_units: toMetricValue(row.total_units),
+        total_units: calculateTotalUnits(row),
         total_units_yoy: toMetricValue(row.total_units_yoy),
         sf_buildings: toMetricValue(row.sf_buildings),
         total_buildings: toMetricValue(row.total_buildings),
@@ -276,7 +292,7 @@ export class PermitsService {
       // Include all metric fields for valueField extraction
       sf_units: toMetricValue(row.sf_units),
       large_multi_units: toMetricValue(row.large_multi_units),
-      total_units: toMetricValue(row.total_units),
+      total_units: calculateTotalUnits(row),
       total_units_yoy: toMetricValue(row.total_units_yoy),
       sf_buildings: toMetricValue(row.sf_buildings),
       total_buildings: toMetricValue(row.total_buildings),
@@ -308,7 +324,7 @@ export class PermitsService {
         // Include all metric fields for valueField extraction
         sf_units: toMetricValue(row.sf_units),
         large_multi_units: toMetricValue(row.large_multi_units),
-        total_units: toMetricValue(row.total_units),
+        total_units: calculateTotalUnits(row),
         total_units_yoy: toMetricValue(row.total_units_yoy),
         sf_buildings: toMetricValue(row.sf_buildings),
         total_buildings: toMetricValue(row.total_buildings),
@@ -357,7 +373,7 @@ export class PermitsService {
       // Include all metric fields for valueField extraction
       sf_units: toMetricValue(row.sf_units),
       large_multi_units: toMetricValue(row.large_multi_units),
-      total_units: toMetricValue(row.total_units),
+      total_units: calculateTotalUnits(row),
       total_units_yoy: toMetricValue(row.total_units_yoy),
       sf_buildings: toMetricValue(row.sf_buildings),
       total_buildings: toMetricValue(row.total_buildings),
@@ -380,7 +396,7 @@ export class PermitsService {
 
     const { data, error } = await this.supabase
       .from('permits_state')
-      .select('state_fips, period_date, sf_units, total_units')
+      .select('state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
       .eq('period_date', latestPeriod);
 
     if (error) throw error;
@@ -388,8 +404,8 @@ export class PermitsService {
     const result = ((data || []) as PermitsRow[])
       .map((row) => {
         const sfUnits = toMetricValue(row.sf_units);
-        const totalUnits = toMetricValue(row.total_units);
-        const sfRatio = sfUnits && totalUnits && totalUnits > 0
+        const totalUnits = calculateTotalUnits(row);
+        const sfRatio = sfUnits !== null && totalUnits !== null && totalUnits > 0
           ? (sfUnits / totalUnits) * 100
           : null;
 
@@ -420,7 +436,7 @@ export class PermitsService {
     while (true) {
       let query = this.supabase
         .from('permits_county')
-        .select('fips_code, county_name, state_fips, period_date, sf_units, total_units')
+        .select('fips_code, county_name, state_fips, period_date, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
         .eq('period_date', latestPeriod);
 
       if (state) {
@@ -441,8 +457,8 @@ export class PermitsService {
 
     const result = allRows.map((row) => {
       const sfUnits = toMetricValue(row.sf_units);
-      const totalUnits = toMetricValue(row.total_units);
-      const sfRatio = sfUnits && totalUnits && totalUnits > 0
+      const totalUnits = calculateTotalUnits(row);
+      const sfRatio = sfUnits !== null && totalUnits !== null && totalUnits > 0
         ? (sfUnits / totalUnits) * 100
         : null;
 
@@ -470,7 +486,7 @@ export class PermitsService {
 
     const { data, error } = await this.supabase
       .from('permits_state')
-      .select('state_fips, period_date, total_value, total_units')
+      .select('state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
       .eq('period_date', latestPeriod);
 
     if (error) throw error;
@@ -478,8 +494,8 @@ export class PermitsService {
     const result = ((data || []) as PermitsRow[])
       .map((row) => {
         const totalValue = toMetricValue(row.total_value);
-        const totalUnits = toMetricValue(row.total_units);
-        const valuePerUnit = totalValue && totalUnits && totalUnits > 0
+        const totalUnits = calculateTotalUnits(row);
+        const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
           ? totalValue / totalUnits
           : null;
 
@@ -510,7 +526,7 @@ export class PermitsService {
     while (true) {
       let query = this.supabase
         .from('permits_county')
-        .select('fips_code, county_name, state_fips, period_date, total_value, total_units')
+        .select('fips_code, county_name, state_fips, period_date, total_value, sf_units, duplex_units, small_multi_units, large_multi_units, total_units')
         .eq('period_date', latestPeriod);
 
       if (state) {
@@ -531,8 +547,8 @@ export class PermitsService {
 
     const result = allRows.map((row) => {
       const totalValue = toMetricValue(row.total_value);
-      const totalUnits = toMetricValue(row.total_units);
-      const valuePerUnit = totalValue && totalUnits && totalUnits > 0
+      const totalUnits = calculateTotalUnits(row);
+      const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
         ? totalValue / totalUnits
         : null;
 
