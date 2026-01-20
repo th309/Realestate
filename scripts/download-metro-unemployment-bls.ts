@@ -7,7 +7,8 @@ import { join } from 'path';
 import { parse } from 'csv-parse/sync';
 import { fetchBLSMetroUnemployment } from './census-economic-import/api-clients';
 
-const OUTPUT_DIR = join(__dirname, '../data/economic');
+// Use process.cwd() for compatibility with both CommonJS and ES modules
+const OUTPUT_DIR = join(process.cwd(), 'data/economic');
 
 if (!existsSync(OUTPUT_DIR)) {
   mkdirSync(OUTPUT_DIR, { recursive: true });

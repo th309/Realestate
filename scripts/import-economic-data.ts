@@ -30,7 +30,8 @@ import {
 import type { ImportResult } from './census-economic-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 
-const DATA_DIR = join(__dirname, '../data/economic');
+// Use process.cwd() for compatibility with both CommonJS and ES modules
+const DATA_DIR = join(process.cwd(), 'data/economic');
 
 interface DatasetConfig {
   id: string;

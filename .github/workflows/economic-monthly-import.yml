@@ -1,0 +1,226 @@
+name: Economic Data Monthly Import
+
+on:
+  # Run on the 20th of every month at 6:00 AM UTC
+  # Economic data sources update at different frequencies:
+  # - Census ACS: Annual (released in Dec)
+  # - BEA GDP/RPP: Quarterly/Annual
+  # - FRED: Monthly (unemployment, employment)
+  # - BLS QCEW: Quarterly (~6 months lag)
+  schedule:
+    - cron: '0 6 20 * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: 'Which dataset to import'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - census-only
+          - bea-only
+          - fred-only
+          - qcew-only
+
+jobs:
+  import-economic-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240  # 4 hours for comprehensive download
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Census and Economic Data
+        id: download
+        env:
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+          BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          echo "=============================================="
+          echo "Economic Data Download - $(date)"
+          echo "=============================================="
+
+          # Download Census/BEA/FRED data
+          echo ""
+          echo ">>> Downloading Census, BEA, and FRED data..."
+          npx tsx scripts/download-census-economic-data.ts 2>&1 | tee download-output.txt
+
+          # Download BLS metro unemployment
+          echo ""
+          echo ">>> Downloading BLS Metro Unemployment..."
+          npx tsx scripts/download-metro-unemployment-bls.ts 2>&1 | tee -a download-output.txt
+
+          # Download QCEW employment data (all metros and counties)
+          echo ""
+          echo ">>> Downloading BLS QCEW Employment data..."
+          npx tsx scripts/download-qcew-employment.ts 2>&1 | tee -a download-output.txt
+
+      - name: Combine Economic Data
+        run: |
+          echo ""
+          echo ">>> Combining economic data with YoY calculations..."
+          npx tsx scripts/combine-economic-data.ts 2>&1 | tee -a download-output.txt
+
+      - name: Import Census Data
+        id: import_census
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+        run: |
+          echo ""
+          echo ">>> Importing Census data to database..."
+          npx tsx scripts/import-census-data.ts 2>&1 | tee -a import-output.txt
+
+      - name: Import Economic Data
+        id: import_economic
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          echo ""
+          echo ">>> Importing Economic data to database..."
+          npx tsx scripts/import-economic-data.ts 2>&1 | tee -a import-output.txt
+
+          # Check for failures
+          if grep -q "errors: [1-9]" import-output.txt; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+            echo "::warning::Import completed with errors"
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Download Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: download-log-${{ github.run_id }}
+          path: download-output.txt
+          retention-days: 30
+
+      - name: Upload Import Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: import-log-${{ github.run_id }}
+          path: import-output.txt
+          retention-days: 30
+
+    outputs:
+      has_failures: ${{ steps.import_economic.outputs.has_failures }}
+
+  notify-on-failure:
+    needs: import-economic-data
+    runs-on: ubuntu-latest
+    if: failure() || needs.import-economic-data.outputs.has_failures == 'true'
+
+    steps:
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const isPartialFailure = '${{ needs.import-economic-data.outputs.has_failures }}' === 'true';
+
+            const title = isPartialFailure
+              ? `Economic Data Import Partial Failure - ${date}`
+              : `Economic Data Import Failed - ${date}`;
+
+            const body = [
+              isPartialFailure ? '## Economic Data Import Partial Failure' : '## Economic Data Import Failure',
+              '',
+              isPartialFailure
+                ? 'Some economic datasets failed to import. The workflow completed but with errors.'
+                : 'The monthly economic data import workflow failed completely.',
+              '',
+              `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              `**Date:** ${date}`,
+              '',
+              '### Data Sources',
+              '- **Census ACS**: Population, income, housing demographics (annual)',
+              '- **BEA**: GDP, Real GDP, Regional Price Parity (annual)',
+              '- **FRED**: Unemployment rates (monthly), Employment (monthly)',
+              '- **BLS QCEW**: Employment for all metros/counties (quarterly)',
+              '',
+              '### Tables Updated',
+              '- census_national, census_state, census_metro, census_county, census_city, census_zip',
+              '- economic_national, economic_state, economic_metro, economic_county',
+              '',
+              '### Action Required',
+              '1. Check the workflow logs and downloaded artifacts for detailed errors',
+              '2. Verify API keys are valid (Census, BEA, FRED)',
+              '3. Verify Supabase credentials are valid',
+              '4. Run scripts locally to diagnose:',
+              '   - `npx tsx scripts/download-census-economic-data.ts`',
+              '   - `npx tsx scripts/download-qcew-employment.ts`',
+              '   - `npx tsx scripts/combine-economic-data.ts`',
+              '   - `npx tsx scripts/import-economic-data.ts`',
+              '5. Re-run the workflow manually once fixed'
+            ].join('\n');
+
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'data-import,automated',
+              state: 'open'
+            });
+
+            const hasExisting = existingIssues.some(issue =>
+              issue.title.includes('Economic Data Import') && issue.title.includes(date)
+            );
+
+            if (!hasExisting) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['bug', 'data-import', 'automated']
+              });
+              console.log('Created failure notification issue');
+            } else {
+              console.log('Issue already exists for today, skipping creation');
+            }
+
+  notify-on-success:
+    needs: import-economic-data
+    runs-on: ubuntu-latest
+    if: success() && needs.import-economic-data.outputs.has_failures != 'true'
+
+    steps:
+      - name: Log Success
+        run: |
+          echo "=============================================="
+          echo "Economic Data Import Completed Successfully"
+          echo "Date: $(date)"
+          echo "=============================================="
+          echo "Data sources updated:"
+          echo "  - Census ACS (population, income, demographics)"
+          echo "  - BEA GDP and Regional Price Parity"
+          echo "  - FRED Unemployment and Employment (national/state)"
+          echo "  - BLS QCEW Employment (all metros and counties)"
+          echo ""
+          echo "Tables updated:"
+          echo "  - census_* (national, state, metro, county, city, zip)"
+          echo "  - economic_* (national, state, metro, county)"
+          echo ""
+          echo "Check Supabase dashboard to verify."

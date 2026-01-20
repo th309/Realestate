@@ -7,22 +7,23 @@
  * Data source: https://www.bls.gov/cew/downloadable-data-files.htm
  * API docs: https://www.bls.gov/cew/additional-resources/open-data/
  *
- * URL format: https://data.bls.gov/cew/data/api/{year}/{qtr}/area/{area_fips}.csv
+ * EFFICIENT APPROACH: Use industry slices to get all areas in one file
+ * URL format: https://data.bls.gov/cew/data/api/{year}/{qtr}/industry/{industry_code}.csv
  *
- * We extract "Total, all industries" (industry_code 10) with "Private" ownership (own_code 5)
- * to get total private sector employment for each area.
+ * Industry code 10 = Total, all industries
+ * We filter for own_code 5 = Private sector
  */
 
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
 
-const OUTPUT_DIR = join(__dirname, '../data/economic');
+// Use process.cwd() for compatibility with both CommonJS and ES modules
+const OUTPUT_DIR = join(process.cwd(), 'data/economic');
 const QCEW_BASE_URL = 'https://data.bls.gov/cew/data/api';
 
 // Rate limiting - BLS asks for reasonable request rates
-const DELAY_MS = 100; // 100ms between requests
-const BATCH_SIZE = 50; // Process in batches
+const DELAY_MS = 500; // 500ms between requests (only ~40 requests total now)
 
 interface QCEWRecord {
   area_fips: string;
@@ -49,19 +50,22 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Fetch QCEW data for a single area and quarter
+ * Fetch QCEW industry slice data (all areas for a given industry)
+ * This is MUCH more efficient than fetching per-area
  */
-async function fetchQCEWData(year: number, qtr: number, areaFips: string): Promise<QCEWRecord[] | null> {
-  const url = `${QCEW_BASE_URL}/${year}/${qtr}/area/${areaFips}.csv`;
+async function fetchQCEWIndustrySlice(year: number, qtr: number, industryCode: string): Promise<QCEWRecord[] | null> {
+  const url = `${QCEW_BASE_URL}/${year}/${qtr}/industry/${industryCode}.csv`;
+
+  console.log(`  Fetching ${year}Q${qtr}...`);
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
       if (response.status === 404) {
-        // No data for this area/period - common for newer areas
+        console.warn(`  No data for ${year}Q${qtr}`);
         return null;
       }
-      console.warn(`  HTTP ${response.status} for ${areaFips} ${year}Q${qtr}`);
+      console.warn(`  HTTP ${response.status} for ${year}Q${qtr}`);
       return null;
     }
 
@@ -76,26 +80,46 @@ async function fetchQCEWData(year: number, qtr: number, areaFips: string): Promi
       relax_column_count: true
     }) as QCEWRecord[];
 
+    console.log(`  Got ${records.length} records for ${year}Q${qtr}`);
     return records;
   } catch (error) {
-    console.warn(`  Error fetching ${areaFips}: ${error}`);
+    console.warn(`  Error fetching ${year}Q${qtr}: ${error}`);
     return null;
   }
 }
 
 /**
  * Extract total private employment from QCEW records
- * own_code 5 = Private, industry_code 10 = Total, all industries
+ * own_code 5 = Private sector
+ * Area FIPS codes: 5-digit for counties, CXXXXX format for MSAs
  */
-function extractPrivateEmployment(records: QCEWRecord[], areaCode: string, areaType: 'county' | 'metro'): EmploymentRecord[] {
+function extractPrivateEmployment(records: QCEWRecord[]): EmploymentRecord[] {
   const results: EmploymentRecord[] = [];
 
-  // Filter for Total Private (own_code=5, industry_code=10)
-  const privateTotal = records.filter(r =>
-    r.own_code === '5' && r.industry_code === '10'
-  );
+  // Filter for Private ownership (own_code=5)
+  const privateRecords = records.filter(r => r.own_code === '5');
 
-  for (const record of privateTotal) {
+  for (const record of privateRecords) {
+    const fips = record.area_fips;
+
+    // Determine area type
+    let areaType: 'county' | 'metro' | null = null;
+    let areaCode: string = fips;
+
+    if (fips.startsWith('C') && fips.length === 5) {
+      // CXXXX format = MSA code, needs trailing '0' to make 5-digit CBSA code
+      // E.g., C1018 -> CBSA 10180
+      areaType = 'metro';
+      areaCode = fips.slice(1) + '0'; // Remove 'C' prefix and add trailing 0
+    } else if (fips.length === 5 && !fips.startsWith('C')) {
+      // 5-digit code = county FIPS (but skip state-level codes ending in 000)
+      if (fips.endsWith('000')) continue;
+      areaType = 'county';
+    } else {
+      // Skip other area types (statewide, national, etc.)
+      continue;
+    }
+
     // QCEW provides monthly employment levels for each quarter
     // We'll use month3 (end of quarter) as the quarterly value
     const employment = parseInt(record.month3_emplvl);
@@ -115,172 +139,6 @@ function extractPrivateEmployment(records: QCEWRecord[], areaCode: string, areaT
   }
 
   return results;
-}
-
-/**
- * Get list of all US county FIPS codes from existing data
- */
-function getCountyFipsList(): string[] {
-  const countyPath = join(OUTPUT_DIR, 'fred_county_unemployment.csv');
-  if (!existsSync(countyPath)) {
-    console.log('County unemployment file not found. Using BEA county GDP file.');
-    const gdpPath = join(OUTPUT_DIR, 'bea_county_gdp.csv');
-    if (!existsSync(gdpPath)) {
-      throw new Error('No county reference file found. Run economic download first.');
-    }
-    const content = readFileSync(gdpPath, 'utf-8');
-    const rows = parse(content, { columns: true }) as Array<{ fips_code: string }>;
-    const fipsSet = new Set<string>();
-    for (const row of rows) {
-      if (row.fips_code && row.fips_code.length === 5) {
-        fipsSet.add(row.fips_code);
-      }
-    }
-    return Array.from(fipsSet).sort();
-  }
-
-  const content = readFileSync(countyPath, 'utf-8');
-  const rows = parse(content, { columns: true }) as Array<{ fips_code: string }>;
-  const fipsSet = new Set<string>();
-  for (const row of rows) {
-    if (row.fips_code && row.fips_code.length === 5) {
-      fipsSet.add(row.fips_code);
-    }
-  }
-  return Array.from(fipsSet).sort();
-}
-
-/**
- * Get list of all MSA CBSA codes from existing data
- */
-function getMetroCbsaList(): string[] {
-  const gdpPath = join(OUTPUT_DIR, 'bea_metro_gdp.csv');
-  if (!existsSync(gdpPath)) {
-    throw new Error('Metro GDP file not found. Run economic download first.');
-  }
-
-  const content = readFileSync(gdpPath, 'utf-8');
-  const rows = parse(content, { columns: true }) as Array<{ cbsa_code: string }>;
-  const cbsaSet = new Set<string>();
-  for (const row of rows) {
-    // Valid CBSA codes are 5 digits, not starting with 00
-    if (row.cbsa_code && row.cbsa_code.length === 5 && !row.cbsa_code.startsWith('00')) {
-      cbsaSet.add(row.cbsa_code);
-    }
-  }
-  return Array.from(cbsaSet).sort();
-}
-
-/**
- * Convert CBSA code to QCEW MSA area code format
- * QCEW uses format "CXXXX0" for MSAs where XXXX is the first 4 digits of CBSA
- */
-function cbsaToQcewMsa(cbsa: string): string {
-  // QCEW MSA codes are "CXXXXX" format - C followed by 5-digit CBSA code
-  return `C${cbsa}`;
-}
-
-/**
- * Download employment data for all counties
- */
-async function downloadCountyEmployment(startYear: number, endYear: number): Promise<EmploymentRecord[]> {
-  const counties = getCountyFipsList();
-  console.log(`\nDownloading county employment for ${counties.length} counties...`);
-
-  const allRecords: EmploymentRecord[] = [];
-  const currentYear = new Date().getFullYear();
-  const currentQtr = Math.ceil((new Date().getMonth() + 1) / 3);
-
-  // QCEW data is released ~6 months after quarter end
-  // Only fetch quarters that should have data available
-  const quarters: Array<{ year: number; qtr: number }> = [];
-  for (let year = startYear; year <= endYear; year++) {
-    for (let qtr = 1; qtr <= 4; qtr++) {
-      // Skip future quarters
-      if (year === currentYear && qtr >= currentQtr) continue;
-      // Skip quarters less than 6 months old (data not yet available)
-      const monthsAgo = (currentYear - year) * 12 + (currentQtr * 3 - qtr * 3);
-      if (monthsAgo < 6) continue;
-      quarters.push({ year, qtr });
-    }
-  }
-
-  console.log(`  Fetching ${quarters.length} quarters of data`);
-
-  // Process in batches to avoid overwhelming the API
-  for (let i = 0; i < counties.length; i += BATCH_SIZE) {
-    const batch = counties.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(counties.length / BATCH_SIZE);
-
-    console.log(`  Processing county batch ${batchNum}/${totalBatches} (${batch[0]} - ${batch[batch.length - 1]})`);
-
-    for (const fips of batch) {
-      // For efficiency, we'll fetch the most recent year's data
-      // The bulk files are better for historical data
-      const recentYear = endYear;
-      for (const { year, qtr } of quarters.filter(q => q.year >= recentYear - 1)) {
-        const records = await fetchQCEWData(year, qtr, fips);
-        if (records) {
-          const employment = extractPrivateEmployment(records, fips, 'county');
-          allRecords.push(...employment);
-        }
-        await sleep(DELAY_MS);
-      }
-    }
-  }
-
-  console.log(`  Downloaded ${allRecords.length} county employment records`);
-  return allRecords;
-}
-
-/**
- * Download employment data for all metros
- */
-async function downloadMetroEmployment(startYear: number, endYear: number): Promise<EmploymentRecord[]> {
-  const metros = getMetroCbsaList();
-  console.log(`\nDownloading metro employment for ${metros.length} metros...`);
-
-  const allRecords: EmploymentRecord[] = [];
-  const currentYear = new Date().getFullYear();
-  const currentQtr = Math.ceil((new Date().getMonth() + 1) / 3);
-
-  // Build list of quarters to fetch
-  const quarters: Array<{ year: number; qtr: number }> = [];
-  for (let year = startYear; year <= endYear; year++) {
-    for (let qtr = 1; qtr <= 4; qtr++) {
-      if (year === currentYear && qtr >= currentQtr) continue;
-      const monthsAgo = (currentYear - year) * 12 + (currentQtr * 3 - qtr * 3);
-      if (monthsAgo < 6) continue;
-      quarters.push({ year, qtr });
-    }
-  }
-
-  console.log(`  Fetching ${quarters.length} quarters of data`);
-
-  for (let i = 0; i < metros.length; i += BATCH_SIZE) {
-    const batch = metros.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(metros.length / BATCH_SIZE);
-
-    console.log(`  Processing metro batch ${batchNum}/${totalBatches}`);
-
-    for (const cbsa of batch) {
-      const qcewCode = cbsaToQcewMsa(cbsa);
-
-      for (const { year, qtr } of quarters) {
-        const records = await fetchQCEWData(year, qtr, qcewCode);
-        if (records) {
-          const employment = extractPrivateEmployment(records, cbsa, 'metro');
-          allRecords.push(...employment);
-        }
-        await sleep(DELAY_MS);
-      }
-    }
-  }
-
-  console.log(`  Downloaded ${allRecords.length} metro employment records`);
-  return allRecords;
 }
 
 /**
@@ -331,7 +189,10 @@ function calculateEmploymentYoY(records: EmploymentRecord[]): Array<{
 /**
  * Save to CSV files
  */
-function saveResults(countyData: ReturnType<typeof calculateEmploymentYoY>, metroData: ReturnType<typeof calculateEmploymentYoY>): void {
+function saveResults(
+  countyData: ReturnType<typeof calculateEmploymentYoY>,
+  metroData: ReturnType<typeof calculateEmploymentYoY>
+): void {
   if (!existsSync(OUTPUT_DIR)) {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
@@ -379,25 +240,63 @@ function saveResults(countyData: ReturnType<typeof calculateEmploymentYoY>, metr
 
 async function main() {
   console.log('='.repeat(60));
-  console.log('BLS QCEW Employment Data Download');
+  console.log('BLS QCEW Employment Data Download (Efficient Bulk Method)');
   console.log('='.repeat(60));
 
   const currentYear = new Date().getFullYear();
-  // Download last 10 years for historical data, or can be configured
+  const currentQtr = Math.ceil((new Date().getMonth() + 1) / 3);
+
+  // Download last 10 years for historical data
   const startYear = currentYear - 10;
   const endYear = currentYear;
 
   console.log(`\nDownloading data from ${startYear} to ${endYear}`);
-  console.log('Note: QCEW data is released ~6 months after quarter end\n');
+  console.log('Note: QCEW data is released ~6 months after quarter end');
+  console.log('Using industry slice method (all areas per file)\n');
+
+  // Build list of quarters to fetch
+  const quarters: Array<{ year: number; qtr: number }> = [];
+  for (let year = startYear; year <= endYear; year++) {
+    for (let qtr = 1; qtr <= 4; qtr++) {
+      // Skip future quarters
+      if (year === currentYear && qtr >= currentQtr) continue;
+      // Skip quarters less than 6 months old (data not yet available)
+      const monthsAgo = (currentYear - year) * 12 + (currentQtr * 3 - qtr * 3);
+      if (monthsAgo < 6) continue;
+      quarters.push({ year, qtr });
+    }
+  }
+
+  console.log(`Fetching ${quarters.length} quarters of data\n`);
+
+  const allCountyRecords: EmploymentRecord[] = [];
+  const allMetroRecords: EmploymentRecord[] = [];
 
   try {
-    // Download metro data (smaller, faster)
-    const metroRecords = await downloadMetroEmployment(startYear, endYear);
-    const metroWithYoY = calculateEmploymentYoY(metroRecords);
+    // Fetch industry 10 (Total, all industries) for each quarter
+    for (const { year, qtr } of quarters) {
+      const records = await fetchQCEWIndustrySlice(year, qtr, '10');
+      if (records) {
+        const employment = extractPrivateEmployment(records);
 
-    // Download county data (larger, takes longer)
-    const countyRecords = await downloadCountyEmployment(startYear, endYear);
-    const countyWithYoY = calculateEmploymentYoY(countyRecords);
+        // Separate county and metro records
+        for (const record of employment) {
+          if (record.area_type === 'county') {
+            allCountyRecords.push(record);
+          } else if (record.area_type === 'metro') {
+            allMetroRecords.push(record);
+          }
+        }
+      }
+      await sleep(DELAY_MS);
+    }
+
+    console.log(`\nTotal county records: ${allCountyRecords.length}`);
+    console.log(`Total metro records: ${allMetroRecords.length}`);
+
+    // Calculate YoY growth
+    const countyWithYoY = calculateEmploymentYoY(allCountyRecords);
+    const metroWithYoY = calculateEmploymentYoY(allMetroRecords);
 
     // Save results
     saveResults(countyWithYoY, metroWithYoY);

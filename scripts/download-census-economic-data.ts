@@ -28,7 +28,8 @@ import {
 } from './census-economic-import/api-clients';
 import { STATE_FIPS_TO_ABBREV, STATE_FIPS_TO_NAME } from './census-economic-import/types';
 
-const OUTPUT_DIR = join(__dirname, '../data/economic');
+// Use process.cwd() for compatibility with both CommonJS and ES modules
+const OUTPUT_DIR = join(process.cwd(), 'data/economic');
 
 // Ensure output directory exists
 if (!existsSync(OUTPUT_DIR)) {

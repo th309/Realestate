@@ -10,9 +10,10 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
-import { STATE_FIPS_TO_NAME, STATE_FIPS_TO_ABBREV } from './census-economic-import/types';
+import { STATE_FIPS_TO_NAME, STATE_FIPS_TO_ABBREV } from './census-economic-import/types.js';
 
-const DATA_DIR = join(__dirname, '../data/economic');
+// Use process.cwd() for compatibility with both CommonJS and ES modules
+const DATA_DIR = join(process.cwd(), 'data/economic');
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -459,8 +460,8 @@ function combineMetroData(): void {
     });
   }
 
-  // Add employment records not covered by unemployment
-  for (const row of employment) {
+  // Add employment records not covered by unemployment (from QCEW data)
+  for (const row of qcewEmployment) {
     const key = `${row.period_date}|${row.cbsa_code}`;
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);
