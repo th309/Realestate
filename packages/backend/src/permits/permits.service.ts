@@ -227,7 +227,7 @@ export class PermitsService {
     const national = permitsData[0];
 
     const valuePerUnit = national.total_value && national.total_units && national.total_units > 0
-      ? national.total_value / national.total_units
+      ? Math.round(national.total_value / national.total_units)
       : null;
 
     return {
@@ -496,7 +496,7 @@ export class PermitsService {
         const totalValue = toMetricValue(row.total_value);
         const totalUnits = calculateTotalUnits(row);
         const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
-          ? totalValue / totalUnits
+          ? Math.round(totalValue / totalUnits)
           : null;
 
         return {
@@ -549,7 +549,7 @@ export class PermitsService {
       const totalValue = toMetricValue(row.total_value);
       const totalUnits = calculateTotalUnits(row);
       const valuePerUnit = totalValue !== null && totalUnits !== null && totalUnits > 0
-        ? totalValue / totalUnits
+        ? Math.round(totalValue / totalUnits)
         : null;
 
       return {
