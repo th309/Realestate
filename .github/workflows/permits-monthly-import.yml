@@ -1,0 +1,275 @@
+name: Building Permits Data Monthly Import
+
+on:
+  # Run on the 22nd of every month at 6:00 AM UTC
+  # Census BPS data has 1-2 month lag, so this timing allows for data availability
+  schedule:
+    - cron: '0 6 22 * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Specific year to download (leave empty for current year)'
+        required: false
+        default: ''
+        type: string
+      full_history:
+        description: 'Download full history (2015-present) instead of incremental'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  import-permits-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Building Permits Data
+        id: download
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+        run: |
+          echo "=============================================="
+          echo "Building Permits Data Download - $(date)"
+          echo "=============================================="
+
+          # Determine download parameters
+          if [ "${{ github.event.inputs.full_history }}" == "true" ]; then
+            echo "Downloading full history (2015-present)..."
+            npx tsx scripts/download-building-permits.ts 2>&1 | tee download-output.txt
+          elif [ -n "${{ github.event.inputs.year }}" ]; then
+            echo "Downloading specific year: ${{ github.event.inputs.year }}..."
+            npx tsx scripts/download-building-permits.ts --year=${{ github.event.inputs.year }} 2>&1 | tee download-output.txt
+          else
+            # For scheduled runs, download current and previous year to catch any revisions
+            CURRENT_YEAR=$(date +%Y)
+            PREV_YEAR=$((CURRENT_YEAR - 1))
+            echo "Downloading incremental data: ${PREV_YEAR}-${CURRENT_YEAR}..."
+            npx tsx scripts/download-building-permits.ts --start-year=${PREV_YEAR} --end-year=${CURRENT_YEAR} 2>&1 | tee download-output.txt
+          fi
+
+          # Check for errors
+          if grep -q "Error:" download-output.txt; then
+            echo "download_status=error" >> $GITHUB_OUTPUT
+          else
+            echo "download_status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Import Building Permits to Database
+        id: import
+        if: steps.download.outputs.download_status == 'success'
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+        run: |
+          echo ""
+          echo "=============================================="
+          echo "Importing Building Permits to Database"
+          echo "=============================================="
+
+          # Import county permits
+          echo ""
+          echo ">>> Importing County permits..."
+          npx tsx scripts/import-building-permits.ts --geo=county 2>&1 | tee -a import-output.txt
+
+          # Import state permits
+          echo ""
+          echo ">>> Importing State permits..."
+          npx tsx scripts/import-building-permits.ts --geo=state 2>&1 | tee -a import-output.txt
+
+          # Check for failures
+          if grep -q "Completed with errors" import-output.txt; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+            echo "::warning::Import completed with errors"
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Backfill YoY Data
+        if: steps.import.outputs.has_failures != 'true' && steps.download.outputs.download_status == 'success'
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+        run: |
+          echo ""
+          echo ">>> Backfilling YoY data for any null values..."
+          if [ -f "scripts/backfill-permits-total-units.ts" ]; then
+            npx tsx scripts/backfill-permits-total-units.ts 2>&1 | tee -a import-output.txt
+          fi
+
+      - name: Trigger Post-Import Refresh
+        if: success() && steps.import.outputs.has_failures != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'post-import-refresh.yml',
+                ref: 'main',
+                inputs: {
+                  trigger_source: 'permits-import'
+                }
+              });
+              console.log('Triggered post-import refresh workflow');
+            } catch (error) {
+              console.log('Could not trigger post-import refresh:', error.message);
+            }
+
+      - name: Upload Import Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: permits-import-log-${{ github.run_id }}
+          path: |
+            download-output.txt
+            import-output.txt
+          retention-days: 30
+
+    outputs:
+      has_failures: ${{ steps.import.outputs.has_failures }}
+      download_status: ${{ steps.download.outputs.download_status }}
+
+  notify-on-failure:
+    needs: import-permits-data
+    runs-on: ubuntu-latest
+    if: failure() || needs.import-permits-data.outputs.has_failures == 'true' || needs.import-permits-data.outputs.download_status == 'error'
+
+    steps:
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const downloadFailed = '${{ needs.import-permits-data.outputs.download_status }}' === 'error';
+            const importFailed = '${{ needs.import-permits-data.outputs.has_failures }}' === 'true';
+
+            let title, body;
+
+            if (downloadFailed) {
+              title = `Building Permits Download Failed - ${date}`;
+              body = [
+                '## Building Permits Data Download Failure',
+                '',
+                'The building permits data download from Census Bureau BPS failed.',
+                '',
+                `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                '',
+                `**Date:** ${date}`,
+                '',
+                '### Data Source',
+                '- U.S. Census Bureau Building Permits Survey (BPS)',
+                '- URL: https://www2.census.gov/econ/bps/',
+                '',
+                '### Possible Causes',
+                '1. Census Bureau website is down or changed URLs',
+                '2. Network connectivity issues',
+                '3. Data format changed',
+                '',
+                '### Action Required',
+                '1. Check if Census BPS website is accessible',
+                '2. Verify URL patterns have not changed',
+                '3. Check workflow logs for specific errors',
+                '4. Re-run workflow manually once resolved'
+              ].join('\n');
+            } else {
+              title = `Building Permits Import Failed - ${date}`;
+              body = [
+                '## Building Permits Data Import Failure',
+                '',
+                'The building permits data import to database failed.',
+                '',
+                `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                '',
+                `**Date:** ${date}`,
+                '',
+                '### Tables That Should Have Data',
+                '- permits_state (State-level building permits)',
+                '- permits_county (County-level building permits)',
+                '',
+                '### Metrics Imported',
+                '- Single-family: sf_buildings, sf_units, sf_value',
+                '- Duplex: duplex_buildings, duplex_units, duplex_value',
+                '- Small Multi (3-4 units): small_multi_buildings, small_multi_units, small_multi_value',
+                '- Large Multi (5+ units): large_multi_buildings, large_multi_units, large_multi_value',
+                '- Totals: total_buildings, total_units, total_value',
+                '- YoY: sf_units_yoy, total_units_yoy',
+                '',
+                '### Action Required',
+                '1. Check workflow logs for specific database errors',
+                '2. Verify Supabase credentials are valid',
+                '3. Check if table schema matches expected format',
+                '4. Re-run workflow manually once fixed'
+              ].join('\n');
+            }
+
+            // Check for existing open issue to avoid duplicates
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'data-import,automated',
+              state: 'open'
+            });
+
+            const hasExisting = existingIssues.some(issue =>
+              issue.title.includes('Building Permits') && issue.title.includes(date)
+            );
+
+            if (!hasExisting) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['bug', 'data-import', 'automated']
+              });
+              console.log('Created failure notification issue');
+            } else {
+              console.log('Issue already exists for today, skipping creation');
+            }
+
+  notify-on-success:
+    needs: import-permits-data
+    runs-on: ubuntu-latest
+    if: success() && needs.import-permits-data.outputs.has_failures != 'true' && needs.import-permits-data.outputs.download_status == 'success'
+
+    steps:
+      - name: Log Success
+        run: |
+          echo "=============================================="
+          echo "Building Permits Data Import Completed Successfully"
+          echo "Date: $(date)"
+          echo "=============================================="
+          echo "Data Source: U.S. Census Bureau Building Permits Survey (BPS)"
+          echo "URL: https://www2.census.gov/econ/bps/"
+          echo ""
+          echo "Data imported to:"
+          echo "  - permits_state (State-level building permits)"
+          echo "  - permits_county (County-level building permits)"
+          echo ""
+          echo "Metrics updated:"
+          echo "  - SF/Duplex/Small Multi/Large Multi buildings, units, value"
+          echo "  - Total buildings, units, value"
+          echo "  - Year-over-year growth rates"
+          echo ""
+          echo "Check Supabase dashboard to verify."

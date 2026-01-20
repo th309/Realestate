@@ -1,0 +1,186 @@
+name: HUD Fair Market Rent Annual Import
+
+on:
+  # Run on October 15th at 6:00 AM UTC
+  # HUD typically publishes new FY FMR data in September/October
+  schedule:
+    - cron: '0 6 15 10 *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      fiscal_year:
+        description: 'Fiscal Year to import (e.g., 2025)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  import-hud-fmr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download HUD FMR Data
+        id: download
+        run: |
+          echo "=============================================="
+          echo "HUD FMR Data Download - $(date)"
+          echo "=============================================="
+
+          if [ -n "${{ github.event.inputs.fiscal_year }}" ]; then
+            echo "Downloading FY${{ github.event.inputs.fiscal_year }}..."
+            npx tsx scripts/download-hud-fmr.ts --fy=${{ github.event.inputs.fiscal_year }} 2>&1 | tee download-output.txt
+          else
+            echo "Downloading latest FY..."
+            npx tsx scripts/download-hud-fmr.ts 2>&1 | tee download-output.txt
+          fi
+
+          if grep -q "SUCCESS" download-output.txt; then
+            echo "download_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "download_status=error" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Import HUD FMR to Database
+        id: import
+        if: steps.download.outputs.download_status == 'success'
+        env:
+          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
+          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+        run: |
+          echo ""
+          echo "=============================================="
+          echo "Importing HUD FMR to Database"
+          echo "=============================================="
+          npx tsx scripts/import-hud-fmr.ts 2>&1 | tee -a import-output.txt
+
+          if grep -q "import complete" import-output.txt; then
+            echo "import_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "import_status=error" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger Post-Import Refresh
+        if: steps.import.outputs.import_status == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'post-import-refresh.yml',
+              ref: 'main',
+              inputs: {
+                trigger_source: 'hud-fmr-import'
+              }
+            });
+            console.log('Triggered post-import refresh workflow');
+
+      - name: Upload Import Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hud-fmr-import-log-${{ github.run_id }}
+          path: |
+            download-output.txt
+            import-output.txt
+          retention-days: 30
+
+    outputs:
+      download_status: ${{ steps.download.outputs.download_status }}
+      import_status: ${{ steps.import.outputs.import_status }}
+
+  notify-on-failure:
+    needs: import-hud-fmr
+    runs-on: ubuntu-latest
+    if: failure() || needs.import-hud-fmr.outputs.download_status == 'error' || needs.import-hud-fmr.outputs.import_status == 'error'
+
+    steps:
+      - name: Create Issue on Failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+
+            const body = [
+              '## HUD FMR Data Import Failure',
+              '',
+              'The annual HUD Fair Market Rent data import failed.',
+              '',
+              `**Workflow Run:** [View Logs](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              `**Date:** ${date}`,
+              '',
+              '### Data Source',
+              '- HUD User Fair Market Rents',
+              '- URL: https://www.huduser.gov/portal/datasets/fmr.html',
+              '- Update Frequency: Annual (October for next fiscal year)',
+              '',
+              '### Tables Updated',
+              '- hud_fmr (County-level Fair Market Rents)',
+              '',
+              '### Action Required',
+              '1. Check if HUD has published new FMR data',
+              '2. Verify the download URL pattern is still valid',
+              '3. Manually download the Excel file if needed',
+              '4. Re-run the workflow once data is available'
+            ].join('\n');
+
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'data-import,automated',
+              state: 'open'
+            });
+
+            const hasExisting = existingIssues.some(issue =>
+              issue.title.includes('HUD FMR') && issue.title.includes(date)
+            );
+
+            if (!hasExisting) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `HUD FMR Import Failed - ${date}`,
+                body: body,
+                labels: ['bug', 'data-import', 'automated']
+              });
+            }
+
+  notify-on-success:
+    needs: import-hud-fmr
+    runs-on: ubuntu-latest
+    if: success() && needs.import-hud-fmr.outputs.import_status == 'success'
+
+    steps:
+      - name: Log Success
+        run: |
+          echo "=============================================="
+          echo "HUD FMR Data Import Completed Successfully"
+          echo "Date: $(date)"
+          echo "=============================================="
+          echo "Data Source: HUD Fair Market Rents"
+          echo "Table: hud_fmr"
+          echo ""
+          echo "Metrics updated:"
+          echo "  - fmr_0br, fmr_1br, fmr_2br, fmr_3br, fmr_4br"
+          echo "  - County-level coverage (100%)"
+          echo ""
+          echo "Post-import refresh triggered for:"
+          echo "  - Calculated metrics (cap_rate using HUD FMR)"
+          echo "  - PropertyIQ scores"

@@ -84,6 +84,26 @@ jobs:
             echo "has_failures=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Trigger Post-Import Refresh
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'post-import-refresh.yml',
+                ref: 'main',
+                inputs: {
+                  trigger_source: 'realtor-import'
+                }
+              });
+              console.log('Triggered post-import refresh workflow');
+            } catch (error) {
+              console.log('Could not trigger post-import refresh:', error.message);
+            }
+
       - name: Upload Import Log
         if: always()
         uses: actions/upload-artifact@v4
