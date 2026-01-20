@@ -10,16 +10,13 @@ export class PermitsController {
   // ============================================================================
 
   @Get('states')
-  async getStatePermits(@Query('metric') metric: string = 'sf_units') {
-    return this.permitsService.getStatePermits(metric);
+  async getStatePermits() {
+    return this.permitsService.getStatePermits();
   }
 
   @Get('counties')
-  async getCountyPermits(
-    @Query('metric') metric: string = 'sf_units',
-    @Query('state') state?: string,
-  ) {
-    return this.permitsService.getCountyPermits(metric, state);
+  async getCountyPermits(@Query('state') state?: string) {
+    return this.permitsService.getCountyPermits(state);
   }
 
   // ============================================================================

@@ -105,20 +105,27 @@ export class PermitsService {
   // State-Level Permits
   // ============================================================================
 
-  async getStatePermits(metric: string): Promise<{
+  async getStatePermits(): Promise<{
     success: boolean;
     count: number;
-    data: PermitsDataPoint[];
+    data: any[];
   }> {
-    const cacheKey = `permits_state:${metric}`;
+    const cacheKey = `permits_state:all`;
     const cached = this.getCached(cacheKey);
     if (cached) {
       const result = cached.map((row) => ({
         region_id: String(row.state_fips || ''),
         region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
-        value: toMetricValue(row[metric]),
         period_date: String(row.period_date || ''),
         state_fips: String(row.state_fips || ''),
+        // Include all metric fields for valueField extraction
+        sf_units: toMetricValue(row.sf_units),
+        large_multi_units: toMetricValue(row.large_multi_units),
+        total_units: toMetricValue(row.total_units),
+        total_units_yoy: toMetricValue(row.total_units_yoy),
+        sf_buildings: toMetricValue(row.sf_buildings),
+        total_buildings: toMetricValue(row.total_buildings),
+        total_value: toMetricValue(row.total_value),
       }));
       return { success: true, count: result.length, data: result };
     }
@@ -138,9 +145,16 @@ export class PermitsService {
     const result = rows.map((row) => ({
       region_id: String(row.state_fips || ''),
       region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
-      value: toMetricValue(row[metric]),
       period_date: String(row.period_date || ''),
       state_fips: String(row.state_fips || ''),
+      // Include all metric fields for valueField extraction
+      sf_units: toMetricValue(row.sf_units),
+      large_multi_units: toMetricValue(row.large_multi_units),
+      total_units: toMetricValue(row.total_units),
+      total_units_yoy: toMetricValue(row.total_units_yoy),
+      sf_buildings: toMetricValue(row.sf_buildings),
+      total_buildings: toMetricValue(row.total_buildings),
+      total_value: toMetricValue(row.total_value),
     }));
 
     return { success: true, count: result.length, data: result };
@@ -150,22 +164,29 @@ export class PermitsService {
   // County-Level Permits
   // ============================================================================
 
-  async getCountyPermits(metric: string, state?: string): Promise<{
+  async getCountyPermits(state?: string): Promise<{
     success: boolean;
     count: number;
-    data: PermitsDataPoint[];
+    data: any[];
   }> {
-    const cacheKey = `permits_county:${metric}:${state || 'all'}`;
+    const cacheKey = `permits_county:${state || 'all'}`;
     const cached = this.getCached(cacheKey);
     if (cached) {
       const result = cached.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
-        value: toMetricValue(row[metric]),
         period_date: String(row.period_date || ''),
         fips_code: String(row.fips_code || ''),
         county_fips: String(row.fips_code || ''),
         state_fips: String(row.state_fips || ''),
+        // Include all metric fields for valueField extraction
+        sf_units: toMetricValue(row.sf_units),
+        large_multi_units: toMetricValue(row.large_multi_units),
+        total_units: toMetricValue(row.total_units),
+        total_units_yoy: toMetricValue(row.total_units_yoy),
+        sf_buildings: toMetricValue(row.sf_buildings),
+        total_buildings: toMetricValue(row.total_buildings),
+        total_value: toMetricValue(row.total_value),
       }));
       return { success: true, count: result.length, data: result };
     }
@@ -192,11 +213,18 @@ export class PermitsService {
     const result = rows.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
-      value: toMetricValue(row[metric]),
       period_date: String(row.period_date || ''),
       fips_code: String(row.fips_code || ''),
       county_fips: String(row.fips_code || ''),
       state_fips: String(row.state_fips || ''),
+      // Include all metric fields for valueField extraction
+      sf_units: toMetricValue(row.sf_units),
+      large_multi_units: toMetricValue(row.large_multi_units),
+      total_units: toMetricValue(row.total_units),
+      total_units_yoy: toMetricValue(row.total_units_yoy),
+      sf_buildings: toMetricValue(row.sf_buildings),
+      total_buildings: toMetricValue(row.total_buildings),
+      total_value: toMetricValue(row.total_value),
     }));
 
     return { success: true, count: result.length, data: result };
