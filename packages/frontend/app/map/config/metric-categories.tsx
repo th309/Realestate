@@ -220,9 +220,17 @@ const NEW_CONSTRUCTION: MetricCategory = {
   subtext: 'What new homes are being built?',
   icon: <ConstructionIcon />,
   metrics: [
-    metric('new_construction_sales', { isNew: true }),
-    metric('new_construction_price', { isNew: true }),
-    metric('new_construction_ppsf', { isPremium: true, isNew: true }),
+    // Building Permits (Census BPS - state/county)
+    metric('sf_permits', { isNew: true }),
+    metric('mf_permits', { isNew: true }),
+    metric('total_permits', { isNew: true }),
+    metric('permits_yoy', { isNew: true }),
+    metric('sf_mf_ratio', { isPremium: true, isNew: true }),
+    metric('permit_value_per_unit', { isPremium: true, isNew: true }),
+    // New Construction Sales (Zillow - metro only)
+    metric('new_construction_sales'),
+    metric('new_construction_price'),
+    metric('new_construction_ppsf', { isPremium: true }),
   ],
 };
 

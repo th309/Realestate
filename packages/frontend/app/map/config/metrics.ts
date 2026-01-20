@@ -514,6 +514,75 @@ export const METRICS: Record<string, MetricConfig> = {
   },
 
   // ============================================================================
+  // BUILDING PERMITS (Census Bureau BPS - state/county)
+  // ============================================================================
+  sf_permits: {
+    id: 'sf_permits',
+    title: 'SF Permits',
+    format: 'number',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'sf_units',
+  },
+
+  mf_permits: {
+    id: 'mf_permits',
+    title: 'MF Permits',
+    format: 'number',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'large_multi_units',
+  },
+
+  total_permits: {
+    id: 'total_permits',
+    title: 'Total Permits',
+    format: 'number',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'total_units',
+  },
+
+  permits_yoy: {
+    id: 'permits_yoy',
+    title: 'Permits YoY',
+    format: 'percent',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'total_units_yoy',
+  },
+
+  sf_mf_ratio: {
+    id: 'sf_mf_ratio',
+    title: 'SF/MF Ratio',
+    format: 'percent_abs',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/sf-ratio/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'sf_ratio',
+  },
+
+  permit_value_per_unit: {
+    id: 'permit_value_per_unit',
+    title: 'Permit Value/Unit',
+    format: 'currency',
+    dataSource: 'census',
+    apiEndpoint: '/api/permits/value-per-unit/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['state', 'county'],
+    valueField: 'value_per_unit',
+  },
+
+  // ============================================================================
   // AREA PROFILE (Census)
   // ============================================================================
   population: {
