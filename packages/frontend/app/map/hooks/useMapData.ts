@@ -77,6 +77,13 @@ const CENSUS_METRICS = new Set([
   'income_growth',
   'median_age',
   'homeownership_rate',
+  // Building Permits (Census BPS)
+  'sf_permits',
+  'mf_permits',
+  'total_permits',
+  'permits_yoy',
+  'sf_mf_ratio',
+  'permit_value_per_unit',
 ]);
 
 const ECONOMIC_METRICS = new Set([
