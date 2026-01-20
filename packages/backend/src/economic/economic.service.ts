@@ -169,16 +169,27 @@ export class EconomicService {
     }
 
     // Use optimized database function to get only latest data per metro
-    const { data, error } = await this.supabase.rpc('get_latest_economic_metro', {
-      p_metric: metric,
-    });
+    // Paginate for consistency (369 metros should fit in one call, but be safe)
+    const allRows: EconomicRow[] = [];
+    const batchSize = 1000;
+    let offset = 0;
 
-    if (error) throw error;
+    while (true) {
+      const { data, error } = await this.supabase
+        .rpc('get_latest_economic_metro', { p_metric: metric })
+        .range(offset, offset + batchSize - 1);
 
-    const rows = (data || []) as EconomicRow[];
-    this.setCache(cacheKey, rows);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
 
-    return rows.map((row) => ({
+      allRows.push(...(data as EconomicRow[]));
+      if (data.length < batchSize) break;
+      offset += batchSize;
+    }
+
+    this.setCache(cacheKey, allRows);
+
+    return allRows.map((row) => ({
       region_id: String(row.cbsa_code || ''),
       region_name: String(row.cbsa_title || ''),
       value: toNumberOrNull(row.metric_value),
