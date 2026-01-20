@@ -242,19 +242,37 @@ export class EconomicService {
       }));
     }
 
-    // Fetch recent data to ensure we get latest per region
-    // For counties we need more data due to higher count (~3100 counties)
-    const { data, error } = await this.supabase
-      .from('economic_county')
-      .select('*')
-      .not(metric, 'is', null)
-      .order('period_date', { ascending: false })
-      .limit(80000); // ~3100 counties * 24 months + buffer
+    // Fetch data with pagination to ensure we get all counties
+    // Supabase has a default row limit, so we need to paginate
+    const PAGE_SIZE = 10000;
+    const allData: EconomicRow[] = [];
+    let offset = 0;
+    let hasMore = true;
 
-    if (error) throw error;
-    this.setCache(cacheKey, data as EconomicRow[]);
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('economic_county')
+        .select('*')
+        .not(metric, 'is', null)
+        .order('period_date', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    const latestRows = this.getLatestPerRegion(data as EconomicRow[], 'fips_code', metric);
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allData.push(...(data as EconomicRow[]));
+        offset += PAGE_SIZE;
+        // Stop if we got fewer rows than requested (no more data)
+        // or if we have enough data for all counties (~3100 * few years)
+        hasMore = data.length === PAGE_SIZE && allData.length < 80000;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    this.setCache(cacheKey, allData);
+
+    const latestRows = this.getLatestPerRegion(allData, 'fips_code', metric);
     return latestRows.map((row) => ({
       region_id: String(row.fips_code || ''),
       region_name: String(row.county_name || ''),
