@@ -22,10 +22,10 @@ function formatValue(value: number | null, format: MetricFormat): string {
     switch (format) {
         case 'currency':
             return value >= 1000000
-                ? `$${(value / 1000000).toFixed(2)}M`
+                ? `$${(value / 1000000).toFixed(1)}M`
                 : value >= 1000
                     ? `$${(value / 1000).toFixed(0)}K`
-                    : `$${value.toLocaleString()}`;
+                    : `$${Math.round(value).toLocaleString()}`;
         case 'percent':
         case 'percent_abs':
             return `${value.toFixed(1)}%`;

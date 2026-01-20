@@ -124,7 +124,7 @@ export function formatValue(
       } else if (value >= CURRENCY_SCALES.THOUSAND) {
         return '$' + Math.round(value / CURRENCY_SCALES.THOUSAND) + 'K' + suffix;
       }
-      return '$' + value.toLocaleString('en-US') + suffix;
+      return '$' + Math.round(value).toLocaleString('en-US') + suffix;
   }
 }
 
