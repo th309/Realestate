@@ -14,6 +14,10 @@
  * - BacktestRunnerService: Runs backtests comparing scores to outcomes
  * - ConfidenceCalculatorService: Calculates confidence scores
  * - AlertService: Manages confidence alerts
+ *
+ * Versioning services:
+ * - FormulaVersionService: Manages formula versions and rollback
+ * - ABTestService: Manages A/B tests for formula comparison
  */
 
 import { Module } from '@nestjs/common';
@@ -29,6 +33,8 @@ import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
 import { BacktestRunnerService } from './backtest/backtest-runner.service';
 import { ConfidenceCalculatorService } from './backtest/confidence-calculator.service';
 import { AlertService } from './backtest/alert.service';
+import { FormulaVersionService } from './versioning/formula-version.service';
+import { ABTestService } from './versioning/ab-test.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
@@ -47,6 +53,9 @@ import { SupabaseModule } from '../supabase/supabase.module';
     BacktestRunnerService,
     ConfidenceCalculatorService,
     AlertService,
+    // Versioning services
+    FormulaVersionService,
+    ABTestService,
   ],
   controllers: [ScoringController],
   exports: [
@@ -63,6 +72,9 @@ import { SupabaseModule } from '../supabase/supabase.module';
     BacktestRunnerService,
     ConfidenceCalculatorService,
     AlertService,
+    // Versioning services
+    FormulaVersionService,
+    ABTestService,
   ],
 })
 export class ScoringModule {}
