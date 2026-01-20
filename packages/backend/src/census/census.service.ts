@@ -321,18 +321,27 @@ export class CensusService {
     }
 
     // Use optimized database function to get only latest data per ZCTA
-    // This returns ~33,000 rows in a single query instead of 33+ paginated API calls
-    // Must set limit > 1000 (Supabase default) to get all ~33,000 US ZCTAs
-    const { data, error } = await this.supabase
-      .rpc('get_latest_census_zip', { p_metric: metric })
-      .limit(50000);
+    // Paginate RPC results since Supabase enforces 1000-row limit regardless of .limit()
+    const allRows: CensusRow[] = [];
+    const batchSize = 1000;
+    let offset = 0;
 
-    if (error) throw error;
+    while (true) {
+      const { data, error } = await this.supabase
+        .rpc('get_latest_census_zip', { p_metric: metric })
+        .range(offset, offset + batchSize - 1);
 
-    const rows = (data || []) as CensusRow[];
-    this.setCache(cacheKey, rows);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
 
-    return rows.map((row) => ({
+      allRows.push(...(data as CensusRow[]));
+      if (data.length < batchSize) break;
+      offset += batchSize;
+    }
+
+    this.setCache(cacheKey, allRows);
+
+    return allRows.map((row) => ({
       region_id: String(row.zcta || ''),
       region_name: String(row.zcta || ''),
       value: toMetricValue(row.metric_value),
