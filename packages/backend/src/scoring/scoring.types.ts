@@ -1,9 +1,10 @@
 /**
  * PropertyIQ Scoring Types
  *
- * Type definitions for the dual scoring system:
+ * Type definitions for the triple scoring system:
  * - HomeReady: For homebuyers and renters
  * - InvestorEdge: For real estate investors
+ * - Market Health Index: Overall market condition (free tier)
  */
 
 // ============================================================================
@@ -27,19 +28,28 @@ export interface MetricData {
 // ============================================================================
 
 export interface HomeReadyComponents {
-  affordability: number; // Can I afford to live here?
-  stability: number; // Is this market stable?
-  value: number; // Am I getting good value?
-  livability: number; // Is this a good place to live?
-  momentum: number; // Is the market trending favorably?
+  affordability: number; // Can I afford to live here? (30%)
+  market_timing: number; // Is it a good time to buy? (25%)
+  stability: number; // Is this market stable? (20%)
+  growth_potential: number; // Will value grow? (15%)
+  livability: number; // Is this a good place to live? (10%)
 }
 
 export const HOMEREADY_WEIGHTS: HomeReadyComponents = {
   affordability: 0.3,
-  stability: 0.25,
-  value: 0.2,
-  livability: 0.15,
-  momentum: 0.1,
+  market_timing: 0.25,
+  stability: 0.2,
+  growth_potential: 0.15,
+  livability: 0.1,
+};
+
+// Legacy alias for backwards compatibility
+export type HomeReadyComponentsLegacy = {
+  affordability: number;
+  stability: number;
+  value: number; // now market_timing
+  livability: number;
+  momentum: number; // now growth_potential
 };
 
 // Metrics that contribute to each HomeReady component
@@ -48,23 +58,33 @@ export const HOMEREADY_COMPONENT_METRICS: Record<
   string[]
 > = {
   affordability: [
+    'income_gap_ratio',
+    'years_to_save',
+    'rent_as_pct_of_income',
     'zhvi',
     'zori',
-    'zori_yoy',
-    'median_income',
-    'mortgage_rate_30y',
+  ],
+  market_timing: [
+    'price_reduced_share',
+    'median_days_on_market',
+    'months_of_supply',
+    'pending_listing_count_yy',
   ],
   stability: [
-    'inventory',
-    'inventory_yoy',
-    'months_supply',
-    'zhvi_volatility',
-    'vacancy_rate',
-    'homeownership_rate',
+    'volatility_36m',
+    'active_listing_count_yy',
+    'unemployment_rate',
   ],
-  value: ['sale_price', 'sale_price_yoy', 'sale_to_list', 'price_cuts', 'grm'],
-  livability: ['population', 'population_growth', 'unemployment_rate'],
-  momentum: ['zhvi_yoy', 'zhvi_mom', 'dom', 'pending_sales'],
+  growth_potential: [
+    'zhvi_5y_cagr',
+    'population_yoy',
+    'median_household_income_yoy',
+  ],
+  livability: [
+    'homeownership_rate',
+    'median_age',
+    'unemployment_rate',
+  ],
 };
 
 // ============================================================================
@@ -72,19 +92,28 @@ export const HOMEREADY_COMPONENT_METRICS: Record<
 // ============================================================================
 
 export interface InvestorEdgeComponents {
-  cashflow: number; // Can I generate positive cash flow?
-  growth: number; // Will property values appreciate?
-  demand: number; // Is there strong rental/buyer demand?
-  entrypoint: number; // Is this a good entry price?
-  risk: number; // What are the risks?
+  cash_flow: number; // Can I generate positive cash flow? (35%)
+  rent_demand: number; // Is there strong rental demand? (20%)
+  appreciation: number; // Will property values appreciate? (20%)
+  entry_point: number; // Is this a good entry price? (15%)
+  risk: number; // What are the risks? (10%)
 }
 
 export const INVESTOREDGE_WEIGHTS: InvestorEdgeComponents = {
-  cashflow: 0.3,
-  growth: 0.25,
-  demand: 0.2,
-  entrypoint: 0.15,
+  cash_flow: 0.35,
+  rent_demand: 0.2,
+  appreciation: 0.2,
+  entry_point: 0.15,
   risk: 0.1,
+};
+
+// Legacy alias for backwards compatibility
+export type InvestorEdgeComponentsLegacy = {
+  cashflow: number; // now cash_flow
+  growth: number; // now appreciation
+  demand: number; // now rent_demand
+  entrypoint: number; // now entry_point
+  risk: number;
 };
 
 // Metrics that contribute to each InvestorEdge component
@@ -92,27 +121,54 @@ export const INVESTOREDGE_COMPONENT_METRICS: Record<
   keyof InvestorEdgeComponents,
   string[]
 > = {
-  cashflow: ['zori', 'zori_yoy', 'grm', 'rent_yield', 'cap_rate_proxy'],
-  growth: [
-    'zhvi_yoy',
-    'sale_price_yoy',
-    'zhvi_3y_cagr',
-    'zhvi_5y_cagr',
-    'gdp_growth',
-    'zhvi_mom',
+  cash_flow: ['cap_rate', 'grm', 'gross_yield', 'rent_to_price_ratio'],
+  rent_demand: [
+    'zori_yoy',
+    'pending_ratio',
+    'median_days_on_market',
+    'renter_share',
   ],
-  demand: [
-    'inventory',
-    'inventory_yoy',
-    'dom',
-    'new_listings',
-    'pending_sales',
-    'sale_to_list',
-    'population_growth',
-    'months_supply',
+  appreciation: ['zhvi_5y_cagr', 'zhvi_yoy', 'population_yoy'],
+  entry_point: ['overvalued_pct', 'price_reduced_share', 'months_of_supply'],
+  risk: [
+    'volatility_36m',
+    'unemployment_rate',
+    'inventory_surplus_pct',
+    'large_multi_permits_yoy',
   ],
-  entrypoint: ['zhvi', 'sale_price', 'list_price', 'price_cuts'],
-  risk: ['zhvi_volatility', 'vacancy_rate', 'unemployment_rate'],
+};
+
+// ============================================================================
+// Market Health Index Components (FREE TIER)
+// ============================================================================
+
+export interface MarketHealthComponents {
+  demand_strength: number; // How strong is buyer demand? (35%)
+  supply_balance: number; // Is supply balanced? (25%)
+  price_stability: number; // Are prices stable? (25%)
+  economic_foundation: number; // Is the economy strong? (15%)
+}
+
+export const MARKET_HEALTH_WEIGHTS: MarketHealthComponents = {
+  demand_strength: 0.35,
+  supply_balance: 0.25,
+  price_stability: 0.25,
+  economic_foundation: 0.15,
+};
+
+// Metrics that contribute to each Market Health component
+export const MARKET_HEALTH_COMPONENT_METRICS: Record<
+  keyof MarketHealthComponents,
+  string[]
+> = {
+  demand_strength: ['pending_ratio', 'median_days_on_market', 'hotness_score'],
+  supply_balance: [
+    'months_of_supply',
+    'active_listing_count_yy',
+    'new_listing_count_yy',
+  ],
+  price_stability: ['price_reduced_share', 'sale_to_list_ratio', 'zhvi_yoy'],
+  economic_foundation: ['unemployment_rate', 'employment_yoy'],
 };
 
 // ============================================================================
@@ -135,13 +191,19 @@ export interface PropertyIQScore {
   stateCode: string | null;
   periodDate: string;
 
-  // HomeReady Score (0-100)
+  // Market Health Index (0-100) - FREE TIER
+  marketHealthScore: number | null;
+  marketHealthComponents: Record<keyof MarketHealthComponents, ComponentScore> | null;
+  marketHealthTrend: 'up' | 'down' | 'stable';
+  marketHealthTrendChange: number;
+
+  // HomeReady Score (0-100) - PRO TIER
   homereadyScore: number;
   homereadyComponents: Record<keyof HomeReadyComponents, ComponentScore>;
   homereadyTrend: 'up' | 'down' | 'stable';
   homereadyTrendChange: number;
 
-  // InvestorEdge Score (0-100)
+  // InvestorEdge Score (0-100) - PRO TIER
   investoredgeScore: number;
   investoredgeComponents: Record<keyof InvestorEdgeComponents, ComponentScore>;
   investoredgeTrend: 'up' | 'down' | 'stable';
@@ -152,6 +214,10 @@ export interface PropertyIQScore {
   metricsAvailable: number;
   metricsTotal: number;
   dataFreshnessDays: number;
+
+  // Data completeness tracking
+  dataCompleteness: number; // 0-100 percentage
+  inheritedMetrics: Record<string, string>; // metric_name -> source_geography_type
 
   calculatedAt: string;
   calculationVersion: string;
@@ -609,28 +675,347 @@ export const INVESTOREDGE_RISK_METRICS: MetricDefinition[] = [
   },
 ];
 
-// All HomeReady metrics organized by component
+// ============================================================================
+// NEW: Market Health Detailed Metrics
+// ============================================================================
+
+// Market Health: Demand Strength Component (35%)
+export const MARKET_HEALTH_DEMAND_STRENGTH_METRICS: MetricDefinition[] = [
+  {
+    name: 'pending_ratio',
+    direction: 'higher_better',
+    weight: 0.45,
+    nullStrategy: 'neutral',
+    description: 'Pending sales ratio',
+  },
+  {
+    name: 'median_days_on_market',
+    direction: 'lower_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Median days on market',
+  },
+  {
+    name: 'hotness_score',
+    direction: 'higher_better',
+    weight: 0.2,
+    nullStrategy: 'skip',
+    description: 'Market hotness score',
+  },
+];
+
+// Market Health: Supply Balance Component (25%)
+export const MARKET_HEALTH_SUPPLY_BALANCE_METRICS: MetricDefinition[] = [
+  {
+    name: 'months_of_supply',
+    direction: 'moderate_better',
+    weight: 0.4,
+    nullStrategy: 'neutral',
+    description: 'Months of supply (optimal: 4-6)',
+  },
+  {
+    name: 'active_listing_count_yy',
+    direction: 'moderate_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Active listing YoY change',
+  },
+  {
+    name: 'new_listing_count_yy',
+    direction: 'moderate_better',
+    weight: 0.25,
+    nullStrategy: 'skip',
+    description: 'New listing YoY change',
+  },
+];
+
+// Market Health: Price Stability Component (25%)
+export const MARKET_HEALTH_PRICE_STABILITY_METRICS: MetricDefinition[] = [
+  {
+    name: 'price_reduced_share',
+    direction: 'lower_better',
+    weight: 0.4,
+    nullStrategy: 'neutral',
+    description: 'Share of listings with price cuts',
+  },
+  {
+    name: 'sale_to_list_ratio',
+    direction: 'moderate_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Sale-to-list ratio (optimal: 0.97-1.03)',
+  },
+  {
+    name: 'zhvi_yoy',
+    direction: 'moderate_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'ZHVI YoY (optimal: 2-6%)',
+  },
+];
+
+// Market Health: Economic Foundation Component (15%)
+export const MARKET_HEALTH_ECONOMIC_FOUNDATION_METRICS: MetricDefinition[] = [
+  {
+    name: 'unemployment_rate',
+    direction: 'lower_better',
+    weight: 0.5,
+    nullStrategy: 'neutral',
+    description: 'Unemployment rate',
+  },
+  {
+    name: 'employment_yoy',
+    direction: 'higher_better',
+    weight: 0.5,
+    nullStrategy: 'skip',
+    description: 'Employment YoY growth',
+  },
+];
+
+// All Market Health metrics organized by component
+export const MARKET_HEALTH_DETAILED_METRICS: Record<
+  keyof MarketHealthComponents,
+  MetricDefinition[]
+> = {
+  demand_strength: MARKET_HEALTH_DEMAND_STRENGTH_METRICS,
+  supply_balance: MARKET_HEALTH_SUPPLY_BALANCE_METRICS,
+  price_stability: MARKET_HEALTH_PRICE_STABILITY_METRICS,
+  economic_foundation: MARKET_HEALTH_ECONOMIC_FOUNDATION_METRICS,
+};
+
+// ============================================================================
+// NEW: HomeReady Detailed Metrics (Updated Component Names)
+// ============================================================================
+
+// HomeReady: Market Timing Component (25%) - formerly "value"
+export const HOMEREADY_MARKET_TIMING_METRICS: MetricDefinition[] = [
+  {
+    name: 'price_reduced_share',
+    direction: 'higher_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Price cuts = buying opportunity',
+  },
+  {
+    name: 'median_days_on_market',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'DOM = negotiation leverage',
+  },
+  {
+    name: 'months_of_supply',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'Supply = buyer power',
+  },
+  {
+    name: 'pending_listing_count_yy',
+    direction: 'lower_better',
+    weight: 0.15,
+    nullStrategy: 'skip',
+    description: 'Pending YoY (lower = less competition)',
+  },
+];
+
+// HomeReady: Growth Potential Component (15%) - formerly "momentum"
+export const HOMEREADY_GROWTH_POTENTIAL_METRICS: MetricDefinition[] = [
+  {
+    name: 'zhvi_5y_cagr',
+    direction: 'higher_better',
+    weight: 0.45,
+    nullStrategy: 'neutral',
+    description: '5-year price CAGR',
+  },
+  {
+    name: 'population_yoy',
+    direction: 'higher_better',
+    weight: 0.3,
+    nullStrategy: 'skip',
+    description: 'Population growth',
+  },
+  {
+    name: 'median_household_income_yoy',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'skip',
+    description: 'Income growth',
+  },
+];
+
+// All HomeReady metrics organized by component (UPDATED)
 export const HOMEREADY_DETAILED_METRICS: Record<
   keyof HomeReadyComponents,
   MetricDefinition[]
 > = {
   affordability: HOMEREADY_AFFORDABILITY_METRICS,
+  market_timing: HOMEREADY_MARKET_TIMING_METRICS,
   stability: HOMEREADY_STABILITY_METRICS,
-  value: HOMEREADY_VALUE_METRICS,
+  growth_potential: HOMEREADY_GROWTH_POTENTIAL_METRICS,
   livability: HOMEREADY_LIVABILITY_METRICS,
-  momentum: HOMEREADY_MOMENTUM_METRICS,
 };
 
-// All InvestorEdge metrics organized by component
+// ============================================================================
+// NEW: InvestorEdge Detailed Metrics (Updated Component Names)
+// ============================================================================
+
+// InvestorEdge: Cash Flow Component (35%) - formerly "cashflow"
+export const INVESTOREDGE_CASH_FLOW_METRICS: MetricDefinition[] = [
+  {
+    name: 'cap_rate',
+    direction: 'higher_better',
+    weight: 0.35,
+    nullStrategy: 'penalize',
+    description: 'Cap rate',
+  },
+  {
+    name: 'grm',
+    direction: 'lower_better',
+    weight: 0.25,
+    nullStrategy: 'penalize',
+    description: 'Gross rent multiplier',
+  },
+  {
+    name: 'gross_yield',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'Gross rent yield',
+  },
+  {
+    name: 'rent_to_price_ratio',
+    direction: 'higher_better',
+    weight: 0.15,
+    nullStrategy: 'neutral',
+    description: 'Monthly rent / price ratio',
+  },
+];
+
+// InvestorEdge: Rent Demand Component (20%) - formerly "demand"
+export const INVESTOREDGE_RENT_DEMAND_METRICS: MetricDefinition[] = [
+  {
+    name: 'zori_yoy',
+    direction: 'higher_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Rent growth YoY',
+  },
+  {
+    name: 'pending_ratio',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'Pending sales ratio',
+  },
+  {
+    name: 'median_days_on_market',
+    direction: 'lower_better',
+    weight: 0.2,
+    nullStrategy: 'neutral',
+    description: 'Days on market',
+  },
+  {
+    name: 'renter_share',
+    direction: 'higher_better',
+    weight: 0.2,
+    nullStrategy: 'skip',
+    description: 'Renter household share',
+  },
+];
+
+// InvestorEdge: Appreciation Component (20%) - formerly "growth"
+export const INVESTOREDGE_APPRECIATION_METRICS: MetricDefinition[] = [
+  {
+    name: 'zhvi_5y_cagr',
+    direction: 'higher_better',
+    weight: 0.4,
+    nullStrategy: 'neutral',
+    description: '5-year price CAGR',
+  },
+  {
+    name: 'zhvi_yoy',
+    direction: 'higher_better',
+    weight: 0.3,
+    nullStrategy: 'neutral',
+    description: 'Price appreciation YoY',
+  },
+  {
+    name: 'population_yoy',
+    direction: 'higher_better',
+    weight: 0.3,
+    nullStrategy: 'skip',
+    description: 'Population growth',
+  },
+];
+
+// InvestorEdge: Entry Point Component (15%) - formerly "entrypoint"
+export const INVESTOREDGE_ENTRY_POINT_METRICS: MetricDefinition[] = [
+  {
+    name: 'overvalued_pct',
+    direction: 'lower_better',
+    weight: 0.4,
+    nullStrategy: 'neutral',
+    description: 'Overvalued percentage (negative = undervalued)',
+  },
+  {
+    name: 'price_reduced_share',
+    direction: 'higher_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: 'Price cut opportunity',
+  },
+  {
+    name: 'months_of_supply',
+    direction: 'higher_better',
+    weight: 0.25,
+    nullStrategy: 'neutral',
+    description: 'Months of supply',
+  },
+];
+
+// InvestorEdge: Risk Component (10%) - updated metrics
+export const INVESTOREDGE_RISK_METRICS_NEW: MetricDefinition[] = [
+  {
+    name: 'volatility_36m',
+    direction: 'lower_better',
+    weight: 0.35,
+    nullStrategy: 'neutral',
+    description: '36-month price volatility',
+  },
+  {
+    name: 'unemployment_rate',
+    direction: 'lower_better',
+    weight: 0.3,
+    nullStrategy: 'neutral',
+    description: 'Unemployment rate',
+  },
+  {
+    name: 'inventory_surplus_pct',
+    direction: 'lower_better',
+    weight: 0.2,
+    nullStrategy: 'skip',
+    description: 'Inventory surplus percentage',
+  },
+  {
+    name: 'large_multi_permits_yoy',
+    direction: 'lower_better',
+    weight: 0.15,
+    nullStrategy: 'skip',
+    description: 'Large multifamily permits YoY (competition risk)',
+  },
+];
+
+// All InvestorEdge metrics organized by component (UPDATED)
 export const INVESTOREDGE_DETAILED_METRICS: Record<
   keyof InvestorEdgeComponents,
   MetricDefinition[]
 > = {
-  cashflow: INVESTOREDGE_CASHFLOW_METRICS,
-  growth: INVESTOREDGE_GROWTH_METRICS,
-  demand: INVESTOREDGE_DEMAND_METRICS,
-  entrypoint: INVESTOREDGE_ENTRYPOINT_METRICS,
-  risk: INVESTOREDGE_RISK_METRICS,
+  cash_flow: INVESTOREDGE_CASH_FLOW_METRICS,
+  rent_demand: INVESTOREDGE_RENT_DEMAND_METRICS,
+  appreciation: INVESTOREDGE_APPRECIATION_METRICS,
+  entry_point: INVESTOREDGE_ENTRY_POINT_METRICS,
+  risk: INVESTOREDGE_RISK_METRICS_NEW,
 };
 
 // ============================================================================
@@ -638,8 +1023,8 @@ export const INVESTOREDGE_DETAILED_METRICS: Record<
 // ============================================================================
 
 export const SCORING_CONSTANTS = {
-  // Trend calculation period (months)
-  TREND_MONTHS: 6,
+  // Trend calculation period (months) - changed from 6 to 3
+  TREND_MONTHS: 3,
 
   // Trend threshold for classification (points)
   TREND_THRESHOLD: 2,
@@ -659,4 +1044,27 @@ export const SCORING_CONSTANTS = {
 
   // Moderate value target percentile (for moderate_better direction)
   MODERATE_TARGET_PERCENTILE: 50,
+
+  // Data completeness thresholds
+  SCORE_AVAILABLE_MIN_COMPLETENESS: 50, // Score unavailable if <50% metrics
+  PARTIAL_SCORE_THRESHOLD: 100, // Show "partial" note if <100%
+};
+
+// ============================================================================
+// Access Control Types
+// ============================================================================
+
+export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
+export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
+export type ScoreAccess = 'full' | 'teaser';
+
+export interface ScoreAccessConfig {
+  scoreType: ScoreType;
+  requiredTier: UserTier[];
+}
+
+export const SCORE_ACCESS_CONFIG: Record<ScoreType, UserTier[]> = {
+  market_health: ['free', 'basic', 'pro', 'enterprise'], // Available to all
+  homeready: ['pro', 'enterprise'], // Pro+ only
+  investoredge: ['pro', 'enterprise'], // Pro+ only
 };

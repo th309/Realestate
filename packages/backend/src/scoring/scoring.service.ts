@@ -1,16 +1,18 @@
 /**
  * PropertyIQ Scoring Service
  *
- * Calculates dual scores for real estate markets:
- * - HomeReady: For homebuyers and renters (affordability, stability, value, livability, momentum)
- * - InvestorEdge: For investors (cashflow, growth, demand, entrypoint, risk)
+ * Calculates triple scores for real estate markets:
+ * - Market Health: Free tier (demand_strength, supply_balance, price_stability, economic_foundation)
+ * - HomeReady: Pro tier (affordability, market_timing, stability, growth_potential, livability)
+ * - InvestorEdge: Pro tier (cash_flow, rent_demand, appreciation, entry_point, risk)
  *
  * Scoring methodology:
- * 1. Fetch raw metrics for a geography/date
+ * 1. Fetch raw metrics for a geography/date with inheritance fallback
  * 2. Calculate derived metrics (GRM, YoY changes, volatility)
- * 3. Normalize metrics to percentiles (0-100 scale)
+ * 3. Normalize metrics using min-max, percentile, or optimal range
  * 4. Weight and combine into component scores
  * 5. Aggregate components into final scores
+ * 6. Track data completeness and inherited metrics
  */
 
 import { Injectable, Inject } from '@nestjs/common';
@@ -22,23 +24,32 @@ import {
   PropertyIQScore,
   HomeReadyComponents,
   InvestorEdgeComponents,
+  MarketHealthComponents,
   ComponentScore,
   CalculatedMetrics,
   MetricPercentiles,
   MetricDefinition,
   HOMEREADY_WEIGHTS,
   INVESTOREDGE_WEIGHTS,
+  MARKET_HEALTH_WEIGHTS,
   HOMEREADY_DETAILED_METRICS,
   INVESTOREDGE_DETAILED_METRICS,
+  MARKET_HEALTH_DETAILED_METRICS,
   SCORING_CONSTANTS,
 } from './scoring.types';
+import { NormalizationService } from './normalization.service';
+import { InheritanceService, MetricWithSource } from './inheritance.service';
+import { MarketHealthService } from './market-health.service';
 
-const CALCULATION_VERSION = '1.0.0';
+const CALCULATION_VERSION = '2.0.0';
 
 @Injectable()
 export class ScoringService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly normalizationService: NormalizationService,
+    private readonly inheritanceService: InheritanceService,
+    private readonly marketHealthService: MarketHealthService,
   ) {}
 
   // ============================================================================
@@ -176,6 +187,33 @@ export class ScoringService {
       dataFreshnessDays,
     );
 
+    // Calculate Market Health score using the new service
+    const marketHealthMetrics = this.convertToMetricWithSource(allMetrics);
+    const marketHealthResult =
+      this.marketHealthService.calculateScore(marketHealthMetrics);
+
+    // Calculate Market Health trends
+    const {
+      marketHealthTrend,
+      marketHealthTrendChange,
+    } = await this.calculateMarketHealthTrends(
+      geographyId,
+      geographyType,
+      targetDate,
+      marketHealthResult.score,
+    );
+
+    // Track inherited metrics
+    const inheritedMetrics: Record<string, string> = {};
+    for (const [name, metric] of Object.entries(marketHealthMetrics)) {
+      if (metric.isInherited && metric.sourceGeographyType) {
+        inheritedMetrics[name] = metric.sourceGeographyType;
+      }
+    }
+
+    // Calculate data completeness
+    const dataCompleteness = marketHealthResult.completeness;
+
     const score: PropertyIQScore = {
       geographyId,
       geographyType,
@@ -183,11 +221,19 @@ export class ScoringService {
       stateCode: geography.state_code,
       periodDate: targetDate,
 
+      // Market Health (FREE TIER)
+      marketHealthScore: marketHealthResult.score,
+      marketHealthComponents: marketHealthResult.components,
+      marketHealthTrend,
+      marketHealthTrendChange,
+
+      // HomeReady (PRO TIER)
       homereadyScore,
       homereadyComponents,
       homereadyTrend,
       homereadyTrendChange,
 
+      // InvestorEdge (PRO TIER)
       investoredgeScore,
       investoredgeComponents,
       investoredgeTrend,
@@ -197,6 +243,10 @@ export class ScoringService {
       metricsAvailable,
       metricsTotal,
       dataFreshnessDays,
+
+      // New fields
+      dataCompleteness,
+      inheritedMetrics,
 
       calculatedAt: new Date().toISOString(),
       calculationVersion: CALCULATION_VERSION,
@@ -468,23 +518,23 @@ export class ScoringService {
         metrics,
         percentiles,
       ),
+      market_timing: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.market_timing,
+        metrics,
+        percentiles,
+      ),
       stability: this.calculateComponentWithDefinitions(
         HOMEREADY_DETAILED_METRICS.stability,
         metrics,
         percentiles,
       ),
-      value: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.value,
+      growth_potential: this.calculateComponentWithDefinitions(
+        HOMEREADY_DETAILED_METRICS.growth_potential,
         metrics,
         percentiles,
       ),
       livability: this.calculateComponentWithDefinitions(
         HOMEREADY_DETAILED_METRICS.livability,
-        metrics,
-        percentiles,
-      ),
-      momentum: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.momentum,
         metrics,
         percentiles,
       ),
@@ -498,23 +548,23 @@ export class ScoringService {
     percentiles: Map<string, MetricPercentiles>,
   ): Record<keyof InvestorEdgeComponents, ComponentScore> {
     const components: Record<keyof InvestorEdgeComponents, ComponentScore> = {
-      cashflow: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.cashflow,
+      cash_flow: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.cash_flow,
         metrics,
         percentiles,
       ),
-      growth: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.growth,
+      rent_demand: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.rent_demand,
         metrics,
         percentiles,
       ),
-      demand: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.demand,
+      appreciation: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.appreciation,
         metrics,
         percentiles,
       ),
-      entrypoint: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.entrypoint,
+      entry_point: this.calculateComponentWithDefinitions(
+        INVESTOREDGE_DETAILED_METRICS.entry_point,
         metrics,
         percentiles,
       ),
@@ -771,6 +821,74 @@ export class ScoringService {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
+  /**
+   * Convert MetricData to MetricWithSource format for MarketHealthService
+   */
+  private convertToMetricWithSource(
+    metrics: MetricData,
+  ): Record<string, MetricWithSource> {
+    const result: Record<string, MetricWithSource> = {};
+
+    for (const [name, metric] of Object.entries(metrics)) {
+      result[name] = {
+        value: metric.value,
+        sourceGeographyId: null,
+        sourceGeographyType: metric.source || null,
+        isInherited: false,
+      };
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculate Market Health trends (compare to 3 months ago)
+   */
+  private async calculateMarketHealthTrends(
+    geographyId: string,
+    geographyType: GeographyType,
+    currentDate: string,
+    currentScore: number | null,
+  ): Promise<{
+    marketHealthTrend: 'up' | 'down' | 'stable';
+    marketHealthTrendChange: number;
+  }> {
+    if (currentScore === null) {
+      return { marketHealthTrend: 'stable', marketHealthTrendChange: 0 };
+    }
+
+    // Get score from 3 months ago for trend calculation
+    const trendDate = this.getDateMonthsAgo(
+      currentDate,
+      SCORING_CONSTANTS.TREND_MONTHS,
+    );
+
+    const { data: previousScore } = await this.supabase
+      .from('propertyiq_scores')
+      .select('market_health_score')
+      .eq('geography_id', geographyId)
+      .eq('geography_type', geographyType)
+      .eq('period_date', trendDate)
+      .single();
+
+    let marketHealthTrend: 'up' | 'down' | 'stable' = 'stable';
+    let marketHealthTrendChange = 0;
+
+    if (previousScore?.market_health_score !== null && previousScore?.market_health_score !== undefined) {
+      marketHealthTrendChange = currentScore - previousScore.market_health_score;
+
+      const threshold = SCORING_CONSTANTS.TREND_THRESHOLD;
+      marketHealthTrend =
+        marketHealthTrendChange > threshold
+          ? 'up'
+          : marketHealthTrendChange < -threshold
+            ? 'down'
+            : 'stable';
+    }
+
+    return { marketHealthTrend, marketHealthTrendChange };
+  }
+
   // ============================================================================
   // Private: Database Operations
   // ============================================================================
@@ -784,28 +902,42 @@ export class ScoringService {
         state_code: score.stateCode,
         period_date: score.periodDate,
 
+        // Market Health (FREE TIER)
+        market_health_score: score.marketHealthScore,
+        market_health_demand_strength: score.marketHealthComponents?.demand_strength?.score ?? null,
+        market_health_supply_balance: score.marketHealthComponents?.supply_balance?.score ?? null,
+        market_health_price_stability: score.marketHealthComponents?.price_stability?.score ?? null,
+        market_health_economic_foundation: score.marketHealthComponents?.economic_foundation?.score ?? null,
+        market_health_trend: score.marketHealthTrend,
+        market_health_trend_change: score.marketHealthTrendChange,
+
+        // HomeReady (PRO TIER) - using new column names
         homeready_score: score.homereadyScore,
         homeready_affordability: score.homereadyComponents.affordability.score,
+        homeready_market_timing: score.homereadyComponents.market_timing.score,
         homeready_stability: score.homereadyComponents.stability.score,
-        homeready_value: score.homereadyComponents.value.score,
+        homeready_growth_potential: score.homereadyComponents.growth_potential.score,
         homeready_livability: score.homereadyComponents.livability.score,
-        homeready_momentum: score.homereadyComponents.momentum.score,
         homeready_trend: score.homereadyTrend,
         homeready_trend_change: score.homereadyTrendChange,
 
+        // InvestorEdge (PRO TIER) - using new column names
         investoredge_score: score.investoredgeScore,
-        investoredge_cashflow: score.investoredgeComponents.cashflow.score,
-        investoredge_growth: score.investoredgeComponents.growth.score,
-        investoredge_demand: score.investoredgeComponents.demand.score,
-        investoredge_entrypoint: score.investoredgeComponents.entrypoint.score,
+        investoredge_cash_flow: score.investoredgeComponents.cash_flow.score,
+        investoredge_rent_demand: score.investoredgeComponents.rent_demand.score,
+        investoredge_appreciation: score.investoredgeComponents.appreciation.score,
+        investoredge_entry_point: score.investoredgeComponents.entry_point.score,
         investoredge_risk: score.investoredgeComponents.risk.score,
         investoredge_trend: score.investoredgeTrend,
         investoredge_trend_change: score.investoredgeTrendChange,
 
+        // Confidence and completeness
         confidence_level: score.confidenceLevel,
         metrics_available: score.metricsAvailable,
         metrics_total: score.metricsTotal,
         data_freshness_days: score.dataFreshnessDays,
+        data_completeness: score.dataCompleteness,
+        inherited_metrics: score.inheritedMetrics,
 
         calculated_at: score.calculatedAt,
         calculation_version: score.calculationVersion,
@@ -882,11 +1014,59 @@ export class ScoringService {
       stateCode: data.state_code,
       periodDate: data.period_date,
 
+      // Market Health (FREE TIER)
+      marketHealthScore: data.market_health_score,
+      marketHealthComponents: data.market_health_score !== null ? {
+        demand_strength: {
+          score: data.market_health_demand_strength,
+          weight: MARKET_HEALTH_WEIGHTS.demand_strength,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        supply_balance: {
+          score: data.market_health_supply_balance,
+          weight: MARKET_HEALTH_WEIGHTS.supply_balance,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        price_stability: {
+          score: data.market_health_price_stability,
+          weight: MARKET_HEALTH_WEIGHTS.price_stability,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        economic_foundation: {
+          score: data.market_health_economic_foundation,
+          weight: MARKET_HEALTH_WEIGHTS.economic_foundation,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+      } : null,
+      marketHealthTrend: data.market_health_trend || 'stable',
+      marketHealthTrendChange: data.market_health_trend_change || 0,
+
+      // HomeReady (PRO TIER)
       homereadyScore: data.homeready_score,
       homereadyComponents: {
         affordability: {
           score: data.homeready_affordability,
           weight: HOMEREADY_WEIGHTS.affordability,
+          weightedContribution: 0,
+          metricsUsed: [],
+          helpingFactors: [],
+          hurtingFactors: [],
+        },
+        market_timing: {
+          score: data.homeready_market_timing,
+          weight: HOMEREADY_WEIGHTS.market_timing,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
@@ -900,9 +1080,9 @@ export class ScoringService {
           helpingFactors: [],
           hurtingFactors: [],
         },
-        value: {
-          score: data.homeready_value,
-          weight: HOMEREADY_WEIGHTS.value,
+        growth_potential: {
+          score: data.homeready_growth_potential,
+          weight: HOMEREADY_WEIGHTS.growth_potential,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
@@ -916,47 +1096,40 @@ export class ScoringService {
           helpingFactors: [],
           hurtingFactors: [],
         },
-        momentum: {
-          score: data.homeready_momentum,
-          weight: HOMEREADY_WEIGHTS.momentum,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
       },
       homereadyTrend: data.homeready_trend || 'stable',
       homereadyTrendChange: data.homeready_trend_change || 0,
 
+      // InvestorEdge (PRO TIER)
       investoredgeScore: data.investoredge_score,
       investoredgeComponents: {
-        cashflow: {
-          score: data.investoredge_cashflow,
-          weight: INVESTOREDGE_WEIGHTS.cashflow,
+        cash_flow: {
+          score: data.investoredge_cash_flow,
+          weight: INVESTOREDGE_WEIGHTS.cash_flow,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
           hurtingFactors: [],
         },
-        growth: {
-          score: data.investoredge_growth,
-          weight: INVESTOREDGE_WEIGHTS.growth,
+        rent_demand: {
+          score: data.investoredge_rent_demand,
+          weight: INVESTOREDGE_WEIGHTS.rent_demand,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
           hurtingFactors: [],
         },
-        demand: {
-          score: data.investoredge_demand,
-          weight: INVESTOREDGE_WEIGHTS.demand,
+        appreciation: {
+          score: data.investoredge_appreciation,
+          weight: INVESTOREDGE_WEIGHTS.appreciation,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
           hurtingFactors: [],
         },
-        entrypoint: {
-          score: data.investoredge_entrypoint,
-          weight: INVESTOREDGE_WEIGHTS.entrypoint,
+        entry_point: {
+          score: data.investoredge_entry_point,
+          weight: INVESTOREDGE_WEIGHTS.entry_point,
           weightedContribution: 0,
           metricsUsed: [],
           helpingFactors: [],
@@ -974,10 +1147,13 @@ export class ScoringService {
       investoredgeTrend: data.investoredge_trend || 'stable',
       investoredgeTrendChange: data.investoredge_trend_change || 0,
 
+      // Confidence and completeness
       confidenceLevel: data.confidence_level,
       metricsAvailable: data.metrics_available,
       metricsTotal: data.metrics_total,
       dataFreshnessDays: data.data_freshness_days,
+      dataCompleteness: data.data_completeness || 0,
+      inheritedMetrics: data.inherited_metrics || {},
 
       calculatedAt: data.calculated_at,
       calculationVersion: data.calculation_version,

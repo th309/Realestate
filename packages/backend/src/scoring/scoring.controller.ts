@@ -2,6 +2,10 @@
  * PropertyIQ Scoring Controller
  *
  * API endpoints for PropertyIQ score calculation and retrieval.
+ * Supports three score types:
+ * - Market Health Index (free tier - available to all users)
+ * - HomeReady Score (pro tier - requires upgrade for free/basic users)
+ * - InvestorEdge Score (pro tier - requires upgrade for free/basic users)
  */
 
 import {
@@ -10,30 +14,122 @@ import {
   Post,
   Param,
   Query,
+  Headers,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import { ScoringService } from './scoring.service';
 import { PercentileService } from './percentile.service';
-import { GeographyType } from './scoring.types';
+import { ScoreAccessService, getScoreAccess } from './scoring.guard';
+import {
+  GeographyType,
+  ScoreType,
+  UserTier,
+  PropertyIQScore,
+  ComponentScore,
+  MARKET_HEALTH_WEIGHTS,
+  HOMEREADY_WEIGHTS,
+  INVESTOREDGE_WEIGHTS,
+} from './scoring.types';
+import {
+  ScoreBadgeResponseDto,
+  ScoreCardResponseDto,
+  ScoreTeaserResponseDto,
+  AllScoresResponseDto,
+  ComponentDetailDto,
+  ConfidenceDto,
+  LockedComponentDto,
+  getScoreLabel,
+  getComponentLabel,
+  getComponentDescription,
+  createUpgradeCta,
+} from './dto/score-response.dto';
 
+@ApiTags('scoring')
 @Controller('scoring')
 export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
     private readonly percentileService: PercentileService,
+    private readonly scoreAccessService: ScoreAccessService,
   ) {}
 
   /**
-   * Get PropertyIQ score for a specific geography
+   * Get PropertyIQ scores for a specific geography
    *
    * GET /scoring/:geographyType/:geographyId
-   * Query params:
-   *   - periodDate: Optional date (YYYY-MM-DD), defaults to latest
-   *   - recalculate: If true, forces recalculation instead of using cached score
+   * Returns all three scores with access control based on user tier
    */
   @Get(':geographyType/:geographyId')
+  @ApiOperation({ summary: 'Get PropertyIQ scores for a geography' })
+  @ApiParam({ name: 'geographyType', enum: ['state', 'metro', 'county', 'zip'] })
+  @ApiParam({ name: 'geographyId', description: 'Geography identifier' })
+  @ApiQuery({ name: 'type', required: false, enum: ['market_health', 'homeready', 'investoredge'] })
+  @ApiQuery({ name: 'expanded', required: false, type: Boolean })
+  @ApiQuery({ name: 'historyMonths', required: false, type: Number })
+  @ApiQuery({ name: 'periodDate', required: false })
+  @ApiQuery({ name: 'recalculate', required: false, type: Boolean })
+  @ApiHeader({ name: 'x-user-tier', required: false, description: 'User subscription tier' })
   async getScore(
+    @Param('geographyType') geographyType: string,
+    @Param('geographyId') geographyId: string,
+    @Headers('x-user-tier') userTierHeader?: string,
+    @Query('type') scoreType?: string,
+    @Query('expanded') expanded?: string,
+    @Query('historyMonths') historyMonths?: string,
+    @Query('periodDate') periodDate?: string,
+    @Query('recalculate') recalculate?: string,
+  ): Promise<AllScoresResponseDto> {
+    const geoType = this.validateGeographyType(geographyType);
+    const userTier = this.validateUserTier(userTierHeader);
+    const isExpanded = expanded === 'true';
+
+    // Get or calculate score
+    let score: PropertyIQScore | null;
+
+    if (recalculate === 'true') {
+      score = await this.scoringService.calculateScore(
+        geographyId,
+        geoType,
+        periodDate,
+      );
+    } else {
+      score = await this.scoringService.getScore(
+        geographyId,
+        geoType,
+        periodDate,
+      );
+
+      if (!score) {
+        score = await this.scoringService.calculateScore(
+          geographyId,
+          geoType,
+          periodDate,
+        );
+      }
+    }
+
+    if (!score) {
+      throw new HttpException(
+        `Unable to calculate score for ${geographyType}/${geographyId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Build response with access control
+    return this.buildAllScoresResponse(score, userTier, isExpanded);
+  }
+
+  /**
+   * Get raw PropertyIQ score (internal/admin endpoint)
+   *
+   * GET /scoring/raw/:geographyType/:geographyId
+   * Returns full score data without access control formatting
+   */
+  @Get('raw/:geographyType/:geographyId')
+  @ApiOperation({ summary: 'Get raw PropertyIQ score data (admin)' })
+  async getRawScore(
     @Param('geographyType') geographyType: string,
     @Param('geographyId') geographyId: string,
     @Query('periodDate') periodDate?: string,
@@ -56,7 +152,6 @@ export class ScoringController {
       return score;
     }
 
-    // Try to get cached score first
     const cachedScore = await this.scoringService.getScore(
       geographyId,
       geoType,
@@ -66,7 +161,6 @@ export class ScoringController {
       return cachedScore;
     }
 
-    // If no cached score, calculate it
     const score = await this.scoringService.calculateScore(
       geographyId,
       geoType,
@@ -373,5 +467,261 @@ export class ScoringController {
     }
 
     return lowerType;
+  }
+
+  private validateUserTier(tier?: string): UserTier {
+    if (!tier) return 'free';
+    const validTiers: UserTier[] = ['free', 'basic', 'pro', 'enterprise'];
+    const lowerTier = tier.toLowerCase() as UserTier;
+    return validTiers.includes(lowerTier) ? lowerTier : 'free';
+  }
+
+  /**
+   * Build response with all three scores and access control
+   */
+  private buildAllScoresResponse(
+    score: PropertyIQScore,
+    userTier: UserTier,
+    expanded: boolean,
+  ): AllScoresResponseDto {
+    const marketHealthAccess = getScoreAccess('market_health', userTier);
+    const homereadyAccess = getScoreAccess('homeready', userTier);
+    const investoredgeAccess = getScoreAccess('investoredge', userTier);
+
+    return {
+      geographyId: score.geographyId,
+      geographyType: score.geographyType,
+      geographyName: score.geographyName,
+      stateCode: score.stateCode || undefined,
+      periodDate: score.periodDate,
+      userTier,
+
+      marketHealth: this.buildScoreResponse(
+        'market_health',
+        score.marketHealthScore,
+        score.marketHealthTrend,
+        score.marketHealthTrendChange,
+        score.periodDate,
+        marketHealthAccess,
+        expanded,
+        score.marketHealthComponents ? this.buildComponentDetails(
+          score.marketHealthComponents,
+          MARKET_HEALTH_WEIGHTS,
+        ) : [],
+        this.buildConfidence(score),
+        score.dataCompleteness,
+        score.inheritedMetrics,
+      ),
+
+      homeready: homereadyAccess === 'full'
+        ? this.buildScoreResponse(
+            'homeready',
+            score.homereadyScore,
+            score.homereadyTrend,
+            score.homereadyTrendChange,
+            score.periodDate,
+            homereadyAccess,
+            expanded,
+            this.buildComponentDetails(
+              score.homereadyComponents,
+              HOMEREADY_WEIGHTS,
+            ),
+            this.buildConfidence(score),
+            score.dataCompleteness,
+            score.inheritedMetrics,
+          )
+        : this.buildTeaserResponse(
+            'homeready',
+            score.homereadyScore,
+            score.homereadyTrend,
+            score.homereadyTrendChange,
+            score.periodDate,
+            score.homereadyComponents,
+          ),
+
+      investoredge: investoredgeAccess === 'full'
+        ? this.buildScoreResponse(
+            'investoredge',
+            score.investoredgeScore,
+            score.investoredgeTrend,
+            score.investoredgeTrendChange,
+            score.periodDate,
+            investoredgeAccess,
+            expanded,
+            this.buildComponentDetails(
+              score.investoredgeComponents,
+              INVESTOREDGE_WEIGHTS,
+            ),
+            this.buildConfidence(score),
+            score.dataCompleteness,
+            score.inheritedMetrics,
+          )
+        : this.buildTeaserResponse(
+            'investoredge',
+            score.investoredgeScore,
+            score.investoredgeTrend,
+            score.investoredgeTrendChange,
+            score.periodDate,
+            score.investoredgeComponents,
+          ),
+
+      calculatedAt: score.calculatedAt,
+      calculationVersion: score.calculationVersion,
+    };
+  }
+
+  /**
+   * Build a score badge or card response
+   */
+  private buildScoreResponse(
+    type: ScoreType,
+    scoreValue: number | null,
+    trend: 'up' | 'down' | 'stable',
+    trendChange: number,
+    periodDate: string,
+    access: 'full' | 'teaser',
+    expanded: boolean,
+    components: ComponentDetailDto[],
+    confidence: ConfidenceDto,
+    dataCompleteness: number,
+    inheritedMetrics: Record<string, string>,
+  ): ScoreBadgeResponseDto | ScoreCardResponseDto {
+    const status = this.getScoreStatus(scoreValue, dataCompleteness);
+
+    const badge: ScoreBadgeResponseDto = {
+      type,
+      label: getScoreLabel(type),
+      score: scoreValue,
+      trend,
+      trendChange,
+      access,
+      status,
+      statusMessage: status !== 'complete' ? this.getStatusMessage(status, dataCompleteness) : undefined,
+      periodDate,
+    };
+
+    if (!expanded) {
+      return badge;
+    }
+
+    // Return full card response
+    const card: ScoreCardResponseDto = {
+      ...badge,
+      components,
+      confidence,
+      dataCompleteness,
+      inheritedMetricsCount: Object.keys(inheritedMetrics).length,
+      inheritedMetrics,
+    };
+
+    return card;
+  }
+
+  /**
+   * Build a teaser response for locked scores
+   */
+  private buildTeaserResponse(
+    type: ScoreType,
+    scoreValue: number | null,
+    trend: 'up' | 'down' | 'stable',
+    trendChange: number,
+    periodDate: string,
+    components: Record<string, ComponentScore>,
+  ): ScoreTeaserResponseDto {
+    const lockedComponents: LockedComponentDto[] = Object.entries(components).map(
+      ([name, component]) => ({
+        name,
+        label: getComponentLabel(name),
+        weight: component.weight,
+        blurredScore: '??',
+      }),
+    );
+
+    return {
+      type,
+      label: getScoreLabel(type),
+      score: null, // Hide actual score
+      trend,
+      trendChange: 0, // Hide trend change
+      access: 'teaser',
+      status: 'complete',
+      periodDate,
+      lockedComponents,
+      upgradeCta: createUpgradeCta(type),
+      teaserDescription: `Upgrade to Pro to unlock the ${getScoreLabel(type)} with detailed component breakdown and insights.`,
+    };
+  }
+
+  /**
+   * Build component details from component scores
+   */
+  private buildComponentDetails<T extends string>(
+    components: Record<T, ComponentScore>,
+    weights: Record<T, number>,
+  ): ComponentDetailDto[] {
+    return Object.entries(components).map(([name, component]) => {
+      const comp = component as ComponentScore;
+      return {
+        name,
+        label: getComponentLabel(name),
+        weight: weights[name as T] || comp.weight,
+        score: comp.score,
+        weightedContribution: comp.weightedContribution,
+        description: getComponentDescription(name),
+        metrics: [], // Metrics would need to be populated from detailed data
+        helpingFactors: comp.helpingFactors,
+        hurtingFactors: comp.hurtingFactors,
+      };
+    });
+  }
+
+  /**
+   * Build confidence information
+   */
+  private buildConfidence(score: PropertyIQScore): ConfidenceDto {
+    const percentage = score.metricsTotal > 0
+      ? Math.round((score.metricsAvailable / score.metricsTotal) * 100)
+      : 0;
+
+    return {
+      level: score.confidenceLevel,
+      percentage,
+      metricsAvailable: score.metricsAvailable,
+      metricsTotal: score.metricsTotal,
+      freshnessInDays: score.dataFreshnessDays,
+      warning: score.confidenceLevel === 'low'
+        ? 'This score has limited confidence due to missing data'
+        : undefined,
+    };
+  }
+
+  /**
+   * Determine score status based on value and completeness
+   */
+  private getScoreStatus(
+    score: number | null,
+    completeness: number,
+  ): 'complete' | 'partial' | 'unavailable' {
+    if (score === null) return 'unavailable';
+    if (completeness < 50) return 'unavailable';
+    if (completeness < 100) return 'partial';
+    return 'complete';
+  }
+
+  /**
+   * Get status message for partial/unavailable scores
+   */
+  private getStatusMessage(
+    status: 'complete' | 'partial' | 'unavailable',
+    completeness: number,
+  ): string {
+    switch (status) {
+      case 'unavailable':
+        return 'Insufficient data available for this geography';
+      case 'partial':
+        return `Score based on ${completeness.toFixed(0)}% of available data`;
+      default:
+        return '';
+    }
   }
 }
