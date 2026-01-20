@@ -596,7 +596,9 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'fred',
     apiEndpoint: '/api/economic/job-growth/{geo}',
     keyField: 'auto',
-    supportedGeos: ['national', 'state', 'metro', 'county'],
+    // FRED only has employment data for national, state, and 3 metros (Boston, LA, NYC)
+    // No county-level employment data available
+    supportedGeos: ['national', 'state'],
   },
 
   gdp_growth: {
