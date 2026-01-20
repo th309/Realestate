@@ -243,8 +243,8 @@ export class EconomicService {
     }
 
     // Fetch data with pagination to ensure we get all counties
-    // Supabase has a default row limit, so we need to paginate
-    const PAGE_SIZE = 10000;
+    // Supabase has a default row limit of 1000, so we paginate in batches
+    const PAGE_SIZE = 1000;
     const allData: EconomicRow[] = [];
     let offset = 0;
     let hasMore = true;
@@ -264,7 +264,7 @@ export class EconomicService {
         offset += PAGE_SIZE;
         // Stop if we got fewer rows than requested (no more data)
         // or if we have enough data for all counties (~3100 * few years)
-        hasMore = data.length === PAGE_SIZE && allData.length < 80000;
+        hasMore = data.length === PAGE_SIZE && allData.length < 500000;
       } else {
         hasMore = false;
       }
