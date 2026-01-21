@@ -321,6 +321,26 @@ export class ScoringService {
   }
 
   // ============================================================================
+  // Debug Methods (for troubleshooting)
+  // ============================================================================
+
+  async debugGetLatestDate(geographyType: GeographyType): Promise<string | null> {
+    return this.getLatestDate(geographyType);
+  }
+
+  async debugGetGeography(geographyId: string, geographyType: GeographyType) {
+    return this.getGeography(geographyId, geographyType);
+  }
+
+  async debugGetMetrics(geography: any, geographyType: GeographyType, periodDate: string) {
+    return this.fetchMetrics(geography, geographyType, periodDate);
+  }
+
+  async debugGetPercentiles(geographyType: GeographyType, periodDate: string) {
+    return this.fetchPercentiles(geographyType, periodDate);
+  }
+
+  // ============================================================================
   // Private: Data Fetching
   // ============================================================================
 

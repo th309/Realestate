@@ -455,6 +455,62 @@ export class ScoringController {
     };
   }
 
+  /**
+   * Debug endpoint to diagnose scoring issues
+   * GET /api/scoring/debug/:geographyType/:geographyId
+   */
+  @Get('debug/:geographyType/:geographyId')
+  async debugScore(
+    @Param('geographyType') geographyType: string,
+    @Param('geographyId') geographyId: string,
+  ) {
+    const geoType = this.validateGeographyType(geographyType);
+    const debug: Record<string, any> = {
+      input: { geographyType: geoType, geographyId },
+      checks: {},
+    };
+
+    // Check 1: Get latest date
+    const latestDate = await this.scoringService.debugGetLatestDate(geoType);
+    debug.checks.latestDate = latestDate;
+
+    if (!latestDate) {
+      debug.failureReason = 'No data found in zillow table for this geography type';
+      return debug;
+    }
+
+    // Check 2: Get geography from geographies table
+    const geography = await this.scoringService.debugGetGeography(geographyId, geoType);
+    debug.checks.geography = geography ? { found: true, name: geography.name, zillow_region_id: geography.zillow_region_id } : null;
+
+    if (!geography) {
+      debug.failureReason = `Geography ${geographyId} not found in geographies table for type ${geoType}`;
+      return debug;
+    }
+
+    // Check 3: Get metrics
+    const metrics = await this.scoringService.debugGetMetrics(geography, geoType, latestDate);
+    debug.checks.metrics = {
+      count: Object.keys(metrics).length,
+      keys: Object.keys(metrics).slice(0, 10),
+    };
+
+    if (Object.keys(metrics).length === 0) {
+      debug.failureReason = 'No metrics found for this geography';
+      return debug;
+    }
+
+    // Check 4: Get percentiles
+    const percentiles = await this.scoringService.debugGetPercentiles(geoType, latestDate);
+    debug.checks.percentiles = {
+      count: Object.keys(percentiles).length,
+      keys: Object.keys(percentiles).slice(0, 10),
+    };
+
+    debug.status = 'All checks passed - score should calculate';
+    return debug;
+  }
+
   private validateGeographyType(type: string): GeographyType {
     const validTypes: GeographyType[] = ['state', 'metro', 'county', 'zip'];
     const lowerType = type.toLowerCase() as GeographyType;
