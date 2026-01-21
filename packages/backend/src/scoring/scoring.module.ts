@@ -18,6 +18,9 @@
  * Versioning services:
  * - FormulaVersionService: Manages formula versions and rollback
  * - ABTestService: Manages A/B tests for formula comparison
+ *
+ * ML Validation services:
+ * - MLValidationService: Manages ML validation jobs for comparing formulas vs AutoGluon
  */
 
 import { Module } from '@nestjs/common';
@@ -35,6 +38,8 @@ import { ConfidenceCalculatorService } from './backtest/confidence-calculator.se
 import { AlertService } from './backtest/alert.service';
 import { FormulaVersionService } from './versioning/formula-version.service';
 import { ABTestService } from './versioning/ab-test.service';
+import { MLValidationService, MLValidationController } from './ml-validation';
+import { BacktestRunsService, BacktestRunsController } from './backtest-runs';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
@@ -56,8 +61,12 @@ import { SupabaseModule } from '../supabase/supabase.module';
     // Versioning services
     FormulaVersionService,
     ABTestService,
+    // ML Validation services
+    MLValidationService,
+    // Backtest runs services
+    BacktestRunsService,
   ],
-  controllers: [ScoringController],
+  controllers: [ScoringController, MLValidationController, BacktestRunsController],
   exports: [
     ScoringService,
     PercentileService,
@@ -75,6 +84,10 @@ import { SupabaseModule } from '../supabase/supabase.module';
     // Versioning services
     FormulaVersionService,
     ABTestService,
+    // ML Validation services
+    MLValidationService,
+    // Backtest runs services
+    BacktestRunsService,
   ],
 })
 export class ScoringModule {}

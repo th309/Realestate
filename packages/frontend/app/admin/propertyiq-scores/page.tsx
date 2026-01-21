@@ -15,9 +15,11 @@ import { BacktestingTab } from './components/BacktestingTab';
 import { FormulaEditorTab } from './components/FormulaEditorTab';
 import { AlertsTab } from './components/AlertsTab';
 import { HistoryTab } from './components/HistoryTab';
+import { MLValidationTab } from './components/MLValidationTab';
+import { AutomatedRunsTab } from './components/AutomatedRunsTab';
 import { GeographySelector } from './components/GeographySelector';
 
-type TabId = 'scores' | 'backtesting' | 'formula' | 'alerts' | 'history';
+type TabId = 'scores' | 'backtesting' | 'automated-runs' | 'formula' | 'ml-validation' | 'alerts' | 'history';
 
 interface Tab {
   id: TabId;
@@ -28,7 +30,9 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'scores', label: 'Score Cards', description: 'View and analyze scores' },
   { id: 'backtesting', label: 'Backtesting', description: 'Run and view backtest results' },
+  { id: 'automated-runs', label: 'Automated Runs', description: 'View automated backtest pipeline runs' },
   { id: 'formula', label: 'Formula Editor', description: 'Edit scoring formulas' },
+  { id: 'ml-validation', label: 'ML Validation', description: 'Compare formulas vs AutoGluon ML' },
   { id: 'alerts', label: 'Alerts', description: 'Confidence alerts' },
   { id: 'history', label: 'History', description: 'Version history' },
 ];
@@ -54,8 +58,12 @@ export default function PropertyIQAdminPage() {
         return <ScoreCardsTab geography={selectedGeography} />;
       case 'backtesting':
         return <BacktestingTab geography={selectedGeography} />;
+      case 'automated-runs':
+        return <AutomatedRunsTab />;
       case 'formula':
         return <FormulaEditorTab />;
+      case 'ml-validation':
+        return <MLValidationTab />;
       case 'alerts':
         return <AlertsTab />;
       case 'history':

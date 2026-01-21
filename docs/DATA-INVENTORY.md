@@ -332,64 +332,536 @@ HUD FMR provides **100% county coverage** for rent data, unlike ZORI which only 
 
 | Table | Purpose |
 |-------|---------|
-| `propertyiq_scores` | Current HomeReady and InvestorEdge scores for all geographies |
-| `propertyiq_score_details` | Breakdown of score components |
+| `propertyiq_scores` | Current HomeReady, InvestorEdge, and Market Health scores for all geographies |
+| `propertyiq_score_details` | Breakdown of score components with raw metrics |
 | `propertyiq_scores_history` | Historical scores for backtesting |
 | `propertyiq_rankings` | National and state rankings |
 | `metric_percentiles` | Pre-computed percentile distributions |
-| `calculated_metrics` | Market Health Index and other calculated scores (market_health_score, investment_score, long_term_growth_score) |
+| `geography_inheritance` | Maps each geography to parent for data inheritance |
+
+### Data Inheritance Model
+
+Scores work at all geographic levels. When metrics are unavailable at granular levels, they inherit from parent geography:
+
+| Geography Level | Inheritance Chain |
+|-----------------|-------------------|
+| ZIP | ZIP → County → Metro → State → National |
+| City | City → County → Metro → State → National |
+| County | County → Metro → State → National |
+| Metro | Metro → State → National |
+| State | State → National |
+
+**Metrics Requiring Inheritance:**
+
+| Metric | Available At | Inherits From |
+|--------|--------------|---------------|
+| `unemployment_rate` | National, State, Metro, County | County for ZIP/City |
+| `employment_yoy` | National, State, Metro, County | County for ZIP/City |
+| `large_multi_permits_yoy` | National, State, Metro, County | County for ZIP/City |
+| `hud_fmr_2br` | County only | Used as ZORI fallback |
+
+---
 
 ### HomeReady Score (For Homebuyers)
 
-| Component | Weight | Card Display | Metrics Used | Definition |
-|-----------|--------|--------------|--------------|------------|
-| **HomeReady Score** | 100% | ScoreCards main score | All below | 0-100 composite score for homebuyer attractiveness. Higher = better time to buy. |
-| **Affordability** | ~25% | ScoreCards indicator | median_income, ZHVI, rent_pct_income | How affordable is the market relative to incomes? |
-| **Stability** | ~20% | ScoreCards indicator | price_volatility, inventory_stability | How stable are prices and inventory? |
-| **Value** | ~20% | ScoreCards indicator | ZHVI_vs_history, price_to_income | Is the market fairly valued? |
-| **Livability** | ~15% | ScoreCards indicator | employment, population_growth, age_demographics | Quality of life factors. |
-| **Momentum** | ~20% | ScoreCards indicator | ZHVI_yoy, inventory_yoy, DOM_change | Market direction and speed. |
-| **Trend** | N/A | ScoreCards trend arrow | 3-month score change | 'improving', 'stable', or 'declining' |
+**Purpose:** Answer "Is this a good market for someone looking to buy a home to live in?"
+
+| Component | Weight | Metrics Used | Definition |
+|-----------|--------|--------------|------------|
+| **HomeReady Score** | 100% | All below | 0-100 composite score for homebuyer attractiveness. Higher = better time to buy. |
+| **Affordability** | 30% | `income_gap_ratio` (40%), `years_to_save` (30%), `rent_as_pct_of_income` (30%) | Can people afford to buy? All inverted (lower is better). |
+| **Market Timing** | 25% | `price_reduced_share` (30%), `median_days_on_market` (25%), `months_of_supply` (25%), `pending_listing_count_yy` (20% inv) | Is it a buyer's market? High price cuts + DOM + supply = buyer leverage. |
+| **Stability** | 20% | `volatility_36m` (40% inv), `active_listing_count_yy` (35% optimal ±10%), `unemployment_rate` (25% inv, inherited) | Will values hold? Low volatility + stable inventory + low unemployment. |
+| **Growth Potential** | 15% | `zhvi_5y_cagr` (40%), `population_yoy` (30%), `median_household_income_yoy` (30%) | Will the home appreciate? Higher is better. |
+| **Livability** | 10% | `homeownership_rate` (60%), `median_age` (40% optimal 30-45) | Is it a place people want to live? |
+| **Trend** | N/A | 3-month score change (±3pt threshold) | 'improving', 'stable', or 'declining' |
+
+**Final Formula:** `homeready = affordability×0.30 + market_timing×0.25 + stability×0.20 + growth_potential×0.15 + livability×0.10`
 
 ### InvestorEdge Score (For Investors)
 
-| Component | Weight | Card Display | Metrics Used | Definition |
-|-----------|--------|--------------|--------------|------------|
-| **InvestorEdge Score** | 100% | ScoreCards main score | All below | 0-100 composite score for investment attractiveness. Higher = better investment opportunity. |
-| **Cash Flow** | ~25% | ScoreCards indicator | cap_rate, GRM, rent_to_price | Potential for positive monthly cash flow. |
-| **Growth** | ~25% | ScoreCards indicator | ZHVI_5y_cagr, population_growth, job_growth | Long-term appreciation potential. |
-| **Demand** | ~20% | ScoreCards indicator | ZORDI, pending_ratio, DOM | Tenant/buyer demand strength. |
-| **Entry Point** | ~15% | ScoreCards indicator | overvalued_pct, price_vs_history | Is it a good time to buy? |
-| **Risk** | ~15% | ScoreCards indicator | volatility, inventory_surplus, economic_diversity | Downside risk factors. Lower is better for this component. |
-| **Trend** | N/A | ScoreCards trend arrow | 3-month score change | 'improving', 'stable', or 'declining' |
+**Purpose:** Answer "Will this property generate strong returns with acceptable risk?"
+
+| Component | Weight | Metrics Used | Definition |
+|-----------|--------|--------------|------------|
+| **InvestorEdge Score** | 100% | All below | 0-100 composite score for investment attractiveness. Higher = better opportunity. |
+| **Cash Flow** | 35% | `cap_rate` (35%), `grm` (25% inv), `gross_yield` (25%), `rent_to_price_ratio` (15%) | Potential for positive cash flow. Uses HUD FMR as ZORI fallback. Cap rate assumes 60% NOI. |
+| **Rent Demand** | 20% | `zori_yoy` (35%), `pending_ratio` (25%), `median_days_on_market` (20% inv), `renter_share` (20%) | Are rents growing? Is there tenant demand? renter_share = renter_units/total_units. |
+| **Appreciation** | 20% | `zhvi_5y_cagr` (40%), `zhvi_yoy` (30%), `population_yoy` (30%) | Long-term equity growth potential. Higher is better. |
+| **Entry Point** | 15% | `overvalued_pct` (40% inv), `price_reduced_share` (35%), `months_of_supply` (25%) | Is now a good time to buy? Negative overvalued% + high price cuts = good entry. |
+| **Risk** | 10% | `volatility_36m` (35% inv), `unemployment_rate` (30% inv, inherited), `inventory_surplus_pct` (20% inv), `large_multi_permits_yoy` (15% inv, inherited) | What's the downside? High MF permits = future rental competition. |
+| **Trend** | N/A | 3-month score change (±3pt threshold) | 'improving', 'stable', or 'declining' |
+
+**Final Formula:** `investoredge = cash_flow×0.35 + rent_demand×0.20 + appreciation×0.20 + entry_point×0.15 + risk×0.10`
 
 ### Market Health Index (Market Conditions)
 
-**Table:** `calculated_metrics` (column: `market_health_score`)
+**Purpose:** Answer "Is this a balanced, sustainable market or showing signs of stress?"
 
-| Component | Weight | Card Display | Metrics Used | Definition |
-|-----------|--------|--------------|--------------|------------|
-| **Market Health Index** | 100% | ScoreCards main score (Orange) | All below | 0-100 composite score measuring overall market health. Higher = healthier market conditions. |
-| **Days on Market** | ~25% | ScoreCards "Supply/Demand" | `median_days_on_market` | Lower DOM = stronger demand. Formula: `100 - (DOM / 90) × 100`. National avg is 40-60 days. |
-| **Inventory YoY** | ~25% | ScoreCards indicator | `active_listing_count_yy` | Moderate change (-20% to +20%) is healthy. Formula: `50 + (inventoryYoY × 2.5)`. |
-| **Price Cut Share** | ~25% | ScoreCards "Price Stability" | `price_reduced_share` | Lower is better. Typical range 0-30%. Formula: `100 - (priceCutShare / 30) × 100`. |
-| **Pending Ratio** | ~25% | ScoreCards "Market Activity" | `pending_ratio` | Higher = faster-moving market. Pending listings ÷ Active listings. |
+| Component | Weight | Metrics Used | Definition |
+|-----------|--------|--------------|------------|
+| **Market Health Index** | 100% | All below | 0-100 composite score measuring market health. Higher = healthier conditions. |
+| **Demand Strength** | 35% | `pending_ratio` (45%), `median_days_on_market` (35% inv), `hotness_score` (20% if available) | Leading indicator of buyer activity. Higher pending + lower DOM = stronger demand. |
+| **Supply Balance** | 25% | `months_of_supply` (40% optimal 4-6), `active_listing_count_yy` (35% optimal ±10%), `new_listing_count_yy` (25% optimal -10% to +15%) | Healthy = 4-6 months supply and stable new listing flow. |
+| **Price Stability** | 25% | `price_reduced_share` (40% inv), `sale_to_list_ratio` (35% optimal ~1.0), `zhvi_yoy` (25% optimal 2-6%) | Low price cuts + equilibrium pricing + moderate growth = stable. |
+| **Economic Foundation** | 15% | `unemployment_rate` (50% inv, inherited), `employment_yoy` (50%, inherited) | A hot market with weak economics is a bubble. |
+| **Trend** | N/A | 3-month score change (±3pt threshold) | 'improving', 'stable', or 'declining' |
 
-**Calculation:**
-```
-Market Health Score = Base(50) + Σ(component_score - 50) / factors
-```
-Each component adds or subtracts from the base score of 50, then normalized to 0-100.
+**Final Formula:** `market_health = demand_strength×0.35 + supply_balance×0.25 + price_stability×0.25 + economic_foundation×0.15`
+
+---
+
+### Normalization Functions
+
+| Function | Formula | Use Case |
+|----------|---------|----------|
+| `normalize(value, min, max)` | `((value - min) / (max - min)) × 100` | Higher is better |
+| `normalizeInverted(value, min, max)` | `100 - normalize(value, min, max)` | Lower is better |
+| `normalizeOptimal(value, optMin, optMax, extMin, extMax)` | 100 if within optimal range, decreasing to extremes | Moderate values best |
 
 ### Score Interpretation
 
-| Score Range | Interpretation | Color |
-|-------------|----------------|-------|
-| 80-100 | Excellent opportunity | Green |
-| 60-79 | Good opportunity | Light Green |
-| 40-59 | Neutral/Average | Amber |
-| 20-39 | Below average | Orange |
-| 0-19 | Poor opportunity | Red |
+| Score Range | Label | Homebuyer | Investor | Market Health |
+|-------------|-------|-----------|----------|---------------|
+| 80-100 | Excellent (Green) | Strong buy signal | High-return opportunity | Very healthy, balanced |
+| 60-79 | Good (Lt Green) | Favorable conditions | Solid opportunity | Healthy conditions |
+| 40-59 | Neutral (Amber) | Mixed signals | Average opportunity | Balanced, watch trends |
+| 20-39 | Below Avg (Orange) | Unfavorable timing | Higher risk/lower return | Showing stress |
+| 0-19 | Poor (Red) | Wait for improvement | Avoid or deep value | Significant distress |
+
+---
+
+### Access Tiers
+
+| Score | Free Tier | Pro Tier |
+|-------|-----------|----------|
+| **Market Health Index** | ✅ Full access (Badge + Card with metrics & trend) | ✅ Full access |
+| **HomeReady Score** | 🔒 Teaser (score visible, details locked) | ✅ Full access |
+| **InvestorEdge Score** | 🔒 Teaser (score visible, details locked) | ✅ Full access |
+
+**Geographic Coverage:** All three scores work identically at every geographic level (National, State, Metro, County, City, ZIP). Users see the same score experience regardless of which level they click.
+
+---
+
+### Backtesting & Confidence Scoring
+
+Each PropertyIQ score includes a **confidence rating** based on backtesting against historical outcomes. This tells users how reliable the score has been at predicting actual results.
+
+#### Confidence Rating Display
+
+| Confidence | Label | Badge | Meaning |
+|------------|-------|-------|---------|
+| 85-100% | High | ★★★★★ | Strong historical correlation with outcomes |
+| 70-84% | Good | ★★★★☆ | Reliable predictor with some variance |
+| 55-69% | Moderate | ★★★☆☆ | Useful signal but consider other factors |
+| 40-54% | Low | ★★☆☆☆ | Weak correlation, use with caution |
+| < 40% | Insufficient | ★☆☆☆☆ | Not enough data or poor predictive power |
+
+#### Backtesting Methodology
+
+**Prediction Horizons:**
+
+| Horizon | Code | Use Case |
+|---------|------|----------|
+| 6 months | `6m` | Market Health, short-term HomeReady |
+| 1 year | `1y` | All scores (standard validation) |
+| 3 years | `3y` | HomeReady growth, InvestorEdge appreciation |
+| 5 years | `5y` | InvestorEdge long-term returns |
+
+**HomeReady Score Validation:**
+
+| Outcome Metric | Horizons | What We Measure |
+|----------------|----------|-----------------|
+| Price Change | 6m, 1y, 3y, 5y | Did high-scoring markets see better appreciation? |
+| Price CAGR | 3y, 5y | Compound annual growth rate |
+| Volatility | 6m, 1y, 3y | Did stable markets (high stability score) have lower volatility? |
+| Days on Market | 6m, 1y | Did buyer's markets maintain favorable conditions? |
+
+**InvestorEdge Score Validation:**
+
+| Outcome Metric | Horizons | What We Measure |
+|----------------|----------|-----------------|
+| Rent Growth | 6m, 1y, 3y, 5y | Did high rent demand scores see higher rent growth? |
+| Rent CAGR | 3y, 5y | Long-term rent compound growth |
+| Cap Rate | 6m, 1y, 3y | Did high cash flow markets maintain strong cap rates? |
+| Price Appreciation | 1y, 3y, 5y | Did high growth scores correlate with actual appreciation? |
+
+**Market Health Score Validation:**
+
+| Outcome Metric | Horizons | What We Measure |
+|----------------|----------|-----------------|
+| Price Stability | 6m, 1y | Did healthy markets avoid price crashes? |
+| Transaction Volume | 6m, 1y | Did healthy markets maintain liquidity? |
+| Inventory Balance | 6m, 1y | Did supply/demand predictions hold? |
+
+*Note: Market Health only validates 6m and 1y horizons — it predicts short-term conditions, not long-term trends.*
+
+#### Confidence Calculation
+
+```
+Confidence = (Correlation Score × 0.5) + (Sample Size Score × 0.3) + (Recency Score × 0.2)
+
+Where:
+- Correlation Score: R² of score vs outcome (0-100)
+- Sample Size Score: Based on number of geographies tested (min 50 for full confidence)
+- Recency Score: Weight toward recent backtests (last 12 months weighted higher)
+```
+
+#### Backtest Results Table
+
+Stored in `propertyiq_backtest_results`:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `score_type` | VARCHAR | 'homeready', 'investoredge', 'market_health' |
+| `component_name` | VARCHAR | Optional: specific component or NULL for overall |
+| `outcome_metric` | VARCHAR | What was measured (e.g., 'price_appreciation_12m') |
+| `geography_type` | VARCHAR | Level tested ('zip', 'county', 'metro', etc.) |
+| `test_period_start` | DATE | Start of historical period tested |
+| `test_period_end` | DATE | End of historical period tested |
+| `sample_size` | INTEGER | Number of geographies in test |
+| `correlation_r2` | DECIMAL | R² correlation coefficient (0-1) |
+| `mean_absolute_error` | DECIMAL | Average prediction error |
+| `confidence_score` | DECIMAL | Calculated confidence (0-100) |
+| `created_at` | TIMESTAMPTZ | When backtest was run |
+
+#### API Response with Confidence
+
+```typescript
+interface ScoreResponse {
+  // ... existing fields ...
+  
+  // Confidence metrics (always returned)
+  confidence: {
+    score: number;              // 0-100
+    label: string;              // "High", "Good", "Moderate", "Low", "Insufficient"
+    stars: number;              // 1-5
+    sample_size: number;        // geographies tested
+    last_backtest: string;      // ISO date
+  };
+  
+  // Component-level confidence (when expanded=true)
+  components?: {
+    // ... existing fields ...
+    confidence?: {
+      score: number;
+      correlation_r2: number;
+    };
+  }[];
+}
+```
+
+#### UI Display with Confidence
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Market Health Index                          72 / 100  │
+│  ↑ +5 pts vs last month                    [Light Green]│
+│  Confidence: ★★★★☆ Good (78%)                          │
+├─────────────────────────────────────────────────────────┤
+│  Demand Strength (35%)      ██████████████████░░  85    │
+│    └ Confidence: 82% correlation with transaction volume│
+│  Supply Balance (25%)       ████████████████░░░░  78    │
+│    └ Confidence: 74% correlation with inventory outcomes│
+│  ...                                                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Confidence Thresholds & Formula Management
+
+#### Action Thresholds
+
+| Confidence | Status | Action | User Display |
+|------------|--------|--------|--------------|
+| 70%+ | ✅ Healthy | No action needed | Full score + confidence stars |
+| 55-69% | ⚠️ Monitor | Flag for quarterly review | Score + "Moderate confidence" note |
+| 40-54% | 🔶 Review Required | Analyze & propose adjustments | Score + "Low confidence" warning |
+| < 40% | 🔴 Formula Broken | Pause score, rebuild formula | "Insufficient Data" (hide score) |
+
+**Why these thresholds?**
+- **55%** is marginally better than random (50% = coin flip)
+- **40%** means the score may mislead users — better to show nothing
+
+#### Diagnostic Signals
+
+When confidence drops, backtest data reveals what to fix:
+
+| Signal | What It Means | Likely Fix |
+|--------|---------------|------------|
+| Low R² but high directional accuracy | Ranks markets correctly, magnitude is off | Adjust normalization ranges |
+| Low directional accuracy | Picking wrong markets | Review component weights, swap weak metrics |
+| One component much weaker than others | That component's metrics aren't predictive | Reduce weight or replace metrics |
+| Confidence varies by geography type | Formula works for metros but not ZIPs | Consider geography-specific weights |
+| High quintile spread but low R² | Identifies extremes well, middle is noisy | Tighter scoring bands |
+
+#### Formula Version Control
+
+All formula changes are versioned:
+
+| Version Change | Trigger |
+|----------------|---------|
+| Major (2.0 → 3.0) | Full rebuild or component structure change |
+| Minor (2.0 → 2.1) | Weight adjustments or metric swaps |
+| Patch (2.0.0 → 2.0.1) | Normalization range tweaks |
+
+#### A/B Testing
+
+Before deploying formula changes:
+1. New formula runs on 10-20% of calculations
+2. Compare confidence scores after 30-60 days
+3. Require statistical significance (p < 0.05) to declare winner
+4. Auto-rollback if treatment performs worse
+
+#### Tables
+
+| Table | Purpose |
+|-------|---------|
+| `propertyiq_backtest_results` | Historical backtest runs with correlation stats |
+| `propertyiq_confidence` | Current confidence scores by score/component/geography |
+| `propertyiq_confidence_history` | Confidence over time for trend analysis |
+| `propertyiq_confidence_alerts` | Triggered alerts when confidence drops |
+| `propertyiq_formula_versions` | Version-controlled formula definitions |
+| `propertyiq_ab_tests` | A/B test configurations and results |
+
+---
+
+### Admin Dashboard
+
+**Route:** `/admin/propertyiq-scores`
+
+Full-page interface for testing and managing scores before going live:
+
+| Tab | Purpose |
+|-----|---------|
+| **Score Cards** | View all three scores with full detail for any geography |
+| **Backtesting** | Run backtests, view confidence by score/component/geography |
+| **→ ML Validation** | Compare formula vs AutoGluon ML, get weight suggestions |
+| **Formula Editor** | Modify weights/metrics, live preview, deploy via A/B test |
+| **Alerts** | View and resolve confidence alerts |
+| **History** | Score and confidence trends over time, formula version history |
+
+**Key Features:**
+- Geography selector (switch between any ZIP/County/Metro/State)
+- All scores visible (bypasses free/pro tier for admin)
+- Raw metric values shown alongside normalized scores
+- Side-by-side comparison of current vs draft formula
+- One-click A/B test deployment
+
+**ML Validation (AutoGluon):**
+- Train ML models to benchmark your formula's performance
+- Compare R², MAE, directional accuracy, quintile spread
+- View ML feature importance vs your current weights
+- Get automated suggestions for weight adjustments
+- Identify missing metrics that ML finds predictive
+- Subgroup analysis (by geo type, price tier, etc.)
+- Apply ML suggestions directly to draft formula
+
+**Automated Backtesting:**
+- Monthly automated runs via GitHub Actions
+- Stratified sampling: ~4,000 geos tested (vs 67,000+ full)
+- Full coverage: National, State, Metro (100%)
+- Sampled: County (500), City (1,000), ZIP (2,000)
+- Alerts auto-generated when confidence drops below thresholds
+- Confidence matrix showing all scores × horizons × geo levels
+- Trend charts tracking confidence over time
+
+---
+
+### Handling Missing Metrics
+
+Scores calculate gracefully when metrics are unavailable, even after inheritance attempts.
+
+| Strategy | When Used | Effect |
+|----------|-----------|--------|
+| **Skip & Reweight** | Metric is optional | Remove from calc, redistribute weight |
+| **Neutral Value (50)** | Metric is important | Use 50 (no positive/negative impact) |
+| **Component Skip** | All metrics in component missing | Skip component, redistribute to others |
+| **Score Unavailable** | >50% of weight missing | Don't calculate, show "Insufficient Data" |
+
+**Metric Strategies:**
+
+| Metric | Strategy | Rationale |
+|--------|----------|-----------|
+| `income_gap_ratio` | Required | Core to HomeReady affordability |
+| `cap_rate` | Required | Core to InvestorEdge cash flow |
+| `unemployment_rate` | Neutral | Important but often inherited |
+| `median_days_on_market` | Neutral | Key market indicator |
+| `hotness_score` | Skip | Can derive from other metrics |
+| `population_yoy` | Skip | Nice-to-have, not critical |
+
+**Score Completeness Display:**
+
+| Completeness | Display |
+|--------------|---------|
+| 100% | Normal score |
+| 50-99% | Score + "Based on X% of metrics" note |
+| < 50% | "Insufficient Data" (hide score) |
+
+---
+
+### UI Display Modes
+
+Scores support two display modes controlled by a `displayMode` prop:
+
+#### Mode 1: Score Badge (Compact)
+Use for: Map markers, list views, comparison tables, dashboard summaries
+
+| Element | Description |
+|---------|-------------|
+| Score Circle | 0-100 number with color fill based on score range |
+| Label | "Market Health", "HomeReady", or "InvestorEdge" |
+| Trend Arrow | ↑ (improving), → (stable), ↓ (declining) with color |
+| Lock Icon | 🔒 shown on HomeReady/InvestorEdge for free tier users |
+
+```
+Free Tier User:
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│     72       │  │     68  🔒   │  │     74  🔒   │
+│Market Health │  │  HomeReady   │  │ InvestorEdge │
+│      ↑       │  │              │  │              │
+└──────────────┘  └──────────────┘  └──────────────┘
+   [Clickable]       [Upgrade CTA]    [Upgrade CTA]
+```
+
+#### Mode 2: Score Card (Expanded)
+Use for: Detail panels when user clicks a score
+
+**Market Health (Free Tier):**
+```
+┌─────────────────────────────────────────────────────────┐
+│  Market Health Index                          72 / 100  │
+│  ↑ +5 pts vs last month                    [Light Green]│
+├─────────────────────────────────────────────────────────┤
+│  Demand Strength (35%)      ██████████████████░░  85    │
+│  Supply Balance (25%)       ████████████████░░░░  78    │
+│  Price Stability (25%)      ██████████████░░░░░░  68    │
+│  Economic Foundation (15%)  ████████████░░░░░░░░  58    │
+├─────────────────────────────────────────────────────────┤
+│  ▼ View Metrics                                         │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ Demand Strength:                                  │  │
+│  │   • Pending Ratio: 42% (target > 30%)            │  │
+│  │   • Days on Market: 38 days                      │  │
+│  │   • Hotness Score: 72                            │  │
+│  │ Supply Balance:                                   │  │
+│  │   • Months of Supply: 4.8 (target 4-6)          │  │
+│  │   • Inventory YoY: +8%                           │  │
+│  │   • New Listings YoY: +5%                        │  │
+│  │ ...                                               │  │
+│  └───────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────┤
+│  6-Month Trend: ▁▂▃▄▅▆ (58 → 72)                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+**HomeReady / InvestorEdge (Free Tier - Gated):**
+```
+┌─────────────────────────────────────────────────────────┐
+│  HomeReady Score                              68 / 100  │
+│  🔒 Upgrade to Pro to unlock full details              │
+├─────────────────────────────────────────────────────────┤
+│  Affordability (30%)        ░░░░░░░░░░░░░░░░░░░░  ??   │
+│  Market Timing (25%)        ░░░░░░░░░░░░░░░░░░░░  ??   │
+│  Stability (20%)            ░░░░░░░░░░░░░░░░░░░░  ??   │
+│  Growth Potential (15%)     ░░░░░░░░░░░░░░░░░░░░  ??   │
+│  Livability (10%)           ░░░░░░░░░░░░░░░░░░░░  ??   │
+├─────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  🔓 Unlock HomeReady insights:                    │  │
+│  │     • Affordability analysis for this market     │  │
+│  │     • Best time to buy indicators                │  │
+│  │     • Price stability & growth trends            │  │
+│  │                                                   │  │
+│  │  [Upgrade to Pro - $X/month]                     │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### API Response Structure
+
+```typescript
+interface ScoreResponse {
+  score_type: 'homeready' | 'investoredge' | 'market_health';
+  geography_id: string;
+  geography_type: string;  // 'zip', 'county', 'metro', etc.
+  period_date: string;
+  
+  // Always returned (badge mode, all tiers)
+  score: number;                    // 0-100
+  score_label: string;              // "Excellent", "Good", etc.
+  score_color: string;              // hex color
+  trend: 'improving' | 'stable' | 'declining';
+  trend_change: number;             // point change from prior period
+  
+  // Access control
+  access: 'full' | 'teaser';        // 'full' for Market Health or Pro users
+  upgrade_cta?: string;             // shown if access = 'teaser'
+  
+  // Only when access='full' AND expanded=true (card mode)
+  components?: {
+    name: string;                   // "Demand Strength"
+    weight: number;                 // 0.35
+    score: number;                  // 0-100
+    metrics: {
+      name: string;                 // "pending_ratio"
+      display_name: string;         // "Pending Ratio"
+      value: number;                // 0.42
+      formatted_value: string;      // "42%"
+      target?: string;              // "> 30%"
+      sub_weight: number;           // 0.45
+      inherited: boolean;           // false
+      source_geography?: string;    // only if inherited
+    }[];
+  }[];
+  
+  // Only when access='full'
+  history?: {
+    period_date: string;
+    score: number;
+  }[];
+}
+```
+
+#### Frontend Props
+
+```typescript
+interface ScoreDisplayProps {
+  scoreType: 'homeready' | 'investoredge' | 'market_health';
+  geographyId: string;
+  geographyType: string;            // 'zip', 'county', 'metro', etc.
+  
+  // Display mode
+  displayMode: 'badge' | 'card';
+  
+  // User tier (determines access)
+  userTier: 'free' | 'pro';
+  
+  // Card mode options (only apply when access='full')
+  showMetrics?: boolean;            // default: true
+  showHistory?: boolean;            // default: true
+  historyMonths?: number;           // default: 6
+  defaultExpanded?: boolean;        // default: false
+  
+  // Callbacks
+  onUpgradeClick?: () => void;      // triggered when user clicks upgrade CTA
+}
+```
+
+#### Access Logic
+
+```typescript
+function getScoreAccess(scoreType: string, userTier: string): 'full' | 'teaser' {
+  // Market Health is always free
+  if (scoreType === 'market_health') return 'full';
+  
+  // HomeReady and InvestorEdge require Pro
+  if (userTier === 'pro') return 'full';
+  
+  return 'teaser';
+}
+```
 
 ---
 
@@ -480,4 +952,4 @@ Annual Timeline:
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 2026 (PropertyIQ Scores v2.0 with data inheritance)*

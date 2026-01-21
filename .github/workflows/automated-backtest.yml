@@ -1,0 +1,207 @@
+# PropertyIQ Automated Backtest Pipeline
+#
+# Runs monthly backtesting across all PropertyIQ scores with stratified sampling.
+# Compares historical scores against actual outcomes to calculate confidence scores.
+#
+# Schedule: 1st of each month at 2 AM UTC
+# Can also be triggered manually with custom parameters.
+
+name: PropertyIQ Automated Backtest
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC on the 1st of each month
+    - cron: '0 2 1 * *'
+
+  workflow_dispatch:
+    inputs:
+      score_types:
+        description: 'Score types to test (comma-separated)'
+        required: false
+        default: 'market_health,homeready,investoredge'
+        type: string
+      horizons:
+        description: 'Horizons to test (comma-separated)'
+        required: false
+        default: '6m,1y,3y,5y'
+        type: string
+      county_sample:
+        description: 'Sample size for counties'
+        required: false
+        default: '500'
+        type: string
+      zip_sample:
+        description: 'Sample size for ZIPs'
+        required: false
+        default: '2000'
+        type: string
+      random_seed:
+        description: 'Random seed for reproducibility'
+        required: false
+        default: '42'
+        type: string
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  backtest:
+    name: Run Automated Backtest
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3-hour timeout for large backtests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r packages/backend/jobs/requirements.txt
+
+      - name: Run automated backtest
+        id: backtest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.BACKTEST_SLACK_WEBHOOK_URL }}
+        run: |
+          cd packages/backend/jobs
+
+          # Set parameters from inputs or defaults
+          SCORE_TYPES="${{ inputs.score_types || 'market_health,homeready,investoredge' }}"
+          HORIZONS="${{ inputs.horizons || '6m,1y,3y,5y' }}"
+          COUNTY_SAMPLE="${{ inputs.county_sample || '500' }}"
+          ZIP_SAMPLE="${{ inputs.zip_sample || '2000' }}"
+          RANDOM_SEED="${{ inputs.random_seed || '42' }}"
+
+          python -m backtest.automated_runner \
+            --score-types "$SCORE_TYPES" \
+            --horizons "$HORIZONS" \
+            --county-sample "$COUNTY_SAMPLE" \
+            --zip-sample "$ZIP_SAMPLE" \
+            --seed "$RANDOM_SEED" \
+            --slack-webhook "$SLACK_WEBHOOK_URL" \
+            2>&1 | tee backtest_output.txt
+
+          # Extract run ID and status for artifacts
+          RUN_ID=$(grep "Backtest Run:" backtest_output.txt | cut -d: -f2 | tr -d ' ')
+          STATUS=$(grep "Status:" backtest_output.txt | cut -d: -f2 | tr -d ' ')
+
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Upload backtest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-results-${{ steps.backtest.outputs.run_id }}
+          path: packages/backend/jobs/backtest_output.txt
+          retention-days: 90
+
+      - name: Check for action required status
+        if: steps.backtest.outputs.status == 'action_required'
+        run: |
+          echo "::warning::Backtest completed with ACTION REQUIRED status. Review confidence alerts in the admin dashboard."
+          exit 1
+
+      - name: Check for review needed status
+        if: steps.backtest.outputs.status == 'review_needed'
+        run: |
+          echo "::warning::Backtest completed with REVIEW NEEDED status. Some scores have low confidence."
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: backtest
+    if: failure()
+
+    steps:
+      - name: Send Slack notification on failure
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.BACKTEST_SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "❌ PropertyIQ Backtest Failed"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "The automated backtest workflow has failed.\n\n*Workflow:* ${{ github.workflow }}\n*Run:* ${{ github.run_id }}\n*Repository:* ${{ github.repository }}"
+                    }
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "View Workflow Run"
+                        },
+                        "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      }
+                    ]
+                  }
+                ]
+              }'
+          fi
+
+  summary:
+    name: Generate Summary
+    runs-on: ubuntu-latest
+    needs: backtest
+    if: always()
+
+    steps:
+      - name: Download backtest results
+        uses: actions/download-artifact@v4
+        with:
+          name: backtest-results-${{ needs.backtest.outputs.run_id }}
+          path: ./results
+        continue-on-error: true
+
+      - name: Generate job summary
+        run: |
+          echo "## PropertyIQ Automated Backtest Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.backtest.result }}" == "success" ]; then
+            echo "✅ **Status:** Success" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.backtest.result }}" == "failure" ]; then
+            echo "❌ **Status:** Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Status:** ${{ needs.backtest.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Score Types | ${{ inputs.score_types || 'market_health,homeready,investoredge' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Horizons | ${{ inputs.horizons || '6m,1y,3y,5y' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| County Sample | ${{ inputs.county_sample || '500' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ZIP Sample | ${{ inputs.zip_sample || '2000' }} |" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "./results/backtest_output.txt" ]; then
+            echo "### Output" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            tail -50 ./results/backtest_output.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
