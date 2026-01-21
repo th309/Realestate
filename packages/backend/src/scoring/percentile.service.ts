@@ -44,17 +44,24 @@ export class PercentileService {
     periodDate: string,
   ): Promise<{ calculated: number; errors: number }> {
     const table = this.getTableForGeography(geographyType);
+    console.log(`Calculating percentiles for ${geographyType} on ${periodDate} from table ${table}`);
 
     // Get all unique metric names for this date
+    // Note: Removed .not('value', 'is', null) filter as it can cause issues
+    // We'll handle null values in the calculation instead
     const { data: metrics, error: metricsError } = await this.supabase
       .from(table)
       .select('metric_name')
-      .eq('period_date', periodDate)
-      .not('value', 'is', null);
+      .eq('period_date', periodDate);
 
-    if (metricsError || !metrics) {
-      console.error('Error fetching metrics:', metricsError);
+    if (metricsError) {
+      console.error(`Error fetching metrics from ${table}:`, metricsError.message, metricsError.details);
       return { calculated: 0, errors: 1 };
+    }
+
+    if (!metrics || metrics.length === 0) {
+      console.log(`No metrics found in ${table} for date ${periodDate}`);
+      return { calculated: 0, errors: 0 };
     }
 
     const uniqueMetrics = [...new Set(metrics.map((m) => m.metric_name))];
@@ -157,15 +164,23 @@ export class PercentileService {
       .select('value')
       .eq('metric_name', metricName)
       .eq('period_date', periodDate)
-      .not('value', 'is', null)
       .order('value', { ascending: true });
 
-    if (error || !values || values.length < 10) {
-      // Need at least 10 values for meaningful percentiles
+    if (error) {
+      console.error(`Error fetching values for ${metricName}:`, error.message);
       return null;
     }
 
-    const numericValues = values.map((v) => v.value as number);
+    // Filter out null values in code instead of in query
+    const nonNullValues = values?.filter((v) => v.value !== null) || [];
+
+    if (nonNullValues.length < 10) {
+      // Need at least 10 values for meaningful percentiles
+      console.log(`Skipping ${metricName}: only ${nonNullValues.length} non-null values`);
+      return null;
+    }
+
+    const numericValues = nonNullValues.map((v) => v.value as number);
     const count = numericValues.length;
 
     // Calculate percentiles
