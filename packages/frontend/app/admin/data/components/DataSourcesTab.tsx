@@ -80,7 +80,7 @@ export function DataSourcesTab() {
   };
 
   const getResponseTimeColor = (ms: number | null) => {
-    if (ms === null) return 'text-gray-500';
+    if (ms === null) return 'text-on-surface-variant';
     if (ms < 500) return 'text-green-600';
     if (ms < 2000) return 'text-amber-600';
     return 'text-red-600';
@@ -166,7 +166,7 @@ export function DataSourcesTab() {
                     {source.daysSinceUpdate !== null
                       ? `${source.daysSinceUpdate} days ago`
                       : 'Unknown'}
-                    <span className="text-xs text-gray-400 ml-1">
+                    <span className="text-xs text-on-surface-variant/60 ml-1">
                       (exp: {source.expectedFreshnessDays}d)
                     </span>
                   </td>

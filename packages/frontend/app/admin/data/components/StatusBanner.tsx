@@ -33,8 +33,8 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
         className="p-4 rounded-xl bg-surface-container animate-pulse"
         data-testid="status-banner-loading"
       >
-        <div className="h-6 bg-gray-200 rounded w-48 mb-2" />
-        <div className="h-4 bg-gray-200 rounded w-96" />
+        <div className="h-6 bg-surface-container-high rounded w-48 mb-2" />
+        <div className="h-4 bg-surface-container-high rounded w-96" />
       </div>
     );
   }
@@ -117,7 +117,7 @@ export function StatusBanner({ summary, loading, lastRefresh }: StatusBannerProp
             <h2 className={`text-lg font-semibold ${statusConfig.text}`}>
               {statusConfig.label}
             </h2>
-            <p className="text-sm text-gray-600" data-testid="last-refresh-time">
+            <p className="text-sm text-on-surface-variant" data-testid="last-refresh-time">
               Last Check: {formatLastRefresh(lastRefresh)}
             </p>
           </div>
