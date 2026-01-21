@@ -1,0 +1,2 @@
+# This directory stores Playwright authentication state files
+# The actual auth state files (*.json) are gitignored

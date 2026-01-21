@@ -1,0 +1,3 @@
+# Ignore auth state files (contain session tokens)
+*.json
+!.gitkeep
