@@ -15,6 +15,7 @@ import { EconomicModule } from './economic/economic.module';
 import { ReportsModule } from './reports/reports.module';
 import { TimeSeriesModule } from './timeseries/timeseries.module';
 import { PermitsModule } from './permits/permits.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PermitsModule } from './permits/permits.module';
     ReportsModule,
     TimeSeriesModule,
     PermitsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
