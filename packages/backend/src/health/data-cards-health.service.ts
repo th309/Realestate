@@ -208,20 +208,21 @@ export class DataCardsHealthService {
 
   private getDateColumn(tableName: string): string | null {
     const dateColumns: Record<string, string> = {
-      zillow_zip: 'date',
-      zillow_county: 'date',
-      zillow_metro: 'date',
-      zillow_state: 'date',
-      realtor_zip: 'month_date_yyyymm',
-      realtor_county: 'month_date_yyyymm',
-      realtor_metro: 'month_date_yyyymm',
-      realtor_state: 'month_date_yyyymm',
+      zillow_zip: 'period_date',
+      zillow_county: 'period_date',
+      zillow_metro: 'period_date',
+      zillow_state: 'period_date',
+      realtor_zip: 'period_date',
+      realtor_county: 'period_date',
+      realtor_metro: 'period_date',
+      realtor_state: 'period_date',
       census_zip: 'year',
       census_county: 'year',
-      economic_county: 'date',
-      economic_metro: 'date',
-      permits_county: 'date',
-      calculated_metrics: 'calculated_at',
+      economic_county: 'period_date',
+      economic_metro: 'period_date',
+      permits_county: 'period_date',
+      permits_state: 'period_date',
+      calculated_metrics: 'period_date',
       propertyiq_scores: 'created_at',
     };
     return dateColumns[tableName] || null;
