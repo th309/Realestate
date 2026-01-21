@@ -218,7 +218,7 @@ export class ScoringService {
       geographyId,
       geographyType,
       geographyName: geography.name,
-      stateCode: geography.state_code,
+      stateCode: geography.state_code ?? null,
       periodDate: targetDate,
 
       // Market Health (FREE TIER)
@@ -260,6 +260,7 @@ export class ScoringService {
 
   /**
    * Calculate scores for all geographies of a given type
+   * Gets geography IDs from the actual data tables (like the map page does)
    */
   async calculateAllScores(
     geographyType: GeographyType,
@@ -268,32 +269,73 @@ export class ScoringService {
     const targetDate = periodDate || (await this.getLatestDate(geographyType));
     if (!targetDate) return { calculated: 0, errors: 0 };
 
-    // Get all geographies of this type
-    const { data: geographies } = await this.supabase
-      .from('geographies')
-      .select('geography_id, name')
-      .eq('geography_type', geographyType);
-
-    if (!geographies) return { calculated: 0, errors: 0 };
+    // Get all unique geography IDs from the data tables
+    const geographyIds = await this.getAllGeographyIds(geographyType, targetDate);
+    if (geographyIds.length === 0) return { calculated: 0, errors: 0 };
 
     let calculated = 0;
     let errors = 0;
 
-    for (const geo of geographies) {
+    for (const geoId of geographyIds) {
       try {
         const score = await this.calculateScore(
-          geo.geography_id,
+          geoId,
           geographyType,
           targetDate,
         );
         if (score) calculated++;
       } catch (err) {
         errors++;
-        console.error(`Error calculating score for ${geo.geography_id}:`, err);
+        console.error(`Error calculating score for ${geoId}:`, err);
       }
     }
 
     return { calculated, errors };
+  }
+
+  /**
+   * Get all geography IDs from the actual data tables
+   */
+  private async getAllGeographyIds(
+    geographyType: GeographyType,
+    periodDate: string,
+  ): Promise<string[]> {
+    switch (geographyType) {
+      case 'state': {
+        const { data } = await this.supabase
+          .from('realtor_state')
+          .select('state_id')
+          .eq('period_date', periodDate);
+        return [...new Set(data?.map(r => r.state_id) || [])];
+      }
+      case 'metro': {
+        const { data } = await this.supabase
+          .from('realtor_metro')
+          .select('cbsa_code')
+          .eq('period_date', periodDate)
+          .limit(2000);
+        return [...new Set(data?.map(r => r.cbsa_code) || [])];
+      }
+      case 'county': {
+        const { data } = await this.supabase
+          .from('realtor_county')
+          .select('county_fips')
+          .eq('period_date', periodDate)
+          .limit(5000);
+        return [...new Set(data?.map(r => r.county_fips) || [])];
+      }
+      case 'zip': {
+        // For ZIPs, just get a sample - there are ~30,000
+        const { data } = await this.supabase
+          .from('realtor_zip')
+          .select('postal_code')
+          .eq('period_date', periodDate)
+          .limit(1000);
+        return [...new Set(data?.map(r => r.postal_code) || [])];
+      }
+      default:
+        return [];
+    }
   }
 
   /**
@@ -373,67 +415,385 @@ export class ScoringService {
     return data?.[0]?.period_date || null;
   }
 
+  /**
+   * Get the primary data table for a geography type
+   * Uses Realtor tables as primary source (like the map page)
+   */
   private getTableForGeography(geographyType: GeographyType): string {
     switch (geographyType) {
       case 'state':
-        return 'zillow_state';
+        return 'realtor_state';
       case 'metro':
-        return 'zillow_metro';
+        return 'realtor_metro';
       case 'county':
-        return 'zillow_county';
+        return 'realtor_county';
       case 'zip':
-        return 'zillow_zip';
+        return 'realtor_zip';
       default:
-        return 'zillow_metro';
+        return 'realtor_metro';
     }
   }
 
+  /**
+   * Get geography info directly from the data tables (like the map page does)
+   * This avoids dependency on a separate 'geographies' table
+   */
   private async getGeography(
     geographyId: string,
     geographyType: GeographyType,
-  ) {
-    const { data } = await this.supabase
-      .from('geographies')
-      .select('*')
-      .eq('geography_id', geographyId)
-      .eq('geography_type', geographyType)
-      .single();
+  ): Promise<{ geography_id: string; name: string; state_code?: string; region_id?: string } | null> {
+    switch (geographyType) {
+      case 'state': {
+        // Query realtor_state table - uses state_id (abbreviation like "IL")
+        const { data } = await this.supabase
+          .from('realtor_state')
+          .select('state_id, state_name')
+          .eq('state_id', geographyId.toUpperCase())
+          .order('period_date', { ascending: false })
+          .limit(1);
 
-    return data;
+        if (data?.[0]) {
+          return {
+            geography_id: data[0].state_id,
+            name: data[0].state_name,
+            state_code: data[0].state_id,
+          };
+        }
+        // Fallback to zillow_state if not in realtor
+        const { data: zillowData } = await this.supabase
+          .from('zillow_state')
+          .select('region_id, region_name, state_abbrev')
+          .eq('state_abbrev', geographyId.toUpperCase())
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          return {
+            geography_id: zillowData[0].state_abbrev || geographyId,
+            name: zillowData[0].region_name,
+            state_code: zillowData[0].state_abbrev,
+            region_id: zillowData[0].region_id,
+          };
+        }
+        return null;
+      }
+
+      case 'metro': {
+        // Query realtor_metro table - uses cbsa_code
+        const { data } = await this.supabase
+          .from('realtor_metro')
+          .select('cbsa_code, cbsa_title')
+          .eq('cbsa_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (data?.[0]) {
+          return {
+            geography_id: data[0].cbsa_code,
+            name: data[0].cbsa_title,
+          };
+        }
+        // Fallback to zillow_metro
+        const { data: zillowData } = await this.supabase
+          .from('zillow_metro')
+          .select('region_id, region_name, cbsa_code')
+          .eq('cbsa_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          return {
+            geography_id: zillowData[0].cbsa_code || geographyId,
+            name: zillowData[0].region_name,
+            region_id: zillowData[0].region_id,
+          };
+        }
+        return null;
+      }
+
+      case 'county': {
+        // Query realtor_county table - uses county_fips
+        const { data } = await this.supabase
+          .from('realtor_county')
+          .select('county_fips, county_name, state_id')
+          .eq('county_fips', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (data?.[0]) {
+          return {
+            geography_id: data[0].county_fips,
+            name: data[0].county_name,
+            state_code: data[0].state_id,
+          };
+        }
+        // Fallback to zillow_county
+        const { data: zillowData } = await this.supabase
+          .from('zillow_county')
+          .select('region_id, region_name, county_fips, state_abbrev')
+          .eq('county_fips', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          return {
+            geography_id: zillowData[0].county_fips || geographyId,
+            name: zillowData[0].region_name,
+            state_code: zillowData[0].state_abbrev,
+            region_id: zillowData[0].region_id,
+          };
+        }
+        return null;
+      }
+
+      case 'zip': {
+        // Query realtor_zip table - uses postal_code
+        const { data } = await this.supabase
+          .from('realtor_zip')
+          .select('postal_code, zip_name')
+          .eq('postal_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (data?.[0]) {
+          // Extract state from zip_name (format: "City, ST")
+          const stateMatch = data[0].zip_name?.match(/, ([A-Z]{2})$/);
+          return {
+            geography_id: data[0].postal_code,
+            name: data[0].zip_name,
+            state_code: stateMatch?.[1],
+          };
+        }
+        // Fallback to zillow_zip
+        const { data: zillowData } = await this.supabase
+          .from('zillow_zip')
+          .select('region_id, region_name, zip_code, state_abbrev')
+          .eq('zip_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          return {
+            geography_id: zillowData[0].zip_code || geographyId,
+            name: zillowData[0].region_name,
+            state_code: zillowData[0].state_abbrev,
+            region_id: zillowData[0].region_id,
+          };
+        }
+        return null;
+      }
+
+      default:
+        return null;
+    }
   }
 
+  /**
+   * Fetch metrics directly from data tables using geography identifiers
+   * (same approach as map page - no dependency on separate geographies table)
+   */
   private async fetchMetrics(
-    geography: any,
+    geography: { geography_id: string; name: string; state_code?: string; region_id?: string },
     geographyType: GeographyType,
     periodDate: string,
   ): Promise<MetricData> {
     const metrics: MetricData = {};
-    const table = this.getTableForGeography(geographyType);
 
-    // Get Zillow region ID for this geography
-    const regionIdField = `zillow_${geographyType}_region_id`;
-    const regionId = geography[regionIdField] || geography.zillow_region_id;
+    // Fetch from Zillow tables using the appropriate identifier
+    switch (geographyType) {
+      case 'state': {
+        // Query zillow_state by state_abbrev
+        const { data: zillowData } = await this.supabase
+          .from('zillow_state')
+          .select('*')
+          .eq('state_abbrev', geography.geography_id.toUpperCase())
+          .eq('period_date', periodDate)
+          .limit(1);
 
-    if (!regionId) return metrics;
+        if (zillowData?.[0]) {
+          // Map Zillow columns to metric names
+          const row = zillowData[0];
+          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
+          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
+        }
+        break;
+      }
 
-    // Fetch all metrics for this region and date
-    const { data } = await this.supabase
-      .from(table)
-      .select('metric_name, value, period_date')
-      .eq('region_id', regionId)
-      .eq('period_date', periodDate);
+      case 'metro': {
+        // Query zillow_metro by cbsa_code
+        const { data: zillowData } = await this.supabase
+          .from('zillow_metro')
+          .select('*')
+          .eq('cbsa_code', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
 
-    if (data) {
-      for (const row of data) {
-        metrics[row.metric_name] = {
-          value: row.value,
-          date: row.period_date,
-          source: 'zillow',
-        };
+        if (zillowData?.[0]) {
+          const row = zillowData[0];
+          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
+          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
+        }
+
+        // Also get ZORI (rent) data
+        const { data: zoriData } = await this.supabase
+          .from('zillow_zori')
+          .select('*')
+          .eq('cbsa_code', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
+
+        if (zoriData?.[0]) {
+          const row = zoriData[0];
+          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
+          if (row.zori_yoy != null) metrics.zori_yoy = { value: row.zori_yoy, date: periodDate, source: 'zillow' };
+        }
+        break;
+      }
+
+      case 'county': {
+        // Query zillow_county by county_fips
+        const { data: zillowData } = await this.supabase
+          .from('zillow_county')
+          .select('*')
+          .eq('county_fips', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          const row = zillowData[0];
+          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
+          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
+        }
+
+        // Also get ZORI (rent) data for counties
+        const { data: zoriData } = await this.supabase
+          .from('zillow_zori')
+          .select('*')
+          .eq('county_fips', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
+
+        if (zoriData?.[0]) {
+          const row = zoriData[0];
+          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
+        }
+        break;
+      }
+
+      case 'zip': {
+        // Query zillow_zip by zip_code
+        const { data: zillowData } = await this.supabase
+          .from('zillow_zip')
+          .select('*')
+          .eq('zip_code', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
+
+        if (zillowData?.[0]) {
+          const row = zillowData[0];
+          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
+          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
+        }
+
+        // Also get ZORI (rent) data for ZIPs
+        const { data: zoriData } = await this.supabase
+          .from('zillow_zori')
+          .select('*')
+          .eq('zip_code', geography.geography_id)
+          .eq('period_date', periodDate)
+          .limit(1);
+
+        if (zoriData?.[0]) {
+          const row = zoriData[0];
+          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
+        }
+        break;
       }
     }
 
+    // Also fetch Realtor data for additional metrics
+    await this.fetchRealtorMetrics(metrics, geography, geographyType, periodDate);
+
     return metrics;
+  }
+
+  /**
+   * Fetch additional metrics from Realtor tables
+   */
+  private async fetchRealtorMetrics(
+    metrics: MetricData,
+    geography: { geography_id: string },
+    geographyType: GeographyType,
+    periodDate: string,
+  ): Promise<void> {
+    let table: string;
+    let idColumn: string;
+
+    switch (geographyType) {
+      case 'state':
+        table = 'realtor_state';
+        idColumn = 'state_id';
+        break;
+      case 'metro':
+        table = 'realtor_metro';
+        idColumn = 'cbsa_code';
+        break;
+      case 'county':
+        table = 'realtor_county';
+        idColumn = 'county_fips';
+        break;
+      case 'zip':
+        table = 'realtor_zip';
+        idColumn = 'postal_code';
+        break;
+      default:
+        return;
+    }
+
+    const { data } = await this.supabase
+      .from(table)
+      .select('*')
+      .eq(idColumn, geographyType === 'state' ? geography.geography_id.toUpperCase() : geography.geography_id)
+      .eq('period_date', periodDate)
+      .limit(1);
+
+    if (data?.[0]) {
+      const row = data[0];
+      // Map Realtor columns to metric names
+      if (row.median_listing_price != null) {
+        metrics.listing_price = { value: row.median_listing_price, date: periodDate, source: 'realtor' };
+      }
+      if (row.median_listing_price_yy != null) {
+        metrics.listing_price_yoy = { value: row.median_listing_price_yy, date: periodDate, source: 'realtor' };
+      }
+      if (row.active_listing_count != null) {
+        metrics.inventory = { value: row.active_listing_count, date: periodDate, source: 'realtor' };
+      }
+      if (row.active_listing_count_yy != null) {
+        metrics.inventory_yoy = { value: row.active_listing_count_yy, date: periodDate, source: 'realtor' };
+      }
+      if (row.median_days_on_market != null) {
+        metrics.days_on_market = { value: row.median_days_on_market, date: periodDate, source: 'realtor' };
+      }
+      if (row.new_listing_count != null) {
+        metrics.new_listings = { value: row.new_listing_count, date: periodDate, source: 'realtor' };
+      }
+      if (row.pending_listing_count != null) {
+        metrics.pending_sales = { value: row.pending_listing_count, date: periodDate, source: 'realtor' };
+      }
+      if (row.price_reduced_share != null) {
+        metrics.price_reduced_share = { value: row.price_reduced_share, date: periodDate, source: 'realtor' };
+      }
+      if (row.hotness_score != null) {
+        metrics.hotness_score = { value: row.hotness_score, date: periodDate, source: 'realtor' };
+      }
+      if (row.supply_score != null) {
+        metrics.supply_score = { value: row.supply_score, date: periodDate, source: 'realtor' };
+      }
+      if (row.demand_score != null) {
+        metrics.demand_score = { value: row.demand_score, date: periodDate, source: 'realtor' };
+      }
+    }
   }
 
   private async fetchPercentiles(

@@ -510,12 +510,12 @@ export class ScoringController {
       return debug;
     }
 
-    // Check 2: Get geography from geographies table
+    // Check 2: Get geography from data tables (Realtor/Zillow)
     const geography = await this.scoringService.debugGetGeography(geographyId, geoType);
-    debug.checks.geography = geography ? { found: true, name: geography.name, zillow_region_id: geography.zillow_region_id } : null;
+    debug.checks.geography = geography ? { found: true, name: geography.name, geography_id: geography.geography_id } : null;
 
     if (!geography) {
-      debug.failureReason = `Geography ${geographyId} not found in geographies table for type ${geoType}`;
+      debug.failureReason = `Geography ${geographyId} not found in data tables for type ${geoType}`;
       return debug;
     }
 
