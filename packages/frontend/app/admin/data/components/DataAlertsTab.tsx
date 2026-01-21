@@ -8,13 +8,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DataAlert, AlertFilter, getMockAlerts } from './dataAlerts.types';
+import { DataAlert, AlertFilter } from './dataAlerts.types';
 import { AlertListItem } from './AlertListItem';
 import { AlertDetail } from './AlertDetail';
 
 export function DataAlertsTab() {
   const [alerts, setAlerts] = useState<DataAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<AlertFilter>({
     status: 'open',
     severity: 'all',
@@ -28,6 +29,7 @@ export function DataAlertsTab() {
 
   const fetchAlerts = async () => {
     setLoading(true);
+    setError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const params = new URLSearchParams();
@@ -41,11 +43,13 @@ export function DataAlertsTab() {
         const data = await response.json();
         setAlerts(data.alerts || []);
       } else {
-        setAlerts(getMockAlerts());
+        setError(`API error: ${response.status} ${response.statusText}`);
+        setAlerts([]);
       }
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-      setAlerts(getMockAlerts());
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      setAlerts([]);
     } finally {
       setLoading(false);
     }
@@ -123,9 +127,20 @@ export function DataAlertsTab() {
         <div className="space-y-3">
           {loading ? (
             <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+          ) : error ? (
+            <div className="p-8 text-center bg-surface-container rounded-xl">
+              <div className="text-red-600 font-medium mb-2">Failed to load alerts</div>
+              <div className="text-sm text-on-surface-variant mb-4">{error}</div>
+              <button
+                onClick={fetchAlerts}
+                className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90"
+              >
+                Retry
+              </button>
+            </div>
           ) : alerts.length === 0 ? (
             <div className="p-8 text-center bg-surface-container rounded-xl text-on-surface-variant">
-              No alerts found
+              No alerts found matching the current filters.
             </div>
           ) : (
             alerts.map((alert) => (

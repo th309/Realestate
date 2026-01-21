@@ -10,7 +10,6 @@
 import { useState, useEffect } from 'react';
 import {
   MetricHealth,
-  getMockMetrics,
   getStatusBadgeClasses,
   getCoverageColor,
 } from './dataCards.types';
@@ -18,6 +17,7 @@ import {
 export function DataCardsTab() {
   const [metrics, setMetrics] = useState<MetricHealth[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'ok' | 'stale' | 'empty' | 'error'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
@@ -27,6 +27,7 @@ export function DataCardsTab() {
 
   const fetchMetricHealth = async () => {
     setLoading(true);
+    setError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/health/data-cards`);
@@ -35,11 +36,13 @@ export function DataCardsTab() {
         const data = await response.json();
         setMetrics(data.checks || []);
       } else {
-        setMetrics(getMockMetrics());
+        setError(`API error: ${response.status} ${response.statusText}`);
+        setMetrics([]);
       }
-    } catch (error) {
-      console.error('Error fetching metric health:', error);
-      setMetrics(getMockMetrics());
+    } catch (err) {
+      console.error('Error fetching metric health:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      setMetrics([]);
     } finally {
       setLoading(false);
     }
@@ -132,6 +135,21 @@ export function DataCardsTab() {
       <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="metric-health-table">
         {loading ? (
           <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <div className="text-red-600 font-medium mb-2">Failed to load data</div>
+            <div className="text-sm text-on-surface-variant mb-4">{error}</div>
+            <button
+              onClick={fetchMetricHealth}
+              className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : metrics.length === 0 ? (
+          <div className="p-8 text-center text-on-surface-variant">
+            No metrics found. The health check API may not be returning data.
+          </div>
         ) : (
           <table className="min-w-full divide-y divide-outline-variant">
             <thead className="bg-surface-container-low">

@@ -65,7 +65,10 @@ export class PipelineRunsService {
 
       if (error) {
         this.logger.warn(`Error fetching pipeline runs: ${error.message}`);
-        return this.getMockRuns();
+        return {
+          pipelines: [],
+          summary: { total: 0, successful: 0, failed: 0, running: 0 },
+        };
       }
 
       const pipelines: PipelineRun[] = (data || []).map((row) => ({
@@ -93,7 +96,10 @@ export class PipelineRunsService {
       };
     } catch (error) {
       this.logger.error('Error fetching pipeline runs:', error);
-      return this.getMockRuns();
+      return {
+        pipelines: [],
+        summary: { total: 0, successful: 0, failed: 0, running: 0 },
+      };
     }
   }
 
@@ -118,55 +124,4 @@ export class PipelineRunsService {
     return statusMap[dbStatus?.toLowerCase()] || 'failed';
   }
 
-  private getMockRuns(): PipelineRunsResponse {
-    const now = new Date();
-    const pipelines: PipelineRun[] = [
-      {
-        id: '1',
-        pipelineName: 'zillow_zhvi',
-        displayName: 'Zillow ZHVI',
-        startedAt: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
-        endedAt: new Date(now.getTime() - 3.5 * 60 * 60 * 1000).toISOString(),
-        status: 'success',
-        recordsProcessed: 33500,
-        recordsInserted: 33120,
-        recordsFailed: 0,
-        durationMs: 272000,
-      },
-      {
-        id: '2',
-        pipelineName: 'zillow_zori',
-        displayName: 'Zillow ZORI',
-        startedAt: new Date(now.getTime() - 3.5 * 60 * 60 * 1000).toISOString(),
-        endedAt: new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString(),
-        status: 'success',
-        recordsProcessed: 29000,
-        recordsInserted: 28450,
-        recordsFailed: 0,
-        durationMs: 198000,
-      },
-      {
-        id: '3',
-        pipelineName: 'bls_unemployment',
-        displayName: 'BLS Unemployment',
-        startedAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-        endedAt: new Date(now.getTime() - 1.8 * 60 * 60 * 1000).toISOString(),
-        status: 'success',
-        recordsProcessed: 3250,
-        recordsInserted: 3221,
-        recordsFailed: 29,
-        durationMs: 132000,
-      },
-    ];
-
-    return {
-      pipelines,
-      summary: {
-        total: pipelines.length,
-        successful: pipelines.filter((p) => p.status === 'success').length,
-        failed: pipelines.filter((p) => p.status === 'failed').length,
-        running: pipelines.filter((p) => p.status === 'running').length,
-      },
-    };
-  }
 }

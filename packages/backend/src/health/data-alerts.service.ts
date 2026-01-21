@@ -69,7 +69,10 @@ export class DataAlertsService {
 
       if (error) {
         this.logger.warn(`Error fetching alerts: ${error.message}`);
-        return this.getMockAlerts();
+        return {
+          alerts: [],
+          summary: this.calculateSummary([]),
+        };
       }
 
       const alerts: DataAlert[] = (data || []).map((row) => ({
@@ -94,7 +97,10 @@ export class DataAlertsService {
       };
     } catch (error) {
       this.logger.error('Error fetching alerts:', error);
-      return this.getMockAlerts();
+      return {
+        alerts: [],
+        summary: this.calculateSummary([]),
+      };
     }
   }
 
@@ -190,36 +196,4 @@ export class DataAlertsService {
     };
   }
 
-  private getMockAlerts(): DataAlertsResponse {
-    const now = new Date();
-    const alerts: DataAlert[] = [
-      {
-        id: '1',
-        alertType: 'source_stale',
-        severity: 'warning',
-        sourceName: 'realtor_s3',
-        title: 'Realtor data slightly stale',
-        message: 'Realtor data is 8 days old, expected refresh every 7 days',
-        status: 'open',
-        createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: '2',
-        alertType: 'pipeline_failed',
-        severity: 'critical',
-        pipelineName: 'realtor_metrics',
-        title: 'Realtor pipeline failed',
-        message: 'Connection timeout to Realtor S3 bucket',
-        status: 'acknowledged',
-        createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString(),
-        acknowledgedAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-        acknowledgedBy: 'admin@example.com',
-      },
-    ];
-
-    return {
-      alerts,
-      summary: this.calculateSummary(alerts),
-    };
-  }
 }

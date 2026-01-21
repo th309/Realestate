@@ -108,7 +108,7 @@ export class BacktestRunsService {
   }> {
     const { limit = 20, offset = 0, status, startDate, endDate } = params;
 
-    let query = this.supabase.client
+    let query = this.supabase.getClient()
       .from('propertyiq_backtest_runs')
       .select('*', { count: 'exact' })
       .order('started_at', { ascending: false })
@@ -143,7 +143,7 @@ export class BacktestRunsService {
    * Get a specific backtest run by ID.
    */
   async getRun(runId: string): Promise<BacktestRun | null> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_backtest_runs')
       .select('*')
       .eq('id', runId)
@@ -164,7 +164,7 @@ export class BacktestRunsService {
    * Get samples for a specific backtest run.
    */
   async getRunSamples(runId: string): Promise<BacktestSample[]> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_backtest_samples')
       .select('*')
       .eq('run_id', runId)
@@ -184,7 +184,7 @@ export class BacktestRunsService {
    */
   async getConfidenceSummary(): Promise<Record<string, Record<string, Record<string, ConfidenceResult>>>> {
     // Get the most recent run
-    const { data: latestRun, error } = await this.supabase.client
+    const { data: latestRun, error } = await this.supabase.getClient()
       .from('propertyiq_backtest_runs')
       .select('results')
       .eq('status', 'healthy')
@@ -225,7 +225,7 @@ export class BacktestRunsService {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_backtest_runs')
       .select('started_at, results')
       .gte('started_at', startDate.toISOString())
@@ -275,7 +275,7 @@ export class BacktestRunsService {
     // Create a job entry
     const jobId = `backtest_${Date.now()}`;
 
-    const { error: insertError } = await this.supabase.client
+    const { error: insertError } = await this.supabase.getClient()
       .from('propertyiq_ml_jobs')
       .insert({
         id: jobId,
@@ -322,7 +322,7 @@ export class BacktestRunsService {
       pythonProcess.unref();
 
       // Update job status to running
-      await this.supabase.client
+      await this.supabase.getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'running',
@@ -339,7 +339,7 @@ export class BacktestRunsService {
       };
     } catch (spawnError) {
       // Update job status to failed
-      await this.supabase.client
+      await this.supabase.getClient()
         .from('propertyiq_ml_jobs')
         .update({
           status: 'failed',
@@ -361,7 +361,7 @@ export class BacktestRunsService {
     error?: string;
     result?: unknown;
   } | null> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_ml_jobs')
       .select('status, progress, error, result')
       .eq('id', jobId)
@@ -386,7 +386,7 @@ export class BacktestRunsService {
     averageDuration: number;
     statusCounts: Record<string, number>;
   }> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_backtest_runs')
       .select('status, duration_seconds, started_at')
       .order('started_at', { ascending: false });

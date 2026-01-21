@@ -74,42 +74,4 @@ export function formatAlertDate(dateStr: string): string {
   });
 }
 
-export function getMockAlerts(): DataAlert[] {
-  const now = new Date();
-  return [
-    {
-      id: '1',
-      alertType: 'source_stale',
-      severity: 'warning',
-      sourceName: 'realtor_s3',
-      title: 'Realtor data slightly stale',
-      message: 'Realtor data is 8 days old. Expected refresh: 7 days.',
-      status: 'open',
-      createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '2',
-      alertType: 'pipeline_failed',
-      severity: 'critical',
-      pipelineName: 'realtor_metrics',
-      title: 'Realtor pipeline failed',
-      message: 'Connection timeout to Realtor S3 bucket.',
-      status: 'acknowledged',
-      createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-      acknowledgedAt: new Date(now.getTime() - 20 * 60 * 60 * 1000).toISOString(),
-      acknowledgedBy: 'admin@propertyiq.com',
-    },
-    {
-      id: '3',
-      alertType: 'coverage_drop',
-      severity: 'info',
-      sourceName: 'census_api',
-      title: 'Census coverage dropped',
-      message: 'Census ZIP coverage dropped from 99.5% to 98.8%.',
-      status: 'resolved',
-      createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      acknowledgedAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      resolvedAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ];
-}
+// No mock data - all data comes from the API at /api/health/data-alerts

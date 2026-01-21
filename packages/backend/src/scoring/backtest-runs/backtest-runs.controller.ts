@@ -28,8 +28,8 @@ import {
 import {
   BacktestRunsService,
   ListBacktestRunsParams,
-  TriggerBacktestParams,
 } from './backtest-runs.service';
+import { TriggerBacktestDto } from './trigger-backtest.dto';
 
 @Controller('api/admin/backtest-runs')
 export class BacktestRunsController {
@@ -162,7 +162,7 @@ export class BacktestRunsController {
    * - random_seed: Random seed for reproducibility
    */
   @Post('trigger')
-  async triggerBacktest(@Body() params: TriggerBacktestParams) {
+  async triggerBacktest(@Body() params: TriggerBacktestDto) {
     try {
       const result = await this.backtestRunsService.triggerBacktest(params);
 

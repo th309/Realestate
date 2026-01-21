@@ -125,7 +125,7 @@ export class DataCardsHealthService {
         return { latestDate: null, recordCount: 0, coverage: 0 };
       }
 
-      const latestDate = data?.[0]?.[dateColumn] || null;
+      const latestDate = dateColumn && data?.[0] ? data[0][dateColumn] : null;
       const recordCount = count || 0;
 
       // Calculate coverage (simplified - just check record count vs expected)

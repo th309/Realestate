@@ -25,6 +25,7 @@ interface SourceHealth {
 export function DataSourcesTab() {
   const [sources, setSources] = useState<SourceHealth[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSourceHealth();
@@ -32,6 +33,7 @@ export function DataSourcesTab() {
 
   const fetchSourceHealth = async () => {
     setLoading(true);
+    setError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/health/data-sources`);
@@ -40,11 +42,13 @@ export function DataSourcesTab() {
         const data = await response.json();
         setSources(data.sources || []);
       } else {
-        setSources(getMockSources());
+        setError(`API error: ${response.status} ${response.statusText}`);
+        setSources([]);
       }
-    } catch (error) {
-      console.error('Error fetching source health:', error);
-      setSources(getMockSources());
+    } catch (err) {
+      console.error('Error fetching source health:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      setSources([]);
     } finally {
       setLoading(false);
     }
@@ -112,6 +116,21 @@ export function DataSourcesTab() {
       <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="source-health-table">
         {loading ? (
           <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <div className="text-red-600 font-medium mb-2">Failed to load data</div>
+            <div className="text-sm text-on-surface-variant mb-4">{error}</div>
+            <button
+              onClick={fetchSourceHealth}
+              className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : sources.length === 0 ? (
+          <div className="p-8 text-center text-on-surface-variant">
+            No data sources found.
+          </div>
         ) : (
           <table className="min-w-full divide-y divide-outline-variant">
             <thead className="bg-surface-container-low">
@@ -185,15 +204,4 @@ export function DataSourcesTab() {
       </div>
     </div>
   );
-}
-
-function getMockSources(): SourceHealth[] {
-  return [
-    { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', available: true, responseTimeMs: 245, fresh: true, daysSinceUpdate: 3, expectedFreshnessDays: 45, schemaChanged: false, lastCheck: new Date().toISOString() },
-    { sourceName: 'census_api', displayName: 'Census', sourceType: 'api', available: true, responseTimeMs: 1234, fresh: true, daysSinceUpdate: 45, expectedFreshnessDays: 400, schemaChanged: false, lastCheck: new Date().toISOString() },
-    { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', available: true, responseTimeMs: 892, fresh: true, daysSinceUpdate: 12, expectedFreshnessDays: 45, schemaChanged: false, lastCheck: new Date().toISOString() },
-    { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', available: true, responseTimeMs: 567, fresh: false, daysSinceUpdate: 8, expectedFreshnessDays: 7, schemaChanged: false, lastCheck: new Date().toISOString() },
-    { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', available: true, responseTimeMs: 1456, fresh: true, daysSinceUpdate: 30, expectedFreshnessDays: 400, schemaChanged: false, lastCheck: new Date().toISOString() },
-    { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', available: true, responseTimeMs: 2100, fresh: true, daysSinceUpdate: 18, expectedFreshnessDays: 45, schemaChanged: false, lastCheck: new Date().toISOString() },
-  ];
 }

@@ -123,7 +123,7 @@ export class MLValidationService {
   async queueMLValidationJob(config: MLValidationConfig): Promise<{ jobId: string }> {
     const jobId = randomUUID();
 
-    const { error } = await this.supabase.client
+    const { error } = await this.supabase.getClient()
       .from('propertyiq_ml_jobs')
       .insert({
         id: jobId,
@@ -178,7 +178,7 @@ export class MLValidationService {
    * Get the status of an ML validation job.
    */
   async getJobStatus(jobId: string): Promise<JobStatus | null> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_ml_jobs')
       .select('*')
       .eq('id', jobId)
@@ -224,7 +224,7 @@ export class MLValidationService {
     horizon?: string;
     limit?: number;
   }): Promise<MLValidationResult[]> {
-    let query = this.supabase.client
+    let query = this.supabase.getClient()
       .from('propertyiq_ml_validations')
       .select('*')
       .order('created_at', { ascending: false });
@@ -254,7 +254,7 @@ export class MLValidationService {
    * Get a specific ML validation result.
    */
   async getValidation(id: string): Promise<MLValidationResult | null> {
-    const { data, error } = await this.supabase.client
+    const { data, error } = await this.supabase.getClient()
       .from('propertyiq_ml_validations')
       .select('*')
       .eq('id', id)

@@ -13,13 +13,13 @@ import {
   AVAILABLE_PIPELINES,
   formatDuration,
   formatRunDate,
-  getMockRuns,
 } from './pipelineRuns.types';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 
 export function PipelineRunsTab() {
   const [runs, setRuns] = useState<PipelineRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export function PipelineRunsTab() {
 
   const fetchPipelineRuns = async () => {
     setLoading(true);
+    setError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/health/pipeline-runs`);
@@ -36,11 +37,13 @@ export function PipelineRunsTab() {
         const data = await response.json();
         setRuns(data.pipelines || []);
       } else {
-        setRuns(getMockRuns());
+        setError(`API error: ${response.status} ${response.statusText}`);
+        setRuns([]);
       }
-    } catch (error) {
-      console.error('Error fetching pipeline runs:', error);
-      setRuns(getMockRuns());
+    } catch (err) {
+      console.error('Error fetching pipeline runs:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to API');
+      setRuns([]);
     } finally {
       setLoading(false);
     }
@@ -115,6 +118,21 @@ export function PipelineRunsTab() {
       <div className="overflow-x-auto bg-surface-container rounded-xl" data-testid="pipeline-runs-table">
         {loading ? (
           <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <div className="text-red-600 font-medium mb-2">Failed to load pipeline runs</div>
+            <div className="text-sm text-on-surface-variant mb-4">{error}</div>
+            <button
+              onClick={fetchPipelineRuns}
+              className="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary/90"
+            >
+              Retry
+            </button>
+          </div>
+        ) : runs.length === 0 ? (
+          <div className="p-8 text-center text-on-surface-variant">
+            No pipeline runs found in the last 72 hours.
+          </div>
         ) : (
           <table className="min-w-full divide-y divide-outline-variant">
             <thead className="bg-surface-container-low">
