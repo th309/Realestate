@@ -38,7 +38,7 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Fetch options based on geography type and search query
+  // Fetch options using Mapbox Geocoding API
   const fetchOptions = useCallback(async () => {
     if (searchQuery.length < 2) {
       setOptions([]);
@@ -47,14 +47,63 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
 
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      if (!token) {
+        console.warn('Mapbox token not found');
+        setOptions([]);
+        return;
+      }
+
+      // Map geo type to Mapbox place types
+      const typeMapping: Record<string, string> = {
+        state: 'region',
+        metro: 'place,district',
+        county: 'district',
+        zip: 'postcode',
+      };
+
+      const mapboxTypes = typeMapping[geoType] || 'place';
+
       const response = await fetch(
-        `${apiUrl}/api/geography/search?type=${geoType}&q=${encodeURIComponent(searchQuery)}`,
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?` +
+          `access_token=${token}&` +
+          `country=US&` +
+          `types=${mapboxTypes}&` +
+          `limit=8`,
       );
 
       if (response.ok) {
         const data = await response.json();
-        setOptions(data.results || []);
+        const mappedResults = data.features?.map((feature: any) => {
+          // Extract state context for display
+          const stateContext = feature.context?.find((c: any) => c.id.startsWith('region'));
+          const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
+
+          // Build a cleaner name
+          let displayName = feature.text;
+          if (geoType === 'zip') {
+            displayName = `${feature.text}${stateAbbrev ? ` (${stateAbbrev})` : ''}`;
+          } else if (geoType === 'county') {
+            displayName = `${feature.text}${stateAbbrev ? `, ${stateAbbrev}` : ''}`;
+          } else if (geoType === 'metro' || geoType === 'state') {
+            displayName = feature.place_name?.split(',')[0] || feature.text;
+          }
+
+          // Build ID based on type
+          let id = feature.id;
+          if (geoType === 'zip') {
+            id = feature.text; // Use zip code as ID
+          } else if (geoType === 'state') {
+            id = stateAbbrev || feature.properties?.short_code?.replace('US-', '') || feature.text;
+          }
+
+          return {
+            id,
+            name: displayName,
+          };
+        }) || [];
+
+        setOptions(mappedResults);
       }
     } catch (error) {
       console.error('Error fetching geography options:', error);
