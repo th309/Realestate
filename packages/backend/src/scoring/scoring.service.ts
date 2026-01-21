@@ -340,6 +340,21 @@ export class ScoringService {
     return this.fetchPercentiles(geographyType, periodDate);
   }
 
+  async debugGetTableCount(tableName: string): Promise<{ count: number; error?: string }> {
+    try {
+      const { count, error } = await this.supabase
+        .from(tableName)
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        return { count: 0, error: error.message };
+      }
+      return { count: count || 0 };
+    } catch (err) {
+      return { count: 0, error: String(err) };
+    }
+  }
+
   // ============================================================================
   // Private: Data Fetching
   // ============================================================================

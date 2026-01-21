@@ -456,6 +456,37 @@ export class ScoringController {
   }
 
   /**
+   * Database status check
+   * GET /api/scoring/db-status
+   */
+  @Get('db-status')
+  async dbStatus() {
+    const status: Record<string, any> = {};
+
+    // Check geographies table
+    const geoCount = await this.scoringService.debugGetTableCount('geographies');
+    status.geographies = geoCount;
+
+    // Check geography_crosswalk table
+    const crosswalkCount = await this.scoringService.debugGetTableCount('geography_crosswalk');
+    status.geography_crosswalk = crosswalkCount;
+
+    // Check zillow tables
+    status.zillow_state = await this.scoringService.debugGetTableCount('zillow_state');
+    status.zillow_metro = await this.scoringService.debugGetTableCount('zillow_metro');
+    status.zillow_county = await this.scoringService.debugGetTableCount('zillow_county');
+    status.zillow_zip = await this.scoringService.debugGetTableCount('zillow_zip');
+
+    // Check scores table
+    status.propertyiq_scores = await this.scoringService.debugGetTableCount('propertyiq_scores');
+
+    // Check percentiles table
+    status.metric_percentiles = await this.scoringService.debugGetTableCount('metric_percentiles');
+
+    return status;
+  }
+
+  /**
    * Debug endpoint to diagnose scoring issues
    * GET /api/scoring/debug/:geographyType/:geographyId
    */
