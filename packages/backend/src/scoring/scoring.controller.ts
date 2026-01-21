@@ -47,7 +47,7 @@ import {
 } from './dto/score-response.dto';
 
 @ApiTags('scoring')
-@Controller('scoring')
+@Controller('api/scoring')
 export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
