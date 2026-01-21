@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
-// Build trigger: 2026-01-21-v1
+// Build trigger: 2026-01-21-v2
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
