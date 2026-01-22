@@ -13,7 +13,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
 
@@ -176,7 +176,7 @@ export class MLWorkflowService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const jobId = uuidv4();
+    const jobId = crypto.randomUUID();
 
     // Create job record
     const { error: insertError } = await supabase

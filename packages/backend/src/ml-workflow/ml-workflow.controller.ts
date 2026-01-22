@@ -21,7 +21,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { MLWorkflowService } from './ml-workflow.service';
 
 @Controller('api/admin/ml-workflow')
