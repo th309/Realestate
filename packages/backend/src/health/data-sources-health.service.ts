@@ -53,28 +53,36 @@ interface SourceConfig {
  * Each source may have multiple tables at different geographic levels.
  * We check the most commonly used table for each source.
  *
- * Freshness is determined by when data was last IMPORTED (created_at),
- * not by the period date of the data itself.
+ * Freshness is based on the "as of" date of the data (period_date/year),
+ * showing how current the actual data is.
+ *
+ * Date columns:
+ * - Zillow: period_date (YYYY-MM-DD)
+ * - Realtor: period_date (YYYY-MM-DD)
+ * - Census: year (integer, e.g., 2023)
+ * - Economic: period_date (YYYY-MM-DD)
+ * - Permits: period_date (YYYY-MM-DD)
+ * - HUD FMR: year (integer, e.g., 2024)
  *
  * Freshness thresholds: frequency × 1.2
  * - Monthly (30 days): 36 days
  * - Annual (365 days): 438 days
  */
 const DATA_SOURCES: SourceConfig[] = [
-  // Zillow - Monthly data, check ZIP level (most granular) - uses updated_at (no created_at column)
-  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'updated_at', expectedFreshnessDays: 36 },
+  // Zillow - Monthly data, check ZIP level (most granular)
+  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // Realtor - Monthly data, check ZIP level (most granular)
-  { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'created_at', expectedFreshnessDays: 36 },
+  { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // Census/ACS - Annual data (5-year ACS estimates), check county level
-  { sourceName: 'census_acs', displayName: 'Census ACS', sourceType: 'api', tableName: 'census_county', dateColumn: 'created_at', expectedFreshnessDays: 438 },
+  { sourceName: 'census_acs', displayName: 'Census ACS', sourceType: 'api', tableName: 'census_county', dateColumn: 'year', expectedFreshnessDays: 438 },
   // BLS - Monthly unemployment/employment data, check county level
-  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'created_at', expectedFreshnessDays: 36 },
+  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // FRED - Monthly national economic indicators (mortgage rates, GDP, etc.)
-  { sourceName: 'fred_api', displayName: 'FRED', sourceType: 'api', tableName: 'economic_national', dateColumn: 'created_at', expectedFreshnessDays: 36 },
+  { sourceName: 'fred_api', displayName: 'FRED', sourceType: 'api', tableName: 'economic_national', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // HUD FMR - Annual Fair Market Rents
-  { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'created_at', expectedFreshnessDays: 438 },
+  { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'year', expectedFreshnessDays: 438 },
   // Building Permits - Monthly data from Census
-  { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'created_at', expectedFreshnessDays: 36 },
+  { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
 ];
 
 @Injectable()
@@ -174,9 +182,16 @@ export class DataSourcesHealthService {
     if (!dateValue) return null;
 
     try {
-      // Parse ISO timestamp (e.g., "2026-01-13T20:31:58.048882+00:00")
-      // or standard date format (YYYY-MM-DD)
-      const date = new Date(dateValue);
+      let date: Date;
+      if (typeof dateValue === 'number') {
+        // Year format (e.g., 2023) - use December 31st of that year
+        // Annual data for year X is typically released in late X+1
+        date = new Date(dateValue, 11, 31); // December 31st
+      } else {
+        // Standard date format (YYYY-MM-DD)
+        date = new Date(dateValue);
+      }
+
       if (isNaN(date.getTime())) return null;
 
       const now = new Date();
