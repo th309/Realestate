@@ -30,6 +30,29 @@ interface PercentileStats {
   stddev: number;
 }
 
+// Mapping from Realtor column names to internal scoring metric names
+// The scoring service uses internal names, so we save percentiles with those names
+const REALTOR_TO_INTERNAL_METRIC: Record<string, string> = {
+  'median_listing_price': 'listing_price',
+  'median_listing_price_yy': 'listing_price_yoy',
+  'median_listing_price_mm': 'listing_price_mom',
+  'median_listing_price_per_square_foot': 'price_per_sqft',
+  'active_listing_count': 'inventory',
+  'active_listing_count_yy': 'inventory_yoy',
+  'median_days_on_market': 'days_on_market',
+  'new_listing_count': 'new_listings',
+  'new_listing_count_yy': 'new_listings_yoy',
+  'pending_listing_count': 'pending_sales',
+  'pending_listing_count_yy': 'pending_sales_yoy',
+  'pending_ratio': 'pending_ratio',
+  'price_reduced_share': 'price_reduced_share',
+  'price_increased_share': 'price_increased_share',
+  'hotness_score': 'hotness_score',
+  'hotness_rank': 'hotness_rank',
+  'supply_score': 'supply_score',
+  'demand_score': 'demand_score',
+};
+
 // Metrics available at ALL geography levels (state, metro, county, zip)
 const COMMON_METRICS = [
   // Price metrics
@@ -67,6 +90,11 @@ function getMetricsForGeography(geographyType: GeographyType): string[] {
     return COMMON_METRICS;
   }
   return [...COMMON_METRICS, ...SUB_STATE_METRICS];
+}
+
+// Convert Realtor column name to internal metric name
+function toInternalMetricName(realtorColumn: string): string {
+  return REALTOR_TO_INTERNAL_METRIC[realtorColumn] || realtorColumn;
 }
 
 @Injectable()
@@ -287,9 +315,12 @@ export class PercentileService {
   }
 
   private async savePercentiles(stats: PercentileStats): Promise<void> {
+    // Convert Realtor column name to internal scoring metric name
+    const internalMetricName = toInternalMetricName(stats.metricName);
+
     const { error } = await this.supabase.from('metric_percentiles').upsert(
       {
-        metric_name: stats.metricName,  // Column is metric_name per migration 030
+        metric_name: internalMetricName,  // Use internal scoring metric names
         geography_type: stats.geographyType,
         period_date: stats.periodDate,
         p10: stats.p10,
