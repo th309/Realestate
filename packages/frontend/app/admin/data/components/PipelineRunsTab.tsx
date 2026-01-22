@@ -131,7 +131,10 @@ export function PipelineRunsTab() {
           </div>
         ) : runs.length === 0 ? (
           <div className="p-8 text-center text-on-surface-variant">
-            No pipeline runs found in the last 72 hours.
+            <p>No pipeline runs logged in the last 72 hours.</p>
+            <p className="text-xs mt-2">
+              Note: Manual imports may not be logged. Check the Data Sources tab for data freshness.
+            </p>
           </div>
         ) : (
           <table className="min-w-full divide-y divide-outline-variant">

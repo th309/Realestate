@@ -32,16 +32,16 @@ export interface PipelineRunsResponse {
 }
 
 const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
-  zillow_zhvi: 'Zillow ZHVI',
-  zillow_zori: 'Zillow ZORI',
-  zillow_market: 'Zillow Market',
-  census_population: 'Census Population',
-  census_income: 'Census Income',
-  bls_unemployment: 'BLS Unemployment',
-  realtor_metrics: 'Realtor Metrics',
+  zillow: 'Zillow',
+  realtor: 'Realtor',
+  census: 'Census ACS',
+  census_acs: 'Census ACS',
+  bls: 'BLS',
+  fred: 'FRED',
+  hud: 'HUD FMR',
   hud_fmr: 'HUD FMR',
   permits: 'Building Permits',
-  calculated_metrics: 'Calculated Metrics',
+  building_permits: 'Building Permits',
 };
 
 @Injectable()
@@ -73,15 +73,15 @@ export class PipelineRunsService {
 
       const pipelines: PipelineRun[] = (data || []).map((row) => ({
         id: row.id,
-        pipelineName: row.source_name,
-        displayName: PIPELINE_DISPLAY_NAMES[row.source_name] || row.source_name,
+        pipelineName: row.source,
+        displayName: PIPELINE_DISPLAY_NAMES[row.source] || row.source,
         startedAt: row.started_at,
-        endedAt: row.ended_at,
+        endedAt: row.completed_at,
         status: this.mapStatus(row.status),
         recordsProcessed: row.records_processed || 0,
-        recordsInserted: row.records_inserted || 0,
-        recordsFailed: row.records_failed || 0,
-        durationMs: row.execution_time_ms,
+        recordsInserted: row.records_success || 0,
+        recordsFailed: row.records_error || 0,
+        durationMs: row.duration_ms,
         errorMessage: row.error_message,
       }));
 
