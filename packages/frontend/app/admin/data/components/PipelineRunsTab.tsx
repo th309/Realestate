@@ -2,6 +2,7 @@
  * PipelineRunsTab Component
  *
  * Displays recent ETL pipeline runs with status, duration, and record counts.
+ * Also shows data source freshness from actual data tables.
  * Allows manual triggering of pipelines.
  */
 
@@ -16,38 +17,62 @@ import {
 } from './pipelineRuns.types';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 
+interface DataSourceHealth {
+  displayName: string;
+  available: boolean;
+  fresh: boolean;
+  daysSinceUpdate: number | null;
+}
+
+interface DataSourcesResponse {
+  sources: DataSourceHealth[];
+  summary: { total: number; available: number; fresh: number };
+}
+
 export function PipelineRunsTab() {
   const [runs, setRuns] = useState<PipelineRun[]>([]);
+  const [dataSources, setDataSources] = useState<DataSourcesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPipelineRuns();
+    fetchData();
   }, []);
 
-  const fetchPipelineRuns = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/health/pipeline-runs`);
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-      if (response.ok) {
-        const data = await response.json();
+    try {
+      // Fetch both pipeline runs and data sources in parallel
+      const [runsResponse, sourcesResponse] = await Promise.all([
+        fetch(`${apiUrl}/api/health/pipeline-runs`),
+        fetch(`${apiUrl}/api/health/data-sources`),
+      ]);
+
+      if (runsResponse.ok) {
+        const data = await runsResponse.json();
         setRuns(data.pipelines || []);
       } else {
-        setError(`API error: ${response.status} ${response.statusText}`);
         setRuns([]);
       }
+
+      if (sourcesResponse.ok) {
+        const data = await sourcesResponse.json();
+        setDataSources(data);
+      }
     } catch (err) {
-      console.error('Error fetching pipeline runs:', err);
+      console.error('Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect to API');
       setRuns([]);
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchPipelineRuns = fetchData;
 
   const handleTriggerPipeline = async (pipelineName: string) => {
     setTriggering(pipelineName);
@@ -88,29 +113,31 @@ export function PipelineRunsTab() {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary - show data source freshness */}
       <div className="grid grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-surface-container">
-          <div className="text-2xl font-bold text-on-surface">{runs.length}</div>
-          <div className="text-sm text-on-surface-variant">Recent Runs</div>
+          <div className="text-2xl font-bold text-on-surface">
+            {dataSources?.summary.total || 7}
+          </div>
+          <div className="text-sm text-on-surface-variant">Data Sources</div>
         </div>
         <div className="p-4 rounded-xl bg-green-50">
           <div className="text-2xl font-bold text-green-800">
-            {runs.filter((r) => r.status === 'success').length}
+            {dataSources?.summary.fresh || 0}
           </div>
-          <div className="text-sm text-green-600">Successful</div>
+          <div className="text-sm text-green-600">Fresh</div>
         </div>
-        <div className="p-4 rounded-xl bg-red-50">
-          <div className="text-2xl font-bold text-red-800">
-            {runs.filter((r) => r.status === 'failed').length}
+        <div className="p-4 rounded-xl bg-amber-50">
+          <div className="text-2xl font-bold text-amber-800">
+            {(dataSources?.summary.total || 0) - (dataSources?.summary.fresh || 0)}
           </div>
-          <div className="text-sm text-red-600">Failed</div>
+          <div className="text-sm text-amber-600">Stale</div>
         </div>
         <div className="p-4 rounded-xl bg-blue-50">
           <div className="text-2xl font-bold text-blue-800">
-            {runs.filter((r) => r.status === 'running').length}
+            {runs.length}
           </div>
-          <div className="text-sm text-blue-600">Running</div>
+          <div className="text-sm text-blue-600">Logged Runs</div>
         </div>
       </div>
 
@@ -130,11 +157,35 @@ export function PipelineRunsTab() {
             </button>
           </div>
         ) : runs.length === 0 ? (
-          <div className="p-8 text-center text-on-surface-variant">
-            <p>No pipeline runs logged in the last 72 hours.</p>
-            <p className="text-xs mt-2">
-              Note: Manual imports may not be logged. Check the Data Sources tab for data freshness.
+          <div className="p-6">
+            <p className="text-center text-on-surface-variant mb-4">
+              No pipeline runs logged. Showing data freshness from actual tables:
             </p>
+            {dataSources && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {dataSources.sources.map((source) => (
+                  <div
+                    key={source.displayName}
+                    className={`p-3 rounded-lg ${
+                      source.fresh ? 'bg-green-50' : 'bg-amber-50'
+                    }`}
+                  >
+                    <div className="font-medium text-on-surface text-sm">
+                      {source.displayName}
+                    </div>
+                    <div
+                      className={`text-xs ${
+                        source.fresh ? 'text-green-600' : 'text-amber-600'
+                      }`}
+                    >
+                      {source.daysSinceUpdate !== null
+                        ? `${source.daysSinceUpdate}d old`
+                        : 'Unknown'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <table className="min-w-full divide-y divide-outline-variant">
