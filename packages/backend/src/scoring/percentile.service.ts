@@ -104,6 +104,16 @@ export class PercentileService {
 
     console.log(`Found ${rows.length} rows for ${geographyType} on ${periodDate}`);
 
+    // Debug: Log first row columns to understand data structure
+    if (rows.length > 0) {
+      const firstRow = rows[0];
+      const sampleCols = Object.keys(firstRow).slice(0, 10);
+      console.log(`Sample columns: ${sampleCols.join(', ')}`);
+      // Log a specific metric value to check type
+      const mlp = firstRow['median_listing_price'];
+      console.log(`median_listing_price value: ${mlp}, type: ${typeof mlp}`);
+    }
+
     let calculated = 0;
     let errors = 0;
 
@@ -205,8 +215,20 @@ export class PercentileService {
     const values: number[] = [];
     for (const row of rows) {
       const val = row[metricName];
-      if (val !== null && val !== undefined && typeof val === 'number' && !isNaN(val)) {
-        values.push(val);
+      if (val === null || val === undefined) continue;
+
+      // Handle both number and string values (database may store as text)
+      let numVal: number;
+      if (typeof val === 'number') {
+        numVal = val;
+      } else if (typeof val === 'string') {
+        numVal = parseFloat(val);
+      } else {
+        continue;
+      }
+
+      if (!isNaN(numVal) && isFinite(numVal)) {
+        values.push(numVal);
       }
     }
 
