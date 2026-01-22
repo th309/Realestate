@@ -30,46 +30,44 @@ interface PercentileStats {
   stddev: number;
 }
 
-// Metrics to calculate percentiles for (from Realtor wide-format tables)
-// These are actual column names in realtor_state, realtor_metro, realtor_county, realtor_zip
-const REALTOR_METRICS = [
+// Metrics available at ALL geography levels (state, metro, county, zip)
+const COMMON_METRICS = [
   // Price metrics
   'median_listing_price',
   'median_listing_price_yy',
   'median_listing_price_mm',
-  'median_listing_price_per_sqft',
-  'median_listing_price_per_sqft_yy',
+  'median_listing_price_per_square_foot', // correct column name
   // Inventory metrics
   'active_listing_count',
   'active_listing_count_yy',
-  'active_listing_count_mm',
   // Days on market
   'median_days_on_market',
-  'median_days_on_market_yy',
-  'median_days_on_market_mm',
-  'average_listing_age',
   // Listing activity
   'new_listing_count',
   'new_listing_count_yy',
-  'new_listing_count_mm',
   'pending_listing_count',
   'pending_listing_count_yy',
-  'pending_listing_count_mm',
+  // Ratios
   'pending_ratio',
-  // Price reductions
-  'price_reduced_count',
-  'price_reduced_count_yy',
-  'price_reduced_count_mm',
-  // Hotness/Market scores
+  'price_reduced_share',
+  'price_increased_share',
+];
+
+// Metrics only available at metro/county/zip levels (NOT state)
+const SUB_STATE_METRICS = [
   'hotness_score',
   'hotness_rank',
   'supply_score',
   'demand_score',
-  // Sale metrics
-  'total_listing_count',
-  'total_listing_count_yy',
-  'total_listing_count_mm',
 ];
+
+// Get metrics for a geography type
+function getMetricsForGeography(geographyType: GeographyType): string[] {
+  if (geographyType === 'state') {
+    return COMMON_METRICS;
+  }
+  return [...COMMON_METRICS, ...SUB_STATE_METRICS];
+}
 
 @Injectable()
 export class PercentileService {
@@ -109,8 +107,12 @@ export class PercentileService {
     let calculated = 0;
     let errors = 0;
 
+    // Get metrics appropriate for this geography level
+    const metricsToCalculate = getMetricsForGeography(geographyType);
+    console.log(`Calculating percentiles for ${metricsToCalculate.length} metrics`);
+
     // Calculate percentiles for each metric column
-    for (const metricName of REALTOR_METRICS) {
+    for (const metricName of metricsToCalculate) {
       try {
         const stats = await this.calculateMetricPercentilesFromRows(
           rows,
