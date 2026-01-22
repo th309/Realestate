@@ -56,6 +56,15 @@ export class ScoringController {
   ) {}
 
   /**
+   * Debug endpoint specifically for county query testing
+   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
+   */
+  @Get('debug-county-query/:countyFips')
+  async debugCountyQuery(@Param('countyFips') countyFips: string) {
+    return this.scoringService.debugCountyQuery(countyFips);
+  }
+
+  /**
    * Get PropertyIQ scores for a specific geography
    *
    * GET /scoring/:geographyType/:geographyId
@@ -540,14 +549,6 @@ export class ScoringController {
 
     debug.status = 'All checks passed - score should calculate';
     return debug;
-  }
-
-  /**
-   * Debug endpoint specifically for county query testing
-   */
-  @Get('debug/county-query/:countyFips')
-  async debugCountyQuery(@Param('countyFips') countyFips: string) {
-    return this.scoringService.debugCountyQuery(countyFips);
   }
 
   private validateGeographyType(type: string): GeographyType {
