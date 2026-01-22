@@ -41,13 +41,37 @@ interface SourceConfig {
   expectedFreshnessDays: number;
 }
 
+/**
+ * Data Source Configurations
+ *
+ * Each source may have multiple tables at different geographic levels.
+ * We check the most commonly used table for each source.
+ *
+ * Date columns:
+ * - Zillow: period_date (YYYY-MM-DD)
+ * - Realtor: period_date (YYYY-MM-DD)
+ * - Census: year (integer, e.g., 2023)
+ * - Economic: period_date (YYYY-MM-DD)
+ * - Permits: period_date (YYYY-MM-DD)
+ * - HUD FMR: year (integer, e.g., 2024)
+ *
+ * Freshness thresholds: frequency × 1.2
+ * - Monthly (30 days): 36 days
+ * - Annual (365 days): 438 days
+ */
 const DATA_SOURCES: SourceConfig[] = [
-  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'date', expectedFreshnessDays: 45 },
-  { sourceName: 'census_api', displayName: 'Census', sourceType: 'api', tableName: 'census_zip', dateColumn: 'year', expectedFreshnessDays: 400 },
-  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'date', expectedFreshnessDays: 45 },
-  { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'month_date_yyyymm', expectedFreshnessDays: 7 },
-  { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'fiscal_year', expectedFreshnessDays: 400 },
-  { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'date', expectedFreshnessDays: 45 },
+  // Zillow - Monthly data, check ZIP level (most granular)
+  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // Census - Annual data, check county level (most reliable)
+  { sourceName: 'census_api', displayName: 'Census', sourceType: 'api', tableName: 'census_county', dateColumn: 'year', expectedFreshnessDays: 438 },
+  // BLS/Economic - Monthly data, check county level
+  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // Realtor - Monthly data, check ZIP level (most granular)
+  { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // HUD FMR - Annual data
+  { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'year', expectedFreshnessDays: 438 },
+  // Building Permits - Monthly data
+  { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
 ];
 
 @Injectable()
@@ -149,14 +173,16 @@ export class DataSourcesHealthService {
     try {
       let date: Date;
       if (typeof dateValue === 'number') {
-        // Year format (e.g., 2023)
-        date = new Date(dateValue, 0, 1);
+        // Year format (e.g., 2023) - use December 31st of that year
+        // Annual data for year X is typically released in late X+1
+        date = new Date(dateValue, 11, 31); // December 31st
       } else if (dateValue.length === 6) {
-        // YYYYMM format
+        // YYYYMM format - use last day of month
         const year = parseInt(dateValue.substring(0, 4), 10);
-        const month = parseInt(dateValue.substring(4, 6), 10) - 1;
-        date = new Date(year, month, 1);
+        const month = parseInt(dateValue.substring(4, 6), 10); // 1-indexed for next month
+        date = new Date(year, month, 0); // Day 0 = last day of previous month
       } else {
+        // Standard date format (YYYY-MM-DD)
         date = new Date(dateValue);
       }
 
