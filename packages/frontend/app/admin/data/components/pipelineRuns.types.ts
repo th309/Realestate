@@ -24,11 +24,13 @@ export interface AvailablePipeline {
 }
 
 export const AVAILABLE_PIPELINES: AvailablePipeline[] = [
-  { name: 'zillow_zhvi', label: 'Zillow ZHVI' },
-  { name: 'zillow_zori', label: 'Zillow ZORI' },
-  { name: 'census_population', label: 'Census Population' },
-  { name: 'bls_unemployment', label: 'BLS Unemployment' },
-  { name: 'realtor_metrics', label: 'Realtor Metrics' },
+  { name: 'zillow', label: 'Zillow' },
+  { name: 'realtor', label: 'Realtor' },
+  { name: 'census_acs', label: 'Census ACS' },
+  { name: 'bls', label: 'BLS' },
+  { name: 'fred', label: 'FRED' },
+  { name: 'hud_fmr', label: 'HUD FMR' },
+  { name: 'building_permits', label: 'Building Permits' },
 ];
 
 export function getStatusBadgeClasses(status: string): string {
