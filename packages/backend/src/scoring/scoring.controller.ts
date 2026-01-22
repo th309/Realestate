@@ -465,6 +465,16 @@ export class ScoringController {
   }
 
   /**
+   * Debug endpoint to inspect raw data structure for percentile calculation
+   * GET /api/scoring/debug-percentile-data/:geographyType
+   */
+  @Get('debug-percentile-data/:geographyType')
+  async debugPercentileData(@Param('geographyType') geographyType: string) {
+    const geoType = this.validateGeographyType(geographyType);
+    return this.percentileService.debugInspectData(geoType);
+  }
+
+  /**
    * Database status check
    * GET /api/scoring/db-status
    */
