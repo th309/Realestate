@@ -16,6 +16,7 @@ import { ReportsModule } from './reports/reports.module';
 import { TimeSeriesModule } from './timeseries/timeseries.module';
 import { PermitsModule } from './permits/permits.module';
 import { HealthModule } from './health/health.module';
+import { MLWorkflowModule } from './ml-workflow/ml-workflow.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { HealthModule } from './health/health.module';
     TimeSeriesModule,
     PermitsModule,
     HealthModule,
+    MLWorkflowModule,
   ],
   controllers: [AppController],
   providers: [AppService],
