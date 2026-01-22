@@ -45,12 +45,35 @@ const CALCULATION_VERSION = '2.0.0';
 
 @Injectable()
 export class ScoringService {
+  // FIPS code to state abbreviation mapping
+  private readonly fipsToState: Record<string, string> = {
+    '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
+    '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
+    '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
+    '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
+    '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
+    '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
+    '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
+    '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
+    '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
+    '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
+    '56': 'WY', '72': 'PR',
+  };
+
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly normalizationService: NormalizationService,
     private readonly inheritanceService: InheritanceService,
     private readonly marketHealthService: MarketHealthService,
   ) {}
+
+  /**
+   * Convert FIPS code to state abbreviation
+   */
+  private fipsToStateAbbr(fips: string | undefined): string | undefined {
+    if (!fips) return undefined;
+    return this.fipsToState[fips.padStart(2, '0')];
+  }
 
   // ============================================================================
   // Public API
@@ -515,16 +538,18 @@ export class ScoringService {
         // Query realtor_county table - uses county_fips
         const { data } = await this.supabase
           .from('realtor_county')
-          .select('county_fips, county_name, state_id')
+          .select('county_fips, county_name')
           .eq('county_fips', geographyId)
           .order('period_date', { ascending: false })
           .limit(1);
 
         if (data?.[0]) {
+          // Derive state from first 2 digits of FIPS code
+          const stateFips = data[0].county_fips?.substring(0, 2);
           return {
             geography_id: data[0].county_fips,
             name: data[0].county_name,
-            state_code: data[0].state_id,
+            state_code: this.fipsToStateAbbr(stateFips),
           };
         }
         // Fallback to zillow_county
