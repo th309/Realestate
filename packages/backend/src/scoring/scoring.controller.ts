@@ -65,6 +65,16 @@ export class ScoringController {
   }
 
   /**
+   * Debug endpoint to inspect raw data structure for percentile calculation
+   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
+   */
+  @Get('debug-percentile-data/:geographyType')
+  async debugPercentileData(@Param('geographyType') geographyType: string) {
+    const geoType = this.validateGeographyType(geographyType);
+    return this.percentileService.debugInspectData(geoType);
+  }
+
+  /**
    * Get PropertyIQ scores for a specific geography
    *
    * GET /scoring/:geographyType/:geographyId
@@ -462,16 +472,6 @@ export class ScoringController {
       percentiles: percentileResult,
       scores: scoreResult,
     };
-  }
-
-  /**
-   * Debug endpoint to inspect raw data structure for percentile calculation
-   * GET /api/scoring/debug-percentile-data/:geographyType
-   */
-  @Get('debug-percentile-data/:geographyType')
-  async debugPercentileData(@Param('geographyType') geographyType: string) {
-    const geoType = this.validateGeographyType(geographyType);
-    return this.percentileService.debugInspectData(geoType);
   }
 
   /**
