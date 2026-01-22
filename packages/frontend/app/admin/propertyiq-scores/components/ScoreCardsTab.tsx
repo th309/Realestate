@@ -92,7 +92,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
         const response = await fetch(
           `${apiUrl}/api/scoring/${geography.type}/${encodeURIComponent(geography.id)}?expanded=true&historyMonths=6`,
           {
-            headers: { 'x-user-tier': 'admin' },
+            headers: { 'x-user-tier': 'enterprise' }, // Enterprise tier for full admin access
           },
         );
 
@@ -169,17 +169,19 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-on-surface-variant">{score.label}</span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  score.confidence.level === 'high'
-                    ? 'bg-green-100 text-green-800'
-                    : score.confidence.level === 'medium'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {score.confidence.percentage}% conf
-              </span>
+              {score.confidence && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${
+                    score.confidence.level === 'high'
+                      ? 'bg-green-100 text-green-800'
+                      : score.confidence.level === 'medium'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-red-100 text-red-800'
+                  }`}
+                >
+                  {score.confidence.percentage}% conf
+                </span>
+              )}
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-on-surface">
