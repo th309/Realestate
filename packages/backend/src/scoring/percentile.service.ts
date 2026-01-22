@@ -82,7 +82,7 @@ export class PercentileService {
   async calculatePercentilesForDate(
     geographyType: GeographyType,
     periodDate: string,
-  ): Promise<{ calculated: number; errors: number }> {
+  ): Promise<{ calculated: number; errors: number; errorDetails?: string[] }> {
     const table = this.getTableForGeography(geographyType);
     console.log(`Calculating percentiles for ${geographyType} on ${periodDate} from table ${table}`);
 
@@ -122,9 +122,10 @@ export class PercentileService {
     console.log(`Calculating percentiles for ${metricsToCalculate.length} metrics`);
 
     // Calculate percentiles for each metric column
+    const errorDetails: string[] = [];
     for (const metricName of metricsToCalculate) {
       try {
-        const stats = await this.calculateMetricPercentilesFromRows(
+        const stats = this.calculateMetricPercentilesFromRows(
           rows,
           metricName,
           geographyType,
@@ -135,12 +136,19 @@ export class PercentileService {
           calculated++;
         }
       } catch (err) {
-        console.error(`Error calculating percentiles for ${metricName}:`, err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`Error calculating percentiles for ${metricName}:`, errMsg);
+        errorDetails.push(`${metricName}: ${errMsg}`);
         errors++;
       }
     }
 
-    return { calculated, errors };
+    // Log error details if any
+    if (errorDetails.length > 0) {
+      console.error(`Error details for ${geographyType}/${periodDate}:`, errorDetails.slice(0, 3));
+    }
+
+    return { calculated, errors, errorDetails: errorDetails.length > 0 ? errorDetails : undefined };
   }
 
   /**
@@ -325,6 +333,65 @@ export class PercentileService {
       default:
         return 'realtor_metro';
     }
+  }
+
+  /**
+   * Debug endpoint to test saving a single percentile record
+   * Returns the exact error message if upsert fails
+   */
+  async debugTestSave(geographyType: GeographyType): Promise<Record<string, unknown>> {
+    const testData = {
+      metric_name: 'test_metric',
+      geography_type: geographyType,
+      period_date: '2024-01-01',
+      p10: 10,
+      p20: 20,
+      p30: 30,
+      p40: 40,
+      p50: 50,
+      p60: 60,
+      p70: 70,
+      p80: 80,
+      p90: 90,
+      min_value: 0,
+      max_value: 100,
+      count_values: 100,
+      mean_value: 50,
+      stddev_value: 20,
+      calculated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await this.supabase
+      .from('metric_percentiles')
+      .upsert(testData, { onConflict: 'metric_name,geography_type,period_date' })
+      .select();
+
+    if (error) {
+      return {
+        success: false,
+        error: {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        },
+        attemptedData: testData,
+      };
+    }
+
+    // Clean up test data
+    await this.supabase
+      .from('metric_percentiles')
+      .delete()
+      .eq('metric_name', 'test_metric')
+      .eq('geography_type', geographyType)
+      .eq('period_date', '2024-01-01');
+
+    return {
+      success: true,
+      message: 'Test save succeeded',
+      data,
+    };
   }
 
   /**

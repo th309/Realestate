@@ -75,6 +75,16 @@ export class ScoringController {
   }
 
   /**
+   * Debug endpoint to test percentile save operation
+   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
+   */
+  @Get('debug-test-save/:geographyType')
+  async debugTestSave(@Param('geographyType') geographyType: string) {
+    const geoType = this.validateGeographyType(geographyType);
+    return this.percentileService.debugTestSave(geoType);
+  }
+
+  /**
    * Get PropertyIQ scores for a specific geography
    *
    * GET /scoring/:geographyType/:geographyId
