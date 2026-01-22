@@ -185,11 +185,16 @@ export class DataSourcesHealthService {
       let date: Date;
       if (typeof dateValue === 'number') {
         // Year format (e.g., 2023) - use December 31st of that year
-        // Annual data for year X is typically released in late X+1
         date = new Date(dateValue, 11, 31); // December 31st
       } else {
-        // Standard date format (YYYY-MM-DD)
-        date = new Date(dateValue);
+        // Monthly period date (YYYY-MM-DD) - use end of month
+        // e.g., "2025-12-01" represents December 2025 data, so use Dec 31
+        // Parse explicitly to avoid timezone issues
+        const parts = dateValue.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10); // 1-12
+        // Get last day of that month (day 0 of next month = last day of current month)
+        date = new Date(year, month, 0);
       }
 
       if (isNaN(date.getTime())) return null;
