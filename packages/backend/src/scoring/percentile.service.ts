@@ -30,20 +30,22 @@ interface PercentileStats {
   stddev: number;
 }
 
-// Mapping from Realtor column names to internal scoring metric names
-// The scoring service uses internal names, so we save percentiles with those names
+// Mapping from Realtor column names to scoring component metric names
+// IMPORTANT: These must match the metric names in scoring.types.ts component definitions
+// Some metrics keep original Realtor names, others use scoring service internal names
 const REALTOR_TO_INTERNAL_METRIC: Record<string, string> = {
-  'median_listing_price': 'listing_price',
-  'median_listing_price_yy': 'listing_price_yoy',
-  'median_listing_price_mm': 'listing_price_mom',
-  'median_listing_price_per_square_foot': 'price_per_sqft',
-  'active_listing_count': 'inventory',
-  'active_listing_count_yy': 'inventory_yoy',
-  'median_days_on_market': 'days_on_market',
-  'new_listing_count': 'new_listings',
-  'new_listing_count_yy': 'new_listings_yoy',
-  'pending_listing_count': 'pending_sales',
-  'pending_listing_count_yy': 'pending_sales_yoy',
+  // These metrics keep their Realtor names (used directly in component definitions)
+  'median_listing_price': 'median_listing_price',
+  'median_listing_price_yy': 'median_listing_price_yy',
+  'median_listing_price_mm': 'median_listing_price_mm',
+  'median_listing_price_per_square_foot': 'median_listing_price_per_square_foot',
+  'active_listing_count': 'inventory',  // Component uses 'inventory'
+  'active_listing_count_yy': 'active_listing_count_yy',  // Component uses this exact name
+  'median_days_on_market': 'median_days_on_market',  // Component uses this exact name
+  'new_listing_count': 'new_listings',  // Component uses 'new_listings'
+  'new_listing_count_yy': 'new_listing_count_yy',  // Component uses this exact name
+  'pending_listing_count': 'pending_sales',  // Component uses 'pending_sales'
+  'pending_listing_count_yy': 'pending_listing_count_yy',  // Component uses this exact name
   'pending_ratio': 'pending_ratio',
   'price_reduced_share': 'price_reduced_share',
   'price_increased_share': 'price_increased_share',
@@ -363,6 +365,198 @@ export class PercentileService {
         return 'realtor_zip';
       default:
         return 'realtor_metro';
+    }
+  }
+
+  /**
+   * Calculate percentiles for Zillow metrics (zhvi, zhvi_yoy, zori, zori_yoy)
+   */
+  async calculateZillowPercentilesForDate(
+    geographyType: GeographyType,
+    periodDate: string,
+  ): Promise<{ calculated: number; errors: number }> {
+    const zillowTable = this.getZillowTableForGeography(geographyType);
+    const zoriTable = 'zillow_zori';
+    const idColumn = this.getZillowIdColumn(geographyType);
+
+    console.log(`Calculating Zillow percentiles for ${geographyType} on ${periodDate}`);
+
+    let calculated = 0;
+    let errors = 0;
+
+    // Fetch ZHVI data
+    const { data: zhviRows } = await this.supabase
+      .from(zillowTable)
+      .select('*')
+      .eq('period_date', periodDate);
+
+    if (zhviRows && zhviRows.length > 0) {
+      // Calculate zhvi percentiles
+      const zhviStats = this.calculateMetricPercentilesFromRows(zhviRows, 'zhvi', geographyType, periodDate);
+      if (zhviStats) {
+        try {
+          await this.savePercentiles(zhviStats);
+          calculated++;
+        } catch { errors++; }
+      }
+
+      // Calculate zhvi_yoy percentiles
+      const zhviYoyStats = this.calculateMetricPercentilesFromRows(zhviRows, 'zhvi_yoy', geographyType, periodDate);
+      if (zhviYoyStats) {
+        try {
+          await this.savePercentiles(zhviYoyStats);
+          calculated++;
+        } catch { errors++; }
+      }
+    }
+
+    // Fetch ZORI data
+    const { data: zoriRows } = await this.supabase
+      .from(zoriTable)
+      .select('*')
+      .eq('period_date', periodDate);
+
+    if (zoriRows && zoriRows.length > 0) {
+      // Filter by geography type
+      const filteredRows = zoriRows.filter((row: Record<string, unknown>) => {
+        switch (geographyType) {
+          case 'state': return row.state_abbrev != null;
+          case 'metro': return row.cbsa_code != null;
+          case 'county': return row.county_fips != null;
+          case 'zip': return row.zip_code != null;
+          default: return true;
+        }
+      });
+
+      // Calculate zori percentiles
+      const zoriStats = this.calculateMetricPercentilesFromRows(filteredRows, 'zori', geographyType, periodDate);
+      if (zoriStats) {
+        try {
+          await this.savePercentiles(zoriStats);
+          calculated++;
+        } catch { errors++; }
+      }
+
+      // Calculate zori_yoy percentiles
+      const zoriYoyStats = this.calculateMetricPercentilesFromRows(filteredRows, 'zori_yoy', geographyType, periodDate);
+      if (zoriYoyStats) {
+        try {
+          await this.savePercentiles(zoriYoyStats);
+          calculated++;
+        } catch { errors++; }
+      }
+    }
+
+    console.log(`Zillow percentiles: calculated ${calculated}, errors ${errors}`);
+    return { calculated, errors };
+  }
+
+  /**
+   * Calculate percentiles for calculated metrics (grm, cap_rate, gross_yield, months_of_supply)
+   */
+  async calculateDerivedPercentilesForDate(
+    geographyType: GeographyType,
+    periodDate: string,
+  ): Promise<{ calculated: number; errors: number }> {
+    console.log(`Calculating derived metric percentiles for ${geographyType} on ${periodDate}`);
+
+    // Fetch calculated_metrics data
+    const { data: rows } = await this.supabase
+      .from('calculated_metrics')
+      .select('*')
+      .eq('geography_type', geographyType)
+      .eq('period_date', periodDate);
+
+    if (!rows || rows.length === 0) {
+      console.log(`No calculated_metrics found for ${geographyType} on ${periodDate}`);
+      return { calculated: 0, errors: 0 };
+    }
+
+    console.log(`Found ${rows.length} calculated_metrics rows`);
+
+    let calculated = 0;
+    let errors = 0;
+
+    // Metrics to calculate from calculated_metrics table
+    const derivedMetrics = [
+      'grm',
+      'cap_rate_proxy',  // Will be saved as 'cap_rate'
+      'annual_rent_price_ratio',  // Will be saved as 'gross_yield'
+      'months_of_supply',
+      'zhvi_yoy_change',
+      'zori_yoy_change',
+    ];
+
+    // Metric name mapping for derived metrics
+    const derivedMetricMapping: Record<string, string> = {
+      'cap_rate_proxy': 'cap_rate',
+      'annual_rent_price_ratio': 'gross_yield',
+      'zhvi_yoy_change': 'zhvi_yoy',
+      'zori_yoy_change': 'zori_yoy',
+    };
+
+    for (const metric of derivedMetrics) {
+      const stats = this.calculateMetricPercentilesFromRows(rows, metric, geographyType, periodDate);
+      if (stats) {
+        // Map to internal metric name if needed
+        stats.metricName = derivedMetricMapping[metric] || metric;
+        try {
+          await this.savePercentiles(stats);
+          calculated++;
+        } catch { errors++; }
+      }
+    }
+
+    console.log(`Derived percentiles: calculated ${calculated}, errors ${errors}`);
+    return { calculated, errors };
+  }
+
+  /**
+   * Calculate ALL percentiles (Realtor + Zillow + Derived) for a date
+   */
+  async calculateAllSourcePercentilesForDate(
+    geographyType: GeographyType,
+    periodDate: string,
+  ): Promise<{ calculated: number; errors: number }> {
+    let totalCalculated = 0;
+    let totalErrors = 0;
+
+    // 1. Realtor metrics
+    const realtor = await this.calculatePercentilesForDate(geographyType, periodDate);
+    totalCalculated += realtor.calculated;
+    totalErrors += realtor.errors;
+
+    // 2. Zillow metrics
+    const zillow = await this.calculateZillowPercentilesForDate(geographyType, periodDate);
+    totalCalculated += zillow.calculated;
+    totalErrors += zillow.errors;
+
+    // 3. Derived/Calculated metrics
+    const derived = await this.calculateDerivedPercentilesForDate(geographyType, periodDate);
+    totalCalculated += derived.calculated;
+    totalErrors += derived.errors;
+
+    console.log(`Total percentiles for ${geographyType}/${periodDate}: ${totalCalculated} calculated, ${totalErrors} errors`);
+    return { calculated: totalCalculated, errors: totalErrors };
+  }
+
+  private getZillowTableForGeography(geographyType: GeographyType): string {
+    switch (geographyType) {
+      case 'state': return 'zillow_state';
+      case 'metro': return 'zillow_metro';
+      case 'county': return 'zillow_county';
+      case 'zip': return 'zillow_zip';
+      default: return 'zillow_metro';
+    }
+  }
+
+  private getZillowIdColumn(geographyType: GeographyType): string {
+    switch (geographyType) {
+      case 'state': return 'state_abbrev';
+      case 'metro': return 'cbsa_code';
+      case 'county': return 'county_fips';
+      case 'zip': return 'zip_code';
+      default: return 'cbsa_code';
     }
   }
 

@@ -394,32 +394,56 @@ export class ScoringController {
 
   /**
    * Calculate percentiles for a specific geography type and date
+   * Calculates percentiles from ALL sources: Realtor, Zillow, and Calculated metrics
    *
    * POST /scoring/percentiles/:geographyType
    * Query params:
    *   - periodDate: Optional date (YYYY-MM-DD), defaults to latest
+   *   - source: Optional source filter ('realtor', 'zillow', 'derived', 'all'), defaults to 'all'
    */
   @Post('percentiles/:geographyType')
   async calculatePercentiles(
     @Param('geographyType') geographyType: string,
     @Query('periodDate') periodDate?: string,
+    @Query('source') source?: string,
   ) {
     const geoType = this.validateGeographyType(geographyType);
 
+    // Get the target date
+    let targetDate = periodDate;
+    if (!targetDate) {
+      // Find latest date from realtor table
+      const latestDate = await this.scoringService.debugGetLatestDate(geoType);
+      if (!latestDate) {
+        return { success: false, error: 'No data found for this geography type' };
+      }
+      targetDate = latestDate;
+    }
+
     let result;
-    if (periodDate) {
-      result = await this.percentileService.calculatePercentilesForDate(
-        geoType,
-        periodDate,
-      );
-    } else {
-      result = await this.percentileService.calculateLatestPercentiles(geoType);
+    const sourceFilter = source || 'all';
+
+    switch (sourceFilter) {
+      case 'realtor':
+        result = await this.percentileService.calculatePercentilesForDate(geoType, targetDate);
+        break;
+      case 'zillow':
+        result = await this.percentileService.calculateZillowPercentilesForDate(geoType, targetDate);
+        break;
+      case 'derived':
+        result = await this.percentileService.calculateDerivedPercentilesForDate(geoType, targetDate);
+        break;
+      case 'all':
+      default:
+        result = await this.percentileService.calculateAllSourcePercentilesForDate(geoType, targetDate);
+        break;
     }
 
     return {
       success: true,
       geographyType: geoType,
-      periodDate,
+      periodDate: targetDate,
+      source: sourceFilter,
       ...result,
     };
   }
@@ -444,6 +468,7 @@ export class ScoringController {
 
   /**
    * Full scoring pipeline: calculate percentiles then scores
+   * Calculates percentiles from ALL sources (Realtor + Zillow + Derived) before scoring
    *
    * POST /scoring/run-pipeline/:geographyType
    * Query params:
@@ -456,29 +481,32 @@ export class ScoringController {
   ) {
     const geoType = this.validateGeographyType(geographyType);
 
-    // Step 1: Calculate percentiles
-    let percentileResult;
-    if (periodDate) {
-      percentileResult =
-        await this.percentileService.calculatePercentilesForDate(
-          geoType,
-          periodDate,
-        );
-    } else {
-      percentileResult =
-        await this.percentileService.calculateLatestPercentiles(geoType);
+    // Get target date
+    let targetDate: string | undefined = periodDate;
+    if (!targetDate) {
+      const latestDate = await this.scoringService.debugGetLatestDate(geoType);
+      if (!latestDate) {
+        return { success: false, error: 'No data found for this geography type' };
+      }
+      targetDate = latestDate;
     }
+
+    // Step 1: Calculate percentiles from ALL sources
+    const percentileResult = await this.percentileService.calculateAllSourcePercentilesForDate(
+      geoType,
+      targetDate,
+    );
 
     // Step 2: Calculate scores
     const scoreResult = await this.scoringService.calculateAllScores(
       geoType,
-      periodDate,
+      targetDate,
     );
 
     return {
       success: true,
       geographyType: geoType,
-      periodDate,
+      periodDate: targetDate,
       percentiles: percentileResult,
       scores: scoreResult,
     };

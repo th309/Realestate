@@ -112,26 +112,38 @@ export class ScoringService {
     );
 
     // Merge raw and calculated metrics
+    // IMPORTANT: Metric names must match component definitions in scoring.types.ts
     const allMetrics = { ...metrics };
     if (calculatedMetrics) {
+      // Cash flow metrics - names must match INVESTOREDGE_CASH_FLOW_METRICS
       if (calculatedMetrics.grm)
         allMetrics.grm = {
           value: calculatedMetrics.grm,
           date: targetDate,
           source: 'calculated',
         };
-      if (calculatedMetrics.rentPriceRatio)
-        allMetrics.rent_yield = {
+      if (calculatedMetrics.rentPriceRatio) {
+        // gross_yield = (annual rent / price) * 100
+        allMetrics.gross_yield = {
           value: calculatedMetrics.rentPriceRatio * 100,
           date: targetDate,
           source: 'calculated',
         };
+        // rent_to_price_ratio = monthly rent / price
+        allMetrics.rent_to_price_ratio = {
+          value: calculatedMetrics.rentPriceRatio / 12,
+          date: targetDate,
+          source: 'calculated',
+        };
+      }
       if (calculatedMetrics.capRateProxy)
-        allMetrics.cap_rate_proxy = {
+        allMetrics.cap_rate = {
           value: calculatedMetrics.capRateProxy,
           date: targetDate,
           source: 'calculated',
         };
+
+      // Price/rent growth metrics
       if (calculatedMetrics.zhviYoyChange)
         allMetrics.zhvi_yoy = {
           value: calculatedMetrics.zhviYoyChange,
@@ -144,14 +156,18 @@ export class ScoringService {
           date: targetDate,
           source: 'calculated',
         };
+
+      // Volatility/stability metrics
       if (calculatedMetrics.zhviStddev12m)
         allMetrics.zhvi_volatility = {
           value: calculatedMetrics.zhviStddev12m,
           date: targetDate,
           source: 'calculated',
         };
+
+      // Supply metrics - name must match MARKET_HEALTH_SUPPLY_BALANCE_METRICS
       if (calculatedMetrics.monthsOfSupply)
-        allMetrics.months_supply = {
+        allMetrics.months_of_supply = {
           value: calculatedMetrics.monthsOfSupply,
           date: targetDate,
           source: 'calculated',
@@ -804,33 +820,67 @@ export class ScoringService {
 
     if (data?.[0]) {
       const row = data[0];
-      // Map Realtor columns to metric names
+      // Map Realtor columns to metric names matching component definitions in scoring.types.ts
+      // IMPORTANT: Metric names must match exactly what components expect for percentile lookups to work
+
+      // Price metrics
       if (row.median_listing_price != null) {
-        metrics.listing_price = { value: row.median_listing_price, date: periodDate, source: 'realtor' };
+        metrics.median_listing_price = { value: row.median_listing_price, date: periodDate, source: 'realtor' };
       }
       if (row.median_listing_price_yy != null) {
-        metrics.listing_price_yoy = { value: row.median_listing_price_yy, date: periodDate, source: 'realtor' };
+        metrics.median_listing_price_yy = { value: row.median_listing_price_yy, date: periodDate, source: 'realtor' };
       }
+      if (row.median_listing_price_mm != null) {
+        metrics.median_listing_price_mm = { value: row.median_listing_price_mm, date: periodDate, source: 'realtor' };
+      }
+      if (row.median_listing_price_per_square_foot != null) {
+        metrics.median_listing_price_per_square_foot = { value: row.median_listing_price_per_square_foot, date: periodDate, source: 'realtor' };
+      }
+
+      // Inventory metrics - use EXACT names from component definitions
       if (row.active_listing_count != null) {
         metrics.inventory = { value: row.active_listing_count, date: periodDate, source: 'realtor' };
       }
       if (row.active_listing_count_yy != null) {
-        metrics.inventory_yoy = { value: row.active_listing_count_yy, date: periodDate, source: 'realtor' };
+        metrics.active_listing_count_yy = { value: row.active_listing_count_yy, date: periodDate, source: 'realtor' };
       }
+
+      // Days on market - use EXACT name from component definitions
       if (row.median_days_on_market != null) {
-        metrics.days_on_market = { value: row.median_days_on_market, date: periodDate, source: 'realtor' };
+        metrics.median_days_on_market = { value: row.median_days_on_market, date: periodDate, source: 'realtor' };
       }
+
+      // Listing activity metrics - use EXACT names from component definitions
       if (row.new_listing_count != null) {
         metrics.new_listings = { value: row.new_listing_count, date: periodDate, source: 'realtor' };
+      }
+      if (row.new_listing_count_yy != null) {
+        metrics.new_listing_count_yy = { value: row.new_listing_count_yy, date: periodDate, source: 'realtor' };
       }
       if (row.pending_listing_count != null) {
         metrics.pending_sales = { value: row.pending_listing_count, date: periodDate, source: 'realtor' };
       }
+      if (row.pending_listing_count_yy != null) {
+        metrics.pending_listing_count_yy = { value: row.pending_listing_count_yy, date: periodDate, source: 'realtor' };
+      }
+
+      // Ratio metrics - use EXACT names from component definitions
+      if (row.pending_ratio != null) {
+        metrics.pending_ratio = { value: row.pending_ratio, date: periodDate, source: 'realtor' };
+      }
       if (row.price_reduced_share != null) {
         metrics.price_reduced_share = { value: row.price_reduced_share, date: periodDate, source: 'realtor' };
       }
+      if (row.price_increased_share != null) {
+        metrics.price_increased_share = { value: row.price_increased_share, date: periodDate, source: 'realtor' };
+      }
+
+      // Market indicators
       if (row.hotness_score != null) {
         metrics.hotness_score = { value: row.hotness_score, date: periodDate, source: 'realtor' };
+      }
+      if (row.hotness_rank != null) {
+        metrics.hotness_rank = { value: row.hotness_rank, date: periodDate, source: 'realtor' };
       }
       if (row.supply_score != null) {
         metrics.supply_score = { value: row.supply_score, date: periodDate, source: 'realtor' };
@@ -1052,17 +1102,27 @@ export class ScoringService {
         }
       }
 
-      // Skip if no percentile data available
+      // If no percentile data, use min-max normalization with fallback ranges
+      // Ranges based on PropertyIQ-Scoring-Implementation-Guide.md
+      let normalizedScore: number;
       if (!percentile) {
-        if (metricDef.nullStrategy === 'penalize') {
-          totalWeight += metricDef.weight;
-          weightedSum += 25 * metricDef.weight;
+        const fallbackNormalized = this.normalizeWithFallback(metricDef.name, metric.value);
+        if (fallbackNormalized === null) {
+          // No fallback range defined, use neutral for 'neutral' strategy or skip
+          if (metricDef.nullStrategy === 'neutral') {
+            totalWeight += metricDef.weight;
+            weightedSum += 50 * metricDef.weight;
+          } else if (metricDef.nullStrategy === 'penalize') {
+            totalWeight += metricDef.weight;
+            weightedSum += 25 * metricDef.weight;
+          }
+          continue;
         }
-        continue;
+        normalizedScore = fallbackNormalized;
+      } else {
+        // Use percentile-based normalization
+        normalizedScore = this.valueToPercentile(metric.value, percentile);
       }
-
-      // Normalize value to 0-100 percentile
-      const normalizedScore = this.valueToPercentile(metric.value, percentile);
 
       // Apply direction transformation
       let adjustedScore: number;
@@ -1133,6 +1193,101 @@ export class ScoringService {
     if (value <= percentiles.p80) return 80;
     if (value <= percentiles.p90) return 90;
     return 95;
+  }
+
+  /**
+   * Fallback min-max normalization when percentiles are not available
+   * Ranges from PropertyIQ-Scoring-Implementation-Guide.md
+   */
+  private normalizeWithFallback(metricName: string, value: number): number | null {
+    // Define min/max ranges per the Implementation Guide
+    const METRIC_RANGES: Record<string, { min: number; max: number; invert?: boolean; optimal?: { min: number; max: number } }> = {
+      // Market metrics
+      price_reduced_share: { min: 0, max: 40 },
+      median_days_on_market: { min: 10, max: 120 },
+      months_of_supply: { min: 1, max: 12, optimal: { min: 4, max: 6 } },
+      pending_ratio: { min: 0.1, max: 0.8 },
+      pending_listing_count_yy: { min: -50, max: 50, invert: true },
+      active_listing_count_yy: { min: -50, max: 50, optimal: { min: -10, max: 10 } },
+      new_listing_count_yy: { min: -50, max: 50, optimal: { min: -10, max: 15 } },
+      hotness_score: { min: 0, max: 100 },
+
+      // Price metrics
+      zhvi_yoy: { min: -15, max: 20, optimal: { min: 2, max: 6 } },
+      zori_yoy: { min: -10, max: 15 },
+      median_listing_price_yy: { min: -20, max: 30 },
+      sale_to_list_ratio: { min: 0.85, max: 1.15, optimal: { min: 0.97, max: 1.03 } },
+
+      // Cash flow metrics
+      cap_rate: { min: 2, max: 12 },
+      grm: { min: 8, max: 30, invert: true },
+      gross_yield: { min: 3, max: 15 },
+      rent_to_price_ratio: { min: 0.003, max: 0.012 },
+
+      // Stability metrics
+      volatility_36m: { min: 0, max: 15, invert: true },
+      unemployment_rate: { min: 2, max: 12, invert: true },
+      employment_yoy: { min: -5, max: 5 },
+
+      // Growth metrics
+      zhvi_5y_cagr: { min: -5, max: 15 },
+      population_yoy: { min: -2, max: 5 },
+      median_household_income_yoy: { min: -5, max: 10 },
+
+      // Census metrics
+      homeownership_rate: { min: 30, max: 85 },
+      renter_share: { min: 20, max: 70 },
+      median_age: { min: 18, max: 65, optimal: { min: 30, max: 45 } },
+
+      // Entry point metrics
+      overvalued_pct: { min: -30, max: 50, invert: true },
+      inventory_surplus_pct: { min: -30, max: 50, invert: true },
+
+      // Permit metrics
+      large_multi_permits_yoy: { min: -50, max: 100, invert: true },
+    };
+
+    const range = METRIC_RANGES[metricName];
+    if (!range) return null;
+
+    // Handle optimal range (moderate_better) metrics
+    if (range.optimal) {
+      return this.normalizeOptimal(
+        value,
+        range.optimal.min,
+        range.optimal.max,
+        range.min,
+        range.max,
+      );
+    }
+
+    // Standard min-max normalization
+    const clamped = Math.max(range.min, Math.min(range.max, value));
+    let normalized = ((clamped - range.min) / (range.max - range.min)) * 100;
+
+    // Invert if lower is better
+    if (range.invert) {
+      normalized = 100 - normalized;
+    }
+
+    return Math.max(0, Math.min(100, normalized));
+  }
+
+  /**
+   * Normalize for metrics where moderate values are best
+   */
+  private normalizeOptimal(
+    value: number,
+    optimalMin: number,
+    optimalMax: number,
+    extremeMin: number,
+    extremeMax: number,
+  ): number {
+    if (value >= optimalMin && value <= optimalMax) return 100;
+    if (value < optimalMin) {
+      return Math.max(0, 100 - ((optimalMin - value) / (optimalMin - extremeMin)) * 100);
+    }
+    return Math.max(0, 100 - ((value - optimalMax) / (extremeMax - optimalMax)) * 100);
   }
 
   private aggregateScore<T extends string>(
