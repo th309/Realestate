@@ -397,6 +397,26 @@ export class ScoringService {
     return this.getGeography(geographyId, geographyType);
   }
 
+  /**
+   * Debug county query specifically to diagnose issues
+   */
+  async debugCountyQuery(countyFips: string) {
+    const { data, error } = await this.supabase
+      .from('realtor_county')
+      .select('county_fips, county_name')
+      .eq('county_fips', countyFips)
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    return {
+      input: countyFips,
+      data,
+      error: error?.message,
+      dataLength: data?.length ?? 0,
+      firstRow: data?.[0] ?? null,
+    };
+  }
+
   async debugGetMetrics(geography: any, geographyType: GeographyType, periodDate: string) {
     return this.fetchMetrics(geography, geographyType, periodDate);
   }

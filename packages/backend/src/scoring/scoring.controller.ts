@@ -542,6 +542,14 @@ export class ScoringController {
     return debug;
   }
 
+  /**
+   * Debug endpoint specifically for county query testing
+   */
+  @Get('debug/county-query/:countyFips')
+  async debugCountyQuery(@Param('countyFips') countyFips: string) {
+    return this.scoringService.debugCountyQuery(countyFips);
+  }
+
   private validateGeographyType(type: string): GeographyType {
     const validTypes: GeographyType[] = ['state', 'metro', 'county', 'zip'];
     const lowerType = type.toLowerCase() as GeographyType;
