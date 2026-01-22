@@ -2,7 +2,13 @@
  * Data Sources Health Service
  *
  * Monitors the health of external data sources:
- * - Zillow S3, Census API, BLS API, Realtor S3, HUD API, Building Permits
+ * - Zillow S3: Home values, market indicators (monthly)
+ * - Realtor S3: Listing data, inventory (monthly)
+ * - Census ACS: Demographics, income (annual, 5-year estimates)
+ * - BLS API: Unemployment, employment (monthly)
+ * - FRED API: National economic indicators, mortgage rates (monthly)
+ * - HUD API: Fair Market Rents (annual)
+ * - Building Permits: Construction activity (monthly)
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -62,15 +68,17 @@ interface SourceConfig {
 const DATA_SOURCES: SourceConfig[] = [
   // Zillow - Monthly data, check ZIP level (most granular)
   { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
-  // Census - Annual data, check county level (most reliable)
-  { sourceName: 'census_api', displayName: 'Census', sourceType: 'api', tableName: 'census_county', dateColumn: 'year', expectedFreshnessDays: 438 },
-  // BLS/Economic - Monthly data, check county level
-  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // Realtor - Monthly data, check ZIP level (most granular)
   { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
-  // HUD FMR - Annual data
+  // Census/ACS - Annual data (5-year ACS estimates), check county level
+  { sourceName: 'census_acs', displayName: 'Census ACS', sourceType: 'api', tableName: 'census_county', dateColumn: 'year', expectedFreshnessDays: 438 },
+  // BLS - Monthly unemployment/employment data, check county level
+  { sourceName: 'bls_api', displayName: 'BLS', sourceType: 'api', tableName: 'economic_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // FRED - Monthly national economic indicators (mortgage rates, GDP, etc.)
+  { sourceName: 'fred_api', displayName: 'FRED', sourceType: 'api', tableName: 'economic_national', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // HUD FMR - Annual Fair Market Rents
   { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'year', expectedFreshnessDays: 438 },
-  // Building Permits - Monthly data
+  // Building Permits - Monthly data from Census
   { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
 ];
 
