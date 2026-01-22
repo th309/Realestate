@@ -68,17 +68,40 @@ export function DataSourcesTab() {
     );
   };
 
-  const getFreshnessBadge = (fresh: boolean, daysSince: number | null) => {
-    if (fresh) {
-      return (
-        <span className="text-green-600">
-          {daysSince !== null ? `${daysSince}d ago` : 'Fresh'}
-        </span>
-      );
+  /**
+   * Get freshness badge with gradient colors:
+   * - Green: <50% of expected threshold (very fresh)
+   * - Yellow: 50-90% of threshold (approaching)
+   * - Orange: 90-100% of threshold (due soon)
+   * - Red: >100% of threshold (overdue/stale)
+   */
+  const getFreshnessBadge = (daysSince: number | null, expectedDays: number) => {
+    if (daysSince === null) {
+      return <span className="text-on-surface-variant">Unknown</span>;
     }
+
+    const ratio = daysSince / expectedDays;
+    let colorClass: string;
+    let label: string;
+
+    if (ratio < 0.5) {
+      colorClass = 'text-green-600';
+      label = 'Fresh';
+    } else if (ratio < 0.9) {
+      colorClass = 'text-amber-500';
+      label = 'OK';
+    } else if (ratio < 1.0) {
+      colorClass = 'text-orange-500';
+      label = 'Due Soon';
+    } else {
+      colorClass = 'text-red-600';
+      label = 'Stale';
+    }
+
     return (
-      <span className="text-amber-600">
-        {daysSince !== null ? `${daysSince}d ago` : 'Unknown'}
+      <span className={`inline-flex items-center gap-1.5 ${colorClass}`}>
+        <span className={`w-2 h-2 rounded-full ${colorClass.replace('text-', 'bg-')}`} />
+        {label}
       </span>
     );
   };
@@ -106,7 +129,7 @@ export function DataSourcesTab() {
         </div>
         <div className="p-4 rounded-xl bg-blue-50">
           <div className="text-2xl font-bold text-blue-800">
-            {sources.filter((s) => s.fresh).length}
+            {sources.filter((s) => s.daysSinceUpdate !== null && s.daysSinceUpdate <= s.expectedFreshnessDays).length}
           </div>
           <div className="text-sm text-blue-600">Fresh</div>
         </div>
@@ -148,10 +171,10 @@ export function DataSourcesTab() {
                   Response
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase tracking-wider">
-                  Fresh
+                  Status
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase tracking-wider">
-                  Last Update
+                  Data Age
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase tracking-wider">
                   Schema
@@ -179,15 +202,19 @@ export function DataSourcesTab() {
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {getFreshnessBadge(source.fresh, source.daysSinceUpdate)}
+                    {getFreshnessBadge(source.daysSinceUpdate, source.expectedFreshnessDays)}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
-                    {source.daysSinceUpdate !== null
-                      ? `${source.daysSinceUpdate} days ago`
-                      : 'Unknown'}
-                    <span className="text-xs text-on-surface-variant/60 ml-1">
-                      (exp: {source.expectedFreshnessDays}d)
-                    </span>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    {source.daysSinceUpdate !== null ? (
+                      <div>
+                        <span className="text-on-surface">{source.daysSinceUpdate}d</span>
+                        <span className="text-on-surface-variant/60 ml-1">
+                          / {source.expectedFreshnessDays}d
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-on-surface-variant">Unknown</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {source.schemaChanged ? (
