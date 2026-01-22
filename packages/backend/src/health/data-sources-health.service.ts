@@ -45,6 +45,8 @@ interface SourceConfig {
   tableName: string;
   dateColumn: string;
   expectedFreshnessDays: number;
+  /** Optional: exclude rows where column != value (e.g., exclude forecast data) */
+  excludeFilter?: { column: string; value: string };
 }
 
 /**
@@ -69,8 +71,8 @@ interface SourceConfig {
  * - Annual (365 days): 438 days
  */
 const DATA_SOURCES: SourceConfig[] = [
-  // Zillow - Monthly data, check ZIP level (most granular)
-  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // Zillow - Monthly data, check ZIP level (exclude zhvf forecast data which has future dates)
+  { sourceName: 'zillow_s3', displayName: 'Zillow', sourceType: 's3', tableName: 'zillow_zip', dateColumn: 'period_date', expectedFreshnessDays: 36, excludeFilter: { column: 'metric_name', value: 'zhvf' } },
   // Realtor - Monthly data, check ZIP level (most granular)
   { sourceName: 'realtor_s3', displayName: 'Realtor', sourceType: 's3', tableName: 'realtor_zip', dateColumn: 'period_date', expectedFreshnessDays: 36 },
   // Census/ACS - Annual data (5-year ACS estimates), check county level
@@ -121,9 +123,16 @@ export class DataSourcesHealthService {
 
     try {
       // Query the table to check availability and freshness
-      const { data, error } = await client
+      let query = client
         .from(config.tableName)
-        .select(config.dateColumn)
+        .select(config.dateColumn);
+
+      // Apply exclude filter if specified (e.g., exclude forecast data)
+      if (config.excludeFilter) {
+        query = query.neq(config.excludeFilter.column, config.excludeFilter.value);
+      }
+
+      const { data, error } = await query
         .order(config.dateColumn, { ascending: false })
         .limit(1);
 
