@@ -855,8 +855,8 @@ export class ScoringService {
 
     if (data) {
       for (const row of data) {
-        map.set(row.metric_id, {
-          metricName: row.metric_id,  // Column is metric_id in DB
+        map.set(row.metric_name, {
+          metricName: row.metric_name,  // Column is metric_name per migration 030
           geographyType: row.geography_type,
           periodDate: row.period_date,
           p10: row.p10,

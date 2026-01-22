@@ -54,7 +54,7 @@ describe('Scoring Pipeline Integration', () => {
   };
 
   const mockPercentiles = {
-    metric_id: 'zhvi',  // Column is metric_id in DB schema
+    metric_name: 'zhvi',  // Column is metric_name per migration 030
     geography_type: 'zip',
     period_date: '2024-01-01',
     p10: 150000,

@@ -289,7 +289,7 @@ export class PercentileService {
   private async savePercentiles(stats: PercentileStats): Promise<void> {
     const { error } = await this.supabase.from('metric_percentiles').upsert(
       {
-        metric_id: stats.metricName,  // Column is metric_id, not metric_name
+        metric_name: stats.metricName,  // Column is metric_name per migration 030
         geography_type: stats.geographyType,
         period_date: stats.periodDate,
         p10: stats.p10,
@@ -309,7 +309,7 @@ export class PercentileService {
         calculated_at: new Date().toISOString(),
       },
       {
-        onConflict: 'metric_id,geography_type,period_date',
+        onConflict: 'metric_name,geography_type,period_date',
       },
     );
 
@@ -341,7 +341,7 @@ export class PercentileService {
    */
   async debugTestSave(geographyType: GeographyType): Promise<Record<string, unknown>> {
     const testData = {
-      metric_id: 'test_metric',  // Column is metric_id, not metric_name
+      metric_name: 'test_metric',  // Column is metric_name per migration 030
       geography_type: geographyType,
       period_date: '2024-01-01',
       p10: 10,
@@ -363,7 +363,7 @@ export class PercentileService {
 
     const { data, error } = await this.supabase
       .from('metric_percentiles')
-      .upsert(testData, { onConflict: 'metric_id,geography_type,period_date' })
+      .upsert(testData, { onConflict: 'metric_name,geography_type,period_date' })
       .select();
 
     if (error) {
@@ -383,7 +383,7 @@ export class PercentileService {
     await this.supabase
       .from('metric_percentiles')
       .delete()
-      .eq('metric_id', 'test_metric')
+      .eq('metric_name', 'test_metric')
       .eq('geography_type', geographyType)
       .eq('period_date', '2024-01-01');
 
