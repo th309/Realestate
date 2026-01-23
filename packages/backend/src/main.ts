@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
-// Build trigger: 2026-01-23-nixpacks-python
+// Build trigger: 2026-01-23-full-ml-deps
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
