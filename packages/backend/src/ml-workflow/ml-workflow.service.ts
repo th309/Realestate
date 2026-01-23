@@ -201,7 +201,7 @@ export class MLWorkflowService {
       this.pythonScriptsPath,
       STEP_SCRIPTS[stepId],
     );
-    const pythonPath = process.env.PYTHON_PATH || 'python';
+    const pythonPath = process.env.PYTHON_PATH || 'python3';
 
     this.logger.log(`Running: ${pythonPath} ${scriptPath}`);
 
