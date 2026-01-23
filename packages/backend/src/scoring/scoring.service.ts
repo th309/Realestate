@@ -703,8 +703,7 @@ export class ScoringService {
     for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
       const scoreData = result.scores[scoreType];
 
-      // Write directly to the table (not the view) for proper upsert support
-      const { error } = await this.supabase.from('propertyiq_scores_v2').upsert(
+      const { error } = await this.supabase.from('propertyiq_scores').upsert(
         {
           geography: result.geography,
           location_id: result.location_id,
