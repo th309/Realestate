@@ -2,11 +2,11 @@
  * GeographySelector Component
  *
  * Allows selection of geography type and specific geography for score viewing.
- * Supports state, metro, county, and zip code selection.
+ * Supports metro, county, and zip code selection.
+ * NOTE: State scoring is not yet supported by the API.
  *
  * Uses the same search logic as the graphs page (useGraphSearch hook)
- * for consistent behavior across the application. State search is handled
- * locally since useGraphSearch doesn't support states.
+ * for consistent behavior across the application.
  * Material Design 3 compliant.
  */
 
@@ -17,28 +17,30 @@ import { useGraphSearch } from '@/app/graphs/hooks/useGraphSearch';
 import type { SearchResult } from '@/app/map/types';
 
 interface Geography {
-  type: 'state' | 'metro' | 'county' | 'zip';
+  type: 'metro' | 'county' | 'zip';
   id: string;
   name: string;
 }
 
 interface GeographySelectorProps {
   selected: Geography | null;
-  onChange: (type: 'state' | 'metro' | 'county' | 'zip', id: string, name: string) => void;
+  onChange: (type: 'metro' | 'county' | 'zip', id: string, name: string) => void;
 }
 
+// Note: State scoring not yet supported by API
 const GEO_TYPES = [
-  { value: 'state', label: 'State' },
   { value: 'metro', label: 'Metro Area' },
   { value: 'county', label: 'County' },
   { value: 'zip', label: 'ZIP Code' },
 ] as const;
 
 export function GeographySelector({ selected, onChange }: GeographySelectorProps) {
-  const [geoType, setGeoType] = useState<'state' | 'metro' | 'county' | 'zip'>(
-    (selected?.type as 'state' | 'metro' | 'county' | 'zip') || 'state',
+  const [geoType, setGeoType] = useState<'metro' | 'county' | 'zip'>(
+    (selected?.type as 'metro' | 'county' | 'zip') || 'metro',
   );
   const [inputValue, setInputValue] = useState('');
+
+  console.log('[GeographySelector] Render - geoType:', geoType, 'selected:', selected);
 
   // Use the same search hook as the graphs page (now supports state, metro, county, zip)
   const {
@@ -58,27 +60,37 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
   }, [searchQuery]);
 
   const handleSelect = (result: SearchResult) => {
+    console.log('[GeographySelector] handleSelect called with result:', result);
+    console.log('[GeographySelector] Current geoType:', geoType);
+
     // Extract the proper ID for the scoring API
-    // - States: use abbreviation from result.value (e.g., "CA")
     // - Metros: use CBSA code from result.id (format: "metro-12420" -> "12420")
     // - Counties: use FIPS code from result.id (format: "county-17031" -> "17031")
     // - ZIPs: use ZIP code from result.value (e.g., "90210")
     let id: string;
-    if (geoType === 'state' && result.id.startsWith('state-')) {
-      id = result.id.replace('state-', '');
-    } else if (geoType === 'metro' && result.id.startsWith('metro-')) {
+    if (geoType === 'metro' && result.id.startsWith('metro-')) {
       id = result.id.replace('metro-', '');
+      console.log('[GeographySelector] Extracted metro CBSA code:', id);
     } else if (geoType === 'county' && result.id.startsWith('county-')) {
       id = result.id.replace('county-', '');
+      console.log('[GeographySelector] Extracted county FIPS code:', id);
+    } else if (geoType === 'zip') {
+      // For ZIP, use the value (ZIP code) or extract from id
+      id = result.value || result.id.replace('zip-', '');
+      console.log('[GeographySelector] Extracted ZIP code:', id);
     } else {
       id = result.value || result.name;
+      console.log('[GeographySelector] Using fallback ID:', id);
     }
+
+    console.log('[GeographySelector] Calling onChange with:', { type: geoType, id, name: result.name });
     onChange(geoType, id, result.name);
     setInputValue(result.name);
     clearSearch();
   };
 
-  const handleTypeChange = (newType: 'state' | 'metro' | 'county' | 'zip') => {
+  const handleTypeChange = (newType: 'metro' | 'county' | 'zip') => {
+    console.log('[GeographySelector] handleTypeChange:', newType);
     setGeoType(newType);
     setInputValue('');
     clearSearch();
@@ -92,8 +104,6 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
   // Get placeholder text based on geo level
   const getSearchPlaceholder = () => {
     switch (geoType) {
-      case 'state':
-        return 'Search states (e.g., California, TX)';
       case 'metro':
         return 'Search metros (e.g., Chicago, Miami)';
       case 'county':
@@ -105,8 +115,8 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
     }
   };
 
-  // Minimum query length: 1 for states (abbreviations), 2 for others
-  const minQueryLength = geoType === 'state' ? 1 : 2;
+  // Minimum query length for search
+  const minQueryLength = 2;
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -178,7 +188,8 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
           <span className="text-sm font-medium">{selected.name}</span>
           <button
             onClick={() => {
-              onChange('state', '', '');
+              console.log('[GeographySelector] Clearing selection');
+              onChange('metro', '', '');
               clearSearch();
               setInputValue('');
             }}

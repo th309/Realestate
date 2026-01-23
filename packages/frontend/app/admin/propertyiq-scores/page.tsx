@@ -40,14 +40,19 @@ const TABS: Tab[] = [
 export default function PropertyIQAdminPage() {
   const [activeTab, setActiveTab] = useState<TabId>('scores');
   const [selectedGeography, setSelectedGeography] = useState<{
-    type: 'state' | 'metro' | 'county' | 'zip';
+    type: 'metro' | 'county' | 'zip';
     id: string;
     name: string;
   } | null>(null);
 
   const handleGeographyChange = useCallback(
-    (type: 'state' | 'metro' | 'county' | 'zip', id: string, name: string) => {
-      setSelectedGeography({ type, id, name });
+    (type: 'metro' | 'county' | 'zip', id: string, name: string) => {
+      console.log('[PropertyIQAdminPage] Geography changed:', { type, id, name });
+      if (!id) {
+        setSelectedGeography(null);
+      } else {
+        setSelectedGeography({ type, id, name });
+      }
     },
     [],
   );
