@@ -2,17 +2,14 @@
  * ML Workflow Service
  *
  * Manages PropertyIQ ML workflow execution:
- * - Spawns Python scripts as child processes
+ * - Calls the PropertyIQ Analytics microservice for scoring/backtesting
  * - Tracks job status in database
- * - Parses progress from stdout
- * - Serves output files
+ * - Handles async job execution
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
 import * as crypto from 'crypto';
 
 export type StepStatus = 'pending' | 'running' | 'completed' | 'error';
@@ -23,21 +20,13 @@ export interface StepState {
   progress?: number;
   error?: string;
   jobId?: string;
-  outputs?: OutputFile[];
-}
-
-export interface OutputFile {
-  name: string;
-  size: string;
-  path?: string;
-  viewUrl?: string;
 }
 
 export interface JobRecord {
   id: string;
-  job_type: string;  // Maps to step_id
+  job_type: string;
   config: Record<string, unknown>;
-  status: string;  // 'queued' | 'running' | 'completed' | 'failed'
+  status: string;
   progress: number;
   result: Record<string, unknown> | null;
   error: string | null;
@@ -46,54 +35,36 @@ export interface JobRecord {
   created_at: string;
 }
 
-// Map step IDs to Python scripts
-const STEP_SCRIPTS: Record<string, string> = {
-  'data-export': 'export_backtest_data.py',
-  'prepare-backtest-data': 'prepare_backtest_data.py',
-  'calculate-benchmarks': 'calculate_benchmarks.py',
-  'feature-analysis': 'find_optimal_weights.py',
-  'score-explanations': 'generate_shap_explanations.py',
-  'monthly-report': 'generate_monthly_report.py',
+// Map step IDs to analytics API endpoints
+const STEP_ENDPOINTS: Record<string, { method: string; path: string }> = {
+  'score-homeready': { method: 'POST', path: '/api/v1/score/homeready' },
+  'score-investor-edge': { method: 'POST', path: '/api/v1/score/investor-edge' },
+  'backtest-run': { method: 'POST', path: '/api/v1/backtest/run' },
 };
 
-// Output file patterns for each step
-const STEP_OUTPUTS: Record<string, string[]> = {
-  'data-export': [
-    'geographies.parquet',
-    'zillow_historical.parquet',
-    'census_latest.parquet',
-    'economic.parquet',
-  ],
-  'prepare-backtest-data': ['backtest_data.parquet'],
-  'calculate-benchmarks': [
-    'backtest_with_benchmarks.parquet',
-    'benchmarks_national.parquet',
-    'benchmarks_regional.parquet',
-    'benchmarks_peer.parquet',
-  ],
-  'feature-analysis': ['feature_importance_*.csv'],
-  'score-explanations': ['explanations_*.json'],
-  'monthly-report': ['monthly_report_*.json', 'monthly_report_*.html'],
-};
+// Legacy step IDs that are no longer supported (were Python scripts)
+const LEGACY_STEPS = [
+  'data-export',
+  'prepare-backtest-data',
+  'calculate-benchmarks',
+  'feature-analysis',
+  'score-explanations',
+  'monthly-report',
+];
 
 @Injectable()
 export class MLWorkflowService {
   private readonly logger = new Logger(MLWorkflowService.name);
-  private readonly pythonScriptsPath: string;
-  private readonly dataPath: string;
-  private readonly reportsPath: string;
-  private runningProcesses: Map<string, ChildProcess> = new Map();
+  private readonly analyticsServiceUrl: string;
 
-  constructor(private readonly supabaseService: SupabaseService) {
-    // Configure paths - adjust based on your deployment
-    const basePath =
-      process.env.ML_SCRIPTS_PATH ||
-      path.resolve(__dirname, '../../../../propertyiq-ml');
-    this.pythonScriptsPath = path.join(basePath, 'scripts');
-    this.dataPath = path.join(basePath, 'data');
-    this.reportsPath = path.join(basePath, 'reports');
-
-    this.logger.log(`ML Scripts path: ${this.pythonScriptsPath}`);
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    this.analyticsServiceUrl =
+      this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
+      'http://localhost:8000';
+    this.logger.log(`Analytics service URL: ${this.analyticsServiceUrl}`);
   }
 
   /**
@@ -102,11 +73,12 @@ export class MLWorkflowService {
   async getWorkflowStatus(): Promise<Record<string, StepState>> {
     const supabase = this.supabaseService.getClient();
 
-    // Get latest job for each step
+    const allStepIds = [...Object.keys(STEP_ENDPOINTS), ...LEGACY_STEPS];
+
     const { data: jobs, error } = await supabase
       .from('propertyiq_ml_jobs')
       .select('*')
-      .in('job_type', Object.keys(STEP_SCRIPTS))
+      .in('job_type', allStepIds)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -114,7 +86,6 @@ export class MLWorkflowService {
       throw error;
     }
 
-    // Build step states from jobs (most recent per step)
     const stepStates: Record<string, StepState> = {};
     const seenSteps = new Set<string>();
 
@@ -122,7 +93,6 @@ export class MLWorkflowService {
       if (seenSteps.has(job.job_type)) continue;
       seenSteps.add(job.job_type);
 
-      // Map DB status to UI status
       const uiStatus = this.mapDbStatusToUiStatus(job.status);
 
       stepStates[job.job_type] = {
@@ -131,17 +101,15 @@ export class MLWorkflowService {
         progress: job.progress,
         error: job.error,
         jobId: job.id,
-        outputs: await this.getStepOutputFiles(job.job_type),
       };
     }
 
     // Add pending state for steps with no jobs
-    for (const stepId of Object.keys(STEP_SCRIPTS)) {
+    for (const stepId of Object.keys(STEP_ENDPOINTS)) {
       if (!stepStates[stepId]) {
         stepStates[stepId] = {
           status: 'pending',
           lastRunTime: null,
-          outputs: await this.getStepOutputFiles(stepId),
         };
       }
     }
@@ -168,10 +136,21 @@ export class MLWorkflowService {
   }
 
   /**
-   * Run a specific workflow step.
+   * Run a specific workflow step by calling the analytics service.
    */
-  async runStep(stepId: string): Promise<{ jobId: string }> {
-    if (!STEP_SCRIPTS[stepId]) {
+  async runStep(
+    stepId: string,
+    payload?: Record<string, unknown>,
+  ): Promise<{ jobId: string }> {
+    // Check if it's a legacy step
+    if (LEGACY_STEPS.includes(stepId)) {
+      throw new Error(
+        `Step "${stepId}" is no longer supported. Use the analytics service endpoints directly.`,
+      );
+    }
+
+    const endpoint = STEP_ENDPOINTS[stepId];
+    if (!endpoint) {
       throw new Error(`Unknown step: ${stepId}`);
     }
 
@@ -184,7 +163,7 @@ export class MLWorkflowService {
       .insert({
         id: jobId,
         job_type: stepId,
-        config: { script: STEP_SCRIPTS[stepId] },
+        config: payload || {},
         status: 'running',
         progress: 0,
         started_at: new Date().toISOString(),
@@ -196,75 +175,116 @@ export class MLWorkflowService {
       throw insertError;
     }
 
-    // Spawn Python process
-    const scriptPath = path.join(
-      this.pythonScriptsPath,
-      STEP_SCRIPTS[stepId],
-    );
-    const pythonPath = process.env.PYTHON_PATH || 'python3';
-
-    this.logger.log(`Running: ${pythonPath} ${scriptPath}`);
-
-    const childProcess = spawn(pythonPath, [scriptPath], {
-      cwd: this.pythonScriptsPath,
-      env: {
-        ...process.env,
-        JOB_ID: jobId,
-      },
-    });
-
-    this.runningProcesses.set(jobId, childProcess);
-
-    // Collect stderr for error reporting
-    let stderrOutput = '';
-
-    // Handle stdout (progress updates)
-    childProcess.stdout?.on('data', async (data) => {
-      const output = data.toString();
-      this.logger.debug(`[${stepId}] stdout: ${output}`);
-
-      // Parse progress
-      const progressMatch = output.match(/PROGRESS:(\d+)/);
-      if (progressMatch) {
-        const progress = parseInt(progressMatch[1], 10);
-        await this.updateJobProgress(jobId, progress);
-      }
-    });
-
-    // Handle stderr - collect for error message
-    childProcess.stderr?.on('data', (data) => {
-      const output = data.toString();
-      this.logger.warn(`[${stepId}] stderr: ${output}`);
-      // Keep last 1000 chars of stderr for error message
-      stderrOutput = (stderrOutput + output).slice(-1000);
-    });
-
-    // Handle completion
-    childProcess.on('close', async (code) => {
-      this.runningProcesses.delete(jobId);
-
-      const status = code === 0 ? 'completed' : 'error';
-      let error: string | null = null;
-      if (code !== 0) {
-        // Include stderr in error message for debugging
-        const stderrSummary = stderrOutput.trim();
-        error = stderrSummary
-          ? `Exit code ${code}: ${stderrSummary}`
-          : `Process exited with code ${code}`;
-      }
-
-      await this.updateJobStatus(jobId, status, error);
-      this.logger.log(`[${stepId}] completed with code ${code}`);
-    });
-
-    // Handle errors
-    childProcess.on('error', async (err) => {
-      this.runningProcesses.delete(jobId);
-      await this.updateJobStatus(jobId, 'error', err.message);
-      this.logger.error(`[${stepId}] process error: ${err.message}`);
-    });
+    // Call analytics service asynchronously
+    this.executeAnalyticsCall(jobId, stepId, endpoint, payload);
 
     return { jobId };
+  }
+
+  /**
+   * Execute the analytics service call and update job status.
+   */
+  private async executeAnalyticsCall(
+    jobId: string,
+    stepId: string,
+    endpoint: { method: string; path: string },
+    payload?: Record<string, unknown>,
+  ): Promise<void> {
+    const url = `${this.analyticsServiceUrl}${endpoint.path}`;
+
+    try {
+      this.logger.log(`Calling analytics service: ${endpoint.method} ${url}`);
+
+      const response = await fetch(url, {
+        method: endpoint.method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      // Update job as completed
+      await this.updateJobStatus(jobId, 'completed', null, result);
+      this.logger.log(`[${stepId}] completed successfully`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      await this.updateJobStatus(jobId, 'error', errorMessage);
+      this.logger.error(`[${stepId}] failed: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Calculate HomeReady score via analytics service.
+   */
+  async calculateHomeReadyScore(
+    propertyData: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const url = `${this.analyticsServiceUrl}/api/v1/score/homeready`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(propertyData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HomeReady scoring failed: ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Calculate InvestorEdge score via analytics service.
+   */
+  async calculateInvestorEdgeScore(
+    propertyData: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const url = `${this.analyticsServiceUrl}/api/v1/score/investor-edge`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(propertyData),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`InvestorEdge scoring failed: ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Run backtest via analytics service.
+   */
+  async runBacktest(
+    params: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const url = `${this.analyticsServiceUrl}/api/v1/backtest/run`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Backtest failed: ${errorText}`);
+    }
+
+    return response.json();
   }
 
   /**
@@ -281,7 +301,7 @@ export class MLWorkflowService {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return null; // Not found
+        return null;
       }
       throw error;
     }
@@ -290,108 +310,26 @@ export class MLWorkflowService {
   }
 
   /**
-   * Get output files for a step.
+   * Check analytics service health.
    */
-  async getStepOutputFiles(stepId: string): Promise<OutputFile[]> {
-    const patterns = STEP_OUTPUTS[stepId] || [];
-    const outputs: OutputFile[] = [];
-
-    // Determine which directory to look in
-    const searchDir =
-      stepId === 'monthly-report' ? this.reportsPath : this.dataPath;
-
-    if (!fs.existsSync(searchDir)) {
-      return outputs;
-    }
-
-    const files = fs.readdirSync(searchDir);
-
-    for (const pattern of patterns) {
-      // Convert glob pattern to regex
-      const regex = new RegExp(
-        '^' + pattern.replace(/\*/g, '.*').replace(/\./g, '\\.') + '$',
+  async checkAnalyticsHealth(): Promise<{ healthy: boolean; error?: string }> {
+    try {
+      const response = await fetch(
+        `${this.analyticsServiceUrl}/api/v1/health`,
+        { method: 'GET' },
       );
 
-      for (const file of files) {
-        if (regex.test(file)) {
-          const filePath = path.join(searchDir, file);
-          const stats = fs.statSync(filePath);
-
-          const output: OutputFile = {
-            name: file,
-            size: this.formatFileSize(stats.size),
-            path: filePath,
-          };
-
-          // Add view URL for HTML files
-          if (file.endsWith('.html')) {
-            output.viewUrl = `/api/admin/ml-workflow/outputs/${stepId}/${file}`;
-          }
-
-          outputs.push(output);
-        }
+      if (response.ok) {
+        return { healthy: true };
       }
+
+      return { healthy: false, error: `Status ${response.status}` };
+    } catch (error) {
+      return {
+        healthy: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
     }
-
-    // Sort by modification time (newest first)
-    outputs.sort((a, b) => {
-      if (!a.path || !b.path) return 0;
-      const aTime = fs.statSync(a.path).mtime.getTime();
-      const bTime = fs.statSync(b.path).mtime.getTime();
-      return bTime - aTime;
-    });
-
-    return outputs;
-  }
-
-  /**
-   * Get a specific output file.
-   */
-  getOutputFile(
-    stepId: string,
-    filename: string,
-  ): { content: Buffer; contentType: string } | null {
-    const searchDir =
-      stepId === 'monthly-report' ? this.reportsPath : this.dataPath;
-    const filePath = path.join(searchDir, filename);
-
-    // Security: prevent directory traversal
-    if (!filePath.startsWith(searchDir)) {
-      return null;
-    }
-
-    if (!fs.existsSync(filePath)) {
-      return null;
-    }
-
-    const content = fs.readFileSync(filePath);
-    let contentType = 'application/octet-stream';
-
-    if (filename.endsWith('.html')) {
-      contentType = 'text/html';
-    } else if (filename.endsWith('.json')) {
-      contentType = 'application/json';
-    } else if (filename.endsWith('.csv')) {
-      contentType = 'text/csv';
-    } else if (filename.endsWith('.parquet')) {
-      contentType = 'application/octet-stream';
-    }
-
-    return { content, contentType };
-  }
-
-  /**
-   * Update job progress.
-   */
-  private async updateJobProgress(jobId: string, progress: number) {
-    const supabase = this.supabaseService.getClient();
-
-    await supabase
-      .from('propertyiq_ml_jobs')
-      .update({
-        progress,
-      })
-      .eq('id', jobId);
   }
 
   /**
@@ -399,40 +337,31 @@ export class MLWorkflowService {
    */
   private async updateJobStatus(
     jobId: string,
-    status: StepStatus,
+    status: 'completed' | 'error',
     error?: string | null,
+    result?: Record<string, unknown>,
   ) {
     const supabase = this.supabaseService.getClient();
 
-    // Map UI status to DB status
     const dbStatus = status === 'error' ? 'failed' : status;
 
     const update: Record<string, unknown> = {
       status: dbStatus,
+      completed_at: new Date().toISOString(),
     };
 
-    if (status === 'completed' || status === 'error') {
-      update.completed_at = new Date().toISOString();
-      if (status === 'completed') {
-        update.progress = 100;
-      }
+    if (status === 'completed') {
+      update.progress = 100;
     }
 
     if (error) {
       update.error = error;
     }
 
-    await supabase.from('propertyiq_ml_jobs').update(update).eq('id', jobId);
-  }
+    if (result) {
+      update.result = result;
+    }
 
-  /**
-   * Format file size for display.
-   */
-  private formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    await supabase.from('propertyiq_ml_jobs').update(update).eq('id', jobId);
   }
 }

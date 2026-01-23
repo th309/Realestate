@@ -1,10 +1,8 @@
-# Railpack configuration for Railway - Backend service
+# Nixpacks configuration for Railway - NestJS Backend
+# Pure Node.js service (Python analytics is now a separate service)
 
 [phases.install]
-cmds = [
-    "npm ci",
-    "pip install -r packages/backend/requirements.txt"
-]
+cmds = ["npm ci"]
 
 [phases.build]
 cmds = ["npm run build:backend"]
