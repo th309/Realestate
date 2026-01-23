@@ -1,0 +1,17 @@
+# Nixpacks configuration for Railway - Backend service
+# Monorepo: builds packages/backend with Node.js + Python
+
+[phases.setup]
+nixPkgs = ["nodejs-20_x", "python312", "python312Packages.pip"]
+
+[phases.install]
+cmds = [
+    "cd packages/backend && npm ci",
+    "cd packages/backend && pip install --user -r requirements.txt"
+]
+
+[phases.build]
+cmds = ["cd packages/backend && npm run build"]
+
+[start]
+cmd = "cd packages/backend && node dist/main.js"
