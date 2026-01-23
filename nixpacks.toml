@@ -1,17 +1,13 @@
 # Railpack configuration for Railway - Backend service
-# Monorepo: builds packages/backend with Node.js + Python
-
-# Force both providers
-providers = ["node", "python"]
 
 [phases.install]
 cmds = [
-    "cd packages/backend && npm ci",
-    "cd packages/backend && pip install -r requirements.txt"
+    "npm ci",
+    "pip install -r packages/backend/requirements.txt"
 ]
 
 [phases.build]
-cmds = ["cd packages/backend && npm run build"]
+cmds = ["npm run build:backend"]
 
 [start]
-cmd = "cd packages/backend && node dist/main.js"
+cmd = "node packages/backend/dist/main.js"
