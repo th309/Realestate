@@ -1,0 +1,11 @@
+# Nixpacks configuration for Railway
+# Adds Python support alongside Node.js for ML workflow scripts
+
+[phases.setup]
+nixPkgs = ["python312", "python312Packages.pip", "python312Packages.pandas", "python312Packages.sqlalchemy"]
+
+[phases.install]
+cmds = [
+    "npm ci",
+    "pip install python-dotenv psycopg2-binary pyarrow"
+]
