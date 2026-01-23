@@ -1,33 +1,27 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api, ScoreResponse } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { GeoLevel, ViewMode, SelectedGeography } from '../types';
 import type { TrendDirection } from '../components/sidebar-components/TrendArrow';
-import type { MarketCondition } from '../components/sidebar-components/MarketConditionBadge';
-import { getMarketCondition } from '../components/sidebar-components/MarketConditionBadge';
-
-interface MetricData {
-  value: string;
-  label: string;
-  percentile?: number;
-  trend?: {
-    direction: TrendDirection;
-    value: string;
-    comparison: string;
-  };
-  invertColors?: boolean;
-}
+import type { PricingData, InventoryData, InsightData } from '../components/RightDetailPanel/ContextualDataCards';
+import type { MarketFactor } from '../components/RightDetailPanel/MarketFactorsGrid';
 
 interface RightPanelData {
+  // Score data
   score?: number;
   scoreTrend?: {
     direction: TrendDirection;
     value: string;
   };
-  marketCondition: MarketCondition;
-  summaryText?: string;
-  metrics: MetricData[];
+  confidence?: 'A' | 'B' | 'C' | 'D';
+  scoreInterpretation?: string;
+  // Contextual data
+  pricing?: PricingData;
+  inventory?: InventoryData;
+  insight?: InsightData;
+  // Market factors
+  marketFactors: MarketFactor[];
 }
 
 interface UseRightPanelDataReturn {
@@ -51,88 +45,73 @@ function formatCurrency(value: number): string {
 }
 
 /**
- * Format percent value for display
- */
-function formatPercent(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
-}
-
-/**
- * Format days for display
- */
-function formatDays(value: number): string {
-  return `${Math.round(value)} days`;
-}
-
-/**
- * Format number with commas
- */
-function formatNumber(value: number): string {
-  return value.toLocaleString();
-}
-
-/**
  * Get trend direction from change value
  */
 function getTrend(change: number, threshold = 0.5): TrendDirection {
   if (change > threshold) return 'up';
   if (change < -threshold) return 'down';
-  return 'flat';
+  return 'stable';
 }
 
 /**
- * Generate summary text based on market data
+ * Get confidence level based on data completeness
  */
-function generateSummaryText(
-  geographyName: string,
-  daysOnMarket?: number,
-  inventoryYoy?: number,
-  priceYoy?: number,
-  marketCondition?: MarketCondition
+function getConfidenceLevel(completeness: number): 'A' | 'B' | 'C' | 'D' {
+  if (completeness >= 90) return 'A';
+  if (completeness >= 70) return 'B';
+  if (completeness >= 50) return 'C';
+  return 'D';
+}
+
+/**
+ * Get inventory level description
+ */
+function getInventoryLevel(months: number): 'Low' | 'Medium' | 'High' {
+  if (months < 4) return 'Low';
+  if (months < 6) return 'Medium';
+  return 'High';
+}
+
+/**
+ * Generate investment insight based on market conditions
+ */
+function generateInsight(
+  viewMode: ViewMode,
+  score?: number
 ): string {
-  const parts: string[] = [];
+  const isHomebuyer = viewMode === 'homebuyer';
 
-  // DOM insight
-  if (daysOnMarket !== undefined) {
-    if (daysOnMarket < 21) {
-      parts.push(`Homes sell fast here, typically in ${Math.round(daysOnMarket)} days`);
-    } else if (daysOnMarket > 45) {
-      parts.push(`Homes take longer to sell here, around ${Math.round(daysOnMarket)} days`);
+  if (score === undefined) {
+    return isHomebuyer
+      ? 'Explore market conditions and trends to make informed decisions about your home purchase.'
+      : 'Analyze market fundamentals and historical performance to identify investment opportunities.';
+  }
+
+  if (score >= 80) {
+    if (isHomebuyer) {
+      return 'Market conditions are highly favorable for buyers. Strong inventory levels and stable pricing create excellent negotiating opportunities.';
     }
+    return 'Strong fundamentals with solid rental demand and appreciation potential. Consider strategic acquisitions in this market.';
   }
 
-  // Inventory insight
-  if (inventoryYoy !== undefined) {
-    if (inventoryYoy > 15) {
-      parts.push('inventory rising significantly');
-    } else if (inventoryYoy < -10) {
-      parts.push('inventory tightening');
+  if (score >= 60) {
+    if (isHomebuyer) {
+      return 'Good market conditions with reasonable pricing. Take time to find the right property as inventory remains steady.';
     }
+    return 'Favorable risk-reward profile with moderate growth potential. Focus on properties with strong rental history.';
   }
 
-  // Price insight
-  if (priceYoy !== undefined) {
-    if (priceYoy > 5) {
-      parts.push('prices climbing');
-    } else if (priceYoy < -2) {
-      parts.push('prices softening');
+  if (score >= 40) {
+    if (isHomebuyer) {
+      return 'Market conditions are balanced. Patience and thorough research will help identify the best opportunities.';
     }
+    return 'Mixed signals suggest careful due diligence. Look for undervalued properties with improvement potential.';
   }
 
-  // Market condition summary
-  if (marketCondition === 'buyers') {
-    parts.push('buyers gaining leverage');
-  } else if (marketCondition === 'sellers') {
-    parts.push('competitive market for buyers');
+  if (isHomebuyer) {
+    return 'Challenging market conditions. Consider expanding your search area or waiting for more favorable timing.';
   }
-
-  if (parts.length === 0) {
-    return `Explore market conditions in ${geographyName}.`;
-  }
-
-  // Capitalize first letter and join
-  const summary = parts.join(', ');
-  return summary.charAt(0).toUpperCase() + summary.slice(1) + '.';
+  return 'Higher risk environment requires selective approach. Focus on cash flow positive opportunities with margin of safety.';
 }
 
 /**
@@ -184,28 +163,82 @@ export function useRightPanelData(
         ? (viewMode === 'homebuyer' ? scoreResponse.homereadyScore : scoreResponse.investoredgeScore)
         : undefined;
 
-      // For now, we'll use placeholder data for metrics until we fetch actual data
-      // In production, you'd fetch the actual metric values for this geography
-      const metrics: MetricData[] = [];
+      // Calculate confidence based on data completeness
+      // In production, this would come from the API response
+      const dataCompleteness = scoreResponse ? 85 : 50;
+      const confidence = getConfidenceLevel(dataCompleteness);
 
-      // Determine market condition (placeholder - would use actual data)
-      const marketCondition = getMarketCondition(undefined, undefined, undefined);
+      // Generate trend (in production, this would come from historical data)
+      const trendChange = Math.random() * 6 - 2; // -2 to +4 for demo
+      const scoreTrend = score !== undefined ? {
+        direction: getTrend(trendChange),
+        value: `${trendChange >= 0 ? '+' : ''}${trendChange.toFixed(1)}%`
+      } : undefined;
 
-      // Generate summary text
-      const summaryText = generateSummaryText(
-        geography.name,
-        undefined, // daysOnMarket
-        undefined, // inventoryYoy
-        undefined, // priceYoy
-        marketCondition
-      );
+      // Generate contextual data (in production, these would be fetched from the API)
+      // For now, we generate realistic demo data
+      const medianPrice = 350000 + Math.random() * 450000;
+      const priceYoy = Math.random() * 20 - 5;
+      const supplyMonths = 2 + Math.random() * 6;
+
+      const pricing: PricingData = {
+        medianPrice: formatCurrency(medianPrice),
+        progress: Math.min(100, Math.max(0, (priceYoy + 10) * 5)), // Normalize to 0-100
+        changeDescription: `${priceYoy >= 0 ? 'Up' : 'Down'} ${Math.abs(priceYoy).toFixed(0)}% compared to last year.`
+      };
+
+      const inventoryLevel = getInventoryLevel(supplyMonths);
+      const inventory: InventoryData = {
+        supplyMonths: `${supplyMonths.toFixed(1)} mo`,
+        level: inventoryLevel,
+        progress: Math.min(100, (supplyMonths / 10) * 100),
+        description: inventoryLevel === 'Low'
+          ? "Current supply is trending towards a seller's market."
+          : inventoryLevel === 'High'
+            ? "Buyer's market with ample inventory choices."
+            : 'Balanced market conditions with steady supply.'
+      };
+
+      const insight: InsightData = {
+        text: generateInsight(viewMode, score)
+      };
+
+      // Generate market factors
+      const marketFactors: MarketFactor[] = [
+        {
+          id: 'appreciation',
+          label: 'Appreciation',
+          value: score ? (score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low') + ` (${Math.round(60 + Math.random() * 35)}/100)` : '--',
+          icon: 'trending_up'
+        },
+        {
+          id: 'yield',
+          label: 'Yield Potential',
+          value: viewMode === 'investor' ? `${(4 + Math.random() * 4).toFixed(1)}% Cap Rate` : `Medium (${Math.round(50 + Math.random() * 30)}/100)`,
+          icon: 'query_stats'
+        },
+        {
+          id: 'risk',
+          label: 'Risk Level',
+          value: score ? (score >= 60 ? 'Low Risk' : score >= 40 ? 'Moderate' : 'Higher Risk') : '--',
+          icon: 'verified'
+        },
+        {
+          id: 'demand',
+          label: 'Demand',
+          value: score ? (score >= 70 ? 'Very Strong' : score >= 50 ? 'Strong' : score >= 30 ? 'Moderate' : 'Weak') : '--',
+          icon: 'groups'
+        }
+      ];
 
       setData({
         score,
-        scoreTrend: score !== undefined ? { direction: 'flat', value: '' } : undefined,
-        marketCondition,
-        summaryText,
-        metrics,
+        scoreTrend,
+        confidence,
+        pricing,
+        inventory,
+        insight,
+        marketFactors,
       });
     } catch (err) {
       console.error('Failed to fetch right panel data:', err);
@@ -227,4 +260,4 @@ export function useRightPanelData(
   };
 }
 
-export type { RightPanelData, MetricData };
+export type { RightPanelData };

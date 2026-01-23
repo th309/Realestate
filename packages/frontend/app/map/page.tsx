@@ -382,12 +382,17 @@ export default function MapPage() {
             geoLevel={geoLevel}
             score={rightPanelData?.score}
             scoreTrend={rightPanelData?.scoreTrend}
-            marketCondition={rightPanelData?.marketCondition ?? 'balanced'}
-            summaryText={rightPanelData?.summaryText}
-            metrics={rightPanelData?.metrics ?? []}
+            confidence={rightPanelData?.confidence}
+            pricing={rightPanelData?.pricing}
+            inventory={rightPanelData?.inventory}
+            insight={rightPanelData?.insight}
+            marketFactors={rightPanelData?.marketFactors ?? []}
             isLoading={rightPanelLoading}
             onViewFullReport={() => {
               console.log('View full report for', selectedGeography?.name);
+            }}
+            onMarketFactorsChange={(factors) => {
+              console.log('Market factors changed:', factors);
             }}
           />
         </main>

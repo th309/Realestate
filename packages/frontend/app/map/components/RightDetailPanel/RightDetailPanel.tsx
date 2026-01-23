@@ -2,39 +2,29 @@
  * RightDetailPanel Component
  *
  * Collapsible panel that slides in from the right when a region is clicked.
- * Shows detailed market analysis including:
- * - Score ring with overall score
- * - Market condition badge
- * - Summary text
- * - 4 key metric cards
- * - Action buttons
+ * Redesigned with minimalist gauge layout showing:
+ * - Large circular score gauge with confidence badge
+ * - Contextual data cards (pricing, inventory, insight)
+ * - Market factors breakdown grid
+ * - PropertyIQ Scores section
  *
  * Mobile: Full-screen overlay
  * Desktop: Side panel overlay
+ *
+ * Material Design 3 compliant.
  */
 
 'use client';
 
 import { useEffect, useCallback } from 'react';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
-import { CloseIcon, LockIcon } from '../Icons';
-import { ScoreRing } from './ScoreRing';
-import { MetricCard, MetricCardGrid } from './MetricCard';
-import { MarketConditionBadge, MarketCondition, TrendArrow, TrendDirection } from '../sidebar-components';
+import { CloseIcon } from '../Icons';
+import { MarketScoreCard } from './MarketScoreCard';
+import { ContextualDataCards, type PricingData, type InventoryData, type InsightData } from './ContextualDataCards';
+import { MarketFactorsGrid, type MarketFactor } from './MarketFactorsGrid';
 import { ScoresSection } from './ScoresSection';
+import type { TrendDirection } from '../sidebar-components/TrendArrow';
 import type { GeographyType } from '../../hooks/useScoreData';
-
-interface MetricData {
-  value: string;
-  label: string;
-  percentile?: number;
-  trend?: {
-    direction: TrendDirection;
-    value: string;
-    comparison: string;
-  };
-  invertColors?: boolean;
-}
 
 interface RightDetailPanelProps {
   isOpen: boolean;
@@ -48,14 +38,19 @@ interface RightDetailPanelProps {
     direction: TrendDirection;
     value: string;
   };
-  marketCondition?: MarketCondition;
-  summaryText?: string;
-  // Metric data (4 cards)
-  metrics?: MetricData[];
+  confidence?: 'A' | 'B' | 'C' | 'D';
+  scoreInterpretation?: string;
+  // Contextual data
+  pricing?: PricingData;
+  inventory?: InventoryData;
+  insight?: InsightData;
+  // Market factors
+  marketFactors?: MarketFactor[];
   isLoading?: boolean;
   // Actions
+  onViewMethodology?: () => void;
   onViewFullReport?: () => void;
-  onCompareMarkets?: () => void;
+  onMarketFactorsChange?: (factors: MarketFactor[]) => void;
 }
 
 export function RightDetailPanel({
@@ -66,15 +61,18 @@ export function RightDetailPanel({
   geoLevel,
   score,
   scoreTrend,
-  marketCondition = 'balanced',
-  summaryText,
-  metrics = [],
+  confidence,
+  scoreInterpretation,
+  pricing,
+  inventory,
+  insight,
+  marketFactors = [],
   isLoading = false,
+  onViewMethodology,
   onViewFullReport,
-  onCompareMarkets,
+  onMarketFactorsChange,
 }: RightDetailPanelProps) {
-  const scoreName = viewMode === 'homebuyer' ? 'HomeReady' : 'InvestorEdge';
-  const themeColor = viewMode === 'homebuyer' ? 'purple' : 'emerald';
+  const scoreName = viewMode === 'homebuyer' ? 'HomeReady Score' : 'InvestorEdge Score';
 
   // Handle escape key to close panel
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -88,17 +86,37 @@ export function RightDetailPanel({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Get score interpretation text
-  const getScoreInterpretation = (score: number): string => {
+  // Get score interpretation based on score value
+  const getDefaultInterpretation = (score: number): string => {
     const isHomebuyer = viewMode === 'homebuyer';
-    if (score >= 80) return isHomebuyer ? 'Excellent Time to Buy' : 'Strong Investment';
-    if (score >= 60) return isHomebuyer ? 'Good Time to Buy' : 'Good Opportunity';
-    if (score >= 40) return isHomebuyer ? 'Fair Conditions' : 'Moderate Potential';
-    if (score >= 20) return isHomebuyer ? 'Challenging Market' : 'Higher Risk';
-    return isHomebuyer ? 'Difficult Conditions' : 'Caution Advised';
+    if (score >= 80) {
+      return isHomebuyer
+        ? 'Excellent market conditions for buyers. Strong fundamentals with favorable pricing dynamics.'
+        : 'High investment potential based on historical performance and current market momentum.';
+    }
+    if (score >= 60) {
+      return isHomebuyer
+        ? 'Good market conditions with solid fundamentals. Opportunities available for prepared buyers.'
+        : 'Good investment opportunity with moderate risk and favorable returns outlook.';
+    }
+    if (score >= 40) {
+      return isHomebuyer
+        ? 'Fair market conditions. Careful analysis recommended before making decisions.'
+        : 'Moderate investment potential. Consider market timing and local factors.';
+    }
+    if (score >= 20) {
+      return isHomebuyer
+        ? 'Challenging market conditions. Patience and strategic timing advised.'
+        : 'Higher risk profile. Thorough due diligence recommended before investing.';
+    }
+    return isHomebuyer
+      ? 'Difficult market conditions. Consider alternative markets or timing.'
+      : 'Caution advised. Market fundamentals require careful evaluation.';
   };
 
   if (!isOpen || !geography) return null;
+
+  const displayInterpretation = scoreInterpretation || (score !== undefined ? getDefaultInterpretation(score) : undefined);
 
   return (
     <>
@@ -113,7 +131,7 @@ export function RightDetailPanel({
       <div
         className={`
           fixed z-50 bg-surface elevation-3 overflow-y-auto
-          inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96
+          inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[420px]
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -121,131 +139,75 @@ export function RightDetailPanel({
         aria-modal="true"
         aria-label={`${geography.name} market details`}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-2 rounded-full hover:bg-surface-container transition-colors duration-200 z-10"
-          aria-label="Close panel"
-        >
-          <CloseIcon />
-        </button>
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-surface border-b border-outline-variant px-4 py-3 flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold text-on-surface truncate">
+              {geography.name}
+            </h2>
+            <p className="text-xs text-on-surface-variant">
+              {geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1)} Level
+              {geography.stateAbbr && ` · ${geography.stateAbbr}`}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-surface-container transition-colors duration-200 flex-shrink-0"
+            aria-label="Close panel"
+          >
+            <CloseIcon />
+          </button>
+        </div>
 
         {/* Content */}
-        <div className="p-4 pt-12 sm:pt-4">
-          {/* Header with Score */}
-          <div className="flex items-start gap-4 mb-4">
-            {/* Score Ring */}
-            <div className="flex-shrink-0">
-              {isLoading ? (
-                <div className="w-20 h-20 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                </div>
-              ) : score !== undefined ? (
-                <ScoreRing score={score} size="md" />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-surface-container-highest flex items-center justify-center">
-                  <span className="text-2xl text-on-surface-variant">--</span>
-                </div>
-              )}
-            </div>
+        <div className="p-4 space-y-6">
+          {/* Main Score Card */}
+          <MarketScoreCard
+            score={score ?? null}
+            scoreName={scoreName}
+            scoreInterpretation={displayInterpretation}
+            trend={scoreTrend}
+            confidence={confidence}
+            isLoading={isLoading}
+            onViewMethodology={onViewMethodology}
+          />
 
-            {/* Geography Name & Score Details */}
-            <div className="flex-1 min-w-0 pt-1">
-              <h2 className="text-lg font-semibold text-on-surface truncate">
-                {geography.name}
-              </h2>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-on-surface-variant">{scoreName} Score</span>
-                {score !== undefined && scoreTrend && (
-                  <TrendArrow direction={scoreTrend.direction} value={scoreTrend.value} />
-                )}
-              </div>
-              {score !== undefined && (
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {getScoreInterpretation(score)}
-                </p>
-              )}
-            </div>
-          </div>
+          {/* Contextual Data Cards */}
+          <ContextualDataCards
+            pricing={pricing}
+            inventory={inventory}
+            insight={insight}
+            isLoading={isLoading}
+          />
 
-          {/* Market Condition Badge */}
-          <div className="mb-4">
-            <MarketConditionBadge condition={marketCondition} size="md" />
-          </div>
-
-          {/* Summary Text */}
-          {summaryText && (
-            <p className="text-sm text-on-surface-variant leading-relaxed mb-4 p-3 bg-surface-container rounded-xl">
-              {summaryText}
-            </p>
-          )}
-
-          {/* Metric Cards */}
-          {metrics.length > 0 && (
-            <MetricCardGrid>
-              {metrics.map((metric, index) => (
-                <MetricCard
-                  key={index}
-                  value={metric.value}
-                  label={metric.label}
-                  percentile={metric.percentile}
-                  trend={metric.trend}
-                  color={themeColor}
-                  invertColors={metric.invertColors}
-                />
-              ))}
-            </MetricCardGrid>
-          )}
-
-          {/* Loading placeholder for metrics */}
-          {isLoading && metrics.length === 0 && (
-            <MetricCardGrid>
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-surface-container rounded-xl p-3 animate-pulse">
-                  <div className="h-5 bg-surface-container-highest rounded w-16 mb-2" />
-                  <div className="h-3 bg-surface-container-highest rounded w-24 mb-2" />
-                  <div className="h-1 bg-surface-container-highest rounded w-full" />
-                </div>
-              ))}
-            </MetricCardGrid>
-          )}
+          {/* Market Factors Grid */}
+          <MarketFactorsGrid
+            factors={marketFactors}
+            title="Market Factors"
+            description="Key elements influencing the score"
+            isLoading={isLoading}
+            viewMode={viewMode}
+            onFactorsChange={onMarketFactorsChange}
+          />
 
           {/* PropertyIQ Scores Section */}
           <ScoresSection
             geographyType={geoLevel as GeographyType}
             geographyId={geography.id}
-            className="mt-6 pt-4 border-t border-outline-variant"
+            className="pt-4 border-t border-outline-variant"
           />
 
-          {/* Action Buttons */}
-          <div className="mt-6 space-y-2">
-            <button
-              onClick={onViewFullReport}
-              className="w-full py-3 px-4 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors duration-200"
-            >
-              View Full Report
-            </button>
-
-            <button
-              onClick={onCompareMarkets}
-              disabled
-              className="w-full py-3 px-4 bg-surface-container text-on-surface-variant rounded-full font-medium flex items-center justify-center gap-2 opacity-60 cursor-not-allowed"
-            >
-              <span>Compare Markets</span>
-              <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">
-                <LockIcon />
-                PRO
-              </span>
-            </button>
-          </div>
-
-          {/* Geography Info */}
-          <div className="mt-6 pt-4 border-t border-outline-variant">
-            <p className="text-xs text-on-surface-variant">
-              {geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1)} Level
-              {geography.stateAbbr && ` - ${geography.stateAbbr}`}
-            </p>
-          </div>
+          {/* Action Button */}
+          {onViewFullReport && (
+            <div className="pt-4">
+              <button
+                onClick={onViewFullReport}
+                className="w-full py-3 px-4 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors duration-200"
+              >
+                View Full Market Report
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
