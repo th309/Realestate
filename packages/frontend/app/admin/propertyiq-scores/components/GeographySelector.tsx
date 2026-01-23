@@ -12,10 +12,9 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useGraphSearch } from '@/app/graphs/hooks/useGraphSearch';
 import type { SearchResult } from '@/app/map/types';
-import { US_STATES } from '@/app/map/types';
 
 interface Geography {
   type: 'state' | 'metro' | 'county' | 'zip';
@@ -40,9 +39,8 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
     (selected?.type as 'state' | 'metro' | 'county' | 'zip') || 'state',
   );
   const [inputValue, setInputValue] = useState('');
-  const [showStateDropdown, setShowStateDropdown] = useState(false);
 
-  // Use the same search hook as the graphs page (for metro, county, zip)
+  // Use the same search hook as the graphs page (now supports state, metro, county, zip)
   const {
     searchQuery,
     searchResults,
@@ -52,33 +50,23 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
     searchRef,
     handleSearch,
     clearSearch,
-  } = useGraphSearch(geoType === 'state' ? undefined : geoType);
+  } = useGraphSearch(geoType);
 
-  // Local state search (useGraphSearch doesn't support states)
-  const filteredStates = useMemo(() => {
-    if (geoType !== 'state' || inputValue.length < 1) return [];
-    const query = inputValue.toLowerCase();
-    return US_STATES.filter(
-      (s) =>
-        s.name.toLowerCase().includes(query) ||
-        s.abbrev.toLowerCase().includes(query)
-    ).slice(0, 10);
-  }, [geoType, inputValue]);
-
-  // Sync input value with search query (for non-state types)
+  // Sync input value with search query
   useEffect(() => {
-    if (geoType !== 'state') {
-      setInputValue(searchQuery);
-    }
-  }, [searchQuery, geoType]);
+    setInputValue(searchQuery);
+  }, [searchQuery]);
 
   const handleSelect = (result: SearchResult) => {
     // Extract the proper ID for the scoring API
+    // - States: use abbreviation from result.value (e.g., "CA")
     // - Metros: use CBSA code from result.id (format: "metro-12420" -> "12420")
     // - Counties: use FIPS code from result.id (format: "county-17031" -> "17031")
     // - ZIPs: use ZIP code from result.value (e.g., "90210")
     let id: string;
-    if (geoType === 'metro' && result.id.startsWith('metro-')) {
+    if (geoType === 'state' && result.id.startsWith('state-')) {
+      id = result.id.replace('state-', '');
+    } else if (geoType === 'metro' && result.id.startsWith('metro-')) {
       id = result.id.replace('metro-', '');
     } else if (geoType === 'county' && result.id.startsWith('county-')) {
       id = result.id.replace('county-', '');
@@ -88,29 +76,17 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
     onChange(geoType, id, result.name);
     setInputValue(result.name);
     clearSearch();
-    setShowStateDropdown(false);
-  };
-
-  const handleStateSelect = (state: { abbrev: string; name: string }) => {
-    onChange('state', state.abbrev, state.name);
-    setInputValue(state.name);
-    setShowStateDropdown(false);
   };
 
   const handleTypeChange = (newType: 'state' | 'metro' | 'county' | 'zip') => {
     setGeoType(newType);
     setInputValue('');
     clearSearch();
-    setShowStateDropdown(false);
   };
 
   const handleInputChange = (value: string) => {
     setInputValue(value);
-    if (geoType === 'state') {
-      setShowStateDropdown(true);
-    } else {
-      handleSearch(value);
-    }
+    handleSearch(value);
   };
 
   // Get placeholder text based on geo level
@@ -129,10 +105,8 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
     }
   };
 
-  // Determine if dropdown should show
-  const shouldShowDropdown = geoType === 'state'
-    ? showStateDropdown && (inputValue.length >= 1 || filteredStates.length > 0)
-    : showSearchResults && (inputValue.length >= 2 || searchResults.length > 0);
+  // Minimum query length: 1 for states (abbreviations), 2 for others
+  const minQueryLength = geoType === 'state' ? 1 : 2;
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -158,69 +132,42 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
         </div>
       </div>
 
-      <div className="relative flex-1 min-w-[200px] max-w-md" ref={geoType === 'state' ? undefined : searchRef}>
+      <div className="relative flex-1 min-w-[200px] max-w-md" ref={searchRef}>
         <input
           type="text"
           value={inputValue}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => {
-            if (geoType === 'state') {
-              setShowStateDropdown(true);
-            } else if (searchResults.length > 0) {
-              setShowSearchResults(true);
-            }
-          }}
-          onBlur={() => {
-            // Delay to allow click on dropdown item
-            setTimeout(() => setShowStateDropdown(false), 200);
+            if (searchResults.length > 0) setShowSearchResults(true);
           }}
           placeholder={getSearchPlaceholder()}
           className="w-full px-4 py-2 rounded-lg border border-outline bg-surface text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary"
         />
 
-        {/* Dropdown */}
-        {shouldShowDropdown && (
+        {/* Dropdown - unified for all geography types */}
+        {showSearchResults && (inputValue.length >= minQueryLength || searchResults.length > 0) && (
           <div className="absolute z-10 w-full mt-1 bg-surface-container rounded-lg shadow-lg border border-outline-variant max-h-60 overflow-auto">
-            {geoType === 'state' ? (
-              // State search results
-              filteredStates.length > 0 ? (
-                filteredStates.map((state) => (
-                  <button
-                    key={state.abbrev}
-                    onClick={() => handleStateSelect(state)}
-                    className="w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high transition-colors"
-                  >
-                    <div className="font-medium">{state.name}</div>
-                    <div className="text-xs text-on-surface-variant">{state.abbrev}</div>
-                  </button>
-                ))
-              ) : inputValue.length >= 1 ? (
-                <div className="px-4 py-3 text-sm text-on-surface-variant">No states found</div>
-              ) : null
-            ) : (
-              // Metro, county, zip search results
-              searchLoading ? (
-                <div className="px-4 py-3 text-sm text-on-surface-variant flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-primary-container border-t-primary rounded-full animate-spin"></div>
-                  Searching...
-                </div>
-              ) : searchResults.length > 0 ? (
-                searchResults.map((result) => (
-                  <button
-                    key={result.id}
-                    onClick={() => handleSelect(result)}
-                    className="w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high transition-colors"
-                  >
-                    <div className="font-medium">{result.name}</div>
-                    {result.subtitle && (
-                      <div className="text-xs text-on-surface-variant">{result.subtitle}</div>
-                    )}
-                  </button>
-                ))
-              ) : inputValue.length >= 2 ? (
-                <div className="px-4 py-3 text-sm text-on-surface-variant">No results found</div>
-              ) : null
-            )}
+            {searchLoading ? (
+              <div className="px-4 py-3 text-sm text-on-surface-variant flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-primary-container border-t-primary rounded-full animate-spin"></div>
+                Searching...
+              </div>
+            ) : searchResults.length > 0 ? (
+              searchResults.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleSelect(result)}
+                  className="w-full px-4 py-2 text-left text-sm text-on-surface hover:bg-surface-container-high transition-colors"
+                >
+                  <div className="font-medium">{result.name}</div>
+                  {result.subtitle && (
+                    <div className="text-xs text-on-surface-variant">{result.subtitle}</div>
+                  )}
+                </button>
+              ))
+            ) : inputValue.length >= minQueryLength ? (
+              <div className="px-4 py-3 text-sm text-on-surface-variant">No results found</div>
+            ) : null}
           </div>
         )}
       </div>
@@ -234,7 +181,6 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
               onChange('state', '', '');
               clearSearch();
               setInputValue('');
-              setShowStateDropdown(false);
             }}
             className="text-on-secondary-container/60 hover:text-on-secondary-container"
           >

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
+import { US_STATES } from '@/app/map/types';
 import type { GeoLevel } from '@/app/map/config/metrics';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -572,6 +573,45 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                 }));
 
                 console.log(`[City Search] Found ${filtered.length} results`);
+                setSearchResults(filtered);
+                setSearchLoading(false);
+                return;
+            }
+
+            // For state level: use static US_STATES array
+            if (geoLevel === 'state') {
+                const lowerQuery = query.toLowerCase();
+
+                console.log(`[State Search] Query: "${query}"`);
+
+                const scored = US_STATES
+                    .map(s => {
+                        const name = s.name.toLowerCase();
+                        const abbrev = s.abbrev.toLowerCase();
+
+                        let score = 0;
+                        if (abbrev === lowerQuery) score = 100; // Exact abbreviation match (e.g., "CA")
+                        else if (name.startsWith(lowerQuery)) score = 95; // Name starts with query
+                        else if (abbrev.startsWith(lowerQuery)) score = 90; // Abbreviation starts with
+                        else if (name.includes(lowerQuery)) score = 50; // Contains anywhere
+
+                        return { state: s, score };
+                    })
+                    .filter(({ score }) => score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 10);
+
+                const filtered = scored.map(({ state }) => ({
+                    id: `state-${state.abbrev}`,
+                    name: state.name,
+                    subtitle: state.abbrev,
+                    value: state.abbrev, // Use abbreviation for API calls
+                    type: 'state' as const,
+                    center: [0, 0] as [number, number],
+                    state: state.abbrev,
+                }));
+
+                console.log(`[State Search] Found ${filtered.length} results`);
                 setSearchResults(filtered);
                 setSearchLoading(false);
                 return;
