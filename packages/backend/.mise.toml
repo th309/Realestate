@@ -1,0 +1,6 @@
+# Mise configuration for Railway
+# Tells mise to install both Node.js and Python
+
+[tools]
+node = "20"
+python = "3.12"

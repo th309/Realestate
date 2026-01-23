@@ -1,13 +1,7 @@
 # Nixpacks configuration for Railway
-# Adds Python support alongside Node.js for ML workflow scripts
-
-providers = []
-
-[phases.setup]
-nixPkgs = ["nodejs_20", "npm", "python312", "python312Packages.pip"]
+# Node.js and Python versions are defined in .mise.toml
 
 [phases.install]
-dependsOn = ["setup"]
 cmds = [
     "npm ci",
     "pip install -r requirements.txt"
