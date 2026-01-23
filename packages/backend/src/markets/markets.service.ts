@@ -345,6 +345,16 @@ export class MarketsService {
   // Uses realtor_metro which has metros we actually have data for
   // Returns deduped list sorted by name - used by frontend for instant search
   async getAllMetros() {
+    // First, get the most recent date to avoid scanning all historical data
+    const { data: dateData } = await this.supabase
+      .from('realtor_metro')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    const latestDate = dateData?.[0]?.period_date;
+    if (!latestDate) return [];
+
     // Paginate to handle >1000 rows (Supabase default limit)
     const metroMap = new Map<string, { regionId: number; name: string }>();
     const batchSize = 1000;
@@ -354,6 +364,7 @@ export class MarketsService {
       const { data, error } = await this.supabase
         .from('realtor_metro')
         .select('cbsa_code, cbsa_title')
+        .eq('period_date', latestDate)
         .order('cbsa_title')
         .range(offset, offset + batchSize - 1);
 
@@ -385,6 +396,16 @@ export class MarketsService {
   // Get all counties for client-side filtering (fast search)
   // Uses realtor_county which has counties we actually have data for
   async getAllCounties() {
+    // First, get the most recent date to avoid scanning all historical data
+    const { data: dateData } = await this.supabase
+      .from('realtor_county')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    const latestDate = dateData?.[0]?.period_date;
+    if (!latestDate) return [];
+
     // Paginate to handle >1000 rows (Supabase default limit)
     const countyMap = new Map<
       string,
@@ -396,7 +417,8 @@ export class MarketsService {
     while (true) {
       const { data, error } = await this.supabase
         .from('realtor_county')
-        .select('county_fips, county_name, state_id')
+        .select('county_fips, county_name')
+        .eq('period_date', latestDate)
         .order('county_name')
         .range(offset, offset + batchSize - 1);
 
@@ -406,10 +428,19 @@ export class MarketsService {
       // Dedupe by county_fips
       for (const row of data) {
         if (row.county_name && row.county_fips && !countyMap.has(row.county_fips)) {
+          // Extract state from county_name (e.g., "vance, nc" -> "NC")
+          const parts = row.county_name.split(',');
+          const state = parts.length > 1 ? parts[parts.length - 1].trim().toUpperCase() : '';
+          const name = parts.length > 1 ? parts.slice(0, -1).join(',').trim() : row.county_name;
+          // Capitalize county name properly
+          const capitalizedName = name.split(' ').map((word: string) =>
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+
           countyMap.set(row.county_fips, {
             fips: row.county_fips,
-            name: row.county_name,
-            state: row.state_id || '',
+            name: capitalizedName,
+            state: state,
           });
         }
       }
@@ -424,6 +455,16 @@ export class MarketsService {
   // Get all ZIP codes for client-side filtering (fast search)
   // Uses realtor_zip which has ZIPs we actually have data for
   async getAllZips() {
+    // First, get the most recent date to avoid scanning all historical data
+    const { data: dateData } = await this.supabase
+      .from('realtor_zip')
+      .select('period_date')
+      .order('period_date', { ascending: false })
+      .limit(1);
+
+    const latestDate = dateData?.[0]?.period_date;
+    if (!latestDate) return [];
+
     // Paginate to handle >1000 rows (Supabase default limit)
     const zipMap = new Map<string, { code: string; name: string }>();
     const batchSize = 1000;
@@ -433,6 +474,7 @@ export class MarketsService {
       const { data, error } = await this.supabase
         .from('realtor_zip')
         .select('postal_code, zip_name')
+        .eq('period_date', latestDate)
         .order('postal_code')
         .range(offset, offset + batchSize - 1);
 
