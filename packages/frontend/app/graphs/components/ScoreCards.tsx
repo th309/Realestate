@@ -4,10 +4,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api, ScoreResponse } from '@/lib/api/client';
 import { GeoLevel, getMetricConfig } from '@/app/map/config/metrics';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
-import { fetchMetricData } from '@/app/map/config/fetchMetricData';
 import { formatValue, getMetricFormat } from '@/app/map/utils/metricUtils';
 import { M3Card } from './M3Card';
-import { Loader2, ArrowUp, ArrowDown, ArrowRight, Settings, Check, X } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Minus, Settings, Check, X } from 'lucide-react';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -117,26 +116,38 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
   );
 };
 
+interface TrendData {
+  currentValue: number | null;
+  previousValue: number | null;
+  changePercent: number | null;
+  direction: 'up' | 'down' | 'flat' | null;
+}
+
 interface SubScoreDisplayProps {
   label: string;
-  value: string;
-  rawValue: number | null;
+  formattedValue: string;
+  trend: TrendData;
   loading?: boolean;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, value, rawValue, loading }) => {
-  const getTrendIcon = (val: number | null) => {
-    if (val === null) return null;
-    if (val >= 55) return <ArrowUp className="w-3 h-3" />;
-    if (val <= 45) return <ArrowDown className="w-3 h-3" />;
-    return <ArrowRight className="w-3 h-3" />;
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading }) => {
+  const getTrendIcon = () => {
+    if (trend.direction === 'up') return <TrendingUp className="w-3 h-3" />;
+    if (trend.direction === 'down') return <TrendingDown className="w-3 h-3" />;
+    if (trend.direction === 'flat') return <Minus className="w-3 h-3" />;
+    return null;
   };
 
-  const getTrendColor = (val: number | null) => {
-    if (val === null) return 'text-on-surface-variant';
-    if (val >= 55) return 'text-green-600';
-    if (val <= 45) return 'text-red-500';
+  const getTrendColor = () => {
+    if (trend.direction === 'up') return 'text-green-600';
+    if (trend.direction === 'down') return 'text-red-500';
     return 'text-on-surface-variant';
+  };
+
+  const getTrendLabel = () => {
+    if (trend.changePercent === null) return null;
+    const sign = trend.changePercent > 0 ? '+' : '';
+    return `${sign}${trend.changePercent.toFixed(1)}%`;
   };
 
   return (
@@ -144,16 +155,19 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, value, rawValu
       <span className="text-[11px] text-on-surface-variant mb-1 truncate max-w-full" title={label}>
         {label}
       </span>
-      <div className={`flex items-center gap-0.5 ${getTrendColor(rawValue)}`}>
-        {loading ? (
-          <Loader2 className="w-3 h-3 animate-spin" />
-        ) : (
-          <>
-            <span className="text-sm font-semibold">{value}</span>
-            {getTrendIcon(rawValue)}
-          </>
-        )}
-      </div>
+      {loading ? (
+        <Loader2 className="w-4 h-4 animate-spin text-on-surface-variant" />
+      ) : (
+        <>
+          <span className="text-sm font-semibold text-on-surface">{formattedValue}</span>
+          {trend.direction && (
+            <div className={`flex items-center gap-0.5 mt-0.5 ${getTrendColor()}`}>
+              {getTrendIcon()}
+              <span className="text-[10px] font-medium">{getTrendLabel()}</span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
@@ -273,8 +287,8 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
 interface MetricIndicator {
   metricId: string;
   label: string;
-  value: string;
-  rawValue: number | null;
+  formattedValue: string;
+  trend: TrendData;
 }
 
 interface ScoreCardProps {
@@ -360,13 +374,13 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
           )}
 
           {!loading && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-start justify-between gap-2">
               {indicators.map((ind) => (
                 <SubScoreDisplay
                   key={ind.metricId}
                   label={ind.label}
-                  value={ind.value}
-                  rawValue={ind.rawValue}
+                  formattedValue={ind.formattedValue}
+                  trend={ind.trend}
                   loading={metricsLoading}
                 />
               ))}
@@ -423,6 +437,57 @@ function saveMetricSelections(selections: MetricSelections) {
   }
 }
 
+// Calculate trend from time series data
+function calculateTrend(data: { date: string; value: number }[]): TrendData {
+  if (!data || data.length < 2) {
+    return { currentValue: data?.[0]?.value ?? null, previousValue: null, changePercent: null, direction: null };
+  }
+
+  // Sort by date descending (most recent first)
+  const sorted = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const currentValue = sorted[0].value;
+
+  // Find value from approximately 3 months ago
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  // Find the closest data point to 3 months ago
+  let previousValue: number | null = null;
+  let closestDiff = Infinity;
+
+  for (const point of sorted) {
+    const pointDate = new Date(point.date);
+    const diff = Math.abs(pointDate.getTime() - threeMonthsAgo.getTime());
+    if (diff < closestDiff && pointDate < new Date(sorted[0].date)) {
+      closestDiff = diff;
+      previousValue = point.value;
+    }
+  }
+
+  // If no previous value found, use the oldest available
+  if (previousValue === null && sorted.length > 1) {
+    previousValue = sorted[sorted.length - 1].value;
+  }
+
+  if (previousValue === null || previousValue === 0) {
+    return { currentValue, previousValue, changePercent: null, direction: null };
+  }
+
+  const changePercent = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+
+  let direction: 'up' | 'down' | 'flat';
+  if (Math.abs(changePercent) < 1) {
+    direction = 'flat';
+  } else if (changePercent > 0) {
+    direction = 'up';
+  } else {
+    direction = 'down';
+  }
+
+  return { currentValue, previousValue, changePercent, direction };
+}
+
 export const ScoreCards: React.FC<ScoreCardsProps> = ({
   geoLevel,
   selectedArea,
@@ -432,7 +497,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
-  const [metricValues, setMetricValues] = useState<Record<string, number | null>>({});
+  const [metricData, setMetricData] = useState<Record<string, TrendData>>({});
 
   // Fetch scores
   useEffect(() => {
@@ -456,11 +521,11 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
     return () => { isMounted = false; };
   }, [geoLevel, selectedArea]);
 
-  // Fetch actual metric data for selected metrics
+  // Fetch time series data for selected metrics to compute trends
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchMetrics() {
+    async function fetchMetricTrends() {
       const allMetricIds = [
         ...metricSelections.homeready,
         ...metricSelections.investoredge,
@@ -469,52 +534,67 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
       const uniqueMetricIds = [...new Set(allMetricIds)];
 
       setMetricsLoading(true);
-      const values: Record<string, number | null> = {};
+      const trends: Record<string, TrendData> = {};
 
-      // Fetch each metric in parallel
+      // Calculate date range: last 4 months of data to ensure we have 3 months of history
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 4);
+      const startDateStr = startDate.toISOString().split('T')[0];
+
+      // Fetch each metric's time series in parallel
       await Promise.all(
         uniqueMetricIds.map(async (metricId) => {
           try {
-            const data = await fetchMetricData(metricId, geoLevel);
-            // Get value for the selected area
-            const entry = data[selectedArea];
-            values[metricId] = entry?.value ?? null;
+            const response = await api.getTimeSeries(
+              metricId,
+              geoLevel,
+              selectedArea,
+              startDateStr,
+              endDate
+            );
+
+            if (response.success && response.data.length > 0) {
+              trends[metricId] = calculateTrend(response.data);
+            } else {
+              trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
+            }
           } catch (err) {
-            console.error(`Failed to fetch metric ${metricId}:`, err);
-            values[metricId] = null;
+            console.error(`Failed to fetch time series for ${metricId}:`, err);
+            trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
           }
         })
       );
 
       if (isMounted) {
-        setMetricValues(values);
+        setMetricData(trends);
         setMetricsLoading(false);
       }
     }
 
     if (selectedArea) {
-      fetchMetrics();
+      fetchMetricTrends();
     }
 
     return () => { isMounted = false; };
   }, [geoLevel, selectedArea, metricSelections]);
 
-  // Convert metric IDs to indicators with formatted values
+  // Convert metric IDs to indicators with formatted values and trends
   const getIndicatorsForMetrics = useCallback((metricIds: string[]): MetricIndicator[] => {
     return metricIds.map(id => {
       const config = getMetricConfig(id);
       const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const rawValue = metricValues[id] ?? null;
+      const trend = metricData[id] || { currentValue: null, previousValue: null, changePercent: null, direction: null };
 
       let formattedValue = '--';
-      if (rawValue !== null) {
+      if (trend.currentValue !== null) {
         const format = getMetricFormat(id);
-        formattedValue = formatValue(rawValue, format);
+        formattedValue = formatValue(trend.currentValue, format);
       }
 
-      return { metricId: id, label, value: formattedValue, rawValue };
+      return { metricId: id, label, formattedValue, trend };
     });
-  }, [metricValues]);
+  }, [metricData]);
 
   // Handlers for metric selection changes
   const handleMetricsChange = useCallback((scoreType: keyof MetricSelections) => (metricIds: string[]) => {
