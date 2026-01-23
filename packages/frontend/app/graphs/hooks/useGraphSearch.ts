@@ -481,9 +481,9 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
 
                 const filtered = scored.map(({ county }) => ({
                     id: `county-${county.fips}`,
-                    name: county.name,
-                    subtitle: county.state ? `${county.state} County` : 'County',
-                    // Include state to disambiguate counties with same name (e.g., "Cook, IL" vs "Cook, MN")
+                    // Show "Cook, IL" format to disambiguate counties with same name
+                    name: county.state ? `${county.name}, ${county.state}` : county.name,
+                    subtitle: 'County',
                     value: county.state ? `${county.name}, ${county.state}` : county.name,
                     type: 'county' as const,
                     center: [0, 0] as [number, number],
@@ -521,15 +521,28 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     .sort((a, b) => b.score - a.score)
                     .slice(0, 10);
 
-                const filtered = scored.map(({ zip }) => ({
-                    id: `zip-${zip.code}`,
-                    name: zip.name || zip.code,
-                    subtitle: `ZIP ${zip.code}`,
-                    value: zip.code, // Use ZIP code for API calls
-                    type: 'zip' as const,
-                    center: [0, 0] as [number, number],
-                    state: '',
-                }));
+                const filtered = scored.map(({ zip }) => {
+                    // zip.name is like "greenwich, oh" - capitalize and format as "21701 - Greenwich, OH"
+                    let displayName = zip.code;
+                    let stateAbbrev = '';
+                    if (zip.name) {
+                        const parts = zip.name.split(',').map(p => p.trim());
+                        const city = parts[0]?.split(' ').map(word =>
+                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                        ).join(' ') || '';
+                        stateAbbrev = parts[1]?.toUpperCase() || '';
+                        displayName = stateAbbrev ? `${zip.code} - ${city}, ${stateAbbrev}` : `${zip.code} - ${city}`;
+                    }
+                    return {
+                        id: `zip-${zip.code}`,
+                        name: displayName,
+                        subtitle: 'ZIP Code',
+                        value: zip.code, // Use ZIP code for API calls
+                        type: 'zip' as const,
+                        center: [0, 0] as [number, number],
+                        state: stateAbbrev,
+                    };
+                });
 
                 console.log(`[ZIP Search] Found ${filtered.length} results`);
                 setSearchResults(filtered);
