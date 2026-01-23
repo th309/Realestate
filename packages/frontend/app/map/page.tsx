@@ -11,7 +11,7 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchBar, GeoLevelPills, Legend, Sidebar, BenchmarkPanel, DataTableModal, RightDetailPanel } from './components';
+import { SearchBar, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers, useRightPanelData } from './hooks';
@@ -341,15 +341,6 @@ export default function MapPage() {
             geoLevel={geoLevel}
             mapData={mapData}
           />
-
-          {selectedGeography && (
-            <BenchmarkPanel
-              selectedGeography={selectedGeography}
-              selectedMetric={selectedMetric}
-              geoLevel={geoLevel}
-              onClose={() => setSelectedGeography(null)}
-            />
-          )}
 
           {/* M3 Extended FAB */}
           <button
