@@ -16,6 +16,7 @@
  */
 
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ScoringService } from './scoring.service';
 import { ScoringController } from './scoring.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -34,6 +35,9 @@ import { ABTestService } from './versioning/ab-test.service';
 import { MLValidationService, MLValidationController } from './ml-validation';
 import { BacktestRunsService, BacktestRunsController } from './backtest-runs';
 
+// Import admin controller
+import { AdminController } from './admin';
+
 // Legacy services (may still be imported elsewhere)
 // These are now simplified or merged into ScoringService
 import { InheritanceService } from './inheritance.service';
@@ -42,7 +46,7 @@ import { InheritanceService } from './inheritance.service';
 import { PerformanceTrackingService } from './performance-tracking.service';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, ConfigModule],
   providers: [
     // Core scoring service (simplified z-score formula system)
     ScoringService,
@@ -73,6 +77,7 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     ScoringController,
     MLValidationController,
     BacktestRunsController,
+    AdminController,
   ],
   exports: [
     ScoringService,

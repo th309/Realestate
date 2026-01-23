@@ -3,6 +3,7 @@
  *
  * Allows editing of scoring formula weights and metrics.
  * Provides live preview and A/B test deployment.
+ * Shows formula components with weights per score type and geography.
  *
  * Material Design 3 compliant.
  */
@@ -31,17 +32,63 @@ interface FormulaVersion {
   createdAt: string;
 }
 
+interface ConfidenceData {
+  confidenceScore: number;
+  confidenceLevel: string;
+  rSquared: number | null;
+  sampleCount: number | null;
+}
+
+const SCORE_TYPES = [
+  { value: 'market_health', label: 'Market Health' },
+  { value: 'homeready', label: 'HomeReady' },
+  { value: 'investoredge', label: 'InvestorEdge' },
+];
+
+const GEOGRAPHIES = [
+  { value: 'state', label: 'State' },
+  { value: 'metro', label: 'Metro' },
+  { value: 'county', label: 'County' },
+  { value: 'zip', label: 'ZIP' },
+];
+
+// Component labels for display
+const COMPONENT_LABELS: Record<string, string> = {
+  demand_strength: 'Demand Strength',
+  supply_balance: 'Supply Balance',
+  price_stability: 'Price Stability',
+  economic_foundation: 'Economic Foundation',
+  affordability: 'Affordability',
+  market_timing: 'Market Timing',
+  stability: 'Stability',
+  growth_potential: 'Growth Potential',
+  livability: 'Livability',
+  cash_flow: 'Cash Flow',
+  rent_demand: 'Rent Demand',
+  appreciation: 'Appreciation',
+  entry_point: 'Entry Point',
+  risk: 'Risk',
+};
+
 export function FormulaEditorTab() {
   const [versions, setVersions] = useState<FormulaVersion[]>([]);
   const [selectedScoreType, setSelectedScoreType] = useState<string>('market_health');
+  const [selectedGeography, setSelectedGeography] = useState<string>('metro');
   const [selectedVersion, setSelectedVersion] = useState<FormulaVersion | null>(null);
   const [draftConfig, setDraftConfig] = useState<Record<string, FormulaComponent> | null>(null);
+  const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchVersions();
   }, [selectedScoreType]);
+
+  useEffect(() => {
+    if (selectedVersion) {
+      fetchConfidenceData();
+    }
+  }, [selectedVersion, selectedGeography]);
 
   const fetchVersions = async () => {
     setLoading(true);
@@ -58,12 +105,46 @@ export function FormulaEditorTab() {
         if (active) {
           setSelectedVersion(active);
           setDraftConfig(active.formulaConfig.components);
+        } else {
+          setSelectedVersion(null);
+          setDraftConfig(null);
         }
       }
     } catch (error) {
       console.error('Error fetching formula versions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchConfidenceData = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(
+        `${apiUrl}/api/admin/backtest-runs/confidence/summary`,
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Find confidence for selected score type and geography
+        const found = data.data?.find(
+          (c: { scoreType: string; geographyType: string }) =>
+            c.scoreType === selectedScoreType && c.geographyType === selectedGeography,
+        );
+        if (found) {
+          setConfidenceData({
+            confidenceScore: found.confidenceScore,
+            confidenceLevel: found.confidenceLevel,
+            rSquared: found.rSquared,
+            sampleCount: found.sampleCount,
+          });
+        } else {
+          setConfidenceData(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching confidence data:', error);
+      setConfidenceData(null);
     }
   };
 
@@ -171,27 +252,79 @@ export function FormulaEditorTab() {
 
   return (
     <div className="space-y-6">
-      {/* Score Type Selector */}
-      <div className="flex items-center gap-4 p-4 bg-surface-container rounded-xl">
-        <label className="text-sm font-medium text-on-surface-variant">Score Type:</label>
-        <div className="flex gap-2">
-          {['market_health', 'homeready', 'investoredge'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedScoreType(type)}
+      {/* Score Type and Geography Selector */}
+      <div className="flex flex-wrap items-center gap-6 p-4 bg-surface-container rounded-xl">
+        {/* Score Type */}
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-on-surface-variant">Score Type:</label>
+          <div className="flex gap-2">
+            {SCORE_TYPES.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => setSelectedScoreType(type.value)}
+                className={`
+                  px-4 py-2 text-sm rounded-lg transition-colors
+                  ${
+                    selectedScoreType === type.value
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                  }
+                `}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Geography */}
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-on-surface-variant">Geography:</label>
+          <div className="flex gap-2">
+            {GEOGRAPHIES.map((geo) => (
+              <button
+                key={geo.value}
+                onClick={() => setSelectedGeography(geo.value)}
+                className={`
+                  px-4 py-2 text-sm rounded-lg transition-colors
+                  ${
+                    selectedGeography === geo.value
+                      ? 'bg-secondary text-on-secondary'
+                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                  }
+                `}
+              >
+                {geo.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Confidence Indicator */}
+        {confidenceData && (
+          <div className="ml-auto flex items-center gap-3 px-4 py-2 rounded-lg bg-surface-container-low">
+            <span className="text-sm text-on-surface-variant">Confidence:</span>
+            <span
               className={`
-                px-4 py-2 text-sm rounded-lg transition-colors
+                px-2 py-0.5 rounded text-sm font-medium
                 ${
-                  selectedScoreType === type
-                    ? 'bg-primary text-on-primary'
-                    : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                  confidenceData.confidenceLevel === 'high'
+                    ? 'bg-green-100 text-green-800'
+                    : confidenceData.confidenceLevel === 'medium'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
                 }
               `}
             >
-              {formatScoreType(type)}
-            </button>
-          ))}
-        </div>
+              {confidenceData.confidenceScore.toFixed(0)}% ({confidenceData.confidenceLevel})
+            </span>
+            {confidenceData.rSquared !== null && (
+              <span className="text-xs text-on-surface-variant">
+                R² = {confidenceData.rSquared.toFixed(3)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -268,7 +401,12 @@ export function FormulaEditorTab() {
                     className="p-4 rounded-lg bg-surface-container-low space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-on-surface">{component.label}</span>
+                      <div>
+                        <span className="font-medium text-on-surface">
+                          {COMPONENT_LABELS[name] || component.label || name}
+                        </span>
+                        <span className="ml-2 text-xs text-on-surface-variant">({name})</span>
+                      </div>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -286,28 +424,41 @@ export function FormulaEditorTab() {
                     </div>
 
                     {/* Weight slider */}
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={component.weight * 100}
-                      onChange={(e) =>
-                        handleWeightChange(name, parseInt(e.target.value, 10) / 100)
-                      }
-                      className="w-full"
-                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        value={component.weight * 100}
+                        onChange={(e) =>
+                          handleWeightChange(name, parseInt(e.target.value, 10) / 100)
+                        }
+                        className="flex-1"
+                      />
+                      <div
+                        className="h-2 rounded"
+                        style={{
+                          width: `${component.weight * 100}%`,
+                          maxWidth: '100px',
+                          backgroundColor: 'var(--md-sys-color-primary)',
+                        }}
+                      />
+                    </div>
 
                     {/* Metrics list */}
-                    <div className="flex flex-wrap gap-1">
-                      {component.metrics.map((metric) => (
-                        <span
-                          key={metric}
-                          className="text-xs px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container"
-                        >
-                          {metric}
-                        </span>
-                      ))}
+                    <div>
+                      <span className="text-xs text-on-surface-variant mb-1 block">Metrics:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {component.metrics.map((metric) => (
+                          <span
+                            key={metric}
+                            className="text-xs px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container"
+                          >
+                            {formatMetricName(metric)}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -338,11 +489,25 @@ export function FormulaEditorTab() {
   );
 }
 
-function formatScoreType(type: string): string {
-  const labels: Record<string, string> = {
-    market_health: 'Market Health',
-    homeready: 'HomeReady',
-    investoredge: 'InvestorEdge',
-  };
-  return labels[type] || type;
+function formatMetricName(metric: string): string {
+  // Convert snake_case to Title Case and handle common abbreviations
+  return metric
+    .split('_')
+    .map((word) => {
+      // Handle common abbreviations
+      if (word === 'yoy') return 'YoY';
+      if (word === 'yy') return 'YoY';
+      if (word === 'zhvi') return 'ZHVI';
+      if (word === 'zori') return 'ZORI';
+      if (word === 'grm') return 'GRM';
+      if (word === 'cagr') return 'CAGR';
+      if (word === 'dom') return 'DOM';
+      if (word === 'pct') return '%';
+      if (word === '3y') return '3Y';
+      if (word === '5y') return '5Y';
+      if (word === '36m') return '36M';
+      // Capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }
