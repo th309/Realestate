@@ -215,6 +215,9 @@ export class MLWorkflowService {
 
     this.runningProcesses.set(jobId, childProcess);
 
+    // Collect stderr for error reporting
+    let stderrOutput = '';
+
     // Handle stdout (progress updates)
     childProcess.stdout?.on('data', async (data) => {
       const output = data.toString();
@@ -228,9 +231,12 @@ export class MLWorkflowService {
       }
     });
 
-    // Handle stderr
+    // Handle stderr - collect for error message
     childProcess.stderr?.on('data', (data) => {
-      this.logger.warn(`[${stepId}] stderr: ${data.toString()}`);
+      const output = data.toString();
+      this.logger.warn(`[${stepId}] stderr: ${output}`);
+      // Keep last 1000 chars of stderr for error message
+      stderrOutput = (stderrOutput + output).slice(-1000);
     });
 
     // Handle completion
@@ -238,7 +244,14 @@ export class MLWorkflowService {
       this.runningProcesses.delete(jobId);
 
       const status = code === 0 ? 'completed' : 'error';
-      const error = code !== 0 ? `Process exited with code ${code}` : null;
+      let error: string | null = null;
+      if (code !== 0) {
+        // Include stderr in error message for debugging
+        const stderrSummary = stderrOutput.trim();
+        error = stderrSummary
+          ? `Exit code ${code}: ${stderrSummary}`
+          : `Process exited with code ${code}`;
+      }
 
       await this.updateJobStatus(jobId, status, error);
       this.logger.log(`[${stepId}] completed with code ${code}`);
