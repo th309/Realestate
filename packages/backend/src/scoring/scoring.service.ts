@@ -37,7 +37,7 @@ import {
 } from './scoring.types';
 
 // Re-export types for consumers
-export { GeographyType, LocationMetrics, ScoreResult, SingleScoreResult };
+export type { GeographyType, LocationMetrics, ScoreResult, SingleScoreResult };
 
 interface ZScoreMap {
   [locationId: string]: { [metricName: string]: number };
@@ -328,17 +328,18 @@ export class ScoringService {
     const locationsMap = new Map<string, LocationMetrics>();
 
     for (const row of realtorData) {
-      const locationId = row[idCol];
+      const r = row as Record<string, any>;
+      const locationId = r[idCol];
       locationsMap.set(locationId, {
         location_id: locationId,
-        location_name: row[nameCol] || locationId,
-        median_price: row.median_listing_price,
-        hotness_score: row.hotness_score,
-        demand_score: row.demand_score,
-        pending_ratio: row.pending_ratio,
-        price_reduced_share: row.price_reduced_share,
-        active_listing_count_yy: row.active_listing_count_yy,
-        price_reduced_count_yy: row.price_reduced_count_yy,
+        location_name: r[nameCol] || locationId,
+        median_price: r.median_listing_price,
+        hotness_score: r.hotness_score,
+        demand_score: r.demand_score,
+        pending_ratio: r.pending_ratio,
+        price_reduced_share: r.price_reduced_share,
+        active_listing_count_yy: r.active_listing_count_yy,
+        price_reduced_count_yy: r.price_reduced_count_yy,
       });
     }
 

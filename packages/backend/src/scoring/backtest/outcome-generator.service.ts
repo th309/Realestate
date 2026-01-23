@@ -213,7 +213,7 @@ export class OutcomeGeneratorService {
 
   private getScoreColumn(scoreType: ScoreType): string {
     switch (scoreType) {
-      case 'market_health':
+      case 'markethealth':
         return 'market_health_score';
       case 'homeready':
         return 'homeready_score';
@@ -254,7 +254,7 @@ export class OutcomeGeneratorService {
     ];
   }
 
-  private getZillowTable(geographyType: GeographyType): string {
+  private getZillowTable(geographyType: GeographyType | string): string {
     switch (geographyType) {
       case 'state':
         return 'zillow_state';
@@ -271,21 +271,9 @@ export class OutcomeGeneratorService {
     }
   }
 
-  private getIdColumn(geographyType: GeographyType): string {
-    switch (geographyType) {
-      case 'state':
-        return 'region_id';
-      case 'metro':
-        return 'region_id';
-      case 'county':
-        return 'region_id';
-      case 'city':
-        return 'region_id';
-      case 'zip':
-        return 'region_id';
-      default:
-        return 'region_id';
-    }
+  private getIdColumn(geographyType: GeographyType | string): string {
+    // All Zillow tables use region_id
+    return 'region_id';
   }
 
   private calculateOutcomeDate(startDate: string, horizon: string): string {

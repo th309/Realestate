@@ -139,7 +139,7 @@ export class ConfidenceDto {
 // ============================================================================
 
 export class ScoreBadgeResponseDto {
-  @ApiProperty({ description: 'Score type', enum: ['market_health', 'homeready', 'investoredge'] })
+  @ApiProperty({ description: 'Score type', enum: ['markethealth', 'homeready', 'investoredge'] })
   type: ScoreType;
 
   @ApiProperty({ description: 'Score label for display' })
@@ -284,7 +284,7 @@ export class AllScoresResponseDto {
 // ============================================================================
 
 export class GetScoreQueryDto {
-  @ApiPropertyOptional({ description: 'Score type filter', enum: ['market_health', 'homeready', 'investoredge'] })
+  @ApiPropertyOptional({ description: 'Score type filter', enum: ['markethealth', 'homeready', 'investoredge'] })
   type?: ScoreType;
 
   @ApiPropertyOptional({ description: 'Include expanded component details', default: false })
@@ -303,7 +303,7 @@ export class GetScoreQueryDto {
 
 export function getScoreLabel(type: ScoreType): string {
   switch (type) {
-    case 'market_health':
+    case 'markethealth':
       return 'Market Health Index';
     case 'homeready':
       return 'HomeReady Score';
@@ -416,13 +416,13 @@ export function formatMetricValue(
 
 export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
   const headlines: Record<ScoreType, string> = {
-    market_health: 'Unlock Full Market Health Details',
+    markethealth: 'Unlock Full Market Health Details',
     homeready: 'Unlock HomeReady Score',
     investoredge: 'Unlock InvestorEdge Score',
   };
 
   const descriptions: Record<ScoreType, string> = {
-    market_health: 'Get detailed market health breakdown and historical trends.',
+    markethealth: 'Get detailed market health breakdown and historical trends.',
     homeready:
       'Discover if this market is right for homebuyers with our proprietary HomeReady scoring.',
     investoredge:
@@ -430,7 +430,7 @@ export function createUpgradeCta(scoreType: ScoreType): UpgradeCtaDto {
   };
 
   const features: Record<ScoreType, string[]> = {
-    market_health: [
+    markethealth: [
       'Component breakdown',
       '12-month history',
       'Metric-level details',

@@ -10,13 +10,16 @@
  * - MarketHealth: Current market conditions
  */
 
-// Re-export core types from formula-weights
-export {
+// Re-export core types from formula-weights (using export type for isolatedModules)
+export type {
   ScoreType,
   GeographyLevel,
   ConfidenceLevel,
   MetricWeight,
   FormulaDefinition,
+} from './formula-weights';
+
+export {
   FORMULA_WEIGHTS,
   GRADE_THRESHOLDS,
   MODEL_CORRELATIONS,
@@ -29,6 +32,22 @@ export {
   getRequiredMetrics,
   validateFormulaWeights,
 } from './formula-weights';
+
+// ============================================================================
+// Access Control Types
+// ============================================================================
+
+export type ScoreAccess = 'full' | 'teaser';
+export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
+
+/**
+ * Score access configuration by tier
+ */
+export const SCORE_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
+  markethealth: ['free', 'basic', 'pro', 'enterprise'], // Available to all
+  homeready: ['pro', 'enterprise'], // Pro+ only
+  investoredge: ['pro', 'enterprise'], // Pro+ only
+};
 
 // ============================================================================
 // Core Types (moved here to avoid circular dependencies)
@@ -170,6 +189,12 @@ export interface ComponentScoreLegacy {
   hurtingFactors: string[];
 }
 
+// Type aliases for backwards compatibility (non-legacy names)
+export type HomeReadyComponents = HomeReadyComponentsLegacy;
+export type InvestorEdgeComponents = InvestorEdgeComponentsLegacy;
+export type MarketHealthComponents = MarketHealthComponentsLegacy;
+export type ComponentScore = ComponentScoreLegacy;
+
 // ============================================================================
 // Legacy Weights (kept for any code that might reference them)
 // ============================================================================
@@ -220,6 +245,8 @@ export const SCORING_CONSTANTS = {
   MEDIUM_CONFIDENCE_METRICS_PCT: 0.7,
   MEDIUM_CONFIDENCE_FRESHNESS_DAYS: 120,
   MODERATE_TARGET_PERCENTILE: 50,
+  SCORE_AVAILABLE_MIN_COMPLETENESS: 50, // Minimum % of data required for score
+  PARTIAL_SCORE_THRESHOLD: 80, // Below this, score is marked as "partial"
 };
 
 // ============================================================================

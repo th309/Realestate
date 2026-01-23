@@ -54,7 +54,7 @@ export function canAccessFullScore(
  */
 export function getScoreAccessLevels(userTier: UserTier): Record<ScoreType, ScoreAccess> {
   return {
-    market_health: getScoreAccess('market_health', userTier),
+    markethealth: getScoreAccess('markethealth', userTier),
     homeready: getScoreAccess('homeready', userTier),
     investoredge: getScoreAccess('investoredge', userTier),
   };
@@ -65,7 +65,7 @@ export function getScoreAccessLevels(userTier: UserTier): Record<ScoreType, Scor
  */
 export function getRequiredTier(scoreType: ScoreType): UserTier {
   switch (scoreType) {
-    case 'market_health':
+    case 'markethealth':
       return 'free'; // Available to everyone
     case 'homeready':
     case 'investoredge':

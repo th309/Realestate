@@ -16,14 +16,42 @@ import {
   HOMEREADY_WEIGHTS,
   INVESTOREDGE_WEIGHTS,
   MARKET_HEALTH_WEIGHTS,
-  HomeReadyComponents,
-  InvestorEdgeComponents,
-  MarketHealthComponents,
 } from '../../scoring.types';
 
 // ============================================================================
-// TYPE DEFINITIONS
+// TYPE DEFINITIONS FOR TESTS (simplified component scores as plain numbers)
 // ============================================================================
+
+/**
+ * Simplified component scores for test fixtures - just the score values
+ */
+export interface TestHomeReadyComponents {
+  affordability: number;
+  market_timing: number;
+  stability: number;
+  growth_potential: number;
+  livability: number;
+}
+
+export interface TestInvestorEdgeComponents {
+  cash_flow: number;
+  rent_demand: number;
+  appreciation: number;
+  entry_point: number;
+  risk: number;
+}
+
+export interface TestMarketHealthComponents {
+  demand_strength: number;
+  supply_balance: number;
+  price_stability: number;
+  economic_foundation: number;
+}
+
+// Type aliases for backwards compatibility in test file
+type HomeReadyComponents = TestHomeReadyComponents;
+type InvestorEdgeComponents = TestInvestorEdgeComponents;
+type MarketHealthComponents = TestMarketHealthComponents;
 
 export interface ExpectedScoreResult {
   score: number | null;

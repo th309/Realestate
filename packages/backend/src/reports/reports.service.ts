@@ -143,7 +143,8 @@ export class ReportsService {
 
     try {
       // 1. Fetch PropertyIQ scores
-      const geoType = dto.primary_geography.type;
+      // Map geography type to GeographyLevel (metro, county, zip)
+      const geoType = dto.primary_geography.type as 'metro' | 'county' | 'zip';
       const scores = await this.scoringService.getScore(
         dto.primary_geography.id,
         geoType,
@@ -175,16 +176,23 @@ export class ReportsService {
         scores: {
           homeready: scores
             ? {
-                score: scores.homereadyScore,
+                score: scores.scores.homeready.score,
+                grade: scores.scores.homeready.grade,
                 trend: 'stable',
-                components: scores.homereadyComponents,
               }
             : undefined,
           investoredge: scores
             ? {
-                score: scores.investoredgeScore,
+                score: scores.scores.investoredge.score,
+                grade: scores.scores.investoredge.grade,
                 trend: 'stable',
-                components: scores.investoredgeComponents,
+              }
+            : undefined,
+          markethealth: scores
+            ? {
+                score: scores.scores.markethealth.score,
+                grade: scores.scores.markethealth.grade,
+                trend: 'stable',
               }
             : undefined,
         },
@@ -238,8 +246,8 @@ export class ReportsService {
           populated_data: populatedData,
           ai_narrative: aiNarratives,
           ai_model_used: 'claude-sonnet-4-20250514',
-          homeready_score: scores?.homereadyScore || null,
-          investoredge_score: scores?.investoredgeScore || null,
+          homeready_score: scores?.scores.homeready.score || null,
+          investoredge_score: scores?.scores.investoredge.score || null,
           scores_snapshot: scores,
           generation_completed_at: new Date().toISOString(),
           generation_time_ms: generationTime,
