@@ -97,3 +97,8 @@ data/zillow/*.csv
 # MCP Server configuration (contains access tokens)
 .gemini/settings.json
 .vscode/mcp.json
+
+# ML model files (too large for GitHub, download at runtime)
+packages/backend/propertyiq-ml/models/
+packages/backend/propertyiq-ml/data/*.parquet
+packages/backend/propertyiq-ml/scripts/__pycache__/

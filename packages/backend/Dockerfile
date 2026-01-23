@@ -1,19 +1,18 @@
 # Multi-stage Dockerfile for NestJS backend with Python ML support
-# Build context is repo root (specified in railway.json)
 
 # Stage 1: Build Node.js application
 FROM node:20-slim AS builder
 
 WORKDIR /app/packages/backend
 
-# Copy package files from backend
-COPY packages/backend/package*.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install Node.js dependencies
 RUN npm ci
 
 # Copy backend source code
-COPY packages/backend/ ./
+COPY . ./
 
 # Build the application
 RUN npm run build
@@ -40,7 +39,7 @@ COPY --from=builder /app/packages/backend/node_modules ./node_modules
 COPY --from=builder /app/packages/backend/package*.json ./
 
 # Copy Python requirements and install
-COPY packages/backend/requirements.txt ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy Python ML scripts (accessible at runtime for spawning)
