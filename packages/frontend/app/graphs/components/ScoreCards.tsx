@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api, ScoreResponse } from '@/lib/api/client';
 import { GeoLevel, getMetricConfig } from '@/app/map/config/metrics';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
+import { fetchMetricData } from '@/app/map/config/fetchMetricData';
+import { formatValue, getMetricFormat } from '@/app/map/utils/metricUtils';
 import { M3Card } from './M3Card';
 import { Loader2, ArrowUp, ArrowDown, ArrowRight, Settings, Check, X } from 'lucide-react';
 
@@ -24,9 +26,7 @@ interface CircularProgressProps {
 // Calculate color on a gradient from red (0) to green (100)
 const getScoreColor = (value: number, maxValue: number = 100): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
-  // Map 0-100 to hue 0-120 (red to green in HSL)
   const hue = percentage * 120;
-  // Use saturation 70% and lightness 45% for vibrant but not too bright colors
   return `hsl(${hue}, 70%, 45%)`;
 };
 
@@ -47,21 +47,15 @@ const getLetterGrade = (score: number): string => {
   return 'F';
 };
 
-// Get grade badge color (5-point scale: A=green to F=red)
+// Get grade badge color
 const getGradeColor = (grade: string): { bg: string; text: string } => {
   const letter = grade.charAt(0);
   switch (letter) {
-    case 'A':
-      return { bg: 'bg-green-500', text: 'text-white' };
-    case 'B':
-      return { bg: 'bg-emerald-500', text: 'text-white' };
-    case 'C':
-      return { bg: 'bg-yellow-500', text: 'text-white' };
-    case 'D':
-      return { bg: 'bg-orange-500', text: 'text-white' };
-    case 'F':
-    default:
-      return { bg: 'bg-red-500', text: 'text-white' };
+    case 'A': return { bg: 'bg-green-500', text: 'text-white' };
+    case 'B': return { bg: 'bg-emerald-500', text: 'text-white' };
+    case 'C': return { bg: 'bg-yellow-500', text: 'text-white' };
+    case 'D': return { bg: 'bg-orange-500', text: 'text-white' };
+    default: return { bg: 'bg-red-500', text: 'text-white' };
   }
 };
 
@@ -95,35 +89,19 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg
-        width={size}
-        height={size}
-        className="transform -rotate-90"
-      >
-        {/* Background circle */}
+      <svg width={size} height={size} className="transform -rotate-90">
         <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={backgroundColor}
-          strokeWidth={strokeWidth}
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={backgroundColor} strokeWidth={strokeWidth}
         />
-        {/* Progress circle */}
         <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={strokeColor} strokeWidth={strokeWidth}
+          strokeLinecap="round" strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           className="transition-all duration-500 ease-out"
         />
       </svg>
-      {/* Center content: score, grade badge, label */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-bold text-on-surface leading-none">
           {Math.round(value)}
@@ -141,17 +119,21 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
 
 interface SubScoreDisplayProps {
   label: string;
-  value: number;
+  value: string;
+  rawValue: number | null;
+  loading?: boolean;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, value }) => {
-  const getTrendIcon = (val: number) => {
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, value, rawValue, loading }) => {
+  const getTrendIcon = (val: number | null) => {
+    if (val === null) return null;
     if (val >= 55) return <ArrowUp className="w-3 h-3" />;
     if (val <= 45) return <ArrowDown className="w-3 h-3" />;
     return <ArrowRight className="w-3 h-3" />;
   };
 
-  const getTrendColor = (val: number) => {
+  const getTrendColor = (val: number | null) => {
+    if (val === null) return 'text-on-surface-variant';
     if (val >= 55) return 'text-green-600';
     if (val <= 45) return 'text-red-500';
     return 'text-on-surface-variant';
@@ -162,15 +144,21 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, value }) => {
       <span className="text-[11px] text-on-surface-variant mb-1 truncate max-w-full" title={label}>
         {label}
       </span>
-      <div className={`flex items-center gap-0.5 ${getTrendColor(value)}`}>
-        <span className="text-sm font-semibold">{Math.round(value)}</span>
-        {getTrendIcon(value)}
+      <div className={`flex items-center gap-0.5 ${getTrendColor(rawValue)}`}>
+        {loading ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <>
+            <span className="text-sm font-semibold">{value}</span>
+            {getTrendIcon(rawValue)}
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-// Available metrics for selection (flattened from categories)
+// Available metrics for selection
 interface AvailableMetric {
   id: string;
   name: string;
@@ -191,11 +179,7 @@ function getAvailableMetrics(): AvailableMetric[] {
     for (const m of cat.metrics) {
       if (!seen.has(m.id)) {
         seen.add(m.id);
-        metrics.push({
-          id: m.id,
-          name: m.name,
-          category: cat.name,
-        });
+        metrics.push({ id: m.id, name: m.name, category: cat.name });
       }
     }
   }
@@ -219,7 +203,6 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
   const [selected, setSelected] = useState<string[]>(selectedMetrics);
   const availableMetrics = getAvailableMetrics();
 
-  // Group by category
   const groupedMetrics = availableMetrics.reduce((acc, m) => {
     if (!acc[m.category]) acc[m.category] = [];
     acc[m.category].push(m);
@@ -287,12 +270,21 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
   );
 };
 
+interface MetricIndicator {
+  metricId: string;
+  label: string;
+  value: string;
+  rawValue: number | null;
+}
+
 interface ScoreCardProps {
   title: string;
   value: number;
+  confidence: string;
   maxValue?: number;
-  indicators: { label: string; value: number; metricId?: string }[];
+  indicators: MetricIndicator[];
   loading?: boolean;
+  metricsLoading?: boolean;
   isAdmin?: boolean;
   selectedMetricIds: string[];
   onMetricsChange?: (metricIds: string[]) => void;
@@ -301,9 +293,11 @@ interface ScoreCardProps {
 const ScoreCard: React.FC<ScoreCardProps> = ({
   title,
   value,
+  confidence,
   maxValue = 100,
   indicators,
   loading = false,
+  metricsLoading = false,
   isAdmin = false,
   selectedMetricIds,
   onMetricsChange,
@@ -315,23 +309,18 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
     onMetricsChange?.(metricIds);
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
-
   return (
     <M3Card variant="elevated" size="sm" className="flex-1 relative">
       {isEditing && (
         <MetricSelector
           selectedMetrics={selectedMetricIds}
           onSave={handleSave}
-          onCancel={handleCancel}
+          onCancel={() => setIsEditing(false)}
           maxSelections={3}
         />
       )}
 
       <div className="flex items-start gap-4">
-        {/* Left: Circular Progress with score, grade, and label inside */}
         <div className="flex flex-col items-center">
           {loading ? (
             <div className="w-[100px] h-[100px] flex items-center justify-center">
@@ -348,9 +337,8 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
           )}
         </div>
 
-        {/* Right: Title and Sub-scores */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-1">
             <h4 className="text-sm font-semibold text-on-surface truncate">
               {title}
             </h4>
@@ -364,13 +352,22 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
               </button>
             )}
           </div>
+
+          {!loading && (
+            <div className="text-[10px] text-on-surface-variant mb-2">
+              Confidence: <span className="font-medium">{confidence}</span>
+            </div>
+          )}
+
           {!loading && (
             <div className="flex items-center justify-between gap-2">
-              {indicators.map((ind, idx) => (
+              {indicators.map((ind) => (
                 <SubScoreDisplay
-                  key={ind.metricId || idx}
+                  key={ind.metricId}
                   label={ind.label}
                   value={ind.value}
+                  rawValue={ind.rawValue}
+                  loading={metricsLoading}
                 />
               ))}
             </div>
@@ -381,12 +378,11 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
   );
 };
 
-// Default metric selections for each score type
+// Default metric selections
 const DEFAULT_HOMEREADY_METRICS = ['home_value_yoy', 'days_on_market', 'for_sale_inventory'];
 const DEFAULT_INVESTOREDGE_METRICS = ['cap_rate', 'rent_index', 'pending_ratio'];
 const DEFAULT_MARKETHEALTH_METRICS = ['hotness_score', 'inventory_yoy', 'new_listings_yoy'];
 
-// Storage key for persisting metric selections
 const STORAGE_KEY = 'scorecard-metric-selections';
 
 interface MetricSelections {
@@ -406,9 +402,7 @@ function loadMetricSelections(): MetricSelections {
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    if (stored) return JSON.parse(stored);
   } catch (e) {
     console.error('Failed to load metric selections:', e);
   }
@@ -422,7 +416,6 @@ function loadMetricSelections(): MetricSelections {
 
 function saveMetricSelections(selections: MetricSelections) {
   if (typeof window === 'undefined') return;
-
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selections));
   } catch (e) {
@@ -437,128 +430,140 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
 }) => {
   const [scores, setScores] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
+  const [metricValues, setMetricValues] = useState<Record<string, number | null>>({});
 
+  // Fetch scores
   useEffect(() => {
     let isMounted = true;
 
     async function fetchScores() {
       try {
         setLoading(true);
-        setError(null);
-
         const response = await api.getScore(geoLevel, selectedArea);
-
         if (isMounted) {
           setScores(response);
           setLoading(false);
         }
       } catch (err) {
         console.error('Failed to fetch scores:', err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch scores');
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchScores();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [geoLevel, selectedArea]);
 
-  // Convert metric IDs to display indicators with values
-  const getIndicatorsForMetrics = useCallback((metricIds: string[]): { label: string; value: number; metricId: string }[] => {
+  // Fetch actual metric data for selected metrics
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchMetrics() {
+      const allMetricIds = [
+        ...metricSelections.homeready,
+        ...metricSelections.investoredge,
+        ...metricSelections.markethealth,
+      ];
+      const uniqueMetricIds = [...new Set(allMetricIds)];
+
+      setMetricsLoading(true);
+      const values: Record<string, number | null> = {};
+
+      // Fetch each metric in parallel
+      await Promise.all(
+        uniqueMetricIds.map(async (metricId) => {
+          try {
+            const data = await fetchMetricData(metricId, geoLevel);
+            // Get value for the selected area
+            const entry = data[selectedArea];
+            values[metricId] = entry?.value ?? null;
+          } catch (err) {
+            console.error(`Failed to fetch metric ${metricId}:`, err);
+            values[metricId] = null;
+          }
+        })
+      );
+
+      if (isMounted) {
+        setMetricValues(values);
+        setMetricsLoading(false);
+      }
+    }
+
+    if (selectedArea) {
+      fetchMetrics();
+    }
+
+    return () => { isMounted = false; };
+  }, [geoLevel, selectedArea, metricSelections]);
+
+  // Convert metric IDs to indicators with formatted values
+  const getIndicatorsForMetrics = useCallback((metricIds: string[]): MetricIndicator[] => {
     return metricIds.map(id => {
       const config = getMetricConfig(id);
       const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const rawValue = metricValues[id] ?? null;
 
-      // Get value from scores components or use placeholder
-      // In a real implementation, you'd fetch actual metric values
-      let value = 50; // Default placeholder
-
-      // Map some known metrics to score components
-      if (scores?.components) {
-        const componentMap: Record<string, number | undefined> = {
-          'affordability': scores.components.homeready?.affordability,
-          'home_value_yoy': scores.components.homeready?.valueGrowth,
-          'for_sale_inventory': scores.components.homeready?.inventoryHealth,
-          'cap_rate': scores.components.investoredge?.cashFlow,
-          'rent_index': scores.components.investoredge?.appreciation,
-          'pending_ratio': scores.components.investoredge?.marketLiquidity,
-          'hotness_score': scores.components.investoredge?.demandRisk,
-          'days_on_market': scores.components.homeready?.marketHealth,
-        };
-
-        if (componentMap[id] !== undefined) {
-          value = componentMap[id] ?? 50;
-        }
+      let formattedValue = '--';
+      if (rawValue !== null) {
+        const format = getMetricFormat(id);
+        formattedValue = formatValue(rawValue, format);
       }
 
-      return { label, value, metricId: id };
+      return { metricId: id, label, value: formattedValue, rawValue };
     });
-  }, [scores]);
+  }, [metricValues]);
 
   // Handlers for metric selection changes
-  const handleHomereadyMetricsChange = useCallback((metricIds: string[]) => {
-    const newSelections = { ...metricSelections, homeready: metricIds };
+  const handleMetricsChange = useCallback((scoreType: keyof MetricSelections) => (metricIds: string[]) => {
+    const newSelections = { ...metricSelections, [scoreType]: metricIds };
     setMetricSelections(newSelections);
     saveMetricSelections(newSelections);
   }, [metricSelections]);
 
-  const handleInvestoredgeMetricsChange = useCallback((metricIds: string[]) => {
-    const newSelections = { ...metricSelections, investoredge: metricIds };
-    setMetricSelections(newSelections);
-    saveMetricSelections(newSelections);
-  }, [metricSelections]);
-
-  const handleMarketHealthMetricsChange = useCallback((metricIds: string[]) => {
-    const newSelections = { ...metricSelections, markethealth: metricIds };
-    setMetricSelections(newSelections);
-    saveMetricSelections(newSelections);
-  }, [metricSelections]);
-
-  // Default values when loading or error
+  // Score values
   const homereadyScore = scores?.homereadyScore ?? 0;
   const investoredgeScore = scores?.investoredgeScore ?? 0;
-  const marketHealthIndex = scores?.components?.homeready?.marketHealth ?? 0;
-
-  // Get indicators based on selected metrics
-  const homereadyIndicators = getIndicatorsForMetrics(metricSelections.homeready);
-  const investoredgeIndicators = getIndicatorsForMetrics(metricSelections.investoredge);
-  const marketHealthIndicators = getIndicatorsForMetrics(metricSelections.markethealth);
+  const marketHealthScore = scores?.components?.homeready?.marketHealth ?? 0;
+  const confidence = scores?.confidenceLevel ?? 'medium';
+  const confidenceLabel = confidence === 'high' ? 'HIGH' : confidence === 'low' ? 'LOW' : 'MEDIUM';
 
   return (
     <div className="flex flex-col gap-3">
       <ScoreCard
         title="HomeReady Score"
         value={homereadyScore}
-        indicators={homereadyIndicators}
+        confidence={confidenceLabel}
+        indicators={getIndicatorsForMetrics(metricSelections.homeready)}
         loading={loading}
+        metricsLoading={metricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.homeready}
-        onMetricsChange={handleHomereadyMetricsChange}
+        onMetricsChange={handleMetricsChange('homeready')}
       />
       <ScoreCard
         title="InvestorEdge Score"
         value={investoredgeScore}
-        indicators={investoredgeIndicators}
+        confidence={confidenceLabel}
+        indicators={getIndicatorsForMetrics(metricSelections.investoredge)}
         loading={loading}
+        metricsLoading={metricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.investoredge}
-        onMetricsChange={handleInvestoredgeMetricsChange}
+        onMetricsChange={handleMetricsChange('investoredge')}
       />
       <ScoreCard
         title="Market Health Index"
-        value={marketHealthIndex}
-        indicators={marketHealthIndicators}
+        value={marketHealthScore}
+        confidence={confidenceLabel}
+        indicators={getIndicatorsForMetrics(metricSelections.markethealth)}
         loading={loading}
+        metricsLoading={metricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.markethealth}
-        onMetricsChange={handleMarketHealthMetricsChange}
+        onMetricsChange={handleMetricsChange('markethealth')}
       />
     </div>
   );
