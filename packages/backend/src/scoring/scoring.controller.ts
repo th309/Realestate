@@ -1,11 +1,14 @@
 /**
  * PropertyIQ Scoring Controller
  *
- * API endpoints for PropertyIQ score calculation and retrieval.
- * Supports three score types:
- * - Market Health Index (free tier - available to all users)
- * - HomeReady Score (pro tier - requires upgrade for free/basic users)
- * - InvestorEdge Score (pro tier - requires upgrade for free/basic users)
+ * API endpoints for the PropertyIQ scoring system.
+ * Implements the simple z-score based scoring methodology.
+ *
+ * Endpoints:
+ * - GET /api/scores?geography=metro&location_id=12420 - Get scores for a location
+ * - GET /api/scores/top?geography=metro&score_type=homeready&limit=10 - Top markets
+ * - GET /api/scores/search?q=austin&geography=zip - Search markets
+ * - POST /api/scores/calculate/:geography - Trigger recalculation
  */
 
 import {
@@ -14,858 +17,361 @@ import {
   Post,
   Param,
   Query,
-  Headers,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiHeader } from '@nestjs/swagger';
-import { ScoringService } from './scoring.service';
-import { PercentileService } from './percentile.service';
-import { ScoreAccessService, getScoreAccess } from './scoring.guard';
-import {
-  GeographyType,
-  ScoreType,
-  UserTier,
-  PropertyIQScore,
-  ComponentScore,
-  MARKET_HEALTH_WEIGHTS,
-  HOMEREADY_WEIGHTS,
-  INVESTOREDGE_WEIGHTS,
-} from './scoring.types';
-import {
-  ScoreBadgeResponseDto,
-  ScoreCardResponseDto,
-  ScoreTeaserResponseDto,
-  AllScoresResponseDto,
-  ComponentDetailDto,
-  ConfidenceDto,
-  LockedComponentDto,
-  getScoreLabel,
-  getComponentLabel,
-  getComponentDescription,
-  createUpgradeCta,
-} from './dto/score-response.dto';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ScoringService, ScoreResult } from './scoring.service';
+import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
+import { GeographyLevel, ScoreType } from './formula-weights';
 
-@ApiTags('scoring')
-@Controller('api/scoring')
+@ApiTags('scores')
+@Controller('api/scores')
 export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
-    private readonly percentileService: PercentileService,
-    private readonly scoreAccessService: ScoreAccessService,
+    private readonly performanceTrackingService: PerformanceTrackingService,
   ) {}
 
-  /**
-   * Debug endpoint specifically for county query testing
-   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
-   */
-  @Get('debug-county-query/:countyFips')
-  async debugCountyQuery(@Param('countyFips') countyFips: string) {
-    return this.scoringService.debugCountyQuery(countyFips);
-  }
+  // ============================================================================
+  // Main Score Endpoints (matching spec)
+  // ============================================================================
 
   /**
-   * Debug endpoint to inspect raw data structure for percentile calculation
-   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
-   */
-  @Get('debug-percentile-data/:geographyType')
-  async debugPercentileData(@Param('geographyType') geographyType: string) {
-    const geoType = this.validateGeographyType(geographyType);
-    return this.percentileService.debugInspectData(geoType);
-  }
-
-  /**
-   * Debug endpoint to test percentile save operation
-   * IMPORTANT: Must be before generic routes to avoid being caught by :geographyType pattern
-   */
-  @Get('debug-test-save/:geographyType')
-  async debugTestSave(@Param('geographyType') geographyType: string) {
-    const geoType = this.validateGeographyType(geographyType);
-    return this.percentileService.debugTestSave(geoType);
-  }
-
-  /**
-   * Get PropertyIQ scores for a specific geography
+   * Get scores for a specific location
    *
-   * GET /scoring/:geographyType/:geographyId
-   * Returns all three scores with access control based on user tier
+   * GET /api/scores?geography=metro&location_id=12420
+   *
+   * Response format (from spec):
+   * {
+   *   "location_id": "12420",
+   *   "location_name": "Austin-Round Rock, TX",
+   *   "geography": "metro",
+   *   "median_price": 420644,
+   *   "scores": {
+   *     "homeready": { "score": 13, "grade": "F", "confidence": 86, "confidence_level": "HIGH" },
+   *     "investoredge": { "score": 32, "grade": "F", "confidence": 90, "confidence_level": "HIGH" },
+   *     "markethealth": { "score": 8, "grade": "F", "confidence": 79, "confidence_level": "MEDIUM" }
+   *   }
+   * }
    */
-  @Get(':geographyType/:geographyId')
-  @ApiOperation({ summary: 'Get PropertyIQ scores for a geography' })
-  @ApiParam({ name: 'geographyType', enum: ['state', 'metro', 'county', 'zip'] })
-  @ApiParam({ name: 'geographyId', description: 'Geography identifier' })
-  @ApiQuery({ name: 'type', required: false, enum: ['market_health', 'homeready', 'investoredge'] })
-  @ApiQuery({ name: 'expanded', required: false, type: Boolean })
-  @ApiQuery({ name: 'historyMonths', required: false, type: Number })
-  @ApiQuery({ name: 'periodDate', required: false })
-  @ApiQuery({ name: 'recalculate', required: false, type: Boolean })
-  @ApiHeader({ name: 'x-user-tier', required: false, description: 'User subscription tier' })
-  async getScore(
-    @Param('geographyType') geographyType: string,
-    @Param('geographyId') geographyId: string,
-    @Headers('x-user-tier') userTierHeader?: string,
-    @Query('type') scoreType?: string,
-    @Query('expanded') expanded?: string,
-    @Query('historyMonths') historyMonths?: string,
-    @Query('periodDate') periodDate?: string,
-    @Query('recalculate') recalculate?: string,
-  ): Promise<AllScoresResponseDto> {
-    const geoType = this.validateGeographyType(geographyType);
-    const userTier = this.validateUserTier(userTierHeader);
-    const isExpanded = expanded === 'true';
-
-    // Get or calculate score
-    let score: PropertyIQScore | null;
-
-    if (recalculate === 'true') {
-      score = await this.scoringService.calculateScore(
-        geographyId,
-        geoType,
-        periodDate,
-      );
-    } else {
-      score = await this.scoringService.getScore(
-        geographyId,
-        geoType,
-        periodDate,
-      );
-
-      if (!score) {
-        score = await this.scoringService.calculateScore(
-          geographyId,
-          geoType,
-          periodDate,
-        );
-      }
+  @Get()
+  @ApiOperation({ summary: 'Get PropertyIQ scores for a location' })
+  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'location_id', required: true, description: 'Location identifier (cbsa_code, fips, or zip)' })
+  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  async getScores(
+    @Query('geography') geography: string,
+    @Query('location_id') locationId: string,
+    @Query('date') date?: string,
+  ): Promise<ScoreResult> {
+    if (!geography) {
+      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
     }
+    if (!locationId) {
+      throw new HttpException('location_id query parameter is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const geoLevel = this.validateGeography(geography);
+    const score = await this.scoringService.getScore(locationId, geoLevel, date);
 
     if (!score) {
       throw new HttpException(
-        `Unable to calculate score for ${geographyType}/${geographyId}`,
+        `No scores found for ${geography}/${locationId}. Try triggering a calculation first.`,
         HttpStatus.NOT_FOUND,
       );
     }
 
-    // Build response with access control
-    return this.buildAllScoresResponse(score, userTier, isExpanded);
-  }
-
-  /**
-   * Get raw PropertyIQ score (internal/admin endpoint)
-   *
-   * GET /scoring/raw/:geographyType/:geographyId
-   * Returns full score data without access control formatting
-   */
-  @Get('raw/:geographyType/:geographyId')
-  @ApiOperation({ summary: 'Get raw PropertyIQ score data (admin)' })
-  async getRawScore(
-    @Param('geographyType') geographyType: string,
-    @Param('geographyId') geographyId: string,
-    @Query('periodDate') periodDate?: string,
-    @Query('recalculate') recalculate?: string,
-  ) {
-    const geoType = this.validateGeographyType(geographyType);
-
-    if (recalculate === 'true') {
-      const score = await this.scoringService.calculateScore(
-        geographyId,
-        geoType,
-        periodDate,
-      );
-      if (!score) {
-        throw new HttpException(
-          `Unable to calculate score for ${geographyType}/${geographyId}`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      return score;
-    }
-
-    const cachedScore = await this.scoringService.getScore(
-      geographyId,
-      geoType,
-      periodDate,
-    );
-    if (cachedScore) {
-      return cachedScore;
-    }
-
-    const score = await this.scoringService.calculateScore(
-      geographyId,
-      geoType,
-      periodDate,
-    );
-    if (!score) {
-      throw new HttpException(
-        `Unable to calculate score for ${geographyType}/${geographyId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
     return score;
   }
 
   /**
-   * Calculate scores for all geographies of a specific type
+   * Get top markets by score
    *
-   * POST /scoring/calculate-all/:geographyType
-   * Query params:
-   *   - periodDate: Optional date (YYYY-MM-DD), defaults to latest
+   * GET /api/scores/top?geography=metro&score_type=homeready&limit=10
    */
-  @Post('calculate-all/:geographyType')
-  async calculateAllScores(
-    @Param('geographyType') geographyType: string,
-    @Query('periodDate') periodDate?: string,
-  ) {
-    const geoType = this.validateGeographyType(geographyType);
-    const result = await this.scoringService.calculateAllScores(
-      geoType,
-      periodDate,
-    );
+  @Get('top')
+  @ApiOperation({ summary: 'Get top markets by score' })
+  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'score_type', required: true, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of results (default 10, max 100)' })
+  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  async getTopMarkets(
+    @Query('geography') geography: string,
+    @Query('score_type') scoreType: string,
+    @Query('limit') limitStr?: string,
+    @Query('date') date?: string,
+  ): Promise<{ location_id: string; location_name: string; score: number; grade: string }[]> {
+    if (!geography) {
+      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
+    }
+    if (!scoreType) {
+      throw new HttpException('score_type query parameter is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const geoLevel = this.validateGeography(geography);
+    const validScoreType = this.validateScoreType(scoreType);
+    const limit = Math.min(Math.max(parseInt(limitStr || '10', 10), 1), 100);
+
+    return this.scoringService.getTopMarkets(geoLevel, validScoreType, limit, date);
+  }
+
+  /**
+   * Search markets by name
+   *
+   * GET /api/scores/search?q=austin&geography=zip
+   */
+  @Get('search')
+  @ApiOperation({ summary: 'Search markets by name' })
+  @ApiQuery({ name: 'q', required: true, description: 'Search query' })
+  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'], description: 'Filter by geography type' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of results (default 20, max 100)' })
+  async searchMarkets(
+    @Query('q') query: string,
+    @Query('geography') geography?: string,
+    @Query('limit') limitStr?: string,
+  ): Promise<{ location_id: string; location_name: string; geography: string }[]> {
+    if (!query || query.trim().length < 2) {
+      throw new HttpException('q query parameter must be at least 2 characters', HttpStatus.BAD_REQUEST);
+    }
+
+    const geoLevel = geography ? this.validateGeography(geography) : undefined;
+    const limit = Math.min(Math.max(parseInt(limitStr || '20', 10), 1), 100);
+
+    return this.scoringService.searchMarkets(query.trim(), geoLevel, limit);
+  }
+
+  // ============================================================================
+  // Calculation Endpoints
+  // ============================================================================
+
+  /**
+   * Trigger score calculation for all locations at a geography level
+   *
+   * POST /api/scores/calculate/:geography
+   */
+  @Post('calculate/:geography')
+  @ApiOperation({ summary: 'Calculate scores for all locations at a geography level' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'date', required: false, description: 'Period date (YYYY-MM-DD), defaults to latest' })
+  async calculateScores(
+    @Param('geography') geography: string,
+    @Query('date') date?: string,
+  ): Promise<{ success: boolean; calculated: number; errors: number; scoreDate: string }> {
+    const geoLevel = this.validateGeography(geography);
+    const result = await this.scoringService.calculateAllScores(geoLevel, date);
+
     return {
-      success: true,
-      geographyType: geoType,
-      periodDate,
+      success: result.errors === 0,
       ...result,
     };
   }
 
-  /**
-   * Get scores for multiple geographies (batch endpoint)
-   *
-   * GET /scoring/batch/:geographyType
-   * Query params:
-   *   - ids: Comma-separated list of geography IDs
-   *   - periodDate: Optional date (YYYY-MM-DD)
-   */
-  @Get('batch/:geographyType')
-  async getBatchScores(
-    @Param('geographyType') geographyType: string,
-    @Query('ids') ids: string,
-    @Query('periodDate') periodDate?: string,
-  ) {
-    if (!ids) {
-      throw new HttpException(
-        'ids query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoType = this.validateGeographyType(geographyType);
-    const geographyIds = ids
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id) => id);
-
-    if (geographyIds.length === 0) {
-      throw new HttpException(
-        'At least one geography ID is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (geographyIds.length > 100) {
-      throw new HttpException(
-        'Maximum 100 geographies per batch request',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const scores = await Promise.all(
-      geographyIds.map(async (id) => {
-        try {
-          const score = await this.scoringService.getScore(
-            id,
-            geoType,
-            periodDate,
-          );
-          if (!score) {
-            return { geographyId: id, error: 'Score not found' };
-          }
-          return score;
-        } catch (err) {
-          return { geographyId: id, error: 'Failed to retrieve score' };
-        }
-      }),
-    );
-
-    return {
-      geographyType: geoType,
-      periodDate,
-      scores,
-    };
-  }
+  // ============================================================================
+  // Legacy Compatibility Endpoints
+  // ============================================================================
 
   /**
-   * Compare scores between geographies
+   * Get score by path (legacy format)
    *
-   * GET /scoring/compare/:geographyType
-   * Query params:
-   *   - ids: Comma-separated list of geography IDs (2-5)
-   *   - periodDate: Optional date (YYYY-MM-DD)
+   * GET /api/scores/:geography/:locationId
    */
-  @Get('compare/:geographyType')
-  async compareScores(
-    @Param('geographyType') geographyType: string,
-    @Query('ids') ids: string,
-    @Query('periodDate') periodDate?: string,
-  ) {
-    if (!ids) {
+  @Get(':geography/:locationId')
+  @ApiOperation({ summary: 'Get scores for a location (path format)' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiParam({ name: 'locationId', description: 'Location identifier' })
+  @ApiQuery({ name: 'date', required: false })
+  async getScoreByPath(
+    @Param('geography') geography: string,
+    @Param('locationId') locationId: string,
+    @Query('date') date?: string,
+  ): Promise<ScoreResult> {
+    const geoLevel = this.validateGeography(geography);
+    const score = await this.scoringService.getScore(locationId, geoLevel, date);
+
+    if (!score) {
       throw new HttpException(
-        'ids query parameter is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const geoType = this.validateGeographyType(geographyType);
-    const geographyIds = ids
-      .split(',')
-      .map((id) => id.trim())
-      .filter((id) => id);
-
-    if (geographyIds.length < 2) {
-      throw new HttpException(
-        'At least 2 geography IDs required for comparison',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (geographyIds.length > 5) {
-      throw new HttpException(
-        'Maximum 5 geographies per comparison',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const scores = await Promise.all(
-      geographyIds.map((id) =>
-        this.scoringService.getScore(id, geoType, periodDate),
-      ),
-    );
-
-    const validScores = scores.filter((s) => s !== null);
-
-    if (validScores.length < 2) {
-      throw new HttpException(
-        'Not enough valid scores found for comparison',
+        `No scores found for ${geography}/${locationId}`,
         HttpStatus.NOT_FOUND,
       );
     }
 
-    // Calculate rankings
-    const homereadyRanked = [...validScores].sort(
-      (a, b) => b.homereadyScore - a.homereadyScore,
-    );
-    const investoredgeRanked = [...validScores].sort(
-      (a, b) => b.investoredgeScore - a.investoredgeScore,
-    );
-
-    return {
-      geographyType: geoType,
-      periodDate,
-      comparison: validScores.map((score) => ({
-        geographyId: score.geographyId,
-        geographyName: score.geographyName,
-        homereadyScore: score.homereadyScore,
-        homereadyRank:
-          homereadyRanked.findIndex(
-            (s) => s.geographyId === score.geographyId,
-          ) + 1,
-        investoredgeScore: score.investoredgeScore,
-        investoredgeRank:
-          investoredgeRanked.findIndex(
-            (s) => s.geographyId === score.geographyId,
-          ) + 1,
-        confidenceLevel: score.confidenceLevel,
-      })),
-      rankings: {
-        homeready: homereadyRanked.map((s) => ({
-          geographyId: s.geographyId,
-          geographyName: s.geographyName,
-          score: s.homereadyScore,
-        })),
-        investoredge: investoredgeRanked.map((s) => ({
-          geographyId: s.geographyId,
-          geographyName: s.geographyName,
-          score: s.investoredgeScore,
-        })),
-      },
-    };
+    return score;
   }
 
   /**
-   * Calculate percentiles for a specific geography type and date
-   * Calculates percentiles from ALL sources: Realtor, Zillow, and Calculated metrics
+   * Get scores for multiple locations (batch)
    *
-   * POST /scoring/percentiles/:geographyType
-   * Query params:
-   *   - periodDate: Optional date (YYYY-MM-DD), defaults to latest
-   *   - source: Optional source filter ('realtor', 'zillow', 'derived', 'all'), defaults to 'all'
+   * GET /api/scores/batch/:geography?ids=id1,id2,id3
    */
-  @Post('percentiles/:geographyType')
-  async calculatePercentiles(
-    @Param('geographyType') geographyType: string,
-    @Query('periodDate') periodDate?: string,
-    @Query('source') source?: string,
-  ) {
-    const geoType = this.validateGeographyType(geographyType);
-
-    // Get the target date
-    let targetDate = periodDate;
-    if (!targetDate) {
-      // Find latest date from realtor table
-      const latestDate = await this.scoringService.debugGetLatestDate(geoType);
-      if (!latestDate) {
-        return { success: false, error: 'No data found for this geography type' };
-      }
-      targetDate = latestDate;
+  @Get('batch/:geography')
+  @ApiOperation({ summary: 'Get scores for multiple locations' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated location IDs' })
+  @ApiQuery({ name: 'date', required: false })
+  async getBatchScores(
+    @Param('geography') geography: string,
+    @Query('ids') ids: string,
+    @Query('date') date?: string,
+  ): Promise<{ geography: string; scores: (ScoreResult | { location_id: string; error: string })[] }> {
+    if (!ids) {
+      throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
     }
 
-    let result;
-    const sourceFilter = source || 'all';
+    const geoLevel = this.validateGeography(geography);
+    const locationIds = ids.split(',').map(id => id.trim()).filter(id => id);
 
-    switch (sourceFilter) {
-      case 'realtor':
-        result = await this.percentileService.calculatePercentilesForDate(geoType, targetDate);
-        break;
-      case 'zillow':
-        result = await this.percentileService.calculateZillowPercentilesForDate(geoType, targetDate);
-        break;
-      case 'derived':
-        result = await this.percentileService.calculateDerivedPercentilesForDate(geoType, targetDate);
-        break;
-      case 'all':
-      default:
-        result = await this.percentileService.calculateAllSourcePercentilesForDate(geoType, targetDate);
-        break;
+    if (locationIds.length === 0) {
+      throw new HttpException('At least one location ID is required', HttpStatus.BAD_REQUEST);
+    }
+    if (locationIds.length > 100) {
+      throw new HttpException('Maximum 100 locations per batch', HttpStatus.BAD_REQUEST);
     }
 
+    const scores = await Promise.all(
+      locationIds.map(async (id) => {
+        try {
+          const score = await this.scoringService.getScore(id, geoLevel, date);
+          return score || { location_id: id, error: 'Score not found' };
+        } catch {
+          return { location_id: id, error: 'Failed to retrieve score' };
+        }
+      }),
+    );
+
+    return { geography, scores };
+  }
+
+  // ============================================================================
+  // Performance Tracking Endpoints
+  // ============================================================================
+
+  /**
+   * Get performance metrics for a geography and score type
+   *
+   * GET /api/scores/performance?geography=metro&score_type=homeready
+   *
+   * Response format (from spec):
+   * {
+   *   "geography": "metro",
+   *   "score_type": "homeready",
+   *   "validation_period": "2024-01 to 2024-12",
+   *   "metrics": {
+   *     "top_quintile_beat_rate": 89.2,
+   *     "bottom_quintile_beat_rate": 11.8,
+   *     "spread": 4.21,
+   *     "correlation": 0.67,
+   *     "predictions_validated": 367
+   *   },
+   *   "status": "healthy",
+   *   "formula_version": "v1.0",
+   *   "last_validated": "2025-01-15"
+   * }
+   */
+  @Get('performance')
+  @ApiOperation({ summary: 'Get performance metrics for score validation' })
+  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
+  async getPerformanceMetrics(
+    @Query('geography') geography?: string,
+    @Query('score_type') scoreType?: string,
+  ): Promise<PerformanceMetrics | PerformanceMetrics[]> {
+    // If both are provided, return single metric
+    if (geography && scoreType) {
+      const geoLevel = this.validateGeography(geography);
+      const validScoreType = this.validateScoreType(scoreType);
+      return this.performanceTrackingService.getPerformanceMetrics(geoLevel, validScoreType);
+    }
+
+    // Otherwise return all metrics
+    return this.performanceTrackingService.getAllPerformanceMetrics();
+  }
+
+  /**
+   * Get active performance alerts
+   *
+   * GET /api/scores/alerts
+   */
+  @Get('alerts')
+  @ApiOperation({ summary: 'Get active performance alerts' })
+  async getAlerts(): Promise<AlertResult[]> {
+    return this.performanceTrackingService.getActiveAlerts();
+  }
+
+  /**
+   * Trigger validation of predictions from 12 months ago
+   *
+   * POST /api/scores/validate
+   */
+  @Post('validate')
+  @ApiOperation({ summary: 'Validate predictions from 12 months ago' })
+  async validatePredictions(): Promise<{ success: boolean; validated: number; errors: number; predictionDate: string }> {
+    const result = await this.performanceTrackingService.validatePredictions();
     return {
-      success: true,
-      geographyType: geoType,
-      periodDate: targetDate,
-      source: sourceFilter,
+      success: result.errors === 0,
       ...result,
     };
   }
 
-  /**
-   * Calculate percentiles for all dates (full recalculation)
-   *
-   * POST /scoring/percentiles-all/:geographyType
-   */
-  @Post('percentiles-all/:geographyType')
-  async calculateAllPercentiles(@Param('geographyType') geographyType: string) {
-    const geoType = this.validateGeographyType(geographyType);
-    const result =
-      await this.percentileService.calculateAllPercentiles(geoType);
+  // ============================================================================
+  // Debug Endpoints
+  // ============================================================================
 
-    return {
-      success: true,
-      geographyType: geoType,
-      ...result,
-    };
+  /**
+   * Get latest data date for a geography
+   */
+  @Get('debug/latest-date/:geography')
+  @ApiOperation({ summary: 'Get latest data date for a geography' })
+  async getLatestDate(@Param('geography') geography: string): Promise<{ geography: string; latestDate: string | null }> {
+    const geoLevel = this.validateGeography(geography);
+    const latestDate = await this.scoringService.debugGetLatestDate(geoLevel);
+    return { geography, latestDate };
   }
 
   /**
-   * Full scoring pipeline: calculate percentiles then scores
-   * Calculates percentiles from ALL sources (Realtor + Zillow + Derived) before scoring
-   *
-   * POST /scoring/run-pipeline/:geographyType
-   * Query params:
-   *   - periodDate: Optional date (YYYY-MM-DD), defaults to latest
+   * Get metric statistics
    */
-  @Post('run-pipeline/:geographyType')
-  async runScoringPipeline(
-    @Param('geographyType') geographyType: string,
-    @Query('periodDate') periodDate?: string,
+  @Get('debug/metric-stats/:geography/:metric')
+  @ApiOperation({ summary: 'Get statistics for a metric' })
+  async getMetricStats(
+    @Param('geography') geography: string,
+    @Param('metric') metric: string,
+    @Query('date') date?: string,
   ) {
-    const geoType = this.validateGeographyType(geographyType);
-
-    // Get target date
-    let targetDate: string | undefined = periodDate;
-    if (!targetDate) {
-      const latestDate = await this.scoringService.debugGetLatestDate(geoType);
-      if (!latestDate) {
-        return { success: false, error: 'No data found for this geography type' };
-      }
-      targetDate = latestDate;
-    }
-
-    // Step 1: Calculate percentiles from ALL sources
-    const percentileResult = await this.percentileService.calculateAllSourcePercentilesForDate(
-      geoType,
-      targetDate,
-    );
-
-    // Step 2: Calculate scores
-    const scoreResult = await this.scoringService.calculateAllScores(
-      geoType,
-      targetDate,
-    );
-
-    return {
-      success: true,
-      geographyType: geoType,
-      periodDate: targetDate,
-      percentiles: percentileResult,
-      scores: scoreResult,
-    };
+    const geoLevel = this.validateGeography(geography);
+    const stats = await this.scoringService.debugGetMetricStats(geoLevel, metric, date);
+    return { geography, metric, stats };
   }
 
-  /**
-   * Database status check
-   * GET /api/scoring/db-status
-   */
-  @Get('db-status')
-  async dbStatus() {
-    const status: Record<string, any> = {};
+  // ============================================================================
+  // Validation Helpers
+  // ============================================================================
 
-    // Check geographies table
-    const geoCount = await this.scoringService.debugGetTableCount('geographies');
-    status.geographies = geoCount;
+  private validateGeography(geography: string): GeographyLevel {
+    const validLevels: GeographyLevel[] = ['metro', 'county', 'zip'];
+    const lower = geography.toLowerCase() as GeographyLevel;
 
-    // Check geography_crosswalk table
-    const crosswalkCount = await this.scoringService.debugGetTableCount('geography_crosswalk');
-    status.geography_crosswalk = crosswalkCount;
-
-    // Check zillow tables
-    status.zillow_state = await this.scoringService.debugGetTableCount('zillow_state');
-    status.zillow_metro = await this.scoringService.debugGetTableCount('zillow_metro');
-    status.zillow_county = await this.scoringService.debugGetTableCount('zillow_county');
-    status.zillow_zip = await this.scoringService.debugGetTableCount('zillow_zip');
-
-    // Check scores table
-    status.propertyiq_scores = await this.scoringService.debugGetTableCount('propertyiq_scores');
-
-    // Check percentiles table
-    status.metric_percentiles = await this.scoringService.debugGetTableCount('metric_percentiles');
-
-    return status;
-  }
-
-  /**
-   * Debug endpoint to diagnose scoring issues
-   * GET /api/scoring/debug/:geographyType/:geographyId
-   */
-  @Get('debug/:geographyType/:geographyId')
-  async debugScore(
-    @Param('geographyType') geographyType: string,
-    @Param('geographyId') geographyId: string,
-  ) {
-    const geoType = this.validateGeographyType(geographyType);
-    const debug: Record<string, any> = {
-      input: { geographyType: geoType, geographyId },
-      checks: {},
-    };
-
-    // Check 1: Get latest date
-    const latestDate = await this.scoringService.debugGetLatestDate(geoType);
-    debug.checks.latestDate = latestDate;
-
-    if (!latestDate) {
-      debug.failureReason = 'No data found in zillow table for this geography type';
-      return debug;
-    }
-
-    // Check 2: Get geography from data tables (Realtor/Zillow)
-    const geography = await this.scoringService.debugGetGeography(geographyId, geoType);
-    debug.checks.geography = geography ? { found: true, name: geography.name, geography_id: geography.geography_id } : null;
-
-    if (!geography) {
-      debug.failureReason = `Geography ${geographyId} not found in data tables for type ${geoType}`;
-      return debug;
-    }
-
-    // Check 3: Get metrics
-    const metrics = await this.scoringService.debugGetMetrics(geography, geoType, latestDate);
-    debug.checks.metrics = {
-      count: Object.keys(metrics).length,
-      keys: Object.keys(metrics).slice(0, 10),
-    };
-
-    if (Object.keys(metrics).length === 0) {
-      debug.failureReason = 'No metrics found for this geography';
-      return debug;
-    }
-
-    // Check 4: Get percentiles
-    const percentiles = await this.scoringService.debugGetPercentiles(geoType, latestDate);
-    debug.checks.percentiles = {
-      count: Object.keys(percentiles).length,
-      keys: Object.keys(percentiles).slice(0, 10),
-    };
-
-    debug.status = 'All checks passed - score should calculate';
-    return debug;
-  }
-
-  private validateGeographyType(type: string): GeographyType {
-    const validTypes: GeographyType[] = ['state', 'metro', 'county', 'zip'];
-    const lowerType = type.toLowerCase() as GeographyType;
-
-    if (!validTypes.includes(lowerType)) {
+    if (!validLevels.includes(lower)) {
       throw new HttpException(
-        `Invalid geography type: ${type}. Valid types: ${validTypes.join(', ')}`,
+        `Invalid geography: ${geography}. Valid values: ${validLevels.join(', ')}`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    return lowerType;
+    return lower;
   }
 
-  private validateUserTier(tier?: string): UserTier {
-    if (!tier) return 'free';
-    const validTiers: UserTier[] = ['free', 'basic', 'pro', 'enterprise'];
-    const lowerTier = tier.toLowerCase() as UserTier;
-    return validTiers.includes(lowerTier) ? lowerTier : 'free';
-  }
+  private validateScoreType(scoreType: string): ScoreType {
+    const validTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const lower = scoreType.toLowerCase() as ScoreType;
 
-  /**
-   * Build response with all three scores and access control
-   */
-  private buildAllScoresResponse(
-    score: PropertyIQScore,
-    userTier: UserTier,
-    expanded: boolean,
-  ): AllScoresResponseDto {
-    const marketHealthAccess = getScoreAccess('market_health', userTier);
-    const homereadyAccess = getScoreAccess('homeready', userTier);
-    const investoredgeAccess = getScoreAccess('investoredge', userTier);
-
-    return {
-      geographyId: score.geographyId,
-      geographyType: score.geographyType,
-      geographyName: score.geographyName,
-      stateCode: score.stateCode || undefined,
-      periodDate: score.periodDate,
-      userTier,
-
-      marketHealth: this.buildScoreResponse(
-        'market_health',
-        score.marketHealthScore,
-        score.marketHealthTrend,
-        score.marketHealthTrendChange,
-        score.periodDate,
-        marketHealthAccess,
-        expanded,
-        score.marketHealthComponents ? this.buildComponentDetails(
-          score.marketHealthComponents,
-          MARKET_HEALTH_WEIGHTS,
-        ) : [],
-        this.buildConfidence(score),
-        score.dataCompleteness,
-        score.inheritedMetrics,
-      ),
-
-      homeready: homereadyAccess === 'full'
-        ? this.buildScoreResponse(
-            'homeready',
-            score.homereadyScore,
-            score.homereadyTrend,
-            score.homereadyTrendChange,
-            score.periodDate,
-            homereadyAccess,
-            expanded,
-            this.buildComponentDetails(
-              score.homereadyComponents,
-              HOMEREADY_WEIGHTS,
-            ),
-            this.buildConfidence(score),
-            score.dataCompleteness,
-            score.inheritedMetrics,
-          )
-        : this.buildTeaserResponse(
-            'homeready',
-            score.homereadyScore,
-            score.homereadyTrend,
-            score.homereadyTrendChange,
-            score.periodDate,
-            score.homereadyComponents,
-          ),
-
-      investoredge: investoredgeAccess === 'full'
-        ? this.buildScoreResponse(
-            'investoredge',
-            score.investoredgeScore,
-            score.investoredgeTrend,
-            score.investoredgeTrendChange,
-            score.periodDate,
-            investoredgeAccess,
-            expanded,
-            this.buildComponentDetails(
-              score.investoredgeComponents,
-              INVESTOREDGE_WEIGHTS,
-            ),
-            this.buildConfidence(score),
-            score.dataCompleteness,
-            score.inheritedMetrics,
-          )
-        : this.buildTeaserResponse(
-            'investoredge',
-            score.investoredgeScore,
-            score.investoredgeTrend,
-            score.investoredgeTrendChange,
-            score.periodDate,
-            score.investoredgeComponents,
-          ),
-
-      calculatedAt: score.calculatedAt,
-      calculationVersion: score.calculationVersion,
-    };
-  }
-
-  /**
-   * Build a score badge or card response
-   */
-  private buildScoreResponse(
-    type: ScoreType,
-    scoreValue: number | null,
-    trend: 'up' | 'down' | 'stable',
-    trendChange: number,
-    periodDate: string,
-    access: 'full' | 'teaser',
-    expanded: boolean,
-    components: ComponentDetailDto[],
-    confidence: ConfidenceDto,
-    dataCompleteness: number,
-    inheritedMetrics: Record<string, string>,
-  ): ScoreBadgeResponseDto | ScoreCardResponseDto {
-    const status = this.getScoreStatus(scoreValue, dataCompleteness);
-
-    const badge: ScoreBadgeResponseDto = {
-      type,
-      label: getScoreLabel(type),
-      score: scoreValue,
-      trend,
-      trendChange,
-      access,
-      status,
-      statusMessage: status !== 'complete' ? this.getStatusMessage(status, dataCompleteness) : undefined,
-      periodDate,
-    };
-
-    if (!expanded) {
-      return badge;
+    if (!validTypes.includes(lower)) {
+      throw new HttpException(
+        `Invalid score_type: ${scoreType}. Valid values: ${validTypes.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
-    // Return full card response
-    const card: ScoreCardResponseDto = {
-      ...badge,
-      components,
-      confidence,
-      dataCompleteness,
-      inheritedMetricsCount: Object.keys(inheritedMetrics).length,
-      inheritedMetrics,
-    };
-
-    return card;
-  }
-
-  /**
-   * Build a teaser response for locked scores
-   */
-  private buildTeaserResponse(
-    type: ScoreType,
-    scoreValue: number | null,
-    trend: 'up' | 'down' | 'stable',
-    trendChange: number,
-    periodDate: string,
-    components: Record<string, ComponentScore>,
-  ): ScoreTeaserResponseDto {
-    const lockedComponents: LockedComponentDto[] = Object.entries(components).map(
-      ([name, component]) => ({
-        name,
-        label: getComponentLabel(name),
-        weight: component.weight,
-        blurredScore: '??',
-      }),
-    );
-
-    return {
-      type,
-      label: getScoreLabel(type),
-      score: null, // Hide actual score
-      trend,
-      trendChange: 0, // Hide trend change
-      access: 'teaser',
-      status: 'complete',
-      periodDate,
-      lockedComponents,
-      upgradeCta: createUpgradeCta(type),
-      teaserDescription: `Upgrade to Pro to unlock the ${getScoreLabel(type)} with detailed component breakdown and insights.`,
-    };
-  }
-
-  /**
-   * Build component details from component scores
-   */
-  private buildComponentDetails<T extends string>(
-    components: Record<T, ComponentScore>,
-    weights: Record<T, number>,
-  ): ComponentDetailDto[] {
-    return Object.entries(components).map(([name, component]) => {
-      const comp = component as ComponentScore;
-      return {
-        name,
-        label: getComponentLabel(name),
-        weight: weights[name as T] || comp.weight,
-        score: comp.score,
-        weightedContribution: comp.weightedContribution,
-        description: getComponentDescription(name),
-        metrics: [], // Metrics would need to be populated from detailed data
-        helpingFactors: comp.helpingFactors,
-        hurtingFactors: comp.hurtingFactors,
-      };
-    });
-  }
-
-  /**
-   * Build confidence information
-   */
-  private buildConfidence(score: PropertyIQScore): ConfidenceDto {
-    const percentage = score.metricsTotal > 0
-      ? Math.round((score.metricsAvailable / score.metricsTotal) * 100)
-      : 0;
-
-    return {
-      level: score.confidenceLevel,
-      percentage,
-      metricsAvailable: score.metricsAvailable,
-      metricsTotal: score.metricsTotal,
-      freshnessInDays: score.dataFreshnessDays,
-      warning: score.confidenceLevel === 'low'
-        ? 'This score has limited confidence due to missing data'
-        : undefined,
-    };
-  }
-
-  /**
-   * Determine score status based on value and completeness
-   */
-  private getScoreStatus(
-    score: number | null,
-    completeness: number,
-  ): 'complete' | 'partial' | 'unavailable' {
-    if (score === null) return 'unavailable';
-    if (completeness < 50) return 'unavailable';
-    if (completeness < 100) return 'partial';
-    return 'complete';
-  }
-
-  /**
-   * Get status message for partial/unavailable scores
-   */
-  private getStatusMessage(
-    status: 'complete' | 'partial' | 'unavailable',
-    completeness: number,
-  ): string {
-    switch (status) {
-      case 'unavailable':
-        return 'Insufficient data available for this geography';
-      case 'partial':
-        return `Score based on ${completeness.toFixed(0)}% of available data`;
-      default:
-        return '';
-    }
+    return lower;
   }
 }

@@ -1,469 +1,273 @@
 /**
  * PropertyIQ Scoring Service
  *
- * Calculates triple scores for real estate markets:
- * - Market Health: Free tier (demand_strength, supply_balance, price_stability, economic_foundation)
- * - HomeReady: Pro tier (affordability, market_timing, stability, growth_potential, livability)
- * - InvestorEdge: Pro tier (cash_flow, rent_demand, appreciation, entry_point, risk)
+ * Calculates three scores for real estate markets using fixed ML-derived formulas:
+ * - HomeReady: Predicts 3-year price appreciation for homebuyers
+ * - InvestorEdge: Predicts total return (appreciation + rental yield) for investors
+ * - MarketHealth: Current market conditions (how hot is the market)
  *
- * Scoring methodology:
- * 1. Fetch raw metrics for a geography/date with inheritance fallback
- * 2. Calculate derived metrics (GRM, YoY changes, volatility)
- * 3. Normalize metrics using min-max, percentile, or optimal range
- * 4. Weight and combine into component scores
- * 5. Aggregate components into final scores
- * 6. Track data completeness and inherited metrics
+ * Scoring methodology (from SCORING_SYSTEM_SPEC.md):
+ * 1. Fetch all locations with their metrics for a geography level
+ * 2. Calculate z-scores for each metric across all locations
+ * 3. Apply fixed formula weights (direction × weight × z-score)
+ * 4. Normalize raw scores to 0-100 range
+ * 5. Convert to letter grades (A+ to F)
+ * 6. Calculate 4-factor confidence score
  */
 
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import {
+  FORMULA_WEIGHTS,
+  MODEL_CORRELATIONS,
+  SAMPLE_SIZE_SCORES,
+  scoreToGrade,
+  getConfidenceLevel,
+  ScoreType,
+  GeographyLevel,
+  FormulaDefinition,
+  ConfidenceLevel,
+} from './formula-weights';
+import {
   GeographyType,
-  MetricData,
-  PropertyIQScore,
-  HomeReadyComponents,
-  InvestorEdgeComponents,
-  MarketHealthComponents,
-  ComponentScore,
-  CalculatedMetrics,
-  MetricPercentiles,
-  MetricDefinition,
-  HOMEREADY_WEIGHTS,
-  INVESTOREDGE_WEIGHTS,
-  MARKET_HEALTH_WEIGHTS,
-  HOMEREADY_DETAILED_METRICS,
-  INVESTOREDGE_DETAILED_METRICS,
-  MARKET_HEALTH_DETAILED_METRICS,
-  SCORING_CONSTANTS,
+  LocationMetrics,
+  ScoreResult,
+  SingleScoreResult,
 } from './scoring.types';
-import { NormalizationService } from './normalization.service';
-import { InheritanceService, MetricWithSource } from './inheritance.service';
-import { MarketHealthService } from './market-health.service';
 
-const CALCULATION_VERSION = '2.0.0';
+// Re-export types for consumers
+export { GeographyType, LocationMetrics, ScoreResult, SingleScoreResult };
+
+interface ZScoreMap {
+  [locationId: string]: { [metricName: string]: number };
+}
+
+interface RawScoreResult {
+  locationId: string;
+  rawScore: number;
+}
+
+const CALCULATION_VERSION = '3.0.0'; // New simplified version
 
 @Injectable()
 export class ScoringService {
-  // FIPS code to state abbreviation mapping
-  private readonly fipsToState: Record<string, string> = {
-    '01': 'AL', '02': 'AK', '04': 'AZ', '05': 'AR', '06': 'CA',
-    '08': 'CO', '09': 'CT', '10': 'DE', '11': 'DC', '12': 'FL',
-    '13': 'GA', '15': 'HI', '16': 'ID', '17': 'IL', '18': 'IN',
-    '19': 'IA', '20': 'KS', '21': 'KY', '22': 'LA', '23': 'ME',
-    '24': 'MD', '25': 'MA', '26': 'MI', '27': 'MN', '28': 'MS',
-    '29': 'MO', '30': 'MT', '31': 'NE', '32': 'NV', '33': 'NH',
-    '34': 'NJ', '35': 'NM', '36': 'NY', '37': 'NC', '38': 'ND',
-    '39': 'OH', '40': 'OK', '41': 'OR', '42': 'PA', '44': 'RI',
-    '45': 'SC', '46': 'SD', '47': 'TN', '48': 'TX', '49': 'UT',
-    '50': 'VT', '51': 'VA', '53': 'WA', '54': 'WV', '55': 'WI',
-    '56': 'WY', '72': 'PR',
-  };
-
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-    private readonly normalizationService: NormalizationService,
-    private readonly inheritanceService: InheritanceService,
-    private readonly marketHealthService: MarketHealthService,
   ) {}
-
-  /**
-   * Convert FIPS code to state abbreviation
-   */
-  private fipsToStateAbbr(fips: string | undefined): string | undefined {
-    if (!fips) return undefined;
-    return this.fipsToState[fips.padStart(2, '0')];
-  }
 
   // ============================================================================
   // Public API
   // ============================================================================
 
   /**
-   * Calculate PropertyIQ scores for a single geography
-   */
-  async calculateScore(
-    geographyId: string,
-    geographyType: GeographyType,
-    periodDate?: string,
-  ): Promise<PropertyIQScore | null> {
-    // Default to most recent data
-    const targetDate = periodDate || (await this.getLatestDate(geographyType));
-    if (!targetDate) return null;
-
-    // Get geography info
-    const geography = await this.getGeography(geographyId, geographyType);
-    if (!geography) return null;
-
-    // Fetch all metrics for this geography
-    const metrics = await this.fetchMetrics(
-      geography,
-      geographyType,
-      targetDate,
-    );
-    if (Object.keys(metrics).length === 0) return null;
-
-    // Calculate derived metrics
-    const calculatedMetrics = await this.calculateDerivedMetrics(
-      geographyId,
-      geographyType,
-      targetDate,
-      metrics,
-    );
-
-    // Merge raw and calculated metrics
-    // IMPORTANT: Metric names must match component definitions in scoring.types.ts
-    const allMetrics = { ...metrics };
-    if (calculatedMetrics) {
-      // Cash flow metrics - names must match INVESTOREDGE_CASH_FLOW_METRICS
-      if (calculatedMetrics.grm)
-        allMetrics.grm = {
-          value: calculatedMetrics.grm,
-          date: targetDate,
-          source: 'calculated',
-        };
-      if (calculatedMetrics.rentPriceRatio) {
-        // gross_yield = (annual rent / price) * 100
-        allMetrics.gross_yield = {
-          value: calculatedMetrics.rentPriceRatio * 100,
-          date: targetDate,
-          source: 'calculated',
-        };
-        // rent_to_price_ratio = monthly rent / price
-        allMetrics.rent_to_price_ratio = {
-          value: calculatedMetrics.rentPriceRatio / 12,
-          date: targetDate,
-          source: 'calculated',
-        };
-      }
-      if (calculatedMetrics.capRateProxy)
-        allMetrics.cap_rate = {
-          value: calculatedMetrics.capRateProxy,
-          date: targetDate,
-          source: 'calculated',
-        };
-
-      // Price/rent growth metrics
-      if (calculatedMetrics.zhviYoyChange)
-        allMetrics.zhvi_yoy = {
-          value: calculatedMetrics.zhviYoyChange,
-          date: targetDate,
-          source: 'calculated',
-        };
-      if (calculatedMetrics.zoriYoyChange)
-        allMetrics.zori_yoy = {
-          value: calculatedMetrics.zoriYoyChange,
-          date: targetDate,
-          source: 'calculated',
-        };
-
-      // Volatility/stability metrics
-      if (calculatedMetrics.zhviStddev12m)
-        allMetrics.zhvi_volatility = {
-          value: calculatedMetrics.zhviStddev12m,
-          date: targetDate,
-          source: 'calculated',
-        };
-
-      // Supply metrics - name must match MARKET_HEALTH_SUPPLY_BALANCE_METRICS
-      if (calculatedMetrics.monthsOfSupply)
-        allMetrics.months_of_supply = {
-          value: calculatedMetrics.monthsOfSupply,
-          date: targetDate,
-          source: 'calculated',
-        };
-    }
-
-    // Get percentiles for normalization
-    const percentiles = await this.fetchPercentiles(geographyType, targetDate);
-
-    // Calculate HomeReady score
-    const homereadyComponents = this.calculateHomeReadyComponents(
-      allMetrics,
-      percentiles,
-    );
-    const homereadyScore = this.aggregateScore(
-      homereadyComponents,
-      HOMEREADY_WEIGHTS,
-    );
-
-    // Calculate InvestorEdge score
-    const investoredgeComponents = this.calculateInvestorEdgeComponents(
-      allMetrics,
-      percentiles,
-    );
-    const investoredgeScore = this.aggregateScore(
-      investoredgeComponents,
-      INVESTOREDGE_WEIGHTS,
-    );
-
-    // Calculate trends (compare to previous month)
-    const {
-      homereadyTrend,
-      homereadyTrendChange,
-      investoredgeTrend,
-      investoredgeTrendChange,
-    } = await this.calculateTrends(
-      geographyId,
-      geographyType,
-      targetDate,
-      homereadyScore,
-      investoredgeScore,
-    );
-
-    // Determine confidence level
-    const metricsAvailable = Object.values(allMetrics).filter(
-      (m) => m.value !== null,
-    ).length;
-    const metricsTotal = Object.values(HOMEREADY_DETAILED_METRICS).reduce(
-      (acc, metrics) => acc + metrics.length,
-      0,
-    );
-    const dataFreshnessDays = this.calculateFreshness(targetDate);
-    const confidenceLevel = this.determineConfidence(
-      metricsAvailable,
-      metricsTotal,
-      dataFreshnessDays,
-    );
-
-    // Calculate Market Health score using the new service
-    const marketHealthMetrics = this.convertToMetricWithSource(allMetrics);
-    const marketHealthResult =
-      this.marketHealthService.calculateScore(marketHealthMetrics);
-
-    // Calculate Market Health trends
-    const {
-      marketHealthTrend,
-      marketHealthTrendChange,
-    } = await this.calculateMarketHealthTrends(
-      geographyId,
-      geographyType,
-      targetDate,
-      marketHealthResult.score,
-    );
-
-    // Track inherited metrics
-    const inheritedMetrics: Record<string, string> = {};
-    for (const [name, metric] of Object.entries(marketHealthMetrics)) {
-      if (metric.isInherited && metric.sourceGeographyType) {
-        inheritedMetrics[name] = metric.sourceGeographyType;
-      }
-    }
-
-    // Calculate data completeness
-    const dataCompleteness = marketHealthResult.completeness;
-
-    const score: PropertyIQScore = {
-      geographyId,
-      geographyType,
-      geographyName: geography.name,
-      stateCode: geography.state_code ?? null,
-      periodDate: targetDate,
-
-      // Market Health (FREE TIER)
-      marketHealthScore: marketHealthResult.score,
-      marketHealthComponents: marketHealthResult.components,
-      marketHealthTrend,
-      marketHealthTrendChange,
-
-      // HomeReady (PRO TIER)
-      homereadyScore,
-      homereadyComponents,
-      homereadyTrend,
-      homereadyTrendChange,
-
-      // InvestorEdge (PRO TIER)
-      investoredgeScore,
-      investoredgeComponents,
-      investoredgeTrend,
-      investoredgeTrendChange,
-
-      confidenceLevel,
-      metricsAvailable,
-      metricsTotal,
-      dataFreshnessDays,
-
-      // New fields
-      dataCompleteness,
-      inheritedMetrics,
-
-      calculatedAt: new Date().toISOString(),
-      calculationVersion: CALCULATION_VERSION,
-    };
-
-    // Save score to database
-    await this.saveScore(score);
-
-    return score;
-  }
-
-  /**
-   * Calculate scores for all geographies of a given type
-   * Gets geography IDs from the actual data tables (like the map page does)
+   * Calculate scores for all locations at a given geography level
    */
   async calculateAllScores(
-    geographyType: GeographyType,
+    geography: GeographyLevel,
     periodDate?: string,
-  ): Promise<{ calculated: number; errors: number }> {
-    const targetDate = periodDate || (await this.getLatestDate(geographyType));
-    if (!targetDate) return { calculated: 0, errors: 0 };
+  ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
+    // Get the latest date if not provided
+    const targetDate = periodDate || (await this.getLatestDate(geography));
+    if (!targetDate) {
+      return { calculated: 0, errors: 0, scoreDate: '' };
+    }
 
-    // Get all unique geography IDs from the data tables
-    const geographyIds = await this.getAllGeographyIds(geographyType, targetDate);
-    if (geographyIds.length === 0) return { calculated: 0, errors: 0 };
+    // 1. Fetch all locations with their metrics
+    const locations = await this.fetchAllMetrics(geography, targetDate);
+    if (locations.length === 0) {
+      return { calculated: 0, errors: 0, scoreDate: targetDate };
+    }
 
+    // 2. For ZIP level, inherit county data for missing census metrics
+    if (geography === 'zip') {
+      await this.inheritCountyData(locations);
+    }
+
+    // 3. Calculate z-scores for all metrics across all locations
+    const allMetricNames = this.getAllMetricNames(geography);
+    const zScores = this.calculateZScores(locations, allMetricNames);
+
+    // 4. Calculate raw scores for each score type
+    const scoreTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const allResults: ScoreResult[] = [];
+
+    for (const scoreType of scoreTypes) {
+      const formula = FORMULA_WEIGHTS[geography][scoreType];
+      const rawScores = this.applyFormula(locations, zScores, formula);
+
+      // 5. Normalize to 0-100
+      const normalizedScores = this.normalizeScores(rawScores);
+
+      // 6. Build results with grades and confidence
+      for (let i = 0; i < locations.length; i++) {
+        const location = locations[i];
+        const score = normalizedScores[i];
+        const grade = scoreToGrade(score);
+        const { confidence, level } = this.calculateConfidence(
+          location,
+          geography,
+          scoreType,
+        );
+
+        // Find or create result for this location
+        let result = allResults.find(r => r.location_id === location.location_id);
+        if (!result) {
+          result = {
+            location_id: location.location_id,
+            location_name: location.location_name,
+            geography,
+            median_price: location.median_price ?? null,
+            score_date: targetDate,
+            scores: {
+              homeready: { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+              investoredge: { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+              markethealth: { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+            },
+          };
+          allResults.push(result);
+        }
+
+        result.scores[scoreType] = { score, grade, confidence, confidence_level: level };
+      }
+    }
+
+    // 7. Save all scores to database
     let calculated = 0;
     let errors = 0;
 
-    for (const geoId of geographyIds) {
+    for (const result of allResults) {
       try {
-        const score = await this.calculateScore(
-          geoId,
-          geographyType,
-          targetDate,
-        );
-        if (score) calculated++;
+        await this.saveScore(result, targetDate);
+        calculated++;
       } catch (err) {
         errors++;
-        console.error(`Error calculating score for ${geoId}:`, err);
+        console.error(`Error saving score for ${result.location_id}:`, err);
       }
     }
 
-    return { calculated, errors };
+    return { calculated, errors, scoreDate: targetDate };
   }
 
   /**
-   * Get all geography IDs from the actual data tables
-   */
-  private async getAllGeographyIds(
-    geographyType: GeographyType,
-    periodDate: string,
-  ): Promise<string[]> {
-    switch (geographyType) {
-      case 'state': {
-        const { data } = await this.supabase
-          .from('realtor_state')
-          .select('state_id')
-          .eq('period_date', periodDate);
-        return [...new Set(data?.map(r => r.state_id) || [])];
-      }
-      case 'metro': {
-        const { data } = await this.supabase
-          .from('realtor_metro')
-          .select('cbsa_code')
-          .eq('period_date', periodDate)
-          .limit(2000);
-        return [...new Set(data?.map(r => r.cbsa_code) || [])];
-      }
-      case 'county': {
-        const { data } = await this.supabase
-          .from('realtor_county')
-          .select('county_fips')
-          .eq('period_date', periodDate)
-          .limit(5000);
-        return [...new Set(data?.map(r => r.county_fips) || [])];
-      }
-      case 'zip': {
-        // For ZIPs, just get a sample - there are ~30,000
-        const { data } = await this.supabase
-          .from('realtor_zip')
-          .select('postal_code')
-          .eq('period_date', periodDate)
-          .limit(1000);
-        return [...new Set(data?.map(r => r.postal_code) || [])];
-      }
-      default:
-        return [];
-    }
-  }
-
-  /**
-   * Get cached score for a geography
+   * Get scores for a single location
    */
   async getScore(
-    geographyId: string,
-    geographyType: GeographyType,
+    locationId: string,
+    geography: GeographyLevel,
     periodDate?: string,
-  ): Promise<PropertyIQScore | null> {
-    const targetDate = periodDate || (await this.getLatestDate(geographyType));
+  ): Promise<ScoreResult | null> {
+    const targetDate = periodDate || (await this.getLatestDate(geography));
     if (!targetDate) return null;
 
+    // Query from the propertyiq_scores table
     const { data } = await this.supabase
       .from('propertyiq_scores')
       .select('*')
-      .eq('geography_id', geographyId)
-      .eq('geography_type', geographyType)
-      .eq('period_date', targetDate)
-      .single();
+      .eq('location_id', locationId)
+      .eq('geography', geography)
+      .eq('score_date', targetDate);
 
-    if (!data) return null;
+    if (!data || data.length === 0) return null;
 
-    return this.mapDbToScore(data);
-  }
+    // Group by location and build response
+    const scoresByType: Record<ScoreType, any> = {
+      homeready: null,
+      investoredge: null,
+      markethealth: null,
+    };
 
-  // ============================================================================
-  // Debug Methods (for troubleshooting)
-  // ============================================================================
+    let locationName = '';
+    let medianPrice: number | null = null;
 
-  async debugGetLatestDate(geographyType: GeographyType): Promise<string | null> {
-    return this.getLatestDate(geographyType);
-  }
-
-  async debugGetGeography(geographyId: string, geographyType: GeographyType) {
-    return this.getGeography(geographyId, geographyType);
-  }
-
-  /**
-   * Debug county query specifically to diagnose issues
-   */
-  async debugCountyQuery(countyFips: string) {
-    const { data, error } = await this.supabase
-      .from('realtor_county')
-      .select('county_fips, county_name')
-      .eq('county_fips', countyFips)
-      .order('period_date', { ascending: false })
-      .limit(1);
+    for (const row of data) {
+      locationName = row.location_name || locationName;
+      medianPrice = row.median_price ?? medianPrice;
+      const scoreType = row.score_type as ScoreType;
+      scoresByType[scoreType] = {
+        score: row.score,
+        grade: row.grade,
+        confidence: row.confidence,
+        confidence_level: row.confidence_level,
+      };
+    }
 
     return {
-      input: countyFips,
-      data,
-      error: error?.message,
-      dataLength: data?.length ?? 0,
-      firstRow: data?.[0] ?? null,
+      location_id: locationId,
+      location_name: locationName,
+      geography,
+      median_price: medianPrice,
+      score_date: targetDate,
+      scores: {
+        homeready: scoresByType.homeready || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+        investoredge: scoresByType.investoredge || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+        markethealth: scoresByType.markethealth || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
+      },
+      return_1y: data[0]?.return_1y,
+      return_3y_ann: data[0]?.return_3y_ann,
     };
   }
 
-  async debugGetMetrics(geography: any, geographyType: GeographyType, periodDate: string) {
-    return this.fetchMetrics(geography, geographyType, periodDate);
+  /**
+   * Get top markets by score
+   */
+  async getTopMarkets(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    limit: number = 10,
+    periodDate?: string,
+  ): Promise<Array<{ location_id: string; location_name: string; score: number; grade: string }>> {
+    const targetDate = periodDate || (await this.getLatestDate(geography));
+    if (!targetDate) return [];
+
+    const { data } = await this.supabase
+      .from('propertyiq_scores')
+      .select('location_id, location_name, score, grade')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', targetDate)
+      .order('score', { ascending: false })
+      .limit(limit);
+
+    return data || [];
   }
 
-  async debugGetPercentiles(geographyType: GeographyType, periodDate: string) {
-    return this.fetchPercentiles(geographyType, periodDate);
-  }
+  /**
+   * Search markets by name
+   */
+  async searchMarkets(
+    query: string,
+    geography?: GeographyLevel,
+    limit: number = 20,
+  ): Promise<Array<{ location_id: string; location_name: string; geography: string }>> {
+    let queryBuilder = this.supabase
+      .from('propertyiq_scores')
+      .select('location_id, location_name, geography')
+      .ilike('location_name', `%${query}%`)
+      .eq('score_type', 'homeready'); // Just need one score type for search
 
-  async debugGetTableCount(tableName: string): Promise<{ count: number; error?: string }> {
-    try {
-      const { count, error } = await this.supabase
-        .from(tableName)
-        .select('*', { count: 'exact', head: true });
-
-      if (error) {
-        return { count: 0, error: error.message };
-      }
-      return { count: count || 0 };
-    } catch (err) {
-      return { count: 0, error: String(err) };
+    if (geography) {
+      queryBuilder = queryBuilder.eq('geography', geography);
     }
+
+    const { data } = await queryBuilder.limit(limit);
+
+    // Deduplicate by location_id + geography
+    const seen = new Set<string>();
+    return (data || []).filter(row => {
+      const key = `${row.geography}:${row.location_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   // ============================================================================
   // Private: Data Fetching
   // ============================================================================
 
-  private async getLatestDate(
-    geographyType: GeographyType,
-  ): Promise<string | null> {
-    const table = this.getTableForGeography(geographyType);
+  private async getLatestDate(geography: GeographyLevel): Promise<string | null> {
+    const table = this.getRealtorTable(geography);
 
     const { data } = await this.supabase
       .from(table)
@@ -474,1284 +278,489 @@ export class ScoringService {
     return data?.[0]?.period_date || null;
   }
 
-  /**
-   * Get the primary data table for a geography type
-   * Uses Realtor tables as primary source (like the map page)
-   */
-  private getTableForGeography(geographyType: GeographyType): string {
-    switch (geographyType) {
-      case 'state':
-        return 'realtor_state';
-      case 'metro':
-        return 'realtor_metro';
-      case 'county':
-        return 'realtor_county';
-      case 'zip':
-        return 'realtor_zip';
-      default:
-        return 'realtor_metro';
+  private getRealtorTable(geography: GeographyLevel): string {
+    switch (geography) {
+      case 'metro': return 'realtor_metro';
+      case 'county': return 'realtor_county';
+      case 'zip': return 'realtor_zip';
+      default: return 'realtor_metro';
+    }
+  }
+
+  private getIdColumn(geography: GeographyLevel): string {
+    switch (geography) {
+      case 'metro': return 'cbsa_code';
+      case 'county': return 'county_fips';
+      case 'zip': return 'postal_code';
+      default: return 'cbsa_code';
+    }
+  }
+
+  private getNameColumn(geography: GeographyLevel): string {
+    switch (geography) {
+      case 'metro': return 'cbsa_title';
+      case 'county': return 'county_name';
+      case 'zip': return 'zip_name';
+      default: return 'cbsa_title';
     }
   }
 
   /**
-   * Get geography info directly from the data tables (like the map page does)
-   * This avoids dependency on a separate 'geographies' table
+   * Fetch all metrics for all locations at a geography level
    */
-  private async getGeography(
-    geographyId: string,
-    geographyType: GeographyType,
-  ): Promise<{ geography_id: string; name: string; state_code?: string; region_id?: string } | null> {
-    switch (geographyType) {
-      case 'state': {
-        // Query realtor_state table - uses state_id (abbreviation like "IL")
-        const { data } = await this.supabase
-          .from('realtor_state')
-          .select('state_id, state_name')
-          .eq('state_id', geographyId.toUpperCase())
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (data?.[0]) {
-          return {
-            geography_id: data[0].state_id,
-            name: data[0].state_name,
-            state_code: data[0].state_id,
-          };
-        }
-        // Fallback to zillow_state if not in realtor
-        const { data: zillowData } = await this.supabase
-          .from('zillow_state')
-          .select('region_id, region_name, state_abbrev')
-          .eq('state_abbrev', geographyId.toUpperCase())
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          return {
-            geography_id: zillowData[0].state_abbrev || geographyId,
-            name: zillowData[0].region_name,
-            state_code: zillowData[0].state_abbrev,
-            region_id: zillowData[0].region_id,
-          };
-        }
-        return null;
-      }
-
-      case 'metro': {
-        // Query realtor_metro table - uses cbsa_code
-        const { data } = await this.supabase
-          .from('realtor_metro')
-          .select('cbsa_code, cbsa_title')
-          .eq('cbsa_code', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (data?.[0]) {
-          return {
-            geography_id: data[0].cbsa_code,
-            name: data[0].cbsa_title,
-          };
-        }
-        // Fallback to zillow_metro
-        const { data: zillowData } = await this.supabase
-          .from('zillow_metro')
-          .select('region_id, region_name, cbsa_code')
-          .eq('cbsa_code', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          return {
-            geography_id: zillowData[0].cbsa_code || geographyId,
-            name: zillowData[0].region_name,
-            region_id: zillowData[0].region_id,
-          };
-        }
-        return null;
-      }
-
-      case 'county': {
-        // Query realtor_county table - uses county_fips
-        const { data } = await this.supabase
-          .from('realtor_county')
-          .select('county_fips, county_name')
-          .eq('county_fips', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (data?.[0]) {
-          // Derive state from first 2 digits of FIPS code
-          const stateFips = data[0].county_fips?.substring(0, 2);
-          return {
-            geography_id: data[0].county_fips,
-            name: data[0].county_name,
-            state_code: this.fipsToStateAbbr(stateFips),
-          };
-        }
-        // Fallback to zillow_county
-        const { data: zillowData } = await this.supabase
-          .from('zillow_county')
-          .select('region_id, region_name, county_fips, state_abbrev')
-          .eq('county_fips', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          return {
-            geography_id: zillowData[0].county_fips || geographyId,
-            name: zillowData[0].region_name,
-            state_code: zillowData[0].state_abbrev,
-            region_id: zillowData[0].region_id,
-          };
-        }
-        return null;
-      }
-
-      case 'zip': {
-        // Query realtor_zip table - uses postal_code
-        const { data } = await this.supabase
-          .from('realtor_zip')
-          .select('postal_code, zip_name')
-          .eq('postal_code', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (data?.[0]) {
-          // Extract state from zip_name (format: "City, ST")
-          const stateMatch = data[0].zip_name?.match(/, ([A-Z]{2})$/);
-          return {
-            geography_id: data[0].postal_code,
-            name: data[0].zip_name,
-            state_code: stateMatch?.[1],
-          };
-        }
-        // Fallback to zillow_zip
-        const { data: zillowData } = await this.supabase
-          .from('zillow_zip')
-          .select('region_id, region_name, zip_code, state_abbrev')
-          .eq('zip_code', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          return {
-            geography_id: zillowData[0].zip_code || geographyId,
-            name: zillowData[0].region_name,
-            state_code: zillowData[0].state_abbrev,
-            region_id: zillowData[0].region_id,
-          };
-        }
-        return null;
-      }
-
-      default:
-        return null;
-    }
-  }
-
-  /**
-   * Fetch metrics directly from data tables using geography identifiers
-   * (same approach as map page - no dependency on separate geographies table)
-   */
-  private async fetchMetrics(
-    geography: { geography_id: string; name: string; state_code?: string; region_id?: string },
-    geographyType: GeographyType,
+  private async fetchAllMetrics(
+    geography: GeographyLevel,
     periodDate: string,
-  ): Promise<MetricData> {
-    const metrics: MetricData = {};
+  ): Promise<LocationMetrics[]> {
+    const table = this.getRealtorTable(geography);
+    const idCol = this.getIdColumn(geography);
+    const nameCol = this.getNameColumn(geography);
 
-    // Fetch from Zillow tables using the appropriate identifier
-    switch (geographyType) {
-      case 'state': {
-        // Query zillow_state by state_abbrev
-        const { data: zillowData } = await this.supabase
-          .from('zillow_state')
-          .select('*')
-          .eq('state_abbrev', geography.geography_id.toUpperCase())
-          .eq('period_date', periodDate)
-          .limit(1);
+    // Fetch Realtor data
+    const { data: realtorData } = await this.supabase
+      .from(table)
+      .select(`${idCol}, ${nameCol}, hotness_score, demand_score, pending_ratio, price_reduced_share, active_listing_count_yy, price_reduced_count_yy, median_listing_price`)
+      .eq('period_date', periodDate);
 
-        if (zillowData?.[0]) {
-          // Map Zillow columns to metric names
-          const row = zillowData[0];
-          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
-          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
-        }
-        break;
-      }
+    if (!realtorData || realtorData.length === 0) return [];
 
-      case 'metro': {
-        // Query zillow_metro by cbsa_code
-        const { data: zillowData } = await this.supabase
-          .from('zillow_metro')
-          .select('*')
-          .eq('cbsa_code', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
+    // Build location metrics map
+    const locationsMap = new Map<string, LocationMetrics>();
 
-        if (zillowData?.[0]) {
-          const row = zillowData[0];
-          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
-          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
-        }
-
-        // Also get ZORI (rent) data
-        const { data: zoriData } = await this.supabase
-          .from('zillow_zori')
-          .select('*')
-          .eq('cbsa_code', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
-
-        if (zoriData?.[0]) {
-          const row = zoriData[0];
-          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
-          if (row.zori_yoy != null) metrics.zori_yoy = { value: row.zori_yoy, date: periodDate, source: 'zillow' };
-        }
-        break;
-      }
-
-      case 'county': {
-        // Query zillow_county by county_fips
-        const { data: zillowData } = await this.supabase
-          .from('zillow_county')
-          .select('*')
-          .eq('county_fips', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          const row = zillowData[0];
-          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
-          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
-        }
-
-        // Also get ZORI (rent) data for counties
-        const { data: zoriData } = await this.supabase
-          .from('zillow_zori')
-          .select('*')
-          .eq('county_fips', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
-
-        if (zoriData?.[0]) {
-          const row = zoriData[0];
-          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
-        }
-        break;
-      }
-
-      case 'zip': {
-        // Query zillow_zip by zip_code
-        const { data: zillowData } = await this.supabase
-          .from('zillow_zip')
-          .select('*')
-          .eq('zip_code', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
-
-        if (zillowData?.[0]) {
-          const row = zillowData[0];
-          if (row.zhvi != null) metrics.zhvi = { value: row.zhvi, date: periodDate, source: 'zillow' };
-          if (row.zhvi_yoy != null) metrics.zhvi_yoy = { value: row.zhvi_yoy, date: periodDate, source: 'zillow' };
-        }
-
-        // Also get ZORI (rent) data for ZIPs
-        const { data: zoriData } = await this.supabase
-          .from('zillow_zori')
-          .select('*')
-          .eq('zip_code', geography.geography_id)
-          .eq('period_date', periodDate)
-          .limit(1);
-
-        if (zoriData?.[0]) {
-          const row = zoriData[0];
-          if (row.zori != null) metrics.zori = { value: row.zori, date: periodDate, source: 'zillow' };
-        }
-        break;
-      }
+    for (const row of realtorData) {
+      const locationId = row[idCol];
+      locationsMap.set(locationId, {
+        location_id: locationId,
+        location_name: row[nameCol] || locationId,
+        median_price: row.median_listing_price,
+        hotness_score: row.hotness_score,
+        demand_score: row.demand_score,
+        pending_ratio: row.pending_ratio,
+        price_reduced_share: row.price_reduced_share,
+        active_listing_count_yy: row.active_listing_count_yy,
+        price_reduced_count_yy: row.price_reduced_count_yy,
+      });
     }
 
-    // Also fetch Realtor data for additional metrics
-    await this.fetchRealtorMetrics(metrics, geography, geographyType, periodDate);
+    // For metro and county, also fetch census/economic data
+    if (geography === 'metro' || geography === 'county') {
+      await this.fetchCensusData(locationsMap, geography, periodDate);
+      await this.fetchEconomicData(locationsMap, geography, periodDate);
+    }
 
-    return metrics;
+    return Array.from(locationsMap.values());
   }
 
   /**
-   * Fetch additional metrics from Realtor tables
+   * Fetch census data (population_yoy, median_gross_rent, homeownership_rate)
    */
-  private async fetchRealtorMetrics(
-    metrics: MetricData,
-    geography: { geography_id: string },
-    geographyType: GeographyType,
+  private async fetchCensusData(
+    locationsMap: Map<string, LocationMetrics>,
+    geography: GeographyLevel,
     periodDate: string,
   ): Promise<void> {
-    let table: string;
-    let idColumn: string;
+    const table = geography === 'metro' ? 'census_metro' : 'census_county';
+    const idCol = geography === 'metro' ? 'cbsa_code' : 'fips_code';
 
-    switch (geographyType) {
-      case 'state':
-        table = 'realtor_state';
-        idColumn = 'state_id';
-        break;
-      case 'metro':
-        table = 'realtor_metro';
-        idColumn = 'cbsa_code';
-        break;
-      case 'county':
-        table = 'realtor_county';
-        idColumn = 'county_fips';
-        break;
-      case 'zip':
-        table = 'realtor_zip';
-        idColumn = 'postal_code';
-        break;
-      default:
-        return;
-    }
+    // Get the year from periodDate for census (annual data)
+    const year = new Date(periodDate).getFullYear();
 
     const { data } = await this.supabase
       .from(table)
-      .select('*')
-      .eq(idColumn, geographyType === 'state' ? geography.geography_id.toUpperCase() : geography.geography_id)
-      .eq('period_date', periodDate)
-      .limit(1);
-
-    if (data?.[0]) {
-      const row = data[0];
-      // Map Realtor columns to metric names matching component definitions in scoring.types.ts
-      // IMPORTANT: Metric names must match exactly what components expect for percentile lookups to work
-
-      // Price metrics
-      if (row.median_listing_price != null) {
-        metrics.median_listing_price = { value: row.median_listing_price, date: periodDate, source: 'realtor' };
-      }
-      if (row.median_listing_price_yy != null) {
-        metrics.median_listing_price_yy = { value: row.median_listing_price_yy, date: periodDate, source: 'realtor' };
-      }
-      if (row.median_listing_price_mm != null) {
-        metrics.median_listing_price_mm = { value: row.median_listing_price_mm, date: periodDate, source: 'realtor' };
-      }
-      if (row.median_listing_price_per_square_foot != null) {
-        metrics.median_listing_price_per_square_foot = { value: row.median_listing_price_per_square_foot, date: periodDate, source: 'realtor' };
-      }
-
-      // Inventory metrics - use EXACT names from component definitions
-      if (row.active_listing_count != null) {
-        metrics.inventory = { value: row.active_listing_count, date: periodDate, source: 'realtor' };
-      }
-      if (row.active_listing_count_yy != null) {
-        metrics.active_listing_count_yy = { value: row.active_listing_count_yy, date: periodDate, source: 'realtor' };
-      }
-
-      // Days on market - use EXACT name from component definitions
-      if (row.median_days_on_market != null) {
-        metrics.median_days_on_market = { value: row.median_days_on_market, date: periodDate, source: 'realtor' };
-      }
-
-      // Listing activity metrics - use EXACT names from component definitions
-      if (row.new_listing_count != null) {
-        metrics.new_listings = { value: row.new_listing_count, date: periodDate, source: 'realtor' };
-      }
-      if (row.new_listing_count_yy != null) {
-        metrics.new_listing_count_yy = { value: row.new_listing_count_yy, date: periodDate, source: 'realtor' };
-      }
-      if (row.pending_listing_count != null) {
-        metrics.pending_sales = { value: row.pending_listing_count, date: periodDate, source: 'realtor' };
-      }
-      if (row.pending_listing_count_yy != null) {
-        metrics.pending_listing_count_yy = { value: row.pending_listing_count_yy, date: periodDate, source: 'realtor' };
-      }
-
-      // Ratio metrics - use EXACT names from component definitions
-      if (row.pending_ratio != null) {
-        metrics.pending_ratio = { value: row.pending_ratio, date: periodDate, source: 'realtor' };
-      }
-      if (row.price_reduced_share != null) {
-        metrics.price_reduced_share = { value: row.price_reduced_share, date: periodDate, source: 'realtor' };
-      }
-      if (row.price_increased_share != null) {
-        metrics.price_increased_share = { value: row.price_increased_share, date: periodDate, source: 'realtor' };
-      }
-
-      // Market indicators
-      if (row.hotness_score != null) {
-        metrics.hotness_score = { value: row.hotness_score, date: periodDate, source: 'realtor' };
-      }
-      if (row.hotness_rank != null) {
-        metrics.hotness_rank = { value: row.hotness_rank, date: periodDate, source: 'realtor' };
-      }
-      if (row.supply_score != null) {
-        metrics.supply_score = { value: row.supply_score, date: periodDate, source: 'realtor' };
-      }
-      if (row.demand_score != null) {
-        metrics.demand_score = { value: row.demand_score, date: periodDate, source: 'realtor' };
-      }
-    }
-  }
-
-  private async fetchPercentiles(
-    geographyType: GeographyType,
-    periodDate: string,
-  ): Promise<Map<string, MetricPercentiles>> {
-    const { data } = await this.supabase
-      .from('metric_percentiles')
-      .select('*')
-      .eq('geography_type', geographyType)
-      .eq('period_date', periodDate);
-
-    const map = new Map<string, MetricPercentiles>();
+      .select(`${idCol}, population_yoy, median_gross_rent, homeownership_rate`)
+      .eq('year', year);
 
     if (data) {
       for (const row of data) {
-        map.set(row.metric_name, {
-          metricName: row.metric_name,  // Column is metric_name per migration 030
-          geographyType: row.geography_type,
-          periodDate: row.period_date,
-          p10: row.p10,
-          p20: row.p20,
-          p30: row.p30,
-          p40: row.p40,
-          p50: row.p50,
-          p60: row.p60,
-          p70: row.p70,
-          p80: row.p80,
-          p90: row.p90,
-          min: row.min_value,
-          max: row.max_value,
-          count: row.count_values,
-          mean: row.mean_value,
-          stddev: row.stddev_value,
-        });
+        const location = locationsMap.get(row[idCol]);
+        if (location) {
+          location.population_yoy = row.population_yoy;
+          location.median_gross_rent = row.median_gross_rent;
+          location.homeownership_rate = row.homeownership_rate;
+        }
+      }
+    }
+  }
+
+  /**
+   * Fetch economic data (unemployment_rate_yoy)
+   */
+  private async fetchEconomicData(
+    locationsMap: Map<string, LocationMetrics>,
+    geography: GeographyLevel,
+    periodDate: string,
+  ): Promise<void> {
+    const table = geography === 'metro' ? 'economic_metro' : 'economic_county';
+    const idCol = geography === 'metro' ? 'cbsa_code' : 'fips_code';
+
+    const { data } = await this.supabase
+      .from(table)
+      .select(`${idCol}, unemployment_rate_yoy`)
+      .eq('period_date', periodDate);
+
+    if (data) {
+      for (const row of data) {
+        const location = locationsMap.get(row[idCol]);
+        if (location) {
+          location.unemployment_rate_yoy = row.unemployment_rate_yoy;
+        }
+      }
+    }
+  }
+
+  /**
+   * Fetch calculated metrics (affordability_ratio, rent_price_ratio)
+   */
+  private async fetchCalculatedMetrics(
+    locationsMap: Map<string, LocationMetrics>,
+    geography: GeographyLevel,
+    periodDate: string,
+  ): Promise<void> {
+    const { data } = await this.supabase
+      .from('calculated_metrics')
+      .select('geography_id, affordability_ratio, rent_price_ratio')
+      .eq('geography_type', geography)
+      .eq('period_date', periodDate);
+
+    if (data) {
+      for (const row of data) {
+        const location = locationsMap.get(row.geography_id);
+        if (location) {
+          location.affordability_ratio = row.affordability_ratio;
+          location.rent_price_ratio = row.rent_price_ratio;
+        }
+      }
+    }
+  }
+
+  /**
+   * For ZIP codes, inherit census data from parent county
+   */
+  private async inheritCountyData(locations: LocationMetrics[]): Promise<void> {
+    // Get ZIP to county mapping
+    const zipCodes = locations.map(l => l.location_id);
+
+    // Query zillow_zip for county_fips
+    const { data: zipMapping } = await this.supabase
+      .from('zillow_zip')
+      .select('zip_code, county_fips')
+      .in('zip_code', zipCodes);
+
+    if (!zipMapping) return;
+
+    // Build ZIP to county map
+    const zipToCounty = new Map<string, string>();
+    for (const row of zipMapping) {
+      if (row.county_fips) {
+        zipToCounty.set(row.zip_code, row.county_fips);
       }
     }
 
-    return map;
+    // Get unique county FIPS codes
+    const countyFips = [...new Set(zipToCounty.values())];
+
+    // Fetch county census data
+    const year = new Date().getFullYear();
+    const { data: countyData } = await this.supabase
+      .from('census_county')
+      .select('fips_code, population_yoy')
+      .eq('year', year)
+      .in('fips_code', countyFips);
+
+    // Fetch county economic data
+    const { data: economicData } = await this.supabase
+      .from('economic_county')
+      .select('fips_code, unemployment_rate_yoy')
+      .in('fips_code', countyFips);
+
+    // Build county data maps
+    const countyPopulation = new Map<string, number>();
+    const countyUnemployment = new Map<string, number>();
+
+    if (countyData) {
+      for (const row of countyData) {
+        if (row.population_yoy != null) {
+          countyPopulation.set(row.fips_code, row.population_yoy);
+        }
+      }
+    }
+
+    if (economicData) {
+      for (const row of economicData) {
+        if (row.unemployment_rate_yoy != null) {
+          countyUnemployment.set(row.fips_code, row.unemployment_rate_yoy);
+        }
+      }
+    }
+
+    // Apply inheritance to ZIP locations
+    for (const location of locations) {
+      const countyFips = zipToCounty.get(location.location_id);
+      if (!countyFips) continue;
+
+      const inherited: string[] = [];
+
+      if (location.population_yoy == null && countyPopulation.has(countyFips)) {
+        location.population_yoy = countyPopulation.get(countyFips);
+        inherited.push('population_yoy');
+      }
+
+      if (location.unemployment_rate_yoy == null && countyUnemployment.has(countyFips)) {
+        location.unemployment_rate_yoy = countyUnemployment.get(countyFips);
+        inherited.push('unemployment_rate_yoy');
+      }
+
+      if (inherited.length > 0) {
+        location._inherited = inherited;
+      }
+    }
   }
 
   // ============================================================================
-  // Private: Derived Metrics Calculation
+  // Private: Z-Score Calculation
   // ============================================================================
 
-  private async calculateDerivedMetrics(
-    geographyId: string,
-    geographyType: GeographyType,
-    periodDate: string,
-    metrics: MetricData,
-  ): Promise<CalculatedMetrics | null> {
-    const zhvi = metrics.zhvi?.value;
-    const zori = metrics.zori?.value;
+  /**
+   * Get all metric names used across all formulas for a geography
+   */
+  private getAllMetricNames(geography: GeographyLevel): string[] {
+    const metrics = new Set<string>();
 
-    // GRM = Home Price / Annual Rent
-    const grm = zhvi && zori ? zhvi / (zori * 12) : null;
+    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
+      const formula = FORMULA_WEIGHTS[geography][scoreType];
+      for (const metricName of Object.keys(formula)) {
+        metrics.add(metricName);
+      }
+    }
 
-    // Rent/Price Ratio = Annual Rent / Home Price
-    const rentPriceRatio = zhvi && zori ? (zori * 12) / zhvi : null;
+    return Array.from(metrics);
+  }
 
-    // Cap Rate Proxy = Rent Yield - 40% for expenses (rough estimate)
-    const capRateProxy = rentPriceRatio ? rentPriceRatio * 0.6 : null;
+  /**
+   * Calculate z-scores for all metrics across all locations
+   */
+  private calculateZScores(
+    locations: LocationMetrics[],
+    metricNames: string[],
+  ): ZScoreMap {
+    const zScores: ZScoreMap = {};
 
-    // Price/Rent Ratio = Home Price / Annual Rent
-    const priceRentRatio = zhvi && zori ? zhvi / (zori * 12) : null;
+    // Initialize zScores for each location
+    for (const location of locations) {
+      zScores[location.location_id] = {};
+    }
 
-    // YoY changes would need historical data lookup
-    // For now, check if we have them in the metrics already
-    const zhviYoyChange = metrics.zhvi_yoy?.value || null;
-    const zoriYoyChange = metrics.zori_yoy?.value || null;
-    const inventoryYoyChange = metrics.inventory_yoy?.value || null;
+    // Calculate z-scores for each metric
+    for (const metricName of metricNames) {
+      // Get all non-null values for this metric
+      const values: number[] = [];
+      for (const location of locations) {
+        const value = (location as any)[metricName];
+        if (value !== null && value !== undefined && !isNaN(value)) {
+          values.push(value);
+        }
+      }
 
-    // Months of supply (inventory / monthly sales rate)
-    // Would need pending_sales or sales_count data
-    const inventory = metrics.inventory?.value;
-    const pendingSales = metrics.pending_sales?.value;
-    const monthsOfSupply =
-      inventory && pendingSales ? inventory / pendingSales : null;
+      if (values.length < 2) continue; // Need at least 2 values for meaningful z-score
 
-    return {
-      geographyId,
-      geographyType,
-      periodDate,
-      grm,
-      rentPriceRatio,
-      capRateProxy,
-      priceRentRatio,
-      zhviYoyChange,
-      zoriYoyChange,
-      inventoryYoyChange,
-      zhvi3yChange: null,
-      zhvi5yChange: null,
-      zhvi90dChange: null,
-      zori90dChange: null,
-      inventory90dChange: null,
-      dom90dChange: null,
-      zhviStddev12m: null,
-      zhviStddev36m: null,
-      zoriStddev12m: null,
-      inventoryStddev12m: null,
-      domStddev12m: null,
-      monthsOfSupply,
-    };
+      // Calculate mean and standard deviation
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+      const std = Math.sqrt(variance);
+
+      if (std === 0) continue; // Skip if no variance
+
+      // Calculate z-score for each location
+      for (const location of locations) {
+        const value = (location as any)[metricName];
+        if (value !== null && value !== undefined && !isNaN(value)) {
+          zScores[location.location_id][metricName] = (value - mean) / std;
+        }
+      }
+    }
+
+    return zScores;
   }
 
   // ============================================================================
   // Private: Score Calculation
   // ============================================================================
 
-  private calculateHomeReadyComponents(
-    metrics: MetricData,
-    percentiles: Map<string, MetricPercentiles>,
-  ): Record<keyof HomeReadyComponents, ComponentScore> {
-    const components: Record<keyof HomeReadyComponents, ComponentScore> = {
-      affordability: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.affordability,
-        metrics,
-        percentiles,
-      ),
-      market_timing: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.market_timing,
-        metrics,
-        percentiles,
-      ),
-      stability: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.stability,
-        metrics,
-        percentiles,
-      ),
-      growth_potential: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.growth_potential,
-        metrics,
-        percentiles,
-      ),
-      livability: this.calculateComponentWithDefinitions(
-        HOMEREADY_DETAILED_METRICS.livability,
-        metrics,
-        percentiles,
-      ),
-    };
+  /**
+   * Apply formula weights to z-scores
+   */
+  private applyFormula(
+    locations: LocationMetrics[],
+    zScores: ZScoreMap,
+    formula: FormulaDefinition,
+  ): RawScoreResult[] {
+    const results: RawScoreResult[] = [];
 
-    return components;
-  }
+    for (const location of locations) {
+      const locationZScores = zScores[location.location_id] || {};
+      let rawScore = 0;
+      let totalWeight = 0;
 
-  private calculateInvestorEdgeComponents(
-    metrics: MetricData,
-    percentiles: Map<string, MetricPercentiles>,
-  ): Record<keyof InvestorEdgeComponents, ComponentScore> {
-    const components: Record<keyof InvestorEdgeComponents, ComponentScore> = {
-      cash_flow: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.cash_flow,
-        metrics,
-        percentiles,
-      ),
-      rent_demand: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.rent_demand,
-        metrics,
-        percentiles,
-      ),
-      appreciation: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.appreciation,
-        metrics,
-        percentiles,
-      ),
-      entry_point: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.entry_point,
-        metrics,
-        percentiles,
-      ),
-      risk: this.calculateComponentWithDefinitions(
-        INVESTOREDGE_DETAILED_METRICS.risk,
-        metrics,
-        percentiles,
-      ),
-    };
-
-    return components;
-  }
-
-  private calculateComponentWithDefinitions(
-    metricDefinitions: MetricDefinition[],
-    metrics: MetricData,
-    percentiles: Map<string, MetricPercentiles>,
-  ): ComponentScore {
-    const metricsUsed: string[] = [];
-    const helpingFactors: string[] = [];
-    const hurtingFactors: string[] = [];
-    let totalWeight = 0;
-    let weightedSum = 0;
-
-    for (const metricDef of metricDefinitions) {
-      const metric = metrics[metricDef.name];
-      const percentile = percentiles.get(metricDef.name);
-
-      // Handle null/missing values based on nullStrategy
-      if (!metric || metric.value === null) {
-        switch (metricDef.nullStrategy) {
-          case 'skip':
-            // Don't include in calculation
-            continue;
-          case 'neutral':
-            // Include at neutral score (50)
-            totalWeight += metricDef.weight;
-            weightedSum += 50 * metricDef.weight;
-            continue;
-          case 'penalize':
-            // Include at low score (25) for penalty
-            totalWeight += metricDef.weight;
-            weightedSum += 25 * metricDef.weight;
-            continue;
+      for (const [metricName, metricDef] of Object.entries(formula)) {
+        const zScore = locationZScores[metricName];
+        if (zScore !== undefined) {
+          // raw_score += direction × weight × z_score
+          rawScore += metricDef.direction * metricDef.weight * zScore;
+          totalWeight += metricDef.weight;
         }
       }
 
-      // If no percentile data, use min-max normalization with fallback ranges
-      // Ranges based on PropertyIQ-Scoring-Implementation-Guide.md
-      let normalizedScore: number;
-      if (!percentile) {
-        const fallbackNormalized = this.normalizeWithFallback(metricDef.name, metric.value);
-        if (fallbackNormalized === null) {
-          // No fallback range defined, use neutral for 'neutral' strategy or skip
-          if (metricDef.nullStrategy === 'neutral') {
-            totalWeight += metricDef.weight;
-            weightedSum += 50 * metricDef.weight;
-          } else if (metricDef.nullStrategy === 'penalize') {
-            totalWeight += metricDef.weight;
-            weightedSum += 25 * metricDef.weight;
-          }
-          continue;
-        }
-        normalizedScore = fallbackNormalized;
-      } else {
-        // Use percentile-based normalization
-        normalizedScore = this.valueToPercentile(metric.value, percentile);
+      // Normalize by total weight if we have partial data
+      if (totalWeight > 0 && totalWeight < 1) {
+        rawScore = rawScore / totalWeight;
       }
 
-      // Apply direction transformation
-      let adjustedScore: number;
-      switch (metricDef.direction) {
-        case 'higher_better':
-          adjustedScore = normalizedScore;
-          break;
-        case 'lower_better':
-          adjustedScore = 100 - normalizedScore;
-          break;
-        case 'moderate_better':
-          // Score highest at 50th percentile, drops off on both ends
-          const deviation = Math.abs(
-            normalizedScore - SCORING_CONSTANTS.MODERATE_TARGET_PERCENTILE,
-          );
-          adjustedScore = 100 - deviation * 2;
-          break;
-        case 'neutral':
-        default:
-          adjustedScore = 50; // Neutral contribution
-          break;
-      }
-
-      // Clamp to valid range
-      adjustedScore = Math.max(
-        SCORING_CONSTANTS.MIN_SCORE,
-        Math.min(SCORING_CONSTANTS.MAX_SCORE, adjustedScore),
-      );
-
-      // Use the defined weight for this metric
-      totalWeight += metricDef.weight;
-      weightedSum += adjustedScore * metricDef.weight;
-      metricsUsed.push(metricDef.name);
-
-      // Track helping/hurting factors
-      if (adjustedScore >= 70) {
-        helpingFactors.push(metricDef.name);
-      } else if (adjustedScore <= 30) {
-        hurtingFactors.push(metricDef.name);
-      }
+      results.push({ locationId: location.location_id, rawScore });
     }
 
-    // Calculate final score (default to 50 if no data)
-    const score = totalWeight > 0 ? weightedSum / totalWeight : 50;
+    return results;
+  }
+
+  /**
+   * Normalize raw scores to 0-100 range
+   */
+  private normalizeScores(rawScores: RawScoreResult[]): number[] {
+    if (rawScores.length === 0) return [];
+
+    const scores = rawScores.map(r => r.rawScore);
+    const minRaw = Math.min(...scores);
+    const maxRaw = Math.max(...scores);
+
+    // Handle edge case where all scores are the same
+    if (maxRaw === minRaw) {
+      return rawScores.map(() => 50); // All get middle score
+    }
+
+    return rawScores.map(r => {
+      const normalized = ((r.rawScore - minRaw) / (maxRaw - minRaw)) * 100;
+      return Math.round(normalized * 10) / 10; // Round to 1 decimal
+    });
+  }
+
+  // ============================================================================
+  // Private: Confidence Calculation
+  // ============================================================================
+
+  /**
+   * Calculate 4-factor confidence score
+   */
+  private calculateConfidence(
+    location: LocationMetrics,
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+  ): { confidence: number; level: ConfidenceLevel } {
+    const formula = FORMULA_WEIGHTS[geography][scoreType];
+    const metricNames = Object.keys(formula);
+
+    // Factor 1: Data Completeness (30%)
+    const availableMetrics = metricNames.filter(
+      m => (location as any)[m] !== null && (location as any)[m] !== undefined,
+    ).length;
+    const completeness = (availableMetrics / metricNames.length) * 100;
+
+    // Factor 2: Model Strength (40%)
+    // correlation × 125, capped at 100
+    const correlation = MODEL_CORRELATIONS[geography][scoreType];
+    const modelStrength = Math.min(correlation * 125, 100);
+
+    // Factor 3: Sample Size (15%)
+    const sampleSizeScore = SAMPLE_SIZE_SCORES[geography];
+
+    // Factor 4: Stability (15%)
+    // 80 if has hotness_score, else 60
+    const stability = location.hotness_score != null ? 80 : 60;
+
+    // Weighted average
+    const confidence =
+      completeness * 0.30 +
+      modelStrength * 0.40 +
+      sampleSizeScore * 0.15 +
+      stability * 0.15;
+
+    const level = getConfidenceLevel(confidence);
 
     return {
-      score: Math.round(score * 100) / 100,
-      weight: 1, // Will be set by caller
-      weightedContribution: 0, // Will be calculated by aggregator
-      metricsUsed,
-      helpingFactors,
-      hurtingFactors,
+      confidence: Math.round(confidence * 10) / 10,
+      level,
     };
-  }
-
-  private valueToPercentile(
-    value: number,
-    percentiles: MetricPercentiles,
-  ): number {
-    // Find which percentile bucket the value falls into
-    if (value <= percentiles.p10) return 10;
-    if (value <= percentiles.p20) return 20;
-    if (value <= percentiles.p30) return 30;
-    if (value <= percentiles.p40) return 40;
-    if (value <= percentiles.p50) return 50;
-    if (value <= percentiles.p60) return 60;
-    if (value <= percentiles.p70) return 70;
-    if (value <= percentiles.p80) return 80;
-    if (value <= percentiles.p90) return 90;
-    return 95;
-  }
-
-  /**
-   * Fallback min-max normalization when percentiles are not available
-   * Ranges from PropertyIQ-Scoring-Implementation-Guide.md
-   */
-  private normalizeWithFallback(metricName: string, value: number): number | null {
-    // Define min/max ranges per the Implementation Guide
-    const METRIC_RANGES: Record<string, { min: number; max: number; invert?: boolean; optimal?: { min: number; max: number } }> = {
-      // Market metrics
-      price_reduced_share: { min: 0, max: 40 },
-      median_days_on_market: { min: 10, max: 120 },
-      months_of_supply: { min: 1, max: 12, optimal: { min: 4, max: 6 } },
-      pending_ratio: { min: 0.1, max: 0.8 },
-      pending_listing_count_yy: { min: -50, max: 50, invert: true },
-      active_listing_count_yy: { min: -50, max: 50, optimal: { min: -10, max: 10 } },
-      new_listing_count_yy: { min: -50, max: 50, optimal: { min: -10, max: 15 } },
-      hotness_score: { min: 0, max: 100 },
-
-      // Price metrics
-      zhvi_yoy: { min: -15, max: 20, optimal: { min: 2, max: 6 } },
-      zori_yoy: { min: -10, max: 15 },
-      median_listing_price_yy: { min: -20, max: 30 },
-      sale_to_list_ratio: { min: 0.85, max: 1.15, optimal: { min: 0.97, max: 1.03 } },
-
-      // Cash flow metrics
-      cap_rate: { min: 2, max: 12 },
-      grm: { min: 8, max: 30, invert: true },
-      gross_yield: { min: 3, max: 15 },
-      rent_to_price_ratio: { min: 0.003, max: 0.012 },
-
-      // Stability metrics
-      volatility_36m: { min: 0, max: 15, invert: true },
-      unemployment_rate: { min: 2, max: 12, invert: true },
-      employment_yoy: { min: -5, max: 5 },
-
-      // Growth metrics
-      zhvi_5y_cagr: { min: -5, max: 15 },
-      population_yoy: { min: -2, max: 5 },
-      median_household_income_yoy: { min: -5, max: 10 },
-
-      // Census metrics
-      homeownership_rate: { min: 30, max: 85 },
-      renter_share: { min: 20, max: 70 },
-      median_age: { min: 18, max: 65, optimal: { min: 30, max: 45 } },
-
-      // Entry point metrics
-      overvalued_pct: { min: -30, max: 50, invert: true },
-      inventory_surplus_pct: { min: -30, max: 50, invert: true },
-
-      // Permit metrics
-      large_multi_permits_yoy: { min: -50, max: 100, invert: true },
-    };
-
-    const range = METRIC_RANGES[metricName];
-    if (!range) return null;
-
-    // Handle optimal range (moderate_better) metrics
-    if (range.optimal) {
-      return this.normalizeOptimal(
-        value,
-        range.optimal.min,
-        range.optimal.max,
-        range.min,
-        range.max,
-      );
-    }
-
-    // Standard min-max normalization
-    const clamped = Math.max(range.min, Math.min(range.max, value));
-    let normalized = ((clamped - range.min) / (range.max - range.min)) * 100;
-
-    // Invert if lower is better
-    if (range.invert) {
-      normalized = 100 - normalized;
-    }
-
-    return Math.max(0, Math.min(100, normalized));
-  }
-
-  /**
-   * Normalize for metrics where moderate values are best
-   */
-  private normalizeOptimal(
-    value: number,
-    optimalMin: number,
-    optimalMax: number,
-    extremeMin: number,
-    extremeMax: number,
-  ): number {
-    if (value >= optimalMin && value <= optimalMax) return 100;
-    if (value < optimalMin) {
-      return Math.max(0, 100 - ((optimalMin - value) / (optimalMin - extremeMin)) * 100);
-    }
-    return Math.max(0, 100 - ((value - optimalMax) / (extremeMax - optimalMax)) * 100);
-  }
-
-  private aggregateScore<T extends string>(
-    components: Record<T, ComponentScore>,
-    weights: Record<T, number>,
-  ): number {
-    let totalWeight = 0;
-    let weightedSum = 0;
-
-    for (const [key, component] of Object.entries(components) as [
-      T,
-      ComponentScore,
-    ][]) {
-      const weight = weights[key];
-      component.weight = weight;
-      component.weightedContribution = component.score * weight;
-
-      weightedSum += component.weightedContribution;
-      totalWeight += weight;
-    }
-
-    return totalWeight > 0
-      ? Math.round((weightedSum / totalWeight) * 100) / 100
-      : 50;
-  }
-
-  // ============================================================================
-  // Private: Trend Calculation
-  // ============================================================================
-
-  private async calculateTrends(
-    geographyId: string,
-    geographyType: GeographyType,
-    currentDate: string,
-    currentHomeready: number,
-    currentInvestoredge: number,
-  ) {
-    // Get score from 6 months ago for trend calculation
-    const trendDate = this.getDateMonthsAgo(
-      currentDate,
-      SCORING_CONSTANTS.TREND_MONTHS,
-    );
-
-    const { data: previousScore } = await this.supabase
-      .from('propertyiq_scores')
-      .select('homeready_score, investoredge_score')
-      .eq('geography_id', geographyId)
-      .eq('geography_type', geographyType)
-      .eq('period_date', trendDate)
-      .single();
-
-    let homereadyTrend: 'up' | 'down' | 'stable' = 'stable';
-    let homereadyTrendChange = 0;
-    let investoredgeTrend: 'up' | 'down' | 'stable' = 'stable';
-    let investoredgeTrendChange = 0;
-
-    if (previousScore) {
-      homereadyTrendChange = currentHomeready - previousScore.homeready_score;
-      investoredgeTrendChange =
-        currentInvestoredge - previousScore.investoredge_score;
-
-      // Use configurable threshold for trend classification
-      const threshold = SCORING_CONSTANTS.TREND_THRESHOLD;
-      homereadyTrend =
-        homereadyTrendChange > threshold
-          ? 'up'
-          : homereadyTrendChange < -threshold
-            ? 'down'
-            : 'stable';
-      investoredgeTrend =
-        investoredgeTrendChange > threshold
-          ? 'up'
-          : investoredgeTrendChange < -threshold
-            ? 'down'
-            : 'stable';
-    }
-
-    return {
-      homereadyTrend,
-      homereadyTrendChange,
-      investoredgeTrend,
-      investoredgeTrendChange,
-    };
-  }
-
-  private getDateMonthsAgo(date: string, months: number): string {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() - months);
-    return d.toISOString().split('T')[0];
-  }
-
-  // ============================================================================
-  // Private: Helpers
-  // ============================================================================
-
-  private determineConfidence(
-    available: number,
-    total: number,
-    freshnessDays: number,
-  ): 'high' | 'medium' | 'low' {
-    const ratio = available / total;
-
-    // High: ≥90% metrics AND <60 days old
-    if (
-      ratio >= SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT &&
-      freshnessDays < SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS
-    ) {
-      return 'high';
-    }
-
-    // Medium: ≥70% metrics AND <120 days old
-    if (
-      ratio >= SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT &&
-      freshnessDays < SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS
-    ) {
-      return 'medium';
-    }
-
-    return 'low';
-  }
-
-  private calculateFreshness(periodDate: string): number {
-    const dataDate = new Date(periodDate);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - dataDate.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
-
-  /**
-   * Convert MetricData to MetricWithSource format for MarketHealthService
-   */
-  private convertToMetricWithSource(
-    metrics: MetricData,
-  ): Record<string, MetricWithSource> {
-    const result: Record<string, MetricWithSource> = {};
-
-    for (const [name, metric] of Object.entries(metrics)) {
-      result[name] = {
-        value: metric.value,
-        sourceGeographyId: null,
-        sourceGeographyType: metric.source || null,
-        isInherited: false,
-      };
-    }
-
-    return result;
-  }
-
-  /**
-   * Calculate Market Health trends (compare to 3 months ago)
-   */
-  private async calculateMarketHealthTrends(
-    geographyId: string,
-    geographyType: GeographyType,
-    currentDate: string,
-    currentScore: number | null,
-  ): Promise<{
-    marketHealthTrend: 'up' | 'down' | 'stable';
-    marketHealthTrendChange: number;
-  }> {
-    if (currentScore === null) {
-      return { marketHealthTrend: 'stable', marketHealthTrendChange: 0 };
-    }
-
-    // Get score from 3 months ago for trend calculation
-    const trendDate = this.getDateMonthsAgo(
-      currentDate,
-      SCORING_CONSTANTS.TREND_MONTHS,
-    );
-
-    const { data: previousScore } = await this.supabase
-      .from('propertyiq_scores')
-      .select('market_health_score')
-      .eq('geography_id', geographyId)
-      .eq('geography_type', geographyType)
-      .eq('period_date', trendDate)
-      .single();
-
-    let marketHealthTrend: 'up' | 'down' | 'stable' = 'stable';
-    let marketHealthTrendChange = 0;
-
-    if (previousScore?.market_health_score !== null && previousScore?.market_health_score !== undefined) {
-      marketHealthTrendChange = currentScore - previousScore.market_health_score;
-
-      const threshold = SCORING_CONSTANTS.TREND_THRESHOLD;
-      marketHealthTrend =
-        marketHealthTrendChange > threshold
-          ? 'up'
-          : marketHealthTrendChange < -threshold
-            ? 'down'
-            : 'stable';
-    }
-
-    return { marketHealthTrend, marketHealthTrendChange };
   }
 
   // ============================================================================
   // Private: Database Operations
   // ============================================================================
 
-  private async saveScore(score: PropertyIQScore): Promise<void> {
-    const { error } = await this.supabase.from('propertyiq_scores').upsert(
-      {
-        geography_id: score.geographyId,
-        geography_type: score.geographyType,
-        geography_name: score.geographyName,
-        state_code: score.stateCode,
-        period_date: score.periodDate,
+  /**
+   * Save score to database
+   */
+  private async saveScore(result: ScoreResult, scoreDate: string): Promise<void> {
+    // Insert/update all three score types
+    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
+      const scoreData = result.scores[scoreType];
 
-        // Market Health (FREE TIER)
-        market_health_score: score.marketHealthScore,
-        market_health_demand_strength: score.marketHealthComponents?.demand_strength?.score ?? null,
-        market_health_supply_balance: score.marketHealthComponents?.supply_balance?.score ?? null,
-        market_health_price_stability: score.marketHealthComponents?.price_stability?.score ?? null,
-        market_health_economic_foundation: score.marketHealthComponents?.economic_foundation?.score ?? null,
-        market_health_trend: score.marketHealthTrend,
-        market_health_trend_change: score.marketHealthTrendChange,
+      const { error } = await this.supabase.from('propertyiq_scores').upsert(
+        {
+          geography: result.geography,
+          location_id: result.location_id,
+          location_name: result.location_name,
+          score_type: scoreType,
+          score: scoreData.score,
+          grade: scoreData.grade,
+          confidence: scoreData.confidence,
+          confidence_level: scoreData.confidence_level,
+          median_price: result.median_price,
+          score_date: scoreDate,
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'geography,location_id,score_type,score_date',
+        },
+      );
 
-        // HomeReady (PRO TIER) - using new column names
-        homeready_score: score.homereadyScore,
-        homeready_affordability: score.homereadyComponents.affordability.score,
-        homeready_market_timing: score.homereadyComponents.market_timing.score,
-        homeready_stability: score.homereadyComponents.stability.score,
-        homeready_growth_potential: score.homereadyComponents.growth_potential.score,
-        homeready_livability: score.homereadyComponents.livability.score,
-        homeready_trend: score.homereadyTrend,
-        homeready_trend_change: score.homereadyTrendChange,
-
-        // InvestorEdge (PRO TIER) - using new column names
-        investoredge_score: score.investoredgeScore,
-        investoredge_cash_flow: score.investoredgeComponents.cash_flow.score,
-        investoredge_rent_demand: score.investoredgeComponents.rent_demand.score,
-        investoredge_appreciation: score.investoredgeComponents.appreciation.score,
-        investoredge_entry_point: score.investoredgeComponents.entry_point.score,
-        investoredge_risk: score.investoredgeComponents.risk.score,
-        investoredge_trend: score.investoredgeTrend,
-        investoredge_trend_change: score.investoredgeTrendChange,
-
-        // Confidence and completeness
-        confidence_level: score.confidenceLevel,
-        metrics_available: score.metricsAvailable,
-        metrics_total: score.metricsTotal,
-        data_freshness_days: score.dataFreshnessDays,
-        data_completeness: score.dataCompleteness,
-        inherited_metrics: score.inheritedMetrics,
-
-        calculated_at: score.calculatedAt,
-        calculation_version: score.calculationVersion,
-      },
-      {
-        onConflict: 'geography_id,geography_type,period_date',
-      },
-    );
-
-    if (error) {
-      console.error('Error saving PropertyIQ score:', error);
-    }
-
-    // Save detailed component scores for Pro tier
-    await this.saveScoreDetails(score);
-  }
-
-  private async saveScoreDetails(score: PropertyIQScore): Promise<void> {
-    // Get the score ID
-    const { data: scoreRecord } = await this.supabase
-      .from('propertyiq_scores')
-      .select('id')
-      .eq('geography_id', score.geographyId)
-      .eq('geography_type', score.geographyType)
-      .eq('period_date', score.periodDate)
-      .single();
-
-    if (!scoreRecord) return;
-
-    // Delete existing details
-    await this.supabase
-      .from('propertyiq_score_details')
-      .delete()
-      .eq('score_id', scoreRecord.id);
-
-    // Insert HomeReady component details
-    for (const [component, data] of Object.entries(score.homereadyComponents)) {
-      await this.supabase.from('propertyiq_score_details').insert({
-        score_id: scoreRecord.id,
-        score_type: 'homeready',
-        component,
-        component_score: data.score,
-        component_weight: data.weight,
-        weighted_contribution: data.weightedContribution,
-        metrics: { used: data.metricsUsed },
-        helping_factors: data.helpingFactors,
-        hurting_factors: data.hurtingFactors,
-      });
-    }
-
-    // Insert InvestorEdge component details
-    for (const [component, data] of Object.entries(
-      score.investoredgeComponents,
-    )) {
-      await this.supabase.from('propertyiq_score_details').insert({
-        score_id: scoreRecord.id,
-        score_type: 'investoredge',
-        component,
-        component_score: data.score,
-        component_weight: data.weight,
-        weighted_contribution: data.weightedContribution,
-        metrics: { used: data.metricsUsed },
-        helping_factors: data.helpingFactors,
-        hurting_factors: data.hurtingFactors,
-      });
+      if (error) {
+        console.error(`Error saving score for ${result.location_id}/${scoreType}:`, error);
+        throw error;
+      }
     }
   }
 
-  private mapDbToScore(data: any): PropertyIQScore {
+  // ============================================================================
+  // Debug Methods
+  // ============================================================================
+
+  async debugGetLatestDate(geography: GeographyLevel): Promise<string | null> {
+    return this.getLatestDate(geography);
+  }
+
+  async debugGetMetricStats(
+    geography: GeographyLevel,
+    metricName: string,
+    periodDate?: string,
+  ): Promise<{ count: number; min: number; max: number; mean: number; std: number } | null> {
+    const targetDate = periodDate || (await this.getLatestDate(geography));
+    if (!targetDate) return null;
+
+    const locations = await this.fetchAllMetrics(geography, targetDate);
+    const values = locations
+      .map(l => (l as any)[metricName])
+      .filter(v => v !== null && v !== undefined && !isNaN(v));
+
+    if (values.length === 0) return null;
+
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const std = Math.sqrt(variance);
+
     return {
-      geographyId: data.geography_id,
-      geographyType: data.geography_type,
-      geographyName: data.geography_name,
-      stateCode: data.state_code,
-      periodDate: data.period_date,
-
-      // Market Health (FREE TIER)
-      marketHealthScore: data.market_health_score,
-      marketHealthComponents: data.market_health_score !== null ? {
-        demand_strength: {
-          score: data.market_health_demand_strength,
-          weight: MARKET_HEALTH_WEIGHTS.demand_strength,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        supply_balance: {
-          score: data.market_health_supply_balance,
-          weight: MARKET_HEALTH_WEIGHTS.supply_balance,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        price_stability: {
-          score: data.market_health_price_stability,
-          weight: MARKET_HEALTH_WEIGHTS.price_stability,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        economic_foundation: {
-          score: data.market_health_economic_foundation,
-          weight: MARKET_HEALTH_WEIGHTS.economic_foundation,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-      } : null,
-      marketHealthTrend: data.market_health_trend || 'stable',
-      marketHealthTrendChange: data.market_health_trend_change || 0,
-
-      // HomeReady (PRO TIER)
-      homereadyScore: data.homeready_score,
-      homereadyComponents: {
-        affordability: {
-          score: data.homeready_affordability,
-          weight: HOMEREADY_WEIGHTS.affordability,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        market_timing: {
-          score: data.homeready_market_timing,
-          weight: HOMEREADY_WEIGHTS.market_timing,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        stability: {
-          score: data.homeready_stability,
-          weight: HOMEREADY_WEIGHTS.stability,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        growth_potential: {
-          score: data.homeready_growth_potential,
-          weight: HOMEREADY_WEIGHTS.growth_potential,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        livability: {
-          score: data.homeready_livability,
-          weight: HOMEREADY_WEIGHTS.livability,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-      },
-      homereadyTrend: data.homeready_trend || 'stable',
-      homereadyTrendChange: data.homeready_trend_change || 0,
-
-      // InvestorEdge (PRO TIER)
-      investoredgeScore: data.investoredge_score,
-      investoredgeComponents: {
-        cash_flow: {
-          score: data.investoredge_cash_flow,
-          weight: INVESTOREDGE_WEIGHTS.cash_flow,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        rent_demand: {
-          score: data.investoredge_rent_demand,
-          weight: INVESTOREDGE_WEIGHTS.rent_demand,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        appreciation: {
-          score: data.investoredge_appreciation,
-          weight: INVESTOREDGE_WEIGHTS.appreciation,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        entry_point: {
-          score: data.investoredge_entry_point,
-          weight: INVESTOREDGE_WEIGHTS.entry_point,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-        risk: {
-          score: data.investoredge_risk,
-          weight: INVESTOREDGE_WEIGHTS.risk,
-          weightedContribution: 0,
-          metricsUsed: [],
-          helpingFactors: [],
-          hurtingFactors: [],
-        },
-      },
-      investoredgeTrend: data.investoredge_trend || 'stable',
-      investoredgeTrendChange: data.investoredge_trend_change || 0,
-
-      // Confidence and completeness
-      confidenceLevel: data.confidence_level,
-      metricsAvailable: data.metrics_available,
-      metricsTotal: data.metrics_total,
-      dataFreshnessDays: data.data_freshness_days,
-      dataCompleteness: data.data_completeness || 0,
-      inheritedMetrics: data.inherited_metrics || {},
-
-      calculatedAt: data.calculated_at,
-      calculationVersion: data.calculation_version,
+      count: values.length,
+      min: Math.min(...values),
+      max: Math.max(...values),
+      mean: Math.round(mean * 100) / 100,
+      std: Math.round(std * 100) / 100,
     };
   }
 }
