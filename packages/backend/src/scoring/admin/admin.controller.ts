@@ -38,6 +38,7 @@ import {
 import {
   FormulaVersionService,
   CreateVersionInput,
+  GeographyLevel,
 } from '../versioning/formula-version.service';
 import {
   ABTestService,
@@ -48,8 +49,14 @@ import type { ScoreType } from '../scoring.types';
 // DTOs
 interface CreateFormulaVersionDto {
   scoreType: string;
+  geography?: string;
   formulaConfig: {
-    components: Record<
+    features?: Array<{
+      name: string;
+      weight: number;
+      direction: '+' | '-';
+    }>;
+    components?: Record<
       string,
       {
         weight: number;
@@ -95,7 +102,10 @@ export class AdminController {
    * List all formula versions for a score type.
    */
   @Get('formula-versions')
-  async listFormulaVersions(@Query('scoreType') scoreType: string) {
+  async listFormulaVersions(
+    @Query('scoreType') scoreType: string,
+    @Query('geography') geography: string = 'metro',
+  ) {
     if (!scoreType) {
       throw new HttpException(
         { success: false, error: 'scoreType query parameter is required' },
@@ -106,6 +116,7 @@ export class AdminController {
     try {
       const versions = await this.formulaVersionService.getAllVersions(
         scoreType as ScoreType,
+        geography as GeographyLevel,
       );
 
       return {
@@ -132,6 +143,7 @@ export class AdminController {
   async getFormulaVersion(
     @Param('version') version: string,
     @Query('scoreType') scoreType: string,
+    @Query('geography') geography: string = 'metro',
   ) {
     if (!scoreType) {
       throw new HttpException(
@@ -144,6 +156,7 @@ export class AdminController {
       const formulaVersion = await this.formulaVersionService.getVersion(
         version,
         scoreType as ScoreType,
+        geography as GeographyLevel,
       );
 
       if (!formulaVersion) {
@@ -189,6 +202,7 @@ export class AdminController {
     try {
       const input: CreateVersionInput = {
         scoreType: dto.scoreType as ScoreType,
+        geography: (dto.geography as GeographyLevel) || 'metro',
         formulaConfig: dto.formulaConfig,
         description: dto.description,
         parentVersion: dto.parentVersion,
@@ -198,7 +212,7 @@ export class AdminController {
       const newVersion = await this.formulaVersionService.createVersion(input);
 
       this.logger.log(
-        `Created formula version ${newVersion.version} for ${dto.scoreType}`,
+        `Created formula version ${newVersion.version} for ${dto.scoreType}/${dto.geography || 'metro'}`,
       );
 
       return {
@@ -226,6 +240,7 @@ export class AdminController {
   async activateVersion(
     @Param('version') version: string,
     @Query('scoreType') scoreType: string,
+    @Query('geography') geography: string = 'metro',
   ) {
     if (!scoreType) {
       throw new HttpException(
@@ -238,13 +253,14 @@ export class AdminController {
       await this.formulaVersionService.activateVersion(
         version,
         scoreType as ScoreType,
+        geography as GeographyLevel,
       );
 
-      this.logger.log(`Activated formula version ${version} for ${scoreType}`);
+      this.logger.log(`Activated formula version ${version} for ${scoreType}/${geography}`);
 
       return {
         success: true,
-        message: `Version ${version} activated for ${scoreType}`,
+        message: `Version ${version} activated for ${scoreType}/${geography}`,
       };
     } catch (error) {
       this.logger.error(`Failed to activate formula version: ${error}`);
@@ -266,6 +282,7 @@ export class AdminController {
   async setDefaultVersion(
     @Param('version') version: string,
     @Query('scoreType') scoreType: string,
+    @Query('geography') geography: string = 'metro',
   ) {
     if (!scoreType) {
       throw new HttpException(
@@ -278,15 +295,16 @@ export class AdminController {
       await this.formulaVersionService.setDefaultVersion(
         version,
         scoreType as ScoreType,
+        geography as GeographyLevel,
       );
 
       this.logger.log(
-        `Set formula version ${version} as default for ${scoreType}`,
+        `Set formula version ${version} as default for ${scoreType}/${geography}`,
       );
 
       return {
         success: true,
-        message: `Version ${version} set as default for ${scoreType}`,
+        message: `Version ${version} set as default for ${scoreType}/${geography}`,
       };
     } catch (error) {
       this.logger.error(`Failed to set default version: ${error}`);
@@ -308,6 +326,7 @@ export class AdminController {
   async rollbackVersion(
     @Param('version') version: string,
     @Query('scoreType') scoreType: string,
+    @Query('geography') geography: string = 'metro',
   ) {
     if (!scoreType) {
       throw new HttpException(
@@ -320,13 +339,14 @@ export class AdminController {
       await this.formulaVersionService.rollback(
         version,
         scoreType as ScoreType,
+        geography as GeographyLevel,
       );
 
-      this.logger.log(`Rolled back to formula version ${version} for ${scoreType}`);
+      this.logger.log(`Rolled back to formula version ${version} for ${scoreType}/${geography}`);
 
       return {
         success: true,
-        message: `Rolled back to version ${version} for ${scoreType}`,
+        message: `Rolled back to version ${version} for ${scoreType}/${geography}`,
       };
     } catch (error) {
       this.logger.error(`Failed to rollback version: ${error}`);

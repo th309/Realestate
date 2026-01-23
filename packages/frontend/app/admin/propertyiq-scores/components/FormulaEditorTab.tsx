@@ -12,6 +12,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+// New features-based format from SCORING_SYSTEM_SPEC
+interface FormulaFeature {
+  name: string;
+  weight: number;
+  direction: '+' | '-';
+}
+
+// Legacy components format (for backward compatibility)
 interface FormulaComponent {
   name: string;
   label: string;
@@ -19,13 +27,17 @@ interface FormulaComponent {
   metrics: string[];
 }
 
+interface FormulaConfig {
+  features?: FormulaFeature[];
+  components?: Record<string, FormulaComponent>;
+}
+
 interface FormulaVersion {
   id: string;
   version: string;
   scoreType: string;
-  formulaConfig: {
-    components: Record<string, FormulaComponent>;
-  };
+  geography: string;
+  formulaConfig: FormulaConfig;
   description: string | null;
   isActive: boolean;
   isDefault: boolean;
@@ -46,7 +58,6 @@ const SCORE_TYPES = [
 ];
 
 const GEOGRAPHIES = [
-  { value: 'state', label: 'State' },
   { value: 'metro', label: 'Metro' },
   { value: 'county', label: 'County' },
   { value: 'zip', label: 'ZIP' },
@@ -75,14 +86,14 @@ export function FormulaEditorTab() {
   const [selectedScoreType, setSelectedScoreType] = useState<string>('market_health');
   const [selectedGeography, setSelectedGeography] = useState<string>('metro');
   const [selectedVersion, setSelectedVersion] = useState<FormulaVersion | null>(null);
-  const [draftConfig, setDraftConfig] = useState<Record<string, FormulaComponent> | null>(null);
+  const [draftFeatures, setDraftFeatures] = useState<FormulaFeature[] | null>(null);
   const [confidenceData, setConfidenceData] = useState<ConfidenceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchVersions();
-  }, [selectedScoreType]);
+  }, [selectedScoreType, selectedGeography]);
 
   useEffect(() => {
     if (selectedVersion) {
@@ -95,7 +106,7 @@ export function FormulaEditorTab() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(
-        `${apiUrl}/api/admin/formula-versions?scoreType=${selectedScoreType}`,
+        `${apiUrl}/api/admin/formula-versions?scoreType=${selectedScoreType}&geography=${selectedGeography}`,
       );
 
       if (response.ok) {
@@ -104,10 +115,11 @@ export function FormulaEditorTab() {
         const active = data.versions?.find((v: FormulaVersion) => v.isActive);
         if (active) {
           setSelectedVersion(active);
-          setDraftConfig(active.formulaConfig.components);
+          // Extract features from the formula config
+          setDraftFeatures(active.formulaConfig.features || []);
         } else {
           setSelectedVersion(null);
-          setDraftConfig(null);
+          setDraftFeatures(null);
         }
       }
     } catch (error) {
@@ -148,32 +160,38 @@ export function FormulaEditorTab() {
     }
   };
 
-  const handleWeightChange = (componentName: string, weight: number) => {
-    if (!draftConfig) return;
+  const handleFeatureWeightChange = (featureName: string, weight: number) => {
+    if (!draftFeatures) return;
 
-    setDraftConfig({
-      ...draftConfig,
-      [componentName]: {
-        ...draftConfig[componentName],
-        weight: Math.max(0, Math.min(1, weight)),
-      },
-    });
+    setDraftFeatures(
+      draftFeatures.map((f) =>
+        f.name === featureName ? { ...f, weight: Math.max(0, Math.min(100, weight)) } : f,
+      ),
+    );
+  };
+
+  const handleFeatureDirectionChange = (featureName: string, direction: '+' | '-') => {
+    if (!draftFeatures) return;
+
+    setDraftFeatures(
+      draftFeatures.map((f) => (f.name === featureName ? { ...f, direction } : f)),
+    );
   };
 
   const getTotalWeight = useCallback(() => {
-    if (!draftConfig) return 0;
-    return Object.values(draftConfig).reduce((sum, c) => sum + c.weight, 0);
-  }, [draftConfig]);
+    if (!draftFeatures) return 0;
+    return draftFeatures.reduce((sum, f) => sum + f.weight, 0);
+  }, [draftFeatures]);
 
   const hasChanges = useCallback(() => {
-    if (!selectedVersion || !draftConfig) return false;
+    if (!selectedVersion || !draftFeatures) return false;
     return (
-      JSON.stringify(selectedVersion.formulaConfig.components) !== JSON.stringify(draftConfig)
+      JSON.stringify(selectedVersion.formulaConfig.features) !== JSON.stringify(draftFeatures)
     );
-  }, [selectedVersion, draftConfig]);
+  }, [selectedVersion, draftFeatures]);
 
   const saveAsDraft = async () => {
-    if (!draftConfig || !selectedVersion) return;
+    if (!draftFeatures || !selectedVersion) return;
 
     setSaving(true);
     try {
@@ -183,7 +201,8 @@ export function FormulaEditorTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scoreType: selectedScoreType,
-          formulaConfig: { components: draftConfig },
+          geography: selectedGeography,
+          formulaConfig: { features: draftFeatures },
           parentVersion: selectedVersion.version,
           description: 'Draft update',
         }),
@@ -200,7 +219,7 @@ export function FormulaEditorTab() {
   };
 
   const deployWithABTest = async () => {
-    if (!draftConfig || !selectedVersion) return;
+    if (!draftFeatures || !selectedVersion) return;
 
     const testName = prompt('Enter A/B test name:');
     if (!testName) return;
@@ -215,7 +234,8 @@ export function FormulaEditorTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scoreType: selectedScoreType,
-          formulaConfig: { components: draftConfig },
+          geography: selectedGeography,
+          formulaConfig: { features: draftFeatures },
           parentVersion: selectedVersion.version,
           description: `A/B test: ${testName}`,
         }),
@@ -340,7 +360,7 @@ export function FormulaEditorTab() {
                   key={version.id}
                   onClick={() => {
                     setSelectedVersion(version);
-                    setDraftConfig(version.formulaConfig.components);
+                    setDraftFeatures(version.formulaConfig.features || []);
                   }}
                   className={`
                     w-full p-3 text-left rounded-lg transition-colors
@@ -378,46 +398,79 @@ export function FormulaEditorTab() {
           <div className="lg:col-span-2 bg-surface-container rounded-xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-on-surface">
-                {selectedVersion ? `Editing v${selectedVersion.version}` : 'Select a version'}
+                {selectedVersion
+                  ? `Editing v${selectedVersion.version} (${selectedGeography})`
+                  : 'Select a version'}
               </h3>
-              {draftConfig && (
+              {draftFeatures && (
                 <div
                   className={`text-sm ${
-                    Math.abs(getTotalWeight() - 1) < 0.01
+                    Math.abs(getTotalWeight() - 100) < 1
                       ? 'text-green-600'
-                      : 'text-red-600'
+                      : 'text-yellow-600'
                   }`}
                 >
-                  Total: {(getTotalWeight() * 100).toFixed(0)}%
+                  Total: {getTotalWeight().toFixed(1)}%
                 </div>
               )}
             </div>
 
-            {draftConfig && (
+            {draftFeatures && draftFeatures.length > 0 ? (
               <div className="space-y-4">
-                {Object.entries(draftConfig).map(([name, component]) => (
+                {draftFeatures.map((feature) => (
                   <div
-                    key={name}
+                    key={feature.name}
                     className="p-4 rounded-lg bg-surface-container-low space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium text-on-surface">
-                          {COMPONENT_LABELS[name] || component.label || name}
-                        </span>
-                        <span className="ml-2 text-xs text-on-surface-variant">({name})</span>
+                      <div className="flex items-center gap-2">
+                        {/* Direction indicator */}
+                        <button
+                          onClick={() =>
+                            handleFeatureDirectionChange(
+                              feature.name,
+                              feature.direction === '+' ? '-' : '+',
+                            )
+                          }
+                          className={`
+                            w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold
+                            ${
+                              feature.direction === '+'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }
+                          `}
+                          title={
+                            feature.direction === '+'
+                              ? 'Higher is better'
+                              : 'Lower is better'
+                          }
+                        >
+                          {feature.direction}
+                        </button>
+                        <div>
+                          <span className="font-medium text-on-surface">
+                            {formatMetricName(feature.name)}
+                          </span>
+                          <span className="ml-2 text-xs text-on-surface-variant">
+                            ({feature.name})
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
                           min="0"
                           max="100"
-                          step="5"
-                          value={Math.round(component.weight * 100)}
+                          step="0.1"
+                          value={feature.weight.toFixed(1)}
                           onChange={(e) =>
-                            handleWeightChange(name, parseInt(e.target.value, 10) / 100)
+                            handleFeatureWeightChange(
+                              feature.name,
+                              parseFloat(e.target.value) || 0,
+                            )
                           }
-                          className="w-16 px-2 py-1 text-right rounded border border-outline bg-surface text-on-surface"
+                          className="w-20 px-2 py-1 text-right rounded border border-outline bg-surface text-on-surface"
                         />
                         <span className="text-sm text-on-surface-variant">%</span>
                       </div>
@@ -429,36 +482,27 @@ export function FormulaEditorTab() {
                         type="range"
                         min="0"
                         max="100"
-                        step="5"
-                        value={component.weight * 100}
+                        step="0.5"
+                        value={feature.weight}
                         onChange={(e) =>
-                          handleWeightChange(name, parseInt(e.target.value, 10) / 100)
+                          handleFeatureWeightChange(
+                            feature.name,
+                            parseFloat(e.target.value),
+                          )
                         }
                         className="flex-1"
                       />
                       <div
                         className="h-2 rounded"
                         style={{
-                          width: `${component.weight * 100}%`,
+                          width: `${feature.weight}%`,
                           maxWidth: '100px',
-                          backgroundColor: 'var(--md-sys-color-primary)',
+                          backgroundColor:
+                            feature.direction === '+'
+                              ? 'var(--md-sys-color-primary)'
+                              : 'var(--md-sys-color-error)',
                         }}
                       />
-                    </div>
-
-                    {/* Metrics list */}
-                    <div>
-                      <span className="text-xs text-on-surface-variant mb-1 block">Metrics:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {component.metrics.map((metric) => (
-                          <span
-                            key={metric}
-                            className="text-xs px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container"
-                          >
-                            {formatMetricName(metric)}
-                          </span>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -480,6 +524,12 @@ export function FormulaEditorTab() {
                     Deploy with A/B Test
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-on-surface-variant">
+                {selectedVersion
+                  ? 'No features defined for this version'
+                  : 'Select a version from the list to edit'}
               </div>
             )}
           </div>
