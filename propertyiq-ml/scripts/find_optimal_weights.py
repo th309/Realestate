@@ -66,9 +66,14 @@ def load_benchmark_data() -> pd.DataFrame:
     return pd.read_parquet(filepath)
 
 
-def prepare_training_data(df: pd.DataFrame, target: str) -> tuple[pd.DataFrame, pd.Series]:
+def prepare_training_data(df: pd.DataFrame, target: str, sample_size: int = None) -> tuple[pd.DataFrame, pd.Series]:
     """
     Prepare training data for AutoGluon.
+
+    Args:
+        df: Input DataFrame
+        target: Target column name
+        sample_size: Optional max sample size for memory efficiency
 
     Returns:
         X: Feature DataFrame
@@ -87,6 +92,11 @@ def prepare_training_data(df: pd.DataFrame, target: str) -> tuple[pd.DataFrame, 
     valid_mask = df[target].notna()
     df_valid = df[valid_mask].copy()
 
+    # Sample if dataset is too large for memory
+    if sample_size and len(df_valid) > sample_size:
+        print(f"  Sampling {sample_size:,} from {len(df_valid):,} rows for memory efficiency")
+        df_valid = df_valid.sample(n=sample_size, random_state=42)
+
     print(f"  Training samples: {len(df_valid):,} (from {len(df):,} total)")
     print(f"  Features: {len(available_features)}")
 
@@ -97,7 +107,7 @@ def prepare_training_data(df: pd.DataFrame, target: str) -> tuple[pd.DataFrame, 
     for col in X.columns:
         if X[col].isna().any():
             median_val = X[col].median()
-            X[col] = X[col].fillna(median_val)
+            X.loc[:, col] = X[col].fillna(median_val)
             print(f"    Filled {col} NaNs with median: {median_val:.4f}")
 
     return X, y
@@ -147,8 +157,11 @@ def train_autogluon_model(
     predictor.fit(
         train_data,
         time_limit=time_limit,
-        presets='best_quality',  # or 'medium_quality' for faster
-        excluded_model_types=['KNN', 'NN_TORCH'],  # Skip slow models
+        presets='medium_quality',  # Faster and less memory intensive
+        excluded_model_types=['KNN', 'NN_TORCH', 'FASTAI'],  # Skip slow/heavy models
+        num_cpus=4,
+        num_gpus=0,  # Disable GPU to avoid memory issues
+        ag_args_fit={'ag.max_memory_usage_ratio': 0.8},
     )
 
     report_progress(70, "Calculating feature importance...")
@@ -175,9 +188,16 @@ def train_autogluon_model(
     importance_df['suggested_weight'] = importance_df['importance'] / total_importance
 
     print(f"\n  Model path: {model_path}")
-    print(f"  Best model: {predictor.get_model_best()}")
+    try:
+        best_model = predictor.model_best if hasattr(predictor, 'model_best') else predictor.get_model_best()
+    except (AttributeError, Exception):
+        best_model = "Unknown"
+    print(f"  Best model: {best_model}")
     print(f"  Leaderboard:")
-    print(predictor.leaderboard().head(5).to_string())
+    try:
+        print(predictor.leaderboard().head(5).to_string())
+    except Exception as e:
+        print(f"  Could not display leaderboard: {e}")
 
     return predictor, importance_df
 
@@ -217,6 +237,8 @@ def main():
                         help='Target variable to predict')
     parser.add_argument('--time-limit', type=int, default=300,
                         help='Training time limit in seconds')
+    parser.add_argument('--sample-size', type=int, default=100000,
+                        help='Max sample size for training (default: 100000)')
     args = parser.parse_args()
 
     print("=" * 60)
@@ -224,6 +246,7 @@ def main():
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Target: {args.target}")
     print(f"Time limit: {args.time_limit}s")
+    print(f"Sample size: {args.sample_size:,}")
     print("=" * 60)
 
     report_progress(0, "Loading benchmark data...")
@@ -233,7 +256,7 @@ def main():
     print(f"  Loaded {len(df):,} records with benchmarks")
 
     # Prepare training data
-    X, y = prepare_training_data(df, args.target)
+    X, y = prepare_training_data(df, args.target, sample_size=args.sample_size)
 
     # Train model
     predictor, importance_df = train_autogluon_model(

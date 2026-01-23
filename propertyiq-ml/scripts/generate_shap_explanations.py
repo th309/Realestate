@@ -111,7 +111,7 @@ def calculate_shap_values(predictor, X: pd.DataFrame) -> tuple:
     report_progress(30, "Calculating SHAP values...")
 
     # Get the best model from predictor
-    best_model = predictor.get_model_best()
+    best_model = predictor.model_best if hasattr(predictor, 'model_best') else predictor.get_model_best()
 
     # Create SHAP explainer
     # Use TreeExplainer for tree-based models, KernelExplainer as fallback

@@ -512,7 +512,7 @@ def main():
     # Generate and save HTML report
     html_content = generate_html_report(report_data, month)
     html_path = os.path.join(reports_dir, f'monthly_report_{month}.html')
-    with open(html_path, 'w') as f:
+    with open(html_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
     print(f"  Saved: {html_path}")
 
@@ -525,7 +525,11 @@ def main():
     print("\n" + "=" * 60)
     print(f"Report Summary for {month}")
     print("=" * 60)
-    print(f"  {overall_health['icon']} Status: {overall_health['status'].upper()}")
+    # Print status (handle emoji encoding issues on Windows console)
+    try:
+        print(f"  {overall_health['icon']} Status: {overall_health['status'].upper()}")
+    except UnicodeEncodeError:
+        print(f"  Status: {overall_health['status'].upper()}")
     print(f"  Message: {overall_health['message']}")
     print(f"  Average correlation: {overall_health['avg_correlation']:.2f}")
     print(f"  Issues found: {overall_health['total_issues']}")

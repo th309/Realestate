@@ -138,10 +138,13 @@ def calculate_features(
     features['density'] = features['population'] / features['land_area_sq_miles'].replace(0, np.nan)
 
     # Add census features (static per geography)
+    # Note: Only use columns that actually exist in the census export
+    census_columns = ['geography_id', 'median_household_income', 'median_age',
+                      'owner_occupied_pct', 'vacancy_rate', 'median_home_value',
+                      'median_gross_rent']
+    available_columns = [c for c in census_columns if c in census_df.columns]
     features = features.merge(
-        census_df[['geography_id', 'median_household_income', 'median_age',
-                   'owner_occupied_pct', 'vacancy_rate', 'poverty_rate',
-                   'bachelors_degree_pct']],
+        census_df[available_columns],
         on='geography_id',
         how='left'
     )
