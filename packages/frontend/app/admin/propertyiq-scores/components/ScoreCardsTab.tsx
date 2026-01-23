@@ -90,7 +90,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         const response = await fetch(
-          `${apiUrl}/api/scoring/${geography.type}/${encodeURIComponent(geography.id)}?expanded=true&historyMonths=6`,
+          `${apiUrl}/api/scores/${geography.type}/${encodeURIComponent(geography.id)}`,
           {
             headers: { 'x-user-tier': 'enterprise' }, // Enterprise tier for full admin access
           },

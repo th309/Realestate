@@ -73,7 +73,18 @@ export function GeographySelector({ selected, onChange }: GeographySelectorProps
   }, [searchQuery, geoType]);
 
   const handleSelect = (result: SearchResult) => {
-    const id = result.value || result.name;
+    // Extract the proper ID for the scoring API
+    // - Metros: use CBSA code from result.id (format: "metro-12420" -> "12420")
+    // - Counties: use FIPS code from result.id (format: "county-17031" -> "17031")
+    // - ZIPs: use ZIP code from result.value (e.g., "90210")
+    let id: string;
+    if (geoType === 'metro' && result.id.startsWith('metro-')) {
+      id = result.id.replace('metro-', '');
+    } else if (geoType === 'county' && result.id.startsWith('county-')) {
+      id = result.id.replace('county-', '');
+    } else {
+      id = result.value || result.name;
+    }
     onChange(geoType, id, result.name);
     setInputValue(result.name);
     clearSearch();
