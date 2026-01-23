@@ -3,6 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "packages/backend/Dockerfile",
+    "buildContextPath": ".",
     "watchPatterns": ["packages/backend/**", "propertyiq-ml/**"]
   },
   "deploy": {
