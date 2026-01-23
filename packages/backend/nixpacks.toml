@@ -7,18 +7,5 @@ nixPkgs = ["python312", "python312Packages.pip"]
 [phases.install]
 cmds = [
     "npm ci",
-    # Core data processing
-    "pip install pandas polars pyarrow duckdb python-dotenv",
-    # ML/AutoML
-    "pip install autogluon scikit-learn scipy statsmodels",
-    # Feature engineering
-    "pip install featuretools tsfresh",
-    # Explainability
-    "pip install shap lime",
-    # Experiment tracking
-    "pip install mlflow",
-    # Visualization
-    "pip install plotly altair seaborn",
-    # Database
-    "pip install psycopg2-binary asyncpg sqlalchemy"
+    "pip install -r requirements.txt"
 ]
