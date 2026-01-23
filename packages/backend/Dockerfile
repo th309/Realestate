@@ -33,14 +33,14 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python && \
 
 WORKDIR /app
 
-# Copy built application from builder stage
+# Copy Python requirements and install FIRST (cached unless requirements.txt changes)
+COPY requirements.txt ./
+RUN pip install --break-system-packages -r requirements.txt
+
+# Copy built application from builder stage (changes frequently)
 COPY --from=builder /app/packages/backend/dist ./dist
 COPY --from=builder /app/packages/backend/node_modules ./node_modules
 COPY --from=builder /app/packages/backend/package*.json ./
-
-# Copy Python requirements and install
-COPY requirements.txt ./
-RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # Copy Python ML scripts (accessible at runtime for spawning)
 COPY propertyiq-ml ./propertyiq-ml
