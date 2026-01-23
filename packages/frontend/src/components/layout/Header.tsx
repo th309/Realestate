@@ -116,11 +116,12 @@ export function Header() {
                             </div>
                         ) : (
                             <div className="flex items-center gap-3">
-                                <Link href="/login">
-                                    <span className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-[var(--md-primary)] transition-colors">
-                                        Log in
-                                    </span>
-                                </Link>
+                                <button
+                                    onClick={() => setIsLoggedIn(true)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-[var(--md-primary)] transition-colors"
+                                >
+                                    Log in
+                                </button>
                                 <button
                                     onClick={() => setIsLoggedIn(true)}
                                     className="px-5 py-2.5 text-sm font-medium text-white bg-[var(--md-primary)] rounded-full hover:bg-opacity-90 transition-all shadow-sm hover:shadow-md active:scale-95"
@@ -169,13 +170,12 @@ export function Header() {
                             </button>
                         ) : (
                             <div className="space-y-3 pt-2">
-                                <Link
-                                    href="/login"
+                                <button
+                                    onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
                                     className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-gray-700 border border-gray-200 hover:bg-gray-50"
-                                    onClick={() => setIsMenuOpen(false)}
                                 >
                                     Log in
-                                </Link>
+                                </button>
                                 <button
                                     onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
                                     className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-white bg-[var(--md-primary)] hover:bg-opacity-90 shadow-md"
