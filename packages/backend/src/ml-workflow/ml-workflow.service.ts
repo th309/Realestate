@@ -377,7 +377,6 @@ export class MLWorkflowService {
       .from('propertyiq_ml_jobs')
       .update({
         progress,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', jobId);
   }
