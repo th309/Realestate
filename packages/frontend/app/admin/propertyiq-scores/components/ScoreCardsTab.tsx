@@ -148,7 +148,10 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
 
   if (!data) return null;
 
-  const scores: ScoreData[] = [data.marketHealth, data.homeready, data.investoredge];
+  // Filter out undefined scores (API might not return all score types)
+  const scores: ScoreData[] = [data.marketHealth, data.homeready, data.investoredge].filter(
+    (score): score is ScoreData => score != null
+  );
 
   return (
     <div className="space-y-6">
