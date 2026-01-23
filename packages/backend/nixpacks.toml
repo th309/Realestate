@@ -2,10 +2,13 @@
 # Adds Python support alongside Node.js for ML workflow scripts
 
 [phases.setup]
-nixPkgs = ["python312", "python312Packages.pip"]
+nixPkgs = ["nodejs_20", "python312", "python312Packages.pip"]
 
 [phases.install]
 cmds = [
     "npm ci",
     "pip install -r requirements.txt"
 ]
+
+[phases.build]
+cmds = ["npm run build"]
