@@ -1,8 +1,10 @@
 # Nixpacks configuration for Railway
 # Adds Python support alongside Node.js for ML workflow scripts
 
+providers = ["node", "python"]
+
 [phases.setup]
-nixPkgs = ["nodejs_20", "python312", "python312Packages.pip"]
+nixPkgs = ["python312", "python312Packages.pip"]
 
 [phases.install]
 cmds = [
@@ -12,3 +14,6 @@ cmds = [
 
 [phases.build]
 cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start:prod"
