@@ -11,7 +11,6 @@ Implements the 6 workflow steps for PropertyIQ ML pipeline:
 """
 
 import logging
-import time
 import os
 from datetime import datetime, date
 from typing import Optional, Any
@@ -102,6 +101,36 @@ class WorkflowService:
                 logger.error(f"  Details: {result.error_details}")
         logger.info("=" * 60)
 
+    def _safe_table_count(self, table_name: str, filters: dict = None) -> tuple[int, bool]:
+        """
+        Safely query a table and return count. Returns (count, exists).
+        If table doesn't exist, returns (0, False) instead of raising error.
+        """
+        try:
+            query = self.supabase.table(table_name).select("*", count="exact")
+
+            # Apply filters if provided
+            if filters:
+                for key, value in filters.items():
+                    if isinstance(value, list):
+                        query = query.in_(key, value)
+                    else:
+                        query = query.eq(key, value)
+
+            response = query.limit(1).execute()
+            count = response.count if hasattr(response, 'count') else len(response.data)
+            logger.info(f"  Table '{table_name}': {count} records")
+            return count, True
+
+        except Exception as e:
+            error_str = str(e)
+            if "PGRST205" in error_str or "Could not find the table" in error_str:
+                logger.warning(f"  Table '{table_name}': NOT FOUND")
+                return 0, False
+            else:
+                # Re-raise other errors
+                raise
+
     async def run_data_export(
         self,
         start_date: Optional[date] = None,
@@ -111,11 +140,11 @@ class WorkflowService:
         """
         Step 1: Export data to Parquet files for ML processing.
 
-        Exports:
-        - geographies.parquet - ZIP/county/metro/state hierarchies
-        - zillow_historical.parquet - Historical Zillow metrics
-        - census_latest.parquet - Latest census data
-        - economic.parquet - Economic indicators
+        Validates data availability in:
+        - geographies table
+        - zillow_zip table
+        - census_zip table
+        - economic_state table
         """
         step_id = "data-export"
         step_name = "Data Export"
@@ -127,65 +156,34 @@ class WorkflowService:
             "states": states or "all"
         })
 
-        outputs = []
         metrics = {}
+        tables_status = {}
 
         try:
-            # Test Supabase connection first
-            logger.info("Testing Supabase connection...")
+            logger.info("Checking required tables...")
+            filters = {"state": states} if states else None
 
-            # Query geographies
-            logger.info("Querying geographies table...")
-            geo_query = self.supabase.table("geographies").select("*", count="exact")
-            if states:
-                geo_query = geo_query.in_("state", states)
+            # Check all required tables
+            geo_count, geo_exists = self._safe_table_count("geographies", filters)
+            tables_status["geographies"] = {"exists": geo_exists, "count": geo_count}
 
-            geo_response = geo_query.limit(1).execute()
-            geo_count = geo_response.count if hasattr(geo_response, 'count') else len(geo_response.data)
-            logger.info(f"  Found {geo_count} geography records")
-            metrics["geography_count"] = geo_count
+            zillow_count, zillow_exists = self._safe_table_count("zillow_zip", filters)
+            tables_status["zillow_zip"] = {"exists": zillow_exists, "count": zillow_count}
 
-            # Query Zillow historical data
-            logger.info("Querying zillow_zip table for historical data...")
-            zillow_query = self.supabase.table("zillow_zip").select("*", count="exact")
-            if states:
-                zillow_query = zillow_query.in_("state", states)
-            if start_date:
-                zillow_query = zillow_query.gte("period_start", str(start_date))
-            if end_date:
-                zillow_query = zillow_query.lte("period_start", str(end_date))
+            census_count, census_exists = self._safe_table_count("census_zip", filters)
+            tables_status["census_zip"] = {"exists": census_exists, "count": census_count}
 
-            zillow_response = zillow_query.limit(1).execute()
-            zillow_count = zillow_response.count if hasattr(zillow_response, 'count') else len(zillow_response.data)
-            logger.info(f"  Found {zillow_count} Zillow records")
-            metrics["zillow_record_count"] = zillow_count
+            econ_count, econ_exists = self._safe_table_count("economic_state")
+            tables_status["economic_state"] = {"exists": econ_exists, "count": econ_count}
 
-            # Query census data
-            logger.info("Querying census_zip table...")
-            census_query = self.supabase.table("census_zip").select("*", count="exact")
-            if states:
-                census_query = census_query.in_("state", states)
+            metrics["tables"] = tables_status
+            metrics["total_records"] = geo_count + zillow_count + census_count + econ_count
 
-            census_response = census_query.limit(1).execute()
-            census_count = census_response.count if hasattr(census_response, 'count') else len(census_response.data)
-            logger.info(f"  Found {census_count} census records")
-            metrics["census_record_count"] = census_count
-
-            # Query economic data
-            logger.info("Querying economic_state table...")
-            econ_response = self.supabase.table("economic_state").select("*", count="exact").limit(1).execute()
-            econ_count = econ_response.count if hasattr(econ_response, 'count') else len(econ_response.data)
-            logger.info(f"  Found {econ_count} economic records")
-            metrics["economic_record_count"] = econ_count
-
-            # For now, mark outputs as "prepared" (actual Parquet export would happen here)
-            # In production, this would write actual Parquet files
-            outputs = [
-                "geographies.parquet (prepared)",
-                "zillow_historical.parquet (prepared)",
-                "census_latest.parquet (prepared)",
-                "economic.parquet (prepared)"
-            ]
+            # Check which tables are missing
+            missing = [t for t, s in tables_status.items() if not s["exists"]]
+            if missing:
+                metrics["missing_tables"] = missing
+                logger.warning(f"Missing tables: {missing}")
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -194,7 +192,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
@@ -224,10 +222,10 @@ class WorkflowService:
         """
         Step 2: Prepare backtest dataset with historical scores and actual outcomes.
 
-        Creates a dataset where each row has:
-        - Historical metrics at score time
-        - Calculated score
-        - Actual outcome (price appreciation) over holding period
+        Checks availability of:
+        - backtest_outcomes table
+        - propertyiq_scores table
+        - zillow_zip historical data
         """
         step_id = "prepare-backtest-data"
         step_name = "Prepare Backtest Data"
@@ -241,32 +239,30 @@ class WorkflowService:
         })
 
         metrics = {}
+        tables_status = {}
 
         try:
-            # Query backtest outcomes table
-            logger.info("Querying backtest_outcomes table...")
-            outcomes_query = self.supabase.table("backtest_outcomes").select("*", count="exact")
-            if states:
-                outcomes_query = outcomes_query.in_("state", states)
+            logger.info("Checking backtest-related tables...")
+            filters = {"state": states} if states else None
 
-            outcomes_response = outcomes_query.limit(1).execute()
-            outcomes_count = outcomes_response.count if hasattr(outcomes_response, 'count') else len(outcomes_response.data)
-            logger.info(f"  Found {outcomes_count} backtest outcome records")
-            metrics["outcomes_count"] = outcomes_count
+            # Check required tables
+            outcomes_count, outcomes_exists = self._safe_table_count("backtest_outcomes", filters)
+            tables_status["backtest_outcomes"] = {"exists": outcomes_exists, "count": outcomes_count}
 
-            # Query propertyiq_scores table
-            logger.info("Querying propertyiq_scores table...")
-            scores_query = self.supabase.table("propertyiq_scores").select("*", count="exact")
-            if states:
-                scores_query = scores_query.in_("state", states)
+            scores_count, scores_exists = self._safe_table_count("propertyiq_scores", filters)
+            tables_status["propertyiq_scores"] = {"exists": scores_exists, "count": scores_count}
 
-            scores_response = scores_query.limit(1).execute()
-            scores_count = scores_response.count if hasattr(scores_response, 'count') else len(scores_response.data)
-            logger.info(f"  Found {scores_count} score records")
-            metrics["scores_count"] = scores_count
+            zillow_count, zillow_exists = self._safe_table_count("zillow_zip", filters)
+            tables_status["zillow_zip"] = {"exists": zillow_exists, "count": zillow_count}
 
-            outputs = ["backtest_data.parquet (prepared)"]
+            metrics["tables"] = tables_status
             metrics["holding_period_months"] = holding_period_months
+
+            # Check which tables are missing
+            missing = [t for t, s in tables_status.items() if not s["exists"]]
+            if missing:
+                metrics["missing_tables"] = missing
+                logger.warning(f"Missing tables: {missing}")
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -275,7 +271,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
@@ -302,10 +298,10 @@ class WorkflowService:
         """
         Step 3: Calculate national, regional, and peer group benchmarks.
 
-        Computes:
-        - National benchmark (median return across all ZIPs)
-        - Regional benchmarks (by state, metro)
-        - Peer group benchmarks (similar demographics, price levels)
+        Checks availability of:
+        - zillow_zip for national benchmarks
+        - zillow_state for regional benchmarks
+        - census_zip for peer group benchmarks
         """
         step_id = "calculate-benchmarks"
         step_name = "Calculate Benchmarks"
@@ -318,38 +314,31 @@ class WorkflowService:
         })
 
         metrics = {}
-        outputs = []
+        tables_status = {}
 
         try:
-            # Query existing benchmark tables
+            logger.info("Checking benchmark data sources...")
+
             if "national" in benchmark_types:
-                logger.info("Calculating national benchmarks...")
-                # Query national level data
-                national_query = self.supabase.table("zillow_zip").select(
-                    "zhvi_sf", "zori_sf"
-                ).not_.is_("zhvi_sf", "null").limit(1000).execute()
-                logger.info(f"  Sampled {len(national_query.data)} records for national benchmark")
-                metrics["national_sample_size"] = len(national_query.data)
-                outputs.append("benchmarks_national.parquet (prepared)")
+                zillow_count, zillow_exists = self._safe_table_count("zillow_zip")
+                tables_status["zillow_zip"] = {"exists": zillow_exists, "count": zillow_count}
 
             if "regional" in benchmark_types:
-                logger.info("Calculating regional benchmarks...")
-                # Query by state
-                regional_query = self.supabase.table("zillow_state").select("*", count="exact").limit(1).execute()
-                regional_count = regional_query.count if hasattr(regional_query, 'count') else len(regional_query.data)
-                logger.info(f"  Found {regional_count} state-level records")
-                metrics["regional_state_count"] = regional_count
-                outputs.append("benchmarks_regional.parquet (prepared)")
+                state_count, state_exists = self._safe_table_count("zillow_state")
+                tables_status["zillow_state"] = {"exists": state_exists, "count": state_count}
 
             if "peer" in benchmark_types:
-                logger.info("Calculating peer group benchmarks...")
-                # Peer groups based on similar characteristics
-                logger.info("  Grouping ZIPs by population, income, and price bands...")
-                metrics["peer_groups_created"] = "pending"
-                outputs.append("benchmarks_peer.parquet (prepared)")
+                census_count, census_exists = self._safe_table_count("census_zip")
+                tables_status["census_zip"] = {"exists": census_exists, "count": census_count}
 
-            # Combined output
-            outputs.append("backtest_with_benchmarks.parquet (prepared)")
+            metrics["tables"] = tables_status
+            metrics["benchmark_types"] = benchmark_types
+
+            # Check which tables are missing
+            missing = [t for t, s in tables_status.items() if not s["exists"]]
+            if missing:
+                metrics["missing_tables"] = missing
+                logger.warning(f"Missing tables: {missing}")
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -358,7 +347,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
@@ -386,10 +375,8 @@ class WorkflowService:
         """
         Step 4: ML-based feature importance and optimal weight suggestions.
 
-        Uses AutoGluon to:
-        - Train regression model predicting outcomes
-        - Extract feature importance
-        - Suggest optimal formula weights
+        Checks availability of:
+        - propertyiq_scores table for training data
         """
         step_id = "feature-analysis"
         step_name = "Feature Analysis (AutoGluon)"
@@ -401,43 +388,26 @@ class WorkflowService:
         })
 
         metrics = {}
+        tables_status = {}
 
         try:
-            logger.info(f"Running {model_type} feature analysis...")
-            logger.info(f"  Target: {target_metric}")
-
-            # In production, this would run AutoGluon
-            # For now, we validate data availability
             logger.info("Checking data availability for feature analysis...")
 
-            # Check if we have enough data
-            scores_query = self.supabase.table("propertyiq_scores").select("*", count="exact").limit(1).execute()
-            scores_count = scores_query.count if hasattr(scores_query, 'count') else 0
-            logger.info(f"  Available scores: {scores_count}")
-            metrics["available_scores"] = scores_count
+            scores_count, scores_exists = self._safe_table_count("propertyiq_scores")
+            tables_status["propertyiq_scores"] = {"exists": scores_exists, "count": scores_count}
 
-            if scores_count < 100:
-                logger.warning("  WARNING: Less than 100 scores available - may not be enough for reliable analysis")
+            metrics["tables"] = tables_status
+            metrics["target_metric"] = target_metric
+            metrics["model_type"] = model_type
 
-            # Placeholder feature importance
-            feature_importance = {
-                "price_momentum": 0.25,
-                "affordability": 0.20,
-                "market_activity": 0.18,
-                "economic_health": 0.15,
-                "demographic_growth": 0.12,
-                "rental_yield": 0.10
-            }
-            metrics["feature_importance"] = feature_importance
-            logger.info("  Feature importance (placeholder):")
-            for feature, importance in feature_importance.items():
-                logger.info(f"    {feature}: {importance:.2%}")
-
-            date_str = datetime.utcnow().strftime("%Y%m%d")
-            outputs = [
-                f"feature_importance_{date_str}.csv (prepared)",
-                f"models/autogluon_{date_str}/ (prepared)"
-            ]
+            if not scores_exists:
+                metrics["status"] = "missing_data"
+                logger.warning("propertyiq_scores table not found - cannot run feature analysis")
+            elif scores_count < 100:
+                metrics["status"] = "insufficient_data"
+                logger.warning(f"Only {scores_count} scores available - need at least 100 for reliable analysis")
+            else:
+                metrics["status"] = "ready"
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -446,7 +416,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
@@ -474,7 +444,8 @@ class WorkflowService:
         """
         Step 5: Generate SHAP explanations for scores.
 
-        Creates human-readable explanations showing why each score is what it is.
+        Checks availability of:
+        - propertyiq_scores table
         """
         step_id = "score-explanations"
         step_name = "Score Explanations (SHAP)"
@@ -486,29 +457,27 @@ class WorkflowService:
         })
 
         metrics = {}
+        tables_status = {}
 
         try:
-            logger.info(f"Generating {explanation_type} explanations...")
+            logger.info("Checking scores table for explanations...")
 
-            # Get sample of scores to explain
-            logger.info(f"  Sampling {sample_size} scores for explanation...")
-            scores_query = self.supabase.table("propertyiq_scores").select(
-                "zip_code", "state", "homeready_score", "investor_edge_score"
-            ).limit(sample_size).execute()
+            scores_count, scores_exists = self._safe_table_count("propertyiq_scores")
+            tables_status["propertyiq_scores"] = {"exists": scores_exists, "count": scores_count}
 
-            actual_sample = len(scores_query.data)
-            logger.info(f"  Retrieved {actual_sample} scores")
-            metrics["scores_sampled"] = actual_sample
+            metrics["tables"] = tables_status
+            metrics["requested_sample_size"] = sample_size
+            metrics["available_scores"] = scores_count if scores_exists else 0
 
-            if actual_sample == 0:
-                logger.warning("  WARNING: No scores found to explain")
-
-            # Placeholder explanations
-            logger.info("  Generating explanations (placeholder)...")
-            metrics["explanations_generated"] = actual_sample
-
-            date_str = datetime.utcnow().strftime("%Y%m%d")
-            outputs = [f"explanations_{date_str}.json (prepared)"]
+            if not scores_exists:
+                metrics["status"] = "missing_data"
+                logger.warning("propertyiq_scores table not found")
+            elif scores_count == 0:
+                metrics["status"] = "no_scores"
+                logger.warning("No scores available to explain")
+            else:
+                metrics["status"] = "ready"
+                metrics["actual_sample_size"] = min(sample_size, scores_count)
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -517,7 +486,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
@@ -544,10 +513,9 @@ class WorkflowService:
         """
         Step 6: Generate monthly formula health report.
 
-        Creates comprehensive report with:
-        - Confidence matrix
-        - Performance metrics
-        - Recommendations
+        Checks availability of:
+        - propertyiq_scores table
+        - backtest_outcomes table
         """
         step_id = "monthly-report"
         step_name = "Monthly Report"
@@ -561,51 +529,28 @@ class WorkflowService:
         })
 
         metrics = {}
+        tables_status = {}
 
         try:
-            logger.info(f"Generating monthly report for {report_month}...")
+            logger.info("Checking data for monthly report...")
 
-            # Gather statistics
-            logger.info("  Gathering score statistics...")
+            scores_count, scores_exists = self._safe_table_count("propertyiq_scores")
+            tables_status["propertyiq_scores"] = {"exists": scores_exists, "count": scores_count}
 
-            # Count scores by state
-            scores_query = self.supabase.table("propertyiq_scores").select("state", count="exact").limit(1).execute()
-            total_scores = scores_query.count if hasattr(scores_query, 'count') else 0
-            logger.info(f"  Total scores in system: {total_scores}")
-            metrics["total_scores"] = total_scores
+            backtest_count, backtest_exists = self._safe_table_count("backtest_outcomes")
+            tables_status["backtest_outcomes"] = {"exists": backtest_exists, "count": backtest_count}
 
-            # Check backtest performance
-            logger.info("  Checking backtest performance...")
-            backtest_query = self.supabase.table("backtest_outcomes").select("*", count="exact").limit(1).execute()
-            backtest_count = backtest_query.count if hasattr(backtest_query, 'count') else 0
-            logger.info(f"  Backtest outcomes available: {backtest_count}")
-            metrics["backtest_outcomes"] = backtest_count
+            metrics["tables"] = tables_status
+            metrics["report_month"] = report_month
 
-            # Generate placeholder report metrics
-            report_data = {
-                "report_month": report_month,
-                "generated_at": datetime.utcnow().isoformat(),
-                "score_coverage": {
-                    "total_zips": total_scores,
-                    "states_covered": "TBD"
-                },
-                "performance": {
-                    "accuracy": "TBD",
-                    "precision": "TBD",
-                    "recall": "TBD"
-                },
-                "recommendations": [
-                    "Review feature weights after more backtest data",
-                    "Consider regional adjustments for outlier markets"
-                ]
-            }
-            metrics["report_data"] = report_data
-            logger.info("  Report generated successfully")
-
-            outputs = [
-                f"monthly_report_{report_month}.json (prepared)",
-                f"monthly_report_{report_month}.html (prepared)"
-            ]
+            # Check which tables are missing
+            missing = [t for t, s in tables_status.items() if not s["exists"]]
+            if missing:
+                metrics["missing_tables"] = missing
+                metrics["status"] = "missing_data"
+                logger.warning(f"Missing tables: {missing}")
+            else:
+                metrics["status"] = "ready"
 
             completed_at = datetime.utcnow()
             result = StepResult(
@@ -614,7 +559,7 @@ class WorkflowService:
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
-                outputs=outputs,
+                outputs=[],
                 metrics=metrics
             )
 
