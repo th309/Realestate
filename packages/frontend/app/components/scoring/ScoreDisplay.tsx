@@ -47,7 +47,7 @@ export interface ScoreDisplayProps {
 export const getScoreColor = (value: number, maxValue: number = 100): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
   const hue = percentage * 120; // 0 = red, 120 = green
-  return `hsl(${hue}, 85%, 45%)`;
+  return `hsl(${hue}, 90%, 45%)`;
 };
 
 /**
@@ -159,9 +159,9 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const percentage = Math.min(value / maxValue, 1);
   const strokeDashoffset = circumference - percentage * circumference;
 
-  // Custom hue mapping for more vibrant colors: 0=Red, 120=Green
+  // Base hue mapping: 0=Red, 120=Green
   const hue = percentage * 120;
-  const strokeColor = `hsl(${hue}, 85%, 45%)`;
+  const strokeColor = getScoreColor(value, maxValue);
 
   const grade = getLetterGrade(value);
   const gradeColors = getGradeColor(grade);
@@ -198,13 +198,44 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   // Unique ID for the gradient to avoid collisions
   const gradientId = `score-gradient-${Math.round(value)}`;
 
+  // Calculate dynamic stops for the gradient to ensure Red is at 0 and the color matches the scale
+  // We want to map the 0-100 color scale onto the 0-value visible arc.
+  const stopColors = [
+    { offset: 0, color: 'hsl(0, 95%, 45%)' },       // 0: Red
+    { offset: 25, color: 'hsl(30, 95%, 45%)' },     // 25: Orange
+    { offset: 50, color: 'hsl(60, 95%, 45%)' },     // 50: Yellow
+    { offset: 75, color: 'hsl(90, 95%, 45%)' },     // 75: Lime
+    { offset: 100, color: 'hsl(120, 95%, 45%)' }    // 100: Green
+  ];
+
+  // Filter and map stops to the current visible portion (0 to value)
+  const visibleStops = stopColors
+    .filter(s => s.offset <= value)
+    .map(s => ({
+      offset: `${(s.offset / value) * 100}%`,
+      color: s.color
+    }));
+
+  // Always ensure the last stop is the exact color of the current score
+  if (value > 0 && !visibleStops.find(s => s.offset === '100%')) {
+    visibleStops.push({
+      offset: '100%',
+      color: strokeColor
+    });
+  }
+
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={`hsl(${Math.max(0, hue - 20)}, 90%, 55%)`} />
-            <stop offset="100%" stopColor={strokeColor} />
+            {visibleStops.length > 0 ? (
+              visibleStops.map((stop, i) => (
+                <stop key={i} offset={stop.offset} stopColor={stop.color} />
+              ))
+            ) : (
+              <stop offset="0%" stopColor="hsl(0, 95%, 45%)" />
+            )}
           </linearGradient>
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="2" result="blur" />
