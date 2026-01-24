@@ -6,6 +6,7 @@
  *
  * Endpoints:
  * - GET /api/scores?geography=metro&location_id=12420 - Get scores for a location
+ * - GET /api/scores/all/:geography/:scoreType - Get all scores for a geography level
  * - GET /api/scores/top?geography=metro&score_type=homeready&limit=10 - Top markets
  * - GET /api/scores/search?q=austin&geography=zip - Search markets
  * - POST /api/scores/calculate/:geography - Trigger recalculation
@@ -31,7 +32,7 @@ export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
     private readonly performanceTrackingService: PerformanceTrackingService,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Main Score Endpoints (matching spec)
@@ -83,6 +84,32 @@ export class ScoringController {
     }
 
     return score;
+  }
+
+  /**
+   * Get all scores for a geography level
+   *
+   * GET /api/scores/all/:geography/:scoreType
+   */
+  @Get('all/:geography/:scoreType')
+  @ApiOperation({ summary: 'Get all scores for a geography level' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiParam({ name: 'scoreType', enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({ name: 'date', required: false })
+  async getAllScores(
+    @Param('geography') geography: string,
+    @Param('scoreType') scoreType: string,
+    @Query('date') date?: string,
+  ): Promise<{ success: boolean; count: number; data: any[] }> {
+    const geoLevel = this.validateGeography(geography);
+    const validScoreType = this.validateScoreType(scoreType);
+    const results = await this.scoringService.getAllScores(geoLevel, validScoreType, date);
+
+    return {
+      success: true,
+      count: results.length,
+      data: results,
+    };
   }
 
   /**

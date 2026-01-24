@@ -218,6 +218,34 @@ export class ScoringService {
   }
 
   /**
+   * Get all scores for a geography level
+   */
+  async getAllScores(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+  ): Promise<Array<{ region_id: string; value: number; grade: string; date: string }>> {
+    const targetDate = periodDate || (await this.getLatestDate(geography));
+    if (!targetDate) return [];
+
+    const { data } = await this.supabase
+      .from('propertyiq_scores')
+      .select('location_id, score, grade, score_date')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', targetDate);
+
+    if (!data) return [];
+
+    return data.map(row => ({
+      region_id: row.location_id,
+      value: row.score,
+      grade: row.grade,
+      date: row.score_date,
+    }));
+  }
+
+  /**
    * Get top markets by score
    */
   async getTopMarkets(

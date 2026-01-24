@@ -29,6 +29,7 @@ export interface ScoreCardIndicator {
         changePercent: number | null;
         direction: 'up' | 'down' | 'flat' | null;
     };
+    history: { date: string; value: number }[]; // For sparklines
 }
 
 export interface UseScoreCardMetricsOptions {
@@ -68,6 +69,7 @@ export function useScoreCardMetrics(
                     changePercent: result?.trend.changePercent ?? null,
                     direction: result?.trend.direction ?? null,
                 },
+                history: result?.trendHistory || [],
             };
         });
     }, [metricIds, metricResults]);

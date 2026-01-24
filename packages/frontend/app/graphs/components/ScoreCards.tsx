@@ -29,7 +29,15 @@ interface SubScoreDisplayProps {
   loading?: boolean;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading }) => {
+import { Sparkline } from '@/app/components/charts/Sparkline';
+
+const SubScoreDisplay: React.FC<SubScoreDisplayProps & { history?: { date: string; value: number }[] }> = ({
+  label,
+  formattedValue,
+  trend,
+  history = [],
+  loading
+}) => {
   const getTrendIcon = () => {
     if (trend.direction === 'up') return <TrendingUp className="w-3 h-3" />;
     if (trend.direction === 'down') return <TrendingDown className="w-3 h-3" />;
@@ -59,6 +67,16 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
       ) : (
         <>
           <span className="text-sm font-semibold text-on-surface">{formattedValue}</span>
+
+          {/* Sparkline for Sub-Metric */}
+          <div className="w-full h-8 my-1 px-1">
+            <Sparkline
+              data={history}
+              color={trend.direction === 'up' ? '#16a34a' : trend.direction === 'down' ? '#ef4444' : '#6750a4'}
+              strokeWidth={1.5}
+            />
+          </div>
+
           {trend.direction && (
             <div className={`flex items-center gap-0.5 mt-0.5 ${getTrendColor()}`}>
               {getTrendIcon()}
@@ -187,6 +205,7 @@ interface MetricIndicator {
   label: string;
   formattedValue: string;
   trend: TrendData;
+  history: { date: string; value: number }[];
 }
 
 interface ScoreCardProps {
@@ -278,6 +297,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
                   label={ind.label}
                   formattedValue={ind.formattedValue}
                   trend={ind.trend}
+                  history={ind.history}
                   loading={metricsLoading}
                 />
               ))}
@@ -449,6 +469,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
       label: ind.label,
       formattedValue: ind.formattedValue,
       trend: ind.trend,
+      history: ind.history,
     }));
   }, [homereadyMetrics, investoredgeMetrics, markethealthMetrics]);
 

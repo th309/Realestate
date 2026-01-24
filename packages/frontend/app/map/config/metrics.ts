@@ -17,6 +17,13 @@ export type GeoLevel = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip
 // MAP DISPLAY SETTINGS
 // ============================================================================
 
+// Score to component metrics mapping
+export const SCORE_COMPONENTS: Record<string, string[]> = {
+  homeready: ['listing_price', 'days_on_market', 'for_sale_inventory'],
+  investoredge: ['cap_rate', 'rent_index', 'pending_ratio'],
+  market_health: ['hotness_score', 'inventory_yoy', 'new_listings_yoy'],
+};
+
 /**
  * Default zoom levels by geography type
  * Used when displaying data for each geography level
@@ -55,7 +62,7 @@ export function getDefaultZoom(geoLevel: GeoLevel): number {
 export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'days';
 
 // Data source types
-export type DataSource = 'zillow' | 'realtor' | 'calculated' | 'census' | 'fred';
+export type DataSource = 'zillow' | 'realtor' | 'calculated' | 'census' | 'fred' | 'scoring';
 
 // Metric configuration interface
 export interface MetricConfig {
@@ -687,6 +694,42 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/economic/cost-of-living/{geo}',
     keyField: 'auto',
     supportedGeos: ['state', 'metro'],
+    rangeType: 'full',
+  },
+
+  // ============================================================================
+  // PROPERTYIQ SCORES
+  // ============================================================================
+  homeready: {
+    id: 'homeready',
+    title: 'HomeReady Score',
+    format: 'index',
+    dataSource: 'scoring',
+    apiEndpoint: '/api/scores/all/{geo}/homeready',
+    keyField: 'region_id',
+    supportedGeos: ['metro', 'county', 'zip'],
+    rangeType: 'full',
+  },
+
+  investoredge: {
+    id: 'investoredge',
+    title: 'InvestorEdge Score',
+    format: 'index',
+    dataSource: 'scoring',
+    apiEndpoint: '/api/scores/all/{geo}/investoredge',
+    keyField: 'region_id',
+    supportedGeos: ['metro', 'county', 'zip'],
+    rangeType: 'full',
+  },
+
+  markethealth: {
+    id: 'markethealth',
+    title: 'Market Health Index',
+    format: 'index',
+    dataSource: 'scoring',
+    apiEndpoint: '/api/scores/all/{geo}/markethealth',
+    keyField: 'region_id',
+    supportedGeos: ['metro', 'county', 'zip'],
     rangeType: 'full',
   },
 };

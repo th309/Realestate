@@ -1,12 +1,29 @@
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import type { ScoreType, ConfidenceLevel } from '../../hooks/useScoreData';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import { Sparkline } from '@/app/components/charts/Sparkline';
+
+export interface ScoreIndicator {
+    metricId: string;
+    label: string;
+    formattedValue: string;
+    trend: {
+        direction: 'up' | 'down' | 'flat' | null;
+        label: string | null;
+    };
+    history: { date: string; value: number }[];
+}
 
 interface ScoreGaugeCardProps {
     type: ScoreType;
     score: number | null;
     confidenceLevel?: ConfidenceLevel;
-    trend?: number | null;
+    trend?: {
+        direction: 'up' | 'down' | 'flat' | null;
+        label: string | null;
+    } | null;
+    history?: { date: string; value: number }[]; // Added for sparkline
+    indicators?: ScoreIndicator[];
     loading?: boolean;
 }
 
@@ -25,56 +42,100 @@ const SCORE_LABELS: Record<ScoreType, { title: string; desc: string }> = {
     }
 };
 
-const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> = {
-    high: { bg: 'bg-green-500', text: 'text-white' },
-    medium: { bg: 'bg-amber-500', text: 'text-white' },
-    low: { bg: 'bg-orange-500', text: 'text-white' },
-    insufficient: { bg: 'bg-red-500', text: 'text-white' }
-};
-
-const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-    high: 'HIGH',
-    medium: 'MED',
-    low: 'LOW',
-    insufficient: 'N/A'
-};
-
-export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend, loading = false }: ScoreGaugeCardProps) {
+export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend, history = [], indicators = [], loading = false }: ScoreGaugeCardProps) {
     const config = SCORE_LABELS[type];
     const currentScore = score ?? 0;
-    const confColors = CONFIDENCE_COLORS[confidenceLevel];
 
     return (
-        <div className="flex-1 bg-surface-container-low rounded-2xl p-4 flex flex-col items-center border border-outline-variant overflow-hidden">
-            {/* Score Display */}
-            <div className="mt-4">
-                {loading ? (
-                    <div className="w-[160px] h-[160px] flex items-center justify-center">
-                        <Loader2 className="w-10 h-10 animate-spin text-on-surface-variant" />
-                    </div>
-                ) : (
-                    <ScoreDisplay
-                        value={currentScore}
-                        size={160}
-                        strokeWidth={10}
-                    />
-                )}
+        <div className="bg-surface-container-low rounded-3xl p-6 flex flex-col border border-outline-variant overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-on-surface">{config.title}</h3>
+                    <p className="text-xs text-on-surface-variant max-w-[200px] mt-1">
+                        {config.desc}
+                    </p>
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                    {/* Main Trend */}
+                    {trend != null && !loading && (
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${trend.direction === 'up' ? 'text-green-600 bg-green-50 border-green-100' :
+                            trend.direction === 'down' ? 'text-red-600 bg-red-50 border-red-100' :
+                                'text-on-surface-variant bg-surface-variant border-outline-variant'
+                            }`}>
+                            {trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : trend.direction === 'down' ? <TrendingDown className="w-3.5 h-3.5" /> : null}
+                            {trend.label || '--'}
+                        </div>
+                    )}
+
+                    {/* Sparkline for Score History */}
+                    {!loading && history.length > 0 && (
+                        <div className="w-32 h-10 mt-1 opacity-80">
+                            <Sparkline
+                                data={history}
+                                color={trend?.direction === 'up' ? '#16a34a' : trend?.direction === 'down' ? '#ef4444' : '#6750a4'}
+                                strokeWidth={2.5}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Trend */}
-            {trend != null && !loading && (
-                <div className={`flex items-center gap-1 mt-1 text-sm font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                    {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
+            <div className="flex flex-col md:flex-row items-center gap-8">
+                {/* Score Display */}
+                <div className="relative">
+                    {loading ? (
+                        <div className="w-[180px] h-[180px] flex items-center justify-center">
+                            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="relative group">
+                            <ScoreDisplay
+                                value={currentScore}
+                                size={180}
+                                strokeWidth={12}
+                            />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-xs font-bold text-on-surface-variant opacity-50 uppercase tracking-widest mb-1">Score</span>
+                                <span className="text-4xl font-black text-on-surface">{currentScore}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
 
-            {/* Score Label */}
-            <h3 className="text-base font-bold text-on-surface mt-2">{config.title}</h3>
-            <p className="text-[10px] leading-tight text-on-surface-variant text-center mt-1.5 max-w-[180px]">
-                {config.desc}
-            </p>
+                {/* Sub-Metrics Grid */}
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                    {indicators.map((ind) => (
+                        <div key={ind.metricId} className="bg-surface p-3 rounded-2xl border border-outline-variant hover:border-primary/30 transition-colors">
+                            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 truncate">
+                                {ind.label}
+                            </div>
+                            <div className="flex items-baseline justify-between gap-1">
+                                <span className="text-base font-bold text-on-surface truncate">
+                                    {loading ? '...' : ind.formattedValue}
+                                </span>
+                                {ind.trend.direction && (
+                                    <span className={`text-[10px] font-bold flex items-center gap-0.5 ${ind.trend.direction === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {ind.trend.direction === 'up' ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                                        {ind.trend.label}
+                                    </span>
+                                )}
+                            </div>
 
+                            {/* Indicator Sparkline */}
+                            {!loading && ind.history.length > 0 && (
+                                <div className="h-6 mt-2 opacity-60">
+                                    <Sparkline
+                                        data={ind.history}
+                                        color={ind.trend.direction === 'up' ? '#16a34a' : ind.trend.direction === 'down' ? '#ef4444' : '#6750a4'}
+                                        strokeWidth={1.2}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
