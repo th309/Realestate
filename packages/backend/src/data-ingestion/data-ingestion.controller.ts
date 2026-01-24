@@ -60,9 +60,9 @@ export class DataIngestionController {
     @Post('redfin')
     @HttpCode(HttpStatus.OK)
     async importRedfin(
-        @Body() body: { metric?: string; limit?: number; url?: string }
+        @Body() body: { metric?: string; limit?: number; url?: string; csvContent?: string }
     ) {
-        return this.redfinService.importRedfinData(body.metric, body.limit, undefined, body.url);
+        return this.redfinService.importRedfinData(body.metric, body.limit, body.csvContent, body.url);
     }
 
     @Post('realtor')

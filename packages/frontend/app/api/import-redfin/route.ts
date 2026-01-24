@@ -31,23 +31,12 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           metric: metricName,
           limit: limitRows,
-          // Send file content as string. Ideally valid CSV.
-          // Backend RedfinService.importRedfinData takes csvContent arg.
-          // We need to support passing csvContent in the body for this controller endpoint.
-          // Wait, my controller logic:
-          // async importRedfin(@Body() body: { metric?: string; limit?: number; url?: string; csvContent?: string })
-          // I need to update the controller to accept csvContent too!
+          csvContent: text
         })
       });
-      // I need to update the backend controller first or simultaneously to accept csvContent.
-      // I will assume I can update/fix it.
-      // Actually, I can't send 'file' content effectively if I haven't added it to the controller DTO.
-      // Let's assume for now I will rely on the "url" based import or just text content if I can add it.
 
-      // Current Controller DTO: { metric?: string; limit?: number; url?: string }
-      // I missed csvContent. I should update the backend controller.
-
-      return NextResponse.json({ success: false, message: 'File upload proxy not yet fully implemented in backend controller. Use URL import.' }, { status: 501 })
+      const result = await response.json()
+      return NextResponse.json(result, { status: response.status })
     } else {
       // JSON Body
       const body = await request.json()

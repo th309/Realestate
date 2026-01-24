@@ -31,6 +31,11 @@ Successfully migrated data ingestion logic from the Frontend (Next.js) to the Ba
 - [x] Created `api/import-realtor` proxy in frontend.
 - [x] Deprecated legacy test endpoints.
 
+### Phase 3: Cleanup & Parity
+- [x] Verified feature parity for Redfin file uploads (CSV content proxying).
+- [x] Deleted legacy `packages/frontend/lib/data-ingestion` directory.
+- [x] Deleted deprecated testing endpoints (`test-zillow`, `analyze-zillow`, etc).
+
 ## Technical Details
 
 ### Backend Structure
@@ -47,9 +52,8 @@ Successfully migrated data ingestion logic from the Frontend (Next.js) to the Ba
     - `DataQualityService`: Helper for validation.
 
 ### Frontend Usage
-The frontend now acts as a lightweight client, forwarding ingestion triggers to the backend. The legacy `lib/data-ingestion` folder in frontend can now be considered for archiving or removal in a future cleanup pass, once we confirm no other components import from it directly (the audit showed mostly API routes).
+The frontend now acts as a lightweight client, forwarding ingestion triggers to the backend. The legacy `lib/data-ingestion` folder has been removed.
 
 ## Next Steps
 1.  **Monitor**: Watch logs for the first few ingestion runs to ensure parity.
-2.  **Cleanup**: Delete `packages/frontend/lib/data-ingestion` after verifying all functionality in production.
-3.  **Enhancement**: Implement more robust scheduling for these ingestion tasks using NestJS Scheduler / Bull Queue.
+2.  **Enhancement**: Implement more robust scheduling for these ingestion tasks using NestJS Scheduler / Bull Queue.
