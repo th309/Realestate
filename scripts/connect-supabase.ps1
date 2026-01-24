@@ -45,7 +45,7 @@ if ([string]::IsNullOrEmpty($Password)) {
     $Password = "IHatedoingpt12"
 }
 
-Write-Host "`n🔌 Connecting to Supabase PostgreSQL via Transaction Pooler..." -ForegroundColor Cyan
+Write-Host "`nConnecting to Supabase PostgreSQL via Transaction Pooler..." -ForegroundColor Cyan
 Write-Host "   Host: $poolerHost" -ForegroundColor Gray
 Write-Host "   Port: $poolerPort" -ForegroundColor Gray
 Write-Host "   Database: $Database" -ForegroundColor Gray
@@ -57,17 +57,18 @@ if (-not [string]::IsNullOrEmpty($Query)) {
     Write-Host "Executing query..." -ForegroundColor Yellow
     Write-Host "Query: $Query`n" -ForegroundColor Gray
     
-    # Use transaction pooler (port 6543) - set password right before command
+    # Use transaction pooler (port 6543) - set password and disable pager
     $env:PGPASSWORD = $Password
+    $env:PAGER = ""
     $result = & psql -h $poolerHost -p $poolerPort -d $Database -U $poolerUser -c $Query 2>&1
     $exitCode = $LASTEXITCODE
     
     if ($exitCode -eq 0) {
         Write-Host $result
-        Write-Host "`n✅ Query executed successfully" -ForegroundColor Green
+        Write-Host "`n[OK] Query executed successfully" -ForegroundColor Green
     }
     else {
-        Write-Host "❌ Query failed" -ForegroundColor Red
+        Write-Host "[X] Query failed" -ForegroundColor Red
         Write-Host $result
         Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
         exit $exitCode
@@ -82,10 +83,11 @@ elseif ($Interactive -or [string]::IsNullOrEmpty($Query)) {
     # Use transaction pooler (most reliable)
     Write-Host "Using session pooler connection..." -ForegroundColor Gray
     $env:PGPASSWORD = $Password
+    $env:PAGER = ""
     & psql -h $poolerHost -p $poolerPort -d $Database -U $poolerUser
     Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
 }
 
-# Clean up
-Remove-Item Env:\PGPASSWORD
-
+# Clean up (final, in case other paths didn't clean)
+Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+Remove-Item Env:\PAGER -ErrorAction SilentlyContinue

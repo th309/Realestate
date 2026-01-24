@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import { join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import { createIngestionLogger } from './utils/ingestion-logger';
 
 // Load environment variables
 dotenv.config({ path: './packages/backend/.env' });
@@ -173,54 +174,78 @@ async function main() {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Parse Excel file
-  const filePath = join(DATA_DIR, FMR_FILE);
-  const records = parseHudFmrExcel(filePath);
-
-  if (records.length === 0) {
-    console.error('No records parsed from HUD FMR file');
-    process.exit(1);
-  }
-
-  // Import records
-  console.log('\n📊 Importing HUD FMR data...');
-  const result = await importHudFmrRecords(supabase, records);
-
-  // Summary
-  console.log('\n═══════════════════════════════════════════════════════════════');
-  console.log('                       SUMMARY');
-  console.log('═══════════════════════════════════════════════════════════════');
-  console.log(`  Processed: ${result.processed}`);
-  console.log(`  Inserted:  ${result.inserted}`);
-  if (result.errors.length > 0) {
-    console.log(`  Errors:    ${result.errors.length}`);
-    result.errors.slice(0, 5).forEach(e => console.log(`    - ${e}`));
-  }
-  console.log('═══════════════════════════════════════════════════════════════\n');
-
-  // Verify data
-  console.log('📋 Verifying imported data...');
-  const { count } = await supabase
-    .from('hud_fmr')
-    .select('*', { count: 'exact', head: true })
-    .eq('year', FISCAL_YEAR);
-
-  console.log(`  Total HUD FMR records for FY${FISCAL_YEAR}: ${count}`);
-
-  // Sample data
-  const { data: sample } = await supabase
-    .from('hud_fmr')
-    .select('fips_code, county_name, state_name, fmr_2br')
-    .eq('year', FISCAL_YEAR)
-    .order('fmr_2br', { ascending: false })
-    .limit(5);
-
-  console.log('\n  Top 5 counties by 2BR FMR:');
-  sample?.forEach(r => {
-    console.log(`    ${r.county_name}, ${r.state_name}: $${r.fmr_2br}/month`);
+  // Create ingestion logger
+  const logger = createIngestionLogger(supabase, {
+    source: 'hud',
+    tableName: 'hud_fmr',
+    datasetId: `hud-fmr-fy${FISCAL_YEAR}`
   });
 
-  console.log('\n✓ HUD FMR import complete!\n');
+  try {
+    // Parse Excel file
+    const filePath = join(DATA_DIR, FMR_FILE);
+    const records = parseHudFmrExcel(filePath);
+
+    if (records.length === 0) {
+      console.error('No records parsed from HUD FMR file');
+      await logger.fail('No records parsed from HUD FMR file');
+      process.exit(1);
+    }
+
+    // Start ingestion log
+    await logger.start(records.length);
+
+    // Import records
+    console.log('\n📊 Importing HUD FMR data...');
+    const result = await importHudFmrRecords(supabase, records);
+
+    // Complete ingestion log
+    await logger.complete({
+      recordsProcessed: result.processed,
+      recordsSuccess: result.inserted,
+      recordsError: result.errors.length,
+      errors: result.errors
+    });
+
+    // Summary
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('                       SUMMARY');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(`  Processed: ${result.processed}`);
+    console.log(`  Inserted:  ${result.inserted}`);
+    if (result.errors.length > 0) {
+      console.log(`  Errors:    ${result.errors.length}`);
+      result.errors.slice(0, 5).forEach(e => console.log(`    - ${e}`));
+    }
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    // Verify data
+    console.log('📋 Verifying imported data...');
+    const { count } = await supabase
+      .from('hud_fmr')
+      .select('*', { count: 'exact', head: true })
+      .eq('year', FISCAL_YEAR);
+
+    console.log(`  Total HUD FMR records for FY${FISCAL_YEAR}: ${count}`);
+
+    // Sample data
+    const { data: sample } = await supabase
+      .from('hud_fmr')
+      .select('fips_code, county_name, state_name, fmr_2br')
+      .eq('year', FISCAL_YEAR)
+      .order('fmr_2br', { ascending: false })
+      .limit(5);
+
+    console.log('\n  Top 5 counties by 2BR FMR:');
+    sample?.forEach(r => {
+      console.log(`    ${r.county_name}, ${r.state_name}: $${r.fmr_2br}/month`);
+    });
+
+    console.log('\n✓ HUD FMR import complete!\n');
+  } catch (error: any) {
+    await logger.fail(error.message);
+    throw error;
+  }
 }
 
 main().catch(console.error);

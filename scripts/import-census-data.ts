@@ -32,6 +32,7 @@ import {
 } from './census-economic-import/csv-processor';
 import type { ImportResult } from './census-economic-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
+import { createIngestionLogger } from './utils/ingestion-logger';
 
 // Use process.cwd() for compatibility with both CommonJS and ES modules
 const DATA_DIR = join(process.cwd(), 'data/economic');
@@ -111,6 +112,13 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
   console.log(`\nImporting ${config.name}...`);
   console.log(`  Source: ${filePath}`);
 
+  // Create ingestion logger for this dataset
+  const logger = createIngestionLogger(supabase, {
+    source: 'census',
+    tableName: `census_${config.id}`,
+    datasetId: `census-${config.id}`
+  });
+
   try {
     const csvContent = readFileSync(filePath, 'utf-8');
     const records = config.parser(csvContent);
@@ -122,10 +130,23 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
       return null;
     }
 
+    // Start ingestion log
+    await logger.start(records.length);
+
     const result = await config.importer(supabase, records);
+
+    // Complete ingestion log
+    await logger.complete({
+      recordsProcessed: records.length,
+      recordsSuccess: result.recordsInserted,
+      recordsError: result.errors,
+      errors: result.errors > 0 ? [`${result.errors} records failed`] : []
+    });
+
     return result;
   } catch (error: any) {
     console.error(`  Error importing ${config.name}: ${error.message}`);
+    await logger.fail(error.message);
     return {
       datasetId: config.id,
       success: false,

@@ -27,8 +27,8 @@ let getDatasetTypes: any;
 let buildZillowUrl: any;
 
 try {
-  // Try to import from web directory
-  const zillowDatasets = require('../web/lib/data-ingestion/sources/zillow-datasets');
+  // Try to import from packages/frontend directory
+  const zillowDatasets = require('../packages/frontend/lib/data-ingestion/sources/zillow-datasets');
   ZILLOW_DATASETS = zillowDatasets.ZILLOW_DATASETS;
   getDatasetsByCategory = zillowDatasets.getDatasetsByCategory;
   getDatasetsByGeography = zillowDatasets.getDatasetsByGeography;
@@ -86,8 +86,8 @@ async function downloadDataset(
   try {
     // Download the CSV
     const response = await axios.get(config.downloadUrl, {
-      timeout: 60000,
-      maxContentLength: 100 * 1024 * 1024, // 100MB max
+      timeout: 300000, // 5 minutes for large files
+      maxContentLength: 500 * 1024 * 1024, // 500MB max for large ZIP files
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }

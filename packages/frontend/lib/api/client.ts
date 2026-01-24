@@ -1350,7 +1350,7 @@ export const api = {
   // Get PropertyIQ score for a specific geography
   getScore: async (geographyType: string, geographyId: string): Promise<ScoreResponse | null> => {
     try {
-      const response = await fetchAPI<ScoreResponse>(`/api/scoring/${geographyType}/${geographyId}`);
+      const response = await fetchAPI<ScoreResponse>(`/api/scores/${geographyType}/${geographyId}`);
       return response;
     } catch (error) {
       console.error('Failed to fetch score:', error);
@@ -1362,7 +1362,7 @@ export const api = {
   getBatchScores: async (geographyType: string, ids: string[]): Promise<BatchScoreResponse | null> => {
     try {
       const response = await fetchAPI<BatchScoreResponse>(
-        `/api/scoring/batch/${geographyType}?ids=${ids.join(',')}`
+        `/api/scores/batch/${geographyType}?ids=${ids.join(',')}`
       );
       return response;
     } catch (error) {

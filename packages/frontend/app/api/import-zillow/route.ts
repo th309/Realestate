@@ -1,48 +1,43 @@
 import { NextResponse } from 'next/server'
-import { importZillowData, testZillowImport } from '@/lib/data-ingestion/sources/zillow-v2'
 
-/**
- * API endpoint to trigger Zillow data import
- * GET /api/import-zillow?metric=zhvi&limit=5&test=true
- */
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const metric = searchParams.get('metric') || 'zhvi'
     const limit = searchParams.get('limit')
     const isTest = searchParams.get('test') === 'true'
-    
-    console.log('🚀 Starting Zillow import via API')
+
+    console.log('🚀 Starting Zillow import via Backend API')
     console.log(`Parameters: metric=${metric}, limit=${limit}, test=${isTest}`)
-    
-    let result
-    
-    if (isTest) {
-      // Test mode: import only 5 regions
-      result = await testZillowImport()
-    } else {
-      // Full import
-      const limitRows = limit ? parseInt(limit) : undefined
-      result = await importZillowData(metric, limitRows)
-    }
-    
-    return NextResponse.json({
-      success: result.success,
-      message: result.message,
-      details: {
-        marketsCreated: result.marketsCreated,
-        timeSeriesInserted: result.timeSeriesInserted,
-        errors: result.errors,
-        errorDetails: result.errorDetails || []
-      }
+
+    const limitRows = limit ? parseInt(limit) : (isTest ? 5 : undefined)
+
+    const response = await fetch(`${BACKEND_URL}/data-ingestion/zillow`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        metric,
+        limit: limitRows
+      })
     })
-    
+
+    const result = await response.json()
+
+    // Transform backend result to match frontend expectation if needed
+    // Backend returns: { success, message, details: { marketsCreated, timeSeriesInserted, errors, errorDetails } }
+    // Frontend expects similar structure.
+
+    return NextResponse.json(result, { status: response.status })
+
   } catch (error: any) {
-    console.error('❌ Import error:', error)
+    console.error('❌ Zillow proxy error:', error)
     return NextResponse.json({
       success: false,
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
 }

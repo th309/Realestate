@@ -1,0 +1,2 @@
+$env:PGPASSWORD = 'IHatedoingpt12'
+psql -h aws-1-us-east-1.pooler.supabase.com -p 6543 -U postgres.pysflbhpnqwoczyuaaif -d postgres -c "SELECT geography_type, COUNT(*) as total, COUNT(actual_appreciation_12m) as has_12m, COUNT(actual_appreciation_24m) as has_24m, COUNT(actual_appreciation_36m) as has_36m, COUNT(actual_appreciation_60m) as has_60m FROM propertyiq_scores_history GROUP BY geography_type ORDER BY geography_type;"

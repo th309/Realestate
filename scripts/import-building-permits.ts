@@ -16,6 +16,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { createImportClient } from './census-economic-import/db-client';
 import { parse } from 'csv-parse/sync';
+import { createIngestionLogger } from './utils/ingestion-logger';
 
 const DATA_DIR = join(process.cwd(), 'data/permits');
 
@@ -322,6 +323,13 @@ async function main() {
     console.log(`\nImporting ${config.name}...`);
     console.log(`  Source: ${filePath}`);
 
+    // Create ingestion logger for this dataset
+    const logger = createIngestionLogger(supabase, {
+      source: 'permits',
+      tableName: `permits_${config.id}`,
+      datasetId: `permits-${config.id}`
+    });
+
     try {
       const csvContent = readFileSync(filePath, 'utf-8');
       const records = parsePermitsCSV(csvContent);
@@ -337,8 +345,19 @@ async function main() {
       const dates = records.map(r => r.period_date).sort();
       console.log(`  Date range: ${dates[0]} to ${dates[dates.length - 1]}`);
 
+      // Start ingestion log
+      await logger.start(records.length);
+
       const result = await config.importer(supabase, records);
       results.push(result);
+
+      // Complete ingestion log
+      await logger.complete({
+        recordsProcessed: records.length,
+        recordsSuccess: result.recordsInserted,
+        recordsError: result.errors,
+        errors: result.errors > 0 ? [`${result.errors} records failed`] : []
+      });
 
       console.log(`  Imported: ${result.recordsInserted} records`);
       if (result.errors > 0) {
@@ -346,6 +365,7 @@ async function main() {
       }
     } catch (error: any) {
       console.error(`  Error importing ${config.name}: ${error.message}`);
+      await logger.fail(error.message);
       results.push({
         datasetId: config.id,
         success: false,

@@ -6,83 +6,28 @@ description: How to run queries and perform operations on the Supabase PostgreSQ
 
 This workflow describes how to interact with the Supabase PostgreSQL database for this project.
 
-## 🔌 MCP Server Setup (Recommended)
-
-The project is configured with Supabase MCP servers for seamless AI-powered database access.
-
-### Configuration Files
-
-**Gemini Configuration** (`.gemini/settings.json`):
-```json
-{
-  "mcpServers": {
-    "supabase": {
-      "command": "npx",
-      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "YOUR_TOKEN"]
-    },
-    "supabase-postgrest": {
-      "command": "npx", 
-      "args": ["-y", "@supabase/mcp-server-postgrest@latest", "--apiUrl", "https://pysflbhpnqwoczyuaaif.supabase.co/rest/v1", "--apiKey", "YOUR_SERVICE_KEY"]
-    }
-  }
-}
-```
-
-### Available MCP Servers
-
-1. **`@supabase/mcp-server-supabase`** - Project Management
-   - Create/manage database tables and migrations
-   - Run SQL queries directly
-   - Database branching for development
-   - Fetch project configurations
-   - Retrieve logs for debugging
-   - Generate TypeScript types from schema
-
-2. **`@supabase/mcp-server-postgrest`** - Data Operations
-   - CRUD operations via REST API
-   - Respects Row-Level Security (RLS) policies
-   - Safe, secure data access
-
-### Setup Steps
-
-1. **Get a Personal Access Token (PAT):**
-   - Go to [Supabase Dashboard](https://supabase.com/dashboard/account/tokens)
-   - Click "Generate new token"
-   - Name it (e.g., "Gemini MCP Server")
-   - Copy the token immediately (shown only once)
-
-2. **Update the configuration file** at `.gemini/settings.json` with your token
-
-3. **Restart your IDE/Agent** to load the MCP servers
-
-### Security Notes
-- ⚠️ MCP servers are for **development/testing only**, not production
-- Use read-only mode for sensitive data when possible
-- Review all AI-generated queries before execution on production data
-
----
-
-## 📝 Manual SQL Access (Alternative)
-
-### Connection Details
+## 🔧 Connection Details
 
 - **Project Reference**: `pysflbhpnqwoczyuaaif`
 - **Supabase URL**: `https://pysflbhpnqwoczyuaaif.supabase.co`
 - **Connection Method**: Transaction Pooler via `aws-1-us-east-1.pooler.supabase.com:6543`
 - **Database**: `postgres`
 - **Username**: `postgres.pysflbhpnqwoczyuaaif`
+- **Password**: Set via `SUPABASE_DB_PASSWORD` env var or hardcoded in scripts
 
-### Running SQL Queries via PowerShell
+---
+
+## 📝 Running SQL Queries
 
 Use the PowerShell script `scripts/connect-supabase.ps1` to execute SQL queries.
 
-#### Basic Syntax
+### Basic Syntax
 
 ```powershell
 .\scripts\connect-supabase.ps1 "YOUR_SQL_QUERY_HERE"
 ```
 
-#### Examples
+### Examples
 
 // turbo
 1. **Count tables in the database:**
@@ -119,9 +64,57 @@ Use the PowerShell script `scripts/connect-supabase.ps1` to execute SQL queries.
 
 ---
 
+## 🚀 Running Migrations
+
+Use the PowerShell script `scripts/run-migration.ps1` to run database migrations.
+
+### Migration Runner Syntax
+
+```powershell
+# Run a specific migration by file name
+.\scripts\run-migration.ps1 -MigrationFile "057-create-building-permits-tables.sql"
+
+# Run a specific migration by number
+.\scripts\run-migration.ps1 -MigrationNumber 57
+
+# Preview all migrations (dry run)
+.\scripts\run-migration.ps1 -All -DryRun
+
+# Run ALL migrations
+.\scripts\run-migration.ps1 -All
+```
+
+### Examples
+
+// turbo
+1. **Dry run to see what would be executed:**
+```powershell
+.\scripts\run-migration.ps1 -MigrationNumber 57 -DryRun
+```
+
+// turbo
+2. **Run a specific migration:**
+```powershell
+.\scripts\run-migration.ps1 -MigrationNumber 57
+```
+
+// turbo
+3. **Run migration by file name:**
+```powershell
+.\scripts\run-migration.ps1 -MigrationFile "057-create-building-permits-tables.sql"
+```
+
+### Migration File Location
+
+All migrations are stored in: `scripts/migrations/`
+
+Naming convention: `NNN-description.sql` (e.g., `057-create-building-permits-tables.sql`)
+
+---
+
 ## 📊 Database Overview
 
-### Key Tables (109 total)
+### Key Tables (138+ total)
 
 | Table | Description |
 |-------|-------------|
@@ -129,6 +122,8 @@ Use the PowerShell script `scripts/connect-supabase.ps1` to execute SQL queries.
 | `zillow_metro` | Zillow metro-level housing data (~2.37M rows) |
 | `census_housing` | Census housing statistics |
 | `geo_*` tables | Geographic mapping tables |
+| `realtor_*` tables | Realtor.com data by geography |
+| `redfin_*` tables | Redfin data by geography |
 
 ### Capabilities
 
@@ -141,6 +136,7 @@ Use the PowerShell script `scripts/connect-supabase.ps1` to execute SQL queries.
 | **CREATE TABLE** | ✅ |
 | **DROP TABLE** | ✅ |
 | **ALTER TABLE** | ✅ |
+| **Migrations** | ✅ |
 
 ---
 

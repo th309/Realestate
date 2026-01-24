@@ -6,6 +6,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { randomUUID } from 'crypto';
 
@@ -113,12 +114,20 @@ export interface JobStatus {
 @Injectable()
 export class MLValidationService {
   private readonly logger = new Logger(MLValidationService.name);
+  private readonly analyticsServiceUrl: string;
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    this.analyticsServiceUrl =
+      this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
+      'http://localhost:8000';
+  }
 
   /**
    * Queue a new ML validation job.
-   * The job will be picked up by a Python worker.
+   * The job will be processed by the analytics service.
    */
   async queueMLValidationJob(config: MLValidationConfig): Promise<{ jobId: string }> {
     const jobId = randomUUID();
@@ -150,28 +159,83 @@ export class MLValidationService {
 
     this.logger.log(`Queued ML validation job ${jobId}`);
 
-    // In production, this would trigger a Python worker
-    // For now, we just return the job ID for polling
-    this.triggerPythonWorker(jobId);
+    // Trigger analytics service to process the job
+    this.executeValidationJob(jobId, config);
 
     return { jobId };
   }
 
   /**
-   * Trigger the Python worker to process the job.
-   * In production, this could use Redis pub/sub, AWS SQS, or similar.
+   * Execute ML validation via analytics service.
    */
-  private async triggerPythonWorker(jobId: string): Promise<void> {
-    // This is a placeholder for the actual worker trigger mechanism
-    // Options:
-    // 1. Redis pub/sub to notify Python worker
-    // 2. AWS Lambda/Cloud Run invocation
-    // 3. Direct process spawn (dev only)
+  private async executeValidationJob(
+    jobId: string,
+    config: MLValidationConfig,
+  ): Promise<void> {
+    const url = `${this.analyticsServiceUrl}/api/v1/validate/ml`;
 
-    this.logger.log(`Would trigger Python worker for job ${jobId}`);
+    try {
+      this.logger.log(`Calling analytics service: POST ${url}`);
 
-    // For development, you can manually run:
-    // python packages/backend/jobs/ml_validation_job.py --job-id <jobId>
+      // Update job status to running
+      await this.supabase.getClient()
+        .from('propertyiq_ml_jobs')
+        .update({
+          status: 'running',
+          started_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          score_type: config.scoreType,
+          geography_type: config.geographyType,
+          horizon: config.horizon,
+          train_period_start: config.trainPeriodStart,
+          train_period_end: config.trainPeriodEnd,
+          test_period_start: config.testPeriodStart,
+          test_period_end: config.testPeriodEnd,
+          ml_preset: config.mlPreset,
+          time_limit_seconds: config.timeLimitSeconds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      // Update job as completed
+      await this.supabase.getClient()
+        .from('propertyiq_ml_jobs')
+        .update({
+          status: 'completed',
+          progress: 100,
+          result: { validationId: result.validation_id },
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+
+      this.logger.log(`ML validation job ${jobId} completed`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      await this.supabase.getClient()
+        .from('propertyiq_ml_jobs')
+        .update({
+          status: 'failed',
+          error: errorMessage,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+
+      this.logger.error(`ML validation job ${jobId} failed: ${errorMessage}`);
+    }
   }
 
   /**

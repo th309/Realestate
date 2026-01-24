@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { importCensusData } from '@/lib/data-ingestion/sources/census'
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export async function GET(request: Request) {
   try {
@@ -8,35 +9,32 @@ export async function GET(request: Request) {
     const year = parseInt(searchParams.get('year') || '2022')
     const geoLevel = searchParams.get('geo_level') || 'metropolitan statistical area/micropolitan statistical area'
     const apiKey = searchParams.get('api_key')
-    
+
     const variablesList = variables.split(',').map(v => v.trim())
-    
-    console.log('🚀 Starting Census import via API')
-    console.log(`Parameters: variables=${variablesList.join(', ')}, year=${year}, geo_level=${geoLevel}`)
-    
-    const result = await importCensusData(
-      variablesList,
-      year,
-      geoLevel as any,
-      apiKey || undefined
-    )
-    
-    return NextResponse.json({
-      success: result.success,
-      message: result.message,
-      details: {
-        recordsInserted: result.recordsInserted,
-        errors: result.errors.length,
-        errorDetails: result.errors.slice(0, 10)
-      }
+
+    console.log('🚀 Starting Census import via Backend API')
+
+    const response = await fetch(`${BACKEND_URL}/data-ingestion/census?api_key=${apiKey || ''}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        variables: variablesList,
+        year,
+        geoLevel
+      })
     })
-    
+
+    const result = await response.json()
+
+    return NextResponse.json(result, { status: response.status })
+
   } catch (error: any) {
-    console.error('❌ Census import error:', error)
+    console.error('❌ Census proxy error:', error)
     return NextResponse.json({
       success: false,
       error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 })
   }
 }

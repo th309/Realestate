@@ -16,6 +16,7 @@ import { downloadDataset, loadFromFile } from './realtor-import/download';
 import { parseNationalCSV, importNationalRecords } from './realtor-import/csv-processor';
 import { REALTOR_DATASETS } from './realtor-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
+import { createIngestionLogger } from './utils/ingestion-logger';
 
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-national')!;
 
@@ -33,62 +34,87 @@ async function main() {
   // Create database client
   const supabase = createRealtorImportClient();
 
-  // Get CSV content
-  let csvContent: string;
-  if (useHistory && DATASET_CONFIG.historyFile) {
-    console.log('📂 Loading historical data...');
-    const result = loadFromFile(DATASET_CONFIG.historyFile);
-    if (!result.success) {
-      console.error(`❌ Failed to load file: ${result.error}`);
+  // Create ingestion logger
+  const logger = createIngestionLogger(supabase, {
+    source: 'realtor',
+    tableName: 'realtor_national',
+    datasetId: 'realtor-national'
+  });
+
+  try {
+    // Get CSV content
+    let csvContent: string;
+    if (useHistory && DATASET_CONFIG.historyFile) {
+      console.log('📂 Loading historical data...');
+      const result = loadFromFile(DATASET_CONFIG.historyFile);
+      if (!result.success) {
+        console.error(`❌ Failed to load file: ${result.error}`);
+        await logger.fail(`Failed to load file: ${result.error}`);
+        process.exit(1);
+      }
+      csvContent = result.csvContent!;
+    } else {
+      console.log('📥 Downloading current month data...');
+      const result = await downloadDataset(DATASET_CONFIG.downloadUrl);
+      if (!result.success) {
+        console.error(`❌ Failed to download: ${result.error}`);
+        await logger.fail(`Failed to download: ${result.error}`);
+        process.exit(1);
+      }
+      csvContent = result.csvContent!;
+    }
+
+    // Parse CSV
+    console.log('\n📊 Parsing CSV data...');
+    const records = parseNationalCSV(csvContent);
+    console.log(`  ✅ Parsed ${records.length} records`);
+
+    // Show date range
+    if (records.length > 0) {
+      const dates = records.map(r => r.period_date).sort((a, b) => a.getTime() - b.getTime());
+      const startDate = dates[0].toISOString().split('T')[0];
+      const endDate = dates[dates.length - 1].toISOString().split('T')[0];
+      console.log(`  📅 Date range: ${startDate} to ${endDate}`);
+    }
+
+    // Start ingestion log
+    await logger.start(records.length);
+
+    // Import to database
+    console.log('\n💾 Importing to database...');
+    const result = await importNationalRecords(supabase, records);
+
+    // Complete ingestion log
+    await logger.complete({
+      recordsProcessed: records.length,
+      recordsSuccess: result.recordsInserted,
+      recordsError: result.errors,
+      errors: result.errors > 0 ? [`${result.errors} records failed`] : []
+    });
+
+    // Summary
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 IMPORT SUMMARY');
+    console.log('='.repeat(60));
+    console.log(`Records imported: ${result.recordsInserted}`);
+    console.log(`Errors: ${result.errors}`);
+    console.log(`Duration: ${duration}s`);
+    console.log('='.repeat(60));
+
+    if (result.success) {
+      // Refresh calculated metrics after successful import
+      if (result.recordsInserted > 0) {
+        await refreshCalculatedMetrics(supabase);
+      }
+      console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
+    } else {
+      console.log('❌ IMPORT COMPLETED WITH ERRORS');
       process.exit(1);
     }
-    csvContent = result.csvContent!;
-  } else {
-    console.log('📥 Downloading current month data...');
-    const result = await downloadDataset(DATASET_CONFIG.downloadUrl);
-    if (!result.success) {
-      console.error(`❌ Failed to download: ${result.error}`);
-      process.exit(1);
-    }
-    csvContent = result.csvContent!;
-  }
-
-  // Parse CSV
-  console.log('\n📊 Parsing CSV data...');
-  const records = parseNationalCSV(csvContent);
-  console.log(`  ✅ Parsed ${records.length} records`);
-
-  // Show date range
-  if (records.length > 0) {
-    const dates = records.map(r => r.period_date).sort((a, b) => a.getTime() - b.getTime());
-    const startDate = dates[0].toISOString().split('T')[0];
-    const endDate = dates[dates.length - 1].toISOString().split('T')[0];
-    console.log(`  📅 Date range: ${startDate} to ${endDate}`);
-  }
-
-  // Import to database
-  console.log('\n💾 Importing to database...');
-  const result = await importNationalRecords(supabase, records);
-
-  // Summary
-  const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 IMPORT SUMMARY');
-  console.log('='.repeat(60));
-  console.log(`Records imported: ${result.recordsInserted}`);
-  console.log(`Errors: ${result.errors}`);
-  console.log(`Duration: ${duration}s`);
-  console.log('='.repeat(60));
-
-  if (result.success) {
-    // Refresh calculated metrics after successful import
-    if (result.recordsInserted > 0) {
-      await refreshCalculatedMetrics(supabase);
-    }
-    console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
-  } else {
-    console.log('❌ IMPORT COMPLETED WITH ERRORS');
-    process.exit(1);
+  } catch (error: any) {
+    await logger.fail(error.message);
+    throw error;
   }
 }
 

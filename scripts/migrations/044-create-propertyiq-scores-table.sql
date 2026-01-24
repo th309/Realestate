@@ -1,6 +1,7 @@
 -- Migration: Create PropertyIQ Scores Table
--- Description: Stores calculated HomeReady and InvestorEdge scores for all geographies
+-- Description: Stores all 3 PropertyIQ scores (Market Health, HomeReady, InvestorEdge) for all geographies
 -- Date: 2025-01-14
+-- Updated: 2025-01-22 - Added Market Health score
 
 -- Main Scores Table
 CREATE TABLE IF NOT EXISTS propertyiq_scores (
@@ -8,13 +9,22 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores (
 
   -- Geography identification
   geography_id TEXT NOT NULL,           -- CBSA code, FIPS, or ZIP
-  geography_type TEXT NOT NULL,         -- 'metro', 'county', 'zip'
+  geography_type TEXT NOT NULL,         -- 'metro', 'county', 'zip', 'state'
   geography_name TEXT NOT NULL,         -- Human-readable name
   state_code TEXT,                      -- Two-letter state code
   parent_geography_id TEXT,             -- Parent metro/county for ZIPs
 
   -- Period
   period_date DATE NOT NULL,            -- First of month (e.g., 2025-01-01)
+
+  -- Market Health Score (Free tier - General market conditions)
+  market_health_score NUMERIC(5,2),               -- 0-100 overall
+  market_health_demand_strength NUMERIC(5,2),     -- 0-100 component
+  market_health_supply_balance NUMERIC(5,2),      -- 0-100 component
+  market_health_price_stability NUMERIC(5,2),     -- 0-100 component
+  market_health_economic_foundation NUMERIC(5,2), -- 0-100 component
+  market_health_trend TEXT,                       -- 'improving', 'stable', 'declining'
+  market_health_trend_change NUMERIC(5,2),        -- Point change over 6 months
 
   -- HomeReady Score (Homebuyers/Renters)
   homeready_score NUMERIC(5,2),                    -- 0-100 overall
@@ -36,7 +46,7 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores (
   investoredge_trend TEXT,                         -- 'improving', 'stable', 'declining'
   investoredge_trend_change NUMERIC(5,2),          -- Point change over 6 months
 
-  -- Confidence
+  -- Confidence (applies to all scores)
   confidence_level TEXT NOT NULL DEFAULT 'medium', -- 'high', 'medium', 'low'
   metrics_available INTEGER,                       -- Count of metrics with data
   metrics_total INTEGER,                           -- Total metrics needed
@@ -47,8 +57,10 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores (
   data_version TEXT,                               -- Version of scoring algorithm
 
   -- Constraints
+  CONSTRAINT valid_market_health_score CHECK (market_health_score IS NULL OR (market_health_score >= 0 AND market_health_score <= 100)),
   CONSTRAINT valid_homeready_score CHECK (homeready_score IS NULL OR (homeready_score >= 0 AND homeready_score <= 100)),
   CONSTRAINT valid_investoredge_score CHECK (investoredge_score IS NULL OR (investoredge_score >= 0 AND investoredge_score <= 100)),
+  CONSTRAINT valid_market_health_trend CHECK (market_health_trend IS NULL OR market_health_trend IN ('improving', 'stable', 'declining')),
   CONSTRAINT valid_homeready_trend CHECK (homeready_trend IS NULL OR homeready_trend IN ('improving', 'stable', 'declining')),
   CONSTRAINT valid_investoredge_trend CHECK (investoredge_trend IS NULL OR investoredge_trend IN ('improving', 'stable', 'declining')),
   CONSTRAINT valid_confidence_level CHECK (confidence_level IN ('high', 'medium', 'low')),
@@ -62,6 +74,7 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores (
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_geography ON propertyiq_scores(geography_id, geography_type);
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_period ON propertyiq_scores(period_date DESC);
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_state ON propertyiq_scores(state_code);
+CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_market_health ON propertyiq_scores(market_health_score DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_homeready ON propertyiq_scores(homeready_score DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_investoredge ON propertyiq_scores(investoredge_score DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_propertyiq_scores_type_period ON propertyiq_scores(geography_type, period_date DESC);
@@ -71,7 +84,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON propertyiq_scores TO authenticated;
 GRANT SELECT ON propertyiq_scores TO anon;
 
 -- Add comment
-COMMENT ON TABLE propertyiq_scores IS 'PropertyIQ proprietary scores: HomeReady (homebuyers/renters) and InvestorEdge (investors). Calculated monthly for metros, counties, and ZIP codes.';
+COMMENT ON TABLE propertyiq_scores IS 'All 3 PropertyIQ scores: Market Health (free), HomeReady (homebuyers), and InvestorEdge (investors). Calculated monthly for states, metros, counties, and ZIP codes.';
 
 -- Score Details Table (for Pro tier component breakdown)
 CREATE TABLE IF NOT EXISTS propertyiq_score_details (
@@ -92,7 +105,7 @@ CREATE TABLE IF NOT EXISTS propertyiq_score_details (
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT valid_score_type CHECK (score_type IN ('homeready', 'investoredge'))
+  CONSTRAINT valid_score_type CHECK (score_type IN ('market_health', 'homeready', 'investoredge'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_score_details_score ON propertyiq_score_details(score_id);
@@ -109,6 +122,7 @@ CREATE TABLE IF NOT EXISTS propertyiq_scores_history (
   geography_id TEXT NOT NULL,
   geography_type TEXT NOT NULL,
   period_date DATE NOT NULL,
+  market_health_score NUMERIC(5,2),
   homeready_score NUMERIC(5,2),
   investoredge_score NUMERIC(5,2),
 
@@ -173,11 +187,12 @@ GRANT SELECT ON propertyiq_rankings TO anon;
 COMMENT ON TABLE propertyiq_rankings IS 'National and state rankings for PropertyIQ scores. Used for percentile displays and comparisons.';
 
 -- Metric Percentiles Table (pre-computed for faster scoring)
+-- NOTE: This table may already exist from migration 030. Using metric_name to match existing schema.
 CREATE TABLE IF NOT EXISTS metric_percentiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  metric_id TEXT NOT NULL,               -- e.g., 'zhvi', 'zori', 'grm'
-  geography_type TEXT NOT NULL,          -- 'metro', 'county', 'zip'
+  metric_name TEXT NOT NULL,             -- e.g., 'zhvi', 'zori', 'median_days_on_market'
+  geography_type TEXT NOT NULL,          -- 'state', 'metro', 'county', 'zip'
   period_date DATE NOT NULL,
 
   -- Percentile breakpoints
@@ -198,10 +213,10 @@ CREATE TABLE IF NOT EXISTS metric_percentiles (
 
   calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT unique_percentile_metric_geo_period UNIQUE (metric_id, geography_type, period_date)
+  CONSTRAINT unique_percentile_metric_geo_period UNIQUE (metric_name, geography_type, period_date)
 );
 
-CREATE INDEX IF NOT EXISTS idx_percentiles_lookup ON metric_percentiles(metric_id, geography_type, period_date DESC);
+CREATE INDEX IF NOT EXISTS idx_percentiles_lookup ON metric_percentiles(metric_name, geography_type, period_date DESC);
 CREATE INDEX IF NOT EXISTS idx_percentiles_period ON metric_percentiles(period_date DESC);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON metric_percentiles TO authenticated;

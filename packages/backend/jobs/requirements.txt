@@ -1,0 +1,30 @@
+# Python dependencies for ML Validation Jobs
+# Install with: pip install -r requirements.txt
+
+# ML Framework
+autogluon.tabular>=1.0,<2.0
+
+# Data Processing
+pandas>=2.0
+numpy>=1.24
+
+# ML Metrics
+scikit-learn>=1.3
+
+# Database
+psycopg2-binary>=2.9
+asyncpg>=0.29
+
+# Job Queue (optional - for Redis-based job processing)
+redis>=5.0
+rq>=1.15
+
+# Environment & Config
+python-dotenv>=1.0
+
+# HTTP Client (for API callbacks)
+httpx>=0.25
+
+# Async Support
+asyncio
+aiohttp>=3.9

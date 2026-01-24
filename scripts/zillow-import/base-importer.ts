@@ -391,12 +391,10 @@ export class ZillowImporter {
           source: 'zillow',
           table_name: tableName,
           metric_name: this.metricName,
-          geography_type: this.geography.toLowerCase(),
           status: 'running',
           records_processed: totalRecords,
-          records_inserted: 0,
-          records_updated: 0,
-          records_failed: 0,
+          records_success: 0,
+          records_error: 0,
           started_at: new Date().toISOString()
         })
         .select('id')
@@ -404,14 +402,14 @@ export class ZillowImporter {
 
       if (!error && data) {
         this.ingestionLogId = data.id;
-        console.log(`Started ingestion log: ${data.id}`);
+        console.log(`📝 Started ingestion log: ${data.id}`);
       }
     } catch (e: any) {
       console.warn('Could not start ingestion log:', e.message);
     }
   }
 
-  private async updateIngestionProgress(recordsProcessed: number, recordsInserted: number, recordsFailed: number): Promise<void> {
+  private async updateIngestionProgress(recordsProcessed: number, recordsSuccess: number, recordsError: number): Promise<void> {
     if (!this.ingestionLogId) return;
 
     try {
@@ -419,8 +417,8 @@ export class ZillowImporter {
         .from('data_ingestion_log')
         .update({
           records_processed: recordsProcessed,
-          records_inserted: recordsInserted,
-          records_failed: recordsFailed
+          records_success: recordsSuccess,
+          records_error: recordsError
         })
         .eq('id', this.ingestionLogId);
     } catch (e) {
@@ -431,7 +429,7 @@ export class ZillowImporter {
   private async completeIngestionLog(result: ImportResult, startTime: number): Promise<void> {
     if (!this.ingestionLogId) return;
 
-    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    const durationMs = Date.now() - startTime;
     const status = result.errors.length > 0
       ? (result.recordsInserted > 0 ? 'partial' : 'failed')
       : 'success';
@@ -442,16 +440,16 @@ export class ZillowImporter {
         .update({
           status,
           records_processed: result.recordsProcessed,
-          records_inserted: result.recordsInserted,
-          records_failed: result.errors.length,
+          records_success: result.recordsInserted,
+          records_error: result.errors.length,
           completed_at: new Date().toISOString(),
-          duration_seconds: durationSeconds,
+          duration_ms: durationMs,
           error_message: result.errors.length > 0 ? result.errors.slice(0, 5).join('; ') : null
         })
         .eq('id', this.ingestionLogId);
 
-      const statusIcon = status === 'success' ? 'OK' : status === 'partial' ? 'WARN' : 'ERR';
-      console.log(`[${statusIcon}] Ingestion log completed: ${status} (${durationSeconds}s)`);
+      const statusIcon = status === 'success' ? '✅' : status === 'partial' ? '⚠️' : '❌';
+      console.log(`${statusIcon} Ingestion log completed: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
     } catch (e: any) {
       console.warn('Error completing ingestion log:', e.message);
     }

@@ -1,0 +1,42 @@
+Validation Complete: Scores Beat the Market
+
+  Summary Table                                                                                                           ┌───────────────────────────────┬───────────┬──────────────┬──────────────┐
+  │            Metric             │ HomeReady │ InvestorEdge │ MarketHealth │                                             ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ Top Quintile Excess Return    │ +1.87%    │ +2.18%       │ +1.22%       │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ Bottom Quintile Excess Return │ -2.31%    │ -3.31%       │ -1.96%       │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ SPREAD                        │ +4.19%    │ +5.49%       │ +3.19%       │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ Top Q Beat-Market Rate        │ 89.0%     │ 85.2%        │ 78.8%        │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ Bottom Q Beat-Market Rate     │ 18.7%     │ 10.4%        │ 29.9%        │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ T-test p-value                │ <0.001    │ <0.001       │ <0.001       │
+  ├───────────────────────────────┼───────────┼──────────────┼──────────────┤
+  │ Spearman Correlation          │ 0.57      │ 0.62         │ —            │
+  └───────────────────────────────┴───────────┴──────────────┴──────────────┘
+  Key Findings
+
+  1. All scores add genuine value — not just riding the market wave
+    - Top quintiles have positive excess returns
+    - Bottom quintiles have negative excess returns
+    - Returns increase monotonically with quintile
+  2. InvestorEdge is the strongest predictor
+    - 5.49% spread between top and bottom
+    - Best at identifying losers (only 10% of bottom quintile beat market)
+  3. HomeReady has highest hit rate
+    - 89% of top quintile beat the market
+    - Best for confident "buy" recommendations
+  4. Avoiding losers may be more valuable than picking winners
+    - Bottom quintile severely underperforms (10-19% beat rate)
+    - Strong "avoid" signal
+
+  Dollar Impact
+
+  On a $500K property over 3 years:
+  - Top quintile: +$28K vs median
+  - Bottom quintile: -$35K vs median
+  - Total value at risk: ~$63K
+
+  Verdict: The scores are statistically validated predictors of excess returns (p < 0.001).

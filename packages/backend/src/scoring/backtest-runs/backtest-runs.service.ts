@@ -6,9 +6,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../supabase/supabase.service';
-import { spawn } from 'child_process';
-import { join } from 'path';
 
 export interface BacktestRunConfig {
   score_types: string[];
@@ -96,8 +95,16 @@ export interface TriggerResult {
 @Injectable()
 export class BacktestRunsService {
   private readonly logger = new Logger(BacktestRunsService.name);
+  private readonly analyticsServiceUrl: string;
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {
+    this.analyticsServiceUrl =
+      this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
+      'http://localhost:8000';
+  }
 
   /**
    * List recent backtest runs with optional filtering.
@@ -260,8 +267,7 @@ export class BacktestRunsService {
   }
 
   /**
-   * Trigger a new backtest run.
-   * This creates a job entry and spawns the Python backtest runner.
+   * Trigger a new backtest run via the analytics service.
    */
   async triggerBacktest(params: TriggerBacktestParams = {}): Promise<TriggerResult> {
     const {
@@ -287,8 +293,9 @@ export class BacktestRunsService {
           zip_sample,
           random_seed,
         },
-        status: 'queued',
+        status: 'running',
         progress: 0,
+        started_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
       });
 
@@ -297,58 +304,80 @@ export class BacktestRunsService {
       throw new Error(`Failed to create backtest job: ${insertError.message}`);
     }
 
-    // Spawn the Python backtest runner as a background process
-    const pythonScript = join(__dirname, '..', '..', '..', 'jobs', 'backtest', 'automated_runner.py');
-    const args = [
-      '-m', 'backtest.automated_runner',
-      '--score-types', score_types.join(','),
-      '--horizons', horizons.join(','),
-      '--county-sample', county_sample.toString(),
-      '--zip-sample', zip_sample.toString(),
-      '--seed', random_seed.toString(),
-    ];
+    // Call analytics service asynchronously
+    this.executeBacktestCall(jobId, {
+      score_types,
+      horizons,
+      county_sample,
+      zip_sample,
+      random_seed,
+    });
+
+    this.logger.log(`Triggered backtest job: ${jobId}`);
+
+    return {
+      jobId,
+      status: 'running',
+      message: 'Backtest job started successfully',
+    };
+  }
+
+  /**
+   * Execute backtest via analytics service and update job status.
+   */
+  private async executeBacktestCall(
+    jobId: string,
+    params: {
+      score_types: string[];
+      horizons: string[];
+      county_sample: number;
+      zip_sample: number;
+      random_seed: number;
+    },
+  ): Promise<void> {
+    const url = `${this.analyticsServiceUrl}/api/v1/backtest/run`;
 
     try {
-      const pythonProcess = spawn('python', args, {
-        cwd: join(__dirname, '..', '..', '..', 'jobs'),
-        detached: true,
-        stdio: 'ignore',
-        env: {
-          ...process.env,
-          BACKTEST_JOB_ID: jobId,
-        },
+      this.logger.log(`Calling analytics service: POST ${url}`);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
       });
 
-      pythonProcess.unref();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Analytics service error (${response.status}): ${errorText}`);
+      }
 
-      // Update job status to running
+      const result = await response.json();
+
+      // Update job as completed
       await this.supabase.getClient()
         .from('propertyiq_ml_jobs')
         .update({
-          status: 'running',
-          started_at: new Date().toISOString(),
-        })
-        .eq('id', jobId);
-
-      this.logger.log(`Triggered backtest job: ${jobId}`);
-
-      return {
-        jobId,
-        status: 'running',
-        message: 'Backtest job started successfully',
-      };
-    } catch (spawnError) {
-      // Update job status to failed
-      await this.supabase.getClient()
-        .from('propertyiq_ml_jobs')
-        .update({
-          status: 'failed',
-          error: String(spawnError),
+          status: 'completed',
+          progress: 100,
+          result,
           completed_at: new Date().toISOString(),
         })
         .eq('id', jobId);
 
-      throw new Error(`Failed to start backtest job: ${spawnError}`);
+      this.logger.log(`Backtest job ${jobId} completed successfully`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      await this.supabase.getClient()
+        .from('propertyiq_ml_jobs')
+        .update({
+          status: 'failed',
+          error: errorMessage,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+
+      this.logger.error(`Backtest job ${jobId} failed: ${errorMessage}`);
     }
   }
 

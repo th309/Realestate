@@ -37,7 +37,7 @@ if (!existsSync(OUTPUT_DIR)) {
 }
 
 // Census ACS 5-Year data available years (2009-2023)
-// Using 2010-2023 for cleaner decade range
+// Note: 2024 ACS data typically releases December 2025
 const CENSUS_YEARS_FULL = [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010];
 const CENSUS_YEARS_QUICK = [2023, 2022]; // For YoY calculation
 
@@ -193,10 +193,10 @@ async function downloadAllCensusData(years: number[]): Promise<void> {
       }
     }
 
-    // Cities/Places - only for latest year (too much data otherwise)
-    if (year === years[0]) {
-      console.log('  Cities (top 10 states)...');
-      const largeStates = ['06', '48', '12', '36', '42', '17', '39', '13', '37', '26'];
+    // Cities/Places - fetch ALL years for historical data
+    console.log('  Cities (top 10 states)...');
+    const largeStates = ['06', '48', '12', '36', '42', '17', '39', '13', '37', '26'];
+    {
       for (const stateFips of largeStates) {
         const cityResult = await fetchCensusACS(year, 'place', stateFips);
         if (cityResult.success && cityResult.data) {
@@ -226,32 +226,28 @@ async function downloadAllCensusData(years: number[]): Promise<void> {
       }
     }
 
-    // ZCTAs - fetch for multiple years to enable YoY calculations
-    // Limit to most recent 3 years to balance data coverage vs API load
-    const zipYearsToFetch = years.slice(0, 3); // e.g., [2023, 2022, 2021]
-    if (zipYearsToFetch.includes(year)) {
-      console.log('  ZIP Codes...');
-      const zipResult = await fetchCensusACS(year, 'zip code tabulation area');
-      if (zipResult.success && zipResult.data) {
-        for (const row of zipResult.data) {
-          allZipRecords.push({
-            year,
-            zcta: row['zip code tabulation area'],
-            total_population: row.B01003_001E,
-            median_age: row.B01002_001E,
-            median_household_income: row.B19013_001E,
-            per_capita_income: row.B19301_001E,
-            total_housing_units: row.B25001_001E,
-            owner_occupied_units: row.B25003_002E,
-            renter_occupied_units: row.B25003_003E,
-            homeownership_rate: row.B25003_002E && row.B25003_001E
-              ? (parseFloat(row.B25003_002E) / parseFloat(row.B25003_001E) * 100).toFixed(2)
-              : null,
-            median_home_value: row.B25077_001E,
-            median_gross_rent: row.B25064_001E,
-            rent_as_pct_of_income: row.B25071_001E
-          });
-        }
+    // ZCTAs - fetch ALL years for historical data
+    console.log('  ZIP Codes...');
+    const zipResult = await fetchCensusACS(year, 'zip code tabulation area');
+    if (zipResult.success && zipResult.data) {
+      for (const row of zipResult.data) {
+        allZipRecords.push({
+          year,
+          zcta: row['zip code tabulation area'],
+          total_population: row.B01003_001E,
+          median_age: row.B01002_001E,
+          median_household_income: row.B19013_001E,
+          per_capita_income: row.B19301_001E,
+          total_housing_units: row.B25001_001E,
+          owner_occupied_units: row.B25003_002E,
+          renter_occupied_units: row.B25003_003E,
+          homeownership_rate: row.B25003_002E && row.B25003_001E
+            ? (parseFloat(row.B25003_002E) / parseFloat(row.B25003_001E) * 100).toFixed(2)
+            : null,
+          median_home_value: row.B25077_001E,
+          median_gross_rent: row.B25064_001E,
+          rent_as_pct_of_income: row.B25071_001E
+        });
       }
     }
   }

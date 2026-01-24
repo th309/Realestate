@@ -23,9 +23,9 @@ const BPS_BASE_URL = 'https://www2.census.gov/econ/bps';
 // Rate limiting - be respectful of Census servers
 const DELAY_MS = 300;
 
-// Default to 10 years of data
+// Default to 10 years of data ending at current year
 const DEFAULT_START_YEAR = 2015;
-const DEFAULT_END_YEAR = 2024;
+const DEFAULT_END_YEAR = new Date().getFullYear();
 
 interface RawPermitRecord {
   survey_date: string;     // YYYYMM
