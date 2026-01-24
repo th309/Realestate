@@ -47,7 +47,7 @@ export interface ScoreDisplayProps {
 export const getScoreColor = (value: number, maxValue: number = 100): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
   const hue = percentage * 120; // 0 = red, 120 = green
-  return `hsl(${hue}, 70%, 45%)`;
+  return `hsl(${hue}, 85%, 45%)`;
 };
 
 /**
@@ -152,11 +152,17 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   showLabel = true,
   className = '',
 }) => {
+  const cx = size / 2;
+  const cy = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const percentage = Math.min(value / maxValue, 1);
   const strokeDashoffset = circumference - percentage * circumference;
-  const strokeColor = getScoreColor(value, maxValue);
+
+  // Custom hue mapping for more vibrant colors: 0=Red, 120=Green
+  const hue = percentage * 120;
+  const strokeColor = `hsl(${hue}, 85%, 45%)`;
+
   const grade = getLetterGrade(value);
   const gradeColors = getGradeColor(grade);
   const label = getScoreLabel(value);
@@ -168,20 +174,46 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const gradePadding = size >= 100 ? 'px-1.5 py-0.5' : size >= 60 ? 'px-1 py-0.5' : 'px-0.5 py-0';
 
   // Calculate tick mark properties
-  const cx = size / 2;
-  const cy = size / 2;
   const tickLength = strokeWidth * 1.8;
   const tickWidth = Math.max(1.5, strokeWidth / 4);
 
-  // Get tick positions for 33% and 66% thresholds
-  const tick33 = getTickMarkPoints(MARKET_THRESHOLDS.sellersMax, cx, cy, radius, tickLength);
-  const tick66 = getTickMarkPoints(MARKET_THRESHOLDS.balancedMax, cx, cy, radius, tickLength);
+  // Get tick positions for 33% and 66% thresholds (clockwise from top)
+  const getPoints = (p: number) => {
+    const angle = (p / 100) * 2 * Math.PI;
+    const dx = Math.sin(angle);
+    const dy = Math.cos(angle);
+    const innerR = radius - tickLength / 2;
+    const outerR = radius + tickLength / 2;
+    return {
+      x1: cx + dx * innerR,
+      y1: cy - dy * innerR,
+      x2: cx + dx * outerR,
+      y2: cy - dy * outerR,
+    };
+  };
+
+  const tick33 = getPoints(MARKET_THRESHOLDS.sellersMax);
+  const tick66 = getPoints(MARKET_THRESHOLDS.balancedMax);
+
+  // Unique ID for the gradient to avoid collisions
+  const gradientId = `score-gradient-${Math.round(value)}`;
 
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={`hsl(${Math.max(0, hue - 20)}, 90%, 55%)`} />
+            <stop offset="100%" stopColor={strokeColor} />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
         {/* Rotated group for circles (clockwise from top) */}
-        <g style={{ transform: 'rotate(-90deg) scaleX(-1)', transformOrigin: 'center' }}>
+        <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
           {/* Background circle */}
           <circle
             cx={cx}
@@ -197,16 +229,16 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             cy={cy}
             r={radius}
             fill="none"
-            stroke={strokeColor}
+            stroke={`url(#${gradientId})`}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-500 ease-out"
+            className="transition-all duration-700 ease-in-out"
           />
         </g>
 
-        {/* Tick marks at 33% and 66% (not rotated) */}
+        {/* Tick marks (not rotated, calculated from top) */}
         <line
           x1={tick33.x1}
           y1={tick33.y1}

@@ -151,7 +151,7 @@ const getTickMarkPoints = (
 ): { x1: number; y1: number; x2: number; y2: number } => {
   const angle = (percentage / 100) * 2 * Math.PI;
   const dirX = Math.sin(angle);
-  const dirY = -Math.cos(angle);
+  const dirY = Math.cos(angle);
   const innerRadius = radius - tickLength / 2;
   const outerRadius = radius + tickLength / 2;
   return {
@@ -208,7 +208,7 @@ export const ScoreBadge = memo(function ScoreBadge({
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
         >
           {/* Rotated group for circles (clockwise from top) */}
-          <g style={{ transform: 'rotate(-90deg) scaleX(-1)', transformOrigin: 'center' }}>
+          <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
             {/* Background ring */}
             <circle
               cx={center}
@@ -232,7 +232,7 @@ export const ScoreBadge = memo(function ScoreBadge({
             />
           </g>
 
-          {/* Tick marks at 33% and 66% (not rotated) */}
+          {/* Tick marks at 33% and 66% (not rotated, calculated from top) */}
           <line
             x1={tick33.x1} y1={tick33.y1} x2={tick33.x2} y2={tick33.y2}
             stroke="#6b7280" strokeWidth={tickWidth} strokeLinecap="round"
