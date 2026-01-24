@@ -6,21 +6,22 @@
  * - Switchable Score Gauge (Main)
  * - Dynamic Side Score Cards (Secondary scores)
  * - Insight Carousel (AI insights)
- * - Market Factors grid (Real-time data)
+ * - Market Factors grid (Real-time data with sparklines)
  */
 
 'use client';
 
-import { useEffect, useCallback, useState, useMemo } from 'react';
-import { X, TrendingUp } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { X, TrendingUp, TrendingDown } from 'lucide-react';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
-import { api, timeSeriesApi } from '@/lib/api/client';
-import { getMetricCategories } from '../../config/metric-categories';
+import { timeSeriesApi } from '@/lib/api/client';
 import { formatValue, getMetricFormat } from '../../utils/metricUtils';
 import { useScoreData, type ScoreType } from '../../hooks/useScoreData';
 import { ScoreGaugeCard } from './ScoreGaugeCard';
 import { SideScoreCard } from './SideScoreCard';
 import { InsightCarousel } from './InsightCarousel';
+import { TrendSparkline } from './TrendSparkline';
+import { MetricSelectorModal } from './MetricSelectorModal';
 
 interface RightDetailPanelProps {
   isOpen: boolean;
@@ -28,7 +29,6 @@ interface RightDetailPanelProps {
   viewMode: ViewMode;
   geography: SelectedGeography | null;
   geoLevel: GeoLevel;
-  isAdmin?: boolean;
 }
 
 interface MarketFactor {
@@ -37,11 +37,12 @@ interface MarketFactor {
   metricId: string;
 }
 
+// Default market factors - Risk Level removed per user request
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
   { id: 'appreciation', label: 'Appreciation', metricId: 'home_value_yoy' },
   { id: 'yield', label: 'Yield Potential', metricId: 'cap_rate' },
-  { id: 'risk', label: 'Risk Level', metricId: 'price_volatility' },
   { id: 'demand', label: 'Demand', metricId: 'pending_ratio' },
+  { id: 'inventory', label: 'Inventory Change', metricId: 'inventory_yoy' },
 ];
 
 const STORAGE_KEY = 'rightpanel-market-factors';
@@ -62,7 +63,6 @@ export function RightDetailPanel({
   viewMode,
   geography,
   geoLevel,
-  isAdmin = false,
 }: RightDetailPanelProps) {
   const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>(
     viewMode === 'investor' ? 'investoredge' : 'homeready'
@@ -74,9 +74,10 @@ export function RightDetailPanel({
     { expanded: true }
   );
 
-  const [metricData, setMetricData] = useState<Record<string, { value: number | null; trend: number | null }>>({});
-  const [marketFactors] = useState<MarketFactor[]>(loadMarketFactors);
+  const [metricData, setMetricData] = useState<Record<string, { value: number | null; trend: number | null; sparklineData: number[] }>>({});
+  const [marketFactors, setMarketFactors] = useState<MarketFactor[]>(loadMarketFactors);
   const [factorsLoading, setFactorsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Sync selected score with viewMode when it changes externally
   useEffect(() => {
@@ -99,31 +100,39 @@ export function RightDetailPanel({
     return { main: selectedScoreType, side1, side2 };
   }, [selectedScoreType]);
 
-  // Fetch real-time metric data for factors
+  // Fetch real-time metric data for factors (current value only, sparklines come from hook)
   useEffect(() => {
     if (!geography || !isOpen) return;
 
     async function fetchMetrics() {
       setFactorsLoading(true);
-      const metricIds = [...new Set(marketFactors.map(f => f.metricId))];
-      const results: Record<string, { value: number | null; trend: number | null }> = {};
+      const ids = [...new Set(marketFactors.map(f => f.metricId))];
+      const results: Record<string, { value: number | null; trend: number | null; sparklineData: number[] }> = {};
 
       const now = new Date();
       const endDate = now.toISOString().split('T')[0];
-      const startDate = new Date(now.setMonth(now.getMonth() - 6)).toISOString().split('T')[0];
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      const startDate = threeMonthsAgo.toISOString().split('T')[0];
 
-      await Promise.all(metricIds.map(async (id) => {
+      await Promise.all(ids.map(async (id) => {
         try {
           const res = await timeSeriesApi.getTimeSeries(id, geoLevel, geography!.id, startDate, endDate);
           if (res.success && res.data.length > 0) {
-            const sorted = [...res.data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            const current = sorted[0].value;
-            const prev = sorted.length > 1 ? sorted[1].value : null;
-            const trend = prev ? ((current - prev) / Math.abs(prev)) * 100 : null;
-            results[id] = { value: current, trend };
+            // Sort by date ascending for sparkline (oldest first)
+            const sortedAsc = [...res.data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const sparklineData = sortedAsc.map(d => d.value);
+
+            // Get current and previous for trend calculation
+            const current = sortedAsc[sortedAsc.length - 1].value;
+            const first = sortedAsc[0].value;
+            const trend = first !== 0 ? ((current - first) / Math.abs(first)) * 100 : null;
+
+            results[id] = { value: current, trend, sparklineData };
+          } else {
+            results[id] = { value: null, trend: null, sparklineData: [] };
           }
         } catch {
-          results[id] = { value: null, trend: null };
+          results[id] = { value: null, trend: null, sparklineData: [] };
         }
       }));
 
@@ -133,6 +142,14 @@ export function RightDetailPanel({
 
     fetchMetrics();
   }, [geography, geoLevel, isOpen, marketFactors]);
+
+  // Handle saving market factors from modal
+  const handleSaveFactors = (factors: MarketFactor[]) => {
+    setMarketFactors(factors);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(factors));
+    }
+  };
 
   const getScoreValue = (type: ScoreType) => {
     if (!scoreData) return null;
@@ -242,28 +259,54 @@ export function RightDetailPanel({
           </div>
 
           {/* Market Factors Section */}
-          <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant">
+          <div
+            className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant"
+            onDoubleClick={() => setIsModalOpen(true)}
+          >
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-sm font-bold text-on-surface">Market Factors</h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Key elements influencing the score</p>
               </div>
-              {isAdmin && (
-                <span className="text-[9px] text-on-surface-variant bg-surface-container px-2 py-1 rounded">
-                  Double click to edit
-                </span>
-              )}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="text-[9px] text-on-surface-variant bg-surface-container px-2 py-1 rounded hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                Double click to edit
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               {marketFactors.map((factor) => {
                 const data = metricData[factor.metricId];
+                const hasSparkline = data?.sparklineData && data.sparklineData.length >= 2;
+                const trendDirection = data?.trend != null
+                  ? (data.trend > 0.5 ? 'up' : data.trend < -0.5 ? 'down' : 'stable')
+                  : 'stable';
+
                 return (
                   <div key={factor.id} className="bg-surface rounded-xl p-3 border border-outline-variant flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/5`}>
-                      <TrendingUp className="w-4 h-4 text-primary" />
+                    {/* Sparkline or trend icon */}
+                    <div className="w-12 h-8 flex items-center justify-center flex-shrink-0">
+                      {hasSparkline ? (
+                        <TrendSparkline
+                          data={data.sparklineData}
+                          width={48}
+                          height={20}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/5">
+                          {trendDirection === 'up' ? (
+                            <TrendingUp className="w-4 h-4 text-green-600" />
+                          ) : trendDirection === 'down' ? (
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <TrendingUp className="w-4 h-4 text-on-surface-variant" />
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <span className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide block truncate">
                         {factor.label}
                       </span>
@@ -283,6 +326,15 @@ export function RightDetailPanel({
           </div>
         </div>
       </aside>
+
+      {/* Metric Selector Modal */}
+      <MetricSelectorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        currentFactors={marketFactors}
+        onSave={handleSaveFactors}
+        maxSelections={4}
+      />
     </>
   );
 }

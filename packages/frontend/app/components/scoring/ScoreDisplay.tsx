@@ -198,32 +198,10 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const tick33 = getPoints(MARKET_THRESHOLDS.sellersMax);
   const tick66 = getPoints(MARKET_THRESHOLDS.balancedMax);
 
-  // Unique ID for the mask to avoid collisions
-  const maskId = `score-mask-${Math.round(value)}-${size}`;
-  const gradientId = `score-conic-${Math.round(value)}`;
-
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
-          {/* Mask for the progress ring */}
-          <mask id={maskId}>
-            <rect x="0" y="0" width="100%" height="100%" fill="black" />
-            <circle
-              cx={cx}
-              cy={cy}
-              r={radius}
-              fill="none"
-              stroke="white"
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-              className="transition-all duration-700 ease-in-out"
-            />
-          </mask>
-
           {/* Glow filter for premium look */}
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -241,23 +219,21 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           strokeWidth={strokeWidth}
         />
 
-        {/* The Animated Conic Gradient Ring */}
-        <foreignObject x="0" y="0" width={size} height={size} mask={`url(#${maskId})`}>
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              background: `conic-gradient(
-                from 0deg,
-                hsl(0, 95%, 45%) 0%,
-                hsl(30, 95%, 45%) 25%,
-                hsl(60, 95%, 45%) 50%,
-                hsl(90, 95%, 45%) 75%,
-                hsl(120, 95%, 45%) 100%
-              )`
-            }}
-          />
-        </foreignObject>
+        {/* The Animated Score Ring - Solid color based on score */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+          className="transition-all duration-700 ease-in-out"
+          filter="url(#glow)"
+        />
 
         {/* Tick marks (not rotated, calculated clockwise from top) */}
         <line

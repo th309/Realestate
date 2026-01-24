@@ -417,7 +417,6 @@ export default function MapPage() {
           viewMode={viewMode}
           geography={selectedGeography}
           geoLevel={geoLevel}
-          isAdmin={true} // TODO: Replace with actual admin check
         />
       </div>
     </div>
