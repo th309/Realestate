@@ -473,9 +473,9 @@ export function RightDetailPanel({
                           </span>
                           <p className="text-sm font-bold text-on-surface mt-0.5">
                             {getRatingLabel(data?.value ?? null, factor.metricId)}
-                            {data?.value !== null && (
+                            {data?.value != null && (
                               <span className="text-on-surface-variant font-normal ml-1">
-                                ({formatMetricValue(factor.metricId, data.value)})
+                                ({formatMetricValue(factor.metricId, data?.value)})
                               </span>
                             )}
                           </p>
