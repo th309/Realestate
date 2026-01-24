@@ -52,6 +52,91 @@ export class ZillowService {
   ) {}
 
   // ============================================================================
+  // Debug Method for ZHVF Data
+  // ============================================================================
+
+  async debugForecastData(): Promise<any> {
+    const debug: any = {
+      metro: {},
+      zip: {},
+      crosswalk: {},
+    };
+
+    // Check ZHVF records in zillow_metro
+    const { data: metroSample, error: metroError } = await this.supabase
+      .from('zillow_metro')
+      .select('region_id, region_name, cbsa_code, state_code, metric_name, value, period_date')
+      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+      .order('period_date', { ascending: false })
+      .limit(10);
+
+    debug.metro.error = metroError?.message || null;
+    debug.metro.sampleCount = metroSample?.length || 0;
+    debug.metro.sample = metroSample?.slice(0, 3) || [];
+    debug.metro.withCbsaCode = metroSample?.filter(r => r.cbsa_code).length || 0;
+
+    // Get distinct dates for ZHVF
+    const { data: metroDates } = await this.supabase
+      .from('zillow_metro')
+      .select('period_date')
+      .eq('metric_name', 'zhvf_12m')
+      .order('period_date', { ascending: false })
+      .limit(5);
+    debug.metro.availableDates = metroDates?.map(d => d.period_date) || [];
+
+    // Count total ZHVF records
+    const { count: metroCount } = await this.supabase
+      .from('zillow_metro')
+      .select('*', { count: 'exact', head: true })
+      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m']);
+    debug.metro.totalRecords = metroCount || 0;
+
+    // Check crosswalk table
+    const { data: crosswalkSample, error: cwError } = await this.supabase
+      .from('zillow_metro_crosswalk')
+      .select('zillow_region_id, cbsa_code, cbsa_title')
+      .limit(5);
+
+    debug.crosswalk.error = cwError?.message || null;
+    debug.crosswalk.sampleCount = crosswalkSample?.length || 0;
+    debug.crosswalk.sample = crosswalkSample || [];
+
+    // Count crosswalk entries
+    const { count: cwCount } = await this.supabase
+      .from('zillow_metro_crosswalk')
+      .select('*', { count: 'exact', head: true });
+    debug.crosswalk.totalEntries = cwCount || 0;
+
+    // Check if ZHVF region_ids match crosswalk
+    if (metroSample && metroSample.length > 0 && crosswalkSample && crosswalkSample.length > 0) {
+      const zhvfRegionIds = new Set(metroSample.map(r => r.region_id));
+      const cwRegionIds = new Set(crosswalkSample.map(r => r.zillow_region_id));
+      const overlap = [...zhvfRegionIds].filter(id => cwRegionIds.has(id));
+      debug.crosswalk.matchingSampleIds = overlap.length;
+    }
+
+    // Check ZIP forecast data
+    const { data: zipSample, error: zipError } = await this.supabase
+      .from('zillow_zip')
+      .select('region_id, region_name, state_code, metric_name, value, period_date')
+      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m'])
+      .order('period_date', { ascending: false })
+      .limit(5);
+
+    debug.zip.error = zipError?.message || null;
+    debug.zip.sampleCount = zipSample?.length || 0;
+    debug.zip.sample = zipSample?.slice(0, 3) || [];
+
+    const { count: zipCount } = await this.supabase
+      .from('zillow_zip')
+      .select('*', { count: 'exact', head: true })
+      .in('metric_name', ['zhvf_1m', 'zhvf_3m', 'zhvf_12m']);
+    debug.zip.totalRecords = zipCount || 0;
+
+    return debug;
+  }
+
+  // ============================================================================
   // ZHVI (Home Value) Methods
   // ============================================================================
 
@@ -355,7 +440,11 @@ export class ZillowService {
   async getMetroForecast(horizon: string = '12m'): Promise<ForecastData[]> {
     // Use cached latest date for forecast data
     const latestDate = await getLatestDate(this.supabase, 'metro', 'zhvf_12m');
-    if (!latestDate) return [];
+    console.log(`[ZHVF Metro] Latest date for zhvf_12m: ${latestDate}, horizon: ${horizon}`);
+    if (!latestDate) {
+      console.log('[ZHVF Metro] No latest date found, returning empty');
+      return [];
+    }
 
     // Query all forecast metrics for that date
     // Need to paginate because there are ~2685 records (895 metros × 3 horizons)
@@ -387,17 +476,56 @@ export class ZillowService {
       page++;
     }
 
-    if (allForecasts.length === 0) return [];
+    console.log(`[ZHVF Metro] Fetched ${allForecasts.length} forecast records`);
+    if (allForecasts.length === 0) {
+      console.log('[ZHVF Metro] No records found, returning empty');
+      return [];
+    }
+
+    // Load crosswalk to get cbsa_code mappings by zillow_region_id
+    // Paginate to get all crosswalk entries (there are ~891 metros)
+    const cbsaMap = new Map<number, string>();
+    let crosswalkPage = 0;
+    const crosswalkPageSize = 1000;
+
+    while (true) {
+      const { data: crosswalk, error: crosswalkError } = await this.supabase
+        .from('zillow_metro_crosswalk')
+        .select('zillow_region_id, cbsa_code')
+        .not('cbsa_code', 'is', null)
+        .range(crosswalkPage * crosswalkPageSize, (crosswalkPage + 1) * crosswalkPageSize - 1);
+
+      if (crosswalkError) {
+        console.error('[ZHVF Metro] Error loading crosswalk:', crosswalkError.message);
+        break;
+      }
+
+      if (!crosswalk || crosswalk.length === 0) break;
+
+      crosswalk.forEach(row => {
+        if (row.zillow_region_id && row.cbsa_code) {
+          cbsaMap.set(row.zillow_region_id, row.cbsa_code);
+        }
+      });
+
+      if (crosswalk.length < crosswalkPageSize) break;
+      crosswalkPage++;
+    }
+
+    console.log(`[ZHVF Metro] Loaded ${cbsaMap.size} CBSA mappings from crosswalk`);
+
     const forecasts = allForecasts;
 
     // Group by region_id to combine forecast metrics
     const byRegion = new Map<number, any>();
     for (const f of forecasts) {
       if (!byRegion.has(f.region_id)) {
+        // Use cbsa_code from crosswalk if not in record
+        const cbsaCode = f.cbsa_code || cbsaMap.get(f.region_id) || null;
         byRegion.set(f.region_id, {
           region_id: String(f.region_id),
           region_name: f.region_name,
-          cbsa_code: f.cbsa_code,
+          cbsa_code: cbsaCode,
           state_abbrev: f.state_code,
           forecast_1m: null,
           forecast_3m: null,
@@ -412,11 +540,21 @@ export class ZillowService {
       if (f.metric_name === 'zhvf_12m') entry.forecast_12m = f.value;
     }
 
-    return [...byRegion.values()]
+    // Log how many have cbsa_code now
+    const withCbsa = [...byRegion.values()].filter(r => r.cbsa_code).length;
+    console.log(`[ZHVF Metro] Records with cbsa_code after crosswalk: ${withCbsa}/${byRegion.size}`);
+
+    // Filter out records without cbsa_code - they can't be displayed on the map
+    // The map GeoJSON uses CBSA codes as keys, so records without cbsa_code won't match
+    const result = [...byRegion.values()]
+      .filter((f) => f.cbsa_code) // Only include records with cbsa_code
       .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
       .sort(
         (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
       );
+
+    console.log(`[ZHVF Metro] Returning ${result.length} unique metros (filtered to only those with cbsa_code)`);
+    return result;
   }
 
   async getZipForecast(

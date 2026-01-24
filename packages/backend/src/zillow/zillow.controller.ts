@@ -105,6 +105,16 @@ export class ZillowController {
   // ZHVF (Forecast) Endpoints
   // ============================================================================
 
+  @Get('forecast/debug')
+  async getForecastDebug() {
+    // Direct query to check ZHVF data in database
+    const debugInfo = await this.zillowService.debugForecastData();
+    return {
+      success: true,
+      ...debugInfo,
+    };
+  }
+
   @Get('forecast/metros')
   async getMetroForecast(@Query('horizon') horizon: string = '12m') {
     const data = await this.zillowService.getMetroForecast(horizon);
