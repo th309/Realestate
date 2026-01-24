@@ -127,6 +127,43 @@ TypeScriptmetric('new_metric', { isPremium: true, isNew: true }),
 ### 4.3 Backend: Ensure the endpoint exists.Color Scale LogicPalette: 7 colors (Violet #7c3aed to Dark Red #b91c1c).Range Calculation:percent: 5th to 95th percentile.percent_abs: 5th to 95th percentile (positive values).currency / number / days: Min to 95th percentile.index (with rangeType: 'full'): Actual Min to Max.Backend Query Pattern (NestJS)Use queryLatestPerRegion() to get the most recent data point for each region, rather than a single global date.TypeScriptconst data = await queryMarketIndicatorLatest(supabase, table, geography);
 // Returns rows with: region_id, value, period_date
 
+### 4.4 Data Binding Hooks (Connecting Data to UI)
+
+**NEVER** write custom fetch logic for cards, dropdowns, or selectors. Use the unified data binding hooks:
+
+| Hook | Use Case | Location |
+|------|----------|----------|
+| `useMetricData` | Core: fetch any metric for any geography | `app/map/hooks/useMetricData.ts` |
+| `useDataCard` | Cards: formatted values + trend calculation | `app/map/hooks/useDataCard.ts` |
+| `useMetricOptions` | Dropdowns: metric/geography options | `app/map/hooks/useMetricOptions.ts` |
+| `useScoreCardMetrics` | Score cards: batch indicators | `app/graphs/hooks/useScoreCardMetrics.ts` |
+
+**Card Example:**
+```typescript
+import { useDataCard } from '@/app/map/hooks';
+
+const { formattedValue, trend, loading } = useDataCard({
+  metricId: 'home_value',
+  geoLevel: 'metro',
+  regionId: '31080',
+  showTrend: true,
+});
+```
+
+**Dropdown Example:**
+```typescript
+import { useAllMetricOptions } from '@/app/map/hooks';
+
+const { options } = useAllMetricOptions(geoLevel);
+// Returns: [{ label: 'Home Value', value: 'home_value', disabled: false }, ...]
+```
+
+**Features:**
+- 2-hour React Query caching (automatic deduplication)
+- Auto-filtering by geography support
+- Consistent formatting via `formatValue()`
+- Trend calculation (3-month comparison)
+
 ## 5. DESIGN SYSTEM: MATERIAL DESIGN 3 (M3)
 
 ### 5.1 Core Authority

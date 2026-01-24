@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ComparisonConfig } from '../types';
 import { GeoLevel } from '@/app/map/config/metrics';
-import { STATES, UNIQUE_METRICS } from '../constants';
+import { STATES } from '../constants';
+import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
 
 export interface BaselineConfig {
   enabled: boolean;
@@ -60,8 +61,19 @@ export function useDashboardState() {
     baseline: true,
   });
 
-  // Get metric options for dropdown (unique metrics only)
-  const metricOptions = useMemo(() => UNIQUE_METRICS, []);
+  // Get metric options for dropdown using the new data binding hook
+  // Filters metrics by geoLevel so only available metrics are enabled
+  const { options: metricOptionsList } = useAllMetricOptions(geoLevel);
+
+  // Transform to the format expected by downstream components
+  const metricOptions = useMemo(() =>
+    metricOptionsList.map(opt => ({
+      id: opt.value,
+      name: opt.label,
+      category: 'general',
+      isPremium: opt.isPremium,
+      disabled: opt.disabled,
+    })), [metricOptionsList]);
 
   const getOptionsForLevel = useCallback((level: GeoLevel) => {
     switch (level) {

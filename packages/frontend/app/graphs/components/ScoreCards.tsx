@@ -4,9 +4,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { api, ScoreResponse } from '@/lib/api/client';
 import { GeoLevel, getMetricConfig } from '@/app/map/config/metrics';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
-import { formatValue, getMetricFormat } from '@/app/map/utils/metricUtils';
 import { M3Card } from './M3Card';
 import { Loader2, TrendingUp, TrendingDown, Minus, Settings, Check, X } from 'lucide-react';
+import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -267,11 +267,10 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
                   key={m.id}
                   onClick={() => toggleMetric(m.id)}
                   disabled={!selected.includes(m.id) && selected.length >= maxSelections}
-                  className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
-                    selected.includes(m.id)
-                      ? 'bg-primary text-on-primary border-primary'
-                      : 'bg-surface border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed'
-                  }`}
+                  className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${selected.includes(m.id)
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-surface border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed'
+                    }`}
                 >
                   {m.name}
                 </button>
@@ -495,9 +494,26 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
 }) => {
   const [scores, setScores] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
-  const [metricData, setMetricData] = useState<Record<string, TrendData>>({});
+
+  // Use the new data binding hooks for metric data (replaces manual fetch)
+  const homereadyMetrics = useScoreCardMetrics({
+    metricIds: metricSelections.homeready,
+    geoLevel,
+    regionId: selectedArea,
+  });
+  const investoredgeMetrics = useScoreCardMetrics({
+    metricIds: metricSelections.investoredge,
+    geoLevel,
+    regionId: selectedArea,
+  });
+  const markethealthMetrics = useScoreCardMetrics({
+    metricIds: metricSelections.markethealth,
+    geoLevel,
+    regionId: selectedArea,
+  });
+
+  const metricsLoading = homereadyMetrics.loading || investoredgeMetrics.loading || markethealthMetrics.loading;
 
   // Fetch scores
   useEffect(() => {
@@ -521,80 +537,22 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
     return () => { isMounted = false; };
   }, [geoLevel, selectedArea]);
 
-  // Fetch time series data for selected metrics to compute trends
-  useEffect(() => {
-    let isMounted = true;
+  // getIndicatorsForMetrics now just returns the indicators from the hook
+  // The hook handles all data fetching, formatting, and trend calculation
+  const getIndicatorsForMetrics = useCallback((scoreType: 'homeready' | 'investoredge' | 'markethealth'): MetricIndicator[] => {
+    const metricsData = {
+      homeready: homereadyMetrics,
+      investoredge: investoredgeMetrics,
+      markethealth: markethealthMetrics,
+    }[scoreType];
 
-    async function fetchMetricTrends() {
-      const allMetricIds = [
-        ...metricSelections.homeready,
-        ...metricSelections.investoredge,
-        ...metricSelections.markethealth,
-      ];
-      const uniqueMetricIds = [...new Set(allMetricIds)];
-
-      setMetricsLoading(true);
-      const trends: Record<string, TrendData> = {};
-
-      // Calculate date range: last 4 months of data to ensure we have 3 months of history
-      const endDate = new Date().toISOString().split('T')[0];
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 4);
-      const startDateStr = startDate.toISOString().split('T')[0];
-
-      // Fetch each metric's time series in parallel
-      await Promise.all(
-        uniqueMetricIds.map(async (metricId) => {
-          try {
-            const response = await api.getTimeSeries(
-              metricId,
-              geoLevel,
-              selectedArea,
-              startDateStr,
-              endDate
-            );
-
-            if (response.success && response.data.length > 0) {
-              trends[metricId] = calculateTrend(response.data);
-            } else {
-              trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
-            }
-          } catch (err) {
-            console.error(`Failed to fetch time series for ${metricId}:`, err);
-            trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
-          }
-        })
-      );
-
-      if (isMounted) {
-        setMetricData(trends);
-        setMetricsLoading(false);
-      }
-    }
-
-    if (selectedArea) {
-      fetchMetricTrends();
-    }
-
-    return () => { isMounted = false; };
-  }, [geoLevel, selectedArea, metricSelections]);
-
-  // Convert metric IDs to indicators with formatted values and trends
-  const getIndicatorsForMetrics = useCallback((metricIds: string[]): MetricIndicator[] => {
-    return metricIds.map(id => {
-      const config = getMetricConfig(id);
-      const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const trend = metricData[id] || { currentValue: null, previousValue: null, changePercent: null, direction: null };
-
-      let formattedValue = '--';
-      if (trend.currentValue !== null) {
-        const format = getMetricFormat(id);
-        formattedValue = formatValue(trend.currentValue, format);
-      }
-
-      return { metricId: id, label, formattedValue, trend };
-    });
-  }, [metricData]);
+    return metricsData.indicators.map(ind => ({
+      metricId: ind.metricId,
+      label: ind.label,
+      formattedValue: ind.formattedValue,
+      trend: ind.trend,
+    }));
+  }, [homereadyMetrics, investoredgeMetrics, markethealthMetrics]);
 
   // Handlers for metric selection changes
   const handleMetricsChange = useCallback((scoreType: keyof MetricSelections) => (metricIds: string[]) => {
@@ -604,11 +562,10 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   }, [metricSelections]);
 
   // Score values
-  const homereadyScore = scores?.homereadyScore ?? 0;
-  const investoredgeScore = scores?.investoredgeScore ?? 0;
-  const marketHealthScore = scores?.components?.homeready?.marketHealth ?? 0;
-  const confidence = scores?.confidenceLevel ?? 'medium';
-  const confidenceLabel = confidence === 'high' ? 'HIGH' : confidence === 'low' ? 'LOW' : 'MEDIUM';
+  const homereadyScore = scores?.scores?.homeready?.score ?? 0;
+  const investoredgeScore = scores?.scores?.investoredge?.score ?? 0;
+  const marketHealthScore = scores?.scores?.markethealth?.score ?? 0;
+  const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'MEDIUM';
 
   return (
     <div className="flex flex-col gap-3">
@@ -616,7 +573,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         title="HomeReady Score"
         value={homereadyScore}
         confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics(metricSelections.homeready)}
+        indicators={getIndicatorsForMetrics('homeready')}
         loading={loading}
         metricsLoading={metricsLoading}
         isAdmin={isAdmin}
@@ -627,7 +584,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         title="InvestorEdge Score"
         value={investoredgeScore}
         confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics(metricSelections.investoredge)}
+        indicators={getIndicatorsForMetrics('investoredge')}
         loading={loading}
         metricsLoading={metricsLoading}
         isAdmin={isAdmin}
@@ -638,7 +595,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         title="Market Health Index"
         value={marketHealthScore}
         confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics(metricSelections.markethealth)}
+        indicators={getIndicatorsForMetrics('markethealth')}
         loading={loading}
         metricsLoading={metricsLoading}
         isAdmin={isAdmin}

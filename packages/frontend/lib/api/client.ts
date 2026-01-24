@@ -1370,31 +1370,52 @@ export const api = {
       return null;
     }
   },
+
+  /**
+   * Get historical time-series data for a specific metric/geography/region
+   * (Delegated to timeSeriesApi)
+   */
+  getTimeSeries: async (
+    metric: string,
+    geoLevel: string,
+    regionId: string,
+    startDate?: string,
+    endDate?: string,
+    limit?: number,
+  ): Promise<TimeSeriesResponse> => {
+    return timeSeriesApi.getTimeSeries(metric, geoLevel, regionId, startDate, endDate, limit);
+  },
+
+  /**
+   * Get available date range for a metric/geography combination
+   * (Delegated to timeSeriesApi)
+   */
+  getAvailableDates: async (metric: string, geoLevel: string): Promise<DateRangeResponse> => {
+    return timeSeriesApi.getAvailableDates(metric, geoLevel);
+  },
 };
 
 // Scoring API response types
 export interface ScoreResponse {
-  geographyId: string;
-  geographyName?: string;
-  geographyType: string;
-  periodDate: string;
-  homereadyScore: number;
-  investoredgeScore: number;
-  confidenceLevel: 'high' | 'medium' | 'low';
-  components?: {
-    homeready?: {
-      affordability: number;
-      valueGrowth: number;
-      marketHealth: number;
-      inventoryHealth: number;
-    };
-    investoredge?: {
-      cashFlow: number;
-      appreciation: number;
-      demandRisk: number;
-      marketLiquidity: number;
-    };
+  location_id: string;
+  location_name: string;
+  geography: string;
+  median_price: number | null;
+  score_date: string;
+  scores: {
+    homeready: SingleScoreResult;
+    investoredge: SingleScoreResult;
+    markethealth: SingleScoreResult;
   };
+  return_1y?: number;
+  return_3y_ann?: number;
+}
+
+export interface SingleScoreResult {
+  score: number;
+  grade: string;
+  confidence: number;
+  confidence_level: 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
 }
 
 export interface BatchScoreResponse {

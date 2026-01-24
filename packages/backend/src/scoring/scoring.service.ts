@@ -54,7 +54,7 @@ const CALCULATION_VERSION = '3.0.0'; // New simplified version
 export class ScoringService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   // ============================================================================
   // Public API
@@ -161,12 +161,21 @@ export class ScoringService {
     if (!targetDate) return null;
 
     // Query from the propertyiq_scores table
-    const { data } = await this.supabase
+    let query = this.supabase
       .from('propertyiq_scores')
       .select('*')
-      .eq('location_id', locationId)
       .eq('geography', geography)
       .eq('score_date', targetDate);
+
+    // If locationId is numeric, match by location_id, otherwise try location_name
+    if (/^\d+$/.test(locationId)) {
+      query = query.eq('location_id', locationId);
+    } else {
+      // Use ILIKE for fuzzy matching of names
+      query = query.ilike('location_name', `${locationId}%`);
+    }
+
+    const { data } = await query;
 
     if (!data || data.length === 0) return null;
 
