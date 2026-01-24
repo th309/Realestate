@@ -39,7 +39,7 @@ interface MarketFactor {
 
 // Default market factors - Risk Level removed per user request
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
-  { id: 'appreciation', label: 'Appreciation', metricId: 'home_value_yoy' },
+  { id: 'appreciation', label: 'Appreciation', metricId: 'home_value' },
   { id: 'yield', label: 'Yield Potential', metricId: 'cap_rate' },
   { id: 'demand', label: 'Demand', metricId: 'pending_ratio' },
   { id: 'inventory', label: 'Inventory Change', metricId: 'inventory_yoy' },
