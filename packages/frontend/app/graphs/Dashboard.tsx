@@ -165,7 +165,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
             <div className="xl:col-span-1 flex flex-col gap-4">
-              <ScoreCards geoLevel={geoLevel} selectedArea={selectedArea} />
+              <ScoreCards geoLevel={geoLevel} selectedArea={selectedArea} isAdmin={true} />
               <InsightsPanel
                 aiInsight={aiInsight}
                 isInsightLoading={isInsightLoading}
