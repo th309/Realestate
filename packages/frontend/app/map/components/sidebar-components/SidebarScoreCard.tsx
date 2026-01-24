@@ -13,7 +13,7 @@
 import { useState } from 'react';
 import { InsightsIcon, ChevronLeftIcon, ChevronRightIcon, LockIcon } from '../Icons';
 import { TrendArrow, getTrendDirection, formatTrendValue } from './TrendArrow';
-import { MarketConditionBadge, MarketCondition } from './MarketConditionBadge';
+import { MarketCondition } from './MarketConditionBadge';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { Loader2 } from 'lucide-react';
 
@@ -29,7 +29,6 @@ interface SidebarScoreCardProps {
   marketHealthScore?: ScoreInfo;
   homereadyScore?: ScoreInfo;
   investoredgeScore?: ScoreInfo;
-  marketCondition?: MarketCondition;
   isLoading?: boolean;
   onClick?: () => void;
   onUpgradeClick?: () => void;
@@ -59,7 +58,6 @@ export function SidebarScoreCard({
   marketHealthScore,
   homereadyScore,
   investoredgeScore,
-  marketCondition = 'balanced',
   isLoading = false,
   onClick,
   onUpgradeClick,
@@ -178,7 +176,6 @@ export function SidebarScoreCard({
                   />
                 )}
               </div>
-              <MarketConditionBadge condition={marketCondition} size="sm" />
             </>
           ) : (
             <p className="text-xs text-on-surface-variant">

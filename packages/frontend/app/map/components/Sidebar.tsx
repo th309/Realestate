@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavItem, MetricCategory, ViewMode, SelectedGeography } from '../types';
-import { MetricCategoryItem, ViewToggle, SidebarScoreCard, MarketCondition, TrendDirection } from './sidebar-components';
+import { MetricCategoryItem, ViewToggle, SidebarScoreCard, TrendDirection } from './sidebar-components';
 import { GeoLevelPills } from './GeoLevelPills';
 
 interface ScoreInfo {
@@ -15,7 +15,6 @@ interface ScoreData {
   marketHealth?: ScoreInfo;
   homeready?: ScoreInfo;
   investoredge?: ScoreInfo;
-  marketCondition?: MarketCondition;
   isLoading?: boolean;
 }
 
@@ -93,9 +92,8 @@ export function Sidebar({
               key={item.id}
               href={item.href}
               onClick={onCloseMobileMenu}
-              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-200 ${
-                isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container'
-              }`}
+              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-200 ${isActive ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container'
+                }`}
             >
               <span className={isActive ? 'text-on-primary-container' : 'text-on-surface-variant'}>
                 {item.icon}
@@ -147,7 +145,6 @@ export function Sidebar({
           marketHealthScore={scoreData?.marketHealth}
           homereadyScore={scoreData?.homeready}
           investoredgeScore={scoreData?.investoredge}
-          marketCondition={scoreData?.marketCondition}
           isLoading={scoreData?.isLoading}
           onClick={onScoreCardClick}
           onUpgradeClick={() => window.location.href = '/pricing'}
