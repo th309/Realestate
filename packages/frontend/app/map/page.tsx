@@ -14,7 +14,7 @@ import { MenuIcon, TableIcon } from './components';
 import { SearchBar, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
 
 // Import hooks
-import { useMapData, useMapSearch, useMapLayers, useRightPanelData } from './hooks';
+import { useMapData, useMapSearch, useMapLayers } from './hooks';
 
 // Import config
 import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
@@ -80,13 +80,6 @@ export default function MapPage() {
     map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
     onFeatureClick: handleFeatureClick
   });
-
-  // Fetch right panel data when a geography is selected
-  const { data: rightPanelData, isLoading: rightPanelLoading } = useRightPanelData(
-    selectedGeography,
-    geoLevel,
-    viewMode
-  );
 
   // Auto-switch geo level when metric doesn't support current level
   // Uses central config as single source of truth for metric/geo compatibility
@@ -371,20 +364,7 @@ export default function MapPage() {
             viewMode={viewMode}
             geography={selectedGeography}
             geoLevel={geoLevel}
-            score={rightPanelData?.score}
-            scoreTrend={rightPanelData?.scoreTrend}
-            confidence={rightPanelData?.confidence}
-            pricing={rightPanelData?.pricing}
-            inventory={rightPanelData?.inventory}
-            insight={rightPanelData?.insight}
-            marketFactors={rightPanelData?.marketFactors ?? []}
-            isLoading={rightPanelLoading}
-            onViewFullReport={() => {
-              console.log('View full report for', selectedGeography?.name);
-            }}
-            onMarketFactorsChange={(factors) => {
-              console.log('Market factors changed:', factors);
-            }}
+            isAdmin={true} // TODO: Replace with actual admin check
           />
         </main>
       </div>

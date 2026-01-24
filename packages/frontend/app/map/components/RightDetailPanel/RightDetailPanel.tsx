@@ -1,30 +1,27 @@
 /**
  * RightDetailPanel Component
  *
- * Collapsible panel that slides in from the right when a region is clicked.
- * Redesigned with minimalist gauge layout showing:
- * - Large circular score gauge with confidence badge
- * - Contextual data cards (pricing, inventory, insight)
- * - Market factors breakdown grid
- * - PropertyIQ Scores section
+ * Wider panel that slides in from the right when a region is clicked.
+ * Compact design with:
+ * - Main score card (HomeReady/InvestorEdge) with admin-editable sub-metrics
+ * - Market Health score card with admin-editable sub-metrics
+ * - All content fits without scrolling
  *
  * Mobile: Full-screen overlay
- * Desktop: Side panel overlay
+ * Desktop: Side panel overlay (520px wide)
  *
  * Material Design 3 compliant.
  */
 
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
 import { CloseIcon } from '../Icons';
-import { MarketScoreCard } from './MarketScoreCard';
-import { ContextualDataCards, type PricingData, type InventoryData, type InsightData } from './ContextualDataCards';
-import { MarketFactorsGrid, type MarketFactor } from './MarketFactorsGrid';
-import { ScoresSection } from './ScoresSection';
-import type { TrendDirection } from '../sidebar-components/TrendArrow';
-import type { GeographyType } from '../../hooks/useScoreData';
+import { CompactScoreCard, type MetricIndicator, type TrendData } from './CompactScoreCard';
+import { api } from '@/lib/api/client';
+import { getMetricConfig } from '../../config/metrics';
+import { formatValue, getMetricFormat } from '../../utils/metricUtils';
 
 interface RightDetailPanelProps {
   isOpen: boolean;
@@ -32,25 +29,99 @@ interface RightDetailPanelProps {
   viewMode: ViewMode;
   geography: SelectedGeography | null;
   geoLevel: GeoLevel;
-  // Score data
-  score?: number;
-  scoreTrend?: {
-    direction: TrendDirection;
-    value: string;
-  };
-  confidence?: 'A' | 'B' | 'C' | 'D';
-  scoreInterpretation?: string;
-  // Contextual data
-  pricing?: PricingData;
-  inventory?: InventoryData;
-  insight?: InsightData;
-  // Market factors
-  marketFactors?: MarketFactor[];
+  isAdmin?: boolean;
   isLoading?: boolean;
-  // Actions
-  onViewMethodology?: () => void;
-  onViewFullReport?: () => void;
-  onMarketFactorsChange?: (factors: MarketFactor[]) => void;
+}
+
+// Default metric selections for each score type
+const DEFAULT_HOMEREADY_METRICS = ['home_value_yoy', 'days_on_market', 'for_sale_inventory'];
+const DEFAULT_INVESTOREDGE_METRICS = ['cap_rate', 'rent_index', 'pending_ratio'];
+const DEFAULT_MARKETHEALTH_METRICS = ['hotness_score', 'inventory_yoy', 'new_listings_yoy'];
+
+const STORAGE_KEY = 'rightpanel-metric-selections';
+
+interface MetricSelections {
+  homeready: string[];
+  investoredge: string[];
+  markethealth: string[];
+}
+
+function loadMetricSelections(): MetricSelections {
+  if (typeof window === 'undefined') {
+    return {
+      homeready: DEFAULT_HOMEREADY_METRICS,
+      investoredge: DEFAULT_INVESTOREDGE_METRICS,
+      markethealth: DEFAULT_MARKETHEALTH_METRICS,
+    };
+  }
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    console.error('Failed to load metric selections:', e);
+  }
+
+  return {
+    homeready: DEFAULT_HOMEREADY_METRICS,
+    investoredge: DEFAULT_INVESTOREDGE_METRICS,
+    markethealth: DEFAULT_MARKETHEALTH_METRICS,
+  };
+}
+
+function saveMetricSelections(selections: MetricSelections) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(selections));
+  } catch (e) {
+    console.error('Failed to save metric selections:', e);
+  }
+}
+
+// Calculate trend from time series data
+function calculateTrend(data: { date: string; value: number }[]): TrendData {
+  if (!data || data.length < 2) {
+    return { currentValue: data?.[0]?.value ?? null, previousValue: null, changePercent: null, direction: null };
+  }
+
+  const sorted = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const currentValue = sorted[0].value;
+
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  let previousValue: number | null = null;
+  let closestDiff = Infinity;
+
+  for (const point of sorted) {
+    const pointDate = new Date(point.date);
+    const diff = Math.abs(pointDate.getTime() - threeMonthsAgo.getTime());
+    if (diff < closestDiff && pointDate < new Date(sorted[0].date)) {
+      closestDiff = diff;
+      previousValue = point.value;
+    }
+  }
+
+  if (previousValue === null && sorted.length > 1) {
+    previousValue = sorted[sorted.length - 1].value;
+  }
+
+  if (previousValue === null || previousValue === 0) {
+    return { currentValue, previousValue, changePercent: null, direction: null };
+  }
+
+  const changePercent = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+
+  let direction: 'up' | 'down' | 'flat';
+  if (Math.abs(changePercent) < 1) {
+    direction = 'flat';
+  } else if (changePercent > 0) {
+    direction = 'up';
+  } else {
+    direction = 'down';
+  }
+
+  return { currentValue, previousValue, changePercent, direction };
 }
 
 export function RightDetailPanel({
@@ -59,20 +130,23 @@ export function RightDetailPanel({
   viewMode,
   geography,
   geoLevel,
-  score,
-  scoreTrend,
-  confidence,
-  scoreInterpretation,
-  pricing,
-  inventory,
-  insight,
-  marketFactors = [],
+  isAdmin = false,
   isLoading = false,
-  onViewMethodology,
-  onViewFullReport,
-  onMarketFactorsChange,
 }: RightDetailPanelProps) {
+  const [scores, setScores] = useState<{
+    homeready: number | null;
+    investoredge: number | null;
+    marketHealth: number | null;
+    confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  }>({ homeready: null, investoredge: null, marketHealth: null, confidence: 'MEDIUM' });
+  const [scoresLoading, setScoresLoading] = useState(false);
+  const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
+  const [metricData, setMetricData] = useState<Record<string, TrendData>>({});
+  const [metricsLoading, setMetricsLoading] = useState(false);
+
   const scoreName = viewMode === 'homebuyer' ? 'HomeReady Score' : 'InvestorEdge Score';
+  const mainScore = viewMode === 'homebuyer' ? scores.homeready : scores.investoredge;
+  const mainMetricKey = viewMode === 'homebuyer' ? 'homeready' : 'investoredge';
 
   // Handle escape key to close panel
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -86,37 +160,120 @@ export function RightDetailPanel({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Get score interpretation based on score value
-  const getDefaultInterpretation = (score: number): string => {
-    const isHomebuyer = viewMode === 'homebuyer';
-    if (score >= 80) {
-      return isHomebuyer
-        ? 'Excellent market conditions for buyers. Strong fundamentals with favorable pricing dynamics.'
-        : 'High investment potential based on historical performance and current market momentum.';
+  // Fetch scores when geography changes
+  useEffect(() => {
+    if (!geography || !isOpen) return;
+
+    let isMounted = true;
+
+    async function fetchScores() {
+      setScoresLoading(true);
+      try {
+        const response = await api.getScore(geoLevel, geography.id);
+        if (isMounted) {
+          const conf = response.confidenceLevel === 'high' ? 'HIGH' : response.confidenceLevel === 'low' ? 'LOW' : 'MEDIUM';
+          setScores({
+            homeready: response.homereadyScore ?? null,
+            investoredge: response.investoredgeScore ?? null,
+            marketHealth: response.components?.homeready?.marketHealth ?? null,
+            confidence: conf,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch scores:', err);
+        if (isMounted) {
+          setScores({ homeready: null, investoredge: null, marketHealth: null, confidence: 'MEDIUM' });
+        }
+      } finally {
+        if (isMounted) setScoresLoading(false);
+      }
     }
-    if (score >= 60) {
-      return isHomebuyer
-        ? 'Good market conditions with solid fundamentals. Opportunities available for prepared buyers.'
-        : 'Good investment opportunity with moderate risk and favorable returns outlook.';
+
+    fetchScores();
+    return () => { isMounted = false; };
+  }, [geography, geoLevel, isOpen]);
+
+  // Fetch metric trends
+  useEffect(() => {
+    if (!geography || !isOpen) return;
+
+    let isMounted = true;
+
+    async function fetchMetricTrends() {
+      const allMetricIds = [
+        ...metricSelections.homeready,
+        ...metricSelections.investoredge,
+        ...metricSelections.markethealth,
+      ];
+      const uniqueMetricIds = [...new Set(allMetricIds)];
+
+      setMetricsLoading(true);
+      const trends: Record<string, TrendData> = {};
+
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 4);
+      const startDateStr = startDate.toISOString().split('T')[0];
+
+      await Promise.all(
+        uniqueMetricIds.map(async (metricId) => {
+          try {
+            const response = await api.getTimeSeries(
+              metricId,
+              geoLevel,
+              geography.id,
+              startDateStr,
+              endDate
+            );
+
+            if (response.success && response.data.length > 0) {
+              trends[metricId] = calculateTrend(response.data);
+            } else {
+              trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
+            }
+          } catch (err) {
+            trends[metricId] = { currentValue: null, previousValue: null, changePercent: null, direction: null };
+          }
+        })
+      );
+
+      if (isMounted) {
+        setMetricData(trends);
+        setMetricsLoading(false);
+      }
     }
-    if (score >= 40) {
-      return isHomebuyer
-        ? 'Fair market conditions. Careful analysis recommended before making decisions.'
-        : 'Moderate investment potential. Consider market timing and local factors.';
-    }
-    if (score >= 20) {
-      return isHomebuyer
-        ? 'Challenging market conditions. Patience and strategic timing advised.'
-        : 'Higher risk profile. Thorough due diligence recommended before investing.';
-    }
-    return isHomebuyer
-      ? 'Difficult market conditions. Consider alternative markets or timing.'
-      : 'Caution advised. Market fundamentals require careful evaluation.';
-  };
+
+    fetchMetricTrends();
+    return () => { isMounted = false; };
+  }, [geography, geoLevel, isOpen, metricSelections]);
+
+  // Convert metric IDs to indicators
+  const getIndicatorsForMetrics = useCallback((metricIds: string[]): MetricIndicator[] => {
+    return metricIds.map(id => {
+      const config = getMetricConfig(id);
+      const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const trend = metricData[id] || { currentValue: null, previousValue: null, changePercent: null, direction: null };
+
+      let formattedValue = '--';
+      if (trend.currentValue !== null) {
+        const format = getMetricFormat(id);
+        formattedValue = formatValue(trend.currentValue, format);
+      }
+
+      return { metricId: id, label, formattedValue, trend };
+    });
+  }, [metricData]);
+
+  // Handlers for metric selection changes
+  const handleMetricsChange = useCallback((scoreType: keyof MetricSelections) => (metricIds: string[]) => {
+    const newSelections = { ...metricSelections, [scoreType]: metricIds };
+    setMetricSelections(newSelections);
+    saveMetricSelections(newSelections);
+  }, [metricSelections]);
 
   if (!isOpen || !geography) return null;
 
-  const displayInterpretation = scoreInterpretation || (score !== undefined ? getDefaultInterpretation(score) : undefined);
+  const loading = isLoading || scoresLoading;
 
   return (
     <>
@@ -127,11 +284,11 @@ export function RightDetailPanel({
         aria-hidden="true"
       />
 
-      {/* Panel */}
+      {/* Panel - wider for compact horizontal cards */}
       <div
         className={`
-          fixed z-50 bg-surface elevation-3 overflow-y-auto
-          inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[420px]
+          fixed z-50 bg-surface elevation-3
+          inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[520px]
           transform transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
@@ -140,7 +297,7 @@ export function RightDetailPanel({
         aria-label={`${geography.name} market details`}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-surface border-b border-outline-variant px-4 py-3 flex items-center justify-between">
+        <div className="bg-surface border-b border-outline-variant px-4 py-3 flex items-center justify-between">
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold text-on-surface truncate">
               {geography.name}
@@ -159,55 +316,35 @@ export function RightDetailPanel({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-6">
-          {/* Main Score Card */}
-          <MarketScoreCard
-            score={score ?? null}
-            scoreName={scoreName}
-            scoreInterpretation={displayInterpretation}
-            trend={scoreTrend}
-            confidence={confidence}
-            isLoading={isLoading}
-            onViewMethodology={onViewMethodology}
-          />
-
-          {/* Contextual Data Cards */}
-          <ContextualDataCards
-            pricing={pricing}
-            inventory={inventory}
-            insight={insight}
-            isLoading={isLoading}
-          />
-
-          {/* Market Factors Grid */}
-          <MarketFactorsGrid
-            factors={marketFactors}
-            title="Market Factors"
-            description="Key elements influencing the score"
-            isLoading={isLoading}
+        {/* Content - compact, no scrolling needed */}
+        <div className="p-4 space-y-3">
+          {/* Main Score Card (HomeReady or InvestorEdge) */}
+          <CompactScoreCard
+            title={scoreName}
+            score={mainScore}
+            confidence={scores.confidence}
+            indicators={getIndicatorsForMetrics(metricSelections[mainMetricKey])}
+            loading={loading}
+            metricsLoading={metricsLoading}
+            isAdmin={isAdmin}
+            selectedMetricIds={metricSelections[mainMetricKey]}
             viewMode={viewMode}
-            onFactorsChange={onMarketFactorsChange}
+            onMetricsChange={handleMetricsChange(mainMetricKey)}
           />
 
-          {/* PropertyIQ Scores Section */}
-          <ScoresSection
-            geographyType={geoLevel as GeographyType}
-            geographyId={geography.id}
-            className="pt-4 border-t border-outline-variant"
+          {/* Market Health Score Card */}
+          <CompactScoreCard
+            title="Market Health Index"
+            score={scores.marketHealth}
+            confidence={scores.confidence}
+            indicators={getIndicatorsForMetrics(metricSelections.markethealth)}
+            loading={loading}
+            metricsLoading={metricsLoading}
+            isAdmin={isAdmin}
+            selectedMetricIds={metricSelections.markethealth}
+            viewMode={viewMode}
+            onMetricsChange={handleMetricsChange('markethealth')}
           />
-
-          {/* Action Button */}
-          {onViewFullReport && (
-            <div className="pt-4">
-              <button
-                onClick={onViewFullReport}
-                className="w-full py-3 px-4 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors duration-200"
-              >
-                View Full Market Report
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </>
