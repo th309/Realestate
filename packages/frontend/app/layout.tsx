@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
+import { Providers } from "./providers";
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -110,15 +111,17 @@ export default function RootLayout({
       <body
         className={`${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <Header />
-        <main className="flex-1 min-h-0">
-          {children}
-        </main>
-        <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4">
-          <p className="text-center text-xs text-on-surface-variant">
-            Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
-          </p>
-        </footer>
+        <Providers>
+          <Header />
+          <main className="flex-1 min-h-0">
+            {children}
+          </main>
+          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4">
+            <p className="text-center text-xs text-on-surface-variant">
+              Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
+            </p>
+          </footer>
+        </Providers>
       </body>
     </html>
   );
