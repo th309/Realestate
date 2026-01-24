@@ -224,19 +224,50 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 
 ### 5.6 Score Display (Standardized Component)
 
-**CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized `ScoreDisplay` component. Do NOT create custom score visualizations.
+**CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized score components. Do NOT create custom score visualizations.
 
+**Two Components Available:**
+
+| Component | Use Case | Data Source |
+|-----------|----------|-------------|
+| `ScoreWidget` | **Preferred** - Auto-fetches data | Uses `useScoreData` internally |
+| `ScoreDisplay` | When you already have the score value | Passed as prop |
+
+#### ScoreWidget (Connected Component)
+**Component:** `app/components/scoring/ScoreWidget.tsx`
+
+Fetches score and confidence from the data binding layer automatically:
+```typescript
+import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
+
+// Auto-fetch and display - no manual data fetching needed
+<ScoreWidget
+  geographyType="metro"
+  geographyId="31080"
+  scoreType="homeready"
+  showConfidence  // Optional: shows confidence badge
+/>
+```
+
+**ScoreWidget Props:**
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `geographyType` | GeographyType | required | state, metro, county, etc. |
+| `geographyId` | string | required | FIPS code, CBSA code, etc. |
+| `scoreType` | ScoreType | required | homeready, investoredge, market_health |
+| `showConfidence` | boolean | false | Show confidence badge (HIGH/MED/LOW) |
+| `size` | number | 100 | Component size in pixels |
+| `showGrade` | boolean | true | Show letter grade badge |
+| `showLabel` | boolean | true | Show descriptor label |
+
+#### ScoreDisplay (Presentation Component)
 **Component:** `app/components/scoring/ScoreDisplay.tsx`
 
-**Data Binding:** Always use `useScoreData` hook for fetching score data:
+Use when you already have score data (e.g., from a parent component):
 ```typescript
-import { useScoreData } from '@/app/map/hooks/useScoreData';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 
-const { data, loading } = useScoreData(geographyType, geographyId);
-
-// Display individual score
-<ScoreDisplay value={data?.homeready?.score ?? 0} />
+<ScoreDisplay value={85} size={100} />
 ```
 
 **Visual Spec:**

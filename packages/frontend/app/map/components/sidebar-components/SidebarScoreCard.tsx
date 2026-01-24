@@ -6,18 +6,15 @@
  * - Homebuyer: HomeReady Score
  * - Investor: InvestorEdge Score
  *
- * Features:
- * - Large score number with ring visualization
- * - Score interpretation text ("Good Time to Buy")
- * - Market condition badge (Buyer's/Seller's/Balanced)
- * - Trend indicator
- * - Data-driven summary text
+ * Uses the standardized ScoreDisplay component for consistent visualization.
  */
 
 import type { ViewMode } from '../../types';
 import { InsightsIcon } from '../Icons';
 import { TrendArrow, TrendDirection } from './TrendArrow';
 import { MarketConditionBadge, MarketCondition } from './MarketConditionBadge';
+import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import { Loader2 } from 'lucide-react';
 
 interface SidebarScoreCardProps {
   viewMode: ViewMode;
@@ -30,45 +27,6 @@ interface SidebarScoreCardProps {
   summaryText?: string;
   isLoading?: boolean;
   onClick?: () => void;
-}
-
-/**
- * Get score interpretation text based on score value
- */
-function getScoreInterpretation(score: number, viewMode: ViewMode): string {
-  const isHomebuyer = viewMode === 'homebuyer';
-
-  if (score >= 80) {
-    return isHomebuyer ? 'Excellent Time to Buy' : 'Strong Investment';
-  }
-  if (score >= 60) {
-    return isHomebuyer ? 'Good Time to Buy' : 'Good Opportunity';
-  }
-  if (score >= 40) {
-    return isHomebuyer ? 'Fair Conditions' : 'Moderate Potential';
-  }
-  if (score >= 20) {
-    return isHomebuyer ? 'Challenging Market' : 'Higher Risk';
-  }
-  return isHomebuyer ? 'Difficult Conditions' : 'Caution Advised';
-}
-
-/**
- * Get score color based on value
- */
-function getScoreColor(score: number): string {
-  if (score >= 70) return 'text-emerald-600';
-  if (score >= 40) return 'text-amber-600';
-  return 'text-rose-600';
-}
-
-/**
- * Get ring color based on score
- */
-function getRingColor(score: number): string {
-  if (score >= 70) return 'stroke-emerald-500';
-  if (score >= 40) return 'stroke-amber-500';
-  return 'stroke-rose-500';
 }
 
 export function SidebarScoreCard({
@@ -101,47 +59,24 @@ export function SidebarScoreCard({
 
       {/* Score Content */}
       <div className="flex items-start gap-3">
-        {/* Score Ring */}
-        <div className="relative flex-shrink-0">
-          <svg
-            className="w-16 h-16 -rotate-90"
-            viewBox="0 0 64 64"
-          >
-            {/* Background ring */}
-            <circle
-              cx="32"
-              cy="32"
-              r="28"
-              fill="none"
-              strokeWidth="6"
-              className="stroke-surface-container-highest"
+        {/* Score Display */}
+        <div className="flex-shrink-0">
+          {isLoading ? (
+            <div className="w-16 h-16 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-on-surface-variant" />
+            </div>
+          ) : hasScore ? (
+            <ScoreDisplay
+              value={score}
+              size={64}
+              strokeWidth={5}
+              showLabel={false}
             />
-            {/* Progress ring */}
-            {hasScore && (
-              <circle
-                cx="32"
-                cy="32"
-                r="28"
-                fill="none"
-                strokeWidth="6"
-                strokeLinecap="round"
-                className={getRingColor(score)}
-                strokeDasharray={`${(score / 100) * 176} 176`}
-              />
-            )}
-          </svg>
-          {/* Score number */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            ) : hasScore ? (
-              <span className={`text-xl font-bold ${getScoreColor(score)}`}>
-                {score}
-              </span>
-            ) : (
+          ) : (
+            <div className="w-16 h-16 flex items-center justify-center rounded-full border-4 border-surface-container-highest">
               <span className="text-lg text-on-surface-variant">--</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Score Details */}
@@ -157,12 +92,7 @@ export function SidebarScoreCard({
           </div>
 
           {hasScore ? (
-            <>
-              <p className="text-xs text-on-surface-variant mb-2">
-                {getScoreInterpretation(score, viewMode)}
-              </p>
-              <MarketConditionBadge condition={marketCondition} size="sm" />
-            </>
+            <MarketConditionBadge condition={marketCondition} size="sm" />
           ) : (
             <p className="text-xs text-on-surface-variant">
               Select a region to see scores

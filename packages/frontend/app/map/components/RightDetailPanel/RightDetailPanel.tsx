@@ -37,15 +37,6 @@ interface MarketFactor {
   metricId: string;
 }
 
-// Letter grade helper
-function getLetterGrade(score: number): string {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B';
-  if (score >= 70) return 'C';
-  if (score >= 60) return 'D';
-  return 'F';
-}
-
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
   { id: 'appreciation', label: 'Appreciation', metricId: 'home_value_yoy' },
   { id: 'yield', label: 'Yield Potential', metricId: 'cap_rate' },
@@ -163,6 +154,19 @@ export function RightDetailPanel({
     return null;
   };
 
+  const getConfidenceLevel = (type: ScoreType): 'high' | 'medium' | 'low' | 'insufficient' => {
+    if (!scoreData) return 'medium';
+    const key = type === 'market_health' ? 'marketHealth' : type;
+    const scoreObj = scoreData[key as keyof typeof scoreData];
+    if (typeof scoreObj === 'object' && scoreObj !== null && 'confidence' in scoreObj) {
+      const conf = (scoreObj as any).confidence;
+      if (conf && typeof conf.level === 'string') {
+        return conf.level as 'high' | 'medium' | 'low' | 'insufficient';
+      }
+    }
+    return 'medium';
+  };
+
   const formatMetricValue = (metricId: string, value: number | null | undefined) => {
     if (value === null || value === undefined) return '--';
     return formatValue(value, getMetricFormat(metricId));
@@ -205,7 +209,7 @@ export function RightDetailPanel({
             <ScoreGaugeCard
               type={scoreLayout.main}
               score={getScoreValue(scoreLayout.main)}
-              confidence={getLetterGrade(getScoreValue(scoreLayout.main) ?? 0)}
+              confidenceLevel={getConfidenceLevel(scoreLayout.main)}
               trend={getScoreTrend(scoreLayout.main)}
               loading={scoresLoading}
             />
