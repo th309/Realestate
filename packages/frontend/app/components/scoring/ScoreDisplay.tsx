@@ -173,15 +173,16 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const labelFontSize = size >= 100 ? 'text-[8px]' : size >= 60 ? 'text-[7px]' : 'text-[5px]';
   const gradePadding = size >= 100 ? 'px-1.5 py-0.5' : size >= 60 ? 'px-1 py-0.5' : 'px-0.5 py-0';
 
-  // Calculate tick mark properties
-  const tickLength = strokeWidth * 1.8;
-  const tickWidth = Math.max(1.5, strokeWidth / 4);
+  // Calculate tick mark properties - stay WITHIN the ring
+  const tickLength = strokeWidth; // Match stroke width exactly
+  const tickWidth = Math.max(1, strokeWidth / 6);
 
   // Get tick positions for 33% and 66% thresholds (clockwise from top)
   const getPoints = (p: number) => {
     const angle = (p / 100) * 2 * Math.PI;
     const dx = Math.sin(angle);
     const dy = Math.cos(angle);
+    // Position tick centered on the stroke radius
     const innerR = radius - tickLength / 2;
     const outerR = radius + tickLength / 2;
     return {
