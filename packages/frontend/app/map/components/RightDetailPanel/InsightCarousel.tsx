@@ -87,7 +87,10 @@ export function InsightCarousel({
             </div>
 
             <div className="min-h-[60px] relative">
-                <p className="text-xs text-on-surface leading-relaxed animate-in fade-in slide-in-from-right-4 duration-500 key={currentIndex}">
+                <p
+                    key={currentIndex}
+                    className="text-xs text-on-surface leading-relaxed animate-in fade-in slide-in-from-right-4 duration-500"
+                >
                     "{current.text}"
                 </p>
             </div>

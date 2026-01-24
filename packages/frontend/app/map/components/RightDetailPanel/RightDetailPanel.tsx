@@ -163,8 +163,8 @@ export function RightDetailPanel({
     return null;
   };
 
-  const formatMetricValue = (metricId: string, value: number | null) => {
-    if (value === null) return '--';
+  const formatMetricValue = (metricId: string, value: number | null | undefined) => {
+    if (value === null || value === undefined) return '--';
     return formatValue(value, getMetricFormat(metricId));
   };
 
@@ -249,7 +249,7 @@ export function RightDetailPanel({
                       </span>
                       <p className="text-sm font-bold text-on-surface mt-0.5">
                         {factorsLoading ? '...' : formatMetricValue(factor.metricId, data?.value)}
-                        {data?.trend != null && (
+                        {data?.trend != null && typeof data.trend === 'number' && (
                           <span className={`text-[10px] font-normal ml-1 ${data.trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             ({data.trend >= 0 ? '+' : ''}{data.trend.toFixed(1)}%)
                           </span>
