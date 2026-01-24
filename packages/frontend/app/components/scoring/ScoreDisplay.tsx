@@ -43,11 +43,13 @@ export interface ScoreDisplayProps {
 
 /**
  * Calculate color on a gradient from red (0) to green (100)
+ * 0 = Red (Hue 0)
+ * 100 = Green (Hue 120)
  */
 export const getScoreColor = (value: number, maxValue: number = 100): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
   const hue = percentage * 120; // 0 = red, 120 = green
-  return `hsl(${hue}, 90%, 45%)`;
+  return `hsl(${hue}, 95%, 45%)`;
 };
 
 /**
@@ -196,81 +198,68 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const tick33 = getPoints(MARKET_THRESHOLDS.sellersMax);
   const tick66 = getPoints(MARKET_THRESHOLDS.balancedMax);
 
-  // Unique ID for the gradient to avoid collisions
-  const gradientId = `score-gradient-${Math.round(value)}`;
-
-  // Calculate dynamic stops for the gradient to ensure Red is at 0 and the color matches the scale
-  // We want to map the 0-100 color scale onto the 0-value visible arc.
-  const stopColors = [
-    { offset: 0, color: 'hsl(0, 95%, 45%)' },       // 0: Red
-    { offset: 25, color: 'hsl(30, 95%, 45%)' },     // 25: Orange
-    { offset: 50, color: 'hsl(60, 95%, 45%)' },     // 50: Yellow
-    { offset: 75, color: 'hsl(90, 95%, 45%)' },     // 75: Lime
-    { offset: 100, color: 'hsl(120, 95%, 45%)' }    // 100: Green
-  ];
-
-  // Filter and map stops to the current visible portion (0 to value)
-  const visibleStops = stopColors
-    .filter(s => s.offset <= value)
-    .map(s => ({
-      offset: `${(s.offset / value) * 100}%`,
-      color: s.color
-    }));
-
-  // Always ensure the last stop is the exact color of the current score
-  if (value > 0 && !visibleStops.find(s => s.offset === '100%')) {
-    visibleStops.push({
-      offset: '100%',
-      color: strokeColor
-    });
-  }
+  // Unique ID for the mask to avoid collisions
+  const maskId = `score-mask-${Math.round(value)}-${size}`;
+  const gradientId = `score-conic-${Math.round(value)}`;
 
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            {visibleStops.length > 0 ? (
-              visibleStops.map((stop, i) => (
-                <stop key={i} offset={stop.offset} stopColor={stop.color} />
-              ))
-            ) : (
-              <stop offset="0%" stopColor="hsl(0, 95%, 45%)" />
-            )}
-          </linearGradient>
+          {/* Mask for the progress ring */}
+          <mask id={maskId}>
+            <rect x="0" y="0" width="100%" height="100%" fill="black" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="none"
+              stroke="white"
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+              className="transition-all duration-700 ease-in-out"
+            />
+          </mask>
+
+          {/* Glow filter for premium look */}
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feGaussianBlur stdDeviation="1.5" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
 
-        {/* Rotated group for circles (clockwise from top) */}
-        <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
-          {/* Background circle */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r={radius}
-            fill="none"
-            stroke={backgroundColor}
-            strokeWidth={strokeWidth}
-          />
-          {/* Progress circle */}
-          <circle
-            cx={cx}
-            cy={cy}
-            r={radius}
-            fill="none"
-            stroke={`url(#${gradientId})`}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-700 ease-in-out"
-          />
-        </g>
+        {/* Background Grey Circle */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          fill="none"
+          stroke={backgroundColor}
+          strokeWidth={strokeWidth}
+        />
 
-        {/* Tick marks (not rotated, calculated from top) */}
+        {/* The Animated Conic Gradient Ring */}
+        <foreignObject x="0" y="0" width={size} height={size} mask={`url(#${maskId})`}>
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              background: `conic-gradient(
+                from 0deg,
+                hsl(0, 95%, 45%) 0%,
+                hsl(30, 95%, 45%) 25%,
+                hsl(60, 95%, 45%) 50%,
+                hsl(90, 95%, 45%) 75%,
+                hsl(120, 95%, 45%) 100%
+              )`
+            }}
+          />
+        </foreignObject>
+
+        {/* Tick marks (not rotated, calculated clockwise from top) */}
         <line
           x1={tick33.x1}
           y1={tick33.y1}
@@ -279,6 +268,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           stroke="#6b7280"
           strokeWidth={tickWidth}
           strokeLinecap="round"
+          className="opacity-60"
         />
         <line
           x1={tick66.x1}
@@ -288,6 +278,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           stroke="#6b7280"
           strokeWidth={tickWidth}
           strokeLinecap="round"
+          className="opacity-60"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
