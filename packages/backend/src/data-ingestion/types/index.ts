@@ -102,3 +102,4 @@ export interface ZillowDatasetConfig {
     seasonalAdjustment?: boolean;
     frequency?: string;
 }
+export * from './realtor.types';

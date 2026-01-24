@@ -25,6 +25,10 @@ Successfully migrated data ingestion logic from the Frontend (Next.js) to the Ba
 - [x] Evaluated Puppeteer usage and created `PUPPETEER_DATASETS.md`.
 - [x] Created `RedfinPuppeteerService` to handle dynamic downloads in isolation.
 - [x] Updated Frontend API routes (`api/import-zillow`, `api/import-redfin`) to proxy requests.
+- [x] Ported `RealtorService` to backend (`sources/realtor.service.ts`) from scripts.
+- [x] Created `realtor.config.ts` and `realtor.types.ts`.
+- [x] Updated `DataIngestionController` to include Realtor endpoints.
+- [x] Created `api/import-realtor` proxy in frontend.
 - [x] Deprecated legacy test endpoints.
 
 ## Technical Details
@@ -38,6 +42,7 @@ Successfully migrated data ingestion logic from the Frontend (Next.js) to the Ba
     - `ZillowService`: Handles Zillow CSV downloads and parsing.
     - `RedfinService`: Orchestrates Redfin data ingestion.
     - `RedfinPuppeteerService`: Isolated service for Puppeteer-based tasks.
+    - `RealtorService`: Handles Realtor.com CSV downloads and parsing (National, State, Metro, County, Zip).
     - `GeoMappingService`: Helper for mapping region names to IDs.
     - `DataQualityService`: Helper for validation.
 

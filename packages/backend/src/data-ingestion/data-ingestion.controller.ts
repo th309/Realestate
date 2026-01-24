@@ -3,6 +3,7 @@ import { CensusService } from './sources/census.service';
 import { FredService } from './sources/fred.service';
 import { ZillowService } from './sources/zillow.service';
 import { RedfinService } from './sources/redfin.service';
+import { RealtorService } from './sources/realtor.service';
 import { CensusGeoLevel } from './types';
 
 @Controller('data-ingestion')
@@ -11,7 +12,8 @@ export class DataIngestionController {
         private readonly censusService: CensusService,
         private readonly fredService: FredService,
         private readonly zillowService: ZillowService,
-        private readonly redfinService: RedfinService
+        private readonly redfinService: RedfinService,
+        private readonly realtorService: RealtorService
     ) { }
 
     @Post('census')
@@ -61,5 +63,17 @@ export class DataIngestionController {
         @Body() body: { metric?: string; limit?: number; url?: string }
     ) {
         return this.redfinService.importRedfinData(body.metric, body.limit, undefined, body.url);
+    }
+
+    @Post('realtor')
+    @HttpCode(HttpStatus.OK)
+    async importRealtor(
+        @Body() body: { datasetId?: string; limit?: number }
+    ) {
+        if (body.datasetId) {
+            return this.realtorService.importDataset(body.datasetId, body.limit);
+        } else {
+            return this.realtorService.importAllRealtorData(body.limit);
+        }
     }
 }

@@ -8,6 +8,7 @@ import { DataQualityService } from './utils/data-quality.service';
 import { ZillowService } from './sources/zillow.service';
 import { RedfinService } from './sources/redfin.service';
 import { RedfinPuppeteerService } from './sources/redfin-puppeteer.service';
+import { RealtorService } from './sources/realtor.service';
 
 @Module({
     imports: [SupabaseModule],
@@ -18,6 +19,7 @@ import { RedfinPuppeteerService } from './sources/redfin-puppeteer.service';
         ZillowService,
         RedfinService,
         RedfinPuppeteerService,
+        RealtorService,
         GeoMappingService,
         DataQualityService
     ],
@@ -27,6 +29,7 @@ import { RedfinPuppeteerService } from './sources/redfin-puppeteer.service';
         ZillowService,
         RedfinService,
         RedfinPuppeteerService,
+        RealtorService,
         GeoMappingService,
         DataQualityService
     ]
