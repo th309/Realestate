@@ -1,17 +1,14 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import type { ScoreType } from '../../hooks/useScoreData';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-import { Sparkline } from '@/app/components/charts/Sparkline';
 
 interface SideScoreCardProps {
     type: ScoreType;
     score: number | null;
     trend?: number | null;
-    history?: { date: string; value: number }[];
     onClick: () => void;
     isActive?: boolean;
     className?: string;
-    loading?: boolean;
 }
 
 const SCORE_CONFIG: Record<ScoreType, { label: string }> = {
@@ -20,7 +17,7 @@ const SCORE_CONFIG: Record<ScoreType, { label: string }> = {
     market_health: { label: 'Market Health' }
 };
 
-export function SideScoreCard({ type, score, trend, history = [], onClick, isActive, className, loading = false }: SideScoreCardProps) {
+export function SideScoreCard({ type, score, trend, onClick, isActive, className }: SideScoreCardProps) {
     const config = SCORE_CONFIG[type];
 
     return (
@@ -63,23 +60,13 @@ export function SideScoreCard({ type, score, trend, history = [], onClick, isAct
                                 <span className={`font-medium ${trend > 0 ? 'text-green-600' : 'text-red-500'}`}>
                                     {Math.abs(trend).toFixed(0)}%
                                 </span>
+                                <span className="truncate opacity-80">vs prev</span>
                             </>
                         ) : (
                             <span className="opacity-50">--</span>
                         )}
                     </div>
                 </div>
-
-                {/* Tiny Sparkline */}
-                {!loading && history.length > 0 && (
-                    <div className="w-12 h-6 opacity-60">
-                        <Sparkline
-                            data={history}
-                            color={trend != null && trend > 0 ? '#16a34a' : trend != null && trend < 0 ? '#ef4444' : '#6750a4'}
-                            strokeWidth={1.5}
-                        />
-                    </div>
-                )}
             </div>
         </div>
     );

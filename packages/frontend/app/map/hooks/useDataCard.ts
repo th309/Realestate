@@ -34,7 +34,6 @@ export interface DataCardResult {
     formattedValue: string;
     format: MetricFormat;
     trend: TrendData;
-    trendHistory: { date: string; value: number }[]; // Full historical data for sparklines
     date: string | undefined;
     loading: boolean;
     error: Error | null;
@@ -163,7 +162,6 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
         formattedValue,
         format,
         trend,
-        trendHistory: trendData || [],
         date: currentData?.date,
         loading: dataLoading || (showTrend && trendLoading),
         error: dataError,

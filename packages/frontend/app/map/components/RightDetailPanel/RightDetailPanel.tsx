@@ -11,16 +11,16 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import { X, TrendingUp } from 'lucide-react';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
-import { getMetricConfig, getMetricFormat, SCORE_COMPONENTS } from '../../config/metrics';
-import { formatValue } from '../../utils/metricUtils';
-import { useDataCardBatch, DataCardResult } from '../../hooks/useDataCard';
+import { api, timeSeriesApi } from '@/lib/api/client';
+import { getMetricCategories } from '../../config/metric-categories';
+import { formatValue, getMetricFormat } from '../../utils/metricUtils';
+import { useScoreData, type ScoreType } from '../../hooks/useScoreData';
 import { ScoreGaugeCard } from './ScoreGaugeCard';
 import { SideScoreCard } from './SideScoreCard';
 import { InsightCarousel } from './InsightCarousel';
-import type { ScoreType } from '../../hooks/useScoreData';
 
 interface RightDetailPanelProps {
   isOpen: boolean;
@@ -68,65 +68,15 @@ export function RightDetailPanel({
     viewMode === 'investor' ? 'investoredge' : 'homeready'
   );
 
+  const { data: scoreData, loading: scoresLoading } = useScoreData(
+    geoLevel as any,
+    geography?.id ?? null,
+    { expanded: true }
+  );
+
+  const [metricData, setMetricData] = useState<Record<string, { value: number | null; trend: number | null }>>({});
   const [marketFactors] = useState<MarketFactor[]>(loadMarketFactors);
-  const regionId = geography?.id || '';
-
-  // 1. Fetch all 3 scores for the panel with 3-month trend/history
-  const scoreResults = useDataCardBatch(
-    ['homeready', 'investoredge', 'markethealth'],
-    geoLevel,
-    regionId,
-    true // showTrend = true fetches historical data
-  );
-
-  // 2. Fetch components for the SELECTED score
-  const selectedComponents = useMemo(() => {
-    const key = selectedScoreType === 'market_health' ? 'market_health' : selectedScoreType;
-    return SCORE_COMPONENTS[key] || [];
-  }, [selectedScoreType]);
-
-  const componentResults = useDataCardBatch(
-    selectedComponents,
-    geoLevel,
-    regionId,
-    true
-  );
-
-  // 3. Fetch default market factors
-  const factorIds = useMemo(() => marketFactors.map(f => f.metricId), [marketFactors]);
-  const factorResults = useDataCardBatch(
-    factorIds,
-    geoLevel,
-    regionId,
-    true
-  );
-
-  // Transform scores for easier access
-  const scores = useMemo(() => {
-    return {
-      homeready: scoreResults['homeready'],
-      investoredge: scoreResults['investoredge'],
-      market_health: scoreResults['markethealth'],
-    };
-  }, [scoreResults]);
-
-  // Transform indicators for ScoreGaugeCard
-  const indicators = useMemo(() => {
-    return selectedComponents.map(id => {
-      const res = componentResults[id];
-      const config = getMetricConfig(id);
-      return {
-        metricId: id,
-        label: config?.title || id,
-        formattedValue: res?.formattedValue || '--',
-        trend: {
-          direction: res?.trend?.direction || null,
-          label: res?.trend?.label || null,
-        },
-        history: res?.trendHistory || [],
-      };
-    });
-  }, [selectedComponents, componentResults]);
+  const [factorsLoading, setFactorsLoading] = useState(false);
 
   // Sync selected score with viewMode when it changes externally
   useEffect(() => {
@@ -138,7 +88,7 @@ export function RightDetailPanel({
     const types: ScoreType[] = ['investoredge', 'homeready', 'market_health'];
     const otherTypes = types.filter(t => t !== selectedScoreType);
 
-    // Side 1 (Top) and Side 2 (Bottom) placement logic
+    // Logic: Top right should always be investoredge or homeready if possible
     let side1 = otherTypes[0];
     let side2 = otherTypes[1];
 
@@ -149,19 +99,84 @@ export function RightDetailPanel({
     return { main: selectedScoreType, side1, side2 };
   }, [selectedScoreType]);
 
-  const getScoreData = (type: ScoreType) => scores[type];
-  const getScoreValue = (type: ScoreType) => scores[type]?.value ?? null;
-  const getScoreTrend = (type: ScoreType) => scores[type]?.trend ?? null;
-  const getScoreHistory = (type: ScoreType) => scores[type]?.trendHistory ?? [];
+  // Fetch real-time metric data for factors
+  useEffect(() => {
+    if (!geography || !isOpen) return;
 
-  const scoresLoading = Object.values(scoreResults).some(r => r.loading);
-  const factorsLoading = Object.values(factorResults).some(r => r.loading);
+    async function fetchMetrics() {
+      setFactorsLoading(true);
+      const metricIds = [...new Set(marketFactors.map(f => f.metricId))];
+      const results: Record<string, { value: number | null; trend: number | null }> = {};
+
+      const now = new Date();
+      const endDate = now.toISOString().split('T')[0];
+      const startDate = new Date(now.setMonth(now.getMonth() - 6)).toISOString().split('T')[0];
+
+      await Promise.all(metricIds.map(async (id) => {
+        try {
+          const res = await timeSeriesApi.getTimeSeries(id, geoLevel, geography!.id, startDate, endDate);
+          if (res.success && res.data.length > 0) {
+            const sorted = [...res.data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            const current = sorted[0].value;
+            const prev = sorted.length > 1 ? sorted[1].value : null;
+            const trend = prev ? ((current - prev) / Math.abs(prev)) * 100 : null;
+            results[id] = { value: current, trend };
+          }
+        } catch {
+          results[id] = { value: null, trend: null };
+        }
+      }));
+
+      setMetricData(results);
+      setFactorsLoading(false);
+    }
+
+    fetchMetrics();
+  }, [geography, geoLevel, isOpen, marketFactors]);
+
+  const getScoreValue = (type: ScoreType) => {
+    if (!scoreData) return null;
+    const key = type === 'market_health' ? 'marketHealth' : type;
+    const scoreObj = scoreData[key as keyof typeof scoreData];
+    if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
+      return (scoreObj as any).score as number ?? null;
+    }
+    return null;
+  };
+
+  const getScoreTrend = (type: ScoreType) => {
+    if (!scoreData) return null;
+    const key = type === 'market_health' ? 'marketHealth' : type;
+    const scoreObj = scoreData[key as keyof typeof scoreData];
+    if (typeof scoreObj === 'object' && scoreObj !== null && 'trendChange' in scoreObj) {
+      return (scoreObj as any).trendChange as number ?? null;
+    }
+    return null;
+  };
+
+  const getConfidenceLevel = (type: ScoreType): 'high' | 'medium' | 'low' | 'insufficient' => {
+    if (!scoreData) return 'medium';
+    const key = type === 'market_health' ? 'marketHealth' : type;
+    const scoreObj = scoreData[key as keyof typeof scoreData];
+    if (typeof scoreObj === 'object' && scoreObj !== null && 'confidence' in scoreObj) {
+      const conf = (scoreObj as any).confidence;
+      if (conf && typeof conf.level === 'string') {
+        return conf.level as 'high' | 'medium' | 'low' | 'insufficient';
+      }
+    }
+    return 'medium';
+  };
+
+  const formatMetricValue = (metricId: string, value: number | null | undefined) => {
+    if (value === null || value === undefined) return '--';
+    return formatValue(value, getMetricFormat(metricId));
+  };
 
   if (!isOpen || !geography) return null;
 
   return (
     <>
-      {/* Scrim - Mobile only */}
+      {/* M3 Scrim - Mobile overlay backdrop only */}
       <div
         className="fixed inset-0 bg-on-surface/40 z-40 md:hidden transition-opacity duration-300"
         onClick={onClose}
@@ -190,37 +205,28 @@ export function RightDetailPanel({
 
         <div className="p-4 space-y-4 overflow-y-auto overflow-x-hidden">
           {/* Main Scoring Section */}
-          <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-            <div className="flex-1">
-              <ScoreGaugeCard
-                type={scoreLayout.main}
-                score={getScoreValue(scoreLayout.main)}
-                trend={getScoreTrend(scoreLayout.main)}
-                history={getScoreHistory(scoreLayout.main)}
-                indicators={indicators}
-                loading={scoresLoading}
-              />
-            </div>
+          <div className="flex gap-3 items-stretch h-[360px]">
+            <ScoreGaugeCard
+              type={scoreLayout.main}
+              score={getScoreValue(scoreLayout.main)}
+              confidenceLevel={getConfidenceLevel(scoreLayout.main)}
+              trend={getScoreTrend(scoreLayout.main)}
+              loading={scoresLoading}
+            />
 
-            <div className="w-full lg:w-[230px] flex flex-col gap-3">
+            <div className="w-[230px] flex flex-col gap-3">
               <SideScoreCard
                 type={scoreLayout.side1}
                 score={getScoreValue(scoreLayout.side1)}
-                trend={getScoreTrend(scoreLayout.side1)?.changePercent}
-                history={getScoreHistory(scoreLayout.side1)}
+                trend={getScoreTrend(scoreLayout.side1)}
                 onClick={() => setSelectedScoreType(scoreLayout.side1)}
-                isActive={selectedScoreType === scoreLayout.side1}
-                loading={scoresLoading}
                 className="flex-1"
               />
               <SideScoreCard
                 type={scoreLayout.side2}
                 score={getScoreValue(scoreLayout.side2)}
-                trend={getScoreTrend(scoreLayout.side2)?.changePercent}
-                history={getScoreHistory(scoreLayout.side2)}
+                trend={getScoreTrend(scoreLayout.side2)}
                 onClick={() => setSelectedScoreType(scoreLayout.side2)}
-                isActive={selectedScoreType === scoreLayout.side2}
-                loading={scoresLoading}
                 className="flex-1"
               />
 
@@ -242,11 +248,16 @@ export function RightDetailPanel({
                 <h4 className="text-sm font-bold text-on-surface">Market Factors</h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Key elements influencing the score</p>
               </div>
+              {isAdmin && (
+                <span className="text-[9px] text-on-surface-variant bg-surface-container px-2 py-1 rounded">
+                  Double click to edit
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               {marketFactors.map((factor) => {
-                const res = factorResults[factor.metricId];
+                const data = metricData[factor.metricId];
                 return (
                   <div key={factor.id} className="bg-surface rounded-xl p-3 border border-outline-variant flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/5`}>
@@ -257,10 +268,10 @@ export function RightDetailPanel({
                         {factor.label}
                       </span>
                       <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
-                        {factorsLoading ? '...' : res?.formattedValue || '--'}
-                        {res?.trend?.changePercent != null && (
-                          <span className={`text-[9px] font-normal ml-1 ${res.trend.direction === 'up' ? 'text-green-600' : 'text-red-500'}`}>
-                            {res.trend.label}
+                        {factorsLoading ? '...' : formatMetricValue(factor.metricId, data?.value)}
+                        {data?.trend != null && typeof data.trend === 'number' && (
+                          <span className={`text-[9px] font-normal ml-1 ${data.trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {data.trend >= 0 ? '+' : ''}{data.trend.toFixed(0)}%
                           </span>
                         )}
                       </p>
