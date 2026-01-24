@@ -29,6 +29,8 @@ export const Dashboard: React.FC = () => {
     isInsightLoading,
     setIsInsightLoading,
     isDataLoading,
+    selectedAreaId,
+    setSelectedAreaId,
     comparison,
     setComparison,
     baseline,
@@ -48,7 +50,7 @@ export const Dashboard: React.FC = () => {
     metric,
     geoLevel,
     timeFrame,
-    selectedArea,
+    selectedArea: selectedAreaId,
     comparison,
     baseline,
     showForecast,
@@ -57,8 +59,8 @@ export const Dashboard: React.FC = () => {
   const handleFetchInsights = async () => {
     setIsInsightLoading(true);
     const primaryData = chartData.map((d) => ({
-      year: d.year,
-      value: d[selectedArea] as number,
+      year: new Date(d.date).getFullYear(), // Parse year from date string
+      value: d[selectedAreaId] as number, // Use the ID for lookup in chartData keys
     }));
     const result = await getInsights(
       selectedArea,
@@ -123,6 +125,8 @@ export const Dashboard: React.FC = () => {
             setGeoLevel={setGeoLevel}
             selectedArea={selectedArea}
             setSelectedArea={setSelectedArea}
+            selectedAreaId={selectedAreaId}
+            setSelectedAreaId={setSelectedAreaId}
             metric={metric}
             setMetric={setMetric}
             metricOptions={metricOptions}
@@ -147,6 +151,7 @@ export const Dashboard: React.FC = () => {
               <ChartSection
                 chartData={chartData}
                 selectedArea={selectedArea}
+                selectedAreaId={selectedAreaId}
                 comparison={comparison}
                 baseline={baseline}
                 metric={metric}
@@ -165,7 +170,7 @@ export const Dashboard: React.FC = () => {
 
             {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
             <div className="xl:col-span-1 flex flex-col gap-4">
-              <ScoreCards geoLevel={geoLevel} selectedArea={selectedArea} isAdmin={true} />
+              <ScoreCards geoLevel={geoLevel} selectedArea={selectedAreaId} isAdmin={true} />
               <InsightsPanel
                 aiInsight={aiInsight}
                 isInsightLoading={isInsightLoading}

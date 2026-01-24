@@ -43,7 +43,8 @@ interface BaselineConfig {
 
 interface ChartSectionProps {
   chartData: Record<string, unknown>[];
-  selectedArea: string;
+  selectedArea: string; // The display name
+  selectedAreaId: string; // The data key (ID)
   comparison: ComparisonConfig;
   baseline: BaselineConfig;
   metric: string;
@@ -84,6 +85,7 @@ const CHART_COLORS = {
 export const ChartSection: React.FC<ChartSectionProps> = ({
   chartData,
   selectedArea,
+  selectedAreaId,
   comparison,
   baseline,
   metric,
@@ -110,8 +112,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
     chartData.forEach((point) => {
       // Primary area
-      if (visibleSeries.primary && typeof point[selectedArea] === 'number') {
-        allValues.push(point[selectedArea] as number);
+      if (visibleSeries.primary && typeof point[selectedAreaId] === 'number') {
+        allValues.push(point[selectedAreaId] as number);
       }
       // Comparison area
       if (comparison.enabled && visibleSeries.comparison && typeof point[comparison.area] === 'number') {
@@ -281,7 +283,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         {visibleSeries.primary && (
           <Area
             type="monotone"
-            dataKey={selectedArea}
+            dataKey={selectedAreaId}
             name={selectedArea}
             stroke={CHART_COLORS.primary}
             strokeWidth={isMobile ? 2 : 3}
@@ -326,7 +328,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       {visibleSeries.primary && (
         <Line
           type="monotone"
-          dataKey={selectedArea}
+          dataKey={selectedAreaId}
           name={selectedArea}
           stroke={CHART_COLORS.primary}
           strokeWidth={isMobile ? 2 : 3}
@@ -373,7 +375,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         {renderMilestones()}
         {visibleSeries.primary && (
           <Bar
-            dataKey={selectedArea}
+            dataKey={selectedAreaId}
             name={selectedArea}
             fill={CHART_COLORS.primary}
             radius={[4, 4, 0, 0]}

@@ -125,19 +125,34 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
             return { direction: null, changePercent: null, label: null };
         }
 
-        const changePercent = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+        const config = getMetricConfig(metricId);
+        const isPercentageMetric = config?.format === 'percent';
+
+        let changePercent: number;
+        let label: string;
+
+        if (isPercentageMetric) {
+            // For percentage metrics, show percentage point difference
+            // e.g., 5% - 2% = +3.0 points
+            changePercent = currentValue - previousValue;
+            const sign = changePercent > 0 ? '+' : '';
+            label = `${sign}${changePercent.toFixed(1)} pts`;
+        } else {
+            // For absolute metrics, show relative percentage change
+            // e.g., ($250k - $200k) / $200k = +25%
+            changePercent = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+            const sign = changePercent > 0 ? '+' : '';
+            label = `${sign}${changePercent.toFixed(1)}%`;
+        }
 
         let direction: 'up' | 'down' | 'flat';
-        if (Math.abs(changePercent) < 1) {
+        if (Math.abs(changePercent) < 0.1) {
             direction = 'flat';
         } else if (changePercent > 0) {
             direction = 'up';
         } else {
             direction = 'down';
         }
-
-        const sign = changePercent > 0 ? '+' : '';
-        const label = `${sign}${changePercent.toFixed(1)}%`;
 
         return { direction, changePercent, label };
     }, [showTrend, trendData]);

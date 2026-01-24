@@ -232,7 +232,7 @@ async function loadAllMetros(): Promise<Metro[]> {
                     // Try to find matching fallback metro for additional fields
                     const fallback = FALLBACK_METROS.find(
                         f => f.name.toLowerCase() === m.name.toLowerCase() ||
-                             m.name.toLowerCase().startsWith(f.name.toLowerCase())
+                            m.name.toLowerCase().startsWith(f.name.toLowerCase())
                     );
                     return {
                         regionId: m.regionId,
@@ -435,19 +435,19 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     .slice(0, 10);
 
                 const filtered = scored.map(({ metro }) => {
-                        const stateAbbrev = metro.state || parseMetroState(metro.name);
-                        // Show full census name (e.g., "Los Angeles-Long Beach-Anaheim")
-                        const displayName = metro.fullName || metro.name;
-                        return {
-                            id: `metro-${metro.regionId}`,
-                            name: displayName,
-                            subtitle: stateAbbrev ? `${stateAbbrev} Metro Area` : 'Metro Area',
-                            value: metro.name, // Use short name for API calls
-                            type: 'metro' as const,
-                            center: [0, 0] as [number, number],
-                            state: stateAbbrev,
-                        };
-                    });
+                    const stateAbbrev = metro.state || parseMetroState(metro.name);
+                    // Show full census name (e.g., "Los Angeles-Long Beach-Anaheim")
+                    const displayName = metro.fullName || metro.name;
+                    return {
+                        id: `metro-${metro.regionId}`,
+                        name: displayName,
+                        subtitle: stateAbbrev ? `${stateAbbrev} Metro Area` : 'Metro Area',
+                        value: metro.regionId.toString(), // Use CBSA code for API calls
+                        type: 'metro' as const,
+                        center: [0, 0] as [number, number],
+                        state: stateAbbrev,
+                    };
+                });
 
                 console.log(`[Metro Search] Found ${filtered.length} results`);
                 setSearchResults(filtered);
@@ -484,7 +484,7 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     // Show "Cook, IL" format to disambiguate counties with same name
                     name: county.state ? `${county.name}, ${county.state}` : county.name,
                     subtitle: 'County',
-                    value: county.state ? `${county.name}, ${county.state}` : county.name,
+                    value: county.fips, // Use FIPS code for API calls
                     type: 'county' as const,
                     center: [0, 0] as [number, number],
                     state: county.state,
@@ -578,8 +578,8 @@ export function useGraphSearch(geoLevel?: GeoLevel) {
                     id: `city-${city.id}`,
                     name: city.name,
                     subtitle: city.state ? `${city.state}, United States` : 'United States',
-                    // Include state to disambiguate cities with same name (e.g., "Miami, FL" vs "Miami, OK")
-                    value: city.state ? `${city.name}, ${city.state}` : city.name,
+                    // Use numeric ID to disambiguate cities
+                    value: city.id.toString(),
                     type: 'city' as const,
                     center: [0, 0] as [number, number],
                     state: city.state,

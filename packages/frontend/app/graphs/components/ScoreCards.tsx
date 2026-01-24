@@ -290,7 +290,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
 };
 
 // Default metric selections
-const DEFAULT_HOMEREADY_METRICS = ['home_value_yoy', 'days_on_market', 'for_sale_inventory'];
+const DEFAULT_HOMEREADY_METRICS = ['listing_price', 'days_on_market', 'for_sale_inventory'];
 const DEFAULT_INVESTOREDGE_METRICS = ['cap_rate', 'rent_index', 'pending_ratio'];
 const DEFAULT_MARKETHEALTH_METRICS = ['hotness_score', 'inventory_yoy', 'new_listings_yoy'];
 

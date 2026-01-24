@@ -22,6 +22,8 @@ interface FilterHeaderProps {
   setGeoLevel: (level: GeoLevel) => void;
   selectedArea: string;
   setSelectedArea: (area: string) => void;
+  selectedAreaId: string;
+  setSelectedAreaId: (id: string) => void;
   metric: string;
   setMetric: (metric: string) => void;
   metricOptions: MetricOption[];
@@ -44,6 +46,8 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   setGeoLevel,
   selectedArea,
   setSelectedArea,
+  selectedAreaId,
+  setSelectedAreaId,
   metric,
   setMetric,
   metricOptions,
@@ -71,8 +75,9 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
   } = useGraphSearch(geoLevel);
 
   const handleSelectResult = (result: SearchResult) => {
-    // Use result.value if available (full name for API), otherwise use display name
-    setSelectedArea(result.value || result.name);
+    // Use result.value for ID (cbsa_code, fips, etc.) and result.name for display
+    setSelectedArea(result.name);
+    setSelectedAreaId(result.value || result.name);
     clearSearch();
   };
 
@@ -162,7 +167,10 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             <M3Select
               label="Primary Area"
               value={selectedArea}
-              onChange={setSelectedArea}
+              onChange={(val) => {
+                setSelectedArea(val);
+                setSelectedAreaId(val); // For states, they are the same
+              }}
               options={primaryOptions}
               disabled={geoLevel === 'national'}
             />

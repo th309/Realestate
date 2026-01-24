@@ -35,6 +35,7 @@ export const BASELINE_GEO_LEVELS: { value: GeoLevel; label: string }[] = [
 export function useDashboardState() {
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
   const [selectedArea, setSelectedArea] = useState('Florida');
+  const [selectedAreaId, setSelectedAreaId] = useState('Florida'); // For states, Name = ID
   const [metric, setMetric] = useState('listing_price'); // Default to listing_price
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Max');
   const [chartType, setChartType] = useState<ChartType>('area');
@@ -120,16 +121,18 @@ export function useDashboardState() {
 
       if (geoLevel === 'national') {
         setSelectedArea('United States');
+        setSelectedAreaId('United States');
         setComparison((prev) => ({ ...prev, enabled: false }));
       } else if (geoLevel === 'state') {
         // For state, use dropdown options
         if (!primaryOptions.includes(selectedArea)) {
           setSelectedArea(primaryOptions[0]);
+          setSelectedAreaId(primaryOptions[0]);
         }
       } else {
         // For metro, county, city, zip - clear the area so user can search
-        // Set a placeholder that prompts search
         setSelectedArea('');
+        setSelectedAreaId('');
       }
     }
   }, [geoLevel, prevGeoLevel, primaryOptions, selectedArea]);
@@ -166,6 +169,8 @@ export function useDashboardState() {
     isInsightLoading,
     setIsInsightLoading,
     isDataLoading,
+    selectedAreaId,
+    setSelectedAreaId,
     comparison,
     setComparison,
     baseline,
