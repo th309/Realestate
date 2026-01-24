@@ -221,3 +221,75 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
     * Short: `duration-200` (icons, selection)
     * Medium: `duration-400` (sheets, dialogs)
     * Long: `duration-600` (page transitions)
+
+### 5.6 Score Display (Standardized Component)
+
+**CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized `ScoreDisplay` component. Do NOT create custom score visualizations.
+
+**Component:** `app/components/scoring/ScoreDisplay.tsx`
+
+**Data Binding:** Always use `useScoreData` hook for fetching score data:
+```typescript
+import { useScoreData } from '@/app/map/hooks/useScoreData';
+import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+
+const { data, loading } = useScoreData(geographyType, geographyId);
+
+// Display individual score
+<ScoreDisplay value={data?.homeready?.score ?? 0} />
+```
+
+**Visual Spec:**
+* **Ring:** SVG circular progress with HSL gradient (red→green based on 0-100 score)
+* **Score Number:** Bold, centered in ring
+* **Letter Grade Badge:** A+ to F with color-coded background:
+  - A grades: `bg-green-500`
+  - B grades: `bg-emerald-500`
+  - C grades: `bg-yellow-500`
+  - D grades: `bg-orange-500`
+  - F grade: `bg-red-500`
+* **Label:** Uppercase descriptor (EXCELLENT, GREAT, GOOD, FAIR, AVERAGE, BELOW AVG, POOR, VERY POOR)
+
+**Props:**
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `value` | number | required | Score 0-100 |
+| `size` | number | 100 | Component size in pixels |
+| `strokeWidth` | number | 6 | Ring stroke width |
+| `showGrade` | boolean | true | Show letter grade badge |
+| `showLabel` | boolean | true | Show descriptor label |
+
+**Grade Thresholds:**
+| Score | Grade |
+|-------|-------|
+| 97+ | A+ |
+| 93-96 | A |
+| 90-92 | A- |
+| 87-89 | B+ |
+| 83-86 | B |
+| 80-82 | B- |
+| 77-79 | C+ |
+| 73-76 | C |
+| 70-72 | C- |
+| 67-69 | D+ |
+| 63-66 | D |
+| 60-62 | D- |
+| <60 | F |
+
+**Label Thresholds:**
+| Score | Label |
+|-------|-------|
+| 90+ | EXCELLENT |
+| 80-89 | GREAT |
+| 70-79 | GOOD |
+| 60-69 | FAIR |
+| 50-59 | AVERAGE |
+| 40-49 | BELOW AVG |
+| 20-39 | POOR |
+| <20 | VERY POOR |
+
+**Exported Utilities:** The component exports helper functions for use in other contexts:
+- `getScoreColor(value)` - Returns HSL color string
+- `getLetterGrade(score)` - Returns letter grade string
+- `getGradeColor(grade)` - Returns `{ bg, text }` Tailwind classes
+- `getScoreLabel(score)` - Returns descriptor string
