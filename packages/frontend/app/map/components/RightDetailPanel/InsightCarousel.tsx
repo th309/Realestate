@@ -7,6 +7,7 @@ interface InsightCarouselProps {
     homeReadyScore: number | null;
     marketHealthScore: number | null;
     viewMode: 'investor' | 'homebuyer';
+    className?: string;
 }
 
 export function InsightCarousel({
@@ -14,7 +15,8 @@ export function InsightCarousel({
     investorScore,
     homeReadyScore,
     marketHealthScore,
-    viewMode
+    viewMode,
+    className
 }: InsightCarouselProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -75,34 +77,36 @@ export function InsightCarousel({
 
     return (
         <div className={`
-      relative overflow-hidden rounded-xl p-4 border border-outline-variant
+      relative overflow-hidden rounded-xl p-3 border border-outline-variant
       bg-gradient-to-br transition-colors duration-500
       ${current.bg}
+      ${className}
+      flex flex-col
     `}>
-            <div className="flex items-center gap-2 mb-2">
-                <Sparkles className={`w-4 h-4 ${current.color}`} />
-                <span className={`text-[10px] font-bold uppercase tracking-wide ${current.color}`}>
+            <div className="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
+                <Sparkles className={`w-3.5 h-3.5 ${current.color}`} />
+                <span className={`text-[9px] font-bold uppercase tracking-wide ${current.color}`}>
                     {current.title}
                 </span>
             </div>
 
-            <div className="min-h-[60px] relative">
+            <div className="flex-1 overflow-hidden">
                 <p
                     key={currentIndex}
-                    className="text-xs text-on-surface leading-relaxed animate-in fade-in slide-in-from-right-4 duration-500"
+                    className="text-[11px] text-on-surface leading-tight animate-in fade-in slide-in-from-right-4 duration-500 line-clamp-4"
                 >
                     "{current.text}"
                 </p>
             </div>
 
             {/* Indicators */}
-            <div className="flex gap-1 mt-2 justify-center">
+            <div className="flex gap-1 mt-1.5 justify-center flex-shrink-0">
                 {insights.map((_, idx) => (
                     <div
                         key={idx}
                         className={`
-              h-1 rounded-full transition-all duration-300
-              ${idx === currentIndex ? `w-4 ${current.color.replace('text-', 'bg-')}` : 'w-1 bg-outline-variant'}
+              h-0.5 rounded-full transition-all duration-300
+              ${idx === currentIndex ? `w-3 ${current.color.replace('text-', 'bg-')}` : 'w-1 bg-outline-variant'}
             `}
                     />
                 ))}

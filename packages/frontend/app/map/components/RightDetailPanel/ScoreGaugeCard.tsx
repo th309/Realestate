@@ -45,46 +45,36 @@ export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend,
     const confColors = CONFIDENCE_COLORS[confidenceLevel];
 
     return (
-        <div className="flex-1 bg-surface-container-low rounded-2xl p-6 flex flex-col items-center border border-outline-variant">
-            {/* Confidence Badge */}
-            <div className="self-end mb-2">
-                <span className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide">Confidence</span>
-                <div className={`${confColors.bg} ${confColors.text} px-2 py-1 rounded-full flex items-center justify-center font-bold text-[10px] mt-1`}>
-                    {CONFIDENCE_LABELS[confidenceLevel]}
-                </div>
-            </div>
-
+        <div className="flex-1 bg-surface-container-low rounded-2xl p-4 flex flex-col items-center border border-outline-variant overflow-hidden">
             {/* Score Display */}
-            {loading ? (
-                <div className="w-[180px] h-[180px] flex items-center justify-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-on-surface-variant" />
-                </div>
-            ) : (
-                <ScoreDisplay
-                    value={currentScore}
-                    size={180}
-                    strokeWidth={12}
-                />
-            )}
+            <div className="mt-4">
+                {loading ? (
+                    <div className="w-[160px] h-[160px] flex items-center justify-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-on-surface-variant" />
+                    </div>
+                ) : (
+                    <ScoreDisplay
+                        value={currentScore}
+                        size={160}
+                        strokeWidth={10}
+                    />
+                )}
+            </div>
 
             {/* Trend */}
             {trend != null && !loading && (
-                <div className={`flex items-center gap-1 mt-2 text-sm font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {trend >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                <div className={`flex items-center gap-1 mt-1 text-sm font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    {trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
                 </div>
             )}
 
             {/* Score Label */}
-            <h3 className="text-lg font-bold text-on-surface mt-4">{config.title}</h3>
-            <p className="text-xs text-on-surface-variant text-center mt-2 max-w-[200px]">
+            <h3 className="text-base font-bold text-on-surface mt-2">{config.title}</h3>
+            <p className="text-[10px] leading-tight text-on-surface-variant text-center mt-1.5 max-w-[180px]">
                 {config.desc}
             </p>
 
-            <button className="mt-4 text-primary text-sm font-semibold flex items-center gap-1 hover:gap-2 transition-all">
-                View Calculation Methodology
-                <span>→</span>
-            </button>
         </div>
     );
 }

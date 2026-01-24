@@ -193,19 +193,19 @@ export function RightDetailPanel({
         `}
       >
         {/* Header */}
-        <div className="bg-surface border-b border-outline-variant px-5 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-surface border-b border-outline-variant px-4 py-3 flex items-center justify-between sticky top-0 z-10">
           <div>
-            <p className="text-[10px] font-medium text-primary uppercase tracking-widest mb-1">Analysis View</p>
-            <h2 className="text-xl font-bold text-on-surface">{geography.name}</h2>
+            <p className="text-[9px] font-medium text-primary uppercase tracking-widest mb-0.5">Analysis View</p>
+            <h2 className="text-lg font-bold text-on-surface">{geography.name}</h2>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-surface-container transition-colors">
             <X className="w-5 h-5 text-on-surface-variant" />
           </button>
         </div>
 
-        <div className="p-5 space-y-6">
+        <div className="p-4 space-y-4 overflow-y-auto overflow-x-hidden">
           {/* Main Scoring Section */}
-          <div className="flex gap-4">
+          <div className="flex gap-3 items-stretch h-[360px]">
             <ScoreGaugeCard
               type={scoreLayout.main}
               score={getScoreValue(scoreLayout.main)}
@@ -214,18 +214,20 @@ export function RightDetailPanel({
               loading={scoresLoading}
             />
 
-            <div className="w-[220px] flex flex-col gap-3">
+            <div className="w-[230px] flex flex-col gap-3">
               <SideScoreCard
                 type={scoreLayout.side1}
                 score={getScoreValue(scoreLayout.side1)}
                 trend={getScoreTrend(scoreLayout.side1)}
                 onClick={() => setSelectedScoreType(scoreLayout.side1)}
+                className="flex-1"
               />
               <SideScoreCard
                 type={scoreLayout.side2}
                 score={getScoreValue(scoreLayout.side2)}
                 trend={getScoreTrend(scoreLayout.side2)}
                 onClick={() => setSelectedScoreType(scoreLayout.side2)}
+                className="flex-1"
               />
 
               <InsightCarousel
@@ -234,13 +236,14 @@ export function RightDetailPanel({
                 homeReadyScore={getScoreValue('homeready')}
                 marketHealthScore={getScoreValue('market_health')}
                 viewMode={viewMode === 'investor' ? 'investor' : 'homebuyer'}
+                className="flex-[2]"
               />
             </div>
           </div>
 
           {/* Market Factors Section */}
-          <div className="bg-surface-container-low rounded-2xl p-5 border border-outline-variant">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h4 className="text-sm font-bold text-on-surface">Market Factors</h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Key elements influencing the score</p>
@@ -252,23 +255,23 @@ export function RightDetailPanel({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {marketFactors.map((factor) => {
                 const data = metricData[factor.metricId];
                 return (
-                  <div key={factor.id} className="bg-surface rounded-xl p-4 border border-outline-variant flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/5`}>
-                      <TrendingUp className="w-5 h-5 text-primary" />
+                  <div key={factor.id} className="bg-surface rounded-xl p-3 border border-outline-variant flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/5`}>
+                      <TrendingUp className="w-4 h-4 text-primary" />
                     </div>
-                    <div>
-                      <span className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wide block">
+                    <div className="min-w-0">
+                      <span className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide block truncate">
                         {factor.label}
                       </span>
-                      <p className="text-sm font-bold text-on-surface mt-0.5">
+                      <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
                         {factorsLoading ? '...' : formatMetricValue(factor.metricId, data?.value)}
                         {data?.trend != null && typeof data.trend === 'number' && (
-                          <span className={`text-[10px] font-normal ml-1 ${data.trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            ({data.trend >= 0 ? '+' : ''}{data.trend.toFixed(1)}%)
+                          <span className={`text-[9px] font-normal ml-1 ${data.trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {data.trend >= 0 ? '+' : ''}{data.trend.toFixed(0)}%
                           </span>
                         )}
                       </p>
