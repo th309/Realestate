@@ -323,7 +323,7 @@ export function RightDetailPanel({
                   <span className="text-5xl font-bold text-on-surface">
                     {loading ? '--' : Math.round(mainScore)}
                   </span>
-                  {trendValue !== null && !loading && (
+                  {trendValue != null && !loading && (
                     <div className={`flex items-center gap-1 mt-1 text-sm font-semibold ${trendValue >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                       {trendValue >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                       {trendValue >= 0 ? '+' : ''}{trendValue.toFixed(1)}%
@@ -362,7 +362,7 @@ export function RightDetailPanel({
                   <div className="h-full bg-green-500 rounded-full" style={{ width: '65%' }} />
                 </div>
                 <p className="text-[10px] text-on-surface-variant mt-2">
-                  {metricData['median_sale_price']?.trend !== null
+                  {metricData['median_sale_price']?.trend != null
                     ? `${metricData['median_sale_price'].trend >= 0 ? 'Up' : 'Down'} ${Math.abs(metricData['median_sale_price'].trend).toFixed(0)}% vs last quarter`
                     : 'Trend data unavailable'}
                 </p>
@@ -377,7 +377,7 @@ export function RightDetailPanel({
                   </div>
                 </div>
                 <p className="text-lg font-bold text-on-surface">
-                  {metricData['months_supply']?.value !== null
+                  {metricData['months_supply']?.value != null
                     ? `${metricData['months_supply'].value < 4 ? 'Low' : metricData['months_supply'].value < 6 ? 'Balanced' : 'High'} (${metricData['months_supply'].value.toFixed(1)} mo)`
                     : '--'}
                 </p>
@@ -385,7 +385,7 @@ export function RightDetailPanel({
                   <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min((metricData['months_supply']?.value ?? 0) / 12 * 100, 100)}%` }} />
                 </div>
                 <p className="text-[10px] text-on-surface-variant mt-2">
-                  {metricData['months_supply']?.value !== null
+                  {metricData['months_supply']?.value != null
                     ? metricData['months_supply'].value < 4 ? "Trending towards seller's market" : "Balanced market conditions"
                     : 'Data unavailable'}
                 </p>
