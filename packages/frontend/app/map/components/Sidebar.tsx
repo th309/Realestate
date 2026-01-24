@@ -5,14 +5,17 @@ import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, NavIte
 import { MetricCategoryItem, ViewToggle, SidebarScoreCard, MarketCondition, TrendDirection } from './sidebar-components';
 import { GeoLevelPills } from './GeoLevelPills';
 
-interface ScoreData {
+interface ScoreInfo {
   score?: number;
-  scoreTrend?: {
-    direction: TrendDirection;
-    value: string;
-  };
+  trend?: number; // Change from 3 months ago
+  access: 'full' | 'teaser';
+}
+
+interface ScoreData {
+  marketHealth?: ScoreInfo;
+  homeready?: ScoreInfo;
+  investoredge?: ScoreInfo;
   marketCondition?: MarketCondition;
-  summaryText?: string;
   isLoading?: boolean;
 }
 
@@ -139,15 +142,15 @@ export function Sidebar({
         {/* View Mode Toggle */}
         <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
 
-        {/* Score Card - leads with market score */}
+        {/* Score Card - carousel with all three scores */}
         <SidebarScoreCard
-          viewMode={viewMode}
-          score={scoreData?.score}
-          scoreTrend={scoreData?.scoreTrend}
+          marketHealthScore={scoreData?.marketHealth}
+          homereadyScore={scoreData?.homeready}
+          investoredgeScore={scoreData?.investoredge}
           marketCondition={scoreData?.marketCondition}
-          summaryText={scoreData?.summaryText}
           isLoading={scoreData?.isLoading}
           onClick={onScoreCardClick}
+          onUpgradeClick={() => window.location.href = '/pricing'}
         />
 
         {/* Metric Categories */}

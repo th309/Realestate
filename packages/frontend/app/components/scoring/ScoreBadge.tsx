@@ -14,6 +14,7 @@
 'use client';
 
 import { memo } from 'react';
+import { MARKET_THRESHOLDS } from './ScoreDisplay';
 
 export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
 export type ScoreAccess = 'full' | 'teaser';
@@ -138,6 +139,29 @@ const SIZES = {
   lg: { svg: 'w-20 h-20', radius: 34, stroke: 5, text: 'text-2xl', viewBox: 80, label: 'text-sm' },
 };
 
+/**
+ * Calculate tick mark positions for market thresholds
+ */
+const getTickMarkPoints = (
+  percentage: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  tickLength: number
+): { x1: number; y1: number; x2: number; y2: number } => {
+  const angle = (percentage / 100) * 2 * Math.PI;
+  const dirX = Math.sin(angle);
+  const dirY = -Math.cos(angle);
+  const innerRadius = radius - tickLength / 2;
+  const outerRadius = radius + tickLength / 2;
+  return {
+    x1: cx + dirX * innerRadius,
+    y1: cy - dirY * innerRadius,
+    x2: cx + dirX * outerRadius,
+    y2: cy - dirY * outerRadius,
+  };
+};
+
 export const ScoreBadge = memo(function ScoreBadge({
   type,
   label,
@@ -159,6 +183,12 @@ export const ScoreBadge = memo(function ScoreBadge({
   const isTeaser = access === 'teaser';
   const isUnavailable = status === 'unavailable';
 
+  // Tick mark calculations
+  const tickLength = config.stroke * 1.8;
+  const tickWidth = Math.max(1, config.stroke / 4);
+  const tick33 = getTickMarkPoints(MARKET_THRESHOLDS.sellersMax, center, center, config.radius, tickLength);
+  const tick66 = getTickMarkPoints(MARKET_THRESHOLDS.balancedMax, center, center, config.radius, tickLength);
+
   return (
     <button
       onClick={onClick}
@@ -174,29 +204,42 @@ export const ScoreBadge = memo(function ScoreBadge({
       {/* Score Ring */}
       <div className="relative">
         <svg
-          className={`${config.svg} -rotate-90`}
+          className={config.svg}
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
         >
-          {/* Background ring */}
-          <circle
-            cx={center}
-            cy={center}
-            r={config.radius}
-            fill="none"
-            strokeWidth={config.stroke}
-            className="stroke-surface-container-highest"
+          {/* Rotated group for circles (clockwise from top) */}
+          <g style={{ transform: 'rotate(-90deg) scaleX(-1)', transformOrigin: 'center' }}>
+            {/* Background ring */}
+            <circle
+              cx={center}
+              cy={center}
+              r={config.radius}
+              fill="none"
+              strokeWidth={config.stroke}
+              className="stroke-surface-container-highest"
+            />
+            {/* Progress ring */}
+            <circle
+              cx={center}
+              cy={center}
+              r={config.radius}
+              fill="none"
+              strokeWidth={config.stroke}
+              strokeLinecap="round"
+              className={`${getRingColor(score)} transition-all duration-700 ease-out`}
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference - progress}
+            />
+          </g>
+
+          {/* Tick marks at 33% and 66% (not rotated) */}
+          <line
+            x1={tick33.x1} y1={tick33.y1} x2={tick33.x2} y2={tick33.y2}
+            stroke="#6b7280" strokeWidth={tickWidth} strokeLinecap="round"
           />
-          {/* Progress ring */}
-          <circle
-            cx={center}
-            cy={center}
-            r={config.radius}
-            fill="none"
-            strokeWidth={config.stroke}
-            strokeLinecap="round"
-            className={`${getRingColor(score)} transition-all duration-700 ease-out`}
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference - progress}
+          <line
+            x1={tick66.x1} y1={tick66.y1} x2={tick66.x2} y2={tick66.y2}
+            stroke="#6b7280" strokeWidth={tickWidth} strokeLinecap="round"
           />
         </svg>
 

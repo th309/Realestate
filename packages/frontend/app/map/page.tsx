@@ -83,32 +83,41 @@ export default function MapPage() {
   });
 
   // Fetch score data for the selected geography to display in sidebars
+  // Request 3 months of history to calculate trend
   const { data: scoreResponse, loading: scoresLoading } = useScoreData(
     geoLevel as any,
     selectedGeography?.id ?? null,
-    { expanded: false }
+    { expanded: false, historyMonths: 3 }
   );
 
-  // Map score response to sidebar format
+  // Map score response to sidebar format with all three scores
   const sidebarScoreData = useMemo(() => {
+    if (scoresLoading) {
+      return { isLoading: true };
+    }
+
     if (!scoreResponse) return undefined;
 
-    const type = viewMode === 'investor' ? 'investoredge' : 'homeready';
-    const scoreObj = scoreResponse[type as keyof typeof scoreResponse];
-
-    if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
+    // Helper to extract score info from response
+    const extractScoreInfo = (scoreObj: any, isPro: boolean) => {
+      if (!scoreObj || typeof scoreObj !== 'object' || !('score' in scoreObj)) {
+        return undefined;
+      }
       return {
-        score: (scoreObj as any).score ?? undefined,
-        scoreTrend: (scoreObj as any).trend ? {
-          direction: (scoreObj as any).trend,
-          value: `${(scoreObj as any).trendChange >= 0 ? '+' : ''}${(scoreObj as any).trendChange?.toFixed(1) ?? '0.0'}%`
-        } : undefined,
-        isLoading: scoresLoading,
-        summaryText: (scoreObj as any).statusMessage
+        score: scoreObj.score ?? undefined,
+        trend: scoreObj.trendChange ?? undefined, // 3-month change
+        access: (isPro && scoreObj.access === 'teaser' ? 'teaser' : 'full') as 'full' | 'teaser',
       };
-    }
-    return undefined;
-  }, [scoreResponse, viewMode, scoresLoading]);
+    };
+
+    return {
+      marketHealth: extractScoreInfo(scoreResponse.marketHealth, false),
+      homeready: extractScoreInfo(scoreResponse.homeready, true),
+      investoredge: extractScoreInfo(scoreResponse.investoredge, true),
+      marketCondition: 'balanced' as const, // TODO: Calculate from market data
+      isLoading: false,
+    };
+  }, [scoreResponse, scoresLoading]);
 
   // Auto-switch geo level when metric doesn't support current level
   // Uses central config as single source of truth for metric/geo compatibility

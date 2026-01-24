@@ -7,114 +7,13 @@ import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { M3Card } from './M3Card';
 import { Loader2, TrendingUp, TrendingDown, Minus, Settings, Check, X } from 'lucide-react';
 import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
+import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
   selectedArea: string;
   isAdmin?: boolean;
 }
-
-interface CircularProgressProps {
-  value: number;
-  maxValue?: number;
-  size?: number;
-  strokeWidth?: number;
-  backgroundColor?: string;
-}
-
-// Calculate color on a gradient from red (0) to green (100)
-const getScoreColor = (value: number, maxValue: number = 100): string => {
-  const percentage = Math.min(Math.max(value / maxValue, 0), 1);
-  const hue = percentage * 120;
-  return `hsl(${hue}, 70%, 45%)`;
-};
-
-// Get letter grade from score
-const getLetterGrade = (score: number): string => {
-  if (score >= 97) return 'A+';
-  if (score >= 93) return 'A';
-  if (score >= 90) return 'A-';
-  if (score >= 87) return 'B+';
-  if (score >= 83) return 'B';
-  if (score >= 80) return 'B-';
-  if (score >= 77) return 'C+';
-  if (score >= 73) return 'C';
-  if (score >= 70) return 'C-';
-  if (score >= 67) return 'D+';
-  if (score >= 63) return 'D';
-  if (score >= 60) return 'D-';
-  return 'F';
-};
-
-// Get grade badge color
-const getGradeColor = (grade: string): { bg: string; text: string } => {
-  const letter = grade.charAt(0);
-  switch (letter) {
-    case 'A': return { bg: 'bg-green-500', text: 'text-white' };
-    case 'B': return { bg: 'bg-emerald-500', text: 'text-white' };
-    case 'C': return { bg: 'bg-yellow-500', text: 'text-white' };
-    case 'D': return { bg: 'bg-orange-500', text: 'text-white' };
-    default: return { bg: 'bg-red-500', text: 'text-white' };
-  }
-};
-
-// Get score label
-const getScoreLabel = (score: number): string => {
-  if (score >= 90) return 'EXCELLENT';
-  if (score >= 80) return 'GREAT';
-  if (score >= 70) return 'GOOD';
-  if (score >= 60) return 'FAIR';
-  if (score >= 50) return 'AVERAGE';
-  if (score >= 40) return 'BELOW AVG';
-  if (score >= 20) return 'POOR';
-  return 'VERY POOR';
-};
-
-const CircularProgress: React.FC<CircularProgressProps> = ({
-  value,
-  maxValue = 100,
-  size = 100,
-  strokeWidth = 6,
-  backgroundColor = '#e5e7eb',
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const percentage = Math.min(value / maxValue, 1);
-  const strokeDashoffset = circumference - percentage * circumference;
-  const strokeColor = getScoreColor(value, maxValue);
-  const grade = getLetterGrade(value);
-  const gradeColors = getGradeColor(grade);
-  const label = getScoreLabel(value);
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke={backgroundColor} strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke={strokeColor} strokeWidth={strokeWidth}
-          strokeLinecap="round" strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-500 ease-out"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-on-surface leading-none">
-          {Math.round(value)}
-        </span>
-        <span className={`mt-1 px-1.5 py-0.5 text-[9px] font-bold rounded ${gradeColors.bg} ${gradeColors.text}`}>
-          {grade}
-        </span>
-        <span className="mt-0.5 text-[8px] text-on-surface-variant uppercase tracking-wider">
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-};
 
 interface TrendData {
   currentValue: number | null;
@@ -340,12 +239,11 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
               <Loader2 className="w-8 h-8 text-on-surface-variant animate-spin" />
             </div>
           ) : (
-            <CircularProgress
+            <ScoreDisplay
               value={value}
               maxValue={maxValue}
               size={100}
               strokeWidth={6}
-              backgroundColor="#e5e7eb"
             />
           )}
         </div>

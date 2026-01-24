@@ -15,6 +15,13 @@ import React from 'react';
  * - Descriptive label (EXCELLENT, GREAT, GOOD, etc.)
  */
 
+/** Market threshold positions (as percentages 0-100) */
+export const MARKET_THRESHOLDS = {
+  sellersMax: 33,   // 0-33 = Sellers Market
+  balancedMax: 66,  // 34-66 = Balanced Market
+  // 67-100 = Buyers Market
+} as const;
+
 export interface ScoreDisplayProps {
   /** The score value (0-100) */
   value: number;
@@ -105,6 +112,36 @@ export const getScoreLabel = (score: number): string => {
  * // Large hero display
  * <ScoreDisplay value={95} size={150} strokeWidth={10} />
  */
+/**
+ * Calculate tick mark positions for market thresholds
+ * Returns start and end points for a line at the given percentage around the circle
+ */
+const getTickMarkPoints = (
+  percentage: number,
+  cx: number,
+  cy: number,
+  radius: number,
+  tickLength: number
+): { x1: number; y1: number; x2: number; y2: number } => {
+  // Convert percentage to angle (clockwise from top)
+  const angle = (percentage / 100) * 2 * Math.PI;
+
+  // Calculate direction vector (clockwise from top in SVG coords)
+  const dirX = Math.sin(angle);
+  const dirY = -Math.cos(angle);
+
+  // Inner and outer points
+  const innerRadius = radius - tickLength / 2;
+  const outerRadius = radius + tickLength / 2;
+
+  return {
+    x1: cx + dirX * innerRadius,
+    y1: cy - dirY * innerRadius,
+    x2: cx + dirX * outerRadius,
+    y2: cy - dirY * outerRadius,
+  };
+};
+
 export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   value,
   maxValue = 100,
@@ -130,30 +167,63 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const labelFontSize = size >= 100 ? 'text-[8px]' : size >= 60 ? 'text-[7px]' : 'text-[5px]';
   const gradePadding = size >= 100 ? 'px-1.5 py-0.5' : size >= 60 ? 'px-1 py-0.5' : 'px-0.5 py-0';
 
+  // Calculate tick mark properties
+  const cx = size / 2;
+  const cy = size / 2;
+  const tickLength = strokeWidth * 1.8;
+  const tickWidth = Math.max(1.5, strokeWidth / 4);
+
+  // Get tick positions for 33% and 66% thresholds
+  const tick33 = getTickMarkPoints(MARKET_THRESHOLDS.sellersMax, cx, cy, radius, tickLength);
+  const tick66 = getTickMarkPoints(MARKET_THRESHOLDS.balancedMax, cx, cy, radius, tickLength);
+
   return (
     <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={backgroundColor}
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
+      <svg width={size} height={size}>
+        {/* Rotated group for circles (clockwise from top) */}
+        <g style={{ transform: 'rotate(-90deg) scaleX(-1)', transformOrigin: 'center' }}>
+          {/* Background circle */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={radius}
+            fill="none"
+            stroke={backgroundColor}
+            strokeWidth={strokeWidth}
+          />
+          {/* Progress circle */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={radius}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            className="transition-all duration-500 ease-out"
+          />
+        </g>
+
+        {/* Tick marks at 33% and 66% (not rotated) */}
+        <line
+          x1={tick33.x1}
+          y1={tick33.y1}
+          x2={tick33.x2}
+          y2={tick33.y2}
+          stroke="#6b7280"
+          strokeWidth={tickWidth}
           strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-500 ease-out"
+        />
+        <line
+          x1={tick66.x1}
+          y1={tick66.y1}
+          x2={tick66.x2}
+          y2={tick66.y2}
+          stroke="#6b7280"
+          strokeWidth={tickWidth}
+          strokeLinecap="round"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

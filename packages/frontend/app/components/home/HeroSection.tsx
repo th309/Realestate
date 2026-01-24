@@ -1,6 +1,6 @@
 'use client';
 
-import { ScoreRing } from './ScoreRing';
+import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { FeatureCarousel } from './FeatureCarousel';
 
 export function HeroSection() {
@@ -62,14 +62,17 @@ export function HeroSection() {
 
         {/* Score Rings - colors auto-calculated from score (red=0, green=100) */}
         <div className="flex gap-8" role="list" aria-label="PropertyIQ scoring metrics">
-          <div role="listitem">
-            <ScoreRing score={87} label="HomeReady Score" delay={300} />
+          <div role="listitem" className="flex flex-col items-center gap-2">
+            <ScoreDisplay value={87} size={88} strokeWidth={5} showLabel={false} />
+            <span className="text-xs text-on-surface-variant font-medium">HomeReady Score</span>
           </div>
-          <div role="listitem">
-            <ScoreRing score={72} label="InvestorEdge Score" delay={450} />
+          <div role="listitem" className="flex flex-col items-center gap-2">
+            <ScoreDisplay value={72} size={88} strokeWidth={5} showLabel={false} />
+            <span className="text-xs text-on-surface-variant font-medium">InvestorEdge Score</span>
           </div>
-          <div role="listitem">
-            <ScoreRing score={94} label="Market Health Index" delay={600} />
+          <div role="listitem" className="flex flex-col items-center gap-2">
+            <ScoreDisplay value={94} size={88} strokeWidth={5} showLabel={false} />
+            <span className="text-xs text-on-surface-variant font-medium">Market Health Index</span>
           </div>
         </div>
         </article>
