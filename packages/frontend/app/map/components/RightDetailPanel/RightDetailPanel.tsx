@@ -172,9 +172,22 @@ export function RightDetailPanel({
 
   return (
     <>
-      <div className="fixed inset-0 bg-on-surface/40 z-40 bg-opacity-20 backdrop-blur-sm" onClick={onClose} />
+      {/* M3 Scrim - Mobile overlay backdrop only */}
+      <div
+        className="fixed inset-0 bg-on-surface/40 z-40 md:hidden transition-opacity duration-300"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <div className="fixed z-50 bg-surface inset-y-0 right-0 w-full sm:w-[580px] shadow-2xl overflow-y-auto transform transition-transform duration-300">
+      <aside
+        className={`
+          flex flex-col bg-surface elevation-1 z-50
+          fixed inset-y-0 right-0 w-full sm:w-[580px]
+          md:relative md:inset-auto md:z-20 md:elevation-0 md:border-l md:border-outline-variant
+          transform transition-all duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : 'translate-x-full md:hidden'}
+        `}
+      >
         {/* Header */}
         <div className="bg-surface border-b border-outline-variant px-5 py-4 flex items-center justify-between sticky top-0 z-10">
           <div>
@@ -262,7 +275,7 @@ export function RightDetailPanel({
             </div>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

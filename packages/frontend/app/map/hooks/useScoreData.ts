@@ -207,7 +207,7 @@ export function useScoreData(
       if (historyMonths > 0) params.append('historyMonths', historyMonths.toString());
 
       const queryString = params.toString();
-      const url = `/api/scoring/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
+      const url = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
 
       // Add user tier header if provided
       const headers: HeadersInit = {};
@@ -223,12 +223,48 @@ export function useScoreData(
         throw new Error(`Failed to fetch scores: ${response.status}`);
       }
 
-      const result = await response.json() as AllScoresResponse;
+      const rawResult = await response.json();
+
+      // Transform backend ScoreResult into AllScoresResponse shape
+      const transformScore = (type: ScoreType, data: any): any => {
+        if (!data) return { score: null, status: 'unavailable' };
+        return {
+          type,
+          label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
+          score: data.score,
+          grade: data.grade,
+          trend: 'stable',
+          trendChange: 0,
+          access: 'full',
+          status: 'complete',
+          periodDate: rawResult.score_date,
+          confidence: {
+            level: data.confidence_level?.toLowerCase() || 'medium',
+            percentage: data.confidence || 0,
+            metricsAvailable: 0,
+            metricsTotal: 0,
+            freshnessInDays: 0
+          }
+        };
+      };
+
+      const transformed: AllScoresResponse = {
+        geographyId: rawResult.location_id,
+        geographyType: rawResult.geography,
+        geographyName: rawResult.location_name,
+        periodDate: rawResult.score_date,
+        userTier: 'pro',
+        calculatedAt: new Date().toISOString(),
+        calculationVersion: '1.0.0',
+        marketHealth: transformScore('market_health', rawResult.scores?.markethealth),
+        homeready: transformScore('homeready', rawResult.scores?.homeready),
+        investoredge: transformScore('investoredge', rawResult.scores?.investoredge),
+      };
 
       // Only update if this is still the latest request
       if (latestRequestRef.current === cacheKey) {
-        setCachedData(cacheKey, result);
-        setData(result);
+        setCachedData(cacheKey, transformed);
+        setData(transformed);
         setError(null);
       }
     } catch (err) {

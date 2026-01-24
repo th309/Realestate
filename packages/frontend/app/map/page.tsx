@@ -15,6 +15,7 @@ import { SearchBar, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailP
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
+import { useScoreData } from './hooks/useScoreData';
 
 // Import config
 import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
@@ -80,6 +81,34 @@ export default function MapPage() {
     map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
     onFeatureClick: handleFeatureClick
   });
+
+  // Fetch score data for the selected geography to display in sidebars
+  const { data: scoreResponse, loading: scoresLoading } = useScoreData(
+    geoLevel as any,
+    selectedGeography?.id ?? null,
+    { expanded: false }
+  );
+
+  // Map score response to sidebar format
+  const sidebarScoreData = useMemo(() => {
+    if (!scoreResponse) return undefined;
+
+    const type = viewMode === 'investor' ? 'investoredge' : 'homeready';
+    const scoreObj = scoreResponse[type as keyof typeof scoreResponse];
+
+    if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
+      return {
+        score: (scoreObj as any).score ?? undefined,
+        scoreTrend: (scoreObj as any).trend ? {
+          direction: (scoreObj as any).trend,
+          value: `${(scoreObj as any).trendChange >= 0 ? '+' : ''}${(scoreObj as any).trendChange?.toFixed(1) ?? '0.0'}%`
+        } : undefined,
+        isLoading: scoresLoading,
+        summaryText: (scoreObj as any).statusMessage
+      };
+    }
+    return undefined;
+  }, [scoreResponse, viewMode, scoresLoading]);
 
   // Auto-switch geo level when metric doesn't support current level
   // Uses central config as single source of truth for metric/geo compatibility
@@ -163,6 +192,18 @@ export default function MapPage() {
     // Data coloring will show "no data" until mapData loads
     updateMapLayers();
   }, [mapData, geoLevel, selectedState, mapLoaded, updateMapLayers]);
+
+  // Handle Mapbox resize when right panel opens/closes
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Trigger a resize after a small delay to allow for animations
+    const timer = setTimeout(() => {
+      map.current?.resize();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [rightPanelOpen]);
 
   // Initialize map
   useEffect(() => {
@@ -308,6 +349,8 @@ export default function MapPage() {
           onMouseDown={handleMouseDown}
           onViewModeChange={handleViewModeChange}
           onCloseMobileMenu={() => setMobileMenuOpen(false)}
+          scoreData={sidebarScoreData}
+          onScoreCardClick={() => selectedGeography && setRightPanelOpen(true)}
         />
 
         {/* Map */}
@@ -353,20 +396,20 @@ export default function MapPage() {
             geoLevel={geoLevel}
             forecastHorizon={forecastHorizon}
           />
-
-          {/* Right Detail Panel - shows when a region is clicked */}
-          <RightDetailPanel
-            isOpen={rightPanelOpen}
-            onClose={() => {
-              setRightPanelOpen(false);
-              setSelectedGeography(null);
-            }}
-            viewMode={viewMode}
-            geography={selectedGeography}
-            geoLevel={geoLevel}
-            isAdmin={true} // TODO: Replace with actual admin check
-          />
         </main>
+
+        {/* Right Detail Panel - shows when a region is clicked */}
+        <RightDetailPanel
+          isOpen={rightPanelOpen}
+          onClose={() => {
+            setRightPanelOpen(false);
+            setSelectedGeography(null);
+          }}
+          viewMode={viewMode}
+          geography={selectedGeography}
+          geoLevel={geoLevel}
+          isAdmin={true} // TODO: Replace with actual admin check
+        />
       </div>
     </div>
   );
