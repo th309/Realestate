@@ -16,12 +16,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchAPI } from '@/lib/api/client';
 
-// Types
 export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
-export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
+export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
 export type ScoreAccess = 'full' | 'teaser';
 export type TrendDirection = 'up' | 'down' | 'stable';
-export type ConfidenceLevel = 'high' | 'medium' | 'low';
+export type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
 
 export interface MetricDetail {
   name: string;
@@ -207,40 +206,39 @@ export function useScoreData(
       if (historyMonths > 0) params.append('historyMonths', historyMonths.toString());
 
       const queryString = params.toString();
-      const url = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
+      const endpoint = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
 
-      // Add user tier header if provided
-      const headers: HeadersInit = {};
-      if (userTier) {
-        headers['x-user-tier'] = userTier;
+      // Use the standard fetchAPI helper from client.ts
+      const rawResult = await fetchAPI<any>(endpoint);
+
+      if (!rawResult) {
+        throw new Error('No data received from API');
       }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${url}`, {
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch scores: ${response.status}`);
-      }
-
-      const rawResult = await response.json();
 
       // Transform backend ScoreResult into AllScoresResponse shape
+      // Backend (scoring.service.ts) returns keys: homeready, investoredge, markethealth
       const transformScore = (type: ScoreType, data: any): any => {
-        if (!data) return { score: null, status: 'unavailable' };
+        if (!data) return {
+          type,
+          score: null,
+          status: 'unavailable',
+          label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
+          confidence: { level: 'insufficient', percentage: 0 }
+        };
+
         return {
           type,
           label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
-          score: data.score,
-          grade: data.grade,
+          score: data.score != null ? Number(data.score) : null,
+          grade: data.grade || '--',
           trend: 'stable',
           trendChange: 0,
           access: 'full',
           status: 'complete',
-          periodDate: rawResult.score_date,
+          periodDate: rawResult.score_date || '',
           confidence: {
-            level: data.confidence_level?.toLowerCase() || 'medium',
-            percentage: data.confidence || 0,
+            level: (data.confidence_level || 'medium').toLowerCase(),
+            percentage: data.confidence != null ? Number(data.confidence) : 0,
             metricsAvailable: 0,
             metricsTotal: 0,
             freshnessInDays: 0
@@ -249,14 +247,15 @@ export function useScoreData(
       };
 
       const transformed: AllScoresResponse = {
-        geographyId: rawResult.location_id,
-        geographyType: rawResult.geography,
-        geographyName: rawResult.location_name,
-        periodDate: rawResult.score_date,
+        geographyId: rawResult.location_id || geographyId,
+        geographyType: rawResult.geography || geographyType,
+        geographyName: rawResult.location_name || '',
+        periodDate: rawResult.score_date || '',
         userTier: 'pro',
         calculatedAt: new Date().toISOString(),
         calculationVersion: '1.0.0',
-        marketHealth: transformScore('market_health', rawResult.scores?.markethealth),
+        // Backend keys are all lowercase: homeready, investoredge, markethealth
+        marketHealth: transformScore('market_health', rawResult.scores?.markethealth || rawResult.scores?.market_health),
         homeready: transformScore('homeready', rawResult.scores?.homeready),
         investoredge: transformScore('investoredge', rawResult.scores?.investoredge),
       };
