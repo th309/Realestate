@@ -12,7 +12,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown } from 'lucide-react';
+import { X } from 'lucide-react';
+import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
 import { timeSeriesApi } from '@/lib/api/client';
 import { formatValue, getMetricFormat } from '../../utils/metricUtils';
@@ -20,7 +21,6 @@ import { useScoreData, type ScoreType } from '../../hooks/useScoreData';
 import { ScoreGaugeCard } from './ScoreGaugeCard';
 import { SideScoreCard } from './SideScoreCard';
 import { InsightCarousel } from './InsightCarousel';
-import { TrendSparkline } from './TrendSparkline';
 import { MetricSelectorModal } from './MetricSelectorModal';
 
 interface RightDetailPanelProps {
@@ -279,31 +279,24 @@ export function RightDetailPanel({
             <div className="grid grid-cols-2 gap-2">
               {marketFactors.map((factor) => {
                 const data = metricData[factor.metricId];
-                const hasSparkline = data?.sparklineData && data.sparklineData.length >= 2;
                 const trendDirection = data?.trend != null
                   ? (data.trend > 0.5 ? 'up' : data.trend < -0.5 ? 'down' : 'stable')
                   : 'stable';
 
                 return (
                   <div key={factor.id} className="bg-surface rounded-xl p-3 border border-outline-variant flex items-center gap-2">
-                    {/* Sparkline or trend icon */}
-                    <div className="w-12 h-8 flex items-center justify-center flex-shrink-0">
-                      {hasSparkline ? (
-                        <TrendSparkline
-                          data={data.sparklineData}
-                          width={48}
-                          height={20}
-                        />
+                    {/* Trend icon */}
+                    <div className={`flex-shrink-0 ${
+                      trendDirection === 'up' ? 'text-green-600' :
+                      trendDirection === 'down' ? 'text-red-500' :
+                      'text-on-surface-variant'
+                    }`}>
+                      {trendDirection === 'up' ? (
+                        <TrendUpSmallIcon />
+                      ) : trendDirection === 'down' ? (
+                        <TrendDownSmallIcon />
                       ) : (
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/5">
-                          {trendDirection === 'up' ? (
-                            <TrendingUp className="w-4 h-4 text-green-600" />
-                          ) : trendDirection === 'down' ? (
-                            <TrendingDown className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <TrendingUp className="w-4 h-4 text-on-surface-variant" />
-                          )}
-                        </div>
+                        <TrendFlatIcon />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Search, Check } from 'lucide-react';
-import { METRICS, type MetricConfig } from '../../config/metrics';
+import { METRICS } from '../../config/metrics';
+import { getMetricCategories } from '../../config/metric-categories';
 
 interface MarketFactor {
   id: string;
@@ -18,50 +19,35 @@ interface MetricSelectorModalProps {
   maxSelections?: number;
 }
 
-// Metrics that can be selected for Market Factors display
-// Excludes Risk Level and other non-applicable metrics
-const SELECTABLE_METRICS: string[] = [
-  'home_value_yoy',
-  'home_value_5yr',
-  'home_price_forecast',
-  'cap_rate',
-  'rent_index',
-  'days_on_market',
-  'for_sale_inventory',
-  'inventory_yoy',
-  'pending_ratio',
-  'new_listings_yoy',
-  'hotness_score',
-  'price_cut_pct',
-  'listing_price',
-  'price_per_sqft',
-  'population_growth',
-  'median_income',
-  'unemployment_rate',
-  'job_growth',
-];
+/**
+ * Get all unique metric IDs from the sidebar categories.
+ * This ensures only metrics with data support are selectable.
+ */
+function getSelectableMetrics(): { id: string; label: string }[] {
+  const seen = new Set<string>();
+  const metrics: { id: string; label: string }[] = [];
 
-// Human-readable labels for metrics
-const METRIC_LABELS: Record<string, string> = {
-  home_value_yoy: 'Appreciation',
-  home_value_5yr: '5-Year Growth',
-  home_price_forecast: 'Price Forecast',
-  cap_rate: 'Yield Potential',
-  rent_index: 'Rent Index',
-  days_on_market: 'Days on Market',
-  for_sale_inventory: 'Inventory',
-  inventory_yoy: 'Inventory Change',
-  pending_ratio: 'Demand',
-  new_listings_yoy: 'New Listings Change',
-  hotness_score: 'Market Heat',
-  price_cut_pct: 'Price Cuts',
-  listing_price: 'Median Price',
-  price_per_sqft: 'Price/Sq Ft',
-  population_growth: 'Population Growth',
-  median_income: 'Median Income',
-  unemployment_rate: 'Unemployment',
-  job_growth: 'Job Growth',
-};
+  // Get metrics from both homebuyer and investor views
+  const allCategories = [
+    ...getMetricCategories('homebuyer'),
+    ...getMetricCategories('investor'),
+  ];
+
+  for (const category of allCategories) {
+    if (category.isDivider || !category.metrics) continue;
+    for (const metric of category.metrics) {
+      if (!seen.has(metric.id)) {
+        seen.add(metric.id);
+        metrics.push({
+          id: metric.id,
+          label: metric.name,
+        });
+      }
+    }
+  }
+
+  return metrics;
+}
 
 export function MetricSelectorModal({
   isOpen,
@@ -73,6 +59,16 @@ export function MetricSelectorModal({
   const [selected, setSelected] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Get all selectable metrics from sidebar categories
+  const selectableMetrics = useMemo(() => getSelectableMetrics(), []);
+  const metricLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    for (const m of selectableMetrics) {
+      labels[m.id] = m.label;
+    }
+    return labels;
+  }, [selectableMetrics]);
+
   // Initialize selected from current factors
   useEffect(() => {
     if (isOpen) {
@@ -81,9 +77,8 @@ export function MetricSelectorModal({
     }
   }, [isOpen, currentFactors]);
 
-  const filteredMetrics = SELECTABLE_METRICS.filter((metricId) => {
-    const label = METRIC_LABELS[metricId] || metricId;
-    return label.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredMetrics = selectableMetrics.filter((metric) => {
+    return metric.label.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleToggle = (metricId: string) => {
@@ -102,7 +97,7 @@ export function MetricSelectorModal({
   const handleSave = () => {
     const factors: MarketFactor[] = selected.map((metricId, index) => ({
       id: `factor_${index}`,
-      label: METRIC_LABELS[metricId] || metricId,
+      label: metricLabels[metricId] || metricId,
       metricId,
     }));
     onSave(factors);
@@ -151,15 +146,14 @@ export function MetricSelectorModal({
 
         {/* Metric List */}
         <div className="max-h-[300px] overflow-y-auto p-2">
-          {filteredMetrics.map((metricId) => {
-            const isSelected = selected.includes(metricId);
-            const label = METRIC_LABELS[metricId] || metricId;
-            const config = METRICS[metricId];
+          {filteredMetrics.map((metric) => {
+            const isSelected = selected.includes(metric.id);
+            const config = METRICS[metric.id];
 
             return (
               <button
-                key={metricId}
-                onClick={() => handleToggle(metricId)}
+                key={metric.id}
+                onClick={() => handleToggle(metric.id)}
                 className={`
                   w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors
                   ${isSelected
@@ -180,7 +174,7 @@ export function MetricSelectorModal({
                   {isSelected && <Check className="w-3 h-3" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-on-surface truncate">{label}</p>
+                  <p className="text-sm font-medium text-on-surface truncate">{metric.label}</p>
                   {config?.dataSource && (
                     <p className="text-[10px] text-on-surface-variant capitalize">
                       Source: {config.dataSource}
