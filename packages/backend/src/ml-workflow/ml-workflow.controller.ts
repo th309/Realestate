@@ -179,4 +179,28 @@ export class MLWorkflowController {
       );
     }
   }
+
+  /**
+   * Get cache status from analytics service.
+   */
+  @Get('cache-status')
+  async getCacheStatus() {
+    try {
+      const status = await this.mlWorkflowService.getCacheStatus();
+      return {
+        success: true,
+        data: status,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get cache status: ${error}`);
+      throw new HttpException(
+        {
+          success: false,
+          error: 'Failed to get cache status',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

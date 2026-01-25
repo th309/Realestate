@@ -102,3 +102,6 @@ data/zillow/*.csv
 packages/backend/propertyiq-ml/models/
 packages/backend/propertyiq-ml/data/*.parquet
 packages/backend/propertyiq-ml/scripts/__pycache__/
+Keys.txt
+__pycache__/
+*.pyc

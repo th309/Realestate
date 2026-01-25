@@ -410,6 +410,27 @@ export class MLWorkflowService {
   }
 
   /**
+   * Get cache status from analytics service.
+   */
+  async getCacheStatus(): Promise<Record<string, unknown>> {
+    const statusUrl = `${this.analyticsServiceUrl}/api/v1/cache/status`;
+
+    try {
+      const response = await fetch(statusUrl, { method: 'GET' });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data || {};
+      }
+
+      return { error: `Status ${response.status}` };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+      return { error: errorMsg };
+    }
+  }
+
+  /**
    * Update job status.
    */
   private async updateJobStatus(

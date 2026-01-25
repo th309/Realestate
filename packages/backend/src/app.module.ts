@@ -18,6 +18,7 @@ import { PermitsModule } from './permits/permits.module';
 import { HealthModule } from './health/health.module';
 import { MLWorkflowModule } from './ml-workflow/ml-workflow.module';
 import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
+import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
     HealthModule,
     MLWorkflowModule,
     DataIngestionModule,
+    AnalyticsChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

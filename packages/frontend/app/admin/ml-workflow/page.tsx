@@ -346,6 +346,8 @@ export default function MLWorkflowPage() {
   const [analyticsHealth, setAnalyticsHealth] = useState<AnalyticsHealth | null>(null);
   const [lastStepResult, setLastStepResult] = useState<Record<string, unknown> | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
+  const [cacheStatus, setCacheStatus] = useState<Record<string, unknown> | null>(null);
+  const [showCacheStatus, setShowCacheStatus] = useState(false);
 
   // Track active polling
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -385,6 +387,27 @@ export default function MLWorkflowPage() {
     const interval = setInterval(fetchAnalyticsHealth, 15000);
     return () => clearInterval(interval);
   }, [fetchAnalyticsHealth]);
+
+  // Fetch cache status from analytics service
+  const fetchCacheStatus = useCallback(async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/cache-status`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setCacheStatus(data.data);
+          setShowCacheStatus(true);
+        }
+      } else {
+        setError('Failed to fetch cache status');
+      }
+    } catch (err) {
+      console.error('Error fetching cache status:', err);
+      setError('Failed to fetch cache status');
+    }
+  }, []);
 
   // Update a single step's state
   const updateStepState = useCallback(
@@ -602,6 +625,14 @@ export default function MLWorkflowPage() {
                   Analytics: {analyticsHealth ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
+              {/* Cache Status Button */}
+              <button
+                onClick={fetchCacheStatus}
+                disabled={!analyticsHealth}
+                className="px-2 py-1 text-xs font-medium rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-50"
+              >
+                Cache Status
+              </button>
               <span className="px-3 py-1 text-xs font-medium rounded-full bg-tertiary-container text-on-tertiary-container">
                 Admin Access
               </span>
@@ -662,6 +693,52 @@ export default function MLWorkflowPage() {
                   />
                 </svg>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cache Status Panel */}
+      {showCacheStatus && cacheStatus && (
+        <div className="bg-surface-container border-b border-outline-variant">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-on-surface">Cache Status</h3>
+              <button
+                onClick={() => setShowCacheStatus(false)}
+                className="text-on-surface-variant hover:text-on-surface"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['metro', 'county', 'zip', 'state'].map(geoType => {
+                const cache = (cacheStatus as { caches?: Record<string, { record_count?: number; last_updated?: string; exists?: boolean }> }).caches?.[geoType];
+                return (
+                  <div key={geoType} className={`p-3 rounded-lg ${cache?.exists ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-on-surface capitalize">{geoType}</span>
+                      <span className={`w-2 h-2 rounded-full ${cache?.exists ? 'bg-green-500' : 'bg-red-500'}`} />
+                    </div>
+                    {cache?.exists ? (
+                      <>
+                        <p className="text-lg font-mono text-on-surface">{(cache.record_count || 0).toLocaleString()}</p>
+                        <p className="text-xs text-on-surface-variant">
+                          {cache.last_updated ? new Date(cache.last_updated).toLocaleString() : 'Unknown'}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-red-400">Not cached</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 text-xs text-on-surface-variant">
+              Total: {(cacheStatus as { total_records?: number }).total_records?.toLocaleString() || 0} records | 
+              Cache dir: {(cacheStatus as { cache_directory?: string }).cache_directory || 'Unknown'}
             </div>
           </div>
         </div>
