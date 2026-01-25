@@ -304,9 +304,21 @@ class BacktestService:
         bottom_excess = bottom_decile.avg_excess_return if bottom_decile else 0
         spread = top_excess - bottom_excess
         
-        # Correlation analysis
-        pearson_r, _ = stats.pearsonr(scores, outcomes)
-        spearman_r, _ = stats.spearmanr(scores, outcomes)
+        # Correlation analysis (handle NaN/constant data)
+        try:
+            pearson_r, _ = stats.pearsonr(scores, outcomes)
+            if np.isnan(pearson_r):
+                pearson_r = 0.0
+        except Exception:
+            pearson_r = 0.0
+            
+        try:
+            spearman_r, _ = stats.spearmanr(scores, outcomes)
+            if np.isnan(spearman_r):
+                spearman_r = 0.0
+        except Exception:
+            spearman_r = 0.0
+            
         r_squared = pearson_r ** 2
         
         # Validation: top decile beats benchmark, bottom trails
@@ -319,9 +331,9 @@ class BacktestService:
         return HorizonResult(
             horizon_months=horizon_months,
             decile_results=decile_results,
-            top_decile_excess=top_excess,
-            bottom_decile_excess=bottom_excess,
-            spread=spread,
+            top_decile_excess=float(top_excess) if not np.isnan(top_excess) else 0.0,
+            bottom_decile_excess=float(bottom_excess) if not np.isnan(bottom_excess) else 0.0,
+            spread=float(spread) if not np.isnan(spread) else 0.0,
             pearson_r=float(pearson_r),
             spearman_r=float(spearman_r),
             r_squared=float(r_squared),

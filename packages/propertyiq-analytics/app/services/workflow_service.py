@@ -630,10 +630,13 @@ class WorkflowService:
         report_month = report_month or datetime.utcnow().strftime("%Y-%m")
 
         try:
+            logger.info(f"Starting monthly report for {report_month}...")
+            
             # Import backtest service for analysis
             from app.services.backtest_service import get_backtest_service
             
             backtest = get_backtest_service()
+            logger.info("Backtest service loaded")
             
             # Run analysis for each score type
             score_types = ['investoredge', 'homeready']
@@ -641,12 +644,14 @@ class WorkflowService:
             
             for score_type in score_types:
                 try:
+                    logger.info(f"Running backtest for {score_type}...")
                     result = await backtest.run_full_backtest(
                         score_type=score_type,
                         geography_type="metro",
                         benchmark_type="national",
                         horizons=[12, 36, 60],
                     )
+                    logger.info(f"Backtest for {score_type} completed: validated={result.overall_validated}, grade={result.confidence_grade}")
                     
                     report_data[score_type] = {
                         "validated": result.overall_validated,
@@ -655,10 +660,10 @@ class WorkflowService:
                         "horizons": [
                             {
                                 "months": h.horizon_months,
-                                "spread": round(h.spread * 100, 2),
-                                "top_excess": round(h.top_decile_excess * 100, 2),
-                                "bottom_excess": round(h.bottom_decile_excess * 100, 2),
-                                "r_squared": round(h.r_squared, 4),
+                                "spread": round(h.spread * 100, 2) if h.spread else 0,
+                                "top_excess": round(h.top_decile_excess * 100, 2) if h.top_decile_excess else 0,
+                                "bottom_excess": round(h.bottom_decile_excess * 100, 2) if h.bottom_decile_excess else 0,
+                                "r_squared": round(h.r_squared, 4) if h.r_squared else 0,
                                 "validated": h.validated,
                                 "sample_size": h.sample_size,
                             }
@@ -666,7 +671,7 @@ class WorkflowService:
                         ] if result.horizons else []
                     }
                 except Exception as e:
-                    logger.error(f"Backtest for {score_type} failed: {e}")
+                    logger.error(f"Backtest for {score_type} failed: {e}", exc_info=True)
                     report_data[score_type] = {"error": str(e)}
             
             metrics["report_month"] = report_month
@@ -681,6 +686,8 @@ class WorkflowService:
             metrics["all_scores_validated"] = all_validated
             metrics["status"] = "success"
             
+            logger.info(f"Monthly report completed: all_validated={all_validated}")
+            
             completed_at = datetime.utcnow()
             return StepResult(
                 success=True,
@@ -693,7 +700,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
-            logger.error(f"Monthly report failed: {e}")
+            logger.error(f"Monthly report failed: {e}", exc_info=True)
             return StepResult(
                 success=False,
                 step_id=step_id,
