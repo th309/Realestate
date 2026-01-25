@@ -21,6 +21,11 @@ statsmodels>=0.14.0
 # Machine Learning
 scikit-learn>=1.3.0
 
+# Visualization
+plotly>=5.18.0
+kaleido>=0.2.1  # For static image export from plotly
+bokeh>=3.3.0
+
 # Note: AutoGluon and SHAP are heavy dependencies (~2GB+)
 # Uncomment when needed for advanced ML features:
 # autogluon.tabular>=1.0.0
