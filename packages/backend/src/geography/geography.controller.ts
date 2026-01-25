@@ -8,6 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { normalizeStateToCode } from '../common/geo';
 import {
   GeographyService,
   GeoJSONFeatureCollection,
@@ -69,20 +70,21 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get counties for a specific state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'Two-letter state abbreviation (e.g., CA, TX)',
+    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getCountiesByState(
     @Param('state') state: string,
   ): Promise<GeoJSONFeatureCollection> {
-    if (!/^[A-Za-z]{2}$/.test(state)) {
+    const stateCode = normalizeStateToCode(state);
+    if (!stateCode || stateCode.length !== 2) {
       throw new HttpException(
-        'Invalid state code. Must be two-letter abbreviation.',
+        'Invalid state. Use two-letter code (CA), FIPS (06), or full name (California).',
         HttpStatus.BAD_REQUEST,
       );
     }
     try {
-      return await this.geographyService.getCountiesGeoJSONByState(state);
+      return await this.geographyService.getCountiesGeoJSONByState(stateCode);
     } catch (error: any) {
       this.logger.error(`Error fetching counties GeoJSON for ${state}`, error);
       throw new HttpException(
@@ -111,20 +113,21 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get ZIP codes for a state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'Two-letter state abbreviation (e.g., CA, TX)',
+    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getZipsByState(
     @Param('state') state: string,
   ): Promise<GeoJSONFeatureCollection> {
-    if (!/^[A-Za-z]{2}$/.test(state)) {
+    const stateCode = normalizeStateToCode(state);
+    if (!stateCode || stateCode.length !== 2) {
       throw new HttpException(
-        'Invalid state code. Must be two-letter abbreviation.',
+        'Invalid state. Use two-letter code (CA), FIPS (06), or full name (California).',
         HttpStatus.BAD_REQUEST,
       );
     }
     try {
-      return await this.geographyService.getZCTAByStateGeoJSON(state);
+      return await this.geographyService.getZCTAByStateGeoJSON(stateCode);
     } catch (error: any) {
       this.logger.error(`Error fetching ZIPs GeoJSON for ${state}`, error);
       throw new HttpException(
@@ -138,20 +141,21 @@ export class GeographyController {
   @ApiOperation({ summary: 'Get cities/places for a state as GeoJSON' })
   @ApiParam({
     name: 'state',
-    description: 'Two-letter state abbreviation (e.g., CA, TX)',
+    description: 'State: two-letter code (CA), FIPS (06), or full name (California)',
   })
   @Header('Cache-Control', 'public, max-age=86400')
   async getCitiesByState(
     @Param('state') state: string,
   ): Promise<GeoJSONFeatureCollection> {
-    if (!/^[A-Za-z]{2}$/.test(state)) {
+    const stateCode = normalizeStateToCode(state);
+    if (!stateCode || stateCode.length !== 2) {
       throw new HttpException(
-        'Invalid state code. Must be two-letter abbreviation.',
+        'Invalid state. Use two-letter code (CA), FIPS (06), or full name (California).',
         HttpStatus.BAD_REQUEST,
       );
     }
     try {
-      return await this.geographyService.getPlacesByStateGeoJSON(state);
+      return await this.geographyService.getPlacesByStateGeoJSON(stateCode);
     } catch (error: any) {
       this.logger.error(`Error fetching cities GeoJSON for ${state}`, error);
       throw new HttpException(

@@ -16,6 +16,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeZipKey } from '../common/zip';
+import {
+  normalizeStateToCode,
+  normalizeStateToFips,
+  normalizeCountyFips,
+  normalizeCbsaCode,
+} from '../common/geo';
 
 export interface GeographyChain {
   geographyId: string;
@@ -330,16 +337,15 @@ export class InheritanceService {
 
       // Add geography filter based on table type
       if (tableName.startsWith('economic_')) {
-        // Economic tables use state_fips, cbsa_code, fips_code
         switch (geographyType) {
           case 'state':
-            query = query.eq('state_fips', geographyId);
+            query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', geographyId);
+            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
             break;
           case 'county':
-            query = query.eq('fips_code', geographyId);
+            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
             break;
           case 'national':
             // National table might use 'US' or have a single row
@@ -349,37 +355,39 @@ export class InheritanceService {
             return null;
         }
       } else if (tableName.startsWith('calculated_metrics')) {
-        // Calculated metrics use geography_id
-        query = query.eq('geography_id', geographyId);
+        let id = geographyId;
+        if (geographyType === 'zip') id = normalizeZipKey(geographyId);
+        else if (geographyType === 'state') id = normalizeStateToCode(geographyId);
+        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim())) id = normalizeCountyFips(geographyId);
+        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim())) id = normalizeCbsaCode(geographyId);
+        query = query.eq('geography_id', id);
       } else if (tableName.startsWith('permits_')) {
-        // Permits tables use state_fips, cbsa_code, fips_code
         switch (geographyType) {
           case 'state':
-            query = query.eq('state_fips', geographyId);
+            query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', geographyId);
+            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
             break;
           case 'county':
-            query = query.eq('fips_code', geographyId);
+            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
             break;
           default:
             return null;
         }
       } else if (tableName.startsWith('census_')) {
-        // Census tables use various ID columns
         switch (geographyType) {
           case 'state':
-            query = query.eq('state_fips', geographyId);
+            query = query.eq('state_fips', normalizeStateToFips(geographyId));
             break;
           case 'metro':
-            query = query.eq('cbsa_code', geographyId);
+            query = query.eq('cbsa_code', /^\d+$/.test(geographyId.trim()) ? normalizeCbsaCode(geographyId) : geographyId);
             break;
           case 'county':
-            query = query.eq('fips_code', geographyId);
+            query = query.eq('fips_code', /^\d+$/.test(geographyId.trim()) ? normalizeCountyFips(geographyId) : geographyId);
             break;
           case 'zip':
-            query = query.eq('zcta', geographyId);
+            query = query.eq('zcta', normalizeZipKey(geographyId));
             break;
           case 'national':
             query = query.limit(1);
@@ -388,8 +396,12 @@ export class InheritanceService {
             return null;
         }
       } else {
-        // Default: use geography_id
-        query = query.eq('geography_id', geographyId);
+        let id = geographyId;
+        if (geographyType === 'zip') id = normalizeZipKey(geographyId);
+        else if (geographyType === 'state') id = normalizeStateToCode(geographyId);
+        else if (geographyType === 'county' && /^\d+$/.test(geographyId.trim())) id = normalizeCountyFips(geographyId);
+        else if (geographyType === 'metro' && /^\d+$/.test(geographyId.trim())) id = normalizeCbsaCode(geographyId);
+        query = query.eq('geography_id', id);
       }
 
       // Add period date filter

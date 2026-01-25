@@ -1,6 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeZipKey } from '../common/zip';
+import { normalizeStateToCode, normalizeCountyFips, normalizeCbsaCode } from '../common/geo';
 
 export interface RealtorDataPoint {
   region_id: string;
@@ -33,73 +35,11 @@ export class RealtorService {
   // Cache for latest dates per table (avoids redundant date queries)
   private latestDateCache = new Map<string, CacheEntry<string>>();
 
-  // FIPS code to state abbreviation mapping (realtor_state uses abbreviations, not FIPS)
-  private readonly fipsToAbbr: Record<string, string> = {
-    '01': 'AL',
-    '02': 'AK',
-    '04': 'AZ',
-    '05': 'AR',
-    '06': 'CA',
-    '08': 'CO',
-    '09': 'CT',
-    '10': 'DE',
-    '11': 'DC',
-    '12': 'FL',
-    '13': 'GA',
-    '15': 'HI',
-    '16': 'ID',
-    '17': 'IL',
-    '18': 'IN',
-    '19': 'IA',
-    '20': 'KS',
-    '21': 'KY',
-    '22': 'LA',
-    '23': 'ME',
-    '24': 'MD',
-    '25': 'MA',
-    '26': 'MI',
-    '27': 'MN',
-    '28': 'MS',
-    '29': 'MO',
-    '30': 'MT',
-    '31': 'NE',
-    '32': 'NV',
-    '33': 'NH',
-    '34': 'NJ',
-    '35': 'NM',
-    '36': 'NY',
-    '37': 'NC',
-    '38': 'ND',
-    '39': 'OH',
-    '40': 'OK',
-    '41': 'OR',
-    '42': 'PA',
-    '44': 'RI',
-    '45': 'SC',
-    '46': 'SD',
-    '47': 'TN',
-    '48': 'TX',
-    '49': 'UT',
-    '50': 'VT',
-    '51': 'VA',
-    '53': 'WA',
-    '54': 'WV',
-    '55': 'WI',
-    '56': 'WY',
-    '72': 'PR',
-  };
-
   /**
-   * Convert FIPS code or abbreviation to state abbreviation
+   * Convert FIPS, 2-letter code, or full state name to state abbreviation (for DB state_id).
    */
-  private toStateAbbr(stateIdOrFips: string): string {
-    // If it's already a 2-letter abbreviation, return as-is
-    if (stateIdOrFips.length === 2 && /^[A-Z]{2}$/i.test(stateIdOrFips)) {
-      return stateIdOrFips.toUpperCase();
-    }
-    // Try to convert from FIPS code
-    const padded = stateIdOrFips.padStart(2, '0');
-    return this.fipsToAbbr[padded] || stateIdOrFips;
+  private toStateAbbr(stateIdOrFipsOrName: string): string {
+    return normalizeStateToCode(stateIdOrFipsOrName);
   }
 
   constructor(
@@ -570,10 +510,11 @@ export class RealtorService {
         );
       }
     } else if (geoLevel === 'metro') {
+      const cbsaKey = /^\d+$/.test(regionId.trim()) ? normalizeCbsaCode(regionId) : regionId;
       const { data } = await this.supabase
         .from('realtor_metro')
         .select([...columns, 'cbsa_title'].join(','))
-        .eq('cbsa_code', regionId)
+        .eq('cbsa_code', cbsaKey)
         .order('period_date', { ascending: false })
         .limit(1);
 
@@ -585,10 +526,11 @@ export class RealtorService {
         }
       }
     } else if (geoLevel === 'county') {
+      const fipsKey = /^\d+$/.test(regionId.trim()) ? normalizeCountyFips(regionId) : regionId;
       const { data } = await this.supabase
         .from('realtor_county')
         .select([...columns, 'county_name'].join(','))
-        .eq('county_fips', regionId)
+        .eq('county_fips', fipsKey)
         .order('period_date', { ascending: false })
         .limit(1);
 
@@ -600,10 +542,11 @@ export class RealtorService {
         }
       }
     } else if (geoLevel === 'zip') {
+      const zipKey = normalizeZipKey(regionId);
       const { data } = await this.supabase
         .from('realtor_zip')
         .select([...columns, 'zip_name'].join(','))
-        .eq('postal_code', regionId)
+        .eq('postal_code', zipKey)
         .order('period_date', { ascending: false })
         .limit(1);
 

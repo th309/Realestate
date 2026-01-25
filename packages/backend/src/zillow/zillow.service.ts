@@ -8,6 +8,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeStateToCode } from '../common/geo';
 
 // Import types
 import type { HomeValueData, ForecastData } from './types';
@@ -181,6 +182,7 @@ export class ZillowService {
     date?: string,
     stateFilter?: string,
   ): Promise<HomeValueData[]> {
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     // Use cached latest date if not provided
     const targetDate =
       date || (await getLatestDate(this.supabase, 'metro', 'zhvi'));
@@ -230,6 +232,7 @@ export class ZillowService {
     date?: string,
     stateFilter?: string,
   ): Promise<HomeValueData[]> {
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     // Use cached latest date if not provided
     const targetDate =
       date || (await getLatestDate(this.supabase, 'county', 'zhvi'));
@@ -298,7 +301,7 @@ export class ZillowService {
     countyFilter?: string,
     date?: string,
   ): Promise<HomeValueData[]> {
-    // State filter is required for ZIP data
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     if (!stateFilter) {
       return [];
     }
@@ -362,7 +365,7 @@ export class ZillowService {
   }
 
   async getCityHomeValues(stateFilter?: string): Promise<HomeValueData[]> {
-    // City data requires a state filter due to large dataset (5M+ records)
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     if (!stateFilter) {
       return []; // Return empty - cities require state filter
     }
@@ -613,6 +616,7 @@ export class ZillowService {
     stateFilter?: string,
     horizon: string = '12m',
   ): Promise<ForecastData[]> {
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     // Find latest date across ALL forecast horizons (zhvf_1m, zhvf_3m, zhvf_12m)
     const latestDates = await Promise.all([
       getLatestDate(this.supabase, 'zip', 'zhvf_1m'),
@@ -775,6 +779,7 @@ export class ZillowService {
     propertyType: string = 'all',
     stateFilter?: string,
   ): Promise<HomeValueData[]> {
+    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     const targetDate =
       date ||
       (await getLatestDateForTable(this.supabase, 'zillow_zori', 'County'));
@@ -821,6 +826,7 @@ export class ZillowService {
     propertyType: string = 'all',
     date?: string,
   ): Promise<HomeValueData[]> {
+    stateFilter = normalizeStateToCode(stateFilter);
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
       date
@@ -923,6 +929,7 @@ export class ZillowService {
     propertyType: string = 'all',
     date?: string,
   ): Promise<HomeValueData[]> {
+    stateFilter = normalizeStateToCode(stateFilter);
     // ZORDI data is in zillow_metro (metro only for now)
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([

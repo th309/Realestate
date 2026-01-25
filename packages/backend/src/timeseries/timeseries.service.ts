@@ -1,6 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeZipKey } from '../common/zip';
+import {
+  normalizeStateRegionId,
+  normalizeCountyFips,
+  normalizeCbsaCode,
+} from '../common/geo';
 
 export interface TimeSeriesDataPoint {
   date: string;
@@ -272,6 +278,12 @@ export class TimeSeriesService {
     source: string,
   ) {
     const level = geoLevel.toLowerCase();
+    // Normalize IDs so frontend can send FIPS, code, or name interchangeably
+    const regionKey = level === 'zip' ? normalizeZipKey(regionId) : regionId;
+    const stateNorm = level === 'state' ? normalizeStateRegionId(regionId) : null;
+    const stateKey = stateNorm ? { code: stateNorm.stateCode, fips: stateNorm.stateFips, name: stateNorm.stateName } : null;
+    const countyKey = level === 'county' && /^\d+$/.test(regionId.trim()) ? normalizeCountyFips(regionId) : regionId;
+    const metroKey = level === 'metro' && /^\d+$/.test(regionId.trim()) ? normalizeCbsaCode(regionId) : regionId;
 
     // Handle calculated_metrics table (uses geography_id and geography_type)
     if (source === 'calculated') {
@@ -287,28 +299,23 @@ export class TimeSeriesService {
           return query.eq('geography_id', regionId);
 
         case 'state':
-          // States: geography_id is state name or state code, geography_name is full name
-          if (regionId.length === 2) {
-            // State code (e.g., "FL")
-            return query.eq('geography_id', regionId.toUpperCase());
+          // States: geography_id is state code; accept FIPS, code, or name
+          if (stateKey) {
+            return query.eq('geography_id', stateKey.code);
           }
-          // State name (e.g., "Florida") - try geography_id first, then geography_name
-          // Use ilike for case-insensitive matching
           return query.or(`geography_id.ilike.${regionId},geography_name.ilike.${regionId}`);
 
         case 'metro':
-          // Metros: If numeric, use geography_id (CBSA code), otherwise match geography_name
-          if (/^\d+$/.test(regionId)) {
-            return query.eq('geography_id', regionId);
+          // Metros: If numeric, use geography_id (CBSA code, normalized), otherwise match geography_name
+          if (metroKey !== regionId) {
+            return query.eq('geography_id', metroKey);
           }
-          // Match by geography_name with ILIKE for fuzzy matching
-          // e.g., "Miami-Fort Lauderdale" matches "Miami-Fort Lauderdale-Pompano Beach, FL"
           return query.ilike('geography_name', `${regionId}%`);
 
         case 'county':
-          // Counties: If numeric (FIPS), use geography_id, otherwise match geography_name
-          if (/^\d+$/.test(regionId)) {
-            return query.eq('geography_id', regionId);
+          // Counties: If numeric (FIPS), use geography_id (5-digit normalized), otherwise match geography_name
+          if (countyKey !== regionId) {
+            return query.eq('geography_id', countyKey);
           }
           // Parse "County, State" format if present
           const countyParts = regionId.split(',').map(s => s.trim());
@@ -316,8 +323,8 @@ export class TimeSeriesService {
           return query.ilike('geography_name', `${countyName}%`);
 
         case 'zip':
-          // ZIPs: geography_id is the ZIP code
-          return query.eq('geography_id', regionId);
+          // ZIPs: geography_id is the ZIP code (regionKey normalized)
+          return query.eq('geography_id', regionKey);
 
         case 'city':
           // Cities: match by geography_name
@@ -336,18 +343,21 @@ export class TimeSeriesService {
       query = query.eq('geography', level);
 
       switch (level) {
-        case 'metro':
-          // If regionId is numeric (CBSA code), use location_id, otherwise match location_name
-          if (/^\d+$/.test(regionId)) {
-            return query.eq('location_id', regionId);
+        case 'state':
+          if (stateKey) {
+            return query.eq('location_id', stateKey.code);
           }
-          // Match by location_name with ILIKE for fuzzy matching
+          return query.eq('location_id', regionId);
+
+        case 'metro':
+          if (metroKey !== regionId) {
+            return query.eq('location_id', metroKey);
+          }
           return query.ilike('location_name', `${regionId}%`);
 
         case 'county':
-          // If regionId is numeric (FIPS code), use location_id, otherwise match location_name
-          if (/^\d+$/.test(regionId)) {
-            return query.eq('location_id', regionId);
+          if (countyKey !== regionId) {
+            return query.eq('location_id', countyKey);
           }
           // Parse "County, State" format if present
           const countyParts = regionId.split(',').map(s => s.trim());
@@ -355,8 +365,8 @@ export class TimeSeriesService {
           return query.ilike('location_name', `${countyName}%`);
 
         case 'zip':
-          // ZIPs: location_id is the ZIP code
-          return query.eq('location_id', regionId);
+          // ZIPs: location_id is the ZIP code (regionKey normalized)
+          return query.eq('location_id', regionKey);
 
         default:
           return query.eq('location_id', regionId);
@@ -375,25 +385,33 @@ export class TimeSeriesService {
         return query;
 
       case 'state':
-        // Realtor: state_name (full name) or state_id (2-letter abbrev)
-        // Zillow: region_name (full name)
-        // Census/Economic: state_name (full name) or state_fips
+        // Realtor: state_id (2-letter); Zillow: region_name (full name); Census/Economic: state_fips or state_name
+        if (stateKey) {
+          if (source === 'realtor') {
+            return query.eq('state_id', stateKey.code);
+          }
+          if (source === 'zillow') {
+            return query.eq('region_name', stateKey.name);
+          }
+          return query.eq('state_fips', stateKey.fips);
+        }
         if (source === 'realtor') {
-          if (regionId.length === 2) {
+          if (regionId.length === 2 && /^[A-Za-z]{2}$/.test(regionId)) {
             return query.eq('state_id', regionId.toUpperCase());
           }
           return query.eq('state_name', regionId);
-        } else if (source === 'zillow') {
-          return query.eq('region_name', regionId);
-        } else {
-          // Census and Economic use state_name
-          return query.eq('state_name', regionId);
         }
+        if (source === 'zillow') {
+          return query.eq('region_name', regionId);
+        }
+        if (/^\d{1,2}$/.test(regionId.trim())) {
+          return query.eq('state_fips', regionId.trim().padStart(2, '0'));
+        }
+        return query.eq('state_name', regionId);
 
       case 'metro':
-        // If regionId is numeric, use cbsa_code for all sources
-        if (/^\d+$/.test(regionId)) {
-          return query.eq('cbsa_code', regionId);
+        if (metroKey !== regionId) {
+          return query.eq('cbsa_code', metroKey);
         }
         // Zillow: use region_name for text-based lookup
         if (source === 'zillow') {
@@ -408,12 +426,11 @@ export class TimeSeriesService {
         return query.ilike('cbsa_title', `${regionId}%`);
 
       case 'county':
-        // If regionId is numeric (FIPS code), use fips_code columns
-        if (/^\d+$/.test(regionId)) {
+        if (countyKey !== regionId) {
           if (source === 'realtor') {
-            return query.eq('county_fips', regionId);
+            return query.eq('county_fips', countyKey);
           }
-          return query.eq('fips_code', regionId);
+          return query.eq('fips_code', countyKey);
         }
         // Parse "County, State" format if present (e.g., "Cook, IL")
         const countyParts = regionId.split(',').map(s => s.trim());
@@ -434,17 +451,15 @@ export class TimeSeriesService {
         return query.ilike('county_name', `${countyName}%`);
 
       case 'zip':
-        // Realtor: postal_code
-        // Zillow: region_name (ZIP code as string)
-        // Census: zcta
+        // Realtor: postal_code; Zillow: region_name; Census: zcta (all stored normalized)
         if (source === 'realtor') {
-          return query.eq('postal_code', regionId);
+          return query.eq('postal_code', regionKey);
         } else if (source === 'zillow') {
-          return query.eq('region_name', regionId);
+          return query.eq('region_name', regionKey);
         } else if (source === 'census') {
-          return query.eq('zcta', regionId);
+          return query.eq('zcta', regionKey);
         }
-        return query.eq('postal_code', regionId);
+        return query.eq('postal_code', regionKey);
 
       case 'city':
         // Parse "City, State" format if present (e.g., "Miami, FL")

@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeStateToCode } from '../common/geo';
 
 @Injectable()
 export class MarketsService {
@@ -47,7 +48,7 @@ export class MarketsService {
   }
 
   async getCountiesByState(stateCode: string) {
-    // Use geographies table - filter by state_code
+    stateCode = normalizeStateToCode(stateCode);
     const { data, error } = await this.supabase
       .from('geographies')
       .select('geography_id, name, state_code, population, fips_code')
@@ -65,7 +66,7 @@ export class MarketsService {
   }
 
   async getMetrosByState(stateCode: string) {
-    // Get metros that have counties in the given state
+    stateCode = normalizeStateToCode(stateCode);
     const { data, error } = await this.supabase
       .from('geographies')
       .select('cbsa_code, cbsa_name, zillow_metro_region_id')

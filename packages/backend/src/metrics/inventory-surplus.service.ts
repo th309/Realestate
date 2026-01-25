@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeZipKey } from '../common/zip';
+import { normalizeStateToCode } from '../common/geo';
 
 interface CacheEntry<T> {
   data: T;
@@ -679,6 +680,7 @@ export class InventorySurplusService {
     geographyType: 'national' | 'metro' | 'state' | 'county' | 'zip',
     state?: string,
   ): Promise<{ data: any[]; success: boolean; source: string }> {
+    if (state) state = normalizeStateToCode(state);
     // Build cache key
     const cacheKey = state
       ? `inventory_surplus:${geographyType}:${state.toLowerCase()}`
