@@ -29,6 +29,69 @@ from app.services.data_cache import get_data_cache, DataCache
 logger = logging.getLogger(__name__)
 
 
+class WorkflowProgress:
+    """
+    Class-level progress tracking for workflow steps.
+    
+    Tracks the current step, substeps completed, and provides
+    real-time progress information for the frontend.
+    """
+    _progress: dict[str, Any] = {}
+    
+    @classmethod
+    def reset(cls):
+        """Reset all progress tracking."""
+        cls._progress = {}
+    
+    @classmethod
+    def start_step(cls, step_id: str, total_substeps: int, substep_names: list[str] = None):
+        """Start tracking a new step."""
+        cls._progress = {
+            "step_id": step_id,
+            "status": "running",
+            "started_at": datetime.utcnow().isoformat(),
+            "total_substeps": total_substeps,
+            "completed_substeps": 0,
+            "current_substep": substep_names[0] if substep_names else "Starting...",
+            "substep_names": substep_names or [],
+            "percent": 0,
+            "details": {},
+        }
+    
+    @classmethod
+    def update_substep(cls, substep_index: int, substep_name: str = None, details: dict = None):
+        """Update progress to a new substep."""
+        if not cls._progress:
+            return
+        
+        cls._progress["completed_substeps"] = substep_index
+        total = cls._progress.get("total_substeps", 1)
+        cls._progress["percent"] = round(substep_index / total * 100, 1) if total > 0 else 0
+        
+        if substep_name:
+            cls._progress["current_substep"] = substep_name
+        elif cls._progress.get("substep_names") and substep_index < len(cls._progress["substep_names"]):
+            cls._progress["current_substep"] = cls._progress["substep_names"][substep_index]
+        
+        if details:
+            cls._progress["details"].update(details)
+    
+    @classmethod
+    def complete_step(cls, success: bool = True, error: str = None):
+        """Mark the current step as complete."""
+        if cls._progress:
+            cls._progress["status"] = "completed" if success else "error"
+            cls._progress["completed_at"] = datetime.utcnow().isoformat()
+            cls._progress["percent"] = 100 if success else cls._progress.get("percent", 0)
+            if error:
+                cls._progress["error"] = error
+    
+    @classmethod
+    def get_progress(cls) -> dict[str, Any]:
+        """Get current progress."""
+        return cls._progress.copy()
+
+
 @dataclass
 class StepResult:
     """Result of a workflow step execution."""
@@ -134,6 +197,10 @@ class WorkflowService:
         try:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
             
+            # Initialize progress tracking
+            substeps = [f"Syncing {gt}" for gt in geography_types] + ["Finalizing cache"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
             # Check if cache seems incomplete (less than 10k records per geo type is suspicious)
             # This handles the case where previous fetches were truncated by Supabase row limits
             cache_status = self.cache.get_cache_status()
@@ -151,7 +218,8 @@ class WorkflowService:
             sync_results = {}
             total_records = 0
             
-            for geo_type in geography_types:
+            for idx, geo_type in enumerate(geography_types):
+                WorkflowProgress.update_substep(idx, f"Syncing {geo_type}...")
                 logger.info(f"Syncing cache for {geo_type}...")
                 try:
                     result = self.cache.sync_cache(geo_type, force_full=force_full)
@@ -160,6 +228,9 @@ class WorkflowService:
                     if result.get('success') and result.get('total_records', 0) > 0:
                         total_records += result.get('total_records', 0)
                         outputs.append(f"{geo_type}: {result.get('total_records', 0)} records")
+                        WorkflowProgress.update_substep(idx + 1, details={
+                            geo_type: {"records": result.get('total_records', 0), "status": "complete"}
+                        })
                     elif result.get('error'):
                         errors.append(f"{geo_type}: {result.get('error')}")
                     else:
@@ -168,6 +239,8 @@ class WorkflowService:
                     logger.error(f"Failed to sync {geo_type}: {geo_err}")
                     sync_results[geo_type] = {"success": False, "error": str(geo_err)}
                     errors.append(f"{geo_type}: {str(geo_err)}")
+            
+            WorkflowProgress.update_substep(len(geography_types), "Finalizing cache...")
             
             metrics["sync_results"] = sync_results
             metrics["total_records_cached"] = total_records
@@ -228,13 +301,19 @@ class WorkflowService:
         step_id = "prepare-backtest-data"
         started_at = datetime.utcnow()
         metrics = {}
+        geo_types = ['metro', 'county', 'zip', 'state']
 
         try:
+            # Initialize progress tracking
+            substeps = [f"Analyzing {gt}" for gt in geo_types] + ["Generating summary"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
             # Check each geography type in cache
             geo_stats = {}
             total_records = 0
             
-            for geo_type in ['metro', 'county', 'zip', 'state']:
+            for idx, geo_type in enumerate(geo_types):
+                WorkflowProgress.update_substep(idx, f"Analyzing {geo_type}...")
                 df = self.cache.get_cached_data(geo_type, auto_sync=False)
                 
                 if df is None or len(df) == 0:
@@ -265,10 +344,18 @@ class WorkflowService:
                 
                 geo_stats[geo_type] = stats
                 total_records += len(df)
+                
+                WorkflowProgress.update_substep(idx + 1, details={
+                    geo_type: {"records": len(df), "status": stats["status"]}
+                })
+            
+            WorkflowProgress.update_substep(len(geo_types), "Generating summary...")
             
             metrics["geography_stats"] = geo_stats
             metrics["total_records"] = total_records
             metrics["status"] = "ready" if total_records > 0 else "no_data"
+            
+            WorkflowProgress.complete_step(success=True)
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -283,6 +370,7 @@ class WorkflowService:
         except Exception as e:
             completed_at = datetime.utcnow()
             logger.error(f"Prepare backtest failed: {e}")
+            WorkflowProgress.complete_step(success=False, error=str(e))
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -308,6 +396,12 @@ class WorkflowService:
         benchmark_types = benchmark_types or ["national", "regional", "peer"]
 
         try:
+            # Initialize progress tracking
+            substeps = ["Loading data", "National benchmarks", "Regional benchmarks", "Finalizing"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
+            WorkflowProgress.update_substep(0, "Loading cached data...")
+            
             # Combine data from all geography types
             all_dfs = []
             for geo_type in ['metro', 'county', 'zip', 'state']:
@@ -317,6 +411,7 @@ class WorkflowService:
             
             if not all_dfs:
                 metrics["error"] = "No cached data found. Run Data Export first."
+                WorkflowProgress.complete_step(success=False, error="No cached data")
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -330,6 +425,8 @@ class WorkflowService:
             
             df = pd.concat(all_dfs, ignore_index=True)
             metrics["total_records_analyzed"] = len(df)
+            WorkflowProgress.update_substep(1, "Computing national benchmarks...", 
+                                           {"records_loaded": len(df)})
             
             # Calculate national benchmarks (across all data)
             if "national" in benchmark_types:
@@ -346,6 +443,8 @@ class WorkflowService:
                                 "count": len(valid_data),
                             }
                 metrics["national_benchmarks"] = national_benchmarks
+            
+            WorkflowProgress.update_substep(2, "Computing regional benchmarks...")
             
             # Calculate by geography type
             if "regional" in benchmark_types and 'geography_type' in df.columns:
@@ -365,8 +464,12 @@ class WorkflowService:
                     geo_benchmarks[geo_type] = geo_stats
                 metrics["geography_benchmarks"] = geo_benchmarks
             
+            WorkflowProgress.update_substep(3, "Finalizing...")
+            
             metrics["benchmark_types_calculated"] = benchmark_types
             metrics["status"] = "success"
+            
+            WorkflowProgress.complete_step(success=True)
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -381,6 +484,7 @@ class WorkflowService:
         except Exception as e:
             completed_at = datetime.utcnow()
             logger.error(f"Calculate benchmarks failed: {e}")
+            WorkflowProgress.complete_step(success=False, error=str(e))
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -406,6 +510,12 @@ class WorkflowService:
         metrics = {}
 
         try:
+            # Initialize progress tracking
+            substeps = ["Loading data", "Overall correlations", "Geography correlations", "Ranking predictors"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
+            WorkflowProgress.update_substep(0, "Loading cached data...")
+            
             # Combine data from all geography types
             all_dfs = []
             for geo_type in ['metro', 'county', 'zip', 'state']:
@@ -414,6 +524,7 @@ class WorkflowService:
                     all_dfs.append(df)
             
             if not all_dfs:
+                WorkflowProgress.complete_step(success=False, error="No cached data")
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -426,6 +537,9 @@ class WorkflowService:
             
             df = pd.concat(all_dfs, ignore_index=True)
             metrics["total_records"] = len(df)
+            
+            WorkflowProgress.update_substep(1, "Computing overall correlations...", 
+                                           {"records": len(df)})
             
             # Correlation analysis by geography type
             score_cols = ['investoredge_score', 'homeready_score', 'market_health_score']
@@ -460,6 +574,9 @@ class WorkflowService:
             
             metrics["overall_correlations"] = correlations
             
+            WorkflowProgress.update_substep(2, "Computing correlations by geography...",
+                                           {"correlations_computed": len(correlations)})
+            
             # Correlations by geography type
             geo_correlations = {}
             if 'geography_type' in df.columns:
@@ -487,6 +604,8 @@ class WorkflowService:
             metrics["model_type"] = model_type
             metrics["target_metric"] = target_metric
             
+            WorkflowProgress.update_substep(3, "Ranking predictors...")
+            
             # Rank by correlation strength
             if correlations:
                 ranked = sorted(
@@ -498,6 +617,8 @@ class WorkflowService:
                 metrics["best_correlation"] = ranked[0][1] if ranked else None
             
             metrics["status"] = "success"
+            
+            WorkflowProgress.complete_step(success=True)
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -537,6 +658,12 @@ class WorkflowService:
         metrics = {}
 
         try:
+            # Initialize progress tracking
+            substeps = ["Loading data", "Overall distributions", "Geography distributions", "Finalizing"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
+            WorkflowProgress.update_substep(0, "Loading cached data...")
+            
             # Combine data from all geography types
             all_dfs = []
             for geo_type in ['metro', 'county', 'zip', 'state']:
@@ -545,6 +672,7 @@ class WorkflowService:
                     all_dfs.append(df)
             
             if not all_dfs:
+                WorkflowProgress.complete_step(success=False, error="No cached data")
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -557,6 +685,9 @@ class WorkflowService:
             
             df = pd.concat(all_dfs, ignore_index=True)
             metrics["total_records"] = len(df)
+            
+            WorkflowProgress.update_substep(1, "Computing overall distributions...",
+                                           {"records": len(df)})
             
             # Score distribution analysis - overall
             score_distributions = {}
@@ -581,6 +712,8 @@ class WorkflowService:
             
             metrics["score_distributions"] = score_distributions
             
+            WorkflowProgress.update_substep(2, "Computing distributions by geography...")
+            
             # Score distribution by geography type
             geo_distributions = {}
             if 'geography_type' in df.columns:
@@ -603,6 +736,9 @@ class WorkflowService:
             metrics["distributions_by_geography"] = geo_distributions
             metrics["explanation_type"] = explanation_type
             metrics["status"] = "success"
+            
+            WorkflowProgress.update_substep(3, "Finalizing...")
+            WorkflowProgress.complete_step(success=True)
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -650,6 +786,11 @@ class WorkflowService:
         try:
             logger.info(f"Starting monthly report for {report_month}...")
             
+            # Initialize progress tracking
+            score_types = ['homeready', 'investoredge', 'market_health']
+            substeps = [f"Backtest {st}" for st in score_types] + ["Key findings", "Dollar impact", "Final verdict"]
+            WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
             # Import backtest service for analysis
             from app.services.backtest_service import get_backtest_service
             
@@ -657,7 +798,6 @@ class WorkflowService:
             logger.info("Backtest service loaded")
             
             # Run analysis for each score type
-            score_types = ['homeready', 'investoredge', 'market_health']
             score_display_names = {
                 'homeready': 'HomeReady',
                 'investoredge': 'InvestorEdge',
@@ -667,7 +807,8 @@ class WorkflowService:
             validation_results = {}
             summary_table = {}
             
-            for score_type in score_types:
+            for idx, score_type in enumerate(score_types):
+                WorkflowProgress.update_substep(idx, f"Running backtest for {score_display_names[score_type]}...")
                 try:
                     logger.info(f"Running backtest for {score_type}...")
                     result = await backtest.run_full_backtest(
@@ -721,6 +862,8 @@ class WorkflowService:
                     display_name = score_display_names.get(score_type, score_type)
                     summary_table[display_name] = {"error": str(e)}
                     validation_results[score_type] = {"error": str(e)}
+            
+            WorkflowProgress.update_substep(len(score_types), "Analyzing key findings...")
             
             # Determine best predictors
             valid_scores = {k: v for k, v in validation_results.items() if "error" not in v and v.get("validated")}
@@ -787,6 +930,8 @@ class WorkflowService:
                         ]
                     })
             
+            WorkflowProgress.update_substep(len(score_types) + 1, "Calculating dollar impact...")
+            
             # Calculate dollar impact (using 3-year horizon / 36m)
             dollar_impact = {}
             if valid_scores:
@@ -805,6 +950,8 @@ class WorkflowService:
                     "bottom_quintile_loss": f"${bottom_loss:,.0f} vs median",
                     "total_value_at_risk": f"~${total_value_at_risk:,.0f}",
                 }
+            
+            WorkflowProgress.update_substep(len(score_types) + 2, "Determining final verdict...")
             
             # Determine overall verdict
             all_validated = all(v.get("validated", False) for v in valid_scores.values()) if valid_scores else False
@@ -831,6 +978,7 @@ class WorkflowService:
             metrics["all_scores_validated"] = all_validated
             metrics["status"] = "success"
             
+            WorkflowProgress.complete_step(success=True)
             logger.info(f"Monthly report completed: {verdict}")
             
             completed_at = datetime.utcnow()
@@ -846,6 +994,7 @@ class WorkflowService:
         except Exception as e:
             completed_at = datetime.utcnow()
             logger.error(f"Monthly report failed: {e}", exc_info=True)
+            WorkflowProgress.complete_step(success=False, error=str(e))
             return StepResult(
                 success=False,
                 step_id=step_id,

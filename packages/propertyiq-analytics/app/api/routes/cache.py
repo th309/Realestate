@@ -108,11 +108,16 @@ async def get_export_progress():
     """
     try:
         cache = get_data_cache()
-        progress = cache.get_export_progress()
+        export_progress = cache.get_export_progress()
+        
+        # Also get workflow step progress
+        from app.services.workflow_service import WorkflowProgress
+        workflow_progress = WorkflowProgress.get_progress()
         
         return {
             "success": True,
-            "progress": progress,
+            "progress": export_progress,
+            "workflow": workflow_progress,
         }
     except Exception as e:
         logger.exception("Failed to get export progress")

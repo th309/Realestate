@@ -455,8 +455,8 @@ export default function MLWorkflowPage() {
 
             const jobData = await jobRes.json();
 
-            // For data-export step, also poll for detailed progress
-            if (stepId === 'data-export' && attempts % 2 === 0) {
+            // Poll for detailed progress for all steps (every 2 seconds)
+            if (attempts % 2 === 0) {
               try {
                 const progressRes = await fetch(`${apiUrl}/api/admin/ml-workflow/export-progress`);
                 if (progressRes.ok) {
@@ -687,46 +687,72 @@ export default function MLWorkflowPage() {
           ))}
         </div>
 
-        {/* Export Progress Details (shown during data-export) */}
-        {exportProgress && stepStates['data-export']?.status === 'running' && (
+        {/* Step Progress Details (shown for any running step) */}
+        {exportProgress && hasRunningStep && (
           <div className="mt-4 p-4 bg-surface-container rounded-xl">
-            <h3 className="text-sm font-medium text-on-surface mb-3">Export Progress</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {['metro', 'county', 'zip', 'state'].map(geo => {
-                const geoProgress = (exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number; status?: string }>)[geo];
-                if (!geoProgress) return null;
-                return (
-                  <div key={geo} className="p-3 bg-surface-container-low rounded-lg">
-                    <div className="text-xs text-on-surface-variant font-medium capitalize">{geo}</div>
-                    <div className="text-lg font-mono text-on-surface">
-                      {(geoProgress.records_fetched || 0).toLocaleString()}
-                    </div>
-                    <div className="text-xs text-on-surface-variant">
-                      / {(geoProgress.total_records || 0).toLocaleString()}
-                    </div>
-                    <div className="mt-1 h-1 bg-surface-container-high rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${geoProgress.percent || 0}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {(exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall && (
-              <div className="mt-3 pt-3 border-t border-outline-variant">
-                <div className="flex justify-between text-sm">
-                  <span className="text-on-surface-variant">Overall Progress:</span>
-                  <span className="font-mono text-on-surface">
-                    {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.records_fetched || 0).toLocaleString()} 
-                    {' / '}
-                    {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.total_records || 0).toLocaleString()}
-                    {' '}
-                    ({((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.percent || 0).toFixed(1)}%)
+            {/* Workflow Step Progress */}
+            {(exportProgress as { workflow?: { step_id?: string; current_substep?: string; completed_substeps?: number; total_substeps?: number; percent?: number; details?: Record<string, unknown> } }).workflow?.step_id && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-on-surface mb-2">
+                  Step Progress: {(exportProgress as { workflow?: { step_id?: string } }).workflow?.step_id}
+                </h3>
+                <div className="flex items-center justify-between text-xs text-on-surface-variant mb-1">
+                  <span>{(exportProgress as { workflow?: { current_substep?: string } }).workflow?.current_substep || 'Processing...'}</span>
+                  <span className="font-mono">
+                    {(exportProgress as { workflow?: { completed_substeps?: number } }).workflow?.completed_substeps || 0} / {(exportProgress as { workflow?: { total_substeps?: number } }).workflow?.total_substeps || 1}
                   </span>
                 </div>
+                <div className="h-2 bg-surface-container-high rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(exportProgress as { workflow?: { percent?: number } }).workflow?.percent || 0}%` }}
+                  />
+                </div>
               </div>
+            )}
+            
+            {/* Data Export Specific Progress (geography breakdown) */}
+            {stepStates['data-export']?.status === 'running' && (exportProgress as Record<string, { records_fetched?: number }>).metro && (
+              <>
+                <h3 className="text-sm font-medium text-on-surface mb-3">Data Fetch by Geography</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {['metro', 'county', 'zip', 'state'].map(geo => {
+                    const geoProgress = (exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number; status?: string }>)[geo];
+                    if (!geoProgress) return null;
+                    return (
+                      <div key={geo} className="p-3 bg-surface-container-low rounded-lg">
+                        <div className="text-xs text-on-surface-variant font-medium capitalize">{geo}</div>
+                        <div className="text-lg font-mono text-on-surface">
+                          {(geoProgress.records_fetched || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-on-surface-variant">
+                          / {(geoProgress.total_records || 0).toLocaleString()}
+                        </div>
+                        <div className="mt-1 h-1 bg-surface-container-high rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${geoProgress.percent || 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall && (
+                  <div className="mt-3 pt-3 border-t border-outline-variant">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-on-surface-variant">Overall Progress:</span>
+                      <span className="font-mono text-on-surface">
+                        {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.records_fetched || 0).toLocaleString()} 
+                        {' / '}
+                        {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.total_records || 0).toLocaleString()}
+                        {' '}
+                        ({((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.percent || 0).toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
