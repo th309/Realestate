@@ -305,8 +305,13 @@ export class PermitsService {
     const { data: permitsData } = await this.getNationalPermits();
     const national = permitsData[0];
 
-    const sfRatio = national.sf_units && national.total_units && national.total_units > 0
-      ? (national.sf_units / national.total_units) * 100
+    const sfUnits = national.sf_units ?? 0; // Treat null as 0 (all MF)
+    const totalUnits = national.total_units ?? 0;
+    
+    // Calculate SF ratio: if totalUnits > 0, calculate ratio
+    // If sfUnits is null/0, ratio will be 0% (meaning 0% SF, 100% MF)
+    const sfRatio = totalUnits > 0
+      ? (sfUnits / totalUnits) * 100
       : null;
 
     return {
@@ -530,9 +535,12 @@ export class PermitsService {
 
     const result = ((data || []) as PermitsRow[])
       .map((row) => {
-        const sfUnits = toMetricValue(row.sf_units);
+        const sfUnits = toMetricValue(row.sf_units) ?? 0; // Treat null as 0 (all MF)
         const totalUnits = calculateTotalUnits(row);
-        const sfRatio = sfUnits !== null && totalUnits !== null && totalUnits > 0
+        
+        // Calculate SF ratio: if totalUnits exists and > 0, calculate ratio
+        // If sfUnits is null, treat as 0 (meaning 0% SF, 100% MF)
+        const sfRatio = totalUnits !== null && totalUnits > 0
           ? (sfUnits / totalUnits) * 100
           : null;
 
@@ -583,9 +591,12 @@ export class PermitsService {
     }
 
     const result = allRows.map((row) => {
-      const sfUnits = toMetricValue(row.sf_units);
+      const sfUnits = toMetricValue(row.sf_units) ?? 0; // Treat null as 0 (all MF)
       const totalUnits = calculateTotalUnits(row);
-      const sfRatio = sfUnits !== null && totalUnits !== null && totalUnits > 0
+      
+      // Calculate SF ratio: if totalUnits exists and > 0, calculate ratio
+      // If sfUnits is null, treat as 0 (meaning 0% SF, 100% MF)
+      const sfRatio = totalUnits !== null && totalUnits > 0
         ? (sfUnits / totalUnits) * 100
         : null;
 
