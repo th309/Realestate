@@ -23,33 +23,50 @@ export class MetricsController {
   /**
    * Get overvalued percentage for metros
    * Calculated as: ((ZHVI / median_income) - 3.5) / 3.5 * 100
-   * Uses national median income as benchmark if local data unavailable
+   * Uses pre-calculated data from calculated_metrics when available; otherwise
+   * computes from zillow_metro (long-format) ZHVI and Census median income.
    */
   @Get('overvalued/metros')
   async getMetroOvervalued(@Query('date') date?: string) {
-    // Get latest ZHVI data for metros
+    // Try pre-calculated data first (same pattern as cap rate)
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'overvalued_pct',
+        'metro',
+      );
+    if (preCalculated.success && preCalculated.data.length > 0) {
+      return {
+        success: true,
+        count: preCalculated.data.length,
+        geography: 'Metro',
+        metric: 'overvalued_pct',
+        source: 'pre-calculated',
+        data: preCalculated.data,
+      };
+    }
+
+    // Fallback: compute on-the-fly from zillow_metro (long-format)
     let targetDate = date;
     if (!targetDate) {
       const { data: latestDate } = await this.supabase
-        .from('zillow_zhvi')
-        .select('date')
-        .eq('geography', 'Metro')
-        .order('date', { ascending: false })
+        .from('zillow_metro')
+        .select('period_date')
+        .eq('metric_name', 'zhvi')
+        .order('period_date', { ascending: false })
         .limit(1)
         .single();
-      targetDate = latestDate?.date;
+      targetDate = latestDate?.period_date;
     }
 
     if (!targetDate) {
       return { success: false, error: 'No ZHVI data available', data: [] };
     }
 
-    // Get ZHVI data for all metros
     const { data: zhviData, error: zhviError } = await this.supabase
-      .from('zillow_zhvi')
+      .from('zillow_metro')
       .select('region_id, region_name, value, cbsa_code')
-      .eq('geography', 'Metro')
-      .eq('date', targetDate)
+      .eq('metric_name', 'zhvi')
+      .eq('period_date', targetDate)
       .not('value', 'is', null);
 
     if (zhviError || !zhviData) {
@@ -60,7 +77,6 @@ export class MetricsController {
       };
     }
 
-    // Try to get Census median income data for metros
     const { data: incomeData } = await this.supabase
       .from('census_data')
       .select('geography_id, value')
@@ -68,7 +84,6 @@ export class MetricsController {
       .eq('metric_name', 'median_income')
       .order('year', { ascending: false });
 
-    // Create income lookup by CBSA code
     const incomeByGeo: Record<string, number> = {};
     if (incomeData) {
       for (const row of incomeData) {
@@ -78,16 +93,11 @@ export class MetricsController {
       }
     }
 
-    // Calculate overvalued percentage for each metro
     const results = zhviData.map((metro) => {
       const zhvi = metro.value;
       const cbsaCode = metro.cbsa_code;
-
-      // Use local median income if available, otherwise national benchmark
       const medianIncome =
         (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
-
-      // Calculate overvalued percentage
       const priceToIncome = zhvi / medianIncome;
       const overvaluedPct =
         ((priceToIncome - PRICE_TO_INCOME_BENCHMARK) /
@@ -101,7 +111,7 @@ export class MetricsController {
         zhvi,
         median_income: medianIncome,
         price_to_income: Math.round(priceToIncome * 100) / 100,
-        overvalued_pct: Math.round(overvaluedPct * 10) / 10, // Round to 1 decimal
+        overvalued_pct: Math.round(overvaluedPct * 10) / 10,
       };
     });
 
