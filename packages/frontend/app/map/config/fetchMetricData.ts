@@ -130,6 +130,12 @@ async function fetchPropertyIQScoreData(
     return {};
   }
 
+  // Backend only supports metro, county, zip (returns 400 for state/national/city/tract)
+  const supportedByApi: GeoLevel[] = ['metro', 'county', 'zip'];
+  if (!supportedByApi.includes(geoLevel)) {
+    return {};
+  }
+
   // Build the API URL for PropertyIQ scores
   // Backend expects singular forms: metro, county, zip (not metros, counties, zips)
   const geoPathMap: Record<GeoLevel, string> = {
