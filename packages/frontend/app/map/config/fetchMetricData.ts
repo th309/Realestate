@@ -124,7 +124,17 @@ async function fetchPropertyIQScoreData(
   }
 
   // Build the API URL for PropertyIQ scores
-  const geoPath = getGeoPathSegment(geoLevel);
+  // Backend expects singular forms: metro, county, zip (not metros, counties, zips)
+  const geoPathMap: Record<GeoLevel, string> = {
+    metro: 'metro',
+    county: 'county',
+    zip: 'zip',
+    state: 'state', // Not used but included for completeness
+    city: 'city', // Not used but included for completeness
+    national: 'national', // Not used but included for completeness
+    tract: 'tract', // Not used but included for completeness
+  };
+  const geoPath = geoPathMap[geoLevel] || geoLevel;
   const baseUrl = `/api/scores/all/${geoPath}`;
   
   const params = new URLSearchParams();
@@ -191,6 +201,16 @@ async function fetchPropertyIQScoreData(
     } else if (totalRecords && allData.length === totalRecords) {
       console.log(`✓ Successfully fetched all ${allData.length} records for ${metricId} at ${geoLevel}`);
     }
+    
+    // Debug: Log sample data to verify format
+    if (allData.length > 0) {
+      console.log(`[PropertyIQ] Sample data for ${metricId} at ${geoLevel}:`, {
+        firstRecord: allData[0],
+        totalRecords: allData.length,
+      });
+    } else {
+      console.warn(`[PropertyIQ] No data returned for ${metricId} at ${geoLevel}`);
+    }
 
     // Transform to unified format
     const normalizedData: ApiResponse = {
@@ -205,7 +225,13 @@ async function fetchPropertyIQScoreData(
       valueField: 'value', // PropertyIQ scores endpoint returns 'value' field
     };
 
-    return transformResponse(normalizedData, geoLevel, modifiedConfig);
+    const result = transformResponse(normalizedData, geoLevel, modifiedConfig);
+    
+    // Debug: Log transformed result
+    const sampleKeys = Object.keys(result).slice(0, 5);
+    console.log(`[PropertyIQ] Transformed ${Object.keys(result).length} records for ${metricId} at ${geoLevel}. Sample keys:`, sampleKeys);
+    
+    return result;
   } catch (error) {
     console.error(`Failed to fetch PropertyIQ score ${metricId}:`, error);
     return {};
@@ -246,6 +272,13 @@ function transformResponse(
         // Census uses fips_code, other sources use county_fips
         // PropertyIQ scores use region_id which contains the FIPS code
         key = item.county_fips || item.fips_code || item.region_id;
+        // Normalize FIPS codes to 5-digit strings with leading zeros (e.g., "01001")
+        if (key && geoLevel === 'county') {
+          const fipsNum = parseInt(key, 10);
+          if (!isNaN(fipsNum)) {
+            key = String(fipsNum).padStart(5, '0');
+          }
+        }
         break;
       case 'postal_code':
         // Census uses zcta, other sources use postal_code

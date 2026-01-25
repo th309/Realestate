@@ -168,41 +168,15 @@ export class ScoringController {
   }
 
   // ============================================================================
-  // Legacy Compatibility Endpoints
+  // Map Display Endpoints (must come before generic routes)
   // ============================================================================
-
-  /**
-   * Get score by path (legacy format)
-   *
-   * GET /api/scores/:geography/:locationId
-   */
-  @Get(':geography/:locationId')
-  @ApiOperation({ summary: 'Get scores for a location (path format)' })
-  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiParam({ name: 'locationId', description: 'Location identifier' })
-  @ApiQuery({ name: 'date', required: false })
-  async getScoreByPath(
-    @Param('geography') geography: string,
-    @Param('locationId') locationId: string,
-    @Query('date') date?: string,
-  ): Promise<ScoreResult> {
-    const geoLevel = this.validateGeography(geography);
-    const score = await this.scoringService.getScore(locationId, geoLevel, date);
-
-    if (!score) {
-      throw new HttpException(
-        `No scores found for ${geography}/${locationId}`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    return score;
-  }
 
   /**
    * Get all scores for a geography level (for map display)
    * 
    * GET /api/scores/all/:geography?score_type=homeready&page=0&page_size=1000
+   * 
+   * NOTE: This route must come BEFORE @Get(':geography/:locationId') to avoid route conflicts
    */
   @Get('all/:geography')
   @ApiOperation({ summary: 'Get all scores for a geography level (paginated)' })
@@ -269,6 +243,38 @@ export class ScoringController {
         hasMore: result.hasMore,
       },
     };
+  }
+
+  // ============================================================================
+  // Legacy Compatibility Endpoints
+  // ============================================================================
+
+  /**
+   * Get score by path (legacy format)
+   *
+   * GET /api/scores/:geography/:locationId
+   */
+  @Get(':geography/:locationId')
+  @ApiOperation({ summary: 'Get scores for a location (path format)' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiParam({ name: 'locationId', description: 'Location identifier' })
+  @ApiQuery({ name: 'date', required: false })
+  async getScoreByPath(
+    @Param('geography') geography: string,
+    @Param('locationId') locationId: string,
+    @Query('date') date?: string,
+  ): Promise<ScoreResult> {
+    const geoLevel = this.validateGeography(geography);
+    const score = await this.scoringService.getScore(locationId, geoLevel, date);
+
+    if (!score) {
+      throw new HttpException(
+        `No scores found for ${geography}/${locationId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return score;
   }
 
   /**
