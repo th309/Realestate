@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 import pandas as pd
-from supabase import create_client, Client
+from supabase import create_client
+from supabase.client import Client
 
 from app.config import get_settings
 
@@ -34,19 +35,28 @@ class DataCache:
         self.settings = get_settings()
         self._supabase: Optional[Client] = None
         
-        # Default cache directory (can be mounted as Railway volume)
-        self.cache_dir = Path(cache_dir or os.environ.get(
-            'CACHE_DIR', 
-            '/data/cache'
-        ))
+        # Determine cache directory with fallback
+        # Priority: explicit arg > CACHE_DIR env > /tmp/propertyiq-cache (always writable)
+        cache_path = cache_dir or os.environ.get('CACHE_DIR')
+        
+        if cache_path:
+            self.cache_dir = Path(cache_path)
+        else:
+            # Use /tmp which is always writable on Railway/Linux
+            self.cache_dir = Path('/tmp/propertyiq-cache')
         
         # Create cache directory if it doesn't exist
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"DataCache initialized at {self.cache_dir}")
+        except PermissionError:
+            # Fallback to /tmp if primary path fails
+            self.cache_dir = Path('/tmp/propertyiq-cache')
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.warning(f"Using fallback cache dir: {self.cache_dir}")
         
         self.metadata_file = self.cache_dir / 'cache_metadata.json'
         self._metadata = self._load_metadata()
-        
-        logger.info(f"DataCache initialized at {self.cache_dir}")
 
     @property
     def supabase(self) -> Client:
@@ -194,12 +204,12 @@ class DataCache:
             logger.info(f"  Batch at offset {offset}...")
             
             try:
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select(','.join(columns)) \
-                    .eq('geography_type', geo_type) \
-                    .order('period_date') \
-                    .range(offset, offset + batch_size - 1) \
-                    .execute()
+                # Build query step by step for supabase-py v2 compatibility
+                query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
+                query = query.eq('geography_type', geo_type)
+                query = query.order('period_date', desc=False)
+                query = query.range(offset, offset + batch_size - 1)
+                response = query.execute()
             except Exception as e:
                 logger.error(f"Error fetching batch at offset {offset}: {e}")
                 break
@@ -261,13 +271,13 @@ class DataCache:
         
         while True:
             try:
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select(','.join(columns)) \
-                    .eq('geography_type', geo_type) \
-                    .gt('period_date', last_date) \
-                    .order('period_date') \
-                    .range(offset, offset + batch_size - 1) \
-                    .execute()
+                # Build query step by step for supabase-py v2 compatibility
+                query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
+                query = query.eq('geography_type', geo_type)
+                query = query.gt('period_date', last_date)
+                query = query.order('period_date', desc=False)
+                query = query.range(offset, offset + batch_size - 1)
+                response = query.execute()
             except Exception as e:
                 logger.error(f"Error fetching incremental batch: {e}")
                 break

@@ -101,16 +101,12 @@ class WorkflowService:
     def _get_sample_count(self, table_name: str, geo_type: str = None) -> int:
         """Get approximate count using a sample query (faster than exact count)."""
         try:
-            query = self.supabase.table(table_name).select("id")
+            # Build query step by step for supabase-py v2 compatibility
+            query = self.supabase.table(table_name).select("id", count="exact")
             if geo_type:
                 query = query.eq("geography_type", geo_type)
             query = query.limit(1)
-            # Use head=True for count-only query
-            response = self.supabase.table(table_name).select("*", count="exact", head=True)
-            if geo_type:
-                response = self.supabase.table(table_name).select("*", count="exact", head=True).eq("geography_type", geo_type).execute()
-            else:
-                response = self.supabase.table(table_name).select("*", count="exact", head=True).execute()
+            response = query.execute()
             return response.count or 0
         except Exception as e:
             logger.warning(f"Count query failed: {e}")

@@ -227,11 +227,11 @@ class BacktestService:
         
         while True:
             try:
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select(','.join(columns)) \
-                    .eq('geography_type', geography_type) \
-                    .range(offset, offset + batch_size - 1) \
-                    .execute()
+                # Build query step by step for supabase-py v2 compatibility
+                query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
+                query = query.eq('geography_type', geography_type)
+                query = query.range(offset, offset + batch_size - 1)
+                response = query.execute()
             except Exception as e:
                 logger.error(f"Error fetching batch at offset {offset}: {e}")
                 break
@@ -499,9 +499,8 @@ class BacktestService:
         # Get database summary (use materialized view if available)
         try:
             # Try materialized view first
-            response = self.supabase.table('mv_backtest_summary') \
-                .select('*') \
-                .execute()
+            query = self.supabase.table('mv_backtest_summary').select('*')
+            response = query.execute()
             
             if response.data:
                 status["database"]["from_view"] = True
@@ -509,10 +508,9 @@ class BacktestService:
             else:
                 # Fall back to sample query
                 status["database"]["from_view"] = False
-                sample = self.supabase.table('propertyiq_scores_history') \
-                    .select('geography_type') \
-                    .limit(1000) \
-                    .execute()
+                query = self.supabase.table('propertyiq_scores_history').select('geography_type')
+                query = query.limit(1000)
+                sample = query.execute()
                 
                 if sample.data:
                     df = pd.DataFrame(sample.data)
