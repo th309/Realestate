@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeZipKey } from '../common/zip';
-import { normalizeStateToCode } from '../common/geo.js';
+import { normalizeStateToCode } from '../common/geo';
 
 interface CacheEntry<T> {
   data: T;

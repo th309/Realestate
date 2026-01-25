@@ -2,7 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode } from '../common/geo.js';
+import { normalizeStateToCode } from '../common/geo';
 import { normalizeZipKey } from '../common/zip';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 

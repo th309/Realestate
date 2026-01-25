@@ -8,7 +8,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode } from '../common/geo.js';
+import { normalizeStateToCode } from '../common/geo';
 
 // Import types
 import type { HomeValueData, ForecastData } from './types';

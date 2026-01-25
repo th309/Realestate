@@ -22,7 +22,7 @@ import {
   normalizeStateToFips,
   normalizeCountyFips,
   normalizeCbsaCode,
-} from '../common/geo.js';
+} from '../common/geo';
 
 export interface GeographyChain {
   geographyId: string;

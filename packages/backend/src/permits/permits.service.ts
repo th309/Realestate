@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToFips, STATE_FIPS_TO_NAME } from '../common/geo.js';
+import { normalizeStateToFips, STATE_FIPS_TO_NAME } from '../common/geo';
 
 export interface PermitsDataPoint {
   region_id: string;

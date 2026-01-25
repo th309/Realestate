@@ -6,7 +6,7 @@ import {
   normalizeStateRegionId,
   normalizeCountyFips,
   normalizeCbsaCode,
-} from '../common/geo.js';
+} from '../common/geo';
 
 export interface TimeSeriesDataPoint {
   date: string;
