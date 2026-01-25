@@ -30,9 +30,9 @@ export function Legend({
   // Pass selectedMetric and geoLevel (e.g., permits 0–200+ scale only at county)
   const { min, max, maxLabelSuffix } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
 
-  // Use shared formatValue for labels - ensures consistency with map
-  const minLabel = formatValue(min, metricFormat, 'min');
-  const maxLabel = formatValue(max, metricFormat, 'max') + (maxLabelSuffix ?? '');
+  // Use shared formatValue for labels - ensures consistency with map (no "100+" for PropertyIQ 0–100 scores)
+  const minLabel = formatValue(min, metricFormat, 'min', selectedMetric);
+  const maxLabel = formatValue(max, metricFormat, 'max', selectedMetric) + (maxLabelSuffix ?? '');
 
   // Get "as of" date from central config
   const dataDate = formatDataDateForDisplay(getMetricDataDate(selectedMetric));
@@ -42,7 +42,7 @@ export function Legend({
 
   // Single value legend - show one color with the value
   if (isSingleValue) {
-    const singleValueLabel = formatValue(min, metricFormat, 'min');
+    const singleValueLabel = formatValue(min, metricFormat, 'min', selectedMetric);
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
         <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>

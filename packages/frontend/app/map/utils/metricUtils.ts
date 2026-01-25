@@ -117,13 +117,16 @@ export function calculateValueRange(
 /**
  * Format a value for display based on metric type.
  * Used by both legend labels and hover popups.
+ * @param metricId - When provided with position 'max', PropertyIQ (0–100) omits '+' so label shows "100" not "100+".
  */
 export function formatValue(
   value: number,
   metricFormat: ReturnType<typeof getFormat>,
-  position?: 'min' | 'max'
+  position?: 'min' | 'max',
+  metricId?: string
 ): string {
-  const suffix = position === 'max' ? '+' : '';
+  const isPropertyIQMax = position === 'max' && metricId && getMetricConfig(metricId)?.dataSource === 'propertyiq';
+  const suffix = position === 'max' && !isPropertyIQMax ? '+' : '';
 
   switch (metricFormat) {
     case 'percent':
