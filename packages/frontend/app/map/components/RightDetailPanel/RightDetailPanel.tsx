@@ -39,9 +39,9 @@ interface MarketFactor {
   metricId: string;
 }
 
-// Default market factors - Risk Level removed per user request
+// Default market factors: chosen so each has ample data at metro, county, and zip (see metric-availability.ts)
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
-  { id: 'appreciation', label: 'Appreciation', metricId: 'home_value' },
+  { id: 'appreciation', label: 'Home Value YoY', metricId: 'home_value_yoy' },
   { id: 'yield', label: 'Yield Potential', metricId: 'cap_rate' },
   { id: 'demand', label: 'Demand', metricId: 'pending_ratio' },
   { id: 'inventory', label: 'Inventory Change', metricId: 'inventory_yoy' },

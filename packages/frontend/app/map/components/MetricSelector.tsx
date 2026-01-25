@@ -78,16 +78,17 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
 
   const toggleMetric = (metricId: string) => {
     const metric = availableMetrics.find(m => m.id === metricId);
-    if (metric?.disabled) return; // Don't allow selection of disabled metrics
-    
     setSelected(prev => {
       if (prev.includes(metricId)) {
+        // Always allow deselecting (even if metric is unavailable/greyed out)
         return prev.filter(id => id !== metricId);
       }
+      if (metric?.disabled) return prev; // Don't allow selecting unavailable metrics
       if (prev.length < maxSelections) {
         return [...prev, metricId];
       }
-      return prev;
+      // At max: replace oldest selection with the new one (no need to deselect first)
+      return [...prev.slice(1), metricId];
     });
   };
 
@@ -129,7 +130,8 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
               <div className="flex flex-wrap gap-2">
                 {metrics.map(m => {
                   const isSelected = selected.includes(m.id);
-                  const isDisabled = m.disabled || (!isSelected && selected.length >= maxSelections);
+                  // Only grey out when metric is unavailable; at max, unselected metrics are still clickable (swap-in)
+                  const isDisabled = m.disabled && !isSelected;
                   return (
                     <button
                       key={m.id}
