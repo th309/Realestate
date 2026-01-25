@@ -35,25 +35,40 @@ class DataCache:
         self.settings = get_settings()
         self._supabase: Optional[Client] = None
         
-        # Determine cache directory with fallback
-        # Priority: explicit arg > CACHE_DIR env > /tmp/cache (Railway volume mount point)
-        cache_path = cache_dir or os.environ.get('CACHE_DIR')
+        # Build list of directories to try
+        import tempfile
+        dirs_to_try = []
         
-        if cache_path:
-            self.cache_dir = Path(cache_path)
-        else:
-            # Use /tmp/cache which is mounted as Railway Volume for persistence
-            self.cache_dir = Path('/tmp/cache')
+        if cache_dir:
+            dirs_to_try.append(Path(cache_dir))
         
-        # Create cache directory if it doesn't exist
-        try:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"DataCache initialized at {self.cache_dir}")
-        except PermissionError:
-            # Fallback to /tmp/cache-fallback if primary path fails
-            self.cache_dir = Path('/tmp/cache-fallback')
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            logger.warning(f"Using fallback cache dir: {self.cache_dir}")
+        env_cache = os.environ.get('CACHE_DIR')
+        if env_cache:
+            dirs_to_try.append(Path(env_cache))
+        
+        # Fallbacks - prefer temp directory
+        dirs_to_try.append(Path(tempfile.gettempdir()) / 'propertyiq-cache')
+        dirs_to_try.append(Path('/tmp/propertyiq-cache'))
+        dirs_to_try.append(Path('.') / 'cache')
+        
+        # Try each directory until we find one that's writable
+        self.cache_dir = None
+        for dir_path in dirs_to_try:
+            try:
+                dir_path.mkdir(parents=True, exist_ok=True)
+                # Test actual write access with a file
+                test_file = dir_path / '.write_test'
+                test_file.write_text('test')
+                test_file.unlink()
+                self.cache_dir = dir_path
+                logger.info(f"DataCache initialized at {self.cache_dir} (writable)")
+                break
+            except (PermissionError, OSError) as e:
+                logger.warning(f"Cannot use cache dir {dir_path}: {e}")
+                continue
+        
+        if self.cache_dir is None:
+            raise RuntimeError(f"No writable cache directory found. Tried: {dirs_to_try}")
         
         self.metadata_file = self.cache_dir / 'cache_metadata.json'
         self._metadata = self._load_metadata()
@@ -446,5 +461,13 @@ def get_data_cache() -> DataCache:
     """Get or create data cache singleton."""
     global _data_cache
     if _data_cache is None:
+        logger.info("Creating new DataCache singleton...")
         _data_cache = DataCache()
     return _data_cache
+
+
+def reset_data_cache():
+    """Reset the singleton (useful for testing or after errors)."""
+    global _data_cache
+    _data_cache = None
+    logger.info("DataCache singleton reset")
