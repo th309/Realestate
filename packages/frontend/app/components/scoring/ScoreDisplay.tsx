@@ -45,11 +45,12 @@ export interface ScoreDisplayProps {
  * Calculate color on a gradient from red (0) to green (100)
  * 0 = Red (Hue 0)
  * 100 = Green (Hue 120)
+ * Smooth gradient transition through the full color spectrum
  */
 export const getScoreColor = (value: number, maxValue: number = 100): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
-  const hue = percentage * 120; // 0 = red, 120 = green
-  return `hsl(${hue}, 95%, 45%)`;
+  const hue = percentage * 120; // 0 = red, 120 = green (smooth transition)
+  return `hsl(${hue}, 100%, 50%)`;
 };
 
 /**
@@ -161,8 +162,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const percentage = Math.min(value / maxValue, 1);
   const strokeDashoffset = circumference - percentage * circumference;
 
-  // Base hue mapping: 0=Red, 120=Green
-  const hue = percentage * 120;
+  // Get smooth gradient color from red (0) to green (100)
   const strokeColor = getScoreColor(value, maxValue);
 
   const grade = getLetterGrade(value);
