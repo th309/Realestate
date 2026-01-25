@@ -138,12 +138,13 @@ export class TimeSeriesService {
         query = query.limit(limit);
       }
 
-      let data: Record<string, unknown>[];
+      type Row = Record<string, unknown>;
+      let data: Row[];
       if (!useLastPoints && !limit) {
         // Paginate to bypass Supabase default row cap so graphing page can get all history
         data = [];
         let offset = 0;
-        let page: Record<string, unknown>[];
+        let page: Row[];
         do {
           const { data: pageData, error: pageError } = await query.range(
             offset,
@@ -154,18 +155,18 @@ export class TimeSeriesService {
               `Error fetching time series for ${metricId}: ${pageError.message}`,
             );
           }
-          page = pageData ?? [];
+          page = (pageData ?? []) as unknown as Row[];
           data = data.concat(page);
           offset += page.length;
         } while (page.length === TIMESERIES_PAGE_SIZE);
       } else {
-        const result = await query;
-        if (result.error) {
+        const res = await query;
+        if (res.error) {
           throw new Error(
-            `Error fetching time series for ${metricId}: ${result.error.message}`,
+            `Error fetching time series for ${metricId}: ${res.error.message}`,
           );
         }
-        data = result.data ?? [];
+        data = (res.data ?? []) as unknown as Row[];
       }
 
       console.log('[TimeSeriesService] Query result:', {
@@ -179,15 +180,17 @@ export class TimeSeriesService {
       }
 
       // Transform to standard format
-      let result = data.map((row: Record<string, unknown>) => ({
-        // Convert year to date string: 2023 -> "2023-01-01"
-        // PropertyIQ scores already use date strings
-        date:
+      let result: TimeSeriesDataPoint[] = data.map((row: Row) => {
+        const rawDate = row[dateField];
+        const dateStr =
           mapping.source === 'census'
-            ? `${row[dateField]}-01-01`
-            : row[dateField],
-        value: Number(row[mapping.columnName]) || 0,
-      }));
+            ? `${String(rawDate ?? '')}-01-01`
+            : String(rawDate ?? '');
+        return {
+          date: dateStr,
+          value: Number(row[mapping.columnName]) || 0,
+        };
+      });
       if (useLastPoints && result.length > 0) {
         result = result.reverse();
       }
