@@ -60,25 +60,21 @@ export function useTrendSparklines(
     setError(null);
 
     try {
-      const now = new Date();
-      const endDate = now.toISOString().split('T')[0];
-      const startDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - months,
-        now.getDate()
-      ).toISOString().split('T')[0];
-
       const results: Record<string, SparklineData> = {};
 
       await Promise.all(
         metricIds.map(async (metricId) => {
           try {
+            // Use historyMonths instead of date range filtering
+            // This gets the most recent N months of data regardless of actual dates
             const response = await api.getTimeSeries(
               metricId,
               geoLevel,
               regionId,
-              startDate,
-              endDate
+              undefined,  // no startDate
+              undefined,  // no endDate
+              undefined,  // no limit
+              months      // historyMonths
             );
 
             if (response.success && response.data.length >= 2) {

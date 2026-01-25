@@ -28,16 +28,16 @@ export async function calculate3MonthTrend(
   regionId: string
 ): Promise<TrendData | null> {
   try {
-    const now = new Date();
-    const endDate = now.toISOString().split('T')[0];
-    const startDate = new Date(now.setMonth(now.getMonth() - 3)).toISOString().split('T')[0];
-
+    // Use historyMonths instead of date range filtering
+    // This gets the most recent 3 months of data regardless of actual dates
     const response = await api.getTimeSeries(
       metricId,
       geoLevel,
       regionId,
-      startDate,
-      endDate
+      undefined,  // no startDate
+      undefined,  // no endDate
+      undefined,  // no limit
+      3           // historyMonths - gets most recent 3 months
     );
 
     if (!response.success || response.data.length < 2) {

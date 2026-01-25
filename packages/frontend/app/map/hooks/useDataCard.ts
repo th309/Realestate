@@ -62,18 +62,16 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
     const { data: trendData, isLoading: trendLoading } = useQuery({
         queryKey: ['metric-trend', metricId, geoLevel, regionId],
         queryFn: async () => {
-            // Fetch last 4 months of data for 3-month trend
-            const endDate = new Date().toISOString().split('T')[0];
-            const startDate = new Date();
-            startDate.setMonth(startDate.getMonth() - 4);
-            const startDateStr = startDate.toISOString().split('T')[0];
-
+            // Use historyMonths instead of date range filtering
+            // This gets the most recent 4 months of data regardless of actual dates
             const response = await api.getTimeSeries(
                 metricId,
                 geoLevel,
                 regionId,
-                startDateStr,
-                endDate,
+                undefined,  // no startDate
+                undefined,  // no endDate
+                undefined,  // no limit
+                4           // historyMonths - gets most recent 4 months for 3-month trend
             );
 
             if (!response.success || response.data.length < 2) {

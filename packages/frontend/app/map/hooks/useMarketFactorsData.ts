@@ -1,9 +1,10 @@
 /**
  * useMarketFactorsData - Data binding layer for Market Factors panel
  *
- * Fetches current value and 3-month trend for multiple metrics using the same
- * API path as useDataCard (api.getTimeSeries). No raw timeSeriesApi calls.
- * Use this for any UI that needs "current + 3-month trend" for a list of metrics.
+ * Fetches current value and N-month trend for multiple metrics using the
+ * unified time-series API with historyMonths parameter. This approach gets
+ * the most recent data regardless of absolute dates (handles stale data gracefully).
+ * Use this for any UI that needs "current + trend" for a list of metrics.
  */
 
 'use client';
@@ -53,11 +54,18 @@ export function useMarketFactorsData(
     queries: stableMetricIds.map((metricId) => ({
       queryKey: ['market-factor', metricId, geoLevel, regionId, months],
       queryFn: async (): Promise<{ metricId: string; points: { date: string; value: number }[] }> => {
-        const endDate = new Date().toISOString().split('T')[0];
-        const start = new Date();
-        start.setMonth(start.getMonth() - Math.max(months, 4));
-        const startDate = start.toISOString().split('T')[0];
-        const response = await api.getTimeSeries(metricId, geoLevel!, regionId!, startDate, endDate);
+        // Use historyMonths instead of date range filtering
+        // This tells the backend to get the most recent N months of data
+        // regardless of actual dates (handles stale data gracefully)
+        const response = await api.getTimeSeries(
+          metricId,
+          geoLevel!,
+          regionId!,
+          undefined,  // no startDate
+          undefined,  // no endDate
+          undefined,  // no limit
+          months      // historyMonths - gets most recent N months
+        );
         if (!response.success || !response.data?.length) {
           return { metricId, points: [] };
         }
