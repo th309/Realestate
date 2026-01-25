@@ -726,9 +726,10 @@ export class ZillowService {
     date?: string,
     propertyType: string = 'all',
   ): Promise<HomeValueData[]> {
+    const metricName = mapRentPropertyType(propertyType);
     const targetDate =
       date ||
-      (await getLatestDateForTable(this.supabase, 'zillow_zori', 'Metro'));
+      (await getLatestDate(this.supabase, 'metro', metricName));
 
     // Pass propertyType directly - queryZori handles mapping to metric name
     const zillow = await queryZori(
@@ -780,9 +781,10 @@ export class ZillowService {
     stateFilter?: string,
   ): Promise<HomeValueData[]> {
     stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
+    const metricName = mapRentPropertyType(propertyType);
     const targetDate =
       date ||
-      (await getLatestDateForTable(this.supabase, 'zillow_zori', 'County'));
+      (await getLatestDate(this.supabase, 'county', metricName));
 
     const countyMap = await buildCountyMappings(this.supabase, stateFilter);
     const fipsCodes = [...countyMap.keys()];
@@ -827,11 +829,12 @@ export class ZillowService {
     date?: string,
   ): Promise<HomeValueData[]> {
     stateFilter = normalizeStateToCode(stateFilter);
+    const metricName = mapRentPropertyType(propertyType);
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
       date
         ? Promise.resolve(date)
-        : getLatestDateForTable(this.supabase, 'zillow_zori', 'Zip'),
+        : getLatestDate(this.supabase, 'zip', metricName),
       buildZipMappings(this.supabase, stateFilter),
     ]);
 

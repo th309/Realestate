@@ -147,9 +147,13 @@ function transformZillowResponse(response: ZillowApiResponse, keyField: 'region_
   response.data?.forEach(item => {
     let key: string | undefined;
     switch (keyField) {
-      case 'county_fips':
+      case 'county_fips': {
         key = item.county_fips || item.region_id;
+        if (key && /^\d+$/.test(String(key))) {
+          key = String(parseInt(key, 10)).padStart(5, '0');
+        }
         break;
+      }
       case 'region_name':
         key = item.region_name;
         break;
@@ -176,9 +180,13 @@ function transformZillowResponseWithDates(
   response.data?.forEach(item => {
     let key: string | undefined;
     switch (keyField) {
-      case 'county_fips':
+      case 'county_fips': {
         key = item.county_fips || item.region_id;
+        if (key && /^\d+$/.test(String(key))) {
+          key = String(parseInt(key, 10)).padStart(5, '0');
+        }
         break;
+      }
       case 'region_name':
         key = item.region_name;
         break;
