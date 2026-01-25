@@ -80,7 +80,7 @@ export function RightDetailPanel({
     metricIds,
     geoLevel,
     geography?.id ?? null,
-    { months: 3, enabled: isOpen && !!geography }
+    { months: 6, enabled: isOpen && !!geography }
   );
 
   // Sync selected score with viewMode when it changes externally
