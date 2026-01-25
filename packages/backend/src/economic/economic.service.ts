@@ -69,7 +69,7 @@ export class EconomicService {
     metric: string,
     date?: string,
   ): Promise<EconomicDataPoint[]> {
-    // For national, just get the most recent record with non-null metric value
+    // For national, get the most recent record with non-null metric value
     let query = this.supabase
       .from('economic_national')
       .select('*')
@@ -97,8 +97,7 @@ export class EconomicService {
         .order('period_date', { ascending: false })
         .limit(1);
 
-      if (fallbackError) throw fallbackError;
-      if (fallbackData && fallbackData.length > 0) {
+      if (!fallbackError && fallbackData && fallbackData.length > 0) {
         const row = fallbackData[0] as EconomicRow;
         return [{
           region_id: 'US',
@@ -109,12 +108,30 @@ export class EconomicService {
       }
     }
 
-    return ((data || []) as EconomicRow[]).map((row) => ({
+    const mapped = ((data || []) as EconomicRow[]).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
       value: toNumberOrNull(row[metric]),
       date: row.period_date as string,
     }));
+
+    // economic_national is not populated with gdp_yoy by the combine script; derive from state aggregate
+    if ((mapped.length === 0 || (mapped.length === 1 && (mapped[0].value === null || mapped[0].value === 0))) && metric === 'gdp_yoy') {
+      const statePoints = await this.getStateData('gdp_yoy', date);
+      const values = statePoints.map((p) => p.value).filter((v): v is number => v != null && !Number.isNaN(v) && v !== 0);
+      if (values.length > 0) {
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        const latestDate = statePoints[0]?.date;
+        return [{
+          region_id: 'US',
+          region_name: 'United States',
+          value: Math.round(avg * 100) / 100,
+          date: latestDate ?? new Date().toISOString().split('T')[0],
+        }];
+      }
+    }
+
+    return mapped;
   }
 
   private async getStateData(
@@ -211,6 +228,7 @@ export class EconomicService {
         value: toNumberOrNull(row.metric_value),
         date: row.period_date as string,
         fips_code: String(row.fips_code || ''),
+        county_fips: String(row.fips_code || ''),
         state_fips: String(row.state_fips || ''),
       }));
     }
@@ -245,6 +263,7 @@ export class EconomicService {
       value: toNumberOrNull(row.metric_value),
       date: row.period_date as string,
       fips_code: String(row.fips_code || ''),
+      county_fips: String(row.fips_code || ''),
       state_fips: String(row.state_fips || ''),
     }));
   }
