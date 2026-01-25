@@ -8,6 +8,8 @@
  * 4. Feature Analysis - Correlation analysis
  * 5. Score Explanations - Statistical distributions
  * 6. Monthly Report - Formula health report
+ *
+ * STATELESS: Each page refresh starts fresh with all steps in pending state.
  */
 
 'use client';
@@ -18,9 +20,7 @@ import {
   WorkflowStep,
   StepState,
   StepStatus,
-  WorkflowStatusResponse,
   RunStepResponse,
-  JobStatusResponse,
 } from './types';
 
 // 6 workflow steps with full details
@@ -85,24 +85,16 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   },
 ];
 
-// Default step states (for initial render before API response)
-const DEFAULT_STEP_STATES: Record<string, StepState> = {
-  'data-export': { status: 'pending', lastRunTime: null },
-  'prepare-backtest-data': { status: 'pending', lastRunTime: null },
-  'calculate-benchmarks': { status: 'pending', lastRunTime: null },
-  'feature-analysis': { status: 'pending', lastRunTime: null },
-  'score-explanations': { status: 'pending', lastRunTime: null },
-  'monthly-report': { status: 'pending', lastRunTime: null },
-};
-
-interface CacheStatus {
-  caches: Record<string, {
-    exists: boolean;
-    file_size_mb: number;
-    record_count: number;
-    last_date: string | null;
-    last_updated: string | null;
-  }>;
+// Fresh step states - always start clean
+function createFreshStepStates(): Record<string, StepState> {
+  return {
+    'data-export': { status: 'pending', lastRunTime: null },
+    'prepare-backtest-data': { status: 'pending', lastRunTime: null },
+    'calculate-benchmarks': { status: 'pending', lastRunTime: null },
+    'feature-analysis': { status: 'pending', lastRunTime: null },
+    'score-explanations': { status: 'pending', lastRunTime: null },
+    'monthly-report': { status: 'pending', lastRunTime: null },
+  };
 }
 
 interface AnalyticsHealth {
@@ -113,17 +105,26 @@ interface AnalyticsHealth {
 }
 
 export default function MLWorkflowPage() {
-  const [stepStates, setStepStates] =
-    useState<Record<string, StepState>>(DEFAULT_STEP_STATES);
-  const [loading, setLoading] = useState(true);
+  // Always start fresh - no loading of previous state
+  const [stepStates, setStepStates] = useState<Record<string, StepState>>(createFreshStepStates);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRunningFullWorkflow, setIsRunningFullWorkflow] = useState(false);
   const [analyticsHealth, setAnalyticsHealth] = useState<AnalyticsHealth | null>(null);
-  const [cacheStatus, setCacheStatus] = useState<CacheStatus | null>(null);
   const [lastStepResult, setLastStepResult] = useState<Record<string, unknown> | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
 
-  // Track polling intervals for cleanup
-  const pollingIntervals = useRef<Record<string, NodeJS.Timeout>>({});
+  // Track active polling
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
+  }, []);
 
   // Fetch analytics service health
   const fetchAnalyticsHealth = useCallback(async () => {
@@ -136,6 +137,8 @@ export default function MLWorkflowPage() {
         if (data.success && data.data) {
           setAnalyticsHealth(data.data);
         }
+      } else {
+        setAnalyticsHealth(null);
       }
     } catch (err) {
       console.error('Error fetching analytics health:', err);
@@ -143,45 +146,12 @@ export default function MLWorkflowPage() {
     }
   }, []);
 
-  // Fetch workflow status from API
-  const fetchWorkflowStatus = useCallback(async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/status`);
-
-      if (!res.ok) {
-        throw new Error('Failed to fetch workflow status');
-      }
-
-      const data: WorkflowStatusResponse = await res.json();
-
-      if (data.success && data.data?.steps) {
-        setStepStates((prev) => ({
-          ...prev,
-          ...data.data.steps,
-        }));
-      }
-    } catch (err) {
-      console.error('Error fetching workflow status:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch status on mount
+  // Check health on mount and periodically
   useEffect(() => {
     fetchAnalyticsHealth();
-    fetchWorkflowStatus();
-
-    // Refresh health every 30 seconds
-    const healthInterval = setInterval(fetchAnalyticsHealth, 30000);
-
-    // Cleanup polling intervals on unmount
-    return () => {
-      clearInterval(healthInterval);
-      Object.values(pollingIntervals.current).forEach(clearInterval);
-    };
-  }, [fetchWorkflowStatus, fetchAnalyticsHealth]);
+    const interval = setInterval(fetchAnalyticsHealth, 15000);
+    return () => clearInterval(interval);
+  }, [fetchAnalyticsHealth]);
 
   // Update a single step's state
   const updateStepState = useCallback(
@@ -197,138 +167,155 @@ export default function MLWorkflowPage() {
     [],
   );
 
-  // Poll job status
-  const startPolling = useCallback(
-    (stepId: string, jobId: string) => {
+  // Run a single step and wait for completion
+  const runStepAndWait = useCallback(
+    async (stepId: string): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-      const interval = setInterval(async () => {
-        try {
-          const res = await fetch(
-            `${apiUrl}/api/admin/ml-workflow/job/${jobId}`,
-          );
-          if (!res.ok) return;
-
-          const data: JobStatusResponse = await res.json();
-
-          if (data.success && data.data) {
-            updateStepState(stepId, {
-              status: data.data.status,
-              progress: data.data.progress,
-              error: data.data.error,
-            });
-
-            // Stop polling when job is done
-            if (
-              data.data.status === 'completed' ||
-              data.data.status === 'error'
-            ) {
-              clearInterval(interval);
-              delete pollingIntervals.current[stepId];
-
-              if (data.data.status === 'completed') {
-                updateStepState(stepId, {
-                  lastRunTime: data.data.completedAt || new Date().toISOString(),
-                });
-                // Store result for display
-                if ((data.data as Record<string, unknown>).result) {
-                  setLastStepResult((data.data as Record<string, unknown>).result as Record<string, unknown>);
-                }
-                // Refresh to get output files
-                fetchWorkflowStatus();
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Error polling job status:', err);
-        }
-      }, 3000); // Poll every 3 seconds
-
-      pollingIntervals.current[stepId] = interval;
-    },
-    [updateStepState, fetchWorkflowStatus],
-  );
-
-  // Run a single step
-  const runStep = useCallback(
-    async (stepId: string) => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      // Update UI - running
+      updateStepState(stepId, {
+        status: 'running',
+        progress: 0,
+        error: undefined,
+      });
 
       try {
-        // Update UI immediately
-        updateStepState(stepId, {
-          status: 'running',
-          progress: 0,
-          error: undefined,
-        });
-
+        // Start the step
         const res = await fetch(`${apiUrl}/api/admin/ml-workflow/run/${stepId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
 
         if (!res.ok) {
-          throw new Error('Failed to start step');
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
         }
 
         const data: RunStepResponse = await res.json();
 
-        if (data.success && data.data?.jobId) {
-          updateStepState(stepId, { jobId: data.data.jobId });
-          startPolling(stepId, data.data.jobId);
-        } else {
-          throw new Error((data as { error?: string }).error || 'Failed to start step');
+        if (!data.success) {
+          throw new Error((data as { error?: string }).error || 'Step failed to start');
         }
-      } catch (err) {
-        console.error(`Error running step ${stepId}:`, err);
+
+        const jobId = data.data?.jobId;
+        if (!jobId) {
+          throw new Error('No job ID returned');
+        }
+
+        // Poll for completion
+        let attempts = 0;
+        const maxAttempts = 300; // 5 minutes max (1 second intervals)
+
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+
+          try {
+            const jobRes = await fetch(`${apiUrl}/api/admin/ml-workflow/job/${jobId}`);
+            if (!jobRes.ok) continue;
+
+            const jobData = await jobRes.json();
+
+            if (jobData.success && jobData.data) {
+              const { status, progress, error: jobError, result } = jobData.data;
+
+              // Update progress
+              if (progress !== undefined) {
+                updateStepState(stepId, { progress });
+              }
+
+              if (status === 'completed') {
+                updateStepState(stepId, {
+                  status: 'completed',
+                  lastRunTime: new Date().toISOString(),
+                  progress: 100,
+                });
+                return { success: true, result };
+              }
+
+              if (status === 'error' || status === 'failed') {
+                updateStepState(stepId, {
+                  status: 'error',
+                  error: jobError || 'Step failed',
+                });
+                return { success: false, error: jobError || 'Step failed' };
+              }
+            }
+          } catch (pollErr) {
+            console.error('Poll error:', pollErr);
+          }
+        }
+
+        // Timeout
         updateStepState(stepId, {
           status: 'error',
-          error: err instanceof Error ? err.message : 'Failed to run step',
+          error: 'Step timed out after 5 minutes',
         });
+        return { success: false, error: 'Step timed out' };
+
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        updateStepState(stepId, {
+          status: 'error',
+          error: errorMsg,
+        });
+        return { success: false, error: errorMsg };
       }
     },
-    [updateStepState, startPolling],
-  );
-
-  // Wait for a step to complete
-  const waitForStepCompletion = useCallback(
-    (stepId: string): Promise<StepStatus> => {
-      return new Promise((resolve) => {
-        const checkStatus = () => {
-          const status = stepStates[stepId]?.status;
-          if (status === 'completed' || status === 'error') {
-            resolve(status);
-          } else {
-            setTimeout(checkStatus, 1000);
-          }
-        };
-        checkStatus();
-      });
-    },
-    [stepStates],
+    [updateStepState],
   );
 
   // Run full workflow sequentially
   const runFullWorkflow = useCallback(async () => {
-    setIsRunningFullWorkflow(true);
+    // Reset everything first
+    setStepStates(createFreshStepStates());
     setError(null);
+    setLastStepResult(null);
+    setIsRunningFullWorkflow(true);
+    setCurrentStepIndex(0);
 
-    for (const step of WORKFLOW_STEPS) {
-      // Start the step
-      await runStep(step.id);
+    for (let i = 0; i < WORKFLOW_STEPS.length; i++) {
+      const step = WORKFLOW_STEPS[i];
+      setCurrentStepIndex(i);
 
-      // Wait for completion
-      const status = await waitForStepCompletion(step.id);
+      const { success, result, error: stepError } = await runStepAndWait(step.id);
 
-      // Stop if step failed
-      if (status === 'error') {
-        setError(`Workflow stopped: ${step.name} failed`);
+      if (result) {
+        setLastStepResult(result);
+      }
+
+      if (!success) {
+        setError(`Workflow stopped at step ${i + 1}: ${step.name} - ${stepError}`);
         break;
       }
     }
 
     setIsRunningFullWorkflow(false);
-  }, [runStep, waitForStepCompletion]);
+    setCurrentStepIndex(-1);
+  }, [runStepAndWait]);
+
+  // Run a single step (manual)
+  const runSingleStep = useCallback(async (stepId: string) => {
+    setError(null);
+    const { result, error: stepError } = await runStepAndWait(stepId);
+    
+    if (result) {
+      setLastStepResult(result);
+    }
+    
+    if (stepError) {
+      setError(`Step failed: ${stepError}`);
+    }
+  }, [runStepAndWait]);
+
+  // Reset all states
+  const resetWorkflow = useCallback(() => {
+    setStepStates(createFreshStepStates());
+    setError(null);
+    setLastStepResult(null);
+    setIsRunningFullWorkflow(false);
+    setCurrentStepIndex(-1);
+  }, []);
 
   // Check if any step is currently running
   const hasRunningStep = Object.values(stepStates).some(
@@ -361,6 +348,13 @@ export default function MLWorkflowPage() {
                 Admin Access
               </span>
               <button
+                onClick={resetWorkflow}
+                disabled={isRunningFullWorkflow}
+                className="px-3 py-2 text-sm font-medium rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50"
+              >
+                Reset
+              </button>
+              <button
                 onClick={runFullWorkflow}
                 disabled={isRunningFullWorkflow || hasRunningStep || !analyticsHealth}
                 className={`
@@ -375,7 +369,7 @@ export default function MLWorkflowPage() {
                 {isRunningFullWorkflow ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-on-surface-variant/30 border-t-on-surface-variant rounded-full animate-spin" />
-                    Running Workflow...
+                    Running Step {currentStepIndex + 1}/{WORKFLOW_STEPS.length}...
                   </span>
                 ) : (
                   'Run Full Workflow'
@@ -417,35 +411,37 @@ export default function MLWorkflowPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {WORKFLOW_STEPS.map((step, index) => (
-              <WorkflowStepCard
-                key={step.id}
-                step={step}
-                stepNumber={index + 1}
-                status={stepStates[step.id]?.status || 'pending'}
-                lastRunTime={stepStates[step.id]?.lastRunTime || null}
-                progress={stepStates[step.id]?.progress}
-                error={stepStates[step.id]?.error}
-                outputFiles={stepStates[step.id]?.outputs}
-                onRun={() => runStep(step.id)}
-                disabled={isRunningFullWorkflow || hasRunningStep || !analyticsHealth}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {WORKFLOW_STEPS.map((step, index) => (
+            <WorkflowStepCard
+              key={step.id}
+              step={step}
+              stepNumber={index + 1}
+              status={stepStates[step.id]?.status || 'pending'}
+              lastRunTime={stepStates[step.id]?.lastRunTime || null}
+              progress={stepStates[step.id]?.progress}
+              error={stepStates[step.id]?.error}
+              outputFiles={stepStates[step.id]?.outputs}
+              onRun={() => runSingleStep(step.id)}
+              disabled={isRunningFullWorkflow || hasRunningStep || !analyticsHealth}
+            />
+          ))}
+        </div>
 
         {/* Last Step Result */}
         {lastStepResult && (
           <div className="mt-6 p-4 bg-surface-container rounded-xl">
-            <h2 className="text-sm font-medium text-on-surface mb-2">
-              Last Step Result
-            </h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-medium text-on-surface">
+                Last Step Result
+              </h2>
+              <button
+                onClick={() => setLastStepResult(null)}
+                className="text-xs text-on-surface-variant hover:text-on-surface"
+              >
+                Clear
+              </button>
+            </div>
             <pre className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-lg overflow-auto max-h-64">
               {JSON.stringify(lastStepResult, null, 2)}
             </pre>
@@ -535,11 +531,6 @@ export default function MLWorkflowPage() {
                   <tbody className="divide-y divide-outline-variant/50">
                     <tr>
                       <td className="py-2 pr-4"><code className="bg-surface-container px-1 rounded">GET</code></td>
-                      <td className="py-2 pr-4"><code>/api/admin/ml-workflow/status</code></td>
-                      <td className="py-2">Get status of all workflow steps</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-surface-container px-1 rounded">GET</code></td>
                       <td className="py-2 pr-4"><code>/api/admin/ml-workflow/health</code></td>
                       <td className="py-2">Check analytics service health</td>
                     </tr>
@@ -583,18 +574,8 @@ export default function MLWorkflowPage() {
                     </tr>
                     <tr>
                       <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/cache/sync?geo_type=metro</code></td>
+                      <td className="py-2 pr-4"><code>/api/v1/cache/sync</code></td>
                       <td className="py-2">Sync cache (incremental by default)</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/cache/sync?force_full=true</code></td>
-                      <td className="py-2">Force full cache refresh</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-error-container text-on-error-container px-1 rounded">DELETE</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/cache/clear</code></td>
-                      <td className="py-2">Clear all cached data</td>
                     </tr>
                     <tr>
                       <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
@@ -602,72 +583,9 @@ export default function MLWorkflowPage() {
                       <td className="py-2">Full decile backtest analysis</td>
                     </tr>
                     <tr>
-                      <td className="py-2 pr-4"><code className="bg-surface-container px-1 rounded">GET</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/backtest/status</code></td>
-                      <td className="py-2">Data availability status</td>
-                    </tr>
-                    <tr>
                       <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/data-export</code></td>
-                      <td className="py-2">Step 1: Sync data to cache</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/prepare-backtest-data</code></td>
-                      <td className="py-2">Step 2: Check data quality</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/calculate-benchmarks</code></td>
-                      <td className="py-2">Step 3: Calculate benchmarks</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/feature-analysis</code></td>
-                      <td className="py-2">Step 4: Correlation analysis</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/score-explanations</code></td>
-                      <td className="py-2">Step 5: Score distributions</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code className="bg-primary-container text-on-primary-container px-1 rounded">POST</code></td>
-                      <td className="py-2 pr-4"><code>/api/v1/workflow/monthly-report</code></td>
-                      <td className="py-2">Step 6: Generate report</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Materialized Views */}
-            <div>
-              <h3 className="text-sm font-medium text-on-surface mb-2">Supabase Materialized Views (Option 3)</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-on-surface-variant">
-                  <thead>
-                    <tr className="border-b border-outline-variant">
-                      <th className="text-left py-2 pr-4 font-medium">View</th>
-                      <th className="text-left py-2 font-medium">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant/50">
-                    <tr>
-                      <td className="py-2 pr-4"><code>mv_backtest_decile_stats</code></td>
-                      <td className="py-2">Pre-aggregated decile statistics by score type, geography, period</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code>mv_backtest_benchmarks</code></td>
-                      <td className="py-2">National/regional benchmark returns by period</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code>mv_backtest_summary</code></td>
-                      <td className="py-2">Quick status check for data availability</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 pr-4"><code>refresh_backtest_views()</code></td>
-                      <td className="py-2">Function to refresh all views after data imports</td>
+                      <td className="py-2 pr-4"><code>/api/v1/workflow/:stepId</code></td>
+                      <td className="py-2">Run workflow step (data-export, calculate-benchmarks, etc.)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -676,7 +594,7 @@ export default function MLWorkflowPage() {
           </div>
         </div>
 
-        {/* Environment Variables */}
+        {/* Configuration */}
         <div className="mt-6 p-6 bg-surface-container-low rounded-xl">
           <h2 className="text-lg font-medium text-on-surface mb-4">
             Configuration
@@ -685,7 +603,7 @@ export default function MLWorkflowPage() {
             <p><code className="bg-surface-container px-1 rounded">ANALYTICS_SERVICE_URL</code> - URL of Analytics microservice (default: http://localhost:8000)</p>
             <p><code className="bg-surface-container px-1 rounded">SUPABASE_URL</code> - Supabase project URL</p>
             <p><code className="bg-surface-container px-1 rounded">SUPABASE_SERVICE_KEY</code> - Supabase service role key</p>
-            <p><code className="bg-surface-container px-1 rounded">CACHE_DIR</code> - Parquet cache directory (default: /data/cache)</p>
+            <p><code className="bg-surface-container px-1 rounded">CACHE_DIR</code> - Parquet cache directory (default: /tmp/propertyiq-cache)</p>
           </div>
         </div>
       </main>
