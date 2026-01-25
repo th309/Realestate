@@ -56,6 +56,11 @@ export async function fetchMetricData(
     return {};
   }
 
+  // Cost of living at national level: baseline 100 (US average)
+  if (metricId === 'cost_of_living' && geoLevel === 'national') {
+    return { 'United States': { value: 100 } };
+  }
+
   // Special handling for PropertyIQ scores - use paginated endpoint
   if (config.dataSource === 'propertyiq') {
     return fetchPropertyIQScoreData(metricId, geoLevel, config, options);

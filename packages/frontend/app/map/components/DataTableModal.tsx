@@ -36,6 +36,8 @@ function formatValue(value: number | null, format: MetricFormat): string {
         case 'days':
             return `${Math.round(value)} days`;
         case 'index':
+            return value.toFixed(0);
+        case 'index_1dec':
             return value.toFixed(1);
         default:
             return value.toLocaleString();

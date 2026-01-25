@@ -38,6 +38,7 @@ export const METRIC_GEO_AVAILABILITY: MetricAvailabilityMap = {
     tract: true,
   },
   cost_of_living: {
+    national: true,
     state: true,
     metro: true,
     tract: true,

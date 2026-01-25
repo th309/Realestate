@@ -117,6 +117,8 @@ export function formatValue(
       return value.toLocaleString('en-US') + ' days';
     case 'index':
       return value.toFixed(0) + suffix;
+    case 'index_1dec':
+      return value.toFixed(1) + suffix;
     case 'currency':
     default:
       if (value >= CURRENCY_SCALES.MILLION) {
@@ -155,6 +157,10 @@ export function formatTooltipValue(
       break;
     case 'index':
       displayValue = value > 0 ? value.toFixed(0) : 'No data';
+      valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
+      break;
+    case 'index_1dec':
+      displayValue = value > 0 ? value.toFixed(1) : 'No data';
       valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
       break;
     case 'number':

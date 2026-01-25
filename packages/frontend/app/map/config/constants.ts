@@ -44,6 +44,7 @@ export const DEFAULT_VALUE_RANGES = {
   days: { min: 0, max: 90 },
   number: { min: 0, max: 10000 },
   index: { min: 0, max: 100 },
+  index_1dec: { min: 0, max: 100 },
   currency: { min: 100000, max: 800000 },
 } as const;
 

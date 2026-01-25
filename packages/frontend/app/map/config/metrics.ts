@@ -52,7 +52,7 @@ export function getDefaultZoom(geoLevel: GeoLevel): number {
 }
 
 // Display format types
-export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'days';
+export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | 'index' | 'index_1dec' | 'days';
 
 // Data source types
 export type DataSource = 'zillow' | 'realtor' | 'calculated' | 'census' | 'fred';
@@ -737,11 +737,11 @@ export const METRICS: Record<string, MetricConfig> = {
   cost_of_living: {
     id: 'cost_of_living',
     title: 'Cost of Living',
-    format: 'index',
+    format: 'index_1dec',
     dataSource: 'fred',
     apiEndpoint: '/api/economic/cost-of-living/{geo}',
     keyField: 'auto',
-    supportedGeos: ['state', 'metro'],
+    supportedGeos: ['national', 'state', 'metro'],
     rangeType: 'full',
   },
 
