@@ -455,6 +455,61 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'cap_rate',
   },
 
+  gross_yield: {
+    id: 'gross_yield',
+    title: 'Gross Yield',
+    format: 'percent_abs',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/gross-yield/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'gross_yield',
+  },
+
+  grm: {
+    id: 'grm',
+    title: 'Gross Rent Multiplier',
+    format: 'number',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/grm/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'grm',
+  },
+
+  rent_to_price_ratio: {
+    id: 'rent_to_price_ratio',
+    title: 'Rent-to-Price Ratio',
+    format: 'percent',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/rent-to-price/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'rent_to_price_ratio',
+  },
+
+  investment_score: {
+    id: 'investment_score',
+    title: 'Investment Score',
+    format: 'number',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/investment-score/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'investment_score',
+  },
+
+  long_term_growth_score: {
+    id: 'long_term_growth_score',
+    title: 'Long-Term Growth Score',
+    format: 'number',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/long-term-growth/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'long_term_growth_score',
+  },
+
   overvalued_pct: {
     id: 'overvalued_pct',
     title: 'Overvalued %',
@@ -688,6 +743,42 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['state', 'metro'],
     rangeType: 'full',
+  },
+
+  // ============================================================================
+  // PROPERTYIQ SCORES (from propertyiq_scores table)
+  // ============================================================================
+  homeready_score: {
+    id: 'homeready_score',
+    title: 'HomeReady Score',
+    format: 'number',
+    dataSource: 'propertyiq',
+    apiEndpoint: '/api/scores/{geo}/{location_id}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'homeready_score',
+  },
+
+  investoredge_score: {
+    id: 'investoredge_score',
+    title: 'InvestorEdge Score',
+    format: 'number',
+    dataSource: 'propertyiq',
+    apiEndpoint: '/api/scores/{geo}/{location_id}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'investoredge_score',
+  },
+
+  market_health_score: {
+    id: 'market_health_score',
+    title: 'Market Health Score',
+    format: 'number',
+    dataSource: 'propertyiq',
+    apiEndpoint: '/api/scores/{geo}/{location_id}',
+    keyField: 'auto',
+    supportedGeos: ['metro', 'county', 'zip'],
+    valueField: 'market_health_score',
   },
 };
 

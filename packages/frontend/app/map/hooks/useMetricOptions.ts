@@ -181,31 +181,35 @@ export function useMetricCategories(): { label: string; value: string }[] {
  * Get all metrics matching sidebar order (for main metric dropdown)
  */
 export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
-    // Master ordered list matching map page sidebar
-    const ORDERED_IDS = [
-        // Affordability
-        'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
-        'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
-        // Market Competition
-        'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
-        'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
-        // Pricing & Deals
-        'home_value_mom', 'home_price_forecast', 'price_cut_pct', 'price_increase_pct',
-        'new_listings', 'inventory_surplus',
-        // Cash Flow
-        'cap_rate', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',
-        // Appreciation
-        'home_value', 'overvalued_pct',
-        // Demand & Risk
-        'demand_score', 'supply_score',
-        // Area Profile
-        'population', 'population_growth', 'median_income', 'income_growth',
-        'median_age', 'homeownership_rate',
-        // Local Economy
-        'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
-        // New Construction
-        'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
-    ];
+  // Master ordered list matching map page sidebar
+  const ORDERED_IDS = [
+    // Affordability
+    'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
+    'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
+    // Market Competition
+    'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
+    'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
+    // Pricing & Deals
+    'home_value_mom', 'home_price_forecast', 'price_cut_pct', 'price_increase_pct',
+    'new_listings', 'inventory_surplus',
+    // Cash Flow
+    'cap_rate', 'gross_yield', 'grm', 'rent_to_price_ratio', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',
+    // Appreciation
+    'home_value', 'overvalued_pct',
+    // Investment Scores
+    'investment_score', 'long_term_growth_score',
+    // Demand & Risk
+    'demand_score', 'supply_score',
+    // Area Profile
+    'population', 'population_growth', 'median_income', 'income_growth',
+    'median_age', 'homeownership_rate',
+    // Local Economy
+    'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
+    // New Construction
+    'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
+    // PropertyIQ Scores
+    'homeready_score', 'investoredge_score', 'market_health_score',
+  ];
 
     const options = useMemo(() => {
         const result: MetricOption[] = [];

@@ -74,7 +74,12 @@ export class TimeSeriesService {
 
     try {
       // Census tables use 'year' field, others use 'period_date'
-      const dateField = mapping.source === 'census' ? 'year' : 'period_date';
+      // PropertyIQ scores use 'score_date'
+      const dateField = mapping.source === 'census' 
+        ? 'year' 
+        : mapping.source === 'propertyiq'
+        ? 'score_date'
+        : 'period_date';
 
       // Build and execute query
       let query = this.supabase
@@ -85,8 +90,19 @@ export class TimeSeriesService {
       // Add region filter
       query = this.addRegionFilter(query, geoLevel, regionId, mapping.source);
 
+      // For calculated metrics, filter out null values
+      if (mapping.source === 'calculated') {
+        query = query.not(mapping.columnName, 'is', null);
+      }
+
+      // For PropertyIQ scores, filter by score_type and exclude null values
+      if (mapping.source === 'propertyiq') {
+        query = query.eq('score_type', mapping.metricNameValue);
+        query = query.not(mapping.columnName, 'is', null);
+      }
+
       // For Zillow tables, add metric_name filter
-      if (mapping.usesMetricName) {
+      if (mapping.usesMetricName && mapping.source === 'zillow') {
         query = query.eq('metric_name', mapping.metricNameValue);
       }
 
@@ -136,6 +152,7 @@ export class TimeSeriesService {
       // Transform to standard format
       const result = data.map((row) => ({
         // Convert year to date string: 2023 -> "2023-01-01"
+        // PropertyIQ scores already use date strings
         date:
           mapping.source === 'census'
             ? `${row[dateField]}-01-01`
@@ -211,6 +228,7 @@ export class TimeSeriesService {
    * - Zillow: region_name (for state/city/zip), cbsa_code, fips_code
    * - Census: state_name, cbsa_code, fips_code, zcta, place_name
    * - Economic: state_name, cbsa_code, fips_code
+   * - Calculated: geography_id, geography_name, geography_type
    */
   private addRegionFilter(
     query: any,
@@ -219,6 +237,96 @@ export class TimeSeriesService {
     source: string,
   ) {
     const level = geoLevel.toLowerCase();
+
+    // Handle calculated_metrics table (uses geography_id and geography_type)
+    if (source === 'calculated') {
+      // First, add geography_type filter
+      query = query.eq('geography_type', level);
+
+      switch (level) {
+        case 'national':
+          // National uses geography_id = 'US' or geography_name = 'United States'
+          if (regionId === 'United States' || regionId === 'US') {
+            return query.or('geography_id.eq.US,geography_name.ilike.United States');
+          }
+          return query.eq('geography_id', regionId);
+
+        case 'state':
+          // States: geography_id is state name or state code, geography_name is full name
+          if (regionId.length === 2) {
+            // State code (e.g., "FL")
+            return query.eq('geography_id', regionId.toUpperCase());
+          }
+          // State name (e.g., "Florida") - try geography_id first, then geography_name
+          // Use ilike for case-insensitive matching
+          return query.or(`geography_id.ilike.${regionId},geography_name.ilike.${regionId}`);
+
+        case 'metro':
+          // Metros: If numeric, use geography_id (CBSA code), otherwise match geography_name
+          if (/^\d+$/.test(regionId)) {
+            return query.eq('geography_id', regionId);
+          }
+          // Match by geography_name with ILIKE for fuzzy matching
+          // e.g., "Miami-Fort Lauderdale" matches "Miami-Fort Lauderdale-Pompano Beach, FL"
+          return query.ilike('geography_name', `${regionId}%`);
+
+        case 'county':
+          // Counties: If numeric (FIPS), use geography_id, otherwise match geography_name
+          if (/^\d+$/.test(regionId)) {
+            return query.eq('geography_id', regionId);
+          }
+          // Parse "County, State" format if present
+          const countyParts = regionId.split(',').map(s => s.trim());
+          const countyName = countyParts[0];
+          return query.ilike('geography_name', `${countyName}%`);
+
+        case 'zip':
+          // ZIPs: geography_id is the ZIP code
+          return query.eq('geography_id', regionId);
+
+        case 'city':
+          // Cities: match by geography_name
+          const cityParts = regionId.split(',').map(s => s.trim());
+          const cityName = cityParts[0];
+          return query.ilike('geography_name', `${cityName}%`);
+
+        default:
+          return query.eq('geography_id', regionId);
+      }
+    }
+
+    // Handle propertyiq_scores table (uses location_id, location_name, geography, score_type)
+    if (source === 'propertyiq') {
+      // Add geography filter (propertyiq_scores uses 'geography' column, not 'geography_type')
+      query = query.eq('geography', level);
+
+      switch (level) {
+        case 'metro':
+          // If regionId is numeric (CBSA code), use location_id, otherwise match location_name
+          if (/^\d+$/.test(regionId)) {
+            return query.eq('location_id', regionId);
+          }
+          // Match by location_name with ILIKE for fuzzy matching
+          return query.ilike('location_name', `${regionId}%`);
+
+        case 'county':
+          // If regionId is numeric (FIPS code), use location_id, otherwise match location_name
+          if (/^\d+$/.test(regionId)) {
+            return query.eq('location_id', regionId);
+          }
+          // Parse "County, State" format if present
+          const countyParts = regionId.split(',').map(s => s.trim());
+          const countyName = countyParts[0];
+          return query.ilike('location_name', `${countyName}%`);
+
+        case 'zip':
+          // ZIPs: location_id is the ZIP code
+          return query.eq('location_id', regionId);
+
+        default:
+          return query.eq('location_id', regionId);
+      }
+    }
 
     switch (level) {
       case 'national':
@@ -365,6 +473,10 @@ export class TimeSeriesService {
 
     if (source === 'calculated') {
       return 'calculated_metrics';
+    }
+
+    if (source === 'propertyiq') {
+      return 'propertyiq_scores';
     }
 
     return null;
@@ -604,10 +716,84 @@ export class TimeSeriesService {
         columnName: 'rpp_all_items',
         usesMetricName: false,
       },
+      // ========================================================================
+      // CALCULATED METRICS (from calculated_metrics table)
+      // ========================================================================
       cap_rate: {
-        source: 'calculated', // We need to handle 'calculated' source in getTableName
+        source: 'calculated',
         columnName: 'cap_rate',
         usesMetricName: false,
+      },
+      income_to_buy: {
+        source: 'calculated',
+        columnName: 'income_to_buy',
+        usesMetricName: false,
+      },
+      years_to_save: {
+        source: 'calculated',
+        columnName: 'years_to_save',
+        usesMetricName: false,
+      },
+      affordable_home_price: {
+        source: 'calculated',
+        columnName: 'affordable_home_price',
+        usesMetricName: false,
+      },
+      gross_yield: {
+        source: 'calculated',
+        columnName: 'gross_yield',
+        usesMetricName: false,
+      },
+      grm: {
+        source: 'calculated',
+        columnName: 'grm',
+        usesMetricName: false,
+      },
+      rent_to_price_ratio: {
+        source: 'calculated',
+        columnName: 'rent_to_price_ratio',
+        usesMetricName: false,
+      },
+      investment_score: {
+        source: 'calculated',
+        columnName: 'investment_score',
+        usesMetricName: false,
+      },
+      long_term_growth_score: {
+        source: 'calculated',
+        columnName: 'long_term_growth_score',
+        usesMetricName: false,
+      },
+      overvalued_pct: {
+        source: 'calculated',
+        columnName: 'overvalued_pct',
+        usesMetricName: false,
+      },
+      inventory_surplus: {
+        source: 'calculated',
+        columnName: 'inventory_surplus_pct',
+        usesMetricName: false,
+      },
+      // ========================================================================
+      // PROPERTYIQ SCORES (from propertyiq_scores table)
+      // ========================================================================
+      homeready_score: {
+        source: 'propertyiq',
+        columnName: 'score',
+        usesMetricName: true,
+        metricNameValue: 'homeready',
+      },
+      investoredge_score: {
+        source: 'propertyiq',
+        columnName: 'score',
+        usesMetricName: true,
+        metricNameValue: 'investoredge',
+      },
+      market_health_score: {
+        source: 'propertyiq',
+        columnName: 'score',
+        usesMetricName: true,
+        metricNameValue: 'markethealth',
       },
     };
 
