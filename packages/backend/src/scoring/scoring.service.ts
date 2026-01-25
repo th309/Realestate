@@ -173,14 +173,26 @@ export class ScoringService {
     if (historyMonths <= 0) return result;
 
     const dates = await this.getScoreDates(geography, historyMonths + 1);
-    if (!dates.length || dates[0] !== targetDate) return result;
+    if (!dates.length || dates[0] !== targetDate) {
+      if (historyMonths > 0) {
+        console.debug(
+          `[Scoring] trend skipped: no history (dates=${dates.length}, target=${targetDate}) ${geography}/${locationId}`,
+        );
+      }
+      return result;
+    }
 
     const historyByDate: Array<{ date: string; result: ScoreResult }> = [];
     for (const d of dates) {
       const r = await this.getScoreForDate(locationId, geography, d);
       if (r) historyByDate.push({ date: d, result: r });
     }
-    if (historyByDate.length < 2) return result;
+    if (historyByDate.length < 2) {
+      console.debug(
+        `[Scoring] trend skipped: need 2+ dates with data, got ${historyByDate.length} ${geography}/${locationId}`,
+      );
+      return result;
+    }
 
     const scores = result.scores;
     const priorResult = historyByDate[1]?.result;

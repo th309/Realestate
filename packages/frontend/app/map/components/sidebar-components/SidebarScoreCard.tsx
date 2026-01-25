@@ -91,13 +91,13 @@ export function SidebarScoreCard({
     setActiveIndex((prev) => (prev === SCORE_ORDER.length - 1 ? 0 : prev + 1));
   };
 
-  // Calculate trend display (same approach as Market Factors: always show arrow when we have a score)
+  // Show trend arrow only when we have real trend data from API (not when missing/no history)
   const trendDirection = currentScore?.trend !== undefined
     ? getTrendDirection(currentScore.trend)
     : 'flat';
   const trendValue = currentScore?.trend !== undefined
     ? formatTrendValue(currentScore.trend, 'points')
-    : '0.0 pts';
+    : '--';
 
   return (
     <div

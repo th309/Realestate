@@ -15,8 +15,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
-import { formatValue, getMetricFormat } from '../../utils/metricUtils';
-import { useTrendSparklines } from '../../hooks/useTrendSparklines';
+import { useMarketFactorsData } from '../../hooks/useMarketFactorsData';
 import type { AllScoresResponse, ScoreType } from '../../hooks/useScoreData';
 import { ScoreGaugeCard } from './ScoreGaugeCard';
 import { SideScoreCard } from './SideScoreCard';
@@ -77,23 +76,12 @@ export function RightDetailPanel({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const metricIds = useMemo(() => [...new Set(marketFactors.map(f => f.metricId))], [marketFactors]);
-  const { sparklines, loading: factorsLoading } = useTrendSparklines(
+  const { data: factorsData, loading: factorsLoading, error: factorsError } = useMarketFactorsData(
     metricIds,
     geoLevel,
     geography?.id ?? null,
     { months: 3, enabled: isOpen && !!geography }
   );
-  const metricData = useMemo(() => {
-    const out: Record<string, { value: number | null; trend: number | null; sparklineData: number[] }> = {};
-    for (const id of metricIds) {
-      const s = sparklines[id];
-      const data = s?.data ?? [];
-      const value = data.length > 0 ? data[data.length - 1] : null;
-      const trend = s?.percentChange ?? null;
-      out[id] = { value, trend, sparklineData: data };
-    }
-    return out;
-  }, [metricIds, sparklines]);
 
   // Sync selected score with viewMode when it changes externally
   useEffect(() => {
@@ -155,11 +143,6 @@ export function RightDetailPanel({
       }
     }
     return 'medium';
-  };
-
-  const formatMetricValue = (metricId: string, value: number | null | undefined) => {
-    if (value === null || value === undefined) return '--';
-    return formatValue(value, getMetricFormat(metricId));
   };
 
   if (!isOpen || !geography) return null;
@@ -240,6 +223,9 @@ export function RightDetailPanel({
               <div>
                 <h4 className="text-sm font-bold text-on-surface">Market Factors</h4>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">Key elements influencing the score</p>
+                {factorsError && (
+                  <p className="text-[10px] text-red-600 mt-1" title={factorsError}>Data unavailable — check network or backend.</p>
+                )}
               </div>
               <button
                 onClick={() => setIsModalOpen(true)}
@@ -251,22 +237,19 @@ export function RightDetailPanel({
 
             <div className="grid grid-cols-2 gap-2">
               {marketFactors.map((factor) => {
-                const data = metricData[factor.metricId];
-                const trendDirection = data?.trend != null
-                  ? (data.trend > 0.5 ? 'up' : data.trend < -0.5 ? 'down' : 'stable')
-                  : 'stable';
+                const datum = factorsData[factor.metricId];
 
                 return (
                   <div key={factor.id} className="bg-surface rounded-xl p-3 border border-outline-variant flex items-center gap-2">
                     {/* Trend icon */}
                     <div className={`flex-shrink-0 ${
-                      trendDirection === 'up' ? 'text-green-600' :
-                      trendDirection === 'down' ? 'text-red-500' :
+                      datum?.trendDirection === 'up' ? 'text-green-600' :
+                      datum?.trendDirection === 'down' ? 'text-red-500' :
                       'text-on-surface-variant'
                     }`}>
-                      {trendDirection === 'up' ? (
+                      {datum?.trendDirection === 'up' ? (
                         <TrendUpSmallIcon />
-                      ) : trendDirection === 'down' ? (
+                      ) : datum?.trendDirection === 'down' ? (
                         <TrendDownSmallIcon />
                       ) : (
                         <TrendFlatIcon />
@@ -277,10 +260,10 @@ export function RightDetailPanel({
                         {factor.label}
                       </span>
                       <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
-                        {factorsLoading ? '...' : formatMetricValue(factor.metricId, data?.value)}
-                        {data?.trend != null && typeof data.trend === 'number' && (
-                          <span className={`text-[9px] font-normal ml-1 ${data.trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {data.trend >= 0 ? '+' : ''}{data.trend.toFixed(0)}%
+                        {factorsLoading ? '...' : (datum?.formattedValue ?? '--')}
+                        {datum?.trendPercent != null && (
+                          <span className={`text-[9px] font-normal ml-1 ${datum.trendPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {datum.trendPercent >= 0 ? '+' : ''}{datum.trendPercent.toFixed(0)}%
                           </span>
                         )}
                       </p>

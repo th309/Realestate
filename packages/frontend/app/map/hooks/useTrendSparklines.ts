@@ -104,7 +104,8 @@ export function useTrendSparklines(
             } else {
               results[metricId] = { data: [], percentChange: null, direction: 'stable' };
             }
-          } catch {
+          } catch (err) {
+            console.warn(`[useTrendSparklines] ${metricId} (${geoLevel}/${regionId}):`, err);
             results[metricId] = { data: [], percentChange: null, direction: 'stable' };
           }
         })

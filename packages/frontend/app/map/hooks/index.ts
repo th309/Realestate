@@ -10,4 +10,5 @@ export * from './useMetricData';
 export * from './useDataCard';
 export * from './useMetricOptions';
 export * from './useScoreData';
+export * from './useMarketFactorsData';
 export * from './useTrendSparklines';

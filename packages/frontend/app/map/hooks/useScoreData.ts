@@ -82,7 +82,8 @@ export interface ScoreBadgeData {
   label: string;
   score: number | null;
   trend: TrendDirection;
-  trendChange: number;
+  /** 3-month change in points; undefined when backend has no history (single score_date) */
+  trendChange?: number;
   access: ScoreAccess;
   status: 'complete' | 'partial' | 'unavailable';
   statusMessage?: string;
@@ -228,8 +229,16 @@ export function useScoreData(
           confidence: { level: 'insufficient', percentage: 0 }
         };
 
-        const trendChange = data.trend_change != null ? Number(data.trend_change) : 0;
-        const trendDir: 'up' | 'down' | 'stable' = trendChange > 0.01 ? 'up' : trendChange < -0.01 ? 'down' : 'stable';
+        // Leave trendChange undefined when API didn't send it (e.g. only one score_date in DB) so UI shows "--" not "0.0 pts"
+        const trendChange = data.trend_change != null ? Number(data.trend_change) : undefined;
+        const trendDir: 'up' | 'down' | 'stable' =
+          trendChange != null
+            ? trendChange > 0.01
+              ? 'up'
+              : trendChange < -0.01
+                ? 'down'
+                : 'stable'
+            : 'stable';
 
         const out: any = {
           type,
