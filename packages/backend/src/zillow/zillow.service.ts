@@ -438,11 +438,24 @@ export class ZillowService {
   // ============================================================================
 
   async getMetroForecast(horizon: string = '12m'): Promise<ForecastData[]> {
-    // Use cached latest date for forecast data
-    const latestDate = await getLatestDate(this.supabase, 'metro', 'zhvf_12m');
-    console.log(`[ZHVF Metro] Latest date for zhvf_12m: ${latestDate}, horizon: ${horizon}`);
-    if (!latestDate) {
-      console.log('[ZHVF Metro] No latest date found, returning empty');
+    // Find latest date across ALL forecast horizons (zhvf_1m, zhvf_3m, zhvf_12m)
+    // This ensures we get data even if one horizon has a different date
+    const latestDates = await Promise.all([
+      getLatestDate(this.supabase, 'metro', 'zhvf_1m'),
+      getLatestDate(this.supabase, 'metro', 'zhvf_3m'),
+      getLatestDate(this.supabase, 'metro', 'zhvf_12m'),
+    ]);
+    
+    // Use the most recent date across all horizons (excluding fallback dates)
+    const validDates = latestDates.filter(date => date && date !== '2025-10-31');
+    const latestDate = validDates.length > 0
+      ? validDates.sort().reverse()[0] // Most recent valid date
+      : latestDates.find(date => date) || null; // Fallback to any date if all are fallback
+    
+    console.log(`[ZHVF Metro] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`);
+    
+    if (!latestDate || latestDate === '2025-10-31') {
+      console.log('[ZHVF Metro] No valid latest date found (all dates are fallback or null), returning empty');
       return [];
     }
 
@@ -546,14 +559,53 @@ export class ZillowService {
 
     // Filter out records without cbsa_code - they can't be displayed on the map
     // The map GeoJSON uses CBSA codes as keys, so records without cbsa_code won't match
+    // Also filter out records where the selected horizon value is null (but allow 0 as valid)
     const result = [...byRegion.values()]
-      .filter((f) => f.cbsa_code) // Only include records with cbsa_code
+      .filter((f) => {
+        // Must have cbsa_code
+        if (!f.cbsa_code) return false;
+        // Must have a non-null value for the selected horizon (0 is valid, null is not)
+        const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
+        const horizonValue = f[horizonField];
+        return horizonValue != null;
+      })
       .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
       .sort(
         (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
       );
 
-    console.log(`[ZHVF Metro] Returning ${result.length} unique metros (filtered to only those with cbsa_code)`);
+    console.log(`[ZHVF Metro] Returning ${result.length} unique metros (filtered to only those with cbsa_code and valid ${horizon} forecast)`);
+    if (result.length === 0) {
+      console.log('[ZHVF Metro] WARNING: No records returned. Diagnostic info:');
+      console.log(`  - Latest date used: ${latestDate}`);
+      console.log(`  - Horizon requested: ${horizon}`);
+      console.log(`  - Total forecast records fetched from DB: ${allForecasts.length}`);
+      console.log(`  - Unique regions after grouping: ${byRegion.size}`);
+      const regionsWithCbsa = [...byRegion.values()].filter(r => r.cbsa_code);
+      console.log(`  - Regions with cbsa_code: ${regionsWithCbsa.length}`);
+      const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
+      const regionsWithHorizonValue = [...byRegion.values()].filter(r => r[horizonField] != null);
+      console.log(`  - Regions with non-null ${horizonField}: ${regionsWithHorizonValue.length}`);
+      if (byRegion.size > 0) {
+        const sampleRegion = [...byRegion.values()][0];
+        console.log(`  - Sample region:`, {
+          region_id: sampleRegion.region_id,
+          region_name: sampleRegion.region_name,
+          cbsa_code: sampleRegion.cbsa_code,
+          forecast_1m: sampleRegion.forecast_1m,
+          forecast_3m: sampleRegion.forecast_3m,
+          forecast_12m: sampleRegion.forecast_12m,
+        });
+      }
+      if (regionsWithCbsa.length > 0 && regionsWithHorizonValue.length === 0) {
+        const sampleWithCbsa = regionsWithCbsa[0];
+        console.log(`  - Sample region WITH cbsa_code but missing ${horizonField}:`, {
+          region_id: sampleWithCbsa.region_id,
+          cbsa_code: sampleWithCbsa.cbsa_code,
+          [horizonField]: sampleWithCbsa[horizonField],
+        });
+      }
+    }
     return result;
   }
 
@@ -561,9 +613,25 @@ export class ZillowService {
     stateFilter?: string,
     horizon: string = '12m',
   ): Promise<ForecastData[]> {
-    // Use cached latest date for forecast data
-    const latestDate = await getLatestDate(this.supabase, 'zip', 'zhvf_12m');
-    if (!latestDate) return [];
+    // Find latest date across ALL forecast horizons (zhvf_1m, zhvf_3m, zhvf_12m)
+    const latestDates = await Promise.all([
+      getLatestDate(this.supabase, 'zip', 'zhvf_1m'),
+      getLatestDate(this.supabase, 'zip', 'zhvf_3m'),
+      getLatestDate(this.supabase, 'zip', 'zhvf_12m'),
+    ]);
+    
+    // Use the most recent date across all horizons (excluding fallback dates)
+    const validDates = latestDates.filter(date => date && date !== '2025-10-31');
+    const latestDate = validDates.length > 0
+      ? validDates.sort().reverse()[0] // Most recent valid date
+      : latestDates.find(date => date) || null; // Fallback to any date if all are fallback
+    
+    console.log(`[ZHVF Zip] Latest dates: 1m=${latestDates[0]}, 3m=${latestDates[1]}, 12m=${latestDates[2]}, using=${latestDate}, horizon=${horizon}`);
+    
+    if (!latestDate || latestDate === '2025-10-31') {
+      console.log('[ZHVF Zip] No valid latest date found (all dates are fallback or null), returning empty');
+      return [];
+    }
 
     // Query all forecast metrics for that date with pagination
     const allForecasts: any[] = [];
@@ -599,7 +667,11 @@ export class ZillowService {
       page++;
     }
 
-    if (allForecasts.length === 0) return [];
+    console.log(`[ZHVF Zip] Fetched ${allForecasts.length} forecast records`);
+    if (allForecasts.length === 0) {
+      console.log('[ZHVF Zip] No records found, returning empty');
+      return [];
+    }
     const forecasts = allForecasts;
 
     // Group by region_id to combine forecast metrics
@@ -624,11 +696,22 @@ export class ZillowService {
       if (f.metric_name === 'zhvf_12m') entry.forecast_12m = f.value;
     }
 
-    return [...byRegion.values()]
+    const result = [...byRegion.values()]
+      .filter((f) => {
+        // Must have a non-null value for the selected horizon (0 is valid, null is not)
+        const horizonField = horizon === '1m' ? 'forecast_1m' : horizon === '3m' ? 'forecast_3m' : 'forecast_12m';
+        return f[horizonField] != null;
+      })
       .map((f) => ({ ...f, value: getForecastValue(f, horizon) }))
       .sort(
         (a, b) => getForecastValue(b, horizon) - getForecastValue(a, horizon),
       );
+
+    console.log(`[ZHVF Zip] Returning ${result.length} unique ZIPs (filtered to only those with valid ${horizon} forecast)`);
+    if (result.length === 0 && allForecasts.length > 0) {
+      console.log(`[ZHVF Zip] WARNING: Filtered out all ${allForecasts.length} records. Check horizon field values.`);
+    }
+    return result;
   }
 
   // ============================================================================

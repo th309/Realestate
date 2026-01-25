@@ -234,14 +234,33 @@ export const api = {
   // ZHVF Forecast endpoints - returns forecast % growth values
   // horizon: '1m' | '3m' | '12m' - which forecast horizon to use
   getMetroForecast: async (horizon: string = '12m'): Promise<MetroHomeValues> => {
-    const response = await fetchAPI<ZillowForecastResponse>(`/api/zillow/forecast/metros?horizon=${horizon}`);
+    const url = `/api/zillow/forecast/metros?horizon=${horizon}`;
+    console.log('[API] Fetching metro forecast:', { url, horizon });
+    const response = await fetchAPI<ZillowForecastResponse>(url);
+    console.log('[API] Metro forecast response:', {
+      success: response.success,
+      count: response.count,
+      dataLength: response.data?.length,
+      sampleItem: response.data?.[0],
+    });
     // Use CBSA code to match GeoJSON
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
       const key = item.cbsa_code || item.region_id;
       if (key && item.value != null) {
         result[key] = Number(item.value);
+      } else {
+        console.warn('[API] Skipping forecast item:', {
+          cbsa_code: item.cbsa_code,
+          region_id: item.region_id,
+          value: item.value,
+          region_name: item.region_name,
+        });
       }
+    });
+    console.log('[API] Metro forecast transformed:', {
+      resultKeys: Object.keys(result).length,
+      sampleKeys: Object.keys(result).slice(0, 5),
     });
     return result;
   },
