@@ -1421,7 +1421,7 @@ export class CalculatedMetricsService {
     // Get ZHVI data (property value) for all counties
     const { data: zhviData } = await this.supabase
       .from('zillow_county')
-      .select('region_id, value, fips_code')
+      .select('region_id, region_name, value, fips_code')
       .eq('metric_name', 'zhvi')
       .eq('period_date', targetDate)
       .not('value', 'is', null);
