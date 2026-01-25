@@ -129,6 +129,7 @@ class WorkflowService:
         started_at = datetime.utcnow()
         metrics = {}
         outputs = []
+        errors = []
 
         try:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
@@ -136,39 +137,55 @@ class WorkflowService:
             # Sync cache for each geography type
             logger.info("Syncing data cache for all geography types...")
             sync_results = {}
+            total_records = 0
             
             for geo_type in geography_types:
                 logger.info(f"Syncing cache for {geo_type}...")
-                result = self.cache.sync_cache(geo_type, force_full=False)
-                sync_results[geo_type] = result
-                
-                if result.get('success'):
-                    outputs.append(f"{geo_type}: {result.get('total_records', 0)} records")
+                try:
+                    result = self.cache.sync_cache(geo_type, force_full=False)
+                    sync_results[geo_type] = result
+                    
+                    if result.get('success') and result.get('total_records', 0) > 0:
+                        total_records += result.get('total_records', 0)
+                        outputs.append(f"{geo_type}: {result.get('total_records', 0)} records")
+                    elif result.get('error'):
+                        errors.append(f"{geo_type}: {result.get('error')}")
+                    else:
+                        errors.append(f"{geo_type}: No data fetched")
+                except Exception as geo_err:
+                    logger.error(f"Failed to sync {geo_type}: {geo_err}")
+                    sync_results[geo_type] = {"success": False, "error": str(geo_err)}
+                    errors.append(f"{geo_type}: {str(geo_err)}")
             
             metrics["sync_results"] = sync_results
-            
-            # Get overall cache status
-            cache_status = self.cache.get_cache_status()
-            metrics["cache_status"] = cache_status
-            
-            # Calculate totals
-            total_records = sum(
-                cache_status.get('caches', {}).get(geo, {}).get('record_count', 0)
-                for geo in geography_types
-            )
             metrics["total_records_cached"] = total_records
             
-            metrics["status"] = "success"
+            # Get overall cache status
+            try:
+                cache_status = self.cache.get_cache_status()
+                metrics["cache_status"] = cache_status
+            except Exception as cache_err:
+                logger.warning(f"Could not get cache status: {cache_err}")
+            
+            # Determine success - need at least some data
+            success = total_records > 0
+            
+            if success:
+                metrics["status"] = "success"
+            else:
+                metrics["status"] = "failed"
+                metrics["errors"] = errors
             
             completed_at = datetime.utcnow()
             return StepResult(
-                success=True,
+                success=success,
                 step_id=step_id,
                 started_at=started_at,
                 completed_at=completed_at,
                 duration_seconds=(completed_at - started_at).total_seconds(),
                 outputs=outputs,
-                metrics=metrics
+                metrics=metrics,
+                error="; ".join(errors) if not success else None
             )
 
         except Exception as e:

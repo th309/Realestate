@@ -198,39 +198,47 @@ class DataCache:
         all_data = []
         offset = 0
         
-        logger.info(f"Fetching full dataset for {geo_type}...")
+        logger.info(f"fetch_full_dataset: Starting for {geo_type}, columns={columns}")
+        logger.info(f"fetch_full_dataset: Supabase URL configured: {bool(self.settings.supabase_url)}")
         
         while True:
             logger.info(f"  Batch at offset {offset}...")
             
             try:
                 # Build query step by step for supabase-py v2 compatibility
+                logger.info(f"  Building query for table 'propertyiq_scores_history'")
                 query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
                 query = query.eq('geography_type', geo_type)
                 query = query.order('period_date', desc=False)
                 query = query.range(offset, offset + batch_size - 1)
+                
+                logger.info(f"  Executing query...")
                 response = query.execute()
+                logger.info(f"  Query executed, response.data has {len(response.data) if response.data else 0} items")
+                
             except Exception as e:
-                logger.error(f"Error fetching batch at offset {offset}: {e}")
+                logger.error(f"Error fetching batch at offset {offset}: {e}", exc_info=True)
                 break
             
             if not response.data:
+                logger.info(f"  No more data at offset {offset}, stopping")
                 break
             
             all_data.extend(response.data)
             logger.info(f"  Fetched {len(response.data)} records (total: {len(all_data)})")
             
             if len(response.data) < batch_size:
+                logger.info(f"  Got {len(response.data)} < batch_size {batch_size}, this is the last batch")
                 break
             
             offset += batch_size
         
         if not all_data:
-            logger.warning(f"No data found for {geo_type}")
+            logger.warning(f"fetch_full_dataset: No data found for {geo_type}")
             return pd.DataFrame()
         
         df = pd.DataFrame(all_data)
-        logger.info(f"Total: {len(df)} records for {geo_type}")
+        logger.info(f"fetch_full_dataset: Total {len(df)} records for {geo_type}")
         return df
 
     def fetch_incremental(
@@ -324,26 +332,38 @@ class DataCache:
         }
         
         try:
+            logger.info(f"sync_cache called for {geo_type}, force_full={force_full}, is_cached={self.is_cached(geo_type)}")
+            
             if force_full or not self.is_cached(geo_type):
                 # Full fetch
                 result['action'] = 'full_fetch'
+                logger.info(f"Performing full fetch for {geo_type}...")
+                
                 df = self.fetch_full_dataset(geo_type)
+                logger.info(f"fetch_full_dataset returned {len(df)} records for {geo_type}")
                 
                 if len(df) > 0:
                     self.save_to_cache(geo_type, df)
                     result['records_fetched'] = len(df)
                     result['total_records'] = len(df)
                     result['success'] = True
+                    logger.info(f"Successfully cached {len(df)} records for {geo_type}")
+                else:
+                    result['error'] = f"No data returned from database for {geo_type}"
+                    logger.warning(f"No data returned from database for {geo_type}")
             else:
                 # Incremental fetch
                 result['action'] = 'incremental'
+                logger.info(f"Performing incremental fetch for {geo_type}...")
                 
                 # Load existing cache
                 cached_df = self.load_from_cache(geo_type)
+                logger.info(f"Loaded {len(cached_df) if cached_df is not None else 0} existing records for {geo_type}")
                 
                 # Fetch new records
                 new_df = self.fetch_incremental(geo_type)
                 result['records_fetched'] = len(new_df)
+                logger.info(f"Fetched {len(new_df)} new records for {geo_type}")
                 
                 if len(new_df) > 0:
                     # Combine and save
@@ -362,9 +382,10 @@ class DataCache:
                 result['success'] = True
                 
         except Exception as e:
-            logger.error(f"Cache sync failed for {geo_type}: {e}")
+            logger.error(f"Cache sync failed for {geo_type}: {e}", exc_info=True)
             result['error'] = str(e)
         
+        logger.info(f"sync_cache result for {geo_type}: {result}")
         return result
 
     def sync_all(self, force_full: bool = False) -> Dict[str, Any]:
