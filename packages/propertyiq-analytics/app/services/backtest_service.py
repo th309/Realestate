@@ -6,6 +6,8 @@ benchmark-beating performance across multiple time horizons.
 
 Key validation: High scores should outperform benchmarks,
                Low scores should underperform benchmarks.
+
+Uses DataCache for efficient access to full historical dataset.
 """
 
 import logging
@@ -21,6 +23,7 @@ from supabase import create_client, Client
 from app.config import get_settings
 from app.models.requests import BacktestRequest
 from app.models.responses import BacktestResponse, BacktestMetrics
+from app.services.data_cache import get_data_cache, DataCache
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +72,7 @@ class BacktestAnalysisResult:
     total_observations: int
     date_range_start: str
     date_range_end: str
+    data_source: str = "database"  # 'cache' or 'database'
 
 
 class BacktestService:
@@ -77,6 +81,7 @@ class BacktestService:
     def __init__(self):
         self.settings = get_settings()
         self._supabase: Optional[Client] = None
+        self._cache: Optional[DataCache] = None
 
     @property
     def supabase(self) -> Client:
@@ -90,12 +95,20 @@ class BacktestService:
             )
         return self._supabase
 
+    @property
+    def cache(self) -> DataCache:
+        """Get data cache instance."""
+        if self._cache is None:
+            self._cache = get_data_cache()
+        return self._cache
+
     async def run_full_backtest(
         self,
         score_type: str = "investoredge",
         geography_type: str = "metro",
         benchmark_type: str = "national",
         horizons: list[int] = None,
+        use_cache: bool = True,
     ) -> BacktestAnalysisResult:
         """
         Run comprehensive backtest analysis.
@@ -105,6 +118,7 @@ class BacktestService:
             geography_type: 'zip', 'county', 'metro', or 'state'
             benchmark_type: 'national', 'regional', or 'peer'
             horizons: List of months to test (default: [6, 12, 36, 60])
+            use_cache: Whether to use cached data (default: True)
         
         Returns:
             BacktestAnalysisResult with decile breakdown for each horizon
@@ -112,14 +126,16 @@ class BacktestService:
         horizons = horizons or [6, 12, 36, 60]
         logger.info(f"Running backtest: {score_type} / {geography_type} / {benchmark_type}")
         
-        # Fetch data
-        df = await self._fetch_backtest_data(score_type, geography_type)
+        # Fetch data (from cache or database)
+        df, data_source = await self._fetch_backtest_data(
+            score_type, geography_type, use_cache
+        )
         
         if df.empty:
             logger.warning("No data found for backtest")
             return self._empty_result(score_type, geography_type, benchmark_type)
         
-        logger.info(f"Loaded {len(df)} records for analysis")
+        logger.info(f"Loaded {len(df)} records for analysis from {data_source}")
         
         # Analyze each horizon
         horizon_results = []
@@ -152,18 +168,51 @@ class BacktestService:
             total_observations=len(df),
             date_range_start=str(date_range_start),
             date_range_end=str(date_range_end),
+            data_source=data_source,
         )
 
     async def _fetch_backtest_data(
         self,
         score_type: str,
         geography_type: str,
-        limit: int = 50000,
-    ) -> pd.DataFrame:
-        """Fetch historical scores with outcomes from database."""
+        use_cache: bool = True,
+    ) -> tuple[pd.DataFrame, str]:
+        """
+        Fetch historical scores with outcomes.
+        
+        Uses cache if available and enabled, otherwise fetches from database
+        using pagination to get the full dataset.
+        
+        Returns:
+            Tuple of (DataFrame, data_source)
+        """
         score_col = f"{score_type}_score"
         
-        # Select only the columns we need (fewer columns = faster query)
+        # Try cache first
+        if use_cache:
+            try:
+                df = self.cache.get_cached_data(geography_type, auto_sync=True)
+                if df is not None and len(df) > 0:
+                    # Filter to records with the requested score
+                    if score_col in df.columns:
+                        df = df[df[score_col].notna()]
+                    logger.info(f"Loaded {len(df)} records from cache")
+                    return df, "cache"
+            except Exception as e:
+                logger.warning(f"Cache load failed, falling back to database: {e}")
+        
+        # Fall back to paginated database fetch
+        return await self._fetch_from_database_paginated(score_type, geography_type), "database"
+
+    async def _fetch_from_database_paginated(
+        self,
+        score_type: str,
+        geography_type: str,
+        batch_size: int = 10000,
+    ) -> pd.DataFrame:
+        """Fetch full dataset from database using pagination."""
+        score_col = f"{score_type}_score"
+        
         columns = [
             'id', 'geography_id', 'geography_type', 'period_date',
             score_col,
@@ -171,28 +220,45 @@ class BacktestService:
             'actual_appreciation_36m', 'actual_appreciation_60m',
         ]
         
-        try:
-            # Use simpler query to avoid timeout
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select(','.join(columns)) \
-                .eq('geography_type', geography_type) \
-                .limit(limit) \
-                .execute()
+        all_data = []
+        offset = 0
+        
+        logger.info(f"Fetching full dataset for {geography_type} using pagination...")
+        
+        while True:
+            try:
+                response = self.supabase.table('propertyiq_scores_history') \
+                    .select(','.join(columns)) \
+                    .eq('geography_type', geography_type) \
+                    .range(offset, offset + batch_size - 1) \
+                    .execute()
+            except Exception as e:
+                logger.error(f"Error fetching batch at offset {offset}: {e}")
+                break
             
             if not response.data:
-                logger.warning(f"No data returned for {geography_type}")
-                return pd.DataFrame()
+                break
             
-            # Filter out null scores in pandas (faster than SQL filter on large table)
-            df = pd.DataFrame(response.data)
-            if score_col in df.columns:
-                df = df[df[score_col].notna()]
+            all_data.extend(response.data)
+            logger.info(f"Fetched batch: {len(response.data)} records (total: {len(all_data)})")
             
-            logger.info(f"Fetched {len(df)} records for {geography_type}/{score_type}")
-            return df
-        except Exception as e:
-            logger.error(f"Error fetching backtest data: {e}")
+            if len(response.data) < batch_size:
+                break
+            
+            offset += batch_size
+        
+        if not all_data:
+            logger.warning(f"No data returned for {geography_type}")
             return pd.DataFrame()
+        
+        df = pd.DataFrame(all_data)
+        
+        # Filter to records with valid scores
+        if score_col in df.columns:
+            df = df[df[score_col].notna()]
+        
+        logger.info(f"Total: {len(df)} valid records for {geography_type}/{score_type}")
+        return df
 
     def _analyze_horizon(
         self,
@@ -375,6 +441,7 @@ class BacktestService:
             total_observations=0,
             date_range_start="N/A",
             date_range_end="N/A",
+            data_source="none",
         )
 
     async def run_backtest(self, request: BacktestRequest) -> BacktestResponse:
@@ -417,55 +484,52 @@ class BacktestService:
         )
 
     async def get_data_status(self) -> dict:
-        """Check the status of backtest data in the database."""
+        """Check the status of backtest data in the database and cache."""
         status = {
-            "total_records": 0,
-            "records_with_scores": {},
-            "records_with_outcomes": {},
-            "records_with_excess_returns": {},
-            "date_range": {"min": None, "max": None},
-            "geography_breakdown": {},
+            "database": {},
+            "cache": {},
         }
         
+        # Get cache status
         try:
-            # Total count
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select('*', count='exact', head=True) \
-                .execute()
-            status["total_records"] = response.count or 0
-            
-            # Sample to check columns
-            sample = self.supabase.table('propertyiq_scores_history') \
-                .select('*') \
-                .limit(1) \
-                .execute()
-            
-            if sample.data:
-                columns = list(sample.data[0].keys())
-                status["available_columns"] = columns
-            
-            # Count by geography type
-            for geo_type in ['state', 'metro', 'county', 'zip']:
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select('*', count='exact', head=True) \
-                    .eq('geography_type', geo_type) \
-                    .execute()
-                status["geography_breakdown"][geo_type] = response.count or 0
-            
-            # Check for outcomes
-            for horizon in [12, 36, 60]:
-                col = f"actual_appreciation_{horizon}m"
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select('*', count='exact', head=True) \
-                    .not_(col, 'is', 'null') \
-                    .execute()
-                status["records_with_outcomes"][f"{horizon}m"] = response.count or 0
-                
+            status["cache"] = self.cache.get_cache_status()
         except Exception as e:
-            logger.error(f"Error checking data status: {e}")
-            status["error"] = str(e)
+            status["cache"]["error"] = str(e)
+        
+        # Get database summary (use materialized view if available)
+        try:
+            # Try materialized view first
+            response = self.supabase.table('mv_backtest_summary') \
+                .select('*') \
+                .execute()
+            
+            if response.data:
+                status["database"]["from_view"] = True
+                status["database"]["summary"] = response.data
+            else:
+                # Fall back to sample query
+                status["database"]["from_view"] = False
+                sample = self.supabase.table('propertyiq_scores_history') \
+                    .select('geography_type') \
+                    .limit(1000) \
+                    .execute()
+                
+                if sample.data:
+                    df = pd.DataFrame(sample.data)
+                    status["database"]["sample_by_geo"] = df['geography_type'].value_counts().to_dict()
+                    
+        except Exception as e:
+            logger.warning(f"Could not get database status: {e}")
+            status["database"]["error"] = str(e)
         
         return status
+
+    async def sync_cache(self, geo_type: str = None, force_full: bool = False) -> dict:
+        """Synchronize cache with database."""
+        if geo_type:
+            return self.cache.sync_cache(geo_type, force_full)
+        else:
+            return self.cache.sync_all(force_full)
 
 
 # Singleton instance

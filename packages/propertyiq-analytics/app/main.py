@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.api.routes import health, scoring, backtest, workflow
+from app.api.routes import health, scoring, backtest, workflow, cache
 
 # Configure logging
 logging.basicConfig(
@@ -88,6 +88,7 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(scoring.router, prefix="/api/v1")
 app.include_router(backtest.router, prefix="/api/v1")
 app.include_router(workflow.router, prefix="/api/v1")
+app.include_router(cache.router, prefix="/api/v1")
 
 
 # Root endpoint

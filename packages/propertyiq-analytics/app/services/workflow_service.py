@@ -8,6 +8,8 @@ Implements the workflow steps for PropertyIQ ML pipeline:
 4. Feature Analysis - Find optimal formula weights
 5. Score Explanations - Generate per-geography explanations
 6. Monthly Report - Validation summary report
+
+Uses DataCache for efficient access to full historical dataset.
 """
 
 import logging
@@ -22,6 +24,7 @@ from scipy import stats
 from supabase import create_client, Client
 
 from app.config import get_settings
+from app.services.data_cache import get_data_cache, DataCache
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,7 @@ class WorkflowService:
     def __init__(self):
         self.settings = get_settings()
         self._supabase: Optional[Client] = None
+        self._cache: Optional[DataCache] = None
         logger.info("WorkflowService initialized")
 
     @property
@@ -59,6 +63,13 @@ class WorkflowService:
                 self.settings.supabase_service_key
             )
         return self._supabase
+
+    @property
+    def cache(self) -> DataCache:
+        """Get data cache instance."""
+        if self._cache is None:
+            self._cache = get_data_cache()
+        return self._cache
 
     def _safe_query(
         self,
@@ -115,7 +126,8 @@ class WorkflowService:
         """
         Step 1: Export data for ML processing.
         
-        Exports a sample of historical scores with outcomes for analysis.
+        Syncs all historical scores to the local cache for fast access.
+        This enables full dataset analysis without repeated database queries.
         """
         step_id = "data-export"
         started_at = datetime.utcnow()
@@ -125,40 +137,30 @@ class WorkflowService:
         try:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
             
-            # Fetch a sample of historical scores (limited to prevent timeout)
-            logger.info("Fetching sample of historical scores...")
-            data = self._safe_query(
-                "propertyiq_scores_history",
-                columns="id, geography_id, geography_type, period_date, investoredge_score, homeready_score, actual_appreciation_12m",
-                limit=5000
+            # Sync cache for each geography type
+            logger.info("Syncing data cache for all geography types...")
+            sync_results = {}
+            
+            for geo_type in geography_types:
+                logger.info(f"Syncing cache for {geo_type}...")
+                result = self.cache.sync_cache(geo_type, force_full=False)
+                sync_results[geo_type] = result
+                
+                if result.get('success'):
+                    outputs.append(f"{geo_type}: {result.get('total_records', 0)} records")
+            
+            metrics["sync_results"] = sync_results
+            
+            # Get overall cache status
+            cache_status = self.cache.get_cache_status()
+            metrics["cache_status"] = cache_status
+            
+            # Calculate totals
+            total_records = sum(
+                cache_status.get('caches', {}).get(geo, {}).get('record_count', 0)
+                for geo in geography_types
             )
-            
-            metrics["sample_size"] = len(data)
-            
-            if data:
-                df = pd.DataFrame(data)
-                metrics["columns_available"] = list(df.columns)
-                
-                if 'period_date' in df.columns:
-                    metrics["date_range"] = {
-                        "min": str(df['period_date'].min()),
-                        "max": str(df['period_date'].max()),
-                    }
-                
-                # Count by geography type in sample
-                if 'geography_type' in df.columns:
-                    geo_counts = df['geography_type'].value_counts().to_dict()
-                    metrics["sample_by_geography"] = geo_counts
-                
-                # Count records with scores
-                if 'investoredge_score' in df.columns:
-                    metrics["with_investoredge"] = int(df['investoredge_score'].notna().sum())
-                if 'homeready_score' in df.columns:
-                    metrics["with_homeready"] = int(df['homeready_score'].notna().sum())
-                if 'actual_appreciation_12m' in df.columns:
-                    metrics["with_outcomes_12m"] = int(df['actual_appreciation_12m'].notna().sum())
-                
-                outputs.append(f"Loaded {len(data)} sample records")
+            metrics["total_records_cached"] = total_records
             
             metrics["status"] = "success"
             
@@ -196,41 +198,52 @@ class WorkflowService:
         """
         Step 2: Prepare backtest dataset.
         
-        Checks what data is available by sampling.
+        Analyzes cached data to check completeness and quality.
         """
         step_id = "prepare-backtest-data"
         started_at = datetime.utcnow()
         metrics = {}
 
         try:
-            # Sample to check data availability
-            sample = self._safe_query(
-                "propertyiq_scores_history",
-                columns="id, investoredge_score, homeready_score, actual_appreciation_6m, actual_appreciation_12m, actual_appreciation_36m, actual_appreciation_60m",
-                limit=10000
-            )
+            # Check each geography type in cache
+            geo_stats = {}
+            total_records = 0
             
-            metrics["sample_size"] = len(sample)
-            
-            if sample:
-                df = pd.DataFrame(sample)
+            for geo_type in ['metro', 'county', 'zip', 'state']:
+                df = self.cache.get_cached_data(geo_type, auto_sync=False)
                 
-                # Check outcome availability in sample
+                if df is None or len(df) == 0:
+                    geo_stats[geo_type] = {"status": "not_cached", "records": 0}
+                    continue
+                
+                stats = {
+                    "status": "ready",
+                    "records": len(df),
+                }
+                
+                # Check outcome availability
                 for horizon in [6, 12, 36, 60]:
                     col = f"actual_appreciation_{horizon}m"
                     if col in df.columns:
-                        pct_with_data = df[col].notna().mean() * 100
-                        metrics[f"pct_with_outcome_{horizon}m"] = round(pct_with_data, 1)
-                    else:
-                        metrics[f"pct_with_outcome_{horizon}m"] = 0
+                        count = int(df[col].notna().sum())
+                        pct = round(count / len(df) * 100, 1)
+                        stats[f"with_outcome_{horizon}m"] = count
+                        stats[f"pct_outcome_{horizon}m"] = pct
                 
                 # Check score availability
                 for score in ['investoredge_score', 'homeready_score']:
                     if score in df.columns:
-                        pct = df[score].notna().mean() * 100
-                        metrics[f"pct_with_{score}"] = round(pct, 1)
+                        count = int(df[score].notna().sum())
+                        pct = round(count / len(df) * 100, 1)
+                        stats[f"with_{score}"] = count
+                        stats[f"pct_{score}"] = pct
+                
+                geo_stats[geo_type] = stats
+                total_records += len(df)
             
-            metrics["status"] = "ready" if len(sample) > 0 else "no_data"
+            metrics["geography_stats"] = geo_stats
+            metrics["total_records"] = total_records
+            metrics["status"] = "ready" if total_records > 0 else "no_data"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -262,7 +275,7 @@ class WorkflowService:
         """
         Step 3: Calculate benchmarks from the data.
         
-        Computes national/regional averages for each period and horizon.
+        Computes national/regional averages using the full cached dataset.
         """
         step_id = "calculate-benchmarks"
         started_at = datetime.utcnow()
@@ -270,15 +283,15 @@ class WorkflowService:
         benchmark_types = benchmark_types or ["national", "regional", "peer"]
 
         try:
-            # Fetch sample data for benchmark calculation
-            data = self._safe_query(
-                "propertyiq_scores_history",
-                columns="period_date, geography_type, actual_appreciation_12m, actual_appreciation_36m",
-                limit=20000
-            )
+            # Combine data from all geography types
+            all_dfs = []
+            for geo_type in ['metro', 'county', 'zip', 'state']:
+                df = self.cache.get_cached_data(geo_type, auto_sync=False)
+                if df is not None and len(df) > 0:
+                    all_dfs.append(df)
             
-            if not data:
-                metrics["error"] = "No data found"
+            if not all_dfs:
+                metrics["error"] = "No cached data found. Run Data Export first."
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -287,32 +300,45 @@ class WorkflowService:
                     completed_at=completed_at,
                     duration_seconds=(completed_at - started_at).total_seconds(),
                     metrics=metrics,
-                    error="No data found"
+                    error="No cached data found"
                 )
             
-            df = pd.DataFrame(data)
-            metrics["records_analyzed"] = len(df)
+            df = pd.concat(all_dfs, ignore_index=True)
+            metrics["total_records_analyzed"] = len(df)
             
-            # Calculate national benchmarks
+            # Calculate national benchmarks (across all data)
             if "national" in benchmark_types:
-                for col in ['actual_appreciation_12m', 'actual_appreciation_36m']:
+                national_benchmarks = {}
+                for horizon in [6, 12, 36, 60]:
+                    col = f'actual_appreciation_{horizon}m'
                     if col in df.columns:
                         valid_data = df[col].dropna()
                         if len(valid_data) > 0:
-                            metrics[f"national_{col}_mean"] = round(float(valid_data.mean()), 4)
-                            metrics[f"national_{col}_median"] = round(float(valid_data.median()), 4)
-                            metrics[f"national_{col}_std"] = round(float(valid_data.std()), 4)
-                            metrics[f"national_{col}_count"] = len(valid_data)
+                            national_benchmarks[f"{horizon}m"] = {
+                                "mean": round(float(valid_data.mean()), 4),
+                                "median": round(float(valid_data.median()), 4),
+                                "std": round(float(valid_data.std()), 4),
+                                "count": len(valid_data),
+                            }
+                metrics["national_benchmarks"] = national_benchmarks
             
             # Calculate by geography type
-            if 'geography_type' in df.columns:
+            if "regional" in benchmark_types and 'geography_type' in df.columns:
+                geo_benchmarks = {}
                 for geo_type in df['geography_type'].unique():
                     geo_df = df[df['geography_type'] == geo_type]
-                    if 'actual_appreciation_12m' in geo_df.columns:
-                        valid_data = geo_df['actual_appreciation_12m'].dropna()
-                        if len(valid_data) > 0:
-                            metrics[f"{geo_type}_12m_mean"] = round(float(valid_data.mean()), 4)
-                            metrics[f"{geo_type}_12m_count"] = len(valid_data)
+                    geo_stats = {}
+                    for horizon in [12, 36]:
+                        col = f'actual_appreciation_{horizon}m'
+                        if col in geo_df.columns:
+                            valid_data = geo_df[col].dropna()
+                            if len(valid_data) > 0:
+                                geo_stats[f"{horizon}m"] = {
+                                    "mean": round(float(valid_data.mean()), 4),
+                                    "count": len(valid_data),
+                                }
+                    geo_benchmarks[geo_type] = geo_stats
+                metrics["geography_benchmarks"] = geo_benchmarks
             
             metrics["benchmark_types_calculated"] = benchmark_types
             metrics["status"] = "success"
@@ -348,21 +374,21 @@ class WorkflowService:
         """
         Step 4: Analyze which features best predict outcomes.
         
-        Uses correlation analysis to find feature importance.
+        Uses correlation analysis on the full cached dataset.
         """
         step_id = "feature-analysis"
         started_at = datetime.utcnow()
         metrics = {}
 
         try:
-            # Fetch data with features and outcomes
-            data = self._safe_query(
-                "propertyiq_scores_history",
-                columns="investoredge_score, homeready_score, market_health_score, actual_appreciation_12m, actual_appreciation_36m",
-                limit=20000
-            )
+            # Combine data from all geography types
+            all_dfs = []
+            for geo_type in ['metro', 'county', 'zip', 'state']:
+                df = self.cache.get_cached_data(geo_type, auto_sync=False)
+                if df is not None and len(df) > 0:
+                    all_dfs.append(df)
             
-            if not data:
+            if not all_dfs:
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -370,16 +396,17 @@ class WorkflowService:
                     started_at=started_at,
                     completed_at=completed_at,
                     duration_seconds=(completed_at - started_at).total_seconds(),
-                    error="No data found"
+                    error="No cached data found. Run Data Export first."
                 )
             
-            df = pd.DataFrame(data)
-            metrics["records"] = len(df)
+            df = pd.concat(all_dfs, ignore_index=True)
+            metrics["total_records"] = len(df)
             
-            # Correlation analysis
+            # Correlation analysis by geography type
             score_cols = ['investoredge_score', 'homeready_score', 'market_health_score']
-            outcome_cols = ['actual_appreciation_12m', 'actual_appreciation_36m']
+            outcome_cols = ['actual_appreciation_12m', 'actual_appreciation_36m', 'actual_appreciation_60m']
             
+            # Overall correlations
             correlations = {}
             for score_col in score_cols:
                 if score_col not in df.columns:
@@ -406,7 +433,32 @@ class WorkflowService:
                         "n": len(valid),
                     }
             
-            metrics["correlations"] = correlations
+            metrics["overall_correlations"] = correlations
+            
+            # Correlations by geography type
+            geo_correlations = {}
+            if 'geography_type' in df.columns:
+                for geo_type in df['geography_type'].unique():
+                    geo_df = df[df['geography_type'] == geo_type]
+                    geo_corrs = {}
+                    
+                    for score_col in ['investoredge_score', 'homeready_score']:
+                        if score_col not in geo_df.columns:
+                            continue
+                        
+                        col = 'actual_appreciation_12m'
+                        if col in geo_df.columns:
+                            valid = geo_df[[score_col, col]].dropna()
+                            if len(valid) >= 30:
+                                r, p = stats.pearsonr(valid[score_col], valid[col])
+                                geo_corrs[score_col] = {
+                                    "pearson_r": round(float(r), 4),
+                                    "n": len(valid),
+                                }
+                    
+                    geo_correlations[geo_type] = geo_corrs
+            
+            metrics["correlations_by_geography"] = geo_correlations
             metrics["model_type"] = model_type
             metrics["target_metric"] = target_metric
             
@@ -453,21 +505,21 @@ class WorkflowService:
         """
         Step 5: Generate score explanations.
         
-        Provides statistical breakdown of score distributions.
+        Provides statistical breakdown of score distributions using full cached data.
         """
         step_id = "score-explanations"
         started_at = datetime.utcnow()
         metrics = {}
 
         try:
-            # Fetch sample scores
-            data = self._safe_query(
-                "propertyiq_scores_history",
-                columns="geography_id, geography_type, investoredge_score, homeready_score, actual_appreciation_12m",
-                limit=sample_size
-            )
+            # Combine data from all geography types
+            all_dfs = []
+            for geo_type in ['metro', 'county', 'zip', 'state']:
+                df = self.cache.get_cached_data(geo_type, auto_sync=False)
+                if df is not None and len(df) > 0:
+                    all_dfs.append(df)
             
-            if not data:
+            if not all_dfs:
                 completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
@@ -475,18 +527,20 @@ class WorkflowService:
                     started_at=started_at,
                     completed_at=completed_at,
                     duration_seconds=(completed_at - started_at).total_seconds(),
-                    error="No data found"
+                    error="No cached data found. Run Data Export first."
                 )
             
-            df = pd.DataFrame(data)
-            metrics["sample_size"] = len(df)
+            df = pd.concat(all_dfs, ignore_index=True)
+            metrics["total_records"] = len(df)
             
-            # Score distribution analysis
+            # Score distribution analysis - overall
+            score_distributions = {}
             for score_col in ['investoredge_score', 'homeready_score']:
                 if score_col in df.columns:
                     valid = df[score_col].dropna()
                     if len(valid) > 0:
-                        metrics[f"{score_col}_distribution"] = {
+                        score_distributions[score_col] = {
+                            "count": len(valid),
                             "mean": round(float(valid.mean()), 2),
                             "std": round(float(valid.std()), 2),
                             "min": round(float(valid.min()), 2),
@@ -500,6 +554,28 @@ class WorkflowService:
                             }
                         }
             
+            metrics["score_distributions"] = score_distributions
+            
+            # Score distribution by geography type
+            geo_distributions = {}
+            if 'geography_type' in df.columns:
+                for geo_type in df['geography_type'].unique():
+                    geo_df = df[df['geography_type'] == geo_type]
+                    geo_stats = {}
+                    
+                    for score_col in ['investoredge_score', 'homeready_score']:
+                        if score_col in geo_df.columns:
+                            valid = geo_df[score_col].dropna()
+                            if len(valid) > 0:
+                                geo_stats[score_col] = {
+                                    "count": len(valid),
+                                    "mean": round(float(valid.mean()), 2),
+                                    "std": round(float(valid.std()), 2),
+                                }
+                    
+                    geo_distributions[geo_type] = geo_stats
+            
+            metrics["distributions_by_geography"] = geo_distributions
             metrics["explanation_type"] = explanation_type
             metrics["status"] = "success"
             
