@@ -27,8 +27,8 @@ export function Legend({
   const legendTitle = getMetricTitle(selectedMetric, forecastHorizon);
 
   // Use shared range calculation - ensures consistency with map layer colors
-  // Pass selectedMetric for special handling (e.g., permits use 0–200+ scale)
-  const { min, max, maxLabelSuffix } = calculateValueRange(mapData, metricFormat, selectedMetric);
+  // Pass selectedMetric and geoLevel (e.g., permits 0–200+ scale only at county)
+  const { min, max, maxLabelSuffix } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
 
   // Use shared formatValue for labels - ensures consistency with map
   const minLabel = formatValue(min, metricFormat, 'min');

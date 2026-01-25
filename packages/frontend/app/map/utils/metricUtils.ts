@@ -10,7 +10,7 @@
  * Re-exports getMetricFormat and getMetricTitle from central config for convenience.
  */
 
-import type { MapData, MapDataEntry } from '../types';
+import type { GeoLevel, MapData, MapDataEntry } from '../types';
 import { getValueFromEntry } from '../types';
 import { getMetricFormat as getFormat, getMetricConfig } from '../config';
 import {
@@ -51,12 +51,14 @@ export interface ValueRangeResult {
  * @param mapData - Object mapping region IDs to values
  * @param metricFormat - The format type of the metric
  * @param metricId - Optional metric ID for special handling
+ * @param geoLevel - Optional geography level; when set with scaleForGeos, fixed scale applies only for that level
  * @returns min and max values for the color scale, and optional max label suffix
  */
 export function calculateValueRange(
   mapData: MapData,
   metricFormat: ReturnType<typeof getFormat>,
-  metricId?: string
+  metricId?: string,
+  geoLevel?: GeoLevel
 ): ValueRangeResult {
   // Extract numeric values from both simple numbers and object entries
   const allValues = Object.values(mapData)
@@ -71,8 +73,12 @@ export function calculateValueRange(
   const sorted = [...allValues].sort((a, b) => a - b);
   const config = metricId ? getMetricConfig(metricId) : undefined;
 
-  // Fixed scale (e.g. permits 0–200+) so the map shows variation instead of one band
-  if (config?.scaleMin != null || config?.scaleMax != null) {
+  // Fixed scale (e.g. permits 0–200+ at county only) when enabled for this geo level
+  const hasFixedScale = config?.scaleMin != null || config?.scaleMax != null;
+  const useFixedScale = hasFixedScale && config && (
+    !config.scaleForGeos || (geoLevel != null && config.scaleForGeos.includes(geoLevel))
+  );
+  if (useFixedScale && config) {
     const min = config.scaleMin ?? sorted[0];
     const max = config.scaleMax ?? sorted[sorted.length - 1];
     return {

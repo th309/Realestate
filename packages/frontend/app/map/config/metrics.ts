@@ -86,6 +86,8 @@ export interface MetricConfig {
   // Fixed scale bounds for color/legend (e.g. permit counts: 0 to 200+)
   scaleMin?: number;
   scaleMax?: number;
+  // When set, fixed scale is only used for these geo levels (e.g. ['county']); omit = all levels
+  scaleForGeos?: GeoLevel[];
 
   // When true, include API rows with null value in map data (e.g. SF/MF ratio when no permits)
   includeNullValues?: boolean;
@@ -589,6 +591,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'sf_units',
     scaleMin: 0,
     scaleMax: 200,
+    scaleForGeos: ['county'], // fixed 0–200+ scale only at county; national/state use data range
   },
 
   mf_permits: {
@@ -602,6 +605,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'large_multi_units',
     scaleMin: 0,
     scaleMax: 200,
+    scaleForGeos: ['county'],
   },
 
   total_permits: {
@@ -615,6 +619,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'total_units',
     scaleMin: 0,
     scaleMax: 200,
+    scaleForGeos: ['county'],
   },
 
   permits_yoy: {

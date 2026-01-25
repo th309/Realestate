@@ -143,7 +143,7 @@ export function useMapLayers({
 
       // Determine metric format for display - uses shared utility for consistency with legend
       const metricFormat = getMetricFormat(selectedMetric);
-      const { min: minVal, max: maxVal } = calculateValueRange(mapData, metricFormat, selectedMetric);
+      const { min: minVal, max: maxVal } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
 
       // Add layers - uses same min/max as legend for consistent colors
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson);
