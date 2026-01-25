@@ -2,7 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode } from '../common/geo';
+import { normalizeStateToCode, normalizeStateToFips } from '../common/geo';
 import { normalizeZipKey } from '../common/zip';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 
@@ -1237,32 +1237,53 @@ export class MetricsController {
       .eq('period_date', targetDate)
       .not('income_to_buy', 'is', null);
 
-    // Handle state filter for ZIP codes: use realtor_zip (source of the calculated metric) to get zips in state, then filter calculated_metrics by geography_id
+    // Handle state filter for ZIP codes: use census_zip (state_fips) so we include all zips in state;
+    // realtor_zip.zip_name is often "City, ST" but can be null or inconsistent, which was excluding zips that have listing price and income_to_buy
     if (stateFilter && geoType === 'zip') {
-      const statePattern = `%, ${stateFilter.toUpperCase()}`;
-      const { data: realtorZips } = await this.supabase
-        .from('realtor_zip')
-        .select('postal_code')
-        .ilike('zip_name', statePattern);
+      const stateFips = normalizeStateToFips(stateFilter);
       const zipSet = new Set<string>();
-      if (realtorZips?.length) {
-        for (const row of realtorZips) {
-          if (row?.postal_code != null) zipSet.add(normalizeZipKey(String(row.postal_code)));
+      const pageSize = 2000;
+      let offset = 0;
+      while (true) {
+        const { data: censusRows } = await this.supabase
+          .from('census_zip')
+          .select('zcta')
+          .eq('state_fips', stateFips)
+          .range(offset, offset + pageSize - 1);
+        if (!censusRows?.length) break;
+        for (const row of censusRows) {
+          if (row?.zcta != null) zipSet.add(normalizeZipKey(String(row.zcta)));
         }
+        if (censusRows.length < pageSize) break;
+        offset += pageSize;
       }
       if (zipSet.size > 0) {
         query = query.in('geography_id', Array.from(zipSet));
       } else {
-        // No zips in state in realtor_zip → return empty (consistent with data source)
-        return {
-          success: true,
-          count: 0,
-          geography: geoLabel,
-          metric: 'income_to_buy',
-          source: 'pre-calculated',
-          date: targetDate,
-          data: [],
-        };
+        // Fallback: realtor_zip by zip_name in case census_zip has no rows for this state
+        const statePattern = `%, ${stateFilter.toUpperCase()}`;
+        const { data: realtorZips } = await this.supabase
+          .from('realtor_zip')
+          .select('postal_code')
+          .ilike('zip_name', statePattern);
+        if (realtorZips?.length) {
+          for (const row of realtorZips) {
+            if (row?.postal_code != null) zipSet.add(normalizeZipKey(String(row.postal_code)));
+          }
+        }
+        if (zipSet.size > 0) {
+          query = query.in('geography_id', Array.from(zipSet));
+        } else {
+          return {
+            success: true,
+            count: 0,
+            geography: geoLabel,
+            metric: 'income_to_buy',
+            source: 'pre-calculated',
+            date: targetDate,
+            data: [],
+          };
+        }
       }
     }
 
