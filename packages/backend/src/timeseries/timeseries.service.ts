@@ -26,6 +26,9 @@ export interface DateRange {
  *
  * @version 2.0.0 - Fixed column name mappings for all data sources
  */
+/** Supabase default row limit; we paginate when no limit is requested so graphs can get full history. */
+const TIMESERIES_PAGE_SIZE = 1000;
+
 @Injectable()
 export class TimeSeriesService {
   constructor(
@@ -33,7 +36,8 @@ export class TimeSeriesService {
   ) { }
 
   /**
-   * Get time series data for a specific metric/geography/region
+   * Get time series data for a specific metric/geography/region.
+   * When lastPoints is set, returns the most recent lastPoints points (for history/trend).
    */
   async getTimeSeries(
     metricId: string,
@@ -42,6 +46,7 @@ export class TimeSeriesService {
     startDate?: string,
     endDate?: string,
     limit?: number,
+    lastPoints?: number,
   ): Promise<TimeSeriesDataPoint[]> {
     console.log('[TimeSeriesService] getTimeSeries called:', {
       metricId,
@@ -81,11 +86,12 @@ export class TimeSeriesService {
         ? 'score_date'
         : 'period_date';
 
-      // Build and execute query
+      // When lastPoints is set we need most recent points: order desc, limit, then reverse
+      const useLastPoints = lastPoints != null && lastPoints > 0 && !startDate && !endDate;
       let query = this.supabase
         .from(table)
         .select(`${dateField}, ${mapping.columnName}`)
-        .order(dateField, { ascending: true });
+        .order(dateField, { ascending: !useLastPoints });
 
       // Add region filter
       query = this.addRegionFilter(query, geoLevel, regionId, mapping.source);
@@ -125,24 +131,47 @@ export class TimeSeriesService {
         }
       }
 
-      // Add limit
-      if (limit) {
+      // Add limit (when lastPoints we take that many; else use limit). When no limit and date range, paginate to get full history.
+      if (useLastPoints) {
+        query = query.limit(lastPoints!);
+      } else if (limit) {
         query = query.limit(limit);
       }
 
-      const { data, error } = await query;
+      let data: Record<string, unknown>[];
+      if (!useLastPoints && !limit) {
+        // Paginate to bypass Supabase default row cap so graphing page can get all history
+        data = [];
+        let offset = 0;
+        let page: Record<string, unknown>[];
+        do {
+          const { data: pageData, error: pageError } = await query.range(
+            offset,
+            offset + TIMESERIES_PAGE_SIZE - 1,
+          );
+          if (pageError) {
+            throw new Error(
+              `Error fetching time series for ${metricId}: ${pageError.message}`,
+            );
+          }
+          page = pageData ?? [];
+          data = data.concat(page);
+          offset += page.length;
+        } while (page.length === TIMESERIES_PAGE_SIZE);
+      } else {
+        const result = await query;
+        if (result.error) {
+          throw new Error(
+            `Error fetching time series for ${metricId}: ${result.error.message}`,
+          );
+        }
+        data = result.data ?? [];
+      }
 
       console.log('[TimeSeriesService] Query result:', {
         rowCount: data?.length || 0,
-        error: error?.message,
         sampleRow: data?.[0],
       });
-
-      if (error) {
-        throw new Error(
-          `Error fetching time series for ${metricId}: ${error.message}`,
-        );
-      }
 
       if (!data || data.length === 0) {
         console.log('[TimeSeriesService] No data returned');
@@ -150,7 +179,7 @@ export class TimeSeriesService {
       }
 
       // Transform to standard format
-      const result = data.map((row) => ({
+      let result = data.map((row: Record<string, unknown>) => ({
         // Convert year to date string: 2023 -> "2023-01-01"
         // PropertyIQ scores already use date strings
         date:
@@ -159,6 +188,9 @@ export class TimeSeriesService {
             : row[dateField],
         value: Number(row[mapping.columnName]) || 0,
       }));
+      if (useLastPoints && result.length > 0) {
+        result = result.reverse();
+      }
       console.log(
         '[TimeSeriesService] Returning',
         result.length,

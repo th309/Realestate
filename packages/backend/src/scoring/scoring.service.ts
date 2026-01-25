@@ -34,6 +34,8 @@ import {
   LocationMetrics,
   ScoreResult,
   SingleScoreResult,
+  SCORE_HISTORY_MONTHS_MAX,
+  ScoreHistoryResult,
 } from './scoring.types';
 
 // Re-export types for consumers
@@ -150,42 +152,110 @@ export class ScoringService {
   }
 
   /**
-   * Get scores for a single location
+   * Get scores for a single location.
+   * When historyMonths > 0 (max SCORE_HISTORY_MONTHS_MAX), fetches up to 6 months of history,
+   * sets trend_change (current - prior period) and attaches history for frontend real-time calculations.
    */
   async getScore(
     locationId: string,
     geography: GeographyLevel,
     periodDate?: string,
+    options?: { historyMonths?: number },
   ): Promise<ScoreResult | null> {
-    const targetDate = periodDate || (await this.getLatestDate(geography));
+    const targetDate = periodDate || (await this.getLatestScoreDate(geography));
     if (!targetDate) return null;
 
-    // Query from the propertyiq_scores table
+    const result = await this.getScoreForDate(locationId, geography, targetDate);
+    if (!result) return null;
+
+    const rawMonths = options?.historyMonths ?? 0;
+    const historyMonths = Math.min(Math.max(0, rawMonths), SCORE_HISTORY_MONTHS_MAX);
+    if (historyMonths <= 0) return result;
+
+    const dates = await this.getScoreDates(geography, historyMonths + 1);
+    if (!dates.length || dates[0] !== targetDate) return result;
+
+    const historyByDate: Array<{ date: string; result: ScoreResult }> = [];
+    for (const d of dates) {
+      const r = await this.getScoreForDate(locationId, geography, d);
+      if (r) historyByDate.push({ date: d, result: r });
+    }
+    if (historyByDate.length < 2) return result;
+
+    const scores = result.scores;
+    const priorResult = historyByDate[1]?.result;
+    if (!priorResult) return result;
+
+    for (const key of ['homeready', 'investoredge', 'markethealth'] as const) {
+      const curr = scores[key];
+      const prev = priorResult.scores[key];
+      const change =
+        curr && prev && typeof curr.score === 'number' && typeof prev.score === 'number'
+          ? Number((curr.score - prev.score).toFixed(1))
+          : 0;
+      (curr as SingleScoreResult).trend_change = change;
+
+      const data = historyByDate.map(({ date, result: r }) => ({
+        date,
+        score: r.scores[key]?.score ?? null,
+      }));
+      const trend: 'up' | 'down' | 'stable' = change > 0.01 ? 'up' : change < -0.01 ? 'down' : 'stable';
+      (curr as SingleScoreResult).history = {
+        data,
+        months: historyMonths,
+        trend,
+        change,
+      };
+    }
+    return result;
+  }
+
+  /**
+   * Get distinct score_dates for a geography (newest first), up to limit.
+   */
+  private async getScoreDates(geography: GeographyLevel, limit: number): Promise<string[]> {
+    const { data } = await this.supabase
+      .from('propertyiq_scores')
+      .select('score_date')
+      .eq('geography', geography)
+      .order('score_date', { ascending: false })
+      .limit(limit * 4);
+
+    if (!data?.length) return [];
+    const dates = [...new Set(data.map((r: { score_date: string }) => r.score_date))].sort(
+      (a, b) => b.localeCompare(a),
+    );
+    return dates.slice(0, limit);
+  }
+
+  /**
+   * Fetch scores for one location at a single score_date (no trend).
+   */
+  private async getScoreForDate(
+    locationId: string,
+    geography: GeographyLevel,
+    scoreDate: string,
+  ): Promise<ScoreResult | null> {
     let query = this.supabase
       .from('propertyiq_scores')
       .select('*')
       .eq('geography', geography)
-      .eq('score_date', targetDate);
+      .eq('score_date', scoreDate);
 
-    // If locationId is numeric, match by location_id, otherwise try location_name
     if (/^\d+$/.test(locationId)) {
       query = query.eq('location_id', locationId);
     } else {
-      // Use ILIKE for fuzzy matching of names
       query = query.ilike('location_name', `${locationId}%`);
     }
 
     const { data } = await query;
-
     if (!data || data.length === 0) return null;
 
-    // Group by location and build response
-    const scoresByType: Record<ScoreType, any> = {
-      homeready: null,
-      investoredge: null,
-      markethealth: null,
+    const scoresByType: Record<ScoreType, SingleScoreResult> = {
+      homeready: null!,
+      investoredge: null!,
+      markethealth: null!,
     };
-
     let locationName = '';
     let medianPrice: number | null = null;
 
@@ -206,7 +276,7 @@ export class ScoringService {
       location_name: locationName,
       geography,
       median_price: medianPrice,
-      score_date: targetDate,
+      score_date: scoreDate,
       scores: {
         homeready: scoresByType.homeready || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
         investoredge: scoresByType.investoredge || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },

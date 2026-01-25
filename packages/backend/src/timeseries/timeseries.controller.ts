@@ -1,12 +1,14 @@
 import { Controller, Get, Query, Param } from '@nestjs/common';
-import { TimeSeriesService } from './timeseries.service';
+import { TimeSeriesService, TimeSeriesDataPoint } from './timeseries.service';
+import { HISTORY_MONTHS_MAX, parseHistoryMonths } from '../common/history.constants';
 
 @Controller('api/timeseries')
 export class TimeSeriesController {
   constructor(private readonly timeSeriesService: TimeSeriesService) {}
 
   /**
-   * Get historical time-series data for any metric/geography/region combination
+   * Get historical time-series data for any metric/geography/region combination.
+   * Optional historyMonths (0-6) returns last N months and adds current, prior, trend_change for real-time calculations.
    *
    * @param metric - Metric ID (e.g., 'listing_price', 'home_value', 'population', etc.)
    * @param geoLevel - Geography level (national, state, metro, county, city, zip)
@@ -14,6 +16,7 @@ export class TimeSeriesController {
    * @param startDate - Optional start date (YYYY-MM-DD)
    * @param endDate - Optional end date (YYYY-MM-DD)
    * @param limit - Optional limit on number of data points (default: all)
+   * @param historyMonths - Optional 0-6; return last N months and include current, prior, trend_change, history
    */
   @Get(':metric/:geoLevel/:regionId')
   async getTimeSeries(
@@ -23,17 +26,36 @@ export class TimeSeriesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
+    @Query('historyMonths') historyMonths?: string,
   ) {
-    const data = await this.timeSeriesService.getTimeSeries(
+    const historyMonthsNum = parseHistoryMonths(historyMonths);
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    const useHistory = historyMonthsNum > 0;
+    const lastPoints = useHistory ? (historyMonthsNum + 1) * 4 : undefined;
+
+    let data = await this.timeSeriesService.getTimeSeries(
       metric,
       geoLevel,
       regionId,
-      startDate,
-      endDate,
-      limit ? parseInt(limit) : undefined,
+      useHistory ? undefined : startDate,
+      useHistory ? undefined : endDate,
+      Number.isNaN(limitNum!) ? undefined : limitNum,
+      lastPoints,
     );
 
-    return {
+    const body: {
+      success: boolean;
+      metric: string;
+      geoLevel: string;
+      regionId: string;
+      count: number;
+      data: TimeSeriesDataPoint[];
+      historyMonths?: number;
+      current?: number | null;
+      prior?: number | null;
+      trend_change?: number;
+      history?: { data: TimeSeriesDataPoint[]; months: number; trend: 'up' | 'down' | 'stable'; change: number };
+    } = {
       success: true,
       metric,
       geoLevel,
@@ -41,6 +63,30 @@ export class TimeSeriesController {
       count: data.length,
       data,
     };
+
+    if (historyMonthsNum > 0 && data.length >= 2) {
+      const take = Math.min(historyMonthsNum + 1, data.length);
+      const slice = data.slice(-take);
+      const current = slice[slice.length - 1]?.value ?? null;
+      const prior = slice[slice.length - 2]?.value ?? null;
+      const change = current != null && prior != null ? Number((current - prior).toFixed(4)) : 0;
+      const trend = change > 0.0001 ? 'up' : change < -0.0001 ? 'down' : 'stable';
+
+      body.historyMonths = historyMonthsNum;
+      body.current = current;
+      body.prior = prior;
+      body.trend_change = change;
+      body.history = {
+        data: slice,
+        months: historyMonthsNum,
+        trend,
+        change,
+      };
+      body.data = slice;
+      body.count = slice.length;
+    }
+
+    return body;
   }
 
   /**

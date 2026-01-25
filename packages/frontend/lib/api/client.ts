@@ -1391,7 +1391,8 @@ export const api = {
   },
 
   /**
-   * Get historical time-series data for a specific metric/geography/region
+   * Get historical time-series data for a specific metric/geography/region.
+   * Pass historyMonths (0-6) to get current, prior, trend_change, history for real-time calculations.
    * (Delegated to timeSeriesApi)
    */
   getTimeSeries: async (
@@ -1401,8 +1402,9 @@ export const api = {
     startDate?: string,
     endDate?: string,
     limit?: number,
+    historyMonths?: number,
   ): Promise<TimeSeriesResponse> => {
-    return timeSeriesApi.getTimeSeries(metric, geoLevel, regionId, startDate, endDate, limit);
+    return timeSeriesApi.getTimeSeries(metric, geoLevel, regionId, startDate, endDate, limit, historyMonths);
   },
 
   /**
@@ -1452,6 +1454,14 @@ export interface TimeSeriesDataPoint {
   value: number;
 }
 
+/** When historyMonths is requested, API also returns these for real-time calculations */
+export interface TimeSeriesHistoryResult {
+  data: TimeSeriesDataPoint[];
+  months: number;
+  trend: 'up' | 'down' | 'stable';
+  change: number;
+}
+
 export interface TimeSeriesResponse {
   success: boolean;
   metric: string;
@@ -1459,6 +1469,12 @@ export interface TimeSeriesResponse {
   regionId: string;
   count: number;
   data: TimeSeriesDataPoint[];
+  /** Present when historyMonths was requested (0-6) */
+  historyMonths?: number;
+  current?: number | null;
+  prior?: number | null;
+  trend_change?: number;
+  history?: TimeSeriesHistoryResult;
 }
 
 export interface DateRangeResponse {
@@ -1473,13 +1489,9 @@ export interface DateRangeResponse {
 // Add to api export object
 export const timeSeriesApi = {
   /**
-   * Get historical time-series data for a specific metric/geography/region
-   * @param metric - Metric ID (e.g., 'listing_price', 'home_value', etc.)
-   * @param geoLevel - Geography level (national, state, metro, county, city, zip)
-   * @param regionId - Region identifier (state name, CBSA code, FIPS, ZIP, etc.)
-   * @param startDate - Optional start date filter (YYYY-MM-DD)
-   * @param endDate - Optional end date filter (YYYY-MM-DD)
-   * @param limit - Optional limit on number of data points
+   * Get historical time-series data for a specific metric/geography/region.
+   * Omit historyMonths to get data for your date range only (most callers want the latest record(s)).
+   * Pass historyMonths (0-6) only when you need current/prior/trend_change/history for real-time calculations.
    */
   getTimeSeries: async (
     metric: string,
@@ -1488,11 +1500,13 @@ export const timeSeriesApi = {
     startDate?: string,
     endDate?: string,
     limit?: number,
+    historyMonths?: number,
   ): Promise<TimeSeriesResponse> => {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    if (limit) params.append('limit', limit.toString());
+    if (limit != null) params.append('limit', limit.toString());
+    if (historyMonths != null && historyMonths > 0) params.append('historyMonths', Math.min(6, historyMonths).toString());
 
     const queryString = params.toString();
     const url = `/api/timeseries/${metric}/${geoLevel}/${encodeURIComponent(regionId)}${queryString ? `?${queryString}` : ''}`;

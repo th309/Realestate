@@ -91,13 +91,13 @@ export function SidebarScoreCard({
     setActiveIndex((prev) => (prev === SCORE_ORDER.length - 1 ? 0 : prev + 1));
   };
 
-  // Calculate trend display
+  // Calculate trend display (same approach as Market Factors: always show arrow when we have a score)
   const trendDirection = currentScore?.trend !== undefined
     ? getTrendDirection(currentScore.trend)
-    : undefined;
+    : 'flat';
   const trendValue = currentScore?.trend !== undefined
     ? formatTrendValue(currentScore.trend, 'points')
-    : undefined;
+    : '0.0 pts';
 
   return (
     <div
@@ -169,12 +169,10 @@ export function SidebarScoreCard({
             <>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <span className="text-xs text-on-surface-variant">3-month change</span>
-                {trendDirection && trendValue && (
-                  <TrendArrow
-                    direction={trendDirection}
-                    value={trendValue}
-                  />
-                )}
+                <TrendArrow
+                  direction={trendDirection}
+                  value={trendValue}
+                />
               </div>
             </>
           ) : (

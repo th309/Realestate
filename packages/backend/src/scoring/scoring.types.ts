@@ -92,11 +92,34 @@ export interface ScoreResult {
   return_3y_ann?: number;
 }
 
+import { HISTORY_MONTHS_MAX } from '../common/history.constants';
+
+/** Maximum months of history (shared across all data types). */
+export const SCORE_HISTORY_MONTHS_MAX = HISTORY_MONTHS_MAX;
+
+/** One point in time for a single score type. */
+export interface ScoreHistoryPoint {
+  date: string;
+  score: number | null;
+}
+
+/** History payload sent to frontend when historyMonths is requested. */
+export interface ScoreHistoryResult {
+  data: ScoreHistoryPoint[];
+  months: number;
+  trend: 'up' | 'down' | 'stable';
+  change: number;
+}
+
 export interface SingleScoreResult {
   score: number;
   grade: string;
   confidence: number;
   confidence_level: import('./formula-weights').ConfidenceLevel;
+  /** Change in score points vs prior period (e.g. +2.5 or -1.3) when history requested */
+  trend_change?: number;
+  /** Up to 6 months of history for real-time calculations when historyMonths requested */
+  history?: ScoreHistoryResult;
 }
 
 // ============================================================================

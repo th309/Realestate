@@ -125,6 +125,7 @@ export interface AllScoresResponse {
 
 interface UseScoreDataOptions {
   expanded?: boolean;
+  /** 0-6; omit for latest scores only. Pass only when you need trend/history (e.g. 3-month change). */
   historyMonths?: number;
   userTier?: string;
 }
@@ -217,6 +218,7 @@ export function useScoreData(
 
       // Transform backend ScoreResult into AllScoresResponse shape
       // Backend (scoring.service.ts) returns keys: homeready, investoredge, markethealth
+      // When historyMonths is requested (up to 6), backend returns trend_change and history for real-time calculations.
       const transformScore = (type: ScoreType, data: any): any => {
         if (!data) return {
           type,
@@ -226,13 +228,16 @@ export function useScoreData(
           confidence: { level: 'insufficient', percentage: 0 }
         };
 
-        return {
+        const trendChange = data.trend_change != null ? Number(data.trend_change) : 0;
+        const trendDir: 'up' | 'down' | 'stable' = trendChange > 0.01 ? 'up' : trendChange < -0.01 ? 'down' : 'stable';
+
+        const out: any = {
           type,
           label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
           score: data.score != null ? Number(data.score) : null,
           grade: data.grade || '--',
-          trend: 'stable',
-          trendChange: 0,
+          trend: trendDir,
+          trendChange,
           access: 'full',
           status: 'complete',
           periodDate: rawResult.score_date || '',
@@ -244,6 +249,15 @@ export function useScoreData(
             freshnessInDays: 0
           }
         };
+        if (data.history && Array.isArray(data.history.data)) {
+          out.history = {
+            data: data.history.data,
+            months: data.history.months ?? 0,
+            trend: data.history.trend ?? trendDir,
+            change: data.history.change ?? trendChange
+          };
+        }
+        return out;
       };
 
       const transformed: AllScoresResponse = {

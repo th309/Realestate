@@ -116,16 +116,16 @@ export function RightDetailPanel({
 
       await Promise.all(ids.map(async (id) => {
         try {
-          const res = await timeSeriesApi.getTimeSeries(id, geoLevel, geography!.id, startDate, endDate);
+          // Use historyMonths so backend returns current, prior, trend_change and we can use server-side trend
+          const res = await timeSeriesApi.getTimeSeries(id, geoLevel, geography!.id, undefined, undefined, undefined, 3);
           if (res.success && res.data.length > 0) {
-            // Sort by date ascending for sparkline (oldest first)
             const sortedAsc = [...res.data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
             const sparklineData = sortedAsc.map(d => d.value);
-
-            // Get current and previous for trend calculation
-            const current = sortedAsc[sortedAsc.length - 1].value;
-            const first = sortedAsc[0].value;
-            const trend = first !== 0 ? ((current - first) / Math.abs(first)) * 100 : null;
+            const current = res.current ?? sortedAsc[sortedAsc.length - 1]?.value ?? null;
+            const first = res.prior ?? sortedAsc[0]?.value;
+            const trend = current != null && first != null && first !== 0
+              ? ((current - first) / Math.abs(first)) * 100
+              : null;
 
             results[id] = { value: current, trend, sparklineData };
           } else {

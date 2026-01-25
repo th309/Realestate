@@ -24,6 +24,8 @@ import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { ScoringService, ScoreResult } from './scoring.service';
 import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
 import { GeographyLevel, ScoreType } from './formula-weights';
+import { parseHistoryMonths } from '../common/history.constants';
+import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
 
 @ApiTags('scores')
 @Controller('api/scores')
@@ -60,10 +62,12 @@ export class ScoringController {
   @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'location_id', required: true, description: 'Location identifier (cbsa_code, fips, or zip)' })
   @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations` })
   async getScores(
     @Query('geography') geography: string,
     @Query('location_id') locationId: string,
     @Query('date') date?: string,
+    @Query('historyMonths') historyMonths?: string,
   ): Promise<ScoreResult> {
     if (!geography) {
       throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
@@ -73,7 +77,10 @@ export class ScoringController {
     }
 
     const geoLevel = this.validateGeography(geography);
-    const score = await this.scoringService.getScore(locationId, geoLevel, date);
+    const options = historyMonths != null
+      ? { historyMonths: parseHistoryMonths(historyMonths) }
+      : undefined;
+    const score = await this.scoringService.getScore(locationId, geoLevel, date, options);
 
     if (!score) {
       throw new HttpException(
@@ -259,13 +266,18 @@ export class ScoringController {
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiParam({ name: 'locationId', description: 'Location identifier' })
   @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations` })
   async getScoreByPath(
     @Param('geography') geography: string,
     @Param('locationId') locationId: string,
     @Query('date') date?: string,
+    @Query('historyMonths') historyMonths?: string,
   ): Promise<ScoreResult> {
     const geoLevel = this.validateGeography(geography);
-    const score = await this.scoringService.getScore(locationId, geoLevel, date);
+    const options = historyMonths != null
+      ? { historyMonths: parseHistoryMonths(historyMonths) }
+      : undefined;
+    const score = await this.scoringService.getScore(locationId, geoLevel, date, options);
 
     if (!score) {
       throw new HttpException(
@@ -287,10 +299,12 @@ export class ScoringController {
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated location IDs' })
   @ApiQuery({ name: 'date', required: false })
+  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history per location` })
   async getBatchScores(
     @Param('geography') geography: string,
     @Query('ids') ids: string,
     @Query('date') date?: string,
+    @Query('historyMonths') historyMonths?: string,
   ): Promise<{ geography: string; scores: (ScoreResult | { location_id: string; error: string })[] }> {
     if (!ids) {
       throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
@@ -298,6 +312,9 @@ export class ScoringController {
 
     const geoLevel = this.validateGeography(geography);
     const locationIds = ids.split(',').map(id => id.trim()).filter(id => id);
+    const options = historyMonths != null
+      ? { historyMonths: parseHistoryMonths(historyMonths) }
+      : undefined;
 
     if (locationIds.length === 0) {
       throw new HttpException('At least one location ID is required', HttpStatus.BAD_REQUEST);
@@ -309,7 +326,7 @@ export class ScoringController {
     const scores = await Promise.all(
       locationIds.map(async (id) => {
         try {
-          const score = await this.scoringService.getScore(id, geoLevel, date);
+          const score = await this.scoringService.getScore(id, geoLevel, date, options);
           return score || { location_id: id, error: 'Score not found' };
         } catch {
           return { location_id: id, error: 'Failed to retrieve score' };
