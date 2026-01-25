@@ -120,7 +120,6 @@ const HOMEBUYER_PRICING: MetricCategory = {
   metrics: [
     metric('home_value_yoy'),
     metric('home_value_mom', { isPremium: true }),
-    metric('home_price_forecast', { isPremium: true }),
     metric('price_cut_pct'),
     metric('price_increase_pct', { isNew: true }),
     metric('new_listings'),
@@ -154,7 +153,6 @@ const INVESTOR_APPRECIATION: MetricCategory = {
   metrics: [
     metric('home_value_yoy'),
     metric('home_value_5yr', { isPremium: true }),
-    metric('home_price_forecast', { isPremium: true }),
     metric('home_value'),
     metric('overvalued_pct', { isPremium: true }),
   ],
@@ -247,7 +245,7 @@ export const SCORES_CATEGORY: MetricCategory = {
   metrics: [
     metric('homeready_score', { isPremium: true, isNew: true }),
     metric('investoredge_score', { isPremium: true, isNew: true }),
-    metric('home_price_forecast', { isPremium: true }),
+    metric('market_health_score', { isPremium: true }),
   ],
 };
 

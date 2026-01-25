@@ -69,7 +69,7 @@ const CATEGORY_METRICS: Record<string, string[]> = {
         'market_heat', 'sale_to_list',
     ],
     pricing_deals: [
-        'home_value_mom', 'home_price_forecast', 'price_cut_pct',
+        'home_value_mom', 'price_cut_pct',
         'price_increase_pct', 'new_listings', 'inventory_surplus',
     ],
 
@@ -99,7 +99,7 @@ const CATEGORY_METRICS: Record<string, string[]> = {
 // Premium metrics (should eventually come from backend)
 const PREMIUM_METRICS = new Set([
     'years_to_save', 'homeowner_affordability', 'home_value_5yr',
-    'sale_to_list', 'home_value_mom', 'home_price_forecast', 'inventory_surplus',
+    'sale_to_list', 'home_value_mom', 'inventory_surplus',
     'cap_rate', 'renter_affordability', 'overvalued_pct',
     'population_growth', 'income_growth', 'median_age', 'homeownership_rate',
     'job_growth', 'gdp_growth', 'cost_of_living',
@@ -199,7 +199,7 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
     'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
     'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
     // Pricing & Deals
-    'home_value_mom', 'home_price_forecast', 'price_cut_pct', 'price_increase_pct',
+    'home_value_mom', 'price_cut_pct', 'price_increase_pct',
     'new_listings', 'inventory_surplus',
     // Cash Flow
     'cap_rate', 'gross_yield', 'grm', 'rent_to_price_ratio', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',

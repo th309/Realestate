@@ -25,7 +25,6 @@ export function Legend({
 }: LegendProps) {
   const metricFormat = getMetricFormat(selectedMetric);
   const legendTitle = getMetricTitle(selectedMetric, forecastHorizon);
-  const isForecast = selectedMetric === 'home_price_forecast';
 
   // Use shared range calculation - ensures consistency with map layer colors
   // Pass selectedMetric for special handling (e.g., market_heat uses full range)
@@ -70,11 +69,6 @@ export function Legend({
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>
-        {isForecast && (geoLevel === 'state' || geoLevel === 'national' || geoLevel === 'county') && (
-          <div className="mt-1.5 md:mt-2 pt-1.5 md:pt-2 border-t border-outline-variant text-[10px] md:text-xs text-amber-600">
-            Forecast data available for Metro and ZIP levels
-          </div>
-        )}
         <NoDataIndicator dataDate={dataDate} />
       </div>
     );

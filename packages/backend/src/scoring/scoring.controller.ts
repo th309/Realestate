@@ -200,6 +200,78 @@ export class ScoringController {
   }
 
   /**
+   * Get all scores for a geography level (for map display)
+   * 
+   * GET /api/scores/all/:geography?score_type=homeready&page=0&page_size=1000
+   */
+  @Get('all/:geography')
+  @ApiOperation({ summary: 'Get all scores for a geography level (paginated)' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'score_type', required: true, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (0-indexed)', type: Number })
+  @ApiQuery({ name: 'page_size', required: false, description: 'Page size (default 1000, max 1000)', type: Number })
+  async getAllScores(
+    @Param('geography') geography: string,
+    @Query('score_type') scoreType: string,
+    @Query('date') date?: string,
+    @Query('page') page?: string,
+    @Query('page_size') pageSize?: string,
+  ): Promise<{
+    success: boolean;
+    count: number;
+    data: Array<{
+      region_id: string;
+      region_name: string;
+      value: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+      date?: string;
+    }>;
+    pagination: {
+      page: number;
+      pageSize: number;
+      total: number;
+      hasMore: boolean;
+    };
+  }> {
+    const geoLevel = this.validateGeography(geography);
+    const validScoreType = this.validateScoreType(scoreType);
+    const pageNum = page ? Math.max(0, parseInt(page, 10)) : 0;
+    // Allow up to 1000 records per page (Supabase limit)
+    const pageSizeNum = pageSize ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000) : 1000;
+
+    const result = await this.scoringService.getAllScoresForGeography(
+      geoLevel,
+      validScoreType,
+      date,
+      pageNum,
+      pageSizeNum,
+    );
+
+    return {
+      success: true,
+      count: result.data.length,
+      data: result.data.map(item => ({
+        region_id: item.location_id,
+        region_name: item.location_name,
+        value: item.score,
+        grade: item.grade,
+        confidence: item.confidence,
+        confidence_level: item.confidence_level,
+        date: date || undefined,
+      })),
+      pagination: {
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+        hasMore: result.hasMore,
+      },
+    };
+  }
+
+  /**
    * Get scores for multiple locations (batch)
    *
    * GET /api/scores/batch/:geography?ids=id1,id2,id3

@@ -55,9 +55,6 @@ export function MetricCategoryItem({
 
   const handleSelectMetric = (metricId: string) => {
     onSelectMetric(metricId);
-    if (metricId === 'home_price_forecast' && !['metro', 'zip'].includes(geoLevel)) {
-      onGeoLevelChange('metro');
-    }
   };
 
   const renderMetric = (metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean }) => (

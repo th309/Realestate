@@ -601,6 +601,15 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     updateFrequency: 'Monthly',
     notes: 'Score is inverted: higher means lower risk, more stable investment',
   },
+  market_health_score: {
+    id: 'market_health_score',
+    name: 'Market Health Score',
+    description: 'Proprietary score (0-100) evaluating overall market health and balance. Higher scores indicate healthier, more balanced markets with strong demand, appropriate supply, stable prices, and solid economic foundations.',
+    formula: 'Weighted composite: Demand Strength (35%) + Supply Balance (25%) + Price Stability (25%) + Economic Foundation (15%)',
+    dataSource: 'PropertyIQ Calculated',
+    updateFrequency: 'Monthly',
+    notes: 'Components: Demand Strength (buyer activity, pending sales), Supply Balance (inventory levels, new listings), Price Stability (price trends, volatility), Economic Foundation (employment, income growth)',
+  },
   home_value_5yr: {
     id: 'home_value_5yr',
     name: 'Home Value Growth (5-Year)',

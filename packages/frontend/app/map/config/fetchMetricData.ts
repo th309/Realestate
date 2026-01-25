@@ -55,6 +55,11 @@ export async function fetchMetricData(
     return {};
   }
 
+  // Special handling for PropertyIQ scores - use paginated endpoint
+  if (config.dataSource === 'propertyiq') {
+    return fetchPropertyIQScoreData(metricId, geoLevel, config, options);
+  }
+
   // Build the API URL
   const geoPath = getGeoPathSegment(geoLevel);
   let url = config.apiEndpoint.replace('{geo}', geoPath);
@@ -93,6 +98,121 @@ export async function fetchMetricData(
 }
 
 /**
+ * Fetch PropertyIQ score data with pagination support
+ */
+async function fetchPropertyIQScoreData(
+  metricId: string,
+  geoLevel: GeoLevel,
+  config: typeof METRICS[string],
+  options?: {
+    state?: string;
+    propertyType?: string;
+    forecastHorizon?: string;
+  }
+): Promise<MetricData> {
+  // Map metric ID to score type
+  const scoreTypeMap: Record<string, string> = {
+    'homeready_score': 'homeready',
+    'investoredge_score': 'investoredge',
+    'market_health_score': 'markethealth',
+  };
+
+  const scoreType = scoreTypeMap[metricId];
+  if (!scoreType) {
+    console.warn(`Unknown PropertyIQ score metric: ${metricId}`);
+    return {};
+  }
+
+  // Build the API URL for PropertyIQ scores
+  const geoPath = getGeoPathSegment(geoLevel);
+  const baseUrl = `/api/scores/all/${geoPath}`;
+  
+  const params = new URLSearchParams();
+  params.append('score_type', scoreType);
+  if (options?.state) params.append('state', options.state);
+
+  const url = `${baseUrl}?${params.toString()}`;
+
+  try {
+    // Fetch all pages
+    const allData: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    let totalRecords: number | null = null;
+    let maxPages: number | null = null;
+
+    while (hasMore) {
+      const pageParams = new URLSearchParams(params);
+      pageParams.append('page', page.toString());
+      pageParams.append('page_size', pageSize.toString());
+
+      const pageUrl = `${baseUrl}?${pageParams.toString()}`;
+      const response = await fetch(`${API_URL}${pageUrl}`);
+
+      if (!response.ok) {
+        console.error(`API error for ${metricId} page ${page}: ${response.status}`);
+        break;
+      }
+
+      const pageData = await response.json();
+
+      if (pageData.data && pageData.data.length > 0) {
+        allData.push(...pageData.data);
+        
+        // Update total records from pagination info
+        if (pageData.pagination?.total) {
+          totalRecords = pageData.pagination.total;
+          // Calculate max pages needed: ceil(total / pageSize) + 1 for safety
+          maxPages = Math.ceil(totalRecords / pageSize) + 2;
+        }
+        
+        hasMore = pageData.pagination?.hasMore || false;
+        page++;
+      } else {
+        hasMore = false;
+      }
+
+      // Safety limit: Use calculated max pages if available, otherwise allow up to 100 pages
+      // This ensures we can fetch all records even for very large datasets (e.g., 100,000+ ZIP codes)
+      const safetyLimit = maxPages || 100;
+      if (page >= safetyLimit) {
+        console.warn(`Pagination safety limit reached for ${metricId} at ${geoLevel} (${page} pages, ${allData.length} records)`);
+        if (totalRecords && allData.length < totalRecords) {
+          console.error(`❌ Not all records fetched: ${allData.length} of ${totalRecords} total`);
+        }
+        break;
+      }
+    }
+
+    // Log completion status
+    if (totalRecords && allData.length < totalRecords) {
+      console.error(`❌ Partial data for ${metricId} at ${geoLevel}: fetched ${allData.length} of ${totalRecords} records`);
+    } else if (totalRecords && allData.length === totalRecords) {
+      console.log(`✓ Successfully fetched all ${allData.length} records for ${metricId} at ${geoLevel}`);
+    }
+
+    // Transform to unified format
+    const normalizedData: ApiResponse = {
+      success: true,
+      count: allData.length,
+      data: allData,
+    };
+
+    // Create a modified config with valueField set to 'value' for PropertyIQ scores
+    const modifiedConfig = {
+      ...config,
+      valueField: 'value', // PropertyIQ scores endpoint returns 'value' field
+    };
+
+    return transformResponse(normalizedData, geoLevel, modifiedConfig);
+  } catch (error) {
+    console.error(`Failed to fetch PropertyIQ score ${metricId}:`, error);
+    return {};
+  }
+}
+
+/**
  * Transform API response to unified MetricData format.
  * ALWAYS includes date if available in response.
  */
@@ -124,10 +244,12 @@ function transformResponse(
         break;
       case 'county_fips':
         // Census uses fips_code, other sources use county_fips
+        // PropertyIQ scores use region_id which contains the FIPS code
         key = item.county_fips || item.fips_code || item.region_id;
         break;
       case 'postal_code':
         // Census uses zcta, other sources use postal_code
+        // PropertyIQ scores use region_id which contains the ZIP code
         key = item.postal_code || item.zcta || item.region_id;
         break;
       case 'place_fips':

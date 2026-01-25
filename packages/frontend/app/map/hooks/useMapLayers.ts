@@ -514,9 +514,6 @@ function setupInteractions(
       const configDate = getMetricDataDate(selectedMetric);
       const asOfText = `as of ${formatDataDateForDisplay(configDate)}`;
 
-      const horizonLabel = forecastHorizon === '1m' ? '1-month' : forecastHorizon === '3m' ? '3-month' : '12-month';
-      const isForecast = selectedMetric === 'home_price_forecast';
-
       // M3-compliant tooltip styling using CSS custom properties
       popup.current
         .setLngLat(e.lngLat)
@@ -530,7 +527,6 @@ function setupInteractions(
           ">
             <div style="font-weight: 500; font-size: 14px; color: var(--md-on-surface, #1d1b20); line-height: 20px;">${name}</div>
             <div style="font-size: 22px; font-weight: 600; color: ${valueColor}; margin: 4px 0;">${displayValue}</div>
-            ${isForecast ? `<div style="font-size: 11px; color: var(--md-on-surface-variant, #49454f);">${horizonLabel} forecast</div>` : ''}
             <div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>
           </div>
         `)

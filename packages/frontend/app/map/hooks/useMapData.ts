@@ -26,8 +26,6 @@ const ZILLOW_ONLY_METRICS = new Set([
   'rent_growth',
   // Renter demand (Zillow ZORDI)
   'rent_for_houses',
-  // Forecasts (Zillow ZHVF)
-  'home_price_forecast',
   // Affordability (Zillow metro only)
   'income_to_buy',
   'income_to_rent',
@@ -465,17 +463,6 @@ async function fetchZillowMetric(
           return api.getMetroRenterDemand(demandType);
         case 'zip':
           return state ? api.getZipRenterDemand(state, demandType) : {};
-        default:
-          return {};
-      }
-
-    // Forecasts (from zillow_zhvf)
-    case 'home_price_forecast':
-      switch (level) {
-        case 'metro':
-          return api.getMetroForecast(horizon);
-        case 'zip':
-          return state ? api.getZipForecast(state, horizon) : {};
         default:
           return {};
       }

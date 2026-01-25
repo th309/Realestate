@@ -135,14 +135,6 @@ export function MetricItem({
         document.body
       )}
 
-      {/* Forecast Horizon Selector */}
-      {metric.id === 'home_price_forecast' && isSelected && (
-        <ForecastHorizonSelector
-          value={forecastHorizon}
-          onChange={onForecastHorizonChange}
-        />
-      )}
-
       {/* Rent Index Type Selector */}
       {metric.id === 'rent_index' && isSelected && (
         <PropertyTypeSelector

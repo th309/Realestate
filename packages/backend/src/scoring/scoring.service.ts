@@ -242,6 +242,66 @@ export class ScoringService {
   }
 
   /**
+   * Get all scores for a geography level (for map display)
+   * Returns paginated results with all three score types
+   */
+  async getAllScoresForGeography(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+    page: number = 0,
+    pageSize: number = 1000,
+  ): Promise<{
+    data: Array<{
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }>;
+    total: number;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+  }> {
+    const targetDate = periodDate || (await this.getLatestScoreDate(geography));
+    if (!targetDate) {
+      return { data: [], total: 0, page, pageSize, hasMore: false };
+    }
+
+    // Get total count
+    const { count: total } = await this.supabase
+      .from('propertyiq_scores')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', targetDate);
+
+    // Fetch paginated data
+    const { data, error } = await this.supabase
+      .from('propertyiq_scores')
+      .select('location_id, location_name, score, grade, confidence, confidence_level')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', targetDate)
+      .order('score', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (error) {
+      throw new Error(`Failed to fetch scores: ${error.message}`);
+    }
+
+    return {
+      data: data || [],
+      total: total || 0,
+      page,
+      pageSize,
+      hasMore: (page + 1) * pageSize < (total || 0),
+    };
+  }
+
+  /**
    * Search markets by name
    */
   async searchMarkets(
@@ -285,6 +345,17 @@ export class ScoringService {
       .limit(1);
 
     return data?.[0]?.period_date || null;
+  }
+
+  private async getLatestScoreDate(geography: GeographyLevel): Promise<string | null> {
+    const { data } = await this.supabase
+      .from('propertyiq_scores')
+      .select('score_date')
+      .eq('geography', geography)
+      .order('score_date', { ascending: false })
+      .limit(1);
+
+    return data?.[0]?.score_date || null;
   }
 
   private getRealtorTable(geography: GeographyLevel): string {

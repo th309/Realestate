@@ -899,13 +899,6 @@ export function getMetricTitle(metricId: string, forecastHorizon?: string): stri
     return metricId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  // Special case for forecast - include horizon in title
-  if (metricId === 'home_price_forecast' && forecastHorizon) {
-    return forecastHorizon === '1m' ? '1-Month Forecast'
-      : forecastHorizon === '3m' ? '3-Month Forecast'
-        : '12-Month Forecast';
-  }
-
   return config.title;
 }
 
