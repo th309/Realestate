@@ -1381,11 +1381,7 @@ export class MetricsController {
       .eq('period_date', targetDate)
       .not('affordable_home_price', 'is', null);
 
-    // Handle state filter for ZIP codes
-    if (stateFilter && geoType === 'zip') {
-      const statePattern = `ZIP ${stateFilter.toUpperCase()}%`;
-      query = query.ilike('geography_name', statePattern);
-    }
+    // ZIP: do not filter by state (same as income_to_buy). Return all zip rows; map uses state-specific GeoJSON.
 
     // Paginate for large datasets (county and zip)
     const allData: any[] = [];
@@ -1524,11 +1520,7 @@ export class MetricsController {
       .eq('period_date', targetDate)
       .not('years_to_save', 'is', null);
 
-    // Handle state filter for ZIP codes
-    if (stateFilter && geoType === 'zip') {
-      const statePattern = `ZIP ${stateFilter.toUpperCase()}%`;
-      query = query.ilike('geography_name', statePattern);
-    }
+    // ZIP: do not filter by state (same as income_to_buy). Return all zip rows; map uses state-specific GeoJSON.
 
     // Paginate for large datasets (county and zip)
     const allData: any[] = [];
