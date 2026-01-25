@@ -160,10 +160,12 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const percentage = Math.min(value / maxValue, 1);
-  const strokeDashoffset = circumference - percentage * circumference;
 
-  // Get smooth gradient color from red (0) to green (100)
-  const strokeColor = getScoreColor(value, maxValue);
+  // Gradient along the arc: draw many small segments, each colored by position (0%=red → 100%=green)
+  const segmentCount = 72;
+  const segmentLength = circumference / segmentCount;
+  const fullSegments = Math.floor(percentage * segmentCount);
+  const partialLength = (percentage * segmentCount - fullSegments) * segmentLength;
 
   const grade = getLetterGrade(value);
   const gradeColors = getGradeColor(grade);
@@ -219,21 +221,36 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           strokeWidth={strokeWidth}
         />
 
-        {/* The Animated Score Ring - Solid color based on score */}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={radius}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
-          className="transition-all duration-700 ease-in-out"
-          filter="url(#glow)"
-        />
+        {/* The Animated Score Ring - Gradient along the arc (red → yellow → green by score) */}
+        <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} className="transition-all duration-700 ease-in-out" filter="url(#glow)">
+          {Array.from({ length: fullSegments }, (_, i) => (
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="none"
+              stroke={getScoreColor((i + 0.5) / segmentCount * 100, 100)}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
+              strokeDashoffset={circumference - i * segmentLength}
+            />
+          ))}
+          {partialLength > 0 && fullSegments < segmentCount && (
+            <circle
+              cx={cx}
+              cy={cy}
+              r={radius}
+              fill="none"
+              stroke={getScoreColor(value, maxValue)}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={`${partialLength} ${circumference - partialLength}`}
+              strokeDashoffset={circumference - fullSegments * segmentLength}
+            />
+          )}
+        </g>
 
         {/* Tick marks (not rotated, calculated clockwise from top) */}
         <line
