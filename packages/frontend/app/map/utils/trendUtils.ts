@@ -5,7 +5,7 @@
  * Used by the data binding layer for real-time trend calculations.
  */
 
-import { timeSeriesApi, type TimeSeriesDataPoint } from '@/lib/api/client';
+import { api, type TimeSeriesDataPoint } from '@/lib/api/client';
 import type { GeoLevel } from '../types';
 
 export interface TrendData {
@@ -32,7 +32,7 @@ export async function calculate3MonthTrend(
     const endDate = now.toISOString().split('T')[0];
     const startDate = new Date(now.setMonth(now.getMonth() - 3)).toISOString().split('T')[0];
 
-    const response = await timeSeriesApi.getTimeSeries(
+    const response = await api.getTimeSeries(
       metricId,
       geoLevel,
       regionId,

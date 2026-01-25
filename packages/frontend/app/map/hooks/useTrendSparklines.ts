@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { timeSeriesApi } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { GeoLevel } from '../types';
 
 export interface SparklineData {
@@ -73,7 +73,7 @@ export function useTrendSparklines(
       await Promise.all(
         metricIds.map(async (metricId) => {
           try {
-            const response = await timeSeriesApi.getTimeSeries(
+            const response = await api.getTimeSeries(
               metricId,
               geoLevel,
               regionId,
