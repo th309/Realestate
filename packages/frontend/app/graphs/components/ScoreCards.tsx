@@ -3,11 +3,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { api, ScoreResponse } from '@/lib/api/client';
 import { GeoLevel, getMetricConfig } from '@/app/map/config/metrics';
-import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { M3Card } from './M3Card';
-import { Loader2, TrendingUp, TrendingDown, Minus, Settings, Check, X } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Minus, Settings } from 'lucide-react';
 import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import { MetricSelector } from '@/app/map/components/MetricSelector';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -71,116 +71,6 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
   );
 };
 
-// Available metrics for selection
-interface AvailableMetric {
-  id: string;
-  name: string;
-  category: string;
-}
-
-function getAvailableMetrics(): AvailableMetric[] {
-  const categories = [
-    ...getMetricCategories('homebuyer'),
-    ...getMetricCategories('investor'),
-  ];
-
-  const seen = new Set<string>();
-  const metrics: AvailableMetric[] = [];
-
-  for (const cat of categories) {
-    if (cat.isDivider || !cat.metrics) continue;
-    for (const m of cat.metrics) {
-      if (!seen.has(m.id)) {
-        seen.add(m.id);
-        metrics.push({ id: m.id, name: m.name, category: cat.name });
-      }
-    }
-  }
-
-  return metrics.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-interface MetricSelectorProps {
-  selectedMetrics: string[];
-  onSave: (metrics: string[]) => void;
-  onCancel: () => void;
-  maxSelections?: number;
-}
-
-const MetricSelector: React.FC<MetricSelectorProps> = ({
-  selectedMetrics,
-  onSave,
-  onCancel,
-  maxSelections = 3,
-}) => {
-  const [selected, setSelected] = useState<string[]>(selectedMetrics);
-  const availableMetrics = getAvailableMetrics();
-
-  const groupedMetrics = availableMetrics.reduce((acc, m) => {
-    if (!acc[m.category]) acc[m.category] = [];
-    acc[m.category].push(m);
-    return acc;
-  }, {} as Record<string, AvailableMetric[]>);
-
-  const toggleMetric = (metricId: string) => {
-    if (selected.includes(metricId)) {
-      setSelected(selected.filter(id => id !== metricId));
-    } else if (selected.length < maxSelections) {
-      setSelected([...selected, metricId]);
-    }
-  };
-
-  return (
-    <div className="absolute top-0 left-0 right-0 bg-surface-container-high border border-outline-variant rounded-xl shadow-lg z-10 p-3 max-h-[300px] overflow-y-auto">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-on-surface">
-          Select up to {maxSelections} metrics ({selected.length}/{maxSelections})
-        </span>
-        <div className="flex gap-1">
-          <button
-            onClick={() => onSave(selected)}
-            className="p-1 rounded-full hover:bg-surface-container text-green-600 transition-colors"
-            title="Save"
-          >
-            <Check className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onCancel}
-            className="p-1 rounded-full hover:bg-surface-container text-red-500 transition-colors"
-            title="Cancel"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {Object.entries(groupedMetrics).map(([category, metrics]) => (
-          <div key={category}>
-            <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wide mb-1">
-              {category}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {metrics.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => toggleMetric(m.id)}
-                  disabled={!selected.includes(m.id) && selected.length >= maxSelections}
-                  className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${selected.includes(m.id)
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-surface border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed'
-                    }`}
-                >
-                  {m.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 interface MetricIndicator {
   metricId: string;
@@ -200,6 +90,7 @@ interface ScoreCardProps {
   isAdmin?: boolean;
   selectedMetricIds: string[];
   onMetricsChange?: (metricIds: string[]) => void;
+  geoLevel: GeoLevel;
 }
 
 const ScoreCard: React.FC<ScoreCardProps> = ({
@@ -213,6 +104,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
   isAdmin = false,
   selectedMetricIds,
   onMetricsChange,
+  geoLevel,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -229,6 +121,8 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
           onSave={handleSave}
           onCancel={() => setIsEditing(false)}
           maxSelections={3}
+          geoLevel={geoLevel}
+          className="absolute top-0 left-0 right-0 z-10 max-h-[400px]"
         />
       )}
 
@@ -477,6 +371,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.homeready}
         onMetricsChange={handleMetricsChange('homeready')}
+        geoLevel={geoLevel}
       />
       <ScoreCard
         title="InvestorEdge Score"
@@ -488,6 +383,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.investoredge}
         onMetricsChange={handleMetricsChange('investoredge')}
+        geoLevel={geoLevel}
       />
       <ScoreCard
         title="Market Health Index"
@@ -499,6 +395,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.markethealth}
         onMetricsChange={handleMetricsChange('markethealth')}
+        geoLevel={geoLevel}
       />
     </div>
   );

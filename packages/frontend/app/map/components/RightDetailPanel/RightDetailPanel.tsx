@@ -327,6 +327,7 @@ export function RightDetailPanel({
         currentFactors={marketFactors}
         onSave={handleSaveFactors}
         maxSelections={4}
+        geoLevel={geoLevel}
       />
     </>
   );

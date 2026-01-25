@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MapPin, BarChart2, Globe } from 'lucide-react';
 import { ComparisonConfig, MetricOption } from '../types';
 import { GeoLevel } from '@/app/map/config/metrics';
@@ -10,6 +10,7 @@ import { M3Card, M3CardHeader } from './M3Card';
 import { SearchBar } from '@/app/map/components';
 import { useGraphSearch } from '../hooks/useGraphSearch';
 import { SearchResult } from '@/app/map/types';
+import { MetricSelector } from '@/app/map/components/MetricSelector';
 
 interface BaselineConfig {
   enabled: boolean;
@@ -60,6 +61,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
 }) => {
   const geoLevelLabel = GEO_LEVEL_OPTIONS.find((opt) => opt.value === geoLevel)?.label || geoLevel;
   const metricName = metricOptions.find((m) => m.id === metric)?.name || metric;
+  const [showMetricSelector, setShowMetricSelector] = useState(false);
 
   // Primary area search - pass geoLevel for optimized metro search
   const {
@@ -233,26 +235,41 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
       </M3Card>
 
       {/* Metric Selection Card */}
-      <M3Card variant="elevated" size="md">
+      <M3Card variant="elevated" size="md" className="relative">
         <M3CardHeader
           icon={<BarChart2 className="w-4 h-4 text-primary" />}
           title="Market Metric"
           subtitle="Data point to analyze"
         />
-        <div className="mt-4">
-          <M3Select
-            label="Metric"
-            value={metricName}
-            onChange={(val) => {
-              const metricId = metricOptions.find((m) => m.name === val)?.id || 'listing_price';
-              setMetric(metricId);
-            }}
-            options={metricOptions.map((m) => ({
-              label: m.name,
-              value: m.name,
-              isPremium: m.isPremium
-            }))}
-          />
+        <div className="mt-4 relative">
+          {showMetricSelector ? (
+            <MetricSelector
+              selectedMetrics={[metric]}
+              onSave={(metricIds) => {
+                if (metricIds.length > 0) {
+                  setMetric(metricIds[0]);
+                }
+                setShowMetricSelector(false);
+              }}
+              onCancel={() => setShowMetricSelector(false)}
+              maxSelections={1}
+              geoLevel={geoLevel}
+              className="absolute top-0 left-0 right-0 z-10 max-h-[400px]"
+            />
+          ) : (
+            <button
+              onClick={() => setShowMetricSelector(true)}
+              className="w-full text-left px-4 py-3 rounded-lg border border-outline-variant bg-surface-container hover:bg-surface-container-high transition-colors flex items-center justify-between"
+            >
+              <div>
+                <div className="text-xs text-on-surface-variant mb-1">Metric</div>
+                <div className="text-sm font-medium text-on-surface">{metricName}</div>
+              </div>
+              <svg className="w-4 h-4 text-on-surface-variant" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          )}
         </div>
       </M3Card>
     </div>
