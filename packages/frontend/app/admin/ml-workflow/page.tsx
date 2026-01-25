@@ -87,6 +87,7 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                 {scoreNames.map(name => (
                   <th key={name} className="text-center py-2 px-3 font-medium text-on-surface border-b border-outline-variant">{name}</th>
                 ))}
+                <th className="text-left py-2 px-3 font-medium text-on-surface border-b border-outline-variant min-w-[200px]">What This Means</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/50">
@@ -97,6 +98,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.top_quintile_excess || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  Properties with the highest scores beat the average market by this much. Positive = good signal.
+                </td>
               </tr>
               <tr>
                 <td className="py-2 px-3 text-on-surface-variant">Bottom Quintile Excess Return</td>
@@ -105,6 +109,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.bottom_quintile_excess || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  Properties with the lowest scores underperformed by this much. Negative = score correctly warns you.
+                </td>
               </tr>
               <tr className="bg-surface-container-low">
                 <td className="py-2 px-3 text-on-surface font-medium">SPREAD</td>
@@ -113,6 +120,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.spread || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic font-medium">
+                  The gap between winners and losers. Bigger spread = more valuable score for decision-making.
+                </td>
               </tr>
               <tr>
                 <td className="py-2 px-3 text-on-surface-variant">Top Q Beat-Market Rate</td>
@@ -121,6 +131,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.top_beat_rate || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  What % of high-scoring properties actually beat the market? Higher = more reliable "buy" signal.
+                </td>
               </tr>
               <tr>
                 <td className="py-2 px-3 text-on-surface-variant">Bottom Q Beat-Market Rate</td>
@@ -129,6 +142,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.bottom_beat_rate || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  What % of low-scoring properties beat the market? Lower = stronger "avoid" signal.
+                </td>
               </tr>
               <tr>
                 <td className="py-2 px-3 text-on-surface-variant">T-test p-value</td>
@@ -137,6 +153,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.t_test_pvalue || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  Is this real or just luck? Below 0.05 = statistically significant (less than 5% chance it's random).
+                </td>
               </tr>
               <tr>
                 <td className="py-2 px-3 text-on-surface-variant">Spearman Correlation</td>
@@ -145,6 +164,9 @@ function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics })
                     {summaryTable[name]?.spearman_correlation || '—'}
                   </td>
                 ))}
+                <td className="py-2 px-3 text-on-surface-variant italic">
+                  Do higher scores lead to higher returns? Range: -1 to +1. Above 0.3 = meaningful relationship.
+                </td>
               </tr>
             </tbody>
           </table>
