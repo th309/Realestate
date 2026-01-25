@@ -681,10 +681,14 @@ export class InventorySurplusService {
     state?: string,
   ): Promise<{ data: any[]; success: boolean; source: string }> {
     if (state) state = normalizeStateToCode(state);
-    // Build cache key
-    const cacheKey = state
-      ? `inventory_surplus:${geographyType}:${state.toLowerCase()}`
-      : `inventory_surplus:${geographyType}`;
+    // For zip, do not filter by state: return all zips for the date so the map can look up by postal_code
+    // (map only loads state-specific GeoJSON and uses mapData[zipCode] - same as income-to-buy)
+    const cacheKey =
+      geographyType === 'zip'
+        ? `inventory_surplus:zip`
+        : state
+          ? `inventory_surplus:${geographyType}:${state.toLowerCase()}`
+          : `inventory_surplus:${geographyType}`;
 
     // Check cache first
     const cached = this.getCached<any[]>(cacheKey);
@@ -720,13 +724,7 @@ export class InventorySurplusService {
     // At this point latestDate is guaranteed to be a string
     const effectiveDate: string = latestDate!;
 
-    // For ZIP geography with state filter, query at database level
-    if (geographyType === 'zip' && state) {
-      const results = await this.fetchZipsByState(effectiveDate, state);
-      this.setCache(cacheKey, results);
-      return { data: results, success: true, source: 'calculated_metrics' };
-    }
-
+    // ZIP: return all zips for the date (no state filter). Map uses state-specific GeoJSON and looks up by postal_code.
     // Get all data for that period (paginated for large datasets)
     const allData: any[] = [];
     let offset = 0;
