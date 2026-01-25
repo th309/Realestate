@@ -15,9 +15,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
-import { timeSeriesApi } from '@/lib/api/client';
 import { formatValue, getMetricFormat } from '../../utils/metricUtils';
-import { useScoreData, type ScoreType } from '../../hooks/useScoreData';
+import { useTrendSparklines } from '../../hooks/useTrendSparklines';
+import type { AllScoresResponse, ScoreType } from '../../hooks/useScoreData';
 import { ScoreGaugeCard } from './ScoreGaugeCard';
 import { SideScoreCard } from './SideScoreCard';
 import { InsightCarousel } from './InsightCarousel';
@@ -29,6 +29,9 @@ interface RightDetailPanelProps {
   viewMode: ViewMode;
   geography: SelectedGeography | null;
   geoLevel: GeoLevel;
+  /** Score data from data binding layer (useScoreData) - passed from map page */
+  scoreData?: AllScoresResponse | null;
+  scoresLoading?: boolean;
 }
 
 interface MarketFactor {
@@ -63,21 +66,34 @@ export function RightDetailPanel({
   viewMode,
   geography,
   geoLevel,
+  scoreData: scoreDataProp,
+  scoresLoading = false,
 }: RightDetailPanelProps) {
   const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>(
     viewMode === 'investor' ? 'investoredge' : 'homeready'
   );
 
-  const { data: scoreData, loading: scoresLoading } = useScoreData(
-    geoLevel as any,
-    geography?.id ?? null,
-    { expanded: true }
-  );
-
-  const [metricData, setMetricData] = useState<Record<string, { value: number | null; trend: number | null; sparklineData: number[] }>>({});
   const [marketFactors, setMarketFactors] = useState<MarketFactor[]>(loadMarketFactors);
-  const [factorsLoading, setFactorsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const metricIds = useMemo(() => [...new Set(marketFactors.map(f => f.metricId))], [marketFactors]);
+  const { sparklines, loading: factorsLoading } = useTrendSparklines(
+    metricIds,
+    geoLevel,
+    geography?.id ?? null,
+    { months: 3, enabled: isOpen && !!geography }
+  );
+  const metricData = useMemo(() => {
+    const out: Record<string, { value: number | null; trend: number | null; sparklineData: number[] }> = {};
+    for (const id of metricIds) {
+      const s = sparklines[id];
+      const data = s?.data ?? [];
+      const value = data.length > 0 ? data[data.length - 1] : null;
+      const trend = s?.percentChange ?? null;
+      out[id] = { value, trend, sparklineData: data };
+    }
+    return out;
+  }, [metricIds, sparklines]);
 
   // Sync selected score with viewMode when it changes externally
   useEffect(() => {
@@ -100,49 +116,6 @@ export function RightDetailPanel({
     return { main: selectedScoreType, side1, side2 };
   }, [selectedScoreType]);
 
-  // Fetch real-time metric data for factors (current value only, sparklines come from hook)
-  useEffect(() => {
-    if (!geography || !isOpen) return;
-
-    async function fetchMetrics() {
-      setFactorsLoading(true);
-      const ids = [...new Set(marketFactors.map(f => f.metricId))];
-      const results: Record<string, { value: number | null; trend: number | null; sparklineData: number[] }> = {};
-
-      const now = new Date();
-      const endDate = now.toISOString().split('T')[0];
-      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-      const startDate = threeMonthsAgo.toISOString().split('T')[0];
-
-      await Promise.all(ids.map(async (id) => {
-        try {
-          // Use historyMonths so backend returns current, prior, trend_change and we can use server-side trend
-          const res = await timeSeriesApi.getTimeSeries(id, geoLevel, geography!.id, undefined, undefined, undefined, 3);
-          if (res.success && res.data.length > 0) {
-            const sortedAsc = [...res.data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const sparklineData = sortedAsc.map(d => d.value);
-            const current = res.current ?? sortedAsc[sortedAsc.length - 1]?.value ?? null;
-            const first = res.prior ?? sortedAsc[0]?.value;
-            const trend = current != null && first != null && first !== 0
-              ? ((current - first) / Math.abs(first)) * 100
-              : null;
-
-            results[id] = { value: current, trend, sparklineData };
-          } else {
-            results[id] = { value: null, trend: null, sparklineData: [] };
-          }
-        } catch {
-          results[id] = { value: null, trend: null, sparklineData: [] };
-        }
-      }));
-
-      setMetricData(results);
-      setFactorsLoading(false);
-    }
-
-    fetchMetrics();
-  }, [geography, geoLevel, isOpen, marketFactors]);
-
   // Handle saving market factors from modal
   const handleSaveFactors = (factors: MarketFactor[]) => {
     setMarketFactors(factors);
@@ -152,9 +125,9 @@ export function RightDetailPanel({
   };
 
   const getScoreValue = (type: ScoreType) => {
-    if (!scoreData) return null;
+    if (!scoreDataProp) return null;
     const key = type === 'market_health' ? 'marketHealth' : type;
-    const scoreObj = scoreData[key as keyof typeof scoreData];
+    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
     if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
       return (scoreObj as any).score as number ?? null;
     }
@@ -162,9 +135,9 @@ export function RightDetailPanel({
   };
 
   const getScoreTrend = (type: ScoreType) => {
-    if (!scoreData) return null;
+    if (!scoreDataProp) return null;
     const key = type === 'market_health' ? 'marketHealth' : type;
-    const scoreObj = scoreData[key as keyof typeof scoreData];
+    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
     if (typeof scoreObj === 'object' && scoreObj !== null && 'trendChange' in scoreObj) {
       return (scoreObj as any).trendChange as number ?? null;
     }
@@ -172,9 +145,9 @@ export function RightDetailPanel({
   };
 
   const getConfidenceLevel = (type: ScoreType): 'high' | 'medium' | 'low' | 'insufficient' => {
-    if (!scoreData) return 'medium';
+    if (!scoreDataProp) return 'medium';
     const key = type === 'market_health' ? 'marketHealth' : type;
-    const scoreObj = scoreData[key as keyof typeof scoreData];
+    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
     if (typeof scoreObj === 'object' && scoreObj !== null && 'confidence' in scoreObj) {
       const conf = (scoreObj as any).confidence;
       if (conf && typeof conf.level === 'string') {

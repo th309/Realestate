@@ -82,12 +82,11 @@ export default function MapPage() {
     onFeatureClick: handleFeatureClick
   });
 
-  // Fetch score data for the selected geography to display in sidebars
-  // Request 3 months of history to calculate trend
+  // Single fetch through data binding layer: scores with 3-month trend for sidebar + right panel
   const { data: scoreResponse, loading: scoresLoading } = useScoreData(
     geoLevel as any,
     selectedGeography?.id ?? null,
-    { expanded: false, historyMonths: 3 }
+    { expanded: true, historyMonths: 3 }
   );
 
   // Map score response to sidebar format with all three scores
@@ -417,6 +416,8 @@ export default function MapPage() {
           viewMode={viewMode}
           geography={selectedGeography}
           geoLevel={geoLevel}
+          scoreData={scoreResponse}
+          scoresLoading={scoresLoading}
         />
       </div>
     </div>

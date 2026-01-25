@@ -9,3 +9,5 @@ export * from './useMarketAverages';
 export * from './useMetricData';
 export * from './useDataCard';
 export * from './useMetricOptions';
+export * from './useScoreData';
+export * from './useTrendSparklines';

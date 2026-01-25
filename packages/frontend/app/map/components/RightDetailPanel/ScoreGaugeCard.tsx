@@ -6,7 +6,10 @@ interface ScoreGaugeCardProps {
     type: ScoreType;
     score: number | null;
     confidenceLevel?: ConfidenceLevel;
+    /** 3-month change: points (from scores API) or percent (from metrics) */
     trend?: number | null;
+    /** Score API returns points; metrics use percent. Default 'points' for score cards. */
+    trendUnit?: 'points' | 'percent';
     loading?: boolean;
 }
 
@@ -39,7 +42,7 @@ const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
     insufficient: 'N/A'
 };
 
-export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend, loading = false }: ScoreGaugeCardProps) {
+export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend, trendUnit = 'points', loading = false }: ScoreGaugeCardProps) {
     const config = SCORE_LABELS[type];
     const currentScore = score ?? 0;
     const confColors = CONFIDENCE_COLORS[confidenceLevel];
@@ -61,11 +64,13 @@ export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend,
                 )}
             </div>
 
-            {/* Trend */}
+            {/* Trend (3-month change from data binding layer: points for scores) */}
             {trend != null && !loading && (
                 <div className={`flex items-center gap-1 mt-1 text-sm font-semibold ${trend >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                     {trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                    {trend >= 0 ? '+' : ''}{trend.toFixed(1)}%
+                    {trendUnit === 'percent'
+                      ? `${trend >= 0 ? '+' : ''}${trend.toFixed(1)}%`
+                      : `${trend >= 0 ? '+' : ''}${trend.toFixed(1)} pts`}
                 </div>
             )}
 

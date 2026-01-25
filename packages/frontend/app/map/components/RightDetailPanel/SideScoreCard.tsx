@@ -5,7 +5,9 @@ import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 interface SideScoreCardProps {
     type: ScoreType;
     score: number | null;
+    /** 3-month change: points (scores API) or percent (metrics). Default 'points'. */
     trend?: number | null;
+    trendUnit?: 'points' | 'percent';
     onClick: () => void;
     isActive?: boolean;
     className?: string;
@@ -17,7 +19,7 @@ const SCORE_CONFIG: Record<ScoreType, { label: string }> = {
     market_health: { label: 'Market Health' }
 };
 
-export function SideScoreCard({ type, score, trend, onClick, isActive, className }: SideScoreCardProps) {
+export function SideScoreCard({ type, score, trend, trendUnit = 'points', onClick, isActive, className }: SideScoreCardProps) {
     const config = SCORE_CONFIG[type];
 
     return (
@@ -52,15 +54,17 @@ export function SideScoreCard({ type, score, trend, onClick, isActive, className
                         {config.label}
                     </span>
 
-                    {/* Trend Text */}
+                    {/* Trend Text (3-month change from data binding layer) */}
                     <div className="text-[9px] text-on-surface-variant flex items-center gap-1">
                         {trend != null ? (
                             <>
                                 {trend > 0 ? <TrendingUp className="w-2.5 h-2.5 text-green-600" /> : <TrendingDown className="w-2.5 h-2.5 text-red-500" />}
                                 <span className={`font-medium ${trend > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                    {Math.abs(trend).toFixed(0)}%
+                                    {trendUnit === 'percent'
+                                      ? `${Math.abs(trend).toFixed(0)}%`
+                                      : `${trend >= 0 ? '+' : ''}${trend.toFixed(1)} pts`}
                                 </span>
-                                <span className="truncate opacity-80">vs prev</span>
+                                {trendUnit === 'percent' && <span className="truncate opacity-80">vs prev</span>}
                             </>
                         ) : (
                             <span className="opacity-50">--</span>
