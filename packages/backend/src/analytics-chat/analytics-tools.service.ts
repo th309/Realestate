@@ -79,6 +79,9 @@ export class AnalyticsToolsService {
       cluster_markets: '/api/v1/advanced/cluster',
       optimize_weights: '/api/v1/advanced/optimize-weights',
       generate_chart: '/api/v1/advanced/chart',
+      // Raw metric tools (query DB directly)
+      analyze_raw_metrics: '/api/v1/advanced/raw-metrics/analyze',
+      get_raw_metric_summary: '/api/v1/advanced/raw-metrics/summary',
     };
 
     const endpoint = endpoints[toolName];
@@ -426,6 +429,52 @@ export class AnalyticsToolsService {
             },
           },
           required: ['chart_type'],
+        },
+      },
+      // === Raw Metric Tools (query DB directly for raw data analysis) ===
+      {
+        name: 'analyze_raw_metrics',
+        description:
+          'Analyze RAW metrics from Zillow, Realtor, Census, Economic data against outcomes. Queries database directly (not cache). Use this to discover which raw data metrics best predict appreciation. Returns correlations, regression, and feature importance. May take 2-5 seconds.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_type: {
+              type: 'string',
+              enum: ['state', 'metro', 'county', 'zip'],
+              description: 'Geography level',
+            },
+            target: {
+              type: 'string',
+              description: 'Target: actual_appreciation_12m, actual_appreciation_36m, or actual_appreciation_60m',
+            },
+            data_sources: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Sources to include: zillow, realtor, census, economic, calculated. Default: all.',
+            },
+            states: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'State filter',
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'get_raw_metric_summary',
+        description:
+          'Get list of available raw metrics from each data source (Zillow, Realtor, Census, Economic, Calculated). Use this to see what raw data is available for analysis.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_type: {
+              type: 'string',
+              enum: ['state', 'metro', 'county', 'zip'],
+            },
+          },
+          required: [],
         },
       },
     ];

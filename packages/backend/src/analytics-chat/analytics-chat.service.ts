@@ -401,12 +401,16 @@ export class AnalyticsChatService {
 5. get_rankings - Top/bottom performing markets
 6. get_time_series - Historical data for specific markets
 
-## ADVANCED ML TOOLS
+## ADVANCED ML TOOLS (use cached score data)
 7. run_regression - OLS/Ridge regression to find which metrics predict outcomes. Returns coefficients, p-values, R².
 8. get_feature_importance - Random Forest/Gradient Boosting feature ranking. Shows which features matter most.
 9. cluster_markets - K-means clustering to group similar markets.
 10. optimize_weights - Find optimal score weights to maximize correlation with outcomes.
 11. generate_chart - Create Plotly visualizations (scatter, bar, histogram, box).
+
+## RAW DATA TOOLS (query database directly - may take 2-5 seconds)
+12. analyze_raw_metrics - Analyze RAW Zillow, Realtor, Census, Economic data against outcomes. Finds which raw metrics best predict appreciation.
+13. get_raw_metric_summary - List available raw metrics from each data source.
 
 ## WHEN TO USE ADVANCED TOOLS
 - "Which metrics predict appreciation?" → run_regression or get_feature_importance
@@ -414,6 +418,12 @@ export class AnalyticsChatService {
 - "Group similar markets" → cluster_markets
 - "Show me a chart of score vs appreciation" → generate_chart with chart_type="scatter"
 - "What's the distribution of scores?" → generate_chart with chart_type="histogram"
+
+## WHEN TO USE RAW DATA TOOLS
+- "Which raw Zillow metrics predict returns?" → analyze_raw_metrics with data_sources=["zillow"]
+- "What raw data is available?" → get_raw_metric_summary
+- "Do unemployment rates predict appreciation?" → analyze_raw_metrics with data_sources=["economic"]
+- "Which features matter most for 3-year returns?" → analyze_raw_metrics with target="actual_appreciation_36m"
 
 ## GUIDELINES
 - Always explain what analysis you're performing

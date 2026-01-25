@@ -750,6 +750,229 @@ class AdvancedAnalysisService:
                 success=False, chart_type=chart_type,
                 title=title or "Chart", error=str(e)
             )
+    
+    # =========================================================================
+    # RAW METRIC ANALYSIS METHODS (query Supabase directly)
+    # =========================================================================
+    
+    def analyze_raw_metrics(
+        self,
+        geography_type: str = 'metro',
+        target: str = 'actual_appreciation_12m',
+        data_sources: Optional[List[str]] = None,
+        states: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Analyze raw metrics from multiple data sources against outcomes.
+        
+        This queries Supabase directly (not the Parquet cache) to find
+        which raw metrics best predict the target variable.
+        
+        Args:
+            geography_type: metro, county, zip, state
+            target: Target variable (appreciation column)
+            data_sources: List of sources to include: zillow, realtor, census, economic, calculated
+            states: State filter
+        
+        Returns:
+            Dict with regression results, feature importance, and top predictors
+        """
+        from app.services.raw_metric_service import get_raw_metric_service
+        
+        try:
+            raw_service = get_raw_metric_service()
+            
+            # Determine which sources to include
+            include_zillow = data_sources is None or 'zillow' in data_sources
+            include_realtor = data_sources is None or 'realtor' in data_sources
+            include_census = data_sources is None or 'census' in data_sources
+            include_economic = data_sources is None or 'economic' in data_sources
+            include_calculated = data_sources is None or 'calculated' in data_sources
+            
+            # Get raw metrics with outcomes
+            df = raw_service.get_raw_metrics_for_regression(
+                geography_type=geography_type,
+                states=states,
+                target_column=target
+            )
+            
+            if len(df) == 0:
+                return {
+                    "success": False,
+                    "error": "No raw metric data available"
+                }
+            
+            logger.info(f"Raw metrics loaded: {len(df)} records, {len(df.columns)} columns")
+            
+            # Identify numeric feature columns (exclude identifiers and target)
+            exclude_patterns = ['id', 'code', 'name', 'date', 'created', 'updated', 'type', 'flag']
+            feature_cols = []
+            for col in df.columns:
+                if col == target:
+                    continue
+                if any(p in col.lower() for p in exclude_patterns):
+                    continue
+                if df[col].dtype in ['float64', 'int64', 'float32', 'int32']:
+                    # Check if column has enough non-null values
+                    if df[col].notna().sum() >= 30:
+                        feature_cols.append(col)
+            
+            logger.info(f"Found {len(feature_cols)} numeric feature columns")
+            
+            if len(feature_cols) == 0:
+                return {
+                    "success": False,
+                    "error": "No numeric feature columns found"
+                }
+            
+            if target not in df.columns:
+                return {
+                    "success": False,
+                    "error": f"Target column '{target}' not found in data"
+                }
+            
+            # Prepare analysis data
+            analysis_df = df[feature_cols + [target]].dropna(subset=[target])
+            
+            # Calculate correlations for each feature
+            correlations = []
+            for col in feature_cols:
+                valid = analysis_df[[col, target]].dropna()
+                if len(valid) >= 20:
+                    try:
+                        r, p = stats.pearsonr(valid[col], valid[target])
+                        correlations.append({
+                            'feature': col,
+                            'correlation': round(float(r), 4),
+                            'abs_correlation': round(abs(float(r)), 4),
+                            'p_value': round(float(p), 6),
+                            'significant': p < 0.05,
+                            'sample_size': len(valid),
+                            'direction': 'positive' if r > 0 else 'negative'
+                        })
+                    except Exception:
+                        pass
+            
+            # Sort by absolute correlation
+            correlations = sorted(correlations, key=lambda x: x['abs_correlation'], reverse=True)
+            
+            # Get top features for regression
+            top_features = [c['feature'] for c in correlations[:15] if c['significant']]
+            
+            if len(top_features) < 3:
+                # Use top correlations even if not significant
+                top_features = [c['feature'] for c in correlations[:10]]
+            
+            regression_result = None
+            feature_importance_result = None
+            
+            if len(top_features) >= 3:
+                # Run regression on top features
+                reg_df = analysis_df[top_features + [target]].dropna()
+                if len(reg_df) >= 30:
+                    try:
+                        X = reg_df[top_features]
+                        y = reg_df[target]
+                        
+                        # Standardize
+                        scaler = StandardScaler()
+                        X_scaled = scaler.fit_transform(X)
+                        
+                        # OLS regression
+                        X_const = sm.add_constant(pd.DataFrame(X_scaled, columns=top_features))
+                        ols_model = sm.OLS(y, X_const).fit()
+                        
+                        regression_result = {
+                            'r_squared': round(float(ols_model.rsquared), 4),
+                            'adj_r_squared': round(float(ols_model.rsquared_adj), 4),
+                            'sample_size': len(reg_df),
+                            'coefficients': {
+                                top_features[i]: {
+                                    'value': round(float(ols_model.params[i+1]), 6),
+                                    'p_value': round(float(ols_model.pvalues[i+1]), 6),
+                                    'significant': ols_model.pvalues[i+1] < 0.05
+                                }
+                                for i in range(len(top_features))
+                            }
+                        }
+                        
+                        # Feature importance via Random Forest
+                        rf = RandomForestRegressor(n_estimators=50, max_depth=8, random_state=42, n_jobs=-1)
+                        rf.fit(X, y)
+                        
+                        importances = sorted(
+                            [
+                                {'feature': top_features[i], 'importance': round(float(rf.feature_importances_[i]), 4)}
+                                for i in range(len(top_features))
+                            ],
+                            key=lambda x: x['importance'],
+                            reverse=True
+                        )
+                        
+                        feature_importance_result = {
+                            'method': 'random_forest',
+                            'r_squared': round(float(rf.score(X, y)), 4),
+                            'importances': importances
+                        }
+                        
+                    except Exception as e:
+                        logger.warning(f"Regression failed: {e}")
+            
+            return {
+                "success": True,
+                "geography_type": geography_type,
+                "target_variable": target,
+                "total_records": len(df),
+                "total_features": len(feature_cols),
+                "data_sources": {
+                    "zillow": include_zillow,
+                    "realtor": include_realtor,
+                    "census": include_census,
+                    "economic": include_economic,
+                    "calculated": include_calculated
+                },
+                "top_correlations": correlations[:20],
+                "regression": regression_result,
+                "feature_importance": feature_importance_result
+            }
+            
+        except Exception as e:
+            logger.error(f"Raw metric analysis failed: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def get_raw_metric_summary(
+        self,
+        geography_type: str = 'metro',
+        states: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get summary of available raw metrics.
+        
+        Returns counts and sample values from each data source.
+        """
+        from app.services.raw_metric_service import get_raw_metric_service
+        
+        try:
+            raw_service = get_raw_metric_service()
+            
+            available = raw_service.get_available_metrics(geography_type)
+            
+            return {
+                "success": True,
+                "geography_type": geography_type,
+                "available_metrics": available,
+                "total_metrics": sum(len(v) for v in available.values())
+            }
+            
+        except Exception as e:
+            logger.error(f"Raw metric summary failed: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 
 # Singleton

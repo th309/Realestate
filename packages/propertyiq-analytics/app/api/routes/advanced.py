@@ -69,6 +69,17 @@ class ChartRequest(BaseModel):
     limit: int = Field(100, ge=10, le=500, description="Max data points")
 
 
+class RawMetricAnalysisRequest(BaseModel):
+    """Request for raw metric analysis."""
+    geography_type: str = Field("metro", description="Geography level")
+    target: str = Field("actual_appreciation_12m", description="Target variable")
+    data_sources: Optional[List[str]] = Field(
+        None, 
+        description="Data sources to include: zillow, realtor, census, economic, calculated"
+    )
+    states: Optional[List[str]] = Field(None, description="State filter")
+
+
 # === Endpoints ===
 
 @router.post("/regression")
@@ -242,4 +253,64 @@ async def generate_chart(request: ChartRequest):
         }
     except Exception as e:
         logger.exception("Chart generation failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === RAW METRIC ENDPOINTS (query Supabase directly) ===
+
+@router.post("/raw-metrics/analyze")
+async def analyze_raw_metrics(request: RawMetricAnalysisRequest):
+    """
+    Analyze raw metrics from multiple data sources against outcomes.
+    
+    This queries Supabase directly (not cache) to find which raw metrics
+    from Zillow, Realtor, Census, Economic data best predict appreciation.
+    
+    Returns:
+    - Top correlations across all raw metrics
+    - Regression analysis on top predictors
+    - Feature importance rankings
+    
+    Note: This may take 2-5 seconds as it queries the database directly.
+    """
+    logger.info(f"POST /advanced/raw-metrics/analyze: target={request.target}")
+    
+    try:
+        service = get_advanced_service()
+        result = service.analyze_raw_metrics(
+            geography_type=request.geography_type,
+            target=request.target,
+            data_sources=request.data_sources,
+            states=request.states
+        )
+        
+        return result
+    except Exception as e:
+        logger.exception("Raw metric analysis failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/raw-metrics/summary")
+async def get_raw_metric_summary(
+    geography_type: str = "metro",
+    states: Optional[str] = None
+):
+    """
+    Get summary of available raw metrics from each data source.
+    
+    Returns list of available metrics from Zillow, Realtor, Census, Economic, Calculated.
+    """
+    logger.info(f"GET /advanced/raw-metrics/summary: geo={geography_type}")
+    
+    try:
+        service = get_advanced_service()
+        state_list = states.split(",") if states else None
+        result = service.get_raw_metric_summary(
+            geography_type=geography_type,
+            states=state_list
+        )
+        
+        return result
+    except Exception as e:
+        logger.exception("Raw metric summary failed")
         raise HTTPException(status_code=500, detail=str(e))
