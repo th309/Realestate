@@ -57,33 +57,32 @@ export interface MetricOptionsResult {
 
 // Category mapping based on metric-categories.tsx structure
 const CATEGORY_METRICS: Record<string, string[]> = {
-    // Homebuyer categories
+    // Homebuyer categories (from metric-categories.tsx)
     home_price_affordability: [
         'listing_price', 'income_to_buy', 'affordable_home_price',
-        'price_per_sqft', 'years_to_save', 'homeowner_affordability',
-        'home_value_yoy', 'home_value_5yr',
+        'price_per_sqft', 'years_to_save', 'home_value_yoy', 'home_value_5yr',
     ],
     market_activity: [
         'days_on_market', 'for_sale_inventory', 'inventory_yoy',
-        'pending_ratio', 'new_listings_yoy', 'hotness_score',
-        'sale_to_list',
+        'pending_ratio', 'new_listings_yoy', 'hotness_score', 'sale_to_list',
     ],
     pricing_deals: [
-        'home_value_mom', 'price_cut_pct',
+        'home_value_yoy', 'home_value_mom', 'price_cut_pct',
         'price_increase_pct', 'new_listings', 'inventory_surplus',
     ],
 
-    // Investor categories
+    // Investor categories (from metric-categories.tsx)
     cash_flow: [
         'cap_rate', 'rent_index', 'rent_for_houses',
-        'income_to_rent', 'renter_affordability',
+        'listing_price', 'price_per_sqft',
     ],
-    appreciation: ['home_value', 'overvalued_pct'],
+    appreciation: ['home_value_yoy', 'home_value_5yr', 'home_value', 'overvalued_pct'],
     demand_risk: [
-        'days_on_market', 'for_sale_inventory', 'demand_score', 'supply_score',
+        'days_on_market', 'for_sale_inventory', 'inventory_yoy',
+        'pending_ratio', 'new_listings_yoy', 'hotness_score',
     ],
 
-    // Area categories
+    // Shared categories (from metric-categories.tsx)
     area_profile: [
         'population', 'population_growth', 'median_income',
         'income_growth', 'median_age', 'homeownership_rate',
@@ -92,7 +91,12 @@ const CATEGORY_METRICS: Record<string, string[]> = {
         'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
     ],
     new_construction: [
+        'sf_permits', 'mf_permits', 'total_permits', 'permits_yoy',
+        'sf_mf_ratio', 'permit_value_per_unit',
         'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
+    ],
+    scores: [
+        'homeready_score', 'investoredge_score', 'market_health_score',
     ],
 };
 
@@ -188,35 +192,35 @@ export function useMetricCategories(): { label: string; value: string }[] {
 
 /**
  * Get all metrics matching sidebar order (for main metric dropdown)
+ * IMPORTANT: This list must match metric-categories.tsx exactly
  */
 export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
-  // Master ordered list matching map page sidebar
+  // Master ordered list matching map page sidebar (metric-categories.tsx)
   const ORDERED_IDS = [
-    // Affordability
+    // Affordability (HOMEBUYER_AFFORDABILITY)
     'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
-    'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
-    // Market Competition
+    'years_to_save', 'home_value_yoy', 'home_value_5yr',
+    // Market Competition (HOMEBUYER_COMPETITION)
     'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
     'new_listings_yoy', 'hotness_score', 'sale_to_list',
-    // Pricing & Deals
+    // Pricing & Deals (HOMEBUYER_PRICING)
     'home_value_mom', 'price_cut_pct', 'price_increase_pct',
     'new_listings', 'inventory_surplus',
-    // Cash Flow
-    'cap_rate', 'gross_yield', 'grm', 'rent_to_price_ratio', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',
-    // Appreciation
+    // Cash Flow (INVESTOR_CASHFLOW)
+    'cap_rate', 'rent_index', 'rent_for_houses',
+    // Appreciation (INVESTOR_APPRECIATION)
     'home_value', 'overvalued_pct',
-    // Investment Scores
-    'investment_score', 'long_term_growth_score',
-    // Demand & Risk
-    'demand_score', 'supply_score',
-    // Area Profile
+    // Demand & Risk (INVESTOR_DEMAND_RISK) - uses same metrics as HOMEBUYER_COMPETITION
+    // Area Profile (AREA_PROFILE)
     'population', 'population_growth', 'median_income', 'income_growth',
     'median_age', 'homeownership_rate',
-    // Local Economy
+    // Local Economy (LOCAL_ECONOMY)
     'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
-    // New Construction
+    // New Construction (NEW_CONSTRUCTION)
+    'sf_permits', 'mf_permits', 'total_permits', 'permits_yoy',
+    'sf_mf_ratio', 'permit_value_per_unit',
     'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
-    // PropertyIQ Scores
+    // PropertyIQ Scores (SCORES_CATEGORY)
     'homeready_score', 'investoredge_score', 'market_health_score',
   ];
 

@@ -13,18 +13,41 @@ interface AvailableMetric {
   disabled?: boolean;
 }
 
-// Map metric IDs to the 4 UI categories
+// Map metric IDs to UI categories (must match metric-categories.tsx)
 function getMetricCategory(metricId: string): string {
-  if (['affordable_home_price', 'home_value_yoy', 'home_value_5yr', 'income_to_buy', 'listing_price', 'price_per_sqft', 'years_to_save', 'homeowner_affordability'].includes(metricId)) {
+  // Affordability metrics
+  if (['affordable_home_price', 'home_value_yoy', 'home_value_5yr', 'income_to_buy', 'listing_price', 'price_per_sqft', 'years_to_save'].includes(metricId)) {
     return 'AFFORDABILITY';
-  } else if (['cap_rate', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability'].includes(metricId)) {
+  }
+  // Cash Flow metrics (Investor)
+  if (['cap_rate', 'rent_index', 'rent_for_houses'].includes(metricId)) {
     return 'CASH FLOW';
-  } else if (['cost_of_living', 'gdp_growth', 'job_growth', 'unemployment_rate'].includes(metricId)) {
+  }
+  // Local Economy metrics
+  if (['cost_of_living', 'gdp_growth', 'job_growth', 'unemployment_rate'].includes(metricId)) {
     return 'LOCAL ECONOMY';
-  } else if (['days_on_market', 'hotness_score', 'for_sale_inventory', 'inventory_yoy', 'market_heat', 'new_listings_yoy', 'pending_ratio', 'sale_to_list'].includes(metricId)) {
+  }
+  // Market Competition metrics
+  if (['days_on_market', 'hotness_score', 'for_sale_inventory', 'inventory_yoy', 'new_listings_yoy', 'pending_ratio', 'sale_to_list', 'home_value_mom', 'price_cut_pct', 'price_increase_pct', 'new_listings', 'inventory_surplus'].includes(metricId)) {
     return 'MARKET COMPETITION';
   }
-  return 'MARKET COMPETITION'; // default
+  // Appreciation metrics (Investor)
+  if (['home_value', 'overvalued_pct'].includes(metricId)) {
+    return 'APPRECIATION';
+  }
+  // Area Profile metrics
+  if (['population', 'population_growth', 'median_income', 'income_growth', 'median_age', 'homeownership_rate'].includes(metricId)) {
+    return 'AREA PROFILE';
+  }
+  // New Construction metrics
+  if (['sf_permits', 'mf_permits', 'total_permits', 'permits_yoy', 'sf_mf_ratio', 'permit_value_per_unit', 'new_construction_sales', 'new_construction_price', 'new_construction_ppsf'].includes(metricId)) {
+    return 'NEW CONSTRUCTION';
+  }
+  // PropertyIQ Scores
+  if (['homeready_score', 'investoredge_score', 'market_health_score'].includes(metricId)) {
+    return 'PROPERTYIQ SCORES';
+  }
+  return 'OTHER';
 }
 
 export interface MetricSelectorProps {
@@ -73,8 +96,11 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
     }, {} as Record<string, AvailableMetric[]>);
   }, [availableMetrics]);
 
-  // Define category order
-  const categoryOrder = ['AFFORDABILITY', 'CASH FLOW', 'LOCAL ECONOMY', 'MARKET COMPETITION'];
+  // Define category order (matches sidebar structure)
+  const categoryOrder = [
+    'AFFORDABILITY', 'MARKET COMPETITION', 'CASH FLOW', 'APPRECIATION',
+    'AREA PROFILE', 'LOCAL ECONOMY', 'NEW CONSTRUCTION', 'PROPERTYIQ SCORES', 'OTHER'
+  ];
 
   const toggleMetric = (metricId: string) => {
     const metric = availableMetrics.find(m => m.id === metricId);
