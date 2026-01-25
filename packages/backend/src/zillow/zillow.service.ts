@@ -8,7 +8,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode } from '../common/geo';
+import { normalizeStateToCode } from '../common/geo.js';
 
 // Import types
 import type { HomeValueData, ForecastData } from './types';
@@ -301,8 +301,8 @@ export class ZillowService {
     countyFilter?: string,
     date?: string,
   ): Promise<HomeValueData[]> {
-    stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
-    if (!stateFilter) {
+    const stateCode = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
+    if (!stateCode) {
       return [];
     }
 
@@ -323,7 +323,7 @@ export class ZillowService {
           'region_id, region_name, state_code, county_fips, value, period_date',
         )
         .eq('metric_name', 'zhvi')
-        .eq('state_code', stateFilter.toUpperCase());
+        .eq('state_code', stateCode.toUpperCase());
 
       if (targetDate) {
         query = query.eq('period_date', targetDate);

@@ -8,7 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
-import { normalizeStateToCode } from '../common/geo';
+import { normalizeStateToCode } from '../common/geo.js';
 import {
   GeographyService,
   GeoJSONFeatureCollection,

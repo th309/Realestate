@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeStateToCode } from '../common/geo';
+import { normalizeStateToCode } from '../common/geo.js';
 
 @Injectable()
 export class MarketsService {
