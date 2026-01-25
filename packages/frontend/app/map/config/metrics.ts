@@ -82,6 +82,10 @@ export interface MetricConfig {
 
   // Range calculation: 'dynamic' uses actual data range, 'full' uses 0-100% of data
   rangeType?: 'dynamic' | 'full';
+
+  // Fixed scale bounds for color/legend (e.g. permit counts: 0 to 200+)
+  scaleMin?: number;
+  scaleMax?: number;
 }
 
 /**
@@ -580,6 +584,8 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'sf_units',
+    scaleMin: 0,
+    scaleMax: 200,
   },
 
   mf_permits: {
@@ -591,6 +597,8 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'large_multi_units',
+    scaleMin: 0,
+    scaleMax: 200,
   },
 
   total_permits: {
@@ -602,6 +610,8 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'total_units',
+    scaleMin: 0,
+    scaleMax: 200,
   },
 
   permits_yoy: {

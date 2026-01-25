@@ -37,33 +37,52 @@ export const COLOR_SCALE = [
 // No data color (light gray with transparency)
 export const NO_DATA_COLOR = 'rgba(200, 200, 200, 0.3)';
 
+export interface ValueRangeResult {
+  min: number;
+  max: number;
+  /** When set (e.g. '+'), legend shows max label with this suffix (e.g. "200+") */
+  maxLabelSuffix?: string;
+}
+
 /**
  * Calculate the value range for color scale mapping.
- * Uses percentile-based calculation to exclude outliers.
+ * Uses percentile-based calculation to exclude outliers, or fixed scale for permit-type metrics.
  *
  * @param mapData - Object mapping region IDs to values
  * @param metricFormat - The format type of the metric
  * @param metricId - Optional metric ID for special handling
- * @returns min and max values for the color scale
+ * @returns min and max values for the color scale, and optional max label suffix
  */
 export function calculateValueRange(
   mapData: MapData,
   metricFormat: ReturnType<typeof getFormat>,
   metricId?: string
-): { min: number; max: number } {
+): ValueRangeResult {
   // Extract numeric values from both simple numbers and object entries
   const allValues = Object.values(mapData)
     .map((entry: MapDataEntry) => getValueFromEntry(entry))
     .filter((v): v is number => v !== null && !isNaN(v));
 
+  const defaultRange = DEFAULT_VALUE_RANGES[metricFormat];
   if (allValues.length === 0) {
-    return DEFAULT_VALUE_RANGES[metricFormat];
+    return { min: defaultRange.min, max: defaultRange.max };
   }
 
   const sorted = [...allValues].sort((a, b) => a - b);
+  const config = metricId ? getMetricConfig(metricId) : undefined;
+
+  // Fixed scale (e.g. permits 0–200+) so the map shows variation instead of one band
+  if (config?.scaleMin != null || config?.scaleMax != null) {
+    const min = config.scaleMin ?? sorted[0];
+    const max = config.scaleMax ?? sorted[sorted.length - 1];
+    return {
+      min,
+      max,
+      maxLabelSuffix: config.scaleMax != null ? '+' : undefined,
+    };
+  }
 
   // Check if this metric uses full range (no percentile clipping)
-  const config = metricId ? getMetricConfig(metricId) : undefined;
   if (config?.rangeType === 'full') {
     return { min: sorted[0], max: sorted[sorted.length - 1] };
   }
@@ -77,19 +96,15 @@ export function calculateValueRange(
     // For absolute percent metrics (0-100%), use data-driven range
     const positiveValues = sorted.filter(v => v >= 0);
     if (positiveValues.length === 0) {
-      return DEFAULT_VALUE_RANGES[metricFormat];
+      return { min: defaultRange.min, max: defaultRange.max };
     }
     const p5Index = Math.max(0, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MIN));
     const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MAX));
     return { min: positiveValues[p5Index], max: positiveValues[p95Index] };
   } else {
-    // For non-percent metrics, use min and 95th percentile of positive values
-    const positiveValues = sorted.filter(v => v > 0);
-    if (positiveValues.length === 0) {
-      return DEFAULT_VALUE_RANGES[metricFormat];
-    }
-    const p95Index = Math.min(positiveValues.length - 1, Math.floor(positiveValues.length * PERCENTILE_BOUNDS.MAX));
-    return { min: positiveValues[0], max: positiveValues[p95Index] };
+    // For number/days/etc: include zeros so 0 is the bottom of the scale (more variation)
+    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * PERCENTILE_BOUNDS.MAX));
+    return { min: sorted[0], max: sorted[p95Index] };
   }
 }
 

@@ -27,12 +27,12 @@ export function Legend({
   const legendTitle = getMetricTitle(selectedMetric, forecastHorizon);
 
   // Use shared range calculation - ensures consistency with map layer colors
-  // Pass selectedMetric for special handling (e.g., market_heat uses full range)
-  const { min, max } = calculateValueRange(mapData, metricFormat, selectedMetric);
+  // Pass selectedMetric for special handling (e.g., permits use 0–200+ scale)
+  const { min, max, maxLabelSuffix } = calculateValueRange(mapData, metricFormat, selectedMetric);
 
   // Use shared formatValue for labels - ensures consistency with map
   const minLabel = formatValue(min, metricFormat, 'min');
-  const maxLabel = formatValue(max, metricFormat, 'max');
+  const maxLabel = formatValue(max, metricFormat, 'max') + (maxLabelSuffix ?? '');
 
   // Get "as of" date from central config
   const dataDate = formatDataDateForDisplay(getMetricDataDate(selectedMetric));
