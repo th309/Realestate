@@ -26,16 +26,17 @@ export async function GET() {
     if (error) {
       console.error('Error fetching testers:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch testers' },
+        { error: 'Failed to fetch testers', details: error.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ testers: testers || [] });
-  } catch (error) {
-    console.error('Testers fetch error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Testers fetch error:', errorMessage);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     );
   }

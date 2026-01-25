@@ -22,16 +22,17 @@ export async function GET() {
     if (error) {
       console.error('Error fetching feedback:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch feedback' },
+        { error: 'Failed to fetch feedback', details: error.message },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ feedback: feedback || [] });
-  } catch (error) {
-    console.error('Admin feedback fetch error:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Admin feedback fetch error:', errorMessage);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     );
   }
