@@ -120,6 +120,110 @@ export class PermitsService {
     return (data?.[0] as PermitsRow)?.period_date as string | null;
   }
 
+  /**
+   * Calculate YoY for rows where it's NULL in the database.
+   * This ensures we show YoY data for all counties/states that have current year data,
+   * even if the YoY wasn't backfilled in the database.
+   * Uses batch fetching for efficiency.
+   */
+  private async enrichYoYData(
+    rows: PermitsRow[],
+    table: 'permits_state' | 'permits_county',
+    currentPeriod: string,
+    idField: 'state_fips' | 'fips_code'
+  ): Promise<void> {
+    // Check if any rows need YoY calculation
+    const needsYoY = rows.some(row => toMetricValue(row.total_units_yoy) === null);
+    if (!needsYoY) {
+      return; // All rows already have YoY
+    }
+
+    // Calculate previous year period
+    const currentDate = new Date(currentPeriod);
+    const prevYear = new Date(currentDate);
+    prevYear.setFullYear(prevYear.getFullYear() - 1);
+    const prevPeriod = prevYear.toISOString().split('T')[0].slice(0, 7) + '-01';
+
+    // Get IDs that need YoY calculation
+    const idsNeedingYoY = rows
+      .filter(row => toMetricValue(row.total_units_yoy) === null)
+      .map(row => String(row[idField]));
+
+    if (idsNeedingYoY.length === 0) {
+      return;
+    }
+
+    // Batch fetch previous year data for all regions that need it
+    // Paginate if needed (Supabase has 1000 row limit)
+    const prevYearDataMap = new Map<string, PermitsRow>();
+    let offset = 0;
+
+    while (true) {
+      let query = this.supabase
+        .from(table)
+        .select(`${idField}, sf_units, duplex_units, small_multi_units, large_multi_units, total_units`)
+        .eq('period_date', prevPeriod)
+        .in(idField, idsNeedingYoY);
+
+      const { data: prevData, error } = await query.range(offset, offset + this.PAGE_SIZE - 1);
+
+      if (error) {
+        console.error(`Error fetching previous year data for YoY calculation:`, error);
+        break; // Continue without YoY enrichment rather than failing
+      }
+
+      if (!prevData || prevData.length === 0) {
+        break;
+      }
+
+      (prevData as PermitsRow[]).forEach((prevRow) => {
+        const id = String(prevRow[idField]);
+        prevYearDataMap.set(id, prevRow);
+      });
+
+      if (prevData.length < this.PAGE_SIZE) {
+        break;
+      }
+      offset += this.PAGE_SIZE;
+    }
+
+    // Calculate YoY for rows that need it
+    rows.forEach((row) => {
+      const storedYoY = toMetricValue(row.total_units_yoy);
+      if (storedYoY !== null) {
+        return; // Already has YoY
+      }
+
+      const id = String(row[idField]);
+      const prevRow = prevYearDataMap.get(id);
+
+      if (!prevRow) {
+        return; // No previous year data available
+      }
+
+      const currentTotal = calculateTotalUnits(row);
+      const prevTotal = calculateTotalUnits(prevRow);
+
+      if (currentTotal === null) {
+        return; // Can't calculate without current year data
+      }
+
+      if (prevTotal === null || prevTotal === 0) {
+        // If previous year was 0 and current > 0, this is "new activity" (100% growth)
+        if (currentTotal > 0) {
+          row.total_units_yoy = 100;
+        } else {
+          // Both are 0, YoY is 0
+          row.total_units_yoy = 0;
+        }
+        return;
+      }
+
+      // Calculate YoY percentage
+      row.total_units_yoy = Math.round(((currentTotal - prevTotal) / prevTotal) * 100 * 100) / 100;
+    });
+  }
+
   // ============================================================================
   // National-Level Permits (aggregated from state data)
   // ============================================================================
@@ -254,7 +358,15 @@ export class PermitsService {
   }> {
     const cacheKey = `permits_state:all`;
     const cached = this.getCached(cacheKey);
+    
+    const latestPeriod = await this.getLatestPeriod('permits_state');
+    
     if (cached) {
+      // Still enrich YoY for cached data if needed (in case YoY wasn't backfilled)
+      if (latestPeriod) {
+        await this.enrichYoYData(cached, 'permits_state', latestPeriod, 'state_fips');
+      }
+      
       const result = cached.map((row) => ({
         region_id: String(row.state_fips || ''),
         region_name: STATE_FIPS_TO_NAME[String(row.state_fips)] || String(row.state_fips),
@@ -272,8 +384,6 @@ export class PermitsService {
       return { success: true, count: result.length, data: result };
     }
 
-    const latestPeriod = await this.getLatestPeriod('permits_state');
-
     const { data, error } = await this.supabase
       .from('permits_state')
       .select('*')
@@ -282,6 +392,12 @@ export class PermitsService {
     if (error) throw error;
 
     const rows = (data || []) as PermitsRow[];
+    
+    // Enrich YoY data for rows where it's NULL
+    if (latestPeriod) {
+      await this.enrichYoYData(rows, 'permits_state', latestPeriod, 'state_fips');
+    }
+    
     this.setCache(cacheKey, rows);
 
     const result = rows.map((row) => ({
@@ -313,7 +429,15 @@ export class PermitsService {
   }> {
     const cacheKey = `permits_county:${state || 'all'}`;
     const cached = this.getCached(cacheKey);
+    
+    const latestPeriod = await this.getLatestPeriod('permits_county');
+    
     if (cached) {
+      // Still enrich YoY for cached data if needed (in case YoY wasn't backfilled)
+      if (latestPeriod) {
+        await this.enrichYoYData(cached, 'permits_county', latestPeriod, 'fips_code');
+      }
+      
       const result = cached.map((row) => ({
         region_id: String(row.fips_code || ''),
         region_name: String(row.county_name || ''),
@@ -332,8 +456,6 @@ export class PermitsService {
       }));
       return { success: true, count: result.length, data: result };
     }
-
-    const latestPeriod = await this.getLatestPeriod('permits_county');
 
     // Paginate to get all counties (Supabase has 1000 row default limit)
     const allRows: PermitsRow[] = [];
@@ -361,6 +483,11 @@ export class PermitsService {
       offset += this.PAGE_SIZE;
     }
 
+    // Enrich YoY data for rows where it's NULL
+    if (latestPeriod) {
+      await this.enrichYoYData(allRows, 'permits_county', latestPeriod, 'fips_code');
+    }
+    
     this.setCache(cacheKey, allRows);
 
     const result = allRows.map((row) => ({

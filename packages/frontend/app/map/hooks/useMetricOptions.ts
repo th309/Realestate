@@ -28,6 +28,7 @@ import {
     getMetricConfig,
     isMetricSupportedForGeo,
 } from '@/app/map/config/metrics';
+import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 
 export interface MetricOption {
@@ -138,9 +139,17 @@ export function useMetricOptions(config: MetricOptionsConfig = {}): MetricOption
             const metricConfig = getMetricConfig(id);
             if (!metricConfig) continue;
 
-            // Check geo level support
-            if (geoLevel && !isMetricSupportedForGeo(id, geoLevel)) {
-                continue;
+            // Check geo level support using verified availability (actual data availability)
+            // Falls back to config-based check if availability data not found
+            if (geoLevel) {
+                const isAvailable = isMetricAvailableForGeo(id, geoLevel);
+                if (!isAvailable) {
+                    // If not in availability map, fall back to config check
+                    const configSupported = isMetricSupportedForGeo(id, geoLevel);
+                    if (!configSupported) {
+                        continue;
+                    }
+                }
             }
 
             // Check premium filter
@@ -222,8 +231,18 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
             const metricConfig = getMetricConfig(id);
             if (!metricConfig) continue;
 
-            // Check geo level support if specified
-            if (geoLevel && !isMetricSupportedForGeo(id, geoLevel)) {
+            // Check geo level support using verified availability (actual data availability)
+            // Falls back to config-based check if availability data not found
+            let isAvailable = true;
+            if (geoLevel) {
+                isAvailable = isMetricAvailableForGeo(id, geoLevel);
+                // If not in availability map, fall back to config check
+                if (!isAvailable) {
+                    isAvailable = isMetricSupportedForGeo(id, geoLevel);
+                }
+            }
+
+            if (!isAvailable) {
                 // Add as disabled instead of skipping
                 result.push({
                     label: metricConfig.title,
@@ -252,7 +271,16 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
             const metricConfig = getMetricConfig(id);
             if (!metricConfig) continue;
 
-            const disabled = geoLevel ? !isMetricSupportedForGeo(id, geoLevel) : false;
+            // Check geo level support using verified availability (actual data availability)
+            // Falls back to config-based check if availability data not found
+            let disabled = false;
+            if (geoLevel) {
+                disabled = !isMetricAvailableForGeo(id, geoLevel);
+                // If not in availability map, fall back to config check
+                if (disabled) {
+                    disabled = !isMetricSupportedForGeo(id, geoLevel);
+                }
+            }
 
             result.push({
                 label: metricConfig.title,
