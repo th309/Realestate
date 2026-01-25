@@ -158,33 +158,38 @@ class BacktestService:
         self,
         score_type: str,
         geography_type: str,
-        limit: int = 100000,
+        limit: int = 50000,
     ) -> pd.DataFrame:
         """Fetch historical scores with outcomes from database."""
         score_col = f"{score_type}_score"
         
-        # Select columns we need
+        # Select only the columns we need (fewer columns = faster query)
         columns = [
             'id', 'geography_id', 'geography_type', 'period_date',
             score_col,
             'actual_appreciation_6m', 'actual_appreciation_12m',
             'actual_appreciation_36m', 'actual_appreciation_60m',
-            'excess_return_vs_national_12m', 'excess_return_vs_regional_12m',
-            'excess_return_vs_peer_12m', 'weighted_excess_return_12m',
         ]
         
         try:
+            # Use simpler query to avoid timeout
             response = self.supabase.table('propertyiq_scores_history') \
                 .select(','.join(columns)) \
                 .eq('geography_type', geography_type) \
-                .not_(score_col, 'is', 'null') \
                 .limit(limit) \
                 .execute()
             
             if not response.data:
+                logger.warning(f"No data returned for {geography_type}")
                 return pd.DataFrame()
             
-            return pd.DataFrame(response.data)
+            # Filter out null scores in pandas (faster than SQL filter on large table)
+            df = pd.DataFrame(response.data)
+            if score_col in df.columns:
+                df = df[df[score_col].notna()]
+            
+            logger.info(f"Fetched {len(df)} records for {geography_type}/{score_type}")
+            return df
         except Exception as e:
             logger.error(f"Error fetching backtest data: {e}")
             return pd.DataFrame()

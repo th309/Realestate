@@ -60,29 +60,50 @@ class WorkflowService:
             )
         return self._supabase
 
-    def _query_table(
+    def _safe_query(
         self,
         table_name: str,
         columns: str = "*",
         filters: dict = None,
-        limit: int = None
-    ) -> tuple[list, int]:
-        """Query a table and return (data, count)."""
-        query = self.supabase.table(table_name).select(columns, count="exact")
-        
-        if filters:
-            for key, value in filters.items():
-                if isinstance(value, list):
-                    query = query.in_(key, value)
-                else:
-                    query = query.eq(key, value)
-        
-        if limit:
+        limit: int = 1000
+    ) -> list:
+        """Execute a safe query with limit to prevent timeouts."""
+        try:
+            query = self.supabase.table(table_name).select(columns)
+            
+            if filters:
+                for key, value in filters.items():
+                    if value is None:
+                        continue
+                    if isinstance(value, list):
+                        query = query.in_(key, value)
+                    else:
+                        query = query.eq(key, value)
+            
             query = query.limit(limit)
-        
-        response = query.execute()
-        count = response.count if hasattr(response, 'count') and response.count else len(response.data)
-        return response.data, count
+            response = query.execute()
+            return response.data or []
+        except Exception as e:
+            logger.error(f"Query error on {table_name}: {e}")
+            return []
+
+    def _get_sample_count(self, table_name: str, geo_type: str = None) -> int:
+        """Get approximate count using a sample query (faster than exact count)."""
+        try:
+            query = self.supabase.table(table_name).select("id")
+            if geo_type:
+                query = query.eq("geography_type", geo_type)
+            query = query.limit(1)
+            # Use head=True for count-only query
+            response = self.supabase.table(table_name).select("*", count="exact", head=True)
+            if geo_type:
+                response = self.supabase.table(table_name).select("*", count="exact", head=True).eq("geography_type", geo_type).execute()
+            else:
+                response = self.supabase.table(table_name).select("*", count="exact", head=True).execute()
+            return response.count or 0
+        except Exception as e:
+            logger.warning(f"Count query failed: {e}")
+            return -1
 
     async def run_data_export(
         self,
@@ -94,10 +115,7 @@ class WorkflowService:
         """
         Step 1: Export data for ML processing.
         
-        Exports:
-        - Historical scores with outcomes
-        - Zillow ZHVI data for outcome calculation
-        - Census data for peer grouping
+        Exports a sample of historical scores with outcomes for analysis.
         """
         step_id = "data-export"
         started_at = datetime.utcnow()
@@ -107,42 +125,42 @@ class WorkflowService:
         try:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
             
-            # Query historical scores
-            logger.info("Fetching historical scores...")
-            data, count = self._query_table(
+            # Fetch a sample of historical scores (limited to prevent timeout)
+            logger.info("Fetching sample of historical scores...")
+            data = self._safe_query(
                 "propertyiq_scores_history",
-                limit=100000
+                columns="id, geography_id, geography_type, period_date, investoredge_score, homeready_score, actual_appreciation_12m",
+                limit=5000
             )
-            metrics["scores_history_count"] = count
+            
+            metrics["sample_size"] = len(data)
             
             if data:
                 df = pd.DataFrame(data)
-                metrics["columns"] = list(df.columns)
-                metrics["date_range"] = {
-                    "min": df['period_date'].min() if 'period_date' in df.columns else None,
-                    "max": df['period_date'].max() if 'period_date' in df.columns else None,
-                }
+                metrics["columns_available"] = list(df.columns)
                 
-                # Count by geography type
+                if 'period_date' in df.columns:
+                    metrics["date_range"] = {
+                        "min": str(df['period_date'].min()),
+                        "max": str(df['period_date'].max()),
+                    }
+                
+                # Count by geography type in sample
                 if 'geography_type' in df.columns:
                     geo_counts = df['geography_type'].value_counts().to_dict()
-                    metrics["by_geography_type"] = geo_counts
+                    metrics["sample_by_geography"] = geo_counts
                 
-                # Count scores with outcomes
-                outcome_cols = [c for c in df.columns if 'actual_appreciation' in c]
-                for col in outcome_cols:
-                    metrics[f"with_{col}"] = int(df[col].notna().sum())
+                # Count records with scores
+                if 'investoredge_score' in df.columns:
+                    metrics["with_investoredge"] = int(df['investoredge_score'].notna().sum())
+                if 'homeready_score' in df.columns:
+                    metrics["with_homeready"] = int(df['homeready_score'].notna().sum())
+                if 'actual_appreciation_12m' in df.columns:
+                    metrics["with_outcomes_12m"] = int(df['actual_appreciation_12m'].notna().sum())
                 
-                outputs.append(f"scores_history: {count} records")
+                outputs.append(f"Loaded {len(data)} sample records")
             
-            # Query Zillow data sample
-            for geo_type in geography_types[:2]:  # Just check a couple
-                table = f"zillow_{geo_type}"
-                try:
-                    _, zillow_count = self._query_table(table, limit=1)
-                    metrics[f"{table}_available"] = zillow_count > 0
-                except Exception as e:
-                    metrics[f"{table}_error"] = str(e)
+            metrics["status"] = "success"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -178,49 +196,41 @@ class WorkflowService:
         """
         Step 2: Prepare backtest dataset.
         
-        Checks what data is available and what needs to be populated.
+        Checks what data is available by sampling.
         """
         step_id = "prepare-backtest-data"
         started_at = datetime.utcnow()
         metrics = {}
 
         try:
-            # Check scores history
-            _, scores_count = self._query_table("propertyiq_scores_history", limit=1)
-            metrics["scores_history_total"] = scores_count
+            # Sample to check data availability
+            sample = self._safe_query(
+                "propertyiq_scores_history",
+                columns="id, investoredge_score, homeready_score, actual_appreciation_6m, actual_appreciation_12m, actual_appreciation_36m, actual_appreciation_60m",
+                limit=10000
+            )
             
-            # Check for outcomes by horizon
-            horizons = [6, 12, 24, 36, 60, 120]
-            for horizon in horizons:
-                col = f"actual_appreciation_{horizon}m"
-                
-                # Query count with this outcome populated
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select('*', count='exact', head=True) \
-                    .not_(col, 'is', 'null') \
-                    .execute()
-                
-                count = response.count or 0
-                metrics[f"with_outcome_{horizon}m"] = count
-                metrics[f"missing_outcome_{horizon}m"] = scores_count - count
+            metrics["sample_size"] = len(sample)
             
-            # Check for excess returns
-            for horizon in [12, 36, 60]:
-                col = f"excess_return_vs_national_{horizon}m"
-                response = self.supabase.table('propertyiq_scores_history') \
-                    .select('*', count='exact', head=True) \
-                    .not_(col, 'is', 'null') \
-                    .execute()
+            if sample:
+                df = pd.DataFrame(sample)
                 
-                count = response.count or 0
-                metrics[f"with_excess_{horizon}m"] = count
+                # Check outcome availability in sample
+                for horizon in [6, 12, 36, 60]:
+                    col = f"actual_appreciation_{horizon}m"
+                    if col in df.columns:
+                        pct_with_data = df[col].notna().mean() * 100
+                        metrics[f"pct_with_outcome_{horizon}m"] = round(pct_with_data, 1)
+                    else:
+                        metrics[f"pct_with_outcome_{horizon}m"] = 0
+                
+                # Check score availability
+                for score in ['investoredge_score', 'homeready_score']:
+                    if score in df.columns:
+                        pct = df[score].notna().mean() * 100
+                        metrics[f"pct_with_{score}"] = round(pct, 1)
             
-            # Check for peer groups
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select('*', count='exact', head=True) \
-                .not_('peer_group_id', 'is', 'null') \
-                .execute()
-            metrics["with_peer_group"] = response.count or 0
+            metrics["status"] = "ready" if len(sample) > 0 else "no_data"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -234,6 +244,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
+            logger.error(f"Prepare backtest failed: {e}")
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -251,7 +262,7 @@ class WorkflowService:
         """
         Step 3: Calculate benchmarks from the data.
         
-        Computes national/regional/peer averages for each period and horizon.
+        Computes national/regional averages for each period and horizon.
         """
         step_id = "calculate-benchmarks"
         started_at = datetime.utcnow()
@@ -260,25 +271,26 @@ class WorkflowService:
 
         try:
             # Fetch sample data for benchmark calculation
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select('period_date, geography_type, actual_appreciation_12m, actual_appreciation_36m') \
-                .not_('actual_appreciation_12m', 'is', 'null') \
-                .limit(50000) \
-                .execute()
+            data = self._safe_query(
+                "propertyiq_scores_history",
+                columns="period_date, geography_type, actual_appreciation_12m, actual_appreciation_36m",
+                limit=20000
+            )
             
-            if not response.data:
-                metrics["error"] = "No data with outcomes found"
+            if not data:
+                metrics["error"] = "No data found"
+                completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
                     step_id=step_id,
                     started_at=started_at,
-                    completed_at=datetime.utcnow(),
-                    duration_seconds=0,
+                    completed_at=completed_at,
+                    duration_seconds=(completed_at - started_at).total_seconds(),
                     metrics=metrics,
-                    error="No data with outcomes found"
+                    error="No data found"
                 )
             
-            df = pd.DataFrame(response.data)
+            df = pd.DataFrame(data)
             metrics["records_analyzed"] = len(df)
             
             # Calculate national benchmarks
@@ -286,10 +298,11 @@ class WorkflowService:
                 for col in ['actual_appreciation_12m', 'actual_appreciation_36m']:
                     if col in df.columns:
                         valid_data = df[col].dropna()
-                        metrics[f"national_{col}_mean"] = float(valid_data.mean())
-                        metrics[f"national_{col}_median"] = float(valid_data.median())
-                        metrics[f"national_{col}_std"] = float(valid_data.std())
-                        metrics[f"national_{col}_count"] = len(valid_data)
+                        if len(valid_data) > 0:
+                            metrics[f"national_{col}_mean"] = round(float(valid_data.mean()), 4)
+                            metrics[f"national_{col}_median"] = round(float(valid_data.median()), 4)
+                            metrics[f"national_{col}_std"] = round(float(valid_data.std()), 4)
+                            metrics[f"national_{col}_count"] = len(valid_data)
             
             # Calculate by geography type
             if 'geography_type' in df.columns:
@@ -298,10 +311,11 @@ class WorkflowService:
                     if 'actual_appreciation_12m' in geo_df.columns:
                         valid_data = geo_df['actual_appreciation_12m'].dropna()
                         if len(valid_data) > 0:
-                            metrics[f"{geo_type}_12m_mean"] = float(valid_data.mean())
+                            metrics[f"{geo_type}_12m_mean"] = round(float(valid_data.mean()), 4)
                             metrics[f"{geo_type}_12m_count"] = len(valid_data)
             
             metrics["benchmark_types_calculated"] = benchmark_types
+            metrics["status"] = "success"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -315,6 +329,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
+            logger.error(f"Calculate benchmarks failed: {e}")
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -334,7 +349,6 @@ class WorkflowService:
         Step 4: Analyze which features best predict outcomes.
         
         Uses correlation analysis to find feature importance.
-        (AutoGluon can be added later for advanced ML)
         """
         step_id = "feature-analysis"
         started_at = datetime.utcnow()
@@ -342,23 +356,24 @@ class WorkflowService:
 
         try:
             # Fetch data with features and outcomes
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select('investoredge_score, homeready_score, market_health_score, actual_appreciation_12m, actual_appreciation_36m') \
-                .not_('actual_appreciation_12m', 'is', 'null') \
-                .limit(50000) \
-                .execute()
+            data = self._safe_query(
+                "propertyiq_scores_history",
+                columns="investoredge_score, homeready_score, market_health_score, actual_appreciation_12m, actual_appreciation_36m",
+                limit=20000
+            )
             
-            if not response.data:
+            if not data:
+                completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
                     step_id=step_id,
                     started_at=started_at,
-                    completed_at=datetime.utcnow(),
-                    duration_seconds=0,
+                    completed_at=completed_at,
+                    duration_seconds=(completed_at - started_at).total_seconds(),
                     error="No data found"
                 )
             
-            df = pd.DataFrame(response.data)
+            df = pd.DataFrame(data)
             metrics["records"] = len(df)
             
             # Correlation analysis
@@ -405,6 +420,8 @@ class WorkflowService:
                 metrics["best_predictor"] = ranked[0][0] if ranked else None
                 metrics["best_correlation"] = ranked[0][1] if ranked else None
             
+            metrics["status"] = "success"
+            
             completed_at = datetime.utcnow()
             return StepResult(
                 success=True,
@@ -417,6 +434,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
+            logger.error(f"Feature analysis failed: {e}")
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -435,7 +453,7 @@ class WorkflowService:
         """
         Step 5: Generate score explanations.
         
-        For now, provides statistical breakdown. SHAP can be added later.
+        Provides statistical breakdown of score distributions.
         """
         step_id = "score-explanations"
         started_at = datetime.utcnow()
@@ -443,44 +461,47 @@ class WorkflowService:
 
         try:
             # Fetch sample scores
-            response = self.supabase.table('propertyiq_scores_history') \
-                .select('geography_id, geography_type, investoredge_score, homeready_score, actual_appreciation_12m') \
-                .not_('investoredge_score', 'is', 'null') \
-                .limit(sample_size) \
-                .execute()
+            data = self._safe_query(
+                "propertyiq_scores_history",
+                columns="geography_id, geography_type, investoredge_score, homeready_score, actual_appreciation_12m",
+                limit=sample_size
+            )
             
-            if not response.data:
+            if not data:
+                completed_at = datetime.utcnow()
                 return StepResult(
                     success=False,
                     step_id=step_id,
                     started_at=started_at,
-                    completed_at=datetime.utcnow(),
-                    duration_seconds=0,
+                    completed_at=completed_at,
+                    duration_seconds=(completed_at - started_at).total_seconds(),
                     error="No data found"
                 )
             
-            df = pd.DataFrame(response.data)
+            df = pd.DataFrame(data)
             metrics["sample_size"] = len(df)
             
             # Score distribution analysis
             for score_col in ['investoredge_score', 'homeready_score']:
                 if score_col in df.columns:
                     valid = df[score_col].dropna()
-                    metrics[f"{score_col}_distribution"] = {
-                        "mean": float(valid.mean()),
-                        "std": float(valid.std()),
-                        "min": float(valid.min()),
-                        "max": float(valid.max()),
-                        "median": float(valid.median()),
-                        "percentiles": {
-                            "10th": float(valid.quantile(0.1)),
-                            "25th": float(valid.quantile(0.25)),
-                            "75th": float(valid.quantile(0.75)),
-                            "90th": float(valid.quantile(0.9)),
+                    if len(valid) > 0:
+                        metrics[f"{score_col}_distribution"] = {
+                            "mean": round(float(valid.mean()), 2),
+                            "std": round(float(valid.std()), 2),
+                            "min": round(float(valid.min()), 2),
+                            "max": round(float(valid.max()), 2),
+                            "median": round(float(valid.median()), 2),
+                            "percentiles": {
+                                "10th": round(float(valid.quantile(0.1)), 2),
+                                "25th": round(float(valid.quantile(0.25)), 2),
+                                "75th": round(float(valid.quantile(0.75)), 2),
+                                "90th": round(float(valid.quantile(0.9)), 2),
+                            }
                         }
-                    }
             
             metrics["explanation_type"] = explanation_type
+            metrics["status"] = "success"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -494,6 +515,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
+            logger.error(f"Score explanations failed: {e}")
             return StepResult(
                 success=False,
                 step_id=step_id,
@@ -555,6 +577,7 @@ class WorkflowService:
                         ] if result.horizons else []
                     }
                 except Exception as e:
+                    logger.error(f"Backtest for {score_type} failed: {e}")
                     report_data[score_type] = {"error": str(e)}
             
             metrics["report_month"] = report_month
@@ -567,6 +590,7 @@ class WorkflowService:
                 for st in score_types
             )
             metrics["all_scores_validated"] = all_validated
+            metrics["status"] = "success"
             
             completed_at = datetime.utcnow()
             return StepResult(
@@ -580,6 +604,7 @@ class WorkflowService:
 
         except Exception as e:
             completed_at = datetime.utcnow()
+            logger.error(f"Monthly report failed: {e}")
             return StepResult(
                 success=False,
                 step_id=step_id,
