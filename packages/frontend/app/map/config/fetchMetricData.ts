@@ -13,7 +13,8 @@ import { METRICS, getKeyFieldForGeo, getGeoPathSegment, getMetricConfig } from '
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Unified response format - ALWAYS includes date for "as of" display
-export type MetricDataEntry = { value: number; date?: string };
+// value may be null when metric is undefined (e.g. SF/MF ratio when total permits = 0)
+export type MetricDataEntry = { value: number | null; date?: string };
 export type MetricData = Record<string, MetricDataEntry>;
 
 interface ApiResponse {
@@ -310,19 +311,23 @@ function transformResponse(
       value = item.score;
     }
     
-    if (value == null) return;
+    if (value == null) {
+      // Include null so the same geographies appear as other permit metrics (e.g. SF/MF ratio when no permits)
+      if (config.includeNullValues) {
+        result[key] = { value: null, date: item.date };
+      }
+      return;
+    }
 
-    value = Number(value);
-    if (isNaN(value)) return;
+    const numValue = Number(value);
+    if (isNaN(numValue)) return;
 
     // Apply percentage conversion if needed
-    if (config.asPercent) {
-      value = value * 100;
-    }
+    const finalValue = config.asPercent ? numValue * 100 : numValue;
 
     // Store with date for "as of" display
     result[key] = {
-      value,
+      value: finalValue,
       date: item.date,
     };
   });

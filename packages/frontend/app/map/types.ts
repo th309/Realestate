@@ -8,7 +8,8 @@ export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
 
 // Map data entries can be simple numbers or objects with value and date
-export type MapDataEntry = number | { value: number; date?: string };
+// value may be null for metrics where the measure is undefined (e.g. SF/MF ratio when no permits)
+export type MapDataEntry = number | { value: number | null; date?: string };
 export type MapData = Record<string, MapDataEntry>;
 
 // Legacy aliases for backward compatibility (deprecated - use MapData/MapDataEntry)

@@ -86,6 +86,9 @@ export interface MetricConfig {
   // Fixed scale bounds for color/legend (e.g. permit counts: 0 to 200+)
   scaleMin?: number;
   scaleMax?: number;
+
+  // When true, include API rows with null value in map data (e.g. SF/MF ratio when no permits)
+  includeNullValues?: boolean;
 }
 
 /**
@@ -634,6 +637,8 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'sf_ratio',
+    // Include counties with null ratio (0 total permits) so map shows same set as SF/MF counts
+    includeNullValues: true,
   },
 
   permit_value_per_unit: {
