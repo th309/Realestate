@@ -272,9 +272,11 @@ function transformResponse(
       case 'region_name':
         key = item.region_name;
         break;
-      case 'cbsa_code':
-        key = item.cbsa_code || item.region_id;
+      case 'cbsa_code': {
+        const raw = item.cbsa_code ?? item.region_id;
+        key = raw != null ? String(raw) : undefined;
         break;
+      }
       case 'county_fips':
         // Census uses fips_code, other sources use county_fips
         // PropertyIQ scores use region_id which contains the FIPS code

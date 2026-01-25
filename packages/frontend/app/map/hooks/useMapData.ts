@@ -631,6 +631,13 @@ export function useMapData(): UseMapDataReturn {
       if (isHotnessAtUnsupportedLevel) {
         // Hotness metrics not available at state/national level
         data = {};
+      } else if (
+        (currentMetric === 'new_construction_price' || currentMetric === 'new_construction_ppsf') &&
+        level === 'metro'
+      ) {
+        // New construction price/ppsf: use unified fetch so valueField and cbsa_code key match map
+        const metricData = await fetchMetricData(currentMetric, level, { state });
+        data = toHomeValues(metricData);
       } else if (isPropertyIQ || isCensusMetric || isEconomicMetric) {
         // Use generic fetchMetricData for PropertyIQ scores, census/economic metrics
         const metricData = await fetchMetricData(currentMetric, level, { state });
