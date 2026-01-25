@@ -227,16 +227,22 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
       feature.properties.stateAbbr = FIPS_TO_STATE[stateFips] || '';
     });
   } else if (geoLevel === 'county') {
+    let countyWithData = 0;
     geojson.features.forEach((feature: any) => {
       const fips = feature.id || feature.properties.id;
       const entry = mapData[fips] ?? mapData[String(parseInt(fips, 10))];
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = fips;
+      if (getValueFromEntry(entry) != null) countyWithData++;
       const stateFips = fips?.substring(0, 2);
       const stateAbbr = FIPS_TO_STATE[stateFips] || '';
       feature.properties.displayName = `${feature.properties.NAME || 'County'}, ${stateAbbr}`;
     });
+    // One-off coverage check: compare to PropertyIQ "County coverage" log (score keys vs features)
+    console.log(
+      `[Map] County layer: ${geojson.features.length} features, ${Object.keys(mapData).length} data keys, ${countyWithData} features with value`
+    );
   } else if (geoLevel === 'metro') {
     geojson.features.forEach((feature: any) => {
       const cbsaCode = feature.properties.CBSAFP || feature.properties.GEOID;

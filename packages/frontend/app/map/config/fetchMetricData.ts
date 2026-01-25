@@ -237,7 +237,11 @@ async function fetchPropertyIQScoreData(
     // Debug: Log transformed result
     const sampleKeys = Object.keys(result).slice(0, 5);
     console.log(`[PropertyIQ] Transformed ${Object.keys(result).length} records for ${metricId} at ${geoLevel}. Sample keys:`, sampleKeys);
-    
+    // One-off coverage check: compare this count to map layer "county features" log (~3,200 = full US)
+    if (geoLevel === 'county') {
+      console.log(`[PropertyIQ] County coverage: ${Object.keys(result).length} score keys (expect ~3,200 for full US)`);
+    }
+
     return result;
   } catch (error) {
     console.error(`Failed to fetch PropertyIQ score ${metricId}:`, error);
