@@ -23,6 +23,192 @@ import {
   RunStepResponse,
 } from './types';
 
+// Types for the validation report
+interface SummaryTableEntry {
+  top_quintile_excess: string;
+  bottom_quintile_excess: string;
+  spread: string;
+  top_beat_rate: string;
+  bottom_beat_rate: string;
+  t_test_pvalue: string;
+  spearman_correlation: string;
+  validated: boolean;
+  observations: number;
+  error?: string;
+}
+
+interface KeyFinding {
+  title: string;
+  points: string[];
+}
+
+interface DollarImpact {
+  property_value: number;
+  holding_period_years: number;
+  top_quintile_gain: string;
+  bottom_quintile_loss: string;
+  total_value_at_risk: string;
+}
+
+interface ValidationReportMetrics {
+  report_month: string;
+  verdict: string;
+  verdict_detail: string;
+  summary_table: Record<string, SummaryTableEntry>;
+  key_findings: KeyFinding[];
+  dollar_impact: DollarImpact;
+  all_scores_validated: boolean;
+  status: string;
+}
+
+// Validation Report Component
+function ValidationReportView({ metrics }: { metrics: ValidationReportMetrics }) {
+  const summaryTable = metrics.summary_table || {};
+  const scoreNames = Object.keys(summaryTable);
+  
+  return (
+    <div className="space-y-6">
+      {/* Verdict Header */}
+      <div className={`p-4 rounded-lg ${metrics.all_scores_validated ? 'bg-green-900/30 border border-green-500/50' : 'bg-yellow-900/30 border border-yellow-500/50'}`}>
+        <h3 className={`text-lg font-semibold ${metrics.all_scores_validated ? 'text-green-400' : 'text-yellow-400'}`}>
+          {metrics.verdict}
+        </h3>
+        <p className="text-sm text-on-surface-variant mt-1">{metrics.verdict_detail}</p>
+      </div>
+
+      {/* Summary Table */}
+      <div>
+        <h4 className="text-sm font-medium text-on-surface mb-3">Summary Table</h4>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border border-outline-variant rounded-lg overflow-hidden">
+            <thead>
+              <tr className="bg-surface-container-high">
+                <th className="text-left py-2 px-3 font-medium text-on-surface border-b border-outline-variant">Metric</th>
+                {scoreNames.map(name => (
+                  <th key={name} className="text-center py-2 px-3 font-medium text-on-surface border-b border-outline-variant">{name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/50">
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">Top Quintile Excess Return</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono text-green-400">
+                    {summaryTable[name]?.top_quintile_excess || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">Bottom Quintile Excess Return</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono text-red-400">
+                    {summaryTable[name]?.bottom_quintile_excess || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr className="bg-surface-container-low">
+                <td className="py-2 px-3 text-on-surface font-medium">SPREAD</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono font-semibold text-on-surface">
+                    {summaryTable[name]?.spread || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">Top Q Beat-Market Rate</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono">
+                    {summaryTable[name]?.top_beat_rate || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">Bottom Q Beat-Market Rate</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono">
+                    {summaryTable[name]?.bottom_beat_rate || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">T-test p-value</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono text-green-400">
+                    {summaryTable[name]?.t_test_pvalue || '—'}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <td className="py-2 px-3 text-on-surface-variant">Spearman Correlation</td>
+                {scoreNames.map(name => (
+                  <td key={name} className="py-2 px-3 text-center font-mono">
+                    {summaryTable[name]?.spearman_correlation || '—'}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Key Findings */}
+      {metrics.key_findings && metrics.key_findings.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-on-surface mb-3">Key Findings</h4>
+          <div className="space-y-3">
+            {metrics.key_findings.map((finding, idx) => (
+              <div key={idx} className="p-3 bg-surface-container-low rounded-lg">
+                <p className="text-sm font-medium text-on-surface mb-1">
+                  {idx + 1}. {finding.title}
+                </p>
+                <ul className="text-xs text-on-surface-variant space-y-1 ml-4">
+                  {finding.points.map((point, pIdx) => (
+                    <li key={pIdx} className="list-disc">{point}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dollar Impact */}
+      {metrics.dollar_impact && Object.keys(metrics.dollar_impact).length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-on-surface mb-3">Dollar Impact</h4>
+          <div className="p-3 bg-surface-container-low rounded-lg">
+            <p className="text-xs text-on-surface-variant mb-2">
+              On a ${metrics.dollar_impact.property_value?.toLocaleString() || '500,000'} property over {metrics.dollar_impact.holding_period_years || 3} years:
+            </p>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-green-400 font-mono font-semibold">{metrics.dollar_impact.top_quintile_gain}</p>
+                <p className="text-xs text-on-surface-variant">Top quintile</p>
+              </div>
+              <div>
+                <p className="text-red-400 font-mono font-semibold">{metrics.dollar_impact.bottom_quintile_loss}</p>
+                <p className="text-xs text-on-surface-variant">Bottom quintile</p>
+              </div>
+              <div>
+                <p className="text-on-surface font-mono font-semibold">{metrics.dollar_impact.total_value_at_risk}</p>
+                <p className="text-xs text-on-surface-variant">Total value at risk</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Raw JSON (collapsed) */}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-on-surface-variant hover:text-on-surface">View raw JSON</summary>
+        <pre className="mt-2 text-on-surface-variant bg-surface-container-low p-3 rounded-lg overflow-auto max-h-48">
+          {JSON.stringify(metrics, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 // 6 workflow steps with full details
 const WORKFLOW_STEPS: WorkflowStep[] = [
   {
@@ -456,7 +642,7 @@ export default function MLWorkflowPage() {
         {/* Last Step Result */}
         {lastStepResult && (
           <div className="mt-6 p-4 bg-surface-container rounded-xl">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-medium text-on-surface">
                 Last Step Result
               </h2>
@@ -467,9 +653,15 @@ export default function MLWorkflowPage() {
                 Clear
               </button>
             </div>
-            <pre className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-lg overflow-auto max-h-64">
-              {JSON.stringify(lastStepResult, null, 2)}
-            </pre>
+            
+            {/* Check if this is the Monthly Report with validation data */}
+            {lastStepResult.metrics?.verdict ? (
+              <ValidationReportView metrics={lastStepResult.metrics as ValidationReportMetrics} />
+            ) : (
+              <pre className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-lg overflow-auto max-h-64">
+                {JSON.stringify(lastStepResult, null, 2)}
+              </pre>
+            )}
           </div>
         )}
 

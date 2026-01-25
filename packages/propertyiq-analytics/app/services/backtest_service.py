@@ -60,6 +60,34 @@ class HorizonResult:
 
 
 @dataclass
+class QuintileResult:
+    """Results for a single score quintile."""
+    quintile: int  # 1-5 (1=bottom, 5=top)
+    score_min: float
+    score_max: float
+    avg_excess_return: float
+    beat_market_rate: float  # % of observations that beat benchmark
+    observations: int
+    t_statistic: float
+    p_value: float
+
+
+@dataclass
+class ValidationSummary:
+    """Summary metrics for score validation."""
+    score_type: str
+    top_quintile_excess: float
+    bottom_quintile_excess: float
+    spread: float
+    top_quintile_beat_rate: float
+    bottom_quintile_beat_rate: float
+    t_test_pvalue: float
+    spearman_correlation: float
+    observations: int
+    validated: bool
+
+
+@dataclass
 class BacktestAnalysisResult:
     """Complete backtest analysis result."""
     score_type: str
@@ -73,6 +101,8 @@ class BacktestAnalysisResult:
     date_range_start: str
     date_range_end: str
     data_source: str = "database"  # 'cache' or 'database'
+    validation_summary: Optional[ValidationSummary] = None
+    quintile_results: list[QuintileResult] = field(default_factory=list)
 
 
 class BacktestService:
@@ -157,6 +187,12 @@ class BacktestService:
         date_range_start = df['period_date'].min() if 'period_date' in df.columns else "N/A"
         date_range_end = df['period_date'].max() if 'period_date' in df.columns else "N/A"
         
+        # Calculate quintile analysis with beat rates (use 36m horizon as primary)
+        primary_horizon = 36 if 36 in horizons else horizons[0] if horizons else 12
+        quintile_results, validation_summary = self._calculate_quintile_validation(
+            df, score_type, primary_horizon
+        )
+        
         return BacktestAnalysisResult(
             score_type=score_type,
             geography_type=geography_type,
@@ -169,6 +205,8 @@ class BacktestService:
             date_range_start=str(date_range_start),
             date_range_end=str(date_range_end),
             data_source=data_source,
+            validation_summary=validation_summary,
+            quintile_results=quintile_results,
         )
 
     async def _fetch_backtest_data(
@@ -399,6 +437,134 @@ class BacktestService:
             ))
         
         return results
+
+    def _calculate_quintile_validation(
+        self,
+        df: pd.DataFrame,
+        score_type: str,
+        horizon_months: int,
+    ) -> tuple[list[QuintileResult], Optional[ValidationSummary]]:
+        """
+        Calculate quintile-based validation with beat-market rates.
+        
+        Returns:
+            Tuple of (quintile_results, validation_summary)
+        """
+        score_col = f"{score_type}_score"
+        outcome_col = f"actual_appreciation_{horizon_months}m"
+        
+        if outcome_col not in df.columns or score_col not in df.columns:
+            return [], None
+        
+        # Filter to valid data
+        valid_df = df[[score_col, outcome_col]].dropna()
+        
+        if len(valid_df) < 100:
+            return [], None
+        
+        scores = valid_df[score_col].values
+        outcomes = valid_df[outcome_col].values
+        
+        # Benchmark is the mean return
+        benchmark = np.mean(outcomes)
+        excess_returns = outcomes - benchmark
+        
+        # Calculate quintile boundaries using percentiles
+        quintile_edges = np.percentile(scores, [0, 20, 40, 60, 80, 100])
+        
+        quintile_results = []
+        
+        for q in range(1, 6):
+            low = quintile_edges[q - 1]
+            high = quintile_edges[q]
+            
+            # Filter to this quintile
+            if q == 5:  # Include max value
+                mask = (scores >= low) & (scores <= high)
+            else:
+                mask = (scores >= low) & (scores < high)
+            
+            q_outcomes = outcomes[mask]
+            q_excess = excess_returns[mask]
+            
+            if len(q_outcomes) < 10:
+                continue
+            
+            avg_excess = float(np.mean(q_excess))
+            
+            # Beat market rate = % of observations with positive excess return
+            beat_rate = float(np.sum(q_excess > 0) / len(q_excess) * 100)
+            
+            # T-test for significance
+            if len(q_excess) > 1 and np.std(q_excess) > 0:
+                t_stat, p_value = stats.ttest_1samp(q_excess, 0)
+            else:
+                t_stat, p_value = 0.0, 1.0
+            
+            quintile_results.append(QuintileResult(
+                quintile=q,
+                score_min=float(low),
+                score_max=float(high),
+                avg_excess_return=avg_excess,
+                beat_market_rate=beat_rate,
+                observations=len(q_outcomes),
+                t_statistic=float(t_stat) if not np.isnan(t_stat) else 0.0,
+                p_value=float(p_value) if not np.isnan(p_value) else 1.0,
+            ))
+        
+        # Build validation summary
+        if len(quintile_results) >= 2:
+            top_q = quintile_results[-1]  # Quintile 5
+            bottom_q = quintile_results[0]  # Quintile 1
+            
+            # Overall t-test comparing top vs bottom quintile
+            top_mask = scores >= quintile_edges[4]
+            bottom_mask = scores < quintile_edges[1]
+            
+            top_outcomes = outcomes[top_mask]
+            bottom_outcomes = outcomes[bottom_mask]
+            
+            if len(top_outcomes) > 1 and len(bottom_outcomes) > 1:
+                _, overall_pvalue = stats.ttest_ind(top_outcomes, bottom_outcomes)
+            else:
+                overall_pvalue = 1.0
+            
+            # Spearman correlation
+            try:
+                spearman_r, _ = stats.spearmanr(scores, outcomes)
+                if np.isnan(spearman_r):
+                    spearman_r = 0.0
+            except Exception:
+                spearman_r = 0.0
+            
+            spread = top_q.avg_excess_return - bottom_q.avg_excess_return
+            
+            # Validated if:
+            # - Top quintile has positive excess
+            # - Bottom quintile has negative excess
+            # - Statistically significant (p < 0.05)
+            validated = (
+                top_q.avg_excess_return > 0 and
+                bottom_q.avg_excess_return < 0 and
+                overall_pvalue < 0.05
+            )
+            
+            validation_summary = ValidationSummary(
+                score_type=score_type,
+                top_quintile_excess=top_q.avg_excess_return,
+                bottom_quintile_excess=bottom_q.avg_excess_return,
+                spread=spread,
+                top_quintile_beat_rate=top_q.beat_market_rate,
+                bottom_quintile_beat_rate=bottom_q.beat_market_rate,
+                t_test_pvalue=float(overall_pvalue) if not np.isnan(overall_pvalue) else 1.0,
+                spearman_correlation=float(spearman_r),
+                observations=len(valid_df),
+                validated=validated,
+            )
+            
+            return quintile_results, validation_summary
+        
+        return quintile_results, None
 
     def _calculate_confidence_grade(
         self,
