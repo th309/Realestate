@@ -31,10 +31,10 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     description: 'Sync full dataset to local Parquet cache for fast analysis',
     script: 'data_cache.sync_all()',
     outputs: [
-      'scores_history_metro.parquet',
-      'scores_history_county.parquet',
-      'scores_history_zip.parquet',
-      'scores_history_state.parquet',
+      'metro: ~900K records',
+      'county: ~1.5M records',
+      'zip: ~1M records',
+      'state: ~200K records',
     ],
     estimatedTime: '5-15 min',
   },
@@ -44,7 +44,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     description:
       'Analyze cached data for completeness and quality metrics',
     script: 'workflow_service.run_prepare_backtest_data()',
-    outputs: ['data quality report'],
+    outputs: [
+      'outcome_coverage (12m/36m/60m %)',
+      'valid_records by geography',
+      'date_range coverage',
+      'score_coverage %',
+    ],
     estimatedTime: '1-2 min',
   },
   {
@@ -53,7 +58,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     description:
       'Compute national, regional, and peer group benchmarks from full dataset',
     script: 'workflow_service.run_calculate_benchmarks()',
-    outputs: ['national_benchmarks', 'geography_benchmarks'],
+    outputs: [
+      'national_benchmarks (12m/36m/60m)',
+      'metro_benchmarks by region',
+      'county_benchmarks by state',
+      'benchmark_periods analyzed',
+    ],
     estimatedTime: '2-5 min',
   },
   {
@@ -61,7 +71,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     name: 'Feature Analysis',
     description: 'Correlation analysis to find which scores best predict outcomes',
     script: 'workflow_service.run_feature_analysis()',
-    outputs: ['correlations by score type and geography'],
+    outputs: [
+      'pearson_r by score type',
+      'spearman_r by score type',
+      'best_predictor identification',
+      'correlations by geography',
+    ],
     estimatedTime: '3-10 min',
   },
   {
@@ -70,7 +85,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     description:
       'Generate statistical distributions and percentile breakdowns',
     script: 'workflow_service.run_score_explanations()',
-    outputs: ['score distributions'],
+    outputs: [
+      'investoredge_score distribution',
+      'homeready_score distribution',
+      'percentiles (10/25/75/90)',
+      'distributions by geography',
+    ],
     estimatedTime: '2-5 min',
   },
   {
@@ -79,7 +99,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
     description:
       'Generate formula health report with validation metrics',
     script: 'workflow_service.run_monthly_report()',
-    outputs: ['monthly_report.json'],
+    outputs: [
+      'validation: pass/fail by score',
+      'confidence_grade (A-F)',
+      'decile spread analysis',
+      'excess return verification',
+    ],
     estimatedTime: '2-5 min',
     viewable: true,
   },
@@ -469,10 +494,13 @@ export default function MLWorkflowPage() {
               <h3 className="text-sm font-medium text-on-surface mb-2">Data Caching Strategy</h3>
               <div className="text-xs text-on-surface-variant space-y-2">
                 <p>
-                  <strong>Initial sync:</strong> Fetches full dataset using 10,000-record batches to avoid timeouts.
+                  <strong>Initial sync:</strong> Fetches full dataset using 1,000-record batches (Supabase row limit).
                 </p>
                 <p>
                   <strong>Incremental updates:</strong> Only fetches new records since last cache update.
+                </p>
+                <p>
+                  <strong>Auto-recovery:</strong> Detects incomplete caches and forces full refresh.
                 </p>
                 <p>
                   <strong>Local Parquet:</strong> Enables millisecond reads for analysis.
