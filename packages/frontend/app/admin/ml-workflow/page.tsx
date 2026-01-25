@@ -440,9 +440,9 @@ export default function MLWorkflowPage() {
           throw new Error('No job ID returned');
         }
 
-        // Poll for completion (longer timeout for data-export: 20 min)
+        // Poll for completion (longer timeout for data-export: 45 min for initial cache build)
         let attempts = 0;
-        const maxAttempts = stepId === 'data-export' ? 1200 : 300; // 20 min for data-export, 5 min for others
+        const maxAttempts = stepId === 'data-export' ? 2700 : 300; // 45 min for data-export, 5 min for others
 
         while (attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 1000));
