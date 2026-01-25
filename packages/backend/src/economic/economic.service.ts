@@ -215,16 +215,19 @@ export class EconomicService {
       }));
     }
 
-    // Use optimized database function to get only latest data per county
-    // Paginate RPC results since Supabase enforces 1000-row limit regardless of .limit()
+    // Use optimized database function with server-side LIMIT/OFFSET so we get all counties.
+    // PostgREST applies a 1000-row response limit; .range() on RPC does not paginate reliably,
+    // so we pass p_limit and p_offset to the RPC and fetch in batches.
     const allRows: EconomicRow[] = [];
     const batchSize = 1000;
     let offset = 0;
 
     while (true) {
-      const { data, error } = await this.supabase
-        .rpc('get_latest_economic_county', { p_metric: metric })
-        .range(offset, offset + batchSize - 1);
+      const { data, error } = await this.supabase.rpc('get_latest_economic_county', {
+        p_metric: metric,
+        p_limit: batchSize,
+        p_offset: offset,
+      });
 
       if (error) throw error;
       if (!data || data.length === 0) break;
