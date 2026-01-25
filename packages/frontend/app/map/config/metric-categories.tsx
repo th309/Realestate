@@ -107,7 +107,6 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
     metric('pending_ratio'),
     metric('new_listings_yoy', { isNew: true }),
     metric('hotness_score', { isNew: true }),
-    metric('market_heat'),
     metric('sale_to_list', { isPremium: true }),
   ],
 };

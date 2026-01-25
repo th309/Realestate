@@ -66,7 +66,7 @@ const CATEGORY_METRICS: Record<string, string[]> = {
     market_activity: [
         'days_on_market', 'for_sale_inventory', 'inventory_yoy',
         'pending_ratio', 'new_listings_yoy', 'hotness_score',
-        'market_heat', 'sale_to_list',
+        'sale_to_list',
     ],
     pricing_deals: [
         'home_value_mom', 'price_cut_pct',
@@ -197,7 +197,7 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
     'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
     // Market Competition
     'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
-    'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
+    'new_listings_yoy', 'hotness_score', 'sale_to_list',
     // Pricing & Deals
     'home_value_mom', 'price_cut_pct', 'price_increase_pct',
     'new_listings', 'inventory_surplus',
