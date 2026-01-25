@@ -36,22 +36,22 @@ class DataCache:
         self._supabase: Optional[Client] = None
         
         # Determine cache directory with fallback
-        # Priority: explicit arg > CACHE_DIR env > /tmp/propertyiq-cache (always writable)
+        # Priority: explicit arg > CACHE_DIR env > /tmp/cache (Railway volume mount point)
         cache_path = cache_dir or os.environ.get('CACHE_DIR')
         
         if cache_path:
             self.cache_dir = Path(cache_path)
         else:
-            # Use /tmp which is always writable on Railway/Linux
-            self.cache_dir = Path('/tmp/propertyiq-cache')
+            # Use /tmp/cache which is mounted as Railway Volume for persistence
+            self.cache_dir = Path('/tmp/cache')
         
         # Create cache directory if it doesn't exist
         try:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"DataCache initialized at {self.cache_dir}")
         except PermissionError:
-            # Fallback to /tmp if primary path fails
-            self.cache_dir = Path('/tmp/propertyiq-cache')
+            # Fallback to /tmp/cache-fallback if primary path fails
+            self.cache_dir = Path('/tmp/cache-fallback')
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             logger.warning(f"Using fallback cache dir: {self.cache_dir}")
         

@@ -629,7 +629,7 @@ def run_ml_validation(config: MLValidationConfig) -> Dict:
         # 5. Train AutoGluon model
         print(f"Training AutoGluon with preset={config.ml_preset}, time_limit={config.time_limit_seconds}s...")
 
-        save_path = f"/tmp/autogluon/{config.score_type}_{config.horizon}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        save_path = f"/tmp/cache/autogluon/{config.score_type}_{config.horizon}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         predictor = TabularPredictor(
             label=target_col,
