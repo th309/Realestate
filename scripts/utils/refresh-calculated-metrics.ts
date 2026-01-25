@@ -467,6 +467,12 @@ const GEO_CONFIGS: GeoConfig[] = [
   { tableName: 'realtor_zip', geoType: 'zip', idField: 'postal_code', nameField: 'zip_name' },
 ];
 
+/**
+ * Income-to-buy: one row per realtor row (same period_date).
+ * Invariant: for zip, calculated_metrics zip count with income_to_buy must equal
+ * realtor_zip count with median_listing_price for that date. Run full pagination
+ * so no zips are skipped.
+ */
 async function calculateIncomeToBuyForGeo(
   supabase: SupabaseClient,
   config: GeoConfig,
