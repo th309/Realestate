@@ -400,16 +400,21 @@ export default function MLWorkflowPage() {
     [],
   );
 
+  // State for export progress details
+  const [exportProgress, setExportProgress] = useState<Record<string, unknown> | null>(null);
+
   // Run a single step and wait for completion
   const runStepAndWait = useCallback(
     async (stepId: string): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const startedAt = new Date().toISOString();
 
-      // Update UI - running
+      // Update UI - running with startedAt
       updateStepState(stepId, {
         status: 'running',
         progress: 0,
         error: undefined,
+        startedAt,
       });
 
       try {
@@ -435,19 +440,35 @@ export default function MLWorkflowPage() {
           throw new Error('No job ID returned');
         }
 
-        // Poll for completion
+        // Poll for completion (longer timeout for data-export: 20 min)
         let attempts = 0;
-        const maxAttempts = 300; // 5 minutes max (1 second intervals)
+        const maxAttempts = stepId === 'data-export' ? 1200 : 300; // 20 min for data-export, 5 min for others
 
         while (attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 1000));
           attempts++;
 
           try {
+            // Poll job status
             const jobRes = await fetch(`${apiUrl}/api/admin/ml-workflow/job/${jobId}`);
             if (!jobRes.ok) continue;
 
             const jobData = await jobRes.json();
+
+            // For data-export step, also poll for detailed progress
+            if (stepId === 'data-export' && attempts % 2 === 0) {
+              try {
+                const progressRes = await fetch(`${apiUrl}/api/admin/ml-workflow/export-progress`);
+                if (progressRes.ok) {
+                  const progressData = await progressRes.json();
+                  if (progressData.success && progressData.data) {
+                    setExportProgress(progressData.data);
+                  }
+                }
+              } catch {
+                // Ignore progress polling errors
+              }
+            }
 
             if (jobData.success && jobData.data) {
               const { status, progress, error: jobError, result } = jobData.data;
@@ -463,6 +484,7 @@ export default function MLWorkflowPage() {
                   lastRunTime: new Date().toISOString(),
                   progress: 100,
                 });
+                setExportProgress(null);
                 return { success: true, result };
               }
 
@@ -471,6 +493,7 @@ export default function MLWorkflowPage() {
                   status: 'error',
                   error: jobError || 'Step failed',
                 });
+                setExportProgress(null);
                 return { success: false, error: jobError || 'Step failed' };
               }
             }
@@ -482,8 +505,9 @@ export default function MLWorkflowPage() {
         // Timeout
         updateStepState(stepId, {
           status: 'error',
-          error: 'Step timed out after 5 minutes',
+          error: `Step timed out after ${stepId === 'data-export' ? '20' : '5'} minutes`,
         });
+        setExportProgress(null);
         return { success: false, error: 'Step timed out' };
 
       } catch (err) {
@@ -492,6 +516,7 @@ export default function MLWorkflowPage() {
           status: 'error',
           error: errorMsg,
         });
+        setExportProgress(null);
         return { success: false, error: errorMsg };
       }
     },
@@ -657,9 +682,54 @@ export default function MLWorkflowPage() {
               outputFiles={stepStates[step.id]?.outputs}
               onRun={() => runSingleStep(step.id)}
               disabled={isRunningFullWorkflow || hasRunningStep || !analyticsHealth}
+              startedAt={stepStates[step.id]?.startedAt}
             />
           ))}
         </div>
+
+        {/* Export Progress Details (shown during data-export) */}
+        {exportProgress && stepStates['data-export']?.status === 'running' && (
+          <div className="mt-4 p-4 bg-surface-container rounded-xl">
+            <h3 className="text-sm font-medium text-on-surface mb-3">Export Progress</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {['metro', 'county', 'zip', 'state'].map(geo => {
+                const geoProgress = (exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number; status?: string }>)[geo];
+                if (!geoProgress) return null;
+                return (
+                  <div key={geo} className="p-3 bg-surface-container-low rounded-lg">
+                    <div className="text-xs text-on-surface-variant font-medium capitalize">{geo}</div>
+                    <div className="text-lg font-mono text-on-surface">
+                      {(geoProgress.records_fetched || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-on-surface-variant">
+                      / {(geoProgress.total_records || 0).toLocaleString()}
+                    </div>
+                    <div className="mt-1 h-1 bg-surface-container-high rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${geoProgress.percent || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {(exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall && (
+              <div className="mt-3 pt-3 border-t border-outline-variant">
+                <div className="flex justify-between text-sm">
+                  <span className="text-on-surface-variant">Overall Progress:</span>
+                  <span className="font-mono text-on-surface">
+                    {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.records_fetched || 0).toLocaleString()} 
+                    {' / '}
+                    {((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.total_records || 0).toLocaleString()}
+                    {' '}
+                    ({((exportProgress as Record<string, { records_fetched?: number; total_records?: number; percent?: number }>).overall.percent || 0).toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Last Step Result */}
         {lastStepResult && (

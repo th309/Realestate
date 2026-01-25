@@ -155,4 +155,28 @@ export class MLWorkflowController {
       );
     }
   }
+
+  /**
+   * Get real-time export progress from analytics service.
+   */
+  @Get('export-progress')
+  async getExportProgress() {
+    try {
+      const progress = await this.mlWorkflowService.getExportProgress();
+      return {
+        success: true,
+        data: progress,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get export progress: ${error}`);
+      throw new HttpException(
+        {
+          success: false,
+          error: 'Failed to get export progress',
+          message: error instanceof Error ? error.message : String(error),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

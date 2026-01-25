@@ -389,6 +389,27 @@ export class MLWorkflowService {
   }
 
   /**
+   * Get real-time export progress from analytics service.
+   */
+  async getExportProgress(): Promise<Record<string, unknown>> {
+    const progressUrl = `${this.analyticsServiceUrl}/api/v1/cache/progress`;
+
+    try {
+      const response = await fetch(progressUrl, { method: 'GET' });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.progress || {};
+      }
+
+      return { error: `Status ${response.status}` };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Connection failed';
+      return { error: errorMsg };
+    }
+  }
+
+  /**
    * Update job status.
    */
   private async updateJobStatus(

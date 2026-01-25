@@ -234,3 +234,23 @@ body {
 .mapboxgl-popup-tip {
   display: none !important;
 }
+
+/* Indeterminate progress bar animation */
+@keyframes indeterminate-progress {
+  0% {
+    transform: translateX(-100%);
+    width: 30%;
+  }
+  50% {
+    transform: translateX(100%);
+    width: 60%;
+  }
+  100% {
+    transform: translateX(300%);
+    width: 30%;
+  }
+}
+
+.animate-indeterminate-progress {
+  animation: indeterminate-progress 2s ease-in-out infinite;
+}

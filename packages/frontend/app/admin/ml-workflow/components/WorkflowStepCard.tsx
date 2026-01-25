@@ -6,6 +6,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { WorkflowStep, StepStatus, OutputFile } from '../types';
 
 interface WorkflowStepCardProps {
@@ -19,6 +20,7 @@ interface WorkflowStepCardProps {
   onRun: () => void;
   onViewOutput?: (url: string) => void;
   disabled?: boolean;
+  startedAt?: string | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -81,6 +83,34 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+// Messages to show while running for each step
+const RUNNING_MESSAGES: Record<string, string[]> = {
+  'data-export': [
+    'Fetching data from Supabase...',
+    'Processing metro records...',
+    'Processing county records...',
+    'Processing zip records...',
+    'Processing state records...',
+    'Saving to Parquet cache...',
+  ],
+  'prepare-backtest-data': ['Analyzing cached data quality...'],
+  'calculate-benchmarks': ['Computing national benchmarks...', 'Computing regional benchmarks...'],
+  'feature-analysis': ['Running correlation analysis...'],
+  'score-explanations': ['Generating statistical distributions...'],
+  'monthly-report': ['Running backtests...', 'Generating validation report...'],
+};
+
+function formatElapsedTime(startTime: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - startTime.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const mins = Math.floor(diffSecs / 60);
+  const secs = diffSecs % 60;
+  
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+}
+
 export function WorkflowStepCard({
   step,
   stepNumber,
@@ -92,9 +122,40 @@ export function WorkflowStepCard({
   onRun,
   onViewOutput,
   disabled,
+  startedAt,
 }: WorkflowStepCardProps) {
   const statusConfig = STATUS_CONFIG[status];
   const icon = STEP_ICONS[step.id] || '📄';
+  
+  // Track elapsed time when running
+  const [elapsedTime, setElapsedTime] = useState<string>('0s');
+  const [messageIndex, setMessageIndex] = useState(0);
+  
+  useEffect(() => {
+    if (status !== 'running') {
+      setElapsedTime('0s');
+      setMessageIndex(0);
+      return;
+    }
+    
+    const startTime = startedAt ? new Date(startedAt) : new Date();
+    
+    // Update elapsed time every second
+    const timer = setInterval(() => {
+      setElapsedTime(formatElapsedTime(startTime));
+    }, 1000);
+    
+    // Cycle through messages every 10 seconds
+    const messages = RUNNING_MESSAGES[step.id] || ['Processing...'];
+    const messageTimer = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % messages.length);
+    }, 10000);
+    
+    return () => {
+      clearInterval(timer);
+      clearInterval(messageTimer);
+    };
+  }, [status, startedAt, step.id]);
 
   const handleViewReport = (url: string) => {
     if (onViewOutput) {
@@ -103,6 +164,9 @@ export function WorkflowStepCard({
       window.open(url, '_blank');
     }
   };
+  
+  const runningMessages = RUNNING_MESSAGES[step.id] || ['Processing...'];
+  const currentMessage = runningMessages[messageIndex % runningMessages.length];
 
   return (
     <div className="bg-surface-container rounded-xl overflow-hidden flex flex-col">
@@ -140,18 +204,23 @@ export function WorkflowStepCard({
       </div>
 
       {/* Progress Bar (when running) */}
-      {status === 'running' && progress !== undefined && (
+      {status === 'running' && (
         <div className="px-4 py-2">
           <div className="flex items-center justify-between text-xs text-on-surface-variant mb-1">
-            <span>Running...</span>
-            <span>{progress}%</span>
+            <span className="flex items-center gap-1">
+              <span className="animate-pulse">{currentMessage}</span>
+            </span>
+            <span className="font-mono">{elapsedTime}</span>
           </div>
+          {/* Indeterminate progress bar */}
           <div className="h-2 bg-surface-container-high rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="h-full bg-primary animate-indeterminate-progress" />
           </div>
+          {step.id === 'data-export' && (
+            <p className="text-xs text-on-surface-variant/70 mt-1 italic">
+              First run fetches 3.6M+ records. This may take 5-15 minutes.
+            </p>
+          )}
         </div>
       )}
 
@@ -168,7 +237,7 @@ export function WorkflowStepCard({
           Last run: {formatRelativeTime(lastRunTime)}
         </div>
 
-        {/* Output Files */}
+        {/* Output Files or Expected Outputs */}
         {outputFiles && outputFiles.length > 0 ? (
           <div className="space-y-1">
             <div className="text-xs text-on-surface-variant font-medium">
@@ -192,6 +261,18 @@ export function WorkflowStepCard({
                     View
                   </button>
                 )}
+              </div>
+            ))}
+          </div>
+        ) : step.outputs && step.outputs.length > 0 ? (
+          <div className="space-y-1">
+            <div className="text-xs text-on-surface-variant font-medium">
+              Outputs:
+            </div>
+            {step.outputs.map((output, idx) => (
+              <div key={idx} className="text-xs text-on-surface-variant/70 flex items-center gap-1">
+                <span className="text-on-surface-variant/50">•</span>
+                <span>{output}</span>
               </div>
             ))}
           </div>

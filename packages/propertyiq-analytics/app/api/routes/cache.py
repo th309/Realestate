@@ -98,6 +98,27 @@ async def sync_cache(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/progress")
+async def get_export_progress():
+    """
+    Get current data export progress.
+    
+    Returns real-time progress for each geography type being exported,
+    including records fetched, total records, and percentage complete.
+    """
+    try:
+        cache = get_data_cache()
+        progress = cache.get_export_progress()
+        
+        return {
+            "success": True,
+            "progress": progress,
+        }
+    except Exception as e:
+        logger.exception("Failed to get export progress")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/sync-background")
 async def sync_cache_background(
     background_tasks: BackgroundTasks,
@@ -108,12 +129,14 @@ async def sync_cache_background(
     Start cache sync in background.
     
     Returns immediately and runs sync in background task.
-    Use /cache/status to check progress.
+    Use /cache/progress to check real-time progress.
+    Use /cache/status to check final results.
     """
     logger.info(f"POST /cache/sync-background geo_type={geo_type} force_full={force_full}")
     
     def do_sync():
         cache = get_data_cache()
+        cache.reset_progress()  # Reset progress before starting
         if geo_type:
             cache.sync_cache(geo_type, force_full)
         else:

@@ -29,6 +29,7 @@ export interface StepState {
   error?: string;
   jobId?: string;
   outputs?: OutputFile[];
+  startedAt?: string | null;
 }
 
 export interface WorkflowStatusResponse {

@@ -30,6 +30,9 @@ class DataCache:
     Supports incremental updates to avoid re-fetching entire dataset.
     """
     
+    # Class-level progress tracking for export operations
+    _export_progress: Dict[str, Any] = {}
+    
     def __init__(self, cache_dir: str = None):
         """Initialize cache with specified directory."""
         self.settings = get_settings()
@@ -137,6 +140,59 @@ class DataCache:
         cache_path = self._get_cache_path(geo_type)
         return cache_path.exists()
 
+    def get_total_count(self, geo_type: str) -> int:
+        """Get total record count for a geography type from database."""
+        try:
+            query = self.supabase.table('propertyiq_scores_history').select('id', count='exact')
+            query = query.eq('geography_type', geo_type)
+            query = query.limit(1)
+            response = query.execute()
+            return response.count or 0
+        except Exception as e:
+            logger.warning(f"Could not get count for {geo_type}: {e}")
+            return 0
+
+    def get_export_progress(self) -> Dict[str, Any]:
+        """Get current export progress."""
+        return DataCache._export_progress.copy()
+
+    def _update_progress(
+        self,
+        geo_type: str,
+        records_fetched: int,
+        total_records: int,
+        status: str = "running"
+    ):
+        """Update export progress for a geography type."""
+        DataCache._export_progress[geo_type] = {
+            "records_fetched": records_fetched,
+            "total_records": total_records,
+            "percent": round(records_fetched / total_records * 100, 1) if total_records > 0 else 0,
+            "status": status,
+        }
+        
+        # Calculate overall progress
+        geo_types = ['metro', 'county', 'zip', 'state']
+        total_fetched = sum(
+            DataCache._export_progress.get(gt, {}).get("records_fetched", 0)
+            for gt in geo_types
+        )
+        total_expected = sum(
+            DataCache._export_progress.get(gt, {}).get("total_records", 0)
+            for gt in geo_types
+        )
+        
+        DataCache._export_progress["overall"] = {
+            "records_fetched": total_fetched,
+            "total_records": total_expected,
+            "percent": round(total_fetched / total_expected * 100, 1) if total_expected > 0 else 0,
+            "status": status,
+        }
+
+    def reset_progress(self):
+        """Reset export progress tracking."""
+        DataCache._export_progress = {}
+
     def get_last_cached_date(self, geo_type: str) -> Optional[str]:
         """Get the most recent period_date in cache."""
         cache_info = self._metadata.get('caches', {}).get(geo_type, {})
@@ -214,10 +270,15 @@ class DataCache:
         # Don't exceed this or pagination will break
         batch_size = min(batch_size, 1000)
         
+        # Get total count first for progress tracking
+        total_count = self.get_total_count(geo_type)
+        logger.info(f"fetch_full_dataset: {geo_type} has {total_count:,} total records")
+        
+        # Initialize progress
+        self._update_progress(geo_type, 0, total_count, "running")
+        
         all_data = []
         offset = 0
-        
-        logger.info(f"fetch_full_dataset: Starting for {geo_type}, batch_size={batch_size}")
         
         while True:
             try:
@@ -232,17 +293,21 @@ class DataCache:
                 
             except Exception as e:
                 logger.error(f"Error fetching batch at offset {offset}: {e}", exc_info=True)
+                self._update_progress(geo_type, len(all_data), total_count, "error")
                 break
             
             if not response.data:
-                logger.info(f"  No more data at offset {offset}")
                 break
             
             all_data.extend(response.data)
             
-            # Log progress every 10 batches (10,000 records)
-            if offset % 10000 == 0:
-                logger.info(f"  {geo_type}: fetched {len(all_data)} records so far...")
+            # Update progress
+            self._update_progress(geo_type, len(all_data), total_count, "running")
+            
+            # Log progress every 50 batches (50,000 records)
+            if len(all_data) % 50000 < batch_size:
+                pct = len(all_data) / total_count * 100 if total_count > 0 else 0
+                logger.info(f"  {geo_type}: {len(all_data):,} / {total_count:,} ({pct:.1f}%)")
             
             # If we got fewer than batch_size, we've reached the end
             if batch_count < batch_size:
@@ -252,10 +317,14 @@ class DataCache:
         
         if not all_data:
             logger.warning(f"fetch_full_dataset: No data found for {geo_type}")
+            self._update_progress(geo_type, 0, total_count, "empty")
             return pd.DataFrame()
         
+        # Mark as complete
+        self._update_progress(geo_type, len(all_data), total_count, "complete")
+        
         df = pd.DataFrame(all_data)
-        logger.info(f"fetch_full_dataset: Completed {geo_type} with {len(df)} total records")
+        logger.info(f"fetch_full_dataset: Completed {geo_type} with {len(df):,} total records")
         return df
 
     def fetch_incremental(
