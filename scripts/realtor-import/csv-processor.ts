@@ -5,6 +5,7 @@
 import { parse } from 'csv-parse/sync';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RealtorNationalRecord, RealtorStateRecord, RealtorCombinedRecord, ImportResult } from './types';
+import { normalizeZipKey } from '../utils/zip';
 
 /**
  * Parse YYYYMM date format to Date object
@@ -614,7 +615,7 @@ export function parseZipCoreCSV(csvContent: string): RealtorCombinedRecord[] {
 
   return records.map((row: any) => ({
     period_date: parseYYYYMM(row.month_date_yyyymm),
-    postal_code: row.postal_code,
+    postal_code: row.postal_code ? normalizeZipKey(row.postal_code) : row.postal_code,
     zip_name: row.zip_name,
     median_listing_price: parseNumeric(row.median_listing_price),
     median_listing_price_mm: parseNumeric(row.median_listing_price_mm),
@@ -675,7 +676,8 @@ export function parseZipHotnessCSV(csvContent: string): Map<string, Partial<Real
   const hotnessMap = new Map<string, Partial<RealtorCombinedRecord>>();
 
   for (const row of records) {
-    const key = `${row.month_date_yyyymm}_${row.postal_code}`;
+    const postal = row.postal_code ? normalizeZipKey(row.postal_code) : row.postal_code;
+    const key = `${row.month_date_yyyymm}_${postal}`;
     hotnessMap.set(key, {
       household_rank: parseInteger(row.hh_rank),
       hotness_rank: parseInteger(row.hotness_rank),

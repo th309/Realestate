@@ -9,6 +9,7 @@ import {
     CENSUS_API_BASE,
     CENSUS_VARIABLES
 } from '../types';
+import { normalizeZipKey } from '../../common/zip';
 
 @Injectable()
 export class CensusService {
@@ -99,7 +100,7 @@ export class CensusService {
         }
 
         if (geoLevel === 'zip code tabulation area') {
-            const zipCode = geoCode.padStart(5, '0');
+            const zipCode = geoCode ? normalizeZipKey(geoCode) : '';
 
             const { data } = await supabase
                 .from('markets')
@@ -216,7 +217,7 @@ export class CensusService {
         }
 
         if (geoLevel === 'zip code tabulation area') {
-            const zipCode = geoCode.padStart(5, '0');
+            const zipCode = geoCode ? normalizeZipKey(geoCode) : '';
             const regionId = `CENSUS-ZIP-${zipCode}`;
 
             const marketData = {

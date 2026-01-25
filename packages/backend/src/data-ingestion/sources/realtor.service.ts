@@ -9,6 +9,7 @@ import {
     RealtorStateRecord,
     RealtorCombinedRecord
 } from '../types/realtor.types';
+import { normalizeZipKey } from '../../common/zip';
 
 @Injectable()
 export class RealtorService {
@@ -150,7 +151,7 @@ export class RealtorService {
         const records = parse(csvContent, { columns: true, skip_empty_lines: true, trim: true });
         return records.map((row: any) => ({
             ...this.mapCommonFields(row),
-            postal_code: row.postal_code,
+            postal_code: row.postal_code ? normalizeZipKey(String(row.postal_code)) : row.postal_code,
             zip_name: row.zip_name
         }));
     }
@@ -229,7 +230,7 @@ export class RealtorService {
             let id = '';
             if (geography === 'metro') id = row.cbsa_code;
             else if (geography === 'county') id = row.county_fips;
-            else if (geography === 'zip') id = row.postal_code;
+            else if (geography === 'zip') id = row.postal_code ? normalizeZipKey(String(row.postal_code)) : row.postal_code;
 
             if (!id) continue;
 

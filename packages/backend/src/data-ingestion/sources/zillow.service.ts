@@ -4,6 +4,7 @@ import { parse as parseSync } from 'csv-parse/sync';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { ZILLOW_URLS } from '../config/zillow-urls';
 import { ImportResult, TimeSeriesRecord } from '../types';
+import { normalizeZipKey } from '../../common/zip';
 
 interface MarketRecord {
     region_id: string;
@@ -65,8 +66,11 @@ export class ZillowService {
                 try {
                     // Extract metadata columns
                     const regionId = record.RegionID;
-                    const regionName = record.RegionName;
                     const regionType = record.RegionType === 'msa' ? 'msa' : record.RegionType;
+                    const regionName =
+                        regionType === 'zip' || regionType === 'Zip'
+                            ? normalizeZipKey(record.RegionName || '')
+                            : (record.RegionName || '');
                     const stateName = record.StateName || null;
                     const sizeRank = record.SizeRank ? parseInt(record.SizeRank) : null;
 
@@ -79,7 +83,7 @@ export class ZillowService {
                         this.logger.debug(`Processing region ${index + 1}/${recordsToProcess.length}: ${regionName}`);
                     }
 
-                    // Step 1: Upsert market record
+                    // Step 1: Upsert market record (regionName already normalized for zip)
                     const marketData: MarketRecord = {
                         region_id: regionId,
                         region_name: regionName,

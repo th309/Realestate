@@ -13,6 +13,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, GeoLevel, MetricFormat } from '@/app/map/config/metrics';
 import { formatValue } from '@/app/map/utils/metricUtils';
+import { normalizeZipKey } from '@/lib/format/zip';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -142,9 +143,11 @@ function transformResponse(
             case 'county_fips':
                 key = item.county_fips || (item as Record<string, unknown>).fips_code as string || item.region_id;
                 break;
-            case 'postal_code':
-                key = item.postal_code || (item as Record<string, unknown>).zcta as string || item.region_id;
+            case 'postal_code': {
+                const raw = item.postal_code || (item as Record<string, unknown>).zcta as string || item.region_id;
+                key = raw ? normalizeZipKey(raw) : undefined;
                 break;
+            }
             default:
                 key = item.region_id;
         }

@@ -10,6 +10,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
+import { normalizeZipKey } from './zip';
 
 // Constants
 const EXPENSE_RATIO = 0.6;
@@ -274,7 +275,8 @@ async function calculateInvestmentMetricsForGeo(
     if (!data || data.length === 0) break;
 
     for (const row of data) {
-      const id = row[config.realtorIdField];
+      let id = row[config.realtorIdField];
+      if (config.geoType === 'zip' && id) id = normalizeZipKey(String(id));
       if (id && row.median_listing_price) {
         priceByCode[id] = row.median_listing_price;
       }
@@ -289,7 +291,8 @@ async function calculateInvestmentMetricsForGeo(
   const records: any[] = [];
 
   for (const row of zoriData) {
-    const geoId = row[config.zillowIdField];
+    let geoId = row[config.zillowIdField];
+    if (config.geoType === 'zip' && geoId) geoId = normalizeZipKey(String(geoId));
     const zori = row.value;
     const price = geoId ? priceByCode[geoId] : null;
 
@@ -546,6 +549,7 @@ async function calculateIncomeToBuyForGeo(
       geoName = 'United States';
     } else {
       geoId = String(row[config.idField]);
+      if (config.geoType === 'zip') geoId = normalizeZipKey(geoId);
       geoName = row[config.nameField] || geoId;
     }
 
@@ -702,17 +706,18 @@ async function calculateAffordableHomePriceForGeo(
 
     if (affordablePrice === null) continue;
 
+    const finalGeoId = config.geoType === 'zip' ? normalizeZipKey(geoId) : geoId;
     let geoName: string;
     if (config.geoType === 'national') {
       geoName = 'United States';
     } else if (config.geoType === 'zip') {
-      geoName = `ZIP ${geoId}`;
+      geoName = `ZIP ${finalGeoId}`;
     } else {
       geoName = row[config.nameField] || geoId;
     }
 
     records.push({
-      geography_id: geoId,
+      geography_id: finalGeoId,
       geography_type: config.geoType,
       geography_name: geoName,
       period_date: targetDate,
@@ -887,6 +892,7 @@ async function calculateYearsToSaveForGeo(
         geoId = 'US';
       } else {
         geoId = String(row[censusConfig.idField]);
+        if (config.geoType === 'zip') geoId = normalizeZipKey(geoId);
       }
       // Keep only the most recent year's data
       if (!incomeByGeo[geoId]) {
@@ -914,7 +920,7 @@ async function calculateYearsToSaveForGeo(
       geoId = row[config.idField];
       geoName = row[config.nameField];
     } else if (config.geoType === 'zip') {
-      geoId = row[config.idField];
+      geoId = normalizeZipKey(String(row[config.idField]));
       geoName = `ZIP ${geoId}`;
     } else {
       geoId = row[config.idField];
@@ -922,7 +928,7 @@ async function calculateYearsToSaveForGeo(
     }
 
     const price = row.median_listing_price;
-    const income = incomeByGeo[geoId];
+    const income = incomeByGeo[geoId] ?? incomeByGeo[row[config.idField]];
 
     if (!income) continue;
 

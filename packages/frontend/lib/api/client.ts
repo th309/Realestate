@@ -1,5 +1,7 @@
 // Use local backend in development, production URL otherwise
 // Updated 2026-01-19: Cap rate data validation fix
+import { normalizeZipKey } from '@/lib/format/zip';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
@@ -506,8 +508,9 @@ export const api = {
     const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; income_to_buy: number }> }>(url);
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      if (item.postal_code && item.income_to_buy != null) {
-        result[item.postal_code] = Number(item.income_to_buy);
+      if (item.postal_code != null && item.income_to_buy != null) {
+        const key = normalizeZipKey(String(item.postal_code));
+        result[key] = Number(item.income_to_buy);
       }
     });
     return result;
@@ -576,8 +579,9 @@ export const api = {
     const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; affordable_home_price: number }> }>(url);
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      if (item.postal_code && item.affordable_home_price != null) {
-        result[item.postal_code] = Number(item.affordable_home_price);
+      if (item.postal_code != null && item.affordable_home_price != null) {
+        const key = normalizeZipKey(String(item.postal_code));
+        result[key] = Number(item.affordable_home_price);
       }
     });
     return result;
@@ -633,8 +637,9 @@ export const api = {
     const response = await fetchAPI<{ success: boolean; data: Array<{ postal_code: string; years_to_save: number }> }>(url);
     const result: Record<string, number> = {};
     response.data?.forEach(item => {
-      if (item.postal_code && item.years_to_save != null) {
-        result[item.postal_code] = Number(item.years_to_save);
+      if (item.postal_code != null && item.years_to_save != null) {
+        const key = normalizeZipKey(String(item.postal_code));
+        result[key] = Number(item.years_to_save);
       }
     });
     return result;
@@ -864,9 +869,11 @@ export const api = {
         case 'county_fips':
           key = item.county_fips || item.region_id;
           break;
-        case 'postal_code':
-          key = item.postal_code || item.region_id;
+        case 'postal_code': {
+          const raw = item.postal_code || item.region_id;
+          key = raw ? normalizeZipKey(raw) : undefined;
           break;
+        }
         default:
           key = item.region_id;
       }

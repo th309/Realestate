@@ -18,6 +18,7 @@ import type {
   ImportResult
 } from './types';
 import { STATE_FIPS_TO_ABBREV, STATE_FIPS_TO_NAME } from './types';
+import { normalizeZipKey } from '../utils/zip';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -246,9 +247,11 @@ export function parseCensusZipCSV(csvContent: string): CensusZipRecord[] {
     trim: true
   });
 
-  return records.map((row: any) => ({
+  return records.map((row: any) => {
+    const raw = row.zcta ?? row.zip_code ?? '';
+    return {
     year: parseInt(row.year),
-    zcta: row.zcta || row.zip_code,
+    zcta: raw ? normalizeZipKey(String(raw)) : '',
     state_fips: row.state_fips || null,
     state_name: row.state_name || null,
     total_population: parseInteger(row.total_population),
@@ -267,7 +270,8 @@ export function parseCensusZipCSV(csvContent: string): CensusZipRecord[] {
     total_employment: parseInteger(row.total_employment),
     total_establishments: parseInteger(row.total_establishments),
     annual_payroll: parseBigInt(row.annual_payroll)
-  }));
+  };
+  });
 }
 
 // ============================================================================

@@ -5,6 +5,7 @@ import { parse } from 'csv-parse/sync';
 import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { normalizeZipKey } from '../utils/zip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,9 +95,9 @@ async function processFile(filePath: string, client: Client) {
         if (region.includes(' Metro')) regionType = 'metro';
         else if (region.length === 2) regionType = 'state';
         else if (['National', 'US', 'USA'].includes(region)) regionType = 'national';
-        else if (/^\d{5}$/.test(region)) {
+        else if (/^\d{4,5}$/.test(region.trim())) {
             regionType = 'zip';
-            zipCode = region;
+            zipCode = normalizeZipKey(region);
         }
         else if (region.includes(' County')) regionType = 'county';
 
@@ -117,7 +118,7 @@ async function processFile(filePath: string, client: Client) {
         dbRecords.push({
             period_date: period,
             region_type: regionType,
-            region_name: region,
+            region_name: regionType === 'zip' && zipCode ? zipCode : region,
             state_code: stateCode,
             zip_code: zipCode,
             median_asking_rent: parseNumber(row['Median Asking Rent']),

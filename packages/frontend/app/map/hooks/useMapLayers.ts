@@ -14,6 +14,7 @@ import {
   type MetricFormat,
 } from '../utils';
 import { getMetricDataDate, formatDataDateForDisplay } from '../config/metrics';
+import { normalizeZipKey } from '@/lib/format/zip';
 
 // API URL for backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -263,7 +264,8 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
       const zipCode = feature.properties.ZCTA5CE20 || feature.properties.GEOID20;
-      const entry = mapData[zipCode];
+      const key = zipCode ? normalizeZipKey(zipCode) : '';
+      const entry = key ? mapData[key] : undefined;
       feature.properties.value = getValueFromEntry(entry);
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = zipCode;

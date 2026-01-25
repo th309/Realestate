@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeZipKey } from '../common/zip';
 
 interface CacheEntry<T> {
   data: T;
@@ -570,7 +571,7 @@ export class InventorySurplusService {
       const surplusPct = ((zip.active_listing_count - avg) / avg) * 100;
 
       recordsToUpsert.push({
-        geography_id: zip.postal_code,
+        geography_id: normalizeZipKey(String(zip.postal_code)),
         geography_type: 'zip',
         geography_name: zip.zip_name,
         period_date: latestDateRow.period_date,

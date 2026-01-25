@@ -20,6 +20,7 @@ import { parse as parseSync } from 'csv-parse/sync';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CSVImportResult, DatasetConfig } from './types';
 import { getTableForGeography, getMetricName, getConflictColumns } from './db-client';
+import { normalizeZipKey } from '../utils/zip';
 
 // Global crosswalk maps for CBSA code matching
 const cbsaCrosswalkMap: Map<string, string> = new Map(); // region_id -> cbsa_code
@@ -274,7 +275,10 @@ export async function importCSV(
 
   for (const record of records) {
     const regionId = parseInt(record.RegionID, 10);
-    const regionName = record.RegionName || '';
+    let regionName = record.RegionName || '';
+    if (geography.toLowerCase() === 'zip' && regionName) {
+      regionName = normalizeZipKey(regionName);
+    }
 
     if (isNaN(regionId) || !regionName) {
       continue;

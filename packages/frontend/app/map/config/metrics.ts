@@ -805,6 +805,7 @@ export function getKeyFieldForGeo(geoLevel: GeoLevel): string {
     case 'county':
       return 'county_fips';
     case 'zip':
+      // When building ZIP keys from API data, use normalizeZipKey() from @/lib/format/zip so keys match map GeoJSON (ZCTA5CE20).
       return 'postal_code';
     case 'city':
       return 'place_fips';

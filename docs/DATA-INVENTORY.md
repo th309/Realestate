@@ -96,6 +96,21 @@ Complete inventory of all data available in the database, including sources, upd
 | **Hotness Rank** | MetricCard | `hotness_rank` | National rank by hotness score (1 = hottest market). |
 | **Months of Supply** | BenchmarkPanel | Calculated | Active Listings ÷ Pending Listings. <4 = seller's market, >6 = buyer's market. |
 
+### Listing price geographic coverage (map deep-dive)
+
+Listing price at **county** and **ZIP** is sourced from `realtor_county` and `realtor_zip`. Realtor.com only reports geographies where they have sufficient listing activity, so:
+
+- **County:** Only a subset of US counties have rows; many counties appear "missing" on the map. Typical coverage is ~2,400–2,500 counties vs. ~3,140 Census counties (~700 gap). States with the largest gaps (e.g. TX, VA, MN, MO) have more rural or low-inventory counties without Realtor data.
+- **ZIP:** Only ZIPs present in `realtor_zip` are shown. Coverage is ~22,000+ ZIPs; some states have fewer ZIPs, and not every county has at least one ZIP in the dataset, so the map can look like "missing counties per state" when viewed at ZIP level.
+
+To regenerate coverage counts and per-state breakdowns, run:
+
+```bash
+npx tsx scripts/check-listing-price-availability.ts
+```
+
+Requires `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`).
+
 ---
 
 ## 3. REDFIN RENTAL DATA

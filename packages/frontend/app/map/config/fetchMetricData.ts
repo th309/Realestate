@@ -6,6 +6,7 @@
  * The "date" field enables "as of" display in tooltips.
  */
 
+import { normalizeZipKey } from '@/lib/format/zip';
 import type { GeoLevel, HomeValues } from '../types';
 import { METRICS, getKeyFieldForGeo, getGeoPathSegment, getMetricConfig } from './metrics';
 
@@ -280,11 +281,12 @@ function transformResponse(
           }
         }
         break;
-      case 'postal_code':
-        // Census uses zcta, other sources use postal_code
-        // PropertyIQ scores use region_id which contains the ZIP code
-        key = item.postal_code || item.zcta || item.region_id;
+      case 'postal_code': {
+        // Census uses zcta, other sources use postal_code. Normalize so map keys match ZCTA5CE20.
+        const raw = item.postal_code || item.zcta || item.region_id;
+        key = raw ? normalizeZipKey(raw) : undefined;
         break;
+      }
       case 'place_fips':
         // Census cities use place_fips
         key = item.place_fips || item.region_id;

@@ -21,6 +21,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { join } from 'path';
 import { parse } from 'csv-parse/sync';
+import { normalizeZipKey } from '../utils/zip';
 
 // Load environment variables
 config({ path: join(__dirname, '../../packages/backend/.env') });
@@ -198,7 +199,10 @@ export class ZillowImporter {
 
     for (const record of rawRecords) {
       const regionId = this.getRegionId(record);
-      const regionName = this.getRegionName(record);
+      let regionName = this.getRegionName(record);
+      if (this.geography === 'Zip' && regionName) {
+        regionName = normalizeZipKey(regionName);
+      }
 
       if (!regionId) continue;
 

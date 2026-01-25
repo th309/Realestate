@@ -18,6 +18,7 @@ import { parseZipHotnessCSV } from './realtor-import/csv-processor';
 import { REALTOR_DATASETS, RealtorCombinedRecord } from './realtor-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 import { createIngestionLogger } from './utils/ingestion-logger';
+import { normalizeZipKey } from './utils/zip';
 
 const DATA_DIR = join(__dirname, '../data/realtor');
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-zip')!;
@@ -42,7 +43,7 @@ function parseInteger(value: string | undefined): number | null {
 
 function parseRow(row: any, hotnessMap: Map<string, Partial<RealtorCombinedRecord>>): any {
   const periodDate = parseYYYYMM(row.month_date_yyyymm);
-  const postalCode = row.postal_code;
+  const postalCode = row.postal_code ? normalizeZipKey(String(row.postal_code)) : row.postal_code;
 
   const record: any = {
     period_date: periodDate,

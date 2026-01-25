@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeZipKey } from '../common/zip';
 
 export interface CalculatedMetricsInput {
   geography_id: string;
@@ -824,8 +825,9 @@ export class CalculatedMetricsService {
 
     const pastByRegion: Record<string, number> = {};
     for (const row of allPastData) {
-      if (!pastByRegion[row.postal_code]) {
-        pastByRegion[row.postal_code] = row.median_listing_price;
+      const key = normalizeZipKey(String(row.postal_code));
+      if (!pastByRegion[key]) {
+        pastByRegion[key] = row.median_listing_price;
       }
     }
 
@@ -835,13 +837,14 @@ export class CalculatedMetricsService {
     const recordsToUpsert: any[] = [];
 
     for (const zip of allCurrentData) {
-      const pastValue = pastByRegion[zip.postal_code];
+      const zipKey = normalizeZipKey(String(zip.postal_code));
+      const pastValue = pastByRegion[zipKey];
       if (!pastValue || pastValue === 0) continue;
 
       const growthPct =
         ((zip.median_listing_price - pastValue) / pastValue) * 100;
       recordsToUpsert.push({
-        geography_id: zip.postal_code,
+        geography_id: zipKey,
         geography_type: 'zip',
         geography_name: zip.zip_name,
         period_date: targetDate,
