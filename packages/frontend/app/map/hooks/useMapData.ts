@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, MarketStats } from '@/lib/api/client';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MapData } from '../types';
-import { METRO_ONLY_METRICS, fetchMetricData, toHomeValues } from '../config';
+import { METRO_ONLY_METRICS, fetchMetricData, toHomeValues, getMetricConfig } from '../config';
 
 interface UseMapDataReturn {
   mapData: MapData;
@@ -617,9 +617,11 @@ export function useMapData(): UseMapDataReturn {
       const currentMetric = metric || 'home_value';
 
       // Check metric type
+      const metricConfig = getMetricConfig(currentMetric);
       const isZillowOnly = ZILLOW_ONLY_METRICS.has(currentMetric);
       const isCensusMetric = CENSUS_METRICS.has(currentMetric);
       const isEconomicMetric = ECONOMIC_METRICS.has(currentMetric);
+      const isPropertyIQ = metricConfig?.dataSource === 'propertyiq';
 
       // Check if hotness metric at unsupported level
       const isHotnessAtUnsupportedLevel =
@@ -629,8 +631,8 @@ export function useMapData(): UseMapDataReturn {
       if (isHotnessAtUnsupportedLevel) {
         // Hotness metrics not available at state/national level
         data = {};
-      } else if (isCensusMetric || isEconomicMetric) {
-        // Use generic fetchMetricData for census/economic metrics
+      } else if (isPropertyIQ || isCensusMetric || isEconomicMetric) {
+        // Use generic fetchMetricData for PropertyIQ scores, census/economic metrics
         const metricData = await fetchMetricData(currentMetric, level, { state });
         data = toHomeValues(metricData);
       } else if (isZillowOnly) {

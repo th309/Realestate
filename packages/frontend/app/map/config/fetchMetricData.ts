@@ -264,6 +264,12 @@ function transformResponse(
 
     // Get the value
     let value = item[valueField];
+    
+    // If valueField is 'value' but it's missing, try 'score' as fallback (for PropertyIQ scores)
+    if (value == null && valueField === 'value' && config.dataSource === 'propertyiq') {
+      value = item.score;
+    }
+    
     if (value == null) return;
 
     value = Number(value);
