@@ -134,6 +134,18 @@ class WorkflowService:
         try:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
             
+            # Check if cache seems incomplete (less than 10k records per geo type is suspicious)
+            # This handles the case where previous fetches were truncated by Supabase row limits
+            cache_status = self.cache.get_cache_status()
+            total_cached = sum(
+                cache_status.get('caches', {}).get(gt, {}).get('record_count', 0)
+                for gt in geography_types
+            )
+            force_full = total_cached < 50000  # Expect at least 50k total records
+            
+            if force_full:
+                logger.info(f"Cache appears incomplete ({total_cached} records). Forcing full refresh...")
+            
             # Sync cache for each geography type
             logger.info("Syncing data cache for all geography types...")
             sync_results = {}
@@ -142,7 +154,7 @@ class WorkflowService:
             for geo_type in geography_types:
                 logger.info(f"Syncing cache for {geo_type}...")
                 try:
-                    result = self.cache.sync_cache(geo_type, force_full=False)
+                    result = self.cache.sync_cache(geo_type, force_full=force_full)
                     sync_results[geo_type] = result
                     
                     if result.get('success') and result.get('total_records', 0) > 0:

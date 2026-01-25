@@ -189,7 +189,7 @@ class DataCache:
         self,
         geo_type: str,
         columns: list[str] = None,
-        batch_size: int = 10000,
+        batch_size: int = 1000,  # Match Supabase default row limit
     ) -> pd.DataFrame:
         """
         Fetch complete dataset from database using pagination.
@@ -197,7 +197,7 @@ class DataCache:
         Args:
             geo_type: Geography type to fetch
             columns: Columns to select (default: all score-related)
-            batch_size: Records per batch
+            batch_size: Records per batch (max 1000 due to Supabase limit)
             
         Returns:
             DataFrame with all records
@@ -210,40 +210,42 @@ class DataCache:
                 'actual_appreciation_60m',
             ]
         
+        # Supabase has a default limit of 1000 rows per request
+        # Don't exceed this or pagination will break
+        batch_size = min(batch_size, 1000)
+        
         all_data = []
         offset = 0
         
-        logger.info(f"fetch_full_dataset: Starting for {geo_type}, columns={columns}")
-        logger.info(f"fetch_full_dataset: Supabase URL configured: {bool(self.settings.supabase_url)}")
+        logger.info(f"fetch_full_dataset: Starting for {geo_type}, batch_size={batch_size}")
         
         while True:
-            logger.info(f"  Batch at offset {offset}...")
-            
             try:
                 # Build query step by step for supabase-py v2 compatibility
-                logger.info(f"  Building query for table 'propertyiq_scores_history'")
                 query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
                 query = query.eq('geography_type', geo_type)
                 query = query.order('period_date', desc=False)
                 query = query.range(offset, offset + batch_size - 1)
                 
-                logger.info(f"  Executing query...")
                 response = query.execute()
-                logger.info(f"  Query executed, response.data has {len(response.data) if response.data else 0} items")
+                batch_count = len(response.data) if response.data else 0
                 
             except Exception as e:
                 logger.error(f"Error fetching batch at offset {offset}: {e}", exc_info=True)
                 break
             
             if not response.data:
-                logger.info(f"  No more data at offset {offset}, stopping")
+                logger.info(f"  No more data at offset {offset}")
                 break
             
             all_data.extend(response.data)
-            logger.info(f"  Fetched {len(response.data)} records (total: {len(all_data)})")
             
-            if len(response.data) < batch_size:
-                logger.info(f"  Got {len(response.data)} < batch_size {batch_size}, this is the last batch")
+            # Log progress every 10 batches (10,000 records)
+            if offset % 10000 == 0:
+                logger.info(f"  {geo_type}: fetched {len(all_data)} records so far...")
+            
+            # If we got fewer than batch_size, we've reached the end
+            if batch_count < batch_size:
                 break
             
             offset += batch_size
@@ -253,14 +255,14 @@ class DataCache:
             return pd.DataFrame()
         
         df = pd.DataFrame(all_data)
-        logger.info(f"fetch_full_dataset: Total {len(df)} records for {geo_type}")
+        logger.info(f"fetch_full_dataset: Completed {geo_type} with {len(df)} total records")
         return df
 
     def fetch_incremental(
         self,
         geo_type: str,
         columns: list[str] = None,
-        batch_size: int = 10000,
+        batch_size: int = 1000,  # Match Supabase default row limit
     ) -> pd.DataFrame:
         """
         Fetch only new records since last cache update.
@@ -268,7 +270,7 @@ class DataCache:
         Args:
             geo_type: Geography type to fetch
             columns: Columns to select
-            batch_size: Records per batch
+            batch_size: Records per batch (max 1000 due to Supabase limit)
             
         Returns:
             DataFrame with new records only
@@ -286,6 +288,9 @@ class DataCache:
                 'actual_appreciation_12m', 'actual_appreciation_36m',
                 'actual_appreciation_60m',
             ]
+        
+        # Supabase has a default limit of 1000 rows per request
+        batch_size = min(batch_size, 1000)
         
         logger.info(f"Fetching incremental data for {geo_type} since {last_date}")
         
@@ -309,8 +314,9 @@ class DataCache:
                 break
             
             all_data.extend(response.data)
+            batch_count = len(response.data)
             
-            if len(response.data) < batch_size:
+            if batch_count < batch_size:
                 break
             
             offset += batch_size
