@@ -757,6 +757,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'homeready_score',
+    rangeType: 'full', // Use actual data min/max (0-100 range)
   },
 
   investoredge_score: {
@@ -768,6 +769,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'investoredge_score',
+    rangeType: 'full', // Use actual data min/max (0-100 range)
   },
 
   market_health_score: {
@@ -779,6 +781,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'market_health_score',
+    rangeType: 'full', // Use actual data min/max (0-100 range)
   },
 };
 
