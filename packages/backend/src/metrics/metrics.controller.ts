@@ -2,6 +2,8 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
+import { normalizeStateToCode } from '../common/geo';
+import { normalizeZipKey } from '../common/zip';
 import { CalculatedMetricsService } from './calculated-metrics.service';
 
 // Updated 2026-01-19: Cap rate data validation fix
@@ -1017,6 +1019,7 @@ export class MetricsController {
    * On-the-fly calculation for zip 5-year growth (fallback)
    */
   private async calculateZipHomeValue5YrGrowth(state?: string, date?: string) {
+    if (state) state = normalizeStateToCode(state);
     // Get current date
     let targetDate = date;
     if (!targetDate) {
@@ -1205,6 +1208,7 @@ export class MetricsController {
     geoLabel: string,
     stateFilter?: string,
   ) {
+    if (stateFilter) stateFilter = normalizeStateToCode(stateFilter);
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
@@ -1233,10 +1237,33 @@ export class MetricsController {
       .eq('period_date', targetDate)
       .not('income_to_buy', 'is', null);
 
-    // Handle state filter for ZIP codes
+    // Handle state filter for ZIP codes: use realtor_zip (source of the calculated metric) to get zips in state, then filter calculated_metrics by geography_id
     if (stateFilter && geoType === 'zip') {
       const statePattern = `%, ${stateFilter.toUpperCase()}`;
-      query = query.ilike('geography_name', statePattern);
+      const { data: realtorZips } = await this.supabase
+        .from('realtor_zip')
+        .select('postal_code')
+        .ilike('zip_name', statePattern);
+      const zipSet = new Set<string>();
+      if (realtorZips?.length) {
+        for (const row of realtorZips) {
+          if (row?.postal_code != null) zipSet.add(normalizeZipKey(String(row.postal_code)));
+        }
+      }
+      if (zipSet.size > 0) {
+        query = query.in('geography_id', Array.from(zipSet));
+      } else {
+        // No zips in state in realtor_zip → return empty (consistent with data source)
+        return {
+          success: true,
+          count: 0,
+          geography: geoLabel,
+          metric: 'income_to_buy',
+          source: 'pre-calculated',
+          date: targetDate,
+          data: [],
+        };
+      }
     }
 
     // Paginate for large datasets (county and zip)
@@ -1346,6 +1373,7 @@ export class MetricsController {
     geoLabel: string,
     stateFilter?: string,
   ) {
+    if (stateFilter) stateFilter = normalizeStateToCode(stateFilter);
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
@@ -1490,6 +1518,7 @@ export class MetricsController {
     geoLabel: string,
     stateFilter?: string,
   ) {
+    if (stateFilter) stateFilter = normalizeStateToCode(stateFilter);
     // Get latest date from calculated_metrics
     const { data: latestRow } = await this.supabase
       .from('calculated_metrics')
