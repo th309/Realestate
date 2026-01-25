@@ -143,14 +143,132 @@ class DataCache:
     def get_total_count(self, geo_type: str) -> int:
         """Get total record count for a geography type from database."""
         try:
+            logger.info(f"get_total_count: Querying count for {geo_type}...")
             query = self.supabase.table('propertyiq_scores_history').select('id', count='exact')
             query = query.eq('geography_type', geo_type)
             query = query.limit(1)
             response = query.execute()
-            return response.count or 0
+            count = response.count or 0
+            logger.info(f"get_total_count: {geo_type} has {count:,} records")
+            return count
         except Exception as e:
-            logger.warning(f"Could not get count for {geo_type}: {e}")
+            logger.error(f"get_total_count FAILED for {geo_type}: {type(e).__name__}: {e}", exc_info=True)
             return 0
+
+    def validate_connection(self, timeout_seconds: int = 30) -> dict:
+        """
+        Quick validation that Supabase is accessible and data can be fetched.
+        
+        Runs early to fail fast if there's a connectivity issue.
+        Should complete within 30 seconds.
+        
+        Returns:
+            dict with 'success', 'message', and 'details'
+        """
+        import time
+        start_time = time.time()
+        
+        logger.info("=" * 60)
+        logger.info("VALIDATE_CONNECTION: Starting early validation check...")
+        logger.info(f"  Supabase URL: {self.settings.supabase_url[:50]}..." if self.settings.supabase_url else "  Supabase URL: NOT SET")
+        logger.info(f"  Service Key: {'SET' if self.settings.supabase_service_key else 'NOT SET'}")
+        
+        try:
+            # Step 1: Test basic connectivity by getting a count
+            logger.info("  Step 1: Testing connectivity with count query...")
+            test_geo = 'metro'  # Start with metro as it's usually smallest
+            
+            query = self.supabase.table('propertyiq_scores_history').select('id', count='exact')
+            query = query.eq('geography_type', test_geo)
+            query = query.limit(1)
+            response = query.execute()
+            
+            elapsed = time.time() - start_time
+            logger.info(f"  Step 1 PASSED: Count query returned in {elapsed:.2f}s")
+            logger.info(f"    Response count: {response.count}")
+            
+            if response.count == 0:
+                logger.warning(f"  WARNING: {test_geo} has 0 records in database!")
+            
+            # Step 2: Test actual data fetch with 10 records
+            logger.info("  Step 2: Testing data fetch with 10 records...")
+            
+            query2 = self.supabase.table('propertyiq_scores_history').select(
+                'id,geography_id,geography_type,period_date,investoredge_score'
+            )
+            query2 = query2.eq('geography_type', test_geo)
+            query2 = query2.limit(10)
+            response2 = query2.execute()
+            
+            elapsed = time.time() - start_time
+            
+            if not response2.data:
+                logger.error(f"  Step 2 FAILED: No data returned for {test_geo}")
+                return {
+                    "success": False,
+                    "message": f"No data returned for {test_geo}",
+                    "details": {
+                        "count": response.count,
+                        "data_returned": 0,
+                        "elapsed_seconds": elapsed,
+                    }
+                }
+            
+            logger.info(f"  Step 2 PASSED: Fetched {len(response2.data)} records in {elapsed:.2f}s")
+            logger.info(f"    Sample record keys: {list(response2.data[0].keys()) if response2.data else 'N/A'}")
+            
+            # Step 3: Verify data structure
+            logger.info("  Step 3: Verifying data structure...")
+            sample = response2.data[0]
+            required_fields = ['id', 'geography_id', 'geography_type']
+            missing = [f for f in required_fields if f not in sample]
+            
+            if missing:
+                logger.error(f"  Step 3 FAILED: Missing required fields: {missing}")
+                return {
+                    "success": False,
+                    "message": f"Data structure invalid - missing fields: {missing}",
+                    "details": {
+                        "available_fields": list(sample.keys()),
+                        "missing_fields": missing,
+                    }
+                }
+            
+            elapsed = time.time() - start_time
+            logger.info(f"  Step 3 PASSED: All required fields present")
+            logger.info("=" * 60)
+            logger.info(f"VALIDATE_CONNECTION: SUCCESS in {elapsed:.2f}s")
+            logger.info("=" * 60)
+            
+            return {
+                "success": True,
+                "message": "Connection validated successfully",
+                "details": {
+                    "test_geography": test_geo,
+                    "total_count": response.count,
+                    "sample_fetched": len(response2.data),
+                    "elapsed_seconds": round(elapsed, 2),
+                }
+            }
+            
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error("=" * 60)
+            logger.error(f"VALIDATE_CONNECTION: FAILED after {elapsed:.2f}s")
+            logger.error(f"  Error type: {type(e).__name__}")
+            logger.error(f"  Error message: {str(e)}")
+            logger.error("  Full traceback:", exc_info=True)
+            logger.error("=" * 60)
+            
+            return {
+                "success": False,
+                "message": f"Connection failed: {type(e).__name__}: {str(e)}",
+                "details": {
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "elapsed_seconds": round(elapsed, 2),
+                }
+            }
 
     def get_export_progress(self) -> Dict[str, Any]:
         """Get current export progress."""
@@ -258,6 +376,13 @@ class DataCache:
         Returns:
             DataFrame with all records
         """
+        import time
+        fetch_start = time.time()
+        
+        logger.info("=" * 60)
+        logger.info(f"FETCH_FULL_DATASET: Starting for {geo_type}")
+        logger.info("=" * 60)
+        
         if columns is None:
             columns = [
                 'id', 'geography_id', 'geography_type', 'period_date',
@@ -266,23 +391,40 @@ class DataCache:
                 'actual_appreciation_60m',
             ]
         
+        logger.info(f"  Columns to fetch: {columns}")
+        
         # Supabase has a default limit of 1000 rows per request
         # Don't exceed this or pagination will break
         batch_size = min(batch_size, 1000)
+        logger.info(f"  Batch size: {batch_size}")
         
         # Get total count first for progress tracking
+        logger.info(f"  Getting total count for {geo_type}...")
         total_count = self.get_total_count(geo_type)
-        logger.info(f"fetch_full_dataset: {geo_type} has {total_count:,} total records")
+        logger.info(f"  Total count: {total_count:,} records")
+        
+        if total_count == 0:
+            logger.error(f"FETCH_FULL_DATASET: Total count is 0 for {geo_type}! Check database.")
+            self._update_progress(geo_type, 0, 0, "empty")
+            return pd.DataFrame()
         
         # Initialize progress
         self._update_progress(geo_type, 0, total_count, "running")
         
         all_data = []
         offset = 0
+        batch_num = 0
+        consecutive_errors = 0
+        max_consecutive_errors = 3
         
         while True:
+            batch_num += 1
+            batch_start = time.time()
+            
             try:
                 # Build query step by step for supabase-py v2 compatibility
+                logger.debug(f"  Batch {batch_num}: offset={offset}, range={offset}-{offset + batch_size - 1}")
+                
                 query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
                 query = query.eq('geography_type', geo_type)
                 query = query.order('period_date', desc=False)
@@ -290,13 +432,41 @@ class DataCache:
                 
                 response = query.execute()
                 batch_count = len(response.data) if response.data else 0
+                batch_elapsed = time.time() - batch_start
+                
+                # Log first batch in detail for debugging
+                if batch_num == 1:
+                    logger.info(f"  FIRST BATCH RESULT:")
+                    logger.info(f"    Records returned: {batch_count}")
+                    logger.info(f"    Time: {batch_elapsed:.2f}s")
+                    if response.data:
+                        logger.info(f"    Sample record keys: {list(response.data[0].keys())}")
+                    else:
+                        logger.error(f"    NO DATA IN FIRST BATCH! This indicates a problem.")
+                
+                consecutive_errors = 0  # Reset on success
                 
             except Exception as e:
-                logger.error(f"Error fetching batch at offset {offset}: {e}", exc_info=True)
-                self._update_progress(geo_type, len(all_data), total_count, "error")
-                break
+                batch_elapsed = time.time() - batch_start
+                consecutive_errors += 1
+                logger.error(f"  BATCH {batch_num} ERROR (attempt {consecutive_errors}/{max_consecutive_errors}):")
+                logger.error(f"    Offset: {offset}")
+                logger.error(f"    Error type: {type(e).__name__}")
+                logger.error(f"    Error message: {str(e)}")
+                logger.error(f"    Time before error: {batch_elapsed:.2f}s")
+                logger.error(f"    Full traceback:", exc_info=True)
+                
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.error(f"  ABORTING: {max_consecutive_errors} consecutive errors")
+                    self._update_progress(geo_type, len(all_data), total_count, "error")
+                    break
+                
+                # Continue to next batch on error
+                offset += batch_size
+                continue
             
             if not response.data:
+                logger.info(f"  Batch {batch_num}: No more data (offset={offset})")
                 break
             
             all_data.extend(response.data)
@@ -304,19 +474,28 @@ class DataCache:
             # Update progress
             self._update_progress(geo_type, len(all_data), total_count, "running")
             
-            # Log progress every 50 batches (50,000 records)
-            if len(all_data) % 50000 < batch_size:
+            # Log progress every 50 batches (50,000 records) OR first 5 batches
+            if batch_num <= 5 or len(all_data) % 50000 < batch_size:
                 pct = len(all_data) / total_count * 100 if total_count > 0 else 0
-                logger.info(f"  {geo_type}: {len(all_data):,} / {total_count:,} ({pct:.1f}%)")
+                elapsed = time.time() - fetch_start
+                rate = len(all_data) / elapsed if elapsed > 0 else 0
+                eta = (total_count - len(all_data)) / rate if rate > 0 else 0
+                logger.info(f"  {geo_type}: {len(all_data):,} / {total_count:,} ({pct:.1f}%) "
+                           f"- {rate:.0f} rec/s - ETA: {eta:.0f}s")
             
             # If we got fewer than batch_size, we've reached the end
             if batch_count < batch_size:
+                logger.info(f"  Batch {batch_num}: Got {batch_count} < {batch_size}, reached end")
                 break
             
             offset += batch_size
         
+        total_elapsed = time.time() - fetch_start
+        
         if not all_data:
-            logger.warning(f"fetch_full_dataset: No data found for {geo_type}")
+            logger.error(f"FETCH_FULL_DATASET: FAILED - No data fetched for {geo_type} after {total_elapsed:.1f}s")
+            logger.error(f"  Total batches attempted: {batch_num}")
+            logger.error(f"  Expected count was: {total_count:,}")
             self._update_progress(geo_type, 0, total_count, "empty")
             return pd.DataFrame()
         
@@ -324,7 +503,12 @@ class DataCache:
         self._update_progress(geo_type, len(all_data), total_count, "complete")
         
         df = pd.DataFrame(all_data)
-        logger.info(f"fetch_full_dataset: Completed {geo_type} with {len(df):,} total records")
+        logger.info("=" * 60)
+        logger.info(f"FETCH_FULL_DATASET: COMPLETED {geo_type}")
+        logger.info(f"  Total records: {len(df):,}")
+        logger.info(f"  Total time: {total_elapsed:.1f}s")
+        logger.info(f"  Rate: {len(df) / total_elapsed:.0f} records/s")
+        logger.info("=" * 60)
         return df
 
     def fetch_incremental(

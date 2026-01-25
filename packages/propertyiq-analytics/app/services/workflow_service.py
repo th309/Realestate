@@ -198,8 +198,38 @@ class WorkflowService:
             geography_types = geography_types or ["metro", "county", "zip", "state"]
             
             # Initialize progress tracking
-            substeps = [f"Syncing {gt}" for gt in geography_types] + ["Finalizing cache"]
+            substeps = ["Validating connection"] + [f"Syncing {gt}" for gt in geography_types] + ["Finalizing cache"]
             WorkflowProgress.start_step(step_id, len(substeps), substeps)
+            
+            # EARLY VALIDATION: Test connectivity before starting long operation
+            logger.info("=" * 60)
+            logger.info("DATA EXPORT: Starting with early validation...")
+            logger.info("=" * 60)
+            
+            WorkflowProgress.update_substep(0, "Validating database connection...")
+            validation = self.cache.validate_connection(timeout_seconds=30)
+            
+            if not validation.get('success'):
+                error_msg = validation.get('message', 'Connection validation failed')
+                logger.error(f"EARLY VALIDATION FAILED: {error_msg}")
+                logger.error(f"Validation details: {validation.get('details', {})}")
+                
+                WorkflowProgress.complete_step(success=False, error=error_msg)
+                
+                completed_at = datetime.utcnow()
+                return StepResult(
+                    success=False,
+                    step_id=step_id,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                    duration_seconds=(completed_at - started_at).total_seconds(),
+                    error=error_msg,
+                    error_details=str(validation.get('details', {})),
+                    metrics={"validation": validation}
+                )
+            
+            logger.info(f"Early validation PASSED: {validation.get('details', {})}")
+            WorkflowProgress.update_substep(1, "Connection validated, starting sync...")
             
             # Check if cache seems incomplete (less than 10k records per geo type is suspicious)
             # This handles the case where previous fetches were truncated by Supabase row limits
@@ -219,28 +249,37 @@ class WorkflowService:
             total_records = 0
             
             for idx, geo_type in enumerate(geography_types):
-                WorkflowProgress.update_substep(idx, f"Syncing {geo_type}...")
-                logger.info(f"Syncing cache for {geo_type}...")
+                # Substep index is offset by 1 due to validation step
+                substep_idx = idx + 1
+                WorkflowProgress.update_substep(substep_idx, f"Syncing {geo_type}...")
+                logger.info(f"=" * 40)
+                logger.info(f"Syncing cache for {geo_type} (step {substep_idx}/{len(substeps)})...")
                 try:
                     result = self.cache.sync_cache(geo_type, force_full=force_full)
                     sync_results[geo_type] = result
                     
+                    logger.info(f"sync_cache result for {geo_type}: success={result.get('success')}, "
+                               f"records={result.get('total_records', 0)}, error={result.get('error', 'none')}")
+                    
                     if result.get('success') and result.get('total_records', 0) > 0:
                         total_records += result.get('total_records', 0)
                         outputs.append(f"{geo_type}: {result.get('total_records', 0)} records")
-                        WorkflowProgress.update_substep(idx + 1, details={
+                        WorkflowProgress.update_substep(substep_idx + 1, details={
                             geo_type: {"records": result.get('total_records', 0), "status": "complete"}
                         })
                     elif result.get('error'):
+                        logger.error(f"ERROR syncing {geo_type}: {result.get('error')}")
                         errors.append(f"{geo_type}: {result.get('error')}")
                     else:
+                        logger.warning(f"WARNING: No data fetched for {geo_type}")
                         errors.append(f"{geo_type}: No data fetched")
                 except Exception as geo_err:
-                    logger.error(f"Failed to sync {geo_type}: {geo_err}")
+                    logger.error(f"EXCEPTION syncing {geo_type}: {type(geo_err).__name__}: {geo_err}", exc_info=True)
                     sync_results[geo_type] = {"success": False, "error": str(geo_err)}
                     errors.append(f"{geo_type}: {str(geo_err)}")
             
-            WorkflowProgress.update_substep(len(geography_types), "Finalizing cache...")
+            # Final substep
+            WorkflowProgress.update_substep(len(geography_types) + 1, "Finalizing cache...")
             
             metrics["sync_results"] = sync_results
             metrics["total_records_cached"] = total_records
