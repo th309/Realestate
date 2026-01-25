@@ -1,0 +1,551 @@
+{
+  "home_value": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "home_price_forecast": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "home_value_yoy": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "home_value_mom": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "home_value_5yr": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "rent_index": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "rent_for_houses": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "for_sale_inventory": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "inventory_yoy": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "new_listings": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "pending_listings": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "home_sales": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "home_sales_yoy": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "pending_ratio": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "days_on_market": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "market_heat": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "price_cut_pct": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "sale_to_list": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "homeowner_affordability": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": false
+  },
+  "renter_affordability": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": false
+  },
+  "years_to_save": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "income_to_buy": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "income_to_rent": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": false
+  },
+  "affordable_home_price": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "listing_price": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "price_per_sqft": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "price_increase_pct": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "new_listings_yoy": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "hotness_score": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "supply_score": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "demand_score": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "cap_rate": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "gross_yield": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "grm": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "rent_to_price_ratio": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "investment_score": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "long_term_growth_score": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "overvalued_pct": {
+    "national": false,
+    "state": false,
+    "metro": true,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "inventory_surplus": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": true,
+    "tract": true
+  },
+  "new_construction_sales": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "new_construction_price": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": false
+  },
+  "new_construction_ppsf": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": false
+  },
+  "sf_permits": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "mf_permits": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "total_permits": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "permits_yoy": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "sf_mf_ratio": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "permit_value_per_unit": {
+    "national": true,
+    "state": true,
+    "metro": false,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "population": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "population_growth": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "median_income": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "income_growth": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "median_age": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "homeownership_rate": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": true,
+    "zip": true,
+    "tract": true
+  },
+  "unemployment_rate": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": true
+  },
+  "job_growth": {
+    "national": true,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": true
+  },
+  "gdp_growth": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": true,
+    "city": false,
+    "zip": false,
+    "tract": true
+  },
+  "cost_of_living": {
+    "national": false,
+    "state": true,
+    "metro": true,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": true
+  },
+  "homeready_score": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "investoredge_score": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  },
+  "market_health_score": {
+    "national": false,
+    "state": false,
+    "metro": false,
+    "county": false,
+    "city": false,
+    "zip": false,
+    "tract": false
+  }
+}

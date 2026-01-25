@@ -1,0 +1,14 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Project instructions are required
+
+Before making any code or configuration changes in this project:
+
+1. **Read** `project_instructions.md` (at the repo root).
+2. **Use** it as the source of truth for behavioral standards, architecture, security, and conventions.
+3. **Comply** with everything it specifies (don’ts, security, 300-line rule, stack, data flow, etc.).
+
+Do not skip this step. If the instructions conflict with a user request, follow the project instructions and explain the conflict to the user.

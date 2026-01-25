@@ -123,7 +123,7 @@ class BacktestService:
         Returns:
             BacktestAnalysisResult with decile breakdown for each horizon
         """
-        horizons = horizons or [6, 12, 36, 60]
+        horizons = horizons or [12, 36, 60]
         logger.info(f"Running backtest: {score_type} / {geography_type} / {benchmark_type}")
         
         # Fetch data (from cache or database)
@@ -216,8 +216,8 @@ class BacktestService:
         columns = [
             'id', 'geography_id', 'geography_type', 'period_date',
             score_col,
-            'actual_appreciation_6m', 'actual_appreciation_12m',
-            'actual_appreciation_36m', 'actual_appreciation_60m',
+            'actual_appreciation_12m', 'actual_appreciation_36m',
+            'actual_appreciation_60m',
         ]
         
         all_data = []

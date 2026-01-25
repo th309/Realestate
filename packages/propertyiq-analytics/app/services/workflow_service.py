@@ -222,7 +222,7 @@ class WorkflowService:
                 }
                 
                 # Check outcome availability
-                for horizon in [6, 12, 36, 60]:
+                for horizon in [12, 36, 60]:
                     col = f"actual_appreciation_{horizon}m"
                     if col in df.columns:
                         count = int(df[col].notna().sum())
@@ -309,7 +309,7 @@ class WorkflowService:
             # Calculate national benchmarks (across all data)
             if "national" in benchmark_types:
                 national_benchmarks = {}
-                for horizon in [6, 12, 36, 60]:
+                for horizon in [12, 36, 60]:
                     col = f'actual_appreciation_{horizon}m'
                     if col in df.columns:
                         valid_data = df[col].dropna()

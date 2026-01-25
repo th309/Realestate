@@ -9,6 +9,7 @@
 DROP MATERIALIZED VIEW IF EXISTS mv_backtest_decile_stats CASCADE;
 DROP MATERIALIZED VIEW IF EXISTS mv_backtest_benchmarks CASCADE;
 DROP MATERIALIZED VIEW IF EXISTS mv_backtest_correlations CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS mv_backtest_summary CASCADE;
 
 -- ============================================================================
 -- 1. Decile Statistics by Score Type, Geography, and Period
@@ -29,8 +30,7 @@ WITH score_buckets AS (
     CASE WHEN homeready_score IS NOT NULL 
          THEN FLOOR(homeready_score / 10) * 10 
          ELSE NULL END as hr_decile,
-    -- Outcomes
-    actual_appreciation_6m,
+    -- Outcomes (12m, 36m, 60m available)
     actual_appreciation_12m,
     actual_appreciation_36m,
     actual_appreciation_60m
@@ -42,10 +42,6 @@ SELECT
   period_date,
   'investoredge' as score_type,
   ie_decile as decile,
-  -- 6-month horizon
-  AVG(actual_appreciation_6m) as avg_return_6m,
-  STDDEV(actual_appreciation_6m) as std_return_6m,
-  COUNT(actual_appreciation_6m) as count_6m,
   -- 12-month horizon
   AVG(actual_appreciation_12m) as avg_return_12m,
   STDDEV(actual_appreciation_12m) as std_return_12m,
@@ -71,9 +67,6 @@ SELECT
   period_date,
   'homeready' as score_type,
   hr_decile as decile,
-  AVG(actual_appreciation_6m) as avg_return_6m,
-  STDDEV(actual_appreciation_6m) as std_return_6m,
-  COUNT(actual_appreciation_6m) as count_6m,
   AVG(actual_appreciation_12m) as avg_return_12m,
   STDDEV(actual_appreciation_12m) as std_return_12m,
   COUNT(actual_appreciation_12m) as count_12m,
@@ -105,10 +98,6 @@ CREATE MATERIALIZED VIEW mv_backtest_benchmarks AS
 SELECT 
   geography_type,
   period_date,
-  -- 6-month benchmark
-  AVG(actual_appreciation_6m) as benchmark_6m,
-  STDDEV(actual_appreciation_6m) as std_6m,
-  COUNT(actual_appreciation_6m) as count_6m,
   -- 12-month benchmark
   AVG(actual_appreciation_12m) as benchmark_12m,
   STDDEV(actual_appreciation_12m) as std_12m,
@@ -133,9 +122,6 @@ UNION ALL
 SELECT 
   'national' as geography_type,
   period_date,
-  AVG(actual_appreciation_6m) as benchmark_6m,
-  STDDEV(actual_appreciation_6m) as std_6m,
-  COUNT(actual_appreciation_6m) as count_6m,
   AVG(actual_appreciation_12m) as benchmark_12m,
   STDDEV(actual_appreciation_12m) as std_12m,
   COUNT(actual_appreciation_12m) as count_12m,

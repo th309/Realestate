@@ -181,8 +181,8 @@ class DataCache:
             columns = [
                 'id', 'geography_id', 'geography_type', 'period_date',
                 'investoredge_score', 'homeready_score', 'market_health_score',
-                'actual_appreciation_6m', 'actual_appreciation_12m',
-                'actual_appreciation_36m', 'actual_appreciation_60m',
+                'actual_appreciation_12m', 'actual_appreciation_36m',
+                'actual_appreciation_60m',
             ]
         
         all_data = []
@@ -250,8 +250,8 @@ class DataCache:
             columns = [
                 'id', 'geography_id', 'geography_type', 'period_date',
                 'investoredge_score', 'homeready_score', 'market_health_score',
-                'actual_appreciation_6m', 'actual_appreciation_12m',
-                'actual_appreciation_36m', 'actual_appreciation_60m',
+                'actual_appreciation_12m', 'actual_appreciation_36m',
+                'actual_appreciation_60m',
             ]
         
         logger.info(f"Fetching incremental data for {geo_type} since {last_date}")
