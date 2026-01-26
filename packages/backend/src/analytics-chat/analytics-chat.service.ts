@@ -128,91 +128,36 @@ export class AnalyticsChatService {
 
   /**
    * Select initial model based on message characteristics
-   * 3-tier system: Haiku 3.5 (fast) → Sonnet 4 (balanced) → Opus 4.5 (powerful)
+   * Simple 2-tier: Haiku for chat, Sonnet for data queries (no mid-request escalation)
    */
   private selectInitialModel(message: string): string {
     const lowerMessage = message.toLowerCase();
 
-    // Complex patterns - start with Sonnet (balanced) to avoid escalation overhead
-    const complexPatterns = [
-      /(optimize|regression|cluster|feature importance)/i,
-      /(predict|correlation|statistical|significance)/i,
-      /(raw.*metric|zillow.*data|realtor.*data|census.*data)/i,
-      /(backtest|validation|test.*strategy|quintile)/i,
-      /compare.*across.*and.*and/i, // Multi-geography comparisons
-      /(machine learning|ml|model.*weight)/i,
+    // Simple conversational patterns - use Haiku (fast & cheap)
+    const simplePatterns = [
+      /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|got it)[\s!?.]*$/i,
+      /^what (is|are) you/i,
+      /^who are you/i,
+      /^help$/i,
     ];
 
-    // Check for complex queries - start with Sonnet
-    if (complexPatterns.some(p => p.test(lowerMessage))) {
-      this.logger.log(`[Quinn Model] Starting with Sonnet 4 (detected complex/ML query) - $3/$15 per MTok`);
-      return this.MODEL_BALANCED;
+    if (simplePatterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Using Haiku 3.5 (simple chat) - $0.25/$1.25 per MTok`);
+      return this.MODEL_FAST;
     }
 
-    // Default: Start with Haiku 3.5 (cheapest), escalate if needed
-    this.logger.log(`[Quinn Model] Starting with Haiku 3.5 (default) - $0.25/$1.25 per MTok`);
-    return this.MODEL_FAST;
+    // Everything else uses Sonnet (likely needs tools) - no escalation overhead
+    this.logger.log(`[Quinn Model] Using Sonnet 4 (data query) - $3/$15 per MTok`);
+    return this.MODEL_BALANCED;
   }
 
   /**
-   * Determine if escalation is needed based on tools used
-   * 3-tier escalation: Haiku 3.5 (fast) → Sonnet 4 (balanced) → Opus 4.5 (powerful)
-   * Returns the target model to escalate to, or null if no escalation needed
+   * Determine if escalation is needed - DISABLED for speed
+   * Mid-request escalation causes double API calls, so we select the right model upfront instead
    */
-  private shouldEscalate(toolsUsed: string[], currentModel: string): string | null {
-    const moderateTools = [
-      'analyze_data',
-      'compare_to_benchmark',
-      'get_geographic_comparison',
-      'compare_states',
-      'get_metro_scores',
-      'search_database',
-      'query_database_table',
-    ];
-
-    const complexTools = [
-      'run_regression',
-      'get_feature_importance',
-      'cluster_markets',
-      'optimize_weights',
-      'generate_chart',
-      'analyze_raw_metrics',
-      'get_raw_metric_summary',
-      'run_backtest',
-      'run_quintile_analysis',
-      'compare_formulas',
-      'aggregate_database',
-    ];
-
-    const hasComplexTools = toolsUsed.some(t => complexTools.includes(t));
-    const hasModerateTools = toolsUsed.some(t => moderateTools.includes(t));
-    const toolCount = toolsUsed.length;
-
-    // Haiku 3.5 (fast) - escalate to Sonnet if complex tools or multiple tools
-    if (currentModel === this.MODEL_FAST) {
-      if (hasComplexTools) {
-        this.logger.log(`[Quinn Escalation] Haiku 3.5 → Sonnet 4 (complex tools: ${toolsUsed.filter(t => complexTools.includes(t)).join(', ')}) - Cost: $0.25 → $3/MTok`);
-        return this.MODEL_BALANCED;
-      }
-      if (hasModerateTools && toolCount >= 2) {
-        this.logger.log(`[Quinn Escalation] Haiku 3.5 → Sonnet 4 (${toolCount} moderate tools) - Cost: $0.25 → $3/MTok`);
-        return this.MODEL_BALANCED;
-      }
-      if (toolCount >= 3) {
-        this.logger.log(`[Quinn Escalation] Haiku 3.5 → Sonnet 4 (${toolCount} tools) - Cost: $0.25 → $3/MTok`);
-        return this.MODEL_BALANCED;
-      }
-    }
-
-    // Sonnet 4 (balanced) - escalate to Opus only for very complex multi-tool scenarios
-    if (currentModel === this.MODEL_BALANCED) {
-      if (hasComplexTools && toolCount >= 4) {
-        this.logger.log(`[Quinn Escalation] Sonnet 4 → Opus 4.5 (${toolCount} complex tools - heavy reasoning needed) - Cost: $3 → $15/MTok`);
-        return this.MODEL_POWERFUL;
-      }
-    }
-
-    // Opus 4.5 (powerful) - no further escalation possible
+  private shouldEscalate(_toolsUsed: string[], _currentModel: string): string | null {
+    // Escalation disabled - we select appropriate model upfront in selectInitialModel
+    // This avoids the latency penalty of restarting requests
     return null;
   }
 
@@ -272,7 +217,6 @@ export class AnalyticsChatService {
 
     // Select initial model based on query characteristics
     let currentModel = this.selectInitialModel(userMessage);
-    let hasEscalated = false;
 
     try {
       this.logger.log(`[Quinn Chat] Processing message in conversation ${conversationId}`);
@@ -304,44 +248,11 @@ export class AnalyticsChatService {
 
       while (response.stop_reason === 'tool_use' && iterations < maxIterations) {
         iterations++;
-        this.logger.debug(`Tool use iteration ${iterations}`);
+        this.logger.log(`[Quinn Chat] Tool use iteration ${iterations}`);
 
         const toolUseBlocks = response.content.filter(
           (block) => block.type === 'tool_use',
         );
-
-        // Check for escalation on first tool use iteration
-        if (iterations === 1 && !hasEscalated) {
-          const requestedTools = toolUseBlocks
-            .filter((b) => b.type === 'tool_use')
-            .map((b) => b.name);
-
-          const escalationTarget = this.shouldEscalate(requestedTools, currentModel);
-
-          if (escalationTarget) {
-            // Escalate: restart with more powerful model
-            hasEscalated = true;
-            currentModel = escalationTarget;
-
-            this.logger.log(`[Quinn Chat] Restarting with ${currentModel}...`);
-            const escalationStartTime = Date.now();
-
-            response = await this.client.messages.create({
-              model: currentModel,
-              max_tokens: 2048,
-              system: systemPrompt,
-              tools: tools as any,
-              messages: apiMessages,
-            });
-
-            const escalationDuration = Date.now() - escalationStartTime;
-            this.logger.log(`[Quinn Chat] Escalated model responded in ${escalationDuration}ms`);
-
-            // Reset iteration counter for escalated attempt
-            iterations = 0;
-            continue;
-          }
-        }
 
         const toolResults: any[] = [];
 
@@ -410,7 +321,7 @@ export class AnalyticsChatService {
       const structuredData = this.extractStructuredData(toolResultsData);
 
       this.logger.log(
-        `[Quinn Chat] Completed with ${currentModel}, used ${toolsUsed.length} tools${hasEscalated ? ' (escalated)' : ''}`,
+        `[Quinn Chat] Completed with ${currentModel}, used ${toolsUsed.length} tools`,
       );
 
       return {
