@@ -51,6 +51,41 @@ A Claude-powered conversational interface that:
 
 ## Architecture
 
+### Hybrid Data Architecture (Option A)
+
+The Analytics Assistant uses a **hybrid architecture** that combines fast cached queries with deep database analysis:
+
+```
+┌───────────────────────────────────┐     ┌────────────────────────────────────┐
+│     PARQUET CACHE (fast ~50ms)    │     │      SUPABASE (direct 2-5s)       │
+│                                   │     │                                    │
+│  • PropertyIQ scores              │     │  • zillow_metro/county/zip/state   │
+│  • Score components               │     │  • realtor_metro/county            │
+│  • Outcomes (appreciation)        │     │  • census_metro/county             │
+│                                   │     │  • economic_metro/county           │
+│  Used for:                        │     │  • calculated_metrics              │
+│  - Backtesting                    │     │                                    │
+│  - Rankings                       │     │  Used for:                         │
+│  - Compare to benchmark           │     │  - Raw metric analysis             │
+│  - Basic filtering                │     │  - Feature discovery               │
+│  - Weight optimization            │     │  - Cross-source correlations       │
+└───────────────────────────────────┘     └────────────────────────────────────┘
+```
+
+### Tool Routing by Question Type
+
+| User Question | Claude's Decision | Python Tool | Speed |
+|---------------|-------------------|-------------|-------|
+| "Compare Houston to Dallas" | Basic comparison | `analyze_data` (cache) | ~100ms |
+| "Top 10 Texas metros" | Rankings needed | `get_rankings` (cache) | ~100ms |
+| "What's the score correlation with 3-year returns?" | Stats on cached scores | `run_regression` (cache) | ~500ms |
+| "Which RAW Zillow metrics predict appreciation?" | Need raw data from DB | `analyze_raw_metrics` (Supabase) | ~3s |
+| "What raw data is available?" | Metadata request | `get_raw_metric_summary` | ~1s |
+| "Cluster Texas markets" | ML clustering | `cluster_markets` (cache) | ~500ms |
+| "Scatter plot of score vs returns" | Visualization | `generate_chart` | ~500ms |
+
+### Full System Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              FRONTEND                                        │
@@ -59,9 +94,15 @@ A Claude-powered conversational interface that:
 │  │  ├─ AnalyticsAssistantButton    - Inline trigger                       │ │
 │  │  ├─ AnalyticsAssistantFAB       - Floating action button               │ │
 │  │  ├─ AnalyticsAssistantModal     - Modal wrapper                        │ │
-│  │  └─ AnalyticsAssistantPanel     - Core chat UI                         │ │
+│  │  └─ AnalyticsAssistantPanel     - Core chat UI + visual renderers      │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
-│                                    │                                         │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Visual Components                                                      │ │
+│  │  ├─ ChartRenderer      - Bar, line, scatter, distribution charts       │ │
+│  │  ├─ DataTable          - Sortable tables with score formatting         │ │
+│  │  ├─ ComparisonCard     - Benchmark comparisons                         │ │
+│  │  └─ RankingsList       - Top/bottom performers display                 │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  Feature Gate Layer                                                     │ │
 │  │  useFeatures() hook → reads from DB → caches in memory                 │ │
@@ -75,10 +116,10 @@ A Claude-powered conversational interface that:
 │  │  AnalyticsChat Module                                                   │ │
 │  │  ├─ analytics-chat.controller.ts    POST /api/analytics/chat/:id       │ │
 │  │  ├─ analytics-chat.service.ts       Claude orchestration + tools       │ │
-│  │  └─ analytics-tools.service.ts      Calls Python analytics API         │ │
+│  │  └─ analytics-tools.service.ts      14 tool definitions + execution    │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  Features Module                                                        │ │
+│  │  Features Module (planned)                                              │ │
 │  │  ├─ Admin endpoints for tier/feature management                        │ │
 │  │  └─ User feature resolution with grandfathering                        │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
@@ -88,31 +129,49 @@ A Claude-powered conversational interface that:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    PYTHON ANALYTICS SERVICE                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  Ad-hoc Analysis Routes (/api/v1/adhoc/*)                              │ │
+│  │  Ad-hoc Analysis Routes (/api/v1/adhoc/*)  [CACHE - FAST]              │ │
 │  │  ├─ POST /filter         Filter cached data                            │ │
 │  │  ├─ POST /analyze        Run analysis on filtered data                 │ │
 │  │  ├─ POST /compare        Compare to benchmarks                         │ │
 │  │  ├─ POST /rank           Top/bottom performers                         │ │
 │  │  ├─ POST /history        Time-series data                              │ │
-│  │  ├─ POST /scenario       What-if modeling                              │ │
-│  │  ├─ POST /explain        Score breakdown                               │ │
 │  │  └─ GET  /metadata       Available filters/options                     │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  AdhocAnalysisService                                                   │ │
-│  │  - Loads from Parquet cache (fast)                                     │ │
-│  │  - Applies dynamic filters                                              │ │
-│  │  - Runs pandas/scipy analysis                                          │ │
+│  │  Advanced Analysis Routes (/api/v1/advanced/*)  [ML TOOLS]             │ │
+│  │  ├─ POST /regression          OLS/Ridge regression                     │ │
+│  │  ├─ POST /feature-importance  Random Forest importance                 │ │
+│  │  ├─ POST /cluster             K-means market clustering                │ │
+│  │  ├─ POST /optimize-weights    Score weight optimization                │ │
+│  │  ├─ POST /chart               Plotly visualization generation          │ │
+│  │  ├─ POST /raw-metrics/analyze Analyze raw metrics (DB query)           │ │
+│  │  └─ GET  /raw-metrics/summary List available raw metrics               │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Services                                                               │ │
+│  │  ├─ AdhocAnalysisService    Parquet cache queries (fast)              │ │
+│  │  ├─ AdvancedAnalysisService ML analysis (regression, clustering)      │ │
+│  │  └─ RawMetricService        Supabase direct queries for raw data      │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
+                          ┌─────────┴─────────┐
+                          │                   │
+                     Cache Query         DB Query
+                     (Parquet)          (Supabase)
+                          │                   │
+                          ▼                   ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           SUPABASE                                           │
-│  - User data (watchlists, saved queries, notes, alerts)                     │
-│  - Feature configuration (tiers, features, overrides)                       │
-│  - Grandfathering records                                                   │
-│  - Conversation history                                                      │
+│  ┌──────────────────────────┐    ┌───────────────────────────────────────┐ │
+│  │  Raw Data Tables         │    │  Config & User Data                    │ │
+│  │  • zillow_metro/county   │    │  • Feature configuration               │ │
+│  │  • realtor_metro/county  │    │  • Tier settings                       │ │
+│  │  • census_metro/county   │    │  • User overrides                      │ │
+│  │  • economic_metro/county │    │  • Grandfathering                      │ │
+│  │  • calculated_metrics    │    │  • Saved queries, watchlists           │ │
+│  │  • propertyiq_scores_*   │    │  • Conversation history                │ │
+│  └──────────────────────────┘    └───────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -737,13 +796,17 @@ $$ LANGUAGE plpgsql STABLE;
 
 ### Python Analytics Service
 
-#### New File: `packages/propertyiq-analytics/app/services/adhoc_analysis_service.py`
+#### Services
 
-Core service for ad-hoc analysis - handles filtering, analysis, comparisons, and time series data against the Parquet cache.
+| Service | File | Purpose | Data Source |
+|---------|------|---------|-------------|
+| `AdhocAnalysisService` | `adhoc_analysis_service.py` | Fast filtering, analysis, rankings | Parquet cache |
+| `AdvancedAnalysisService` | `advanced_analysis_service.py` | ML analysis (regression, clustering, charts) | Parquet cache |
+| `RawMetricService` | `raw_metric_service.py` | Query raw metrics for feature discovery | Supabase direct |
 
-#### New File: `packages/propertyiq-analytics/app/api/routes/adhoc.py`
+#### API Routes
 
-FastAPI routes exposing the ad-hoc analysis capabilities:
+**Ad-hoc Routes** (`/api/v1/adhoc/*`) - Fast cache queries:
 - `GET /metadata` - Available filters and options
 - `POST /filter` - Filter dataset and return summary
 - `POST /analyze` - Run full analysis on filtered data
@@ -751,20 +814,48 @@ FastAPI routes exposing the ad-hoc analysis capabilities:
 - `POST /rank` - Get top/bottom performers
 - `POST /history` - Time series data
 
-#### Update: `packages/propertyiq-analytics/app/main.py`
-
-Add the adhoc router to the FastAPI app.
+**Advanced Routes** (`/api/v1/advanced/*`) - ML and raw metric analysis:
+- `POST /regression` - OLS/Ridge regression analysis
+- `POST /feature-importance` - Random Forest/Gradient Boosting importance
+- `POST /cluster` - K-means market clustering
+- `POST /optimize-weights` - Score component weight optimization
+- `POST /chart` - Plotly visualization generation
+- `POST /raw-metrics/analyze` - Analyze raw metrics from Supabase
+- `GET /raw-metrics/summary` - List available raw metrics by source
 
 ### NestJS Backend
 
-#### New Module: `packages/backend/src/analytics-chat/`
+#### Analytics Chat Module (`packages/backend/src/analytics-chat/`)
 
-- `analytics-chat.module.ts` - Module definition
-- `analytics-chat.controller.ts` - REST endpoints for chat
-- `analytics-chat.service.ts` - Claude orchestration with tool use
-- `analytics-tools.service.ts` - Tool definitions and execution against Python API
+| File | Purpose |
+|------|---------|
+| `analytics-chat.module.ts` | Module definition |
+| `analytics-chat.controller.ts` | REST endpoints for chat |
+| `analytics-chat.service.ts` | Claude orchestration with tool use + structured data extraction |
+| `analytics-tools.service.ts` | 14 tool definitions and execution against Python API |
 
-#### New Module: `packages/backend/src/admin/features/`
+#### Available Claude Tools (14 total)
+
+**Basic Analysis Tools (cache-based, fast):**
+1. `get_available_filters` - Get metadata about available options
+2. `filter_geographies` - Filter by geography/state/score
+3. `analyze_data` - Run statistical analysis on filtered data
+4. `compare_to_benchmark` - Compare to national/regional benchmarks
+5. `get_rankings` - Get top/bottom performers
+6. `get_time_series` - Historical data for specific geography
+
+**Advanced ML Tools (cache-based):**
+7. `run_regression` - OLS/Ridge regression to find predictors
+8. `get_feature_importance` - Random Forest/Gradient Boosting feature ranking
+9. `cluster_markets` - K-means clustering to find similar markets
+10. `optimize_weights` - Find optimal score component weights
+11. `generate_chart` - Plotly chart generation (scatter, bar, histogram, box)
+
+**Raw Metric Tools (Supabase direct, slower):**
+12. `analyze_raw_metrics` - Find which raw metrics predict appreciation
+13. `get_raw_metric_summary` - List available metrics from each data source
+
+#### Features Module (Planned: `packages/backend/src/admin/features/`)
 
 - `features.module.ts` - Module definition
 - `features.controller.ts` - Admin endpoints for tier/feature management
@@ -901,28 +992,33 @@ Show grandfathered status in account settings:
 
 ## Implementation Phases
 
-### Phase 1: Core MVP (Week 1-2)
+### Phase 1: Core MVP ✅ COMPLETE
 
-- [ ] Python adhoc analysis service
-- [ ] Python API routes (`/api/v1/adhoc/*`)
-- [ ] NestJS analytics-chat module
-- [ ] Claude tool definitions (filter, analyze, compare, rank)
-- [ ] Basic chat UI (text responses only)
-- [ ] Database tables for features (manual seed)
+- [x] Python adhoc analysis service (`adhoc_analysis_service.py`)
+- [x] Python API routes (`/api/v1/adhoc/*`)
+- [x] NestJS analytics-chat module (4 files)
+- [x] Claude tool definitions (6 basic tools)
+- [x] Basic chat UI (text responses)
+- [x] Database tables for features (2 migrations)
+- [x] **ADDED:** Advanced ML analysis service (`advanced_analysis_service.py`)
+- [x] **ADDED:** Raw metric service (`raw_metric_service.py`) - Hybrid Architecture
+- [x] **ADDED:** Advanced API routes (`/api/v1/advanced/*`)
+- [x] **ADDED:** 8 additional Claude tools (regression, clustering, charts, raw metrics)
 
-**Deliverable:** Working NL query → text response
+**Deliverable:** Working NL query → text response with full ML capabilities
 
-### Phase 2: Visual Outputs (Week 3)
+### Phase 2: Visual Outputs ✅ COMPLETE
 
-- [ ] Chart rendering component (bar, line, distribution)
-- [ ] Data table component (sortable, paginated)
-- [ ] Score breakdown display
-- [ ] Comparison table component
-- [ ] Structured response types from API
+- [x] Chart rendering component (bar, line, scatter, distribution)
+- [x] Data table component (sortable, with score/percent formatting)
+- [x] Comparison card component (benchmark comparisons)
+- [x] Rankings list component (top/bottom performers)
+- [x] Structured data extraction in backend
+- [x] Frontend renders visuals inline with messages
 
 **Deliverable:** Rich visual responses inline
 
-### Phase 3: Persistence (Week 4)
+### Phase 3: Persistence (IN PROGRESS)
 
 - [ ] Save queries functionality
 - [ ] Watchlist CRUD
@@ -932,7 +1028,7 @@ Show grandfathered status in account settings:
 
 **Deliverable:** Users can save and retrieve their work
 
-### Phase 4: Admin & Features (Week 5)
+### Phase 4: Admin & Features
 
 - [ ] Feature management admin dashboard
 - [ ] Tier configuration UI
@@ -942,9 +1038,9 @@ Show grandfathered status in account settings:
 
 **Deliverable:** Admin can configure tiers without code
 
-### Phase 5: Grandfathering (Week 6)
+### Phase 5: Grandfathering
 
-- [ ] Grandfathering database tables
+- [ ] Grandfathering database functions
 - [ ] Policy engine
 - [ ] Admin grandfathering dashboard
 - [ ] User-facing grandfather display
@@ -952,7 +1048,7 @@ Show grandfathered status in account settings:
 
 **Deliverable:** Full grandfathering support
 
-### Phase 6: Alerts & Export (Week 7-8)
+### Phase 6: Alerts & Export
 
 - [ ] Alert creation UI
 - [ ] Alert checking background job
@@ -963,7 +1059,7 @@ Show grandfathered status in account settings:
 
 **Deliverable:** Proactive features working
 
-### Phase 7: Polish & Advanced (Week 9+)
+### Phase 7: Polish & Advanced
 
 - [ ] Scenario modeling
 - [ ] Statistical deep dives
@@ -976,74 +1072,93 @@ Show grandfathered status in account settings:
 
 ## File Structure
 
-### New Files to Create
+### Files Created (Phase 1 & 2) ✅
 
 ```
 packages/
 ├── backend/
 │   └── src/
-│       ├── analytics-chat/
-│       │   ├── analytics-chat.module.ts
-│       │   ├── analytics-chat.controller.ts
-│       │   ├── analytics-chat.service.ts
-│       │   └── analytics-tools.service.ts
-│       └── admin/
-│           └── features/
-│               ├── features.module.ts
-│               ├── features.controller.ts
-│               └── features.service.ts
+│       └── analytics-chat/
+│           ├── analytics-chat.module.ts      ✅ Module definition
+│           ├── analytics-chat.controller.ts  ✅ REST endpoints
+│           ├── analytics-chat.service.ts     ✅ Claude orchestration + structured data
+│           └── analytics-tools.service.ts    ✅ 14 tool definitions
 │
 ├── propertyiq-analytics/
 │   └── app/
 │       ├── services/
-│       │   └── adhoc_analysis_service.py
+│       │   ├── adhoc_analysis_service.py     ✅ Cache-based analysis
+│       │   ├── advanced_analysis_service.py  ✅ ML analysis (regression, clustering)
+│       │   └── raw_metric_service.py         ✅ Supabase direct queries
 │       └── api/
 │           └── routes/
-│               └── adhoc.py
+│               ├── adhoc.py                   ✅ Ad-hoc analysis routes
+│               └── advanced.py                ✅ ML and raw metric routes
 │
 └── frontend/
     ├── components/
     │   └── analytics-assistant/
-    │       ├── index.ts
-    │       ├── types.ts
-    │       ├── AnalyticsAssistantButton.tsx
-    │       ├── AnalyticsAssistantFAB.tsx
-    │       ├── AnalyticsAssistantModal.tsx
-    │       ├── AnalyticsAssistantPanel.tsx
-    │       ├── UpgradePrompt.tsx
-    │       └── hooks/
-    │           └── useAnalyticsChat.ts
+    │       ├── index.ts                       ✅ Public exports
+    │       ├── types.ts                       ✅ TypeScript types + StructuredData
+    │       ├── AnalyticsAssistantButton.tsx   ✅ Trigger button
+    │       ├── AnalyticsAssistantModal.tsx    ✅ Modal wrapper
+    │       ├── AnalyticsAssistantPanel.tsx    ✅ Chat UI with visual rendering
+    │       ├── hooks/
+    │       │   └── useAnalyticsChat.ts        ✅ Chat state management
+    │       └── visuals/
+    │           ├── index.ts                   ✅ Visual exports
+    │           ├── ChartRenderer.tsx          ✅ Bar/line/scatter/distribution
+    │           ├── DataTable.tsx              ✅ Sortable data tables
+    │           └── ComparisonCard.tsx         ✅ Benchmark comparisons
+    └── app/
+        ├── api/analytics/chat/
+        │   ├── [conversationId]/route.ts      ✅ Chat API proxy
+        │   └── health/route.ts                ✅ Health check proxy
+        └── test-analytics/
+            └── page.tsx                       ✅ Test page for components
+```
+
+### Files to Create (Remaining Phases)
+
+```
+packages/
+├── backend/
+│   └── src/
+│       └── admin/
+│           └── features/                      ⏳ Phase 4
+│               ├── features.module.ts
+│               ├── features.controller.ts
+│               └── features.service.ts
+│
+└── frontend/
+    ├── components/
+    │   └── analytics-assistant/
+    │       └── UpgradePrompt.tsx              ⏳ Phase 4
     ├── lib/
     │   ├── features/
-    │   │   └── analytics-assistant.ts
+    │   │   └── analytics-assistant.ts         ⏳ Phase 4
     │   └── hooks/
-    │       └── useFeatures.ts
+    │       └── useFeatures.ts                 ⏳ Phase 4
     └── app/
         └── admin/
-            ├── features/
-            │   └── page.tsx
-            ├── grandfathering/
-            │   └── page.tsx
-            └── analytics-chat/
-                └── page.tsx
+            ├── features/page.tsx              ⏳ Phase 4
+            └── grandfathering/page.tsx        ⏳ Phase 5
 ```
 
-### Files to Modify
+### Files Modified
 
 ```
-packages/backend/src/app.module.ts          # Add AnalyticsChatModule, FeaturesModule
-packages/propertyiq-analytics/app/main.py   # Add adhoc router
+packages/backend/src/app.module.ts          ✅ Added AnalyticsChatModule
+packages/propertyiq-analytics/app/main.py   ✅ Added adhoc + advanced routers
+packages/backend/.env                        ✅ Added ANTHROPIC_API_KEY, ANALYTICS_SERVICE_URL
 ```
 
-### Database Migrations
+### Database Migrations Created ✅
 
 ```
 PropertyIQ/supabase/migrations/
-├── YYYYMMDD_create-analytics-user-tables.sql       # Saved queries, watchlist, notes, alerts, shares, conversations
-├── YYYYMMDD_create-feature-config-tables.sql       # Tiers, features, tier_features, overrides
-├── YYYYMMDD_create-grandfathering-tables.sql       # Grandfathering, policies, pricing history, audit
-├── YYYYMMDD_create-feature-functions.sql           # get_user_features, get_user_pricing
-└── YYYYMMDD_seed-feature-data.sql                  # Initial tiers and feature definitions
+├── 20240101005600_create-analytics-assistant-tables.sql  ✅ User data + feature config
+└── 20240101005700_seed-feature-configuration.sql         ✅ Tiers + 31 feature definitions
 ```
 
 ---
