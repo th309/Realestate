@@ -1,5 +1,5 @@
 /**
- * Analytics Chat Service - v1.0.1
+ * Analytics Chat Service - v1.0.2
  *
  * Orchestrates natural language analytics queries using Claude tool-use.
  * Handles conversation state and tool execution loop.
@@ -475,8 +475,8 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['AZ'] }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['NC'] }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['GA'] }, limit: 10, ascending: false } },
-      // Realtor hotness (order_by string: asc = low rank first)
-      { tool: 'query_database_table', params: { table_name: 'realtor_metro', columns: ['geography_name', 'hotness_rank', 'median_listing_price'], order_by: 'hotness_rank', limit: 10 } },
+      // Realtor hotness (order_by: asc = low rank first). realtor_metro has no geography_name column.
+      { tool: 'query_database_table', params: { table_name: 'realtor_metro', columns: ['hotness_rank', 'median_listing_price'], order_by: 'hotness_rank', limit: 10 } },
       // Benchmark & analysis
       { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, benchmark_type: 'national' } },
       { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, horizons: [12, 36] } },

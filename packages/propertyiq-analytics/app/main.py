@@ -1,4 +1,4 @@
-# PropertyIQ Analytics Service - v1.0.1
+# PropertyIQ Analytics Service - v1.0.2
 import logging
 import time
 from contextlib import asynccontextmanager
