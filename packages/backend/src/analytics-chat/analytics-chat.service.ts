@@ -109,10 +109,8 @@ export class AnalyticsChatService {
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
       this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
-      this.logger.log(`[Quinn Init] 3-tier model escalation enabled:`);
-      this.logger.log(`[Quinn Init]   Fast: ${this.MODEL_FAST} ($0.25/$1.25 per MTok)`);
-      this.logger.log(`[Quinn Init]   Balanced: ${this.MODEL_BALANCED} ($3.00/$15.00 per MTok)`);
-      this.logger.log(`[Quinn Init]   Powerful: ${this.MODEL_POWERFUL} ($15.00/$75.00 per MTok)`);
+      this.logger.log(`[Quinn Init] Using ${this.MODEL_BALANCED} for all queries ($3/$15 per MTok)`);
+      this.logger.log(`[Quinn Init] Model escalation DISABLED for optimal performance`);
     } else {
       this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
       this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
@@ -127,38 +125,97 @@ export class AnalyticsChatService {
   }
 
   /**
-   * Select initial model based on message characteristics
-   * Simple 2-tier: Haiku for chat, Sonnet for data queries (no mid-request escalation)
+   * Select model - ALWAYS use Sonnet for consistent performance
+   * No escalation overhead, no model switching delays
    */
-  private selectInitialModel(message: string): string {
-    const lowerMessage = message.toLowerCase();
-
-    // Simple conversational patterns - use Haiku (fast & cheap)
-    const simplePatterns = [
-      /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|got it)[\s!?.]*$/i,
-      /^what (is|are) you/i,
-      /^who are you/i,
-      /^help$/i,
-    ];
-
-    if (simplePatterns.some(p => p.test(lowerMessage))) {
-      this.logger.log(`[Quinn Model] Using Haiku 3.5 (simple chat) - $0.25/$1.25 per MTok`);
-      return this.MODEL_FAST;
-    }
-
-    // Everything else uses Sonnet (likely needs tools) - no escalation overhead
-    this.logger.log(`[Quinn Model] Using Sonnet 4 (data query) - $3/$15 per MTok`);
+  private selectInitialModel(_message: string): string {
+    this.logger.log(`[Quinn Model] Using Sonnet 4 - $3/$15 per MTok`);
     return this.MODEL_BALANCED;
   }
 
   /**
-   * Determine if escalation is needed - DISABLED for speed
-   * Mid-request escalation causes double API calls, so we select the right model upfront instead
+   * Filter tools based on query type - only show relevant tools
+   * This dramatically reduces Claude's processing overhead
    */
-  private shouldEscalate(_toolsUsed: string[], _currentModel: string): string | null {
-    // Escalation disabled - we select appropriate model upfront in selectInitialModel
-    // This avoids the latency penalty of restarting requests
-    return null;
+  private getRelevantTools(message: string): any[] {
+    const allTools = this.toolsService.getToolDefinitions();
+    const lowerMessage = message.toLowerCase();
+
+    // Score/ranking queries - most common
+    if (/\b(top|best|rank|score|hot|perform|invest|compare.*score)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Score query detected - providing Score Analysis tools`);
+      return allTools.filter(t =>
+        ['get_rankings', 'analyze_data', 'compare_to_benchmark', 'get_time_series',
+         'filter_geographies', 'get_available_filters'].includes(t.name)
+      );
+    }
+
+    // Market data queries (Zillow, Realtor, Census, Economic)
+    if (/\b(price|rent|value|zillow|realtor|listing|inventory|sale|hotness|zhvi|zri)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Market data query detected - providing Database Query tools`);
+      return allTools.filter(t =>
+        ['query_database_table', 'describe_database_table', 'aggregate_database',
+         'search_database', 'get_database_summary'].includes(t.name)
+      );
+    }
+
+    // Demographics/economic data
+    if (/\b(population|income|unemployment|demographic|census|economic|gdp)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Demographics query detected - providing Database Query tools`);
+      return allTools.filter(t =>
+        ['query_database_table', 'describe_database_table', 'aggregate_database'].includes(t.name)
+      );
+    }
+
+    // ML/analysis queries
+    if (/\b(predict|regression|feature|importance|cluster|correlat|optim|weight|machine learning|ml)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] ML analysis query detected - providing ML tools`);
+      return allTools.filter(t =>
+        ['run_regression', 'get_feature_importance', 'cluster_markets', 'optimize_weights',
+         'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
+      );
+    }
+
+    // Validation/backtest queries
+    if (/\b(backtest|validat|quintile|test|verify|check|perform)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Validation query detected - providing Validation tools`);
+      return allTools.filter(t =>
+        ['run_backtest', 'run_quintile_analysis', 'compare_formulas'].includes(t.name)
+      );
+    }
+
+    // News queries
+    if (/\b(news|article|recent|happening|event|announcement)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] News query detected - providing News tools`);
+      return allTools.filter(t =>
+        ['search_real_estate_news', 'analyze_news_impact'].includes(t.name)
+      );
+    }
+
+    // Geography/comparison queries
+    if (/\b(similar|neighbor|compar|nearby|surrounding|like|near)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Geography query detected - providing Geography tools`);
+      return allTools.filter(t =>
+        ['find_similar_geographies', 'compare_to_neighbors', 'find_neighboring_geographies',
+         'get_rankings', 'query_database_table'].includes(t.name)
+      );
+    }
+
+    // Discovery/exploration queries
+    if (/\b(what|show|available|list|data|table|have|exist)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Discovery query detected - providing Database Query tools`);
+      return allTools.filter(t =>
+        ['get_database_summary', 'get_database_tables', 'describe_database_table',
+         'query_database_table', 'get_available_filters'].includes(t.name)
+      );
+    }
+
+    // Default: provide core tools (Score + Database)
+    this.logger.log(`[Quinn Tools] General query - providing core tools`);
+    return allTools.filter(t =>
+      ['get_rankings', 'query_database_table', 'describe_database_table',
+       'analyze_data', 'search_database'].includes(t.name)
+    );
   }
 
   /**
@@ -199,7 +256,10 @@ export class AnalyticsChatService {
 
     // Build system prompt
     const systemPrompt = this.buildSystemPrompt(conversation.context);
-    const tools = this.toolsService.getToolDefinitions();
+
+    // Get relevant tools based on query (dynamic filtering)
+    const tools = this.getRelevantTools(userMessage);
+    this.logger.log(`[Quinn Tools] Providing ${tools.length} tools (filtered from 27 total)`);
 
     // Add user message to history
     conversation.messages.push({ role: 'user', content: userMessage });
