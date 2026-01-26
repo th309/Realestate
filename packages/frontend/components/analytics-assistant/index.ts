@@ -1,20 +1,22 @@
 /**
- * Analytics Assistant - Public Exports
+ * Quinn - AI Analytics Assistant
+ *
+ * Quinn is PropertyIQ's AI-powered analytics assistant for exploring
+ * real estate market data through natural language.
  *
  * Usage:
  *
- * // Button that opens modal
+ * // Using the Quinn namespace (recommended)
+ * import { Quinn } from '@/components/analytics-assistant';
+ * <Quinn.Button />
+ * <Quinn.Panel />
+ *
+ * // Or individual components
  * import { AnalyticsAssistantButton } from '@/components/analytics-assistant';
  * <AnalyticsAssistantButton />
  *
- * // With custom label and variant
- * <AnalyticsAssistantButton label="Analyze" variant="secondary" />
- *
- * // Icon only
- * <AnalyticsAssistantButton iconOnly />
- *
  * // With context (scoped to a geography)
- * <AnalyticsAssistantButton
+ * <Quinn.Button
  *   context={{
  *     geographyType: 'metro',
  *     geographyId: '12420',
@@ -26,13 +28,10 @@
  *   ]}
  * />
  *
- * // Standalone panel (for embedding)
- * import { AnalyticsAssistantPanel } from '@/components/analytics-assistant';
- * <AnalyticsAssistantPanel />
- *
- * // Custom hook for advanced usage
- * import { useAnalyticsChat } from '@/components/analytics-assistant';
- * const { messages, sendMessage, isLoading } = useAnalyticsChat();
+ * // Feature-gated access
+ * <Quinn.Gate feature="analytics_assistant_enabled" userId={userId}>
+ *   <Quinn.Panel />
+ * </Quinn.Gate>
  */
 
 export { AnalyticsAssistantButton } from './AnalyticsAssistantButton';
@@ -59,3 +58,52 @@ export type {
   ComparisonConfig,
   ComparisonMetric,
 } from './visuals';
+
+// Persistence (saved queries, watchlist, conversations, alerts)
+export {
+  useSavedQueries,
+  useWatchlist,
+  useConversations,
+  useAlerts,
+  ConversationsSidebar,
+  SaveQueryDialog,
+} from './persistence';
+export type {
+  SavedQuery,
+  WatchlistItem,
+  Note,
+  Conversation,
+  ConversationMessage,
+  Alert,
+  AlertCondition,
+} from './persistence';
+
+// Feature Gating
+export { UpgradePrompt } from './UpgradePrompt';
+export { FeatureGate, useFeatureAccess } from './FeatureGate';
+export { GrandfatheredBadge, GrandfatheredInfo, FeatureCard } from './GrandfatheredBadge';
+
+// Export & Share
+export { ExportButton } from './ExportButton';
+export { ShareDialog } from './ShareDialog';
+
+// ============================================================================
+// QUINN - Branded exports
+// ============================================================================
+export { Quinn, QUINN_VERSION, QUINN_NAME, QUINN_DESCRIPTION } from './quinn';
+export {
+  QuinnButton,
+  QuinnModal,
+  QuinnPanel,
+  QuinnGate,
+  QuinnChart,
+  QuinnTable,
+  QuinnComparison,
+  QuinnExportButton,
+  QuinnShareDialog,
+  useQuinn,
+  useQuinnSavedQueries,
+  useQuinnWatchlist,
+  useQuinnConversations,
+  useQuinnAlerts,
+} from './quinn';

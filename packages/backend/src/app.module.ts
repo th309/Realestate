@@ -19,6 +19,8 @@ import { HealthModule } from './health/health.module';
 import { MLWorkflowModule } from './ml-workflow/ml-workflow.module';
 import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
 import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
+import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-persistence.module';
+import { FeaturesModule } from './admin/features/features.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
     MLWorkflowModule,
     DataIngestionModule,
     AnalyticsChatModule,
+    AnalyticsPersistenceModule,
+    FeaturesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

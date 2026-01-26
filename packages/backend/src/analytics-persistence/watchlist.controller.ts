@@ -1,0 +1,266 @@
+/**
+ * Watchlist Controller
+ *
+ * REST endpoints for market watchlist.
+ */
+
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Logger,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  WatchlistService,
+  AddToWatchlistDto,
+  UpdateWatchlistItemDto,
+} from './watchlist.service';
+
+@Controller('analytics/watchlist')
+export class WatchlistController {
+  private readonly logger = new Logger(WatchlistController.name);
+
+  constructor(private readonly watchlistService: WatchlistService) {}
+
+  /**
+   * Get all watchlist items
+   * GET /api/analytics/watchlist?userId=xxx&folder=xxx
+   */
+  @Get()
+  async getAll(
+    @Query('userId') userId: string,
+    @Query('folder') folder?: string,
+  ) {
+    this.logger.log(`GET /analytics/watchlist for user ${userId}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const items = await this.watchlistService.getAll(userId, folder);
+      return {
+        success: true,
+        data: items,
+        count: items.length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get watchlist grouped by folder
+   * GET /api/analytics/watchlist/grouped?userId=xxx
+   */
+  @Get('grouped')
+  async getGrouped(@Query('userId') userId: string) {
+    this.logger.log(`GET /analytics/watchlist/grouped for user ${userId}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const grouped = await this.watchlistService.getGroupedByFolder(userId);
+      return {
+        success: true,
+        data: grouped,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get all folders
+   * GET /api/analytics/watchlist/folders?userId=xxx
+   */
+  @Get('folders')
+  async getFolders(@Query('userId') userId: string) {
+    this.logger.log(`GET /analytics/watchlist/folders for user ${userId}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const folders = await this.watchlistService.getFolders(userId);
+      return {
+        success: true,
+        data: folders,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Check if a market is in watchlist
+   * GET /api/analytics/watchlist/check?userId=xxx&geographyType=metro&geographyId=12420
+   */
+  @Get('check')
+  async check(
+    @Query('userId') userId: string,
+    @Query('geographyType') geographyType: string,
+    @Query('geographyId') geographyId: string,
+  ) {
+    if (!userId || !geographyType || !geographyId) {
+      throw new HttpException(
+        'userId, geographyType, and geographyId are required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const isInWatchlist = await this.watchlistService.isInWatchlist(
+        userId,
+        geographyType,
+        geographyId,
+      );
+      return {
+        success: true,
+        inWatchlist: isInWatchlist,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Add to watchlist
+   * POST /api/analytics/watchlist
+   */
+  @Post()
+  async add(@Body() body: AddToWatchlistDto & { userId: string }) {
+    this.logger.log(`POST /analytics/watchlist`);
+
+    const { userId, ...dto } = body;
+
+    if (!userId || !dto.geography_type || !dto.geography_id) {
+      throw new HttpException(
+        'userId, geography_type, and geography_id are required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const item = await this.watchlistService.add(userId, dto);
+      return {
+        success: true,
+        data: item,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Update watchlist item
+   * PUT /api/analytics/watchlist/:id
+   */
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateWatchlistItemDto & { userId: string },
+  ) {
+    this.logger.log(`PUT /analytics/watchlist/${id}`);
+
+    const { userId, ...dto } = body;
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const item = await this.watchlistService.update(userId, id, dto);
+      return {
+        success: true,
+        data: item,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Remove from watchlist
+   * DELETE /api/analytics/watchlist/:id?userId=xxx
+   */
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Query('userId') userId: string) {
+    this.logger.log(`DELETE /analytics/watchlist/${id}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      await this.watchlistService.remove(userId, id);
+      return {
+        success: true,
+        deleted: true,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Remove by geography
+   * DELETE /api/analytics/watchlist/geography/:type/:id?userId=xxx
+   */
+  @Delete('geography/:type/:geoId')
+  async removeByGeography(
+    @Param('type') type: string,
+    @Param('geoId') geoId: string,
+    @Query('userId') userId: string,
+  ) {
+    this.logger.log(`DELETE /analytics/watchlist/geography/${type}/${geoId}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      await this.watchlistService.removeByGeography(userId, type, geoId);
+      return {
+        success: true,
+        deleted: true,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+}
