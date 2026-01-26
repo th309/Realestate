@@ -168,10 +168,7 @@ export function QuinnFloatingButton() {
           className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-primary-container text-on-primary-container elevation-3 hover:elevation-4 transition-all duration-200 active:scale-95 disabled:opacity-70"
           aria-label="Open Quinn AI Assistant"
         >
-          <MaterialIcon 
-            name="smart_toy" 
-            className="text-[28px] group-hover:scale-110 transition-transform duration-200" 
-          />
+          <span className="text-2xl font-bold group-hover:scale-110 transition-transform duration-200">Q</span>
           {/* Online Status Indicator */}
           <span className={`absolute top-0 right-0 w-4 h-4 rounded-full border-2 border-surface ${isUserLoading ? 'bg-amber-500' : 'bg-emerald-500'}`} />
         </button>
@@ -193,7 +190,7 @@ export function QuinnFloatingButton() {
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
-                    <MaterialIcon name="smart_toy" className="text-xl" />
+                    <span className="text-lg font-bold">Q</span>
                   </div>
                   {/* Online indicator */}
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface" />
@@ -227,7 +224,7 @@ export function QuinnFloatingButton() {
               {messages.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
-                    <MaterialIcon name="smart_toy" className="text-3xl" />
+                    <span className="text-3xl font-bold">Q</span>
                   </div>
                   <h4 className="text-on-surface font-medium mb-2">
                     Ask Quinn anything about real estate markets
@@ -256,7 +253,7 @@ export function QuinnFloatingButton() {
                     >
                       {msg.role === 'assistant' && (
                         <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
-                          <MaterialIcon name="smart_toy" className="text-lg" />
+                          <span className="text-sm font-bold">Q</span>
                         </div>
                       )}
                       <div className="flex flex-col gap-1">
@@ -278,7 +275,7 @@ export function QuinnFloatingButton() {
                   {loading && (
                     <div className="flex items-start gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
-                        <MaterialIcon name="smart_toy" className="text-lg" />
+                        <span className="text-sm font-bold">Q</span>
                       </div>
                       <div className="bg-surface-container-high px-4 py-3 rounded-[20px] rounded-bl-sm">
                         <div className="flex gap-1">
