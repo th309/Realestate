@@ -57,12 +57,12 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"  Supabase validation error: {e}")
 
-    async def warm_cache():
+    def _warm_cache_sync():
+        """Run in thread so event loop can still serve /api/v1/health."""
         try:
             from app.services.data_cache import get_data_cache
             cache = get_data_cache()
-            geo_types = ['metro', 'state', 'county', 'zip']  # Metro first (most common)
-            for geo in geo_types:
+            for geo in ['metro', 'state', 'county', 'zip']:
                 try:
                     if not cache.is_cached(geo):
                         logger.info(f"Cache empty for {geo} - syncing from Supabase...")
@@ -73,6 +73,12 @@ async def lifespan(app: FastAPI):
                 except Exception as e:
                     logger.error(f"  {geo}: sync failed - {e}")
             logger.info("Cache warming complete - all geography types loaded from DB")
+        except Exception as e:
+            logger.error(f"Cache warming failed: {e}")
+
+    async def warm_cache():
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, _warm_cache_sync)
         except Exception as e:
             logger.error(f"Cache warming failed: {e}")
 
