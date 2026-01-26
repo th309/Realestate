@@ -25,7 +25,7 @@ class DatabaseQueryService:
     ALLOWED_TABLES = {
         # Zillow data
         'zillow_metro', 'zillow_county', 'zillow_zip', 'zillow_state',
-        'zillow_city', 'zillow_neighborhood',
+        'zillow_city', 'zillow_neighborhood', 'zillow_metro_crosswalk',
         # Realtor data
         'realtor_metro', 'realtor_county', 'realtor_zip', 'realtor_state',
         'realtor_national',
@@ -44,6 +44,8 @@ class DatabaseQueryService:
         'market_time_series',
         # HUD Fair Market Rent
         'hud_fmr',
+        # Building permits (Census BPS)
+        'permits_state', 'permits_metro', 'permits_county',
         # Backtest results (validation data, not user data)
         'backtest_runs', 'backtest_results',
         # TIGER geographic boundaries

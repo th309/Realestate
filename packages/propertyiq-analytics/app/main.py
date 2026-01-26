@@ -57,23 +57,28 @@ async def lifespan(app: FastAPI):
     logger.info("PropertyIQ Analytics service ready")
     logger.info("=" * 60)
     
-    # Start background cache warming for metro data (most commonly used)
+    # Load ALL most recent data from DB into cache (covers ~90% of user queries)
     import asyncio
     async def warm_cache():
         try:
-            logger.info("Starting background cache warming for metro data...")
             from app.services.data_cache import get_data_cache
             cache = get_data_cache()
-            if not cache.is_cached('metro'):
-                logger.info("Metro cache empty - syncing from Supabase...")
-                cache.sync_cache('metro', force_full=True)
-                logger.info("Metro cache warming complete!")
-            else:
-                logger.info("Metro cache already exists - skipping warm-up")
+            geo_types = ['metro', 'state', 'county', 'zip']  # Metro first (most common)
+            for geo in geo_types:
+                try:
+                    if not cache.is_cached(geo):
+                        logger.info(f"Cache empty for {geo} - syncing from Supabase...")
+                        cache.sync_cache(geo, force_full=True)
+                        logger.info(f"  {geo}: done")
+                    else:
+                        logger.info(f"  {geo}: already cached, skipping")
+                except Exception as e:
+                    logger.error(f"  {geo}: sync failed - {e}")
+            logger.info("Cache warming complete - all geography types loaded from DB")
         except Exception as e:
             logger.error(f"Cache warming failed: {e}")
     
-    # Run cache warming in background (don't block startup)
+    # Run in background (don't block startup)
     asyncio.create_task(warm_cache())
     
     yield
