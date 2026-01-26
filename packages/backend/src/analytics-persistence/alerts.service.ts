@@ -245,11 +245,20 @@ export class AlertsService {
   async markTriggered(alertId: string): Promise<void> {
     const client = this.supabase.getClient();
 
+    // Fetch current trigger_count first, then increment
+    const { data: alert } = await client
+      .from('analytics_alerts')
+      .select('trigger_count')
+      .eq('id', alertId)
+      .single();
+
+    const currentCount = alert?.trigger_count ?? 0;
+
     await client
       .from('analytics_alerts')
       .update({
         last_triggered_at: new Date().toISOString(),
-        trigger_count: client.raw('trigger_count + 1'),
+        trigger_count: currentCount + 1,
       })
       .eq('id', alertId);
   }
