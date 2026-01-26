@@ -149,12 +149,11 @@ export class AnalyticsChatService {
     const allTools = this.toolsService.getToolDefinitions();
     const lowerMessage = message.toLowerCase();
 
-    // Score/ranking queries - most common
-    if (/\b(top|best|rank|score|hot|perform|invest|compare.*score)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Score query detected - providing Score Analysis tools`);
+    // Score/ranking queries - most common - ONLY action tools, no exploration
+    if (/\b(top|best|rank|score|hot|perform|invest)/i.test(lowerMessage)) {
+      this.logger.log(`[Quinn Tools] Score query detected - providing ONLY action tools (no exploration)`);
       return allTools.filter(t =>
-        ['get_rankings', 'analyze_data', 'compare_to_benchmark', 'get_time_series',
-         'filter_geographies', 'get_available_filters'].includes(t.name)
+        ['get_rankings', 'analyze_data', 'compare_to_benchmark', 'get_time_series'].includes(t.name)
       );
     }
 
@@ -815,23 +814,26 @@ export class AnalyticsChatService {
   private buildSystemPrompt(context?: Record<string, any>): string {
     let prompt = `You are Quinn, PropertyIQ's real estate analytics assistant. Answer concisely using the right tools.
 
-## CRITICAL RULES
+## CRITICAL RULES - FOLLOW EXACTLY
 
-1. **PropertyIQ Scores → get_rankings ONLY**
-   - ❌ NEVER: query_database_table on propertyiq_scores
-   - ✅ ALWAYS: get_rankings, analyze_data, compare_to_benchmark
-   - Returns COMPLETE data (names, scores, appreciation) - no follow-up queries needed!
+1. **NEVER EXPLORE** - Don't call get_available_filters, describe_database_table, or get_database_summary first
+   - Just call the action tool directly
+   - If it fails, THEN try alternatives
 
-2. **Raw Data → query_database_table**
-   - Zillow: zhvi (prices), zri (rents), inventory
-   - Realtor: hotness_rank (lower=hotter), median_listing_price, days_on_market
+2. **"Hot markets" or "Top markets" → get_rankings(score_type="investoredge", limit=10)**
+   - Call it IMMEDIATELY - don't check data first
+   - Returns COMPLETE data (names, scores, appreciation)
+
+3. **PropertyIQ Scores → get_rankings ONLY**
+   - ❌ NEVER query_database_table on propertyiq_scores
+   - ✅ ALWAYS get_rankings, analyze_data, compare_to_benchmark
+
+4. **Raw Data → query_database_table**
+   - Zillow: zhvi, zri, inventory
+   - Realtor: hotness_rank, median_listing_price
    - Census: population, median_income
-   - Economic: unemployment_rate, gdp
 
-3. **Efficiency Rules**
-   - Maximum 1-3 tool calls for simple queries
-   - Don't explore schemas - just call the tool
-   - Trust tool outputs - they include all needed data
+5. **Efficiency: 1-2 tool calls maximum for simple queries**
 
 ## COMMON QUERIES
 
