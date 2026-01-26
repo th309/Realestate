@@ -56,6 +56,7 @@ export function QuinnFloatingButton() {
   const [loading, setLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get user ID (authenticated or anonymous)
   const { userId, isLoading: isUserLoading } = useQuinnUser();
@@ -80,6 +81,18 @@ export function QuinnFloatingButton() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Auto-resize textarea up to 10 lines (~200px), then scroll
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set height to scrollHeight, capped at max (10 lines ≈ 200px)
+      const maxHeight = 200;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    }
+  }, [input]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || !conversationId) {
@@ -365,20 +378,22 @@ export function QuinnFloatingButton() {
               </div>
               
               {/* Input Field */}
-              <div className="flex items-center gap-3 bg-surface-container-high px-4 py-3 rounded-full border border-outline-variant focus-within:border-primary transition-colors">
-                <input
-                  type="text"
+              <div className="flex items-end gap-3 bg-surface-container-high px-4 py-3 rounded-2xl border border-outline-variant focus-within:border-primary transition-colors">
+                <textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Quinn about properties..."
                   disabled={loading}
-                  className="flex-1 bg-transparent border-none text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 disabled:opacity-50"
+                  rows={1}
+                  className="flex-1 bg-transparent border-none text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 disabled:opacity-50 resize-none overflow-y-auto leading-5"
+                  style={{ minHeight: '20px', maxHeight: '200px' }}
                 />
                 <button
                   onClick={() => sendMessage(input)}
                   disabled={loading || !input.trim()}
-                  className="w-9 h-9 flex items-center justify-center bg-primary text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors duration-200 shrink-0"
+                  className="w-9 h-9 flex items-center justify-center bg-primary text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors duration-200 shrink-0 self-end"
                   aria-label="Send message"
                 >
                   <MaterialIcon name="send" className="text-lg" />
