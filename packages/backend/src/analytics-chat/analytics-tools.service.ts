@@ -23,7 +23,36 @@ export class AnalyticsToolsService {
     this.analyticsBaseUrl =
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
-    this.logger.log(`Analytics service URL: ${this.analyticsBaseUrl}`);
+    this.logger.log(`[Analytics Tools] Service URL: ${this.analyticsBaseUrl}`);
+    
+    // Test connectivity on startup
+    this.testConnectivity();
+  }
+  
+  /**
+   * Test connectivity to analytics service on startup
+   */
+  private async testConnectivity(): Promise<void> {
+    try {
+      this.logger.log(`[Analytics Tools] Testing connectivity to ${this.analyticsBaseUrl}...`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(`${this.analyticsBaseUrl}/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        this.logger.log(`[Analytics Tools] ✓ Connected successfully (status: ${response.status})`);
+      } else {
+        this.logger.warn(`[Analytics Tools] ⚠ Service responded with status: ${response.status}`);
+      }
+    } catch (error) {
+      this.logger.error(`[Analytics Tools] ✗ Failed to connect: ${error.message}`);
+      this.logger.error(`[Analytics Tools] Tools will fail until Analytics service is reachable at ${this.analyticsBaseUrl}`);
+    }
   }
 
   /**
@@ -55,11 +84,22 @@ export class AnalyticsToolsService {
       this.logger.log(`[Tool ${toolName}] Calling ${method} ${url}`);
 
       const fetchStart = Date.now();
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: method === 'POST' ? JSON.stringify(args) : undefined,
-      });
+      
+      // Add 30 second timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      let response;
+      try {
+        response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: method === 'POST' ? JSON.stringify(args) : undefined,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       const fetchDuration = Date.now() - fetchStart;
 
       this.logger.log(`[Tool ${toolName}] Response status: ${response.status} (${fetchDuration}ms)`);
