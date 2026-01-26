@@ -993,14 +993,18 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
     for (const { toolName, data } of toolResults) {
       this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
 
+      // Unwrap if data is nested under data.data (analytics service wraps responses)
+      const actualData = data.data || data;
+      this.logger.debug(`[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`);
+
       // Handle rankings from get_rankings tool
-      if (toolName === 'get_rankings' && data.rankings) {
-        this.logger.debug(`[Quinn Extract] Found rankings: ${data.rankings.length} items`);
+      if (toolName === 'get_rankings' && actualData.rankings) {
+        this.logger.debug(`[Quinn Extract] Found rankings: ${actualData.rankings.length} items`);
 
         structured.rankings = {
-          title: data.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
-          direction: data.direction || 'top',
-          items: data.rankings.map((item: any) => ({
+          title: actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
+          direction: actualData.direction || 'top',
+          items: actualData.rankings.map((item: any) => ({
             rank: item.rank,
             name: item.geography_name || item.geography_id,
             score: item.score,
@@ -1011,8 +1015,8 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
       }
 
       // Handle comparison from compare_to_benchmark tool
-      if (toolName === 'compare_to_benchmark' && data.comparison) {
-        const comp = data.comparison;
+      if (toolName === 'compare_to_benchmark' && actualData.comparison) {
+        const comp = actualData.comparison;
         structured.comparison = {
           title: 'Benchmark Comparison',
           filteredLabel: 'Selected Markets',
@@ -1052,7 +1056,7 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
       }
 
       // Handle analysis results from analyze_data tool
-      if (toolName === 'analyze_data' && data.top_performers) {
+      if (toolName === 'analyze_data' && actualData.top_performers) {
         // Create a table for top performers
         structured.table = {
           title: 'Top Performers',
@@ -1062,7 +1066,7 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
             { key: 'score', label: 'Score', type: 'score' },
             { key: 'appreciation', label: '12M Return', type: 'percent' },
           ],
-          rows: data.top_performers.slice(0, 10).map((p: any, i: number) => ({
+          rows: actualData.top_performers.slice(0, 10).map((p: any, i: number) => ({
             rank: i + 1,
             name: p.geography_name || p.geography_id,
             score: p.score,
@@ -1072,8 +1076,8 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
         };
 
         // Create distribution chart if available
-        if (data.chart_data?.distribution) {
-          const dist = data.chart_data.distribution;
+        if (actualData.chart_data?.distribution) {
+          const dist = actualData.chart_data.distribution;
           structured.chart = {
             type: 'distribution',
             title: 'Score Distribution',
