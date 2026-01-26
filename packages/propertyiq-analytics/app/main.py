@@ -1,6 +1,7 @@
 import logging
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -83,22 +84,57 @@ async def lifespan(app: FastAPI):
             logger.error(f"Cache warming failed: {e}")
 
     async def warm_market_data_cache():
-        """Preload market tables (Zillow, Realtor, Census, etc.) so Quinn hits cache instead of DB."""
+        """Load market tables from Parquet only (fast). DB is used only when Parquet is missing."""
         try:
             from app.services.market_data_cache import get_market_data_cache
             cache = get_market_data_cache()
-            logger.info("Market data cache: loading all tables...")
+            logger.info("Market data cache: loading from Parquet...")
             loop = asyncio.get_event_loop()
             results = await loop.run_in_executor(None, cache.load_all)
             ok = sum(1 for v in results.values() if v)
             logger.info(f"Market data cache: loaded {ok}/{len(results)} tables")
         except Exception as e:
             logger.error(f"Market data cache warming failed: {e}")
-    
+
+    def _run_weekly_refresh_sync():
+        """Run incremental/full refresh for all market tables (blocking)."""
+        try:
+            from app.services.market_data_cache import get_market_data_cache
+            cache = get_market_data_cache()
+            logger.info("Market data cache: weekly refresh from Supabase (4am EST)...")
+            results = cache.refresh_all_from_supabase()
+            ok = sum(1 for v in results.values() if v)
+            logger.info(f"Market data cache: refresh complete {ok}/{len(results)} tables")
+        except Exception as e:
+            logger.error(f"Market data cache weekly refresh failed: {e}")
+
+    async def weekly_refresh_at_4am_est():
+        """Schedule market cache refresh every Sunday at 4am EST."""
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/New_York")
+        while True:
+            now = datetime.now(tz)
+            # Next Sunday at 4am EST
+            days_ahead = (6 - now.weekday()) % 7
+            if days_ahead == 0 and now.hour >= 4:
+                days_ahead = 7
+            next_sunday = now.replace(hour=4, minute=0, second=0, microsecond=0)
+            if days_ahead > 0:
+                next_sunday = next_sunday + timedelta(days=days_ahead)
+            elif now.hour >= 4:
+                next_sunday = next_sunday + timedelta(days=7)
+            delay = (next_sunday - now).total_seconds()
+            if delay < 60:
+                delay = 60
+            logger.info(f"Market data cache: next refresh at {next_sunday.isoformat()} EST (in {delay/3600:.1f}h)")
+            await asyncio.sleep(delay)
+            await asyncio.get_event_loop().run_in_executor(None, _run_weekly_refresh_sync)
+
     # Run in background (don't block startup) so /api/v1/health responds within Railway's 10s window
     asyncio.create_task(validate_supabase())
     asyncio.create_task(warm_cache())
     asyncio.create_task(warm_market_data_cache())
+    asyncio.create_task(weekly_refresh_at_4am_est())
     yield
     logger.info("Shutting down PropertyIQ Analytics service")
 
