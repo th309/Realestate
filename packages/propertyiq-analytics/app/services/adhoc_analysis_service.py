@@ -64,8 +64,8 @@ class AdhocAnalysisService:
     
     def get_available_filters(self) -> Dict[str, Any]:
         """Return metadata about available filter options."""
-        metro_df = self.cache.get_cached_data('metro', auto_sync=False)
-        state_df = self.cache.get_cached_data('state', auto_sync=False)
+        metro_df = self.cache.get_cached_data('metro', auto_sync=True)
+        state_df = self.cache.get_cached_data('state', auto_sync=True)
         
         states = []
         if state_df is not None and 'geography_id' in state_df.columns:
@@ -103,7 +103,7 @@ class AdhocAnalysisService:
     def filter_data(self, criteria: FilterCriteria) -> pd.DataFrame:
         """Filter the cached dataset based on criteria."""
         geo_type = criteria.geography_type or 'metro'
-        df = self.cache.get_cached_data(geo_type, auto_sync=False)
+        df = self.cache.get_cached_data(geo_type, auto_sync=True)
         
         if df is None or len(df) == 0:
             logger.warning(f"No cached data for {geo_type}")
@@ -393,7 +393,7 @@ class AdhocAnalysisService:
         if metrics is None:
             metrics = ['investoredge_score']
         
-        df = self.cache.get_cached_data(geography_type, auto_sync=False)
+        df = self.cache.get_cached_data(geography_type, auto_sync=True)
         if df is None or len(df) == 0:
             return {"error": f"No data available for {geography_type}"}
         
