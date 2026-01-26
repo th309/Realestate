@@ -87,9 +87,10 @@ export class AnalyticsChatService {
   private client: Anthropic | null = null;
 
   // Model tiers for dynamic escalation
-  private readonly MODEL_HAIKU = 'claude-haiku-4-20250514';
-  private readonly MODEL_SONNET = 'claude-sonnet-4-20250514';
-  private readonly MODEL_OPUS = 'claude-opus-4-5-20251101';
+  // Using actual available model names from Anthropic
+  private readonly MODEL_HAIKU = 'claude-3-5-haiku-20241022';  // Fast, cheap
+  private readonly MODEL_SONNET = 'claude-sonnet-4-20250514';   // Balanced
+  private readonly MODEL_OPUS = 'claude-sonnet-4-20250514';     // Fallback to Sonnet (Opus 4 not yet available)
 
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
