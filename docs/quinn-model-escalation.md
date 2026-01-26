@@ -215,6 +215,42 @@ Expected log:
 4. **Transparent**: All escalations are logged for observability
 5. **Automatic**: No user configuration or manual routing needed
 
+## System Prompt Enhancements
+
+Quinn's system prompt has been optimized to help it make better tool selection decisions:
+
+### Data Source Mapping
+- Clear mapping of which metrics live in which tables
+- Specific column name mappings (e.g., "home price" → `zhvi` column)
+- Examples for each data source (Zillow, Realtor, Census, Economic, HUD)
+
+### Decision Tree for Tool Selection
+8 query types with specific tool recommendations:
+1. Rankings & Scores → SCORE ANALYSIS TOOLS
+2. Specific Metric Lookup → DATABASE QUERY TOOLS
+3. Aggregations & Summaries → aggregate_database
+4. Predictive Analysis → ADVANCED ML TOOLS
+5. Raw Data Correlation → RAW METRIC ANALYSIS TOOLS
+6. Validation & Backtesting → VALIDATION TOOLS
+7. Market News & Events → NEWS TOOLS
+8. Geographic Relationships → GEOGRAPHY TOOLS
+
+### Common Workflows
+Pre-defined multi-step workflows:
+- **Market Research**: summary → query → news
+- **Investment Analysis**: rankings → metrics → comparison → regression
+- **Score Validation**: backtest → feature importance → optimize weights
+
+### Troubleshooting Guidance
+Instructions for handling:
+- Empty results from tools
+- Missing data
+- Ambiguous queries
+- Geography name mismatches
+
+### Quick Reference Examples
+Concrete examples for every tool category with exact parameters
+
 ## Future Enhancements
 
 Potential improvements:
@@ -224,3 +260,4 @@ Potential improvements:
 - **Cost tracking**: Track actual costs per conversation
 - **Streaming**: Stream responses for better UX
 - **Caching**: Cache common queries to avoid repeated API calls
+- **Learning from feedback**: Track which tool selections work best
