@@ -54,6 +54,7 @@ export function QuinnFloatingButton() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [conversationId] = useState(() => `quinn-${Date.now()}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Show tooltip briefly on mount
@@ -86,12 +87,11 @@ export function QuinnFloatingButton() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/analytics/chat', {
+      const response = await fetch(`/api/analytics/chat/${conversationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: text,
-          conversationId: `quinn-${Date.now()}`
+          message: text
         })
       });
 
