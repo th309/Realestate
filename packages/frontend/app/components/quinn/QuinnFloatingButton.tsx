@@ -365,29 +365,23 @@ export function QuinnFloatingButton() {
               </div>
               
               {/* Input Field */}
-              <div className="flex items-end gap-2 bg-surface-container-high p-2 rounded-xl border border-outline-variant focus-within:border-primary transition-colors">
-                <button 
-                  className="p-2 text-on-surface-variant hover:text-primary rounded-full transition-colors"
-                  aria-label="Add attachment"
-                >
-                  <MaterialIcon name="add_circle" className="text-xl" />
-                </button>
-                <textarea
+              <div className="flex items-center gap-3 bg-surface-container-high px-4 py-3 rounded-full border border-outline-variant focus-within:border-primary transition-colors">
+                <input
+                  type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Quinn about properties..."
                   disabled={loading}
-                  rows={1}
-                  className="flex-1 max-h-24 py-2 bg-transparent border-none text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 resize-none disabled:opacity-50"
+                  className="flex-1 bg-transparent border-none text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 disabled:opacity-50"
                 />
                 <button
                   onClick={() => sendMessage(input)}
                   disabled={loading || !input.trim()}
-                  className="p-2 bg-primary text-on-primary rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors duration-200"
+                  className="w-9 h-9 flex items-center justify-center bg-primary text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors duration-200 shrink-0"
                   aria-label="Send message"
                 >
-                  <MaterialIcon name="send" className="text-xl" />
+                  <MaterialIcon name="send" className="text-lg" />
                 </button>
               </div>
               
