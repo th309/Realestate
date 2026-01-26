@@ -384,9 +384,9 @@ class DataCache:
         logger.info("=" * 60)
         
         if columns is None:
+            # propertyiq_scores_history does not have geography_name or parent_geography_id
             columns = [
-                'id', 'geography_id', 'geography_name', 'geography_type', 'period_date',
-                'parent_geography_id',  # State code for metros/counties
+                'id', 'geography_id', 'geography_type', 'period_date',
                 'investoredge_score', 'homeready_score', 'market_health_score',
                 'actual_appreciation_12m', 'actual_appreciation_36m',
                 'actual_appreciation_60m',
@@ -536,9 +536,9 @@ class DataCache:
             return self.fetch_full_dataset(geo_type, columns, batch_size)
         
         if columns is None:
+            # propertyiq_scores_history does not have geography_name or parent_geography_id
             columns = [
-                'id', 'geography_id', 'geography_name', 'geography_type', 'period_date',
-                'parent_geography_id',  # State code for metros/counties
+                'id', 'geography_id', 'geography_type', 'period_date',
                 'investoredge_score', 'homeready_score', 'market_health_score',
                 'actual_appreciation_12m', 'actual_appreciation_36m',
                 'actual_appreciation_60m',
