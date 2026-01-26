@@ -5,6 +5,7 @@ Provides incremental data loading:
 1. Initial load: Fetch all historical data and cache to Parquet
 2. Incremental updates: Only fetch new records since last cache
 3. Fast reads: Load from local Parquet files instead of database
+4. Geography name enrichment: Joins scores with crosswalk for human-readable names
 """
 
 import logging
@@ -23,11 +24,78 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# Geography Crosswalk Helpers - Resolve IDs to human-readable names
+# ============================================================================
+
+def _load_metro_crosswalk(supabase: Client) -> pd.DataFrame:
+    """Load metro crosswalk from Supabase for ID->name resolution."""
+    try:
+        all_data = []
+        offset = 0
+        batch_size = 1000
+        
+        while True:
+            response = (
+                supabase.table('zillow_metro_crosswalk')
+                .select('cbsa_code, cbsa_title')
+                .not_('cbsa_code', 'is', 'null')
+                .range(offset, offset + batch_size - 1)
+                .execute()
+            )
+            if not response.data:
+                break
+            all_data.extend(response.data)
+            if len(response.data) < batch_size:
+                break
+            offset += batch_size
+        
+        if all_data:
+            df = pd.DataFrame(all_data)
+            df = df.drop_duplicates(subset=['cbsa_code'])
+            logger.info(f"Loaded {len(df)} metro crosswalk entries")
+            return df
+    except Exception as e:
+        logger.warning(f"Failed to load metro crosswalk: {e}")
+    return pd.DataFrame()
+
+
+def _load_geography_crosswalk(supabase: Client) -> pd.DataFrame:
+    """Load geography crosswalk for state/county/zip name resolution."""
+    try:
+        all_data = []
+        offset = 0
+        batch_size = 1000
+        
+        while True:
+            response = (
+                supabase.table('geography_crosswalk')
+                .select('state_abbrev, state_name, county_fips, county_name, zip_code, zip_default_city')
+                .range(offset, offset + batch_size - 1)
+                .execute()
+            )
+            if not response.data:
+                break
+            all_data.extend(response.data)
+            if len(response.data) < batch_size:
+                break
+            offset += batch_size
+        
+        if all_data:
+            df = pd.DataFrame(all_data)
+            logger.info(f"Loaded {len(df)} geography crosswalk entries")
+            return df
+    except Exception as e:
+        logger.warning(f"Failed to load geography crosswalk: {e}")
+    return pd.DataFrame()
+
+
 class DataCache:
     """
     Parquet-based cache for PropertyIQ historical data.
     
     Supports incremental updates to avoid re-fetching entire dataset.
+    Includes geography name enrichment from crosswalk tables.
     """
 
     # Columns that exist on propertyiq_scores_history (no geography_name/parent_geography_id)
@@ -39,6 +107,11 @@ class DataCache:
     
     # Class-level progress tracking for export operations
     _export_progress: Dict[str, Any] = {}
+    
+    # Class-level crosswalk caches (loaded once, used for all enrichment)
+    _metro_crosswalk: Optional[pd.DataFrame] = None
+    _geography_crosswalk: Optional[pd.DataFrame] = None
+    _crosswalk_loaded: bool = False
     
     def __init__(self, cache_dir: str = None):
         """Initialize cache with specified directory."""
@@ -107,6 +180,140 @@ class DataCache:
             'caches': {},
             'created_at': datetime.utcnow().isoformat(),
         }
+
+    def _ensure_crosswalks_loaded(self) -> None:
+        """Load crosswalk data if not already loaded (lazy initialization)."""
+        if DataCache._crosswalk_loaded:
+            return
+        
+        try:
+            logger.info("Loading geography crosswalks for name resolution...")
+            DataCache._metro_crosswalk = _load_metro_crosswalk(self.supabase)
+            DataCache._geography_crosswalk = _load_geography_crosswalk(self.supabase)
+            DataCache._crosswalk_loaded = True
+            logger.info(f"Crosswalks loaded: {len(DataCache._metro_crosswalk or [])} metros, "
+                       f"{len(DataCache._geography_crosswalk or [])} geographies")
+        except Exception as e:
+            logger.warning(f"Failed to load crosswalks (name resolution may be unavailable): {e}")
+            DataCache._crosswalk_loaded = True  # Don't retry on failure
+
+    def _enrich_with_geography_names(self, df: pd.DataFrame, geo_type: str) -> pd.DataFrame:
+        """
+        Enrich DataFrame with geography_name and parent_geography_id columns.
+        
+        Uses crosswalk tables to resolve geography IDs to human-readable names.
+        """
+        if df is None or len(df) == 0:
+            return df
+        
+        if 'geography_id' not in df.columns:
+            return df
+        
+        # Ensure crosswalks are loaded
+        self._ensure_crosswalks_loaded()
+        
+        # Make a copy to avoid modifying cached data
+        df = df.copy()
+        
+        # Initialize columns if not present
+        if 'geography_name' not in df.columns:
+            df['geography_name'] = None
+        if 'parent_geography_id' not in df.columns:
+            df['parent_geography_id'] = None
+        
+        if geo_type == 'metro':
+            # Match by CBSA code
+            if DataCache._metro_crosswalk is not None and len(DataCache._metro_crosswalk) > 0:
+                crosswalk = DataCache._metro_crosswalk.copy()
+                crosswalk = crosswalk.rename(columns={
+                    'cbsa_code': 'geography_id',
+                    'cbsa_title': 'geography_name_lookup'
+                })
+                # Merge to add names
+                df = df.merge(
+                    crosswalk[['geography_id', 'geography_name_lookup']],
+                    on='geography_id',
+                    how='left'
+                )
+                # Fill in geography_name from lookup
+                df['geography_name'] = df['geography_name_lookup'].combine_first(df['geography_name'])
+                df = df.drop(columns=['geography_name_lookup'], errors='ignore')
+                
+                # Extract state from CBSA title (e.g., "Austin-Round Rock, TX" -> "TX")
+                def extract_state(name):
+                    if pd.isna(name):
+                        return None
+                    import re
+                    match = re.search(r',\s*([A-Z]{2})(?:-[A-Z]{2})*$', str(name))
+                    return match.group(1) if match else None
+                
+                df['parent_geography_id'] = df['geography_name'].apply(extract_state)
+        
+        elif geo_type == 'state':
+            # States: geography_id is state abbreviation
+            if DataCache._geography_crosswalk is not None and len(DataCache._geography_crosswalk) > 0:
+                # Get unique state mappings
+                state_map = (
+                    DataCache._geography_crosswalk[['state_abbrev', 'state_name']]
+                    .drop_duplicates()
+                    .rename(columns={'state_abbrev': 'geography_id', 'state_name': 'geography_name_lookup'})
+                )
+                df = df.merge(state_map, on='geography_id', how='left')
+                df['geography_name'] = df['geography_name_lookup'].combine_first(df['geography_name'])
+                df = df.drop(columns=['geography_name_lookup'], errors='ignore')
+        
+        elif geo_type == 'county':
+            # Counties: geography_id is FIPS code
+            if DataCache._geography_crosswalk is not None and len(DataCache._geography_crosswalk) > 0:
+                county_map = (
+                    DataCache._geography_crosswalk[['county_fips', 'county_name', 'state_abbrev']]
+                    .dropna(subset=['county_fips'])
+                    .drop_duplicates(subset=['county_fips'])
+                    .rename(columns={
+                        'county_fips': 'geography_id',
+                        'county_name': 'county_name_lookup',
+                        'state_abbrev': 'state_lookup'
+                    })
+                )
+                df = df.merge(county_map, on='geography_id', how='left')
+                # Create full county name with state
+                df['geography_name'] = df.apply(
+                    lambda row: f"{row['county_name_lookup']}, {row['state_lookup']}" 
+                    if pd.notna(row.get('county_name_lookup')) and pd.notna(row.get('state_lookup'))
+                    else row.get('geography_name'),
+                    axis=1
+                )
+                df['parent_geography_id'] = df['state_lookup'].combine_first(df['parent_geography_id'])
+                df = df.drop(columns=['county_name_lookup', 'state_lookup'], errors='ignore')
+        
+        elif geo_type == 'zip':
+            # ZIP codes: geography_id is ZIP code
+            if DataCache._geography_crosswalk is not None and len(DataCache._geography_crosswalk) > 0:
+                zip_map = (
+                    DataCache._geography_crosswalk[['zip_code', 'zip_default_city', 'state_abbrev']]
+                    .dropna(subset=['zip_code'])
+                    .drop_duplicates(subset=['zip_code'])
+                    .rename(columns={
+                        'zip_code': 'geography_id',
+                        'zip_default_city': 'city_lookup',
+                        'state_abbrev': 'state_lookup'
+                    })
+                )
+                df = df.merge(zip_map, on='geography_id', how='left')
+                # Create ZIP name with city and state
+                df['geography_name'] = df.apply(
+                    lambda row: f"{row['city_lookup']}, {row['state_lookup']} {row['geography_id']}"
+                    if pd.notna(row.get('city_lookup')) and pd.notna(row.get('state_lookup'))
+                    else row.get('geography_name'),
+                    axis=1
+                )
+                df['parent_geography_id'] = df['state_lookup'].combine_first(df['parent_geography_id'])
+                df = df.drop(columns=['city_lookup', 'state_lookup'], errors='ignore')
+        
+        # Final fallback: use geography_id as name if still null
+        df['geography_name'] = df['geography_name'].fillna(df['geography_id'])
+        
+        return df
 
     def _save_metadata(self):
         """Save cache metadata to disk."""
@@ -684,6 +891,7 @@ class DataCache:
         self,
         geo_type: str,
         auto_sync: bool = True,
+        enrich_names: bool = True,
     ) -> Optional[pd.DataFrame]:
         """
         Get data for geography type, syncing if needed.
@@ -691,19 +899,25 @@ class DataCache:
         Args:
             geo_type: Geography type
             auto_sync: Automatically sync if cache is empty
+            enrich_names: Add geography_name column from crosswalk (default: True)
             
         Returns:
-            DataFrame or None
+            DataFrame or None (with geography_name if enrich_names=True)
         """
-        if self.is_cached(geo_type):
-            return self.load_from_cache(geo_type)
+        df = None
         
-        if auto_sync:
+        if self.is_cached(geo_type):
+            df = self.load_from_cache(geo_type)
+        elif auto_sync:
             logger.info(f"Cache empty for {geo_type}, syncing...")
             self.sync_cache(geo_type)
-            return self.load_from_cache(geo_type)
+            df = self.load_from_cache(geo_type)
         
-        return None
+        # Enrich with geography names from crosswalk
+        if df is not None and enrich_names:
+            df = self._enrich_with_geography_names(df, geo_type)
+        
+        return df
 
     def clear_cache(self, geo_type: str = None):
         """Clear cache for specific geography or all."""
