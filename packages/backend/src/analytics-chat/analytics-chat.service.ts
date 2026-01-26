@@ -213,7 +213,7 @@ export class AnalyticsChatService {
 
     const toolsUsed: string[] = [];
     const toolResultsData: Array<{ toolName: string; data: any }> = [];
-    let finalResponse = '';
+    const responseTextParts: string[] = []; // Collect text from all responses
 
     // Select initial model based on query characteristics
     let currentModel = this.selectInitialModel(userMessage);
@@ -229,18 +229,33 @@ export class AnalyticsChatService {
       this.logger.log(`[Quinn Chat] Calling Claude API (model: ${currentModel})...`);
       const apiStartTime = Date.now();
 
-      let response = await this.client.messages.create({
-        model: currentModel,
-        max_tokens: 2048,
-        system: systemPrompt,
-        tools: tools as any,
-        messages: apiMessages,
-      });
+      // Add timeout wrapper to prevent hanging (60 second timeout)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Claude API call timed out after 60 seconds')), 60000)
+      );
+
+      let response = await Promise.race([
+        this.client.messages.create({
+          model: currentModel,
+          max_tokens: 2048,
+          system: systemPrompt,
+          tools: tools as any,
+          messages: apiMessages,
+        }),
+        timeoutPromise
+      ]) as Anthropic.Messages.Message;
 
       const apiDuration = Date.now() - apiStartTime;
       this.logger.log(`[Quinn Chat] Claude API responded in ${apiDuration}ms`);
       this.logger.log(`[Quinn Chat] Stop reason: ${response.stop_reason}`);
       this.logger.log(`[Quinn Chat] Content blocks: ${response.content.length}`);
+
+      // Extract text from initial response (if any)
+      const initialTextBlock = response.content.find((block) => block.type === 'text');
+      if (initialTextBlock && 'text' in initialTextBlock) {
+        responseTextParts.push(initialTextBlock.text);
+        this.logger.log(`[Quinn Chat] Initial response text length: ${initialTextBlock.text.length}`);
+      }
 
       // Process tool calls in a loop (max 10 iterations to prevent infinite loops)
       let iterations = 0;
@@ -290,29 +305,44 @@ export class AnalyticsChatService {
         
         this.logger.log(`[Quinn Chat] Sending ${toolResults.length} tool results back to Claude...`);
 
-        // Continue conversation with tool results
-        response = await this.client.messages.create({
-          model: currentModel,
-          max_tokens: 2048,
-          system: systemPrompt,
-          tools: tools as any,
-          messages: [
-            ...apiMessages,
-            { role: 'assistant', content: response.content },
-            { role: 'user', content: toolResults },
-          ],
-        });
+        // Continue conversation with tool results (with timeout)
+        const followUpTimeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Claude follow-up API call timed out after 60 seconds')), 60000)
+        );
+
+        response = await Promise.race([
+          this.client.messages.create({
+            model: currentModel,
+            max_tokens: 2048,
+            system: systemPrompt,
+            tools: tools as any,
+            messages: [
+              ...apiMessages,
+              { role: 'assistant', content: response.content },
+              { role: 'user', content: toolResults },
+            ],
+          }),
+          followUpTimeoutPromise
+        ]) as Anthropic.Messages.Message;
+
+        // Extract text from this response iteration (if any)
+        const iterationTextBlock = response.content.find((block) => block.type === 'text');
+        if (iterationTextBlock && 'text' in iterationTextBlock) {
+          responseTextParts.push(iterationTextBlock.text);
+          this.logger.log(`[Quinn Chat] Iteration ${iterations} text length: ${iterationTextBlock.text.length}`);
+        }
       }
 
       if (iterations >= maxIterations) {
         this.logger.warn('Max tool iterations reached');
       }
 
-      // Extract final text response
-      const textBlock = response.content.find((block) => block.type === 'text');
-      finalResponse =
-        textBlock?.text ||
-        'I was unable to generate a response. Please try again.';
+      // Combine all text parts from all responses
+      const finalResponse = responseTextParts.length > 0
+        ? responseTextParts.join('\n\n')
+        : 'I was unable to generate a response. Please try again.';
+
+      this.logger.log(`[Quinn Chat] Final response combined from ${responseTextParts.length} text parts, total length: ${finalResponse.length}`);
 
       // Save assistant response to history
       conversation.messages.push({ role: 'assistant', content: finalResponse });
@@ -335,7 +365,7 @@ export class AnalyticsChatService {
       this.logger.error(`[Quinn Chat] Error type: ${error.constructor?.name}`);
       this.logger.error(`[Quinn Chat] Error message: ${error.message}`);
       this.logger.error(`[Quinn Chat] Error stack: ${error.stack}`);
-      
+
       // Check for specific Anthropic API errors
       if (error.status) {
         this.logger.error(`[Quinn Chat] API status code: ${error.status}`);
@@ -343,7 +373,25 @@ export class AnalyticsChatService {
       if (error.error) {
         this.logger.error(`[Quinn Chat] API error details: ${JSON.stringify(error.error)}`);
       }
-      
+
+      // If we have any partial response text, return it with an error notice
+      if (responseTextParts.length > 0) {
+        const partialResponse = responseTextParts.join('\n\n');
+        const errorMessage = `\n\n---\n\n⚠️ I encountered an error while completing this response: ${error.message}. The information above may be incomplete.`;
+        const finalResponse = partialResponse + errorMessage;
+
+        this.logger.warn(`[Quinn Chat] Returning partial response (${partialResponse.length} chars) due to error`);
+        conversation.messages.push({ role: 'assistant', content: finalResponse });
+
+        return {
+          response: finalResponse,
+          toolsUsed,
+          structuredData: this.extractStructuredData(toolResultsData),
+          modelUsed: currentModel,
+        };
+      }
+
+      // No partial response available, throw the error
       throw error;
     }
   }
