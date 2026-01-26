@@ -889,7 +889,12 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
         ? responseTextParts.join('\n\n').trim()
         : '';
 
+      this.logger.log(`[Quinn Chat] Extracting structured data from ${toolResultsData.length} tool results...`);
       const structuredData = this.extractStructuredData(toolResultsData);
+      this.logger.log(`[Quinn Chat] Structured data extracted: ${structuredData ? JSON.stringify(Object.keys(structuredData)) : 'undefined'}`);
+      if (structuredData?.rankings) {
+        this.logger.log(`[Quinn Chat] Rankings found: ${structuredData.rankings.items?.length || 0} items`);
+      }
 
       // When we have tool results but no (or empty) model text, build a fallback so the user always gets an answer
       if (!finalResponse && structuredData) {
@@ -902,10 +907,18 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
 
       // For ranking queries: append the actual rankings list to the model's intro so the response is complete
       if (structuredData?.rankings?.items?.length) {
+        this.logger.log(`[Quinn Chat] Formatting ${structuredData.rankings.items.length} rankings for response...`);
         const list = this.formatRankingsForResponse(structuredData.rankings);
+        this.logger.log(`[Quinn Chat] Formatted list length: ${list.length} chars`);
         if (list && !finalResponse.includes(list.slice(0, 30))) {
+          this.logger.log(`[Quinn Chat] Appending rankings list to response (prev length: ${finalResponse.length})`);
           finalResponse = finalResponse.trimEnd() + '\n\n' + list;
+          this.logger.log(`[Quinn Chat] Final response with rankings: ${finalResponse.length} chars`);
+        } else {
+          this.logger.warn(`[Quinn Chat] Skipping list append - already in response or empty`);
         }
+      } else {
+        this.logger.warn(`[Quinn Chat] No rankings to format (structuredData.rankings.items.length = ${structuredData?.rankings?.items?.length || 0})`);
       }
 
       conversation.messages.push({ role: 'assistant', content: finalResponse });
@@ -978,8 +991,12 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
     const structured: StructuredData = {};
 
     for (const { toolName, data } of toolResults) {
+      this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
+
       // Handle rankings from get_rankings tool
       if (toolName === 'get_rankings' && data.rankings) {
+        this.logger.debug(`[Quinn Extract] Found rankings: ${data.rankings.length} items`);
+
         structured.rankings = {
           title: data.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
           direction: data.direction || 'top',
