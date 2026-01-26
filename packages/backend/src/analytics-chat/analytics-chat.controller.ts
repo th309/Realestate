@@ -31,6 +31,7 @@ interface ChatResponse {
   response?: string;
   toolsUsed?: string[];
   structuredData?: any;
+  modelUsed?: string;
   conversationId: string;
   error?: string;
 }
@@ -95,6 +96,7 @@ export class AnalyticsChatController {
 
       const duration = Date.now() - startTime;
       this.logger.log(`[Quinn ${requestId}] === SUCCESS === Duration: ${duration}ms`);
+      this.logger.log(`[Quinn ${requestId}] Model used: ${result.modelUsed || 'unknown'}`);
       this.logger.log(`[Quinn ${requestId}] Response length: ${result.response?.length || 0}`);
       this.logger.log(`[Quinn ${requestId}] Tools used: ${result.toolsUsed?.join(', ') || 'none'}`);
 
@@ -103,6 +105,7 @@ export class AnalyticsChatController {
         response: result.response,
         toolsUsed: result.toolsUsed,
         structuredData: result.structuredData,
+        modelUsed: result.modelUsed,
         conversationId,
       };
     } catch (error) {

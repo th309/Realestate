@@ -85,7 +85,11 @@ interface RankingsData {
 export class AnalyticsChatService {
   private readonly logger = new Logger(AnalyticsChatService.name);
   private client: Anthropic | null = null;
-  private readonly model = 'claude-sonnet-4-20250514';
+
+  // Model tiers for dynamic escalation
+  private readonly MODEL_HAIKU = 'claude-haiku-4-20250514';
+  private readonly MODEL_SONNET = 'claude-sonnet-4-20250514';
+  private readonly MODEL_OPUS = 'claude-opus-4-5-20251101';
 
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
@@ -104,7 +108,7 @@ export class AnalyticsChatService {
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
       this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
-      this.logger.log(`[Quinn Init] Using model: ${this.model}`);
+      this.logger.log(`[Quinn Init] Model escalation enabled: ${this.MODEL_HAIKU} → ${this.MODEL_SONNET} → ${this.MODEL_OPUS}`);
     } else {
       this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
       this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
@@ -119,6 +123,108 @@ export class AnalyticsChatService {
   }
 
   /**
+   * Select initial model based on message characteristics
+   * Simple queries start with Haiku, complex patterns start with Sonnet
+   */
+  private selectInitialModel(message: string): string {
+    const lowerMessage = message.toLowerCase();
+
+    // Very simple patterns - start with Haiku
+    const simplePatterns = [
+      /^(hi|hello|hey|thanks|thank you)/i,
+      /^(what is|define)\s+\w+$/i,
+      /^show me (top|bottom)/i,
+      /^(list|get|show)/i,
+    ];
+
+    // Complex patterns - start with Sonnet to avoid escalation overhead
+    const complexPatterns = [
+      /(optimize|regression|cluster|feature importance)/i,
+      /(predict|correlation|statistical)/i,
+      /(raw.*metric|zillow.*data|realtor.*data)/i,
+      /(backtest|validation|test.*strategy)/i,
+      /compare.*across.*and/i, // Multi-step comparisons
+    ];
+
+    // Check for complex queries first
+    if (complexPatterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Starting with Sonnet (detected complex query)`);
+      return this.MODEL_SONNET;
+    }
+
+    // Check for very simple queries
+    if (simplePatterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Starting with Haiku (detected simple query)`);
+      return this.MODEL_HAIKU;
+    }
+
+    // Default: start with Haiku and escalate if needed
+    this.logger.log(`[Quinn Model] Starting with Haiku (default)`);
+    return this.MODEL_HAIKU;
+  }
+
+  /**
+   * Determine if escalation is needed based on tools used
+   * Returns the target model to escalate to, or null if no escalation needed
+   */
+  private shouldEscalate(toolsUsed: string[], currentModel: string): string | null {
+    // Define tool complexity tiers
+    const basicTools = [
+      'get_available_filters',
+      'filter_geographies',
+      'get_rankings',
+      'get_time_series',
+    ];
+
+    const moderateTools = [
+      'analyze_data',
+      'compare_to_benchmark',
+      'get_geographic_comparison',
+      'compare_states',
+      'get_metro_scores',
+    ];
+
+    const complexTools = [
+      'run_regression',
+      'get_feature_importance',
+      'cluster_markets',
+      'optimize_weights',
+      'generate_chart',
+      'analyze_raw_metrics',
+      'get_raw_metric_summary',
+      'run_backtest',
+      'validate_strategy',
+      'calculate_backtest_metrics',
+      'get_market_fundamentals',
+    ];
+
+    const hasComplexTools = toolsUsed.some(t => complexTools.includes(t));
+    const hasModerateTools = toolsUsed.some(t => moderateTools.includes(t));
+
+    // If currently on Haiku
+    if (currentModel === this.MODEL_HAIKU) {
+      if (hasComplexTools) {
+        this.logger.log(`[Quinn Escalation] Haiku → Sonnet (complex tools: ${toolsUsed.filter(t => complexTools.includes(t)).join(', ')})`);
+        return this.MODEL_SONNET;
+      }
+      if (hasModerateTools || toolsUsed.length > 2) {
+        this.logger.log(`[Quinn Escalation] Haiku → Sonnet (moderate complexity: ${toolsUsed.length} tools)`);
+        return this.MODEL_SONNET;
+      }
+    }
+
+    // If currently on Sonnet and hitting very complex multi-tool scenarios
+    if (currentModel === this.MODEL_SONNET) {
+      if (hasComplexTools && toolsUsed.length > 3) {
+        this.logger.log(`[Quinn Escalation] Sonnet → Opus (high complexity: ${toolsUsed.length} complex tools)`);
+        return this.MODEL_OPUS;
+      }
+    }
+
+    return null; // No escalation needed
+  }
+
+  /**
    * Process a chat message and return response
    */
   async chat(
@@ -129,6 +235,7 @@ export class AnalyticsChatService {
     response: string;
     toolsUsed: string[];
     structuredData?: StructuredData;
+    modelUsed?: string; // Track which model was ultimately used
   }> {
     if (!this.client) {
       throw new Error('Claude client not initialized - check ANTHROPIC_API_KEY');
@@ -171,6 +278,10 @@ export class AnalyticsChatService {
     const toolResultsData: Array<{ toolName: string; data: any }> = [];
     let finalResponse = '';
 
+    // Select initial model based on query characteristics
+    let currentModel = this.selectInitialModel(userMessage);
+    let hasEscalated = false;
+
     try {
       this.logger.log(`[Quinn Chat] Processing message in conversation ${conversationId}`);
       this.logger.log(`[Quinn Chat] User message: "${userMessage.slice(0, 100)}..."`);
@@ -179,17 +290,17 @@ export class AnalyticsChatService {
       this.logger.log(`[Quinn Chat] System prompt length: ${systemPrompt.length} chars`);
 
       // Initial request
-      this.logger.log(`[Quinn Chat] Calling Claude API (model: ${this.model})...`);
+      this.logger.log(`[Quinn Chat] Calling Claude API (model: ${currentModel})...`);
       const apiStartTime = Date.now();
-      
+
       let response = await this.client.messages.create({
-        model: this.model,
+        model: currentModel,
         max_tokens: 2048,
         system: systemPrompt,
         tools: tools as any,
         messages: apiMessages,
       });
-      
+
       const apiDuration = Date.now() - apiStartTime;
       this.logger.log(`[Quinn Chat] Claude API responded in ${apiDuration}ms`);
       this.logger.log(`[Quinn Chat] Stop reason: ${response.stop_reason}`);
@@ -206,6 +317,39 @@ export class AnalyticsChatService {
         const toolUseBlocks = response.content.filter(
           (block) => block.type === 'tool_use',
         );
+
+        // Check for escalation on first tool use iteration
+        if (iterations === 1 && !hasEscalated) {
+          const requestedTools = toolUseBlocks
+            .filter((b) => b.type === 'tool_use')
+            .map((b) => b.name);
+
+          const escalationTarget = this.shouldEscalate(requestedTools, currentModel);
+
+          if (escalationTarget) {
+            // Escalate: restart with more powerful model
+            hasEscalated = true;
+            currentModel = escalationTarget;
+
+            this.logger.log(`[Quinn Chat] Restarting with ${currentModel}...`);
+            const escalationStartTime = Date.now();
+
+            response = await this.client.messages.create({
+              model: currentModel,
+              max_tokens: 2048,
+              system: systemPrompt,
+              tools: tools as any,
+              messages: apiMessages,
+            });
+
+            const escalationDuration = Date.now() - escalationStartTime;
+            this.logger.log(`[Quinn Chat] Escalated model responded in ${escalationDuration}ms`);
+
+            // Reset iteration counter for escalated attempt
+            iterations = 0;
+            continue;
+          }
+        }
 
         const toolResults: any[] = [];
 
@@ -234,7 +378,7 @@ export class AnalyticsChatService {
 
         // Continue conversation with tool results
         response = await this.client.messages.create({
-          model: this.model,
+          model: currentModel,
           max_tokens: 2048,
           system: systemPrompt,
           tools: tools as any,
@@ -263,10 +407,15 @@ export class AnalyticsChatService {
       const structuredData = this.extractStructuredData(toolResultsData);
 
       this.logger.log(
-        `Completed chat in ${conversationId}, used ${toolsUsed.length} tools`,
+        `[Quinn Chat] Completed with ${currentModel}, used ${toolsUsed.length} tools${hasEscalated ? ' (escalated)' : ''}`,
       );
 
-      return { response: finalResponse, toolsUsed, structuredData };
+      return {
+        response: finalResponse,
+        toolsUsed,
+        structuredData,
+        modelUsed: currentModel,
+      };
     } catch (error) {
       this.logger.error(`[Quinn Chat] === CHAT ERROR ===`);
       this.logger.error(`[Quinn Chat] Error type: ${error.constructor?.name}`);

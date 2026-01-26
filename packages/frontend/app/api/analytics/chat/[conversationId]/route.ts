@@ -69,6 +69,9 @@ export async function POST(
       if (data.error) {
         console.error(`[Quinn POST ${requestId}] Backend error:`, data.error);
       }
+      if (data.modelUsed) {
+        console.log(`[Quinn POST ${requestId}] Model used:`, data.modelUsed);
+      }
       if (data.toolsUsed) {
         console.log(`[Quinn POST ${requestId}] Tools used:`, data.toolsUsed);
       }
