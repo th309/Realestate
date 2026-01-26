@@ -825,11 +825,11 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
           }
 
           // Store tool result for structured data extraction
-          if (result.success && result.data) {
-            toolResultsData.push({ toolName: toolUse.name, data: result.data });
+          if (result.success) {
+            toolResultsData.push({ toolName: toolUse.name, data: result });
           }
 
-          const toolResultContent = JSON.stringify(result.success ? result.data : { error: result.error });
+          const toolResultContent = JSON.stringify(result.success ? result : { error: result.error });
           this.logger.log(`[Quinn Chat] Tool result content length: ${toolResultContent.length}`);
 
           toolResults.push({
