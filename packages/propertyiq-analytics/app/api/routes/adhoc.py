@@ -122,7 +122,7 @@ async def filter_data(request: FilterRequest):
         return {
             "success": True,
             "record_count": len(df),
-            "geography_count": df['geography_id'].nunique() if len(df) > 0 and 'geography_id' in df.columns else 0,
+            "geography_count": int(df["geography_id"].nunique()) if len(df) > 0 and "geography_id" in df.columns else 0,
             "date_range": date_range,
             "filter_applied": request.model_dump(exclude_none=True)
         }
@@ -161,7 +161,6 @@ async def analyze_data(request: AnalyzeRequest):
             horizons=request.horizons,
             include_chart_data=request.include_chart_data
         )
-        
         return {
             "success": result.success,
             "record_count": result.record_count,

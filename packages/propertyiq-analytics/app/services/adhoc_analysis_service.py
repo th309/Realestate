@@ -19,6 +19,17 @@ from app.services.data_cache import get_data_cache, DataCache
 logger = logging.getLogger(__name__)
 
 
+def _native_scalar(x):
+    """Convert numpy/pandas scalar to native Python for JSON serialization."""
+    if x is None or (hasattr(pd, "isna") and pd.isna(x)):
+        return None
+    if hasattr(x, "item"):
+        return x.item()
+    if isinstance(x, (str, int, float, bool)):
+        return x
+    return str(x)
+
+
 @dataclass
 class FilterCriteria:
     """Criteria for filtering the dataset."""
@@ -169,8 +180,8 @@ class AdhocAnalysisService:
         result = AnalysisResult(
             success=True,
             query_description=f"Analysis of {len(df)} records",
-            record_count=len(df),
-            geography_count=df['geography_id'].nunique() if 'geography_id' in df.columns else 0
+            record_count=int(len(df)),
+            geography_count=int(df["geography_id"].nunique()) if "geography_id" in df.columns else 0,
         )
         
         # Summary statistics for score
@@ -201,13 +212,13 @@ class AdhocAnalysisService:
                     try:
                         r, p = stats.pearsonr(valid[score_type], valid[outcome_col])
                         rho, p_spearman = stats.spearmanr(valid[score_type], valid[outcome_col])
-                        result.correlations[f'{horizon}m'] = {
-                            'pearson_r': round(float(r), 4),
-                            'spearman_rho': round(float(rho), 4),
-                            'r_squared': round(float(r**2), 4),
-                            'p_value': round(float(p), 4),
-                            'sample_size': len(valid),
-                            'significant': p < 0.05
+                        result.correlations[f"{horizon}m"] = {
+                            "pearson_r": round(float(r), 4),
+                            "spearman_rho": round(float(rho), 4),
+                            "r_squared": round(float(r**2), 4),
+                            "p_value": round(float(p), 4),
+                            "sample_size": len(valid),
+                            "significant": bool(p < 0.05),
                         }
                     except Exception as e:
                         logger.warning(f"Correlation calculation failed for {horizon}m: {e}")
@@ -220,22 +231,21 @@ class AdhocAnalysisService:
                 sorted_df = latest_period.sort_values(score_type, ascending=False)
                 
                 def format_performer(row):
+                    gid = row.get("geography_id")
+                    gname = row.get("geography_name", gid)
                     perf = {
-                        'geography_id': row.get('geography_id'),
-                        'geography_name': row.get('geography_name', row.get('geography_id')),
-                        'score': round(float(row.get(score_type, 0)), 1) if pd.notna(row.get(score_type)) else None,
+                        "geography_id": _native_scalar(gid),
+                        "geography_name": _native_scalar(gname),
+                        "score": round(float(row.get(score_type, 0)), 1) if pd.notna(row.get(score_type)) else None,
                     }
-                    
                     # Add appreciation if available
-                    if 'actual_appreciation_12m' in row and pd.notna(row.get('actual_appreciation_12m')):
-                        perf['appreciation_12m'] = round(float(row['actual_appreciation_12m']) * 100, 2)
-                    if 'actual_appreciation_36m' in row and pd.notna(row.get('actual_appreciation_36m')):
-                        perf['appreciation_36m'] = round(float(row['actual_appreciation_36m']) * 100, 2)
-                    
+                    if "actual_appreciation_12m" in row and pd.notna(row.get("actual_appreciation_12m")):
+                        perf["appreciation_12m"] = round(float(row["actual_appreciation_12m"]) * 100, 2)
+                    if "actual_appreciation_36m" in row and pd.notna(row.get("actual_appreciation_36m")):
+                        perf["appreciation_36m"] = round(float(row["actual_appreciation_36m"]) * 100, 2)
                     # Add state if available
-                    if 'parent_geography_id' in row and pd.notna(row.get('parent_geography_id')):
-                        perf['state'] = row['parent_geography_id']
-                    
+                    if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
+                        perf["state"] = _native_scalar(row["parent_geography_id"])
                     return perf
                 
                 result.top_performers = [format_performer(row) for _, row in sorted_df.head(10).iterrows()]
@@ -360,23 +370,22 @@ class AdhocAnalysisService:
         rankings = []
         
         for rank, (_, row) in enumerate(sorted_df.head(limit).iterrows(), 1):
+            gid = row.get("geography_id")
+            gname = row.get("geography_name", gid)
             item = {
-                'rank': rank,
-                'geography_id': row.get('geography_id'),
-                'geography_name': row.get('geography_name', row.get('geography_id')),
-                'score': round(float(row.get(score_type, 0)), 1) if pd.notna(row.get(score_type)) else None,
+                "rank": rank,
+                "geography_id": _native_scalar(gid),
+                "geography_name": _native_scalar(gname),
+                "score": round(float(row.get(score_type, 0)), 1) if pd.notna(row.get(score_type)) else None,
             }
-            
-            if 'parent_geography_id' in row and pd.notna(row.get('parent_geography_id')):
-                item['state'] = row['parent_geography_id']
-            
-            if 'actual_appreciation_12m' in row and pd.notna(row.get('actual_appreciation_12m')):
-                item['appreciation_12m'] = round(float(row['actual_appreciation_12m']) * 100, 2)
-            
+            if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
+                item["state"] = _native_scalar(row["parent_geography_id"])
+            if "actual_appreciation_12m" in row and pd.notna(row.get("actual_appreciation_12m")):
+                item["appreciation_12m"] = round(float(row["actual_appreciation_12m"]) * 100, 2)
             rankings.append(item)
-        
+
         return {
-            "total_geographies": latest_period['geography_id'].nunique(),
+            "total_geographies": int(latest_period["geography_id"].nunique()),
             "direction": "bottom" if ascending else "top",
             "limit": limit,
             "rankings": rankings,
@@ -405,8 +414,12 @@ class AdhocAnalysisService:
         if months > 0:
             geo_df = geo_df.tail(months)
         
-        geography_name = geo_df['geography_name'].iloc[0] if 'geography_name' in geo_df.columns else geography_id
-        
+        geography_name = (
+            _native_scalar(geo_df["geography_name"].iloc[0])
+            if "geography_name" in geo_df.columns
+            else _native_scalar(geography_id)
+        )
+
         series = {}
         for metric in metrics:
             if metric in geo_df.columns:
