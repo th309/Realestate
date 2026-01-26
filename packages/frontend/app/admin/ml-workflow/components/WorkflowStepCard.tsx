@@ -237,7 +237,7 @@ export function WorkflowStepCard({
           Last run: {formatRelativeTime(lastRunTime)}
         </div>
 
-        {/* Output Files or Expected Outputs */}
+        {/* Output Files (actual results) or Expected Outputs (greyed until run) */}
         {outputFiles && outputFiles.length > 0 ? (
           <div className="space-y-1">
             <div className="text-xs text-on-surface-variant font-medium">
@@ -266,12 +266,19 @@ export function WorkflowStepCard({
           </div>
         ) : step.outputs && step.outputs.length > 0 ? (
           <div className="space-y-1">
-            <div className="text-xs text-on-surface-variant font-medium">
+            <div className={`text-xs font-medium ${status === 'pending' ? 'text-on-surface-variant/40' : 'text-on-surface-variant'}`}>
               Outputs:
             </div>
             {step.outputs.map((output, idx) => (
-              <div key={idx} className="text-xs text-on-surface-variant/70 flex items-center gap-1">
-                <span className="text-on-surface-variant/50">•</span>
+              <div 
+                key={idx} 
+                className={`text-xs flex items-center gap-1 ${
+                  status === 'pending' 
+                    ? 'text-on-surface-variant/30' 
+                    : 'text-on-surface-variant/70'
+                }`}
+              >
+                <span className={status === 'pending' ? 'text-on-surface-variant/20' : 'text-on-surface-variant/50'}>•</span>
                 <span>{output}</span>
               </div>
             ))}

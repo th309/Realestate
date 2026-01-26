@@ -9,7 +9,7 @@
  * 5. Score Explanations - Statistical distributions
  * 6. Monthly Report - Formula health report
  *
- * STATELESS: Each page refresh starts fresh with all steps in pending state.
+ * State persists in localStorage across page refreshes.
  */
 
 'use client';
@@ -318,7 +318,10 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   },
 ];
 
-// Fresh step states - always start clean
+// LocalStorage key for persisting workflow state
+const WORKFLOW_STATE_KEY = 'ml-workflow-state';
+
+// Fresh step states for initial/reset state
 function createFreshStepStates(): Record<string, StepState> {
   return {
     'data-export': { status: 'pending', lastRunTime: null },
@@ -330,6 +333,41 @@ function createFreshStepStates(): Record<string, StepState> {
   };
 }
 
+// Load persisted state from localStorage
+function loadPersistedState(): Record<string, StepState> {
+  if (typeof window === 'undefined') return createFreshStepStates();
+  
+  try {
+    const saved = localStorage.getItem(WORKFLOW_STATE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Record<string, StepState>;
+      // Reset any 'running' states to 'pending' (page was refreshed mid-run)
+      for (const stepId of Object.keys(parsed)) {
+        if (parsed[stepId].status === 'running') {
+          parsed[stepId].status = 'pending';
+          parsed[stepId].progress = undefined;
+          parsed[stepId].startedAt = undefined;
+        }
+      }
+      return parsed;
+    }
+  } catch (err) {
+    console.error('Error loading persisted workflow state:', err);
+  }
+  return createFreshStepStates();
+}
+
+// Save state to localStorage
+function savePersistedState(state: Record<string, StepState>): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(WORKFLOW_STATE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error('Error saving workflow state:', err);
+  }
+}
+
 interface AnalyticsHealth {
   status: string;
   service: string;
@@ -338,8 +376,9 @@ interface AnalyticsHealth {
 }
 
 export default function MLWorkflowPage() {
-  // Always start fresh - no loading of previous state
+  // Load persisted state from localStorage on mount
   const [stepStates, setStepStates] = useState<Record<string, StepState>>(createFreshStepStates);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRunningFullWorkflow, setIsRunningFullWorkflow] = useState(false);
@@ -360,6 +399,20 @@ export default function MLWorkflowPage() {
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, []);
+
+  // Load persisted state on mount (client-side only)
+  useEffect(() => {
+    const savedState = loadPersistedState();
+    setStepStates(savedState);
+    setIsHydrated(true);
+  }, []);
+
+  // Save state to localStorage whenever it changes (after hydration)
+  useEffect(() => {
+    if (isHydrated) {
+      savePersistedState(stepStates);
+    }
+  }, [stepStates, isHydrated]);
 
   // Fetch analytics service health
   const fetchAnalyticsHealth = useCallback(async () => {
@@ -589,9 +642,11 @@ export default function MLWorkflowPage() {
     }
   }, [runStepAndWait]);
 
-  // Reset all states
+  // Reset all states (clears localStorage too)
   const resetWorkflow = useCallback(() => {
-    setStepStates(createFreshStepStates());
+    const freshState = createFreshStepStates();
+    setStepStates(freshState);
+    savePersistedState(freshState);
     setError(null);
     setLastStepResult(null);
     setIsRunningFullWorkflow(false);
