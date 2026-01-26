@@ -33,8 +33,10 @@ export class AnalyticsToolsService {
     toolName: string,
     args: Record<string, any>,
   ): Promise<ToolResult> {
-    this.logger.log(`Executing tool: ${toolName}`);
-    this.logger.debug(`Arguments: ${JSON.stringify(args)}`);
+    const startTime = Date.now();
+    this.logger.log(`[Tool ${toolName}] === EXECUTING ===`);
+    this.logger.log(`[Tool ${toolName}] Analytics base URL: ${this.analyticsBaseUrl}`);
+    this.logger.log(`[Tool ${toolName}] Arguments: ${JSON.stringify(args)}`);
 
     try {
       let endpoint = this.getToolEndpoint(toolName);
@@ -50,25 +52,49 @@ export class AnalyticsToolsService {
       }
 
       const url = `${this.analyticsBaseUrl}${endpoint}`;
-      this.logger.debug(`Calling ${method} ${url}`);
+      this.logger.log(`[Tool ${toolName}] Calling ${method} ${url}`);
 
+      const fetchStart = Date.now();
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: method === 'POST' ? JSON.stringify(args) : undefined,
       });
+      const fetchDuration = Date.now() - fetchStart;
+
+      this.logger.log(`[Tool ${toolName}] Response status: ${response.status} (${fetchDuration}ms)`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`API error: ${response.status} - ${errorText}`);
-        throw new Error(`API error: ${response.status} - ${errorText}`);
+        this.logger.error(`[Tool ${toolName}] API error: ${response.status} - ${errorText.slice(0, 500)}`);
+        throw new Error(`API error: ${response.status} - ${errorText.slice(0, 200)}`);
       }
 
-      const data = await response.json();
-      this.logger.debug(`Tool ${toolName} succeeded`);
+      const responseText = await response.text();
+      this.logger.log(`[Tool ${toolName}] Response size: ${responseText.length} bytes`);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        this.logger.error(`[Tool ${toolName}] JSON parse error: ${parseError.message}`);
+        this.logger.error(`[Tool ${toolName}] Raw response: ${responseText.slice(0, 500)}`);
+        throw new Error(`Invalid JSON from analytics service`);
+      }
+
+      const totalDuration = Date.now() - startTime;
+      this.logger.log(`[Tool ${toolName}] === SUCCESS === (${totalDuration}ms total)`);
+      
+      // Log a preview of the data
+      const dataPreview = JSON.stringify(data).slice(0, 300);
+      this.logger.log(`[Tool ${toolName}] Data preview: ${dataPreview}...`);
+      
       return { success: true, data };
     } catch (error) {
-      this.logger.error(`Tool execution failed: ${error.message}`);
+      const totalDuration = Date.now() - startTime;
+      this.logger.error(`[Tool ${toolName}] === FAILED === (${totalDuration}ms)`);
+      this.logger.error(`[Tool ${toolName}] Error: ${error.message}`);
+      this.logger.error(`[Tool ${toolName}] Stack: ${error.stack}`);
       return { success: false, data: null, error: error.message };
     }
   }

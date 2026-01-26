@@ -356,7 +356,8 @@ export class AnalyticsChatService {
         for (const toolUse of toolUseBlocks) {
           if (toolUse.type !== 'tool_use') continue;
 
-          this.logger.log(`Executing tool: ${toolUse.name}`);
+          this.logger.log(`[Quinn Chat] Executing tool: ${toolUse.name}`);
+          this.logger.log(`[Quinn Chat] Tool input: ${JSON.stringify(toolUse.input).slice(0, 200)}`);
           toolsUsed.push(toolUse.name);
 
           const result = await this.toolsService.executeTool(
@@ -364,17 +365,27 @@ export class AnalyticsChatService {
             toolUse.input as Record<string, any>,
           );
 
+          this.logger.log(`[Quinn Chat] Tool ${toolUse.name} result: success=${result.success}`);
+          if (!result.success) {
+            this.logger.error(`[Quinn Chat] Tool ${toolUse.name} error: ${result.error}`);
+          }
+
           // Store tool result for structured data extraction
           if (result.success && result.data) {
             toolResultsData.push({ toolName: toolUse.name, data: result.data });
           }
 
+          const toolResultContent = JSON.stringify(result.success ? result.data : { error: result.error });
+          this.logger.log(`[Quinn Chat] Tool result content length: ${toolResultContent.length}`);
+
           toolResults.push({
             type: 'tool_result' as const,
             tool_use_id: toolUse.id,
-            content: JSON.stringify(result.success ? result.data : { error: result.error }),
+            content: toolResultContent,
           });
         }
+        
+        this.logger.log(`[Quinn Chat] Sending ${toolResults.length} tool results back to Claude...`);
 
         // Continue conversation with tool results
         response = await this.client.messages.create({
