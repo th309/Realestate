@@ -96,11 +96,18 @@ export class AnalyticsChatService {
     private readonly supabase: SupabaseService,
   ) {
     const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    this.logger.log(`[Quinn Init] Checking ANTHROPIC_API_KEY...`);
+    this.logger.log(`[Quinn Init] API key present: ${!!apiKey}`);
+    this.logger.log(`[Quinn Init] API key length: ${apiKey?.length || 0}`);
+    this.logger.log(`[Quinn Init] API key prefix: ${apiKey?.slice(0, 10) || 'N/A'}...`);
+    
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
-      this.logger.log('Analytics Chat Service initialized with Claude');
+      this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
+      this.logger.log(`[Quinn Init] Using model: ${this.model}`);
     } else {
-      this.logger.warn('ANTHROPIC_API_KEY not configured - chat disabled');
+      this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
+      this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
     }
   }
 
@@ -165,9 +172,16 @@ export class AnalyticsChatService {
     let finalResponse = '';
 
     try {
-      this.logger.log(`Processing message in conversation ${conversationId}`);
+      this.logger.log(`[Quinn Chat] Processing message in conversation ${conversationId}`);
+      this.logger.log(`[Quinn Chat] User message: "${userMessage.slice(0, 100)}..."`);
+      this.logger.log(`[Quinn Chat] Conversation history length: ${apiMessages.length} messages`);
+      this.logger.log(`[Quinn Chat] Available tools: ${tools.length}`);
+      this.logger.log(`[Quinn Chat] System prompt length: ${systemPrompt.length} chars`);
 
       // Initial request
+      this.logger.log(`[Quinn Chat] Calling Claude API (model: ${this.model})...`);
+      const apiStartTime = Date.now();
+      
       let response = await this.client.messages.create({
         model: this.model,
         max_tokens: 2048,
@@ -175,6 +189,11 @@ export class AnalyticsChatService {
         tools: tools as any,
         messages: apiMessages,
       });
+      
+      const apiDuration = Date.now() - apiStartTime;
+      this.logger.log(`[Quinn Chat] Claude API responded in ${apiDuration}ms`);
+      this.logger.log(`[Quinn Chat] Stop reason: ${response.stop_reason}`);
+      this.logger.log(`[Quinn Chat] Content blocks: ${response.content.length}`);
 
       // Process tool calls in a loop (max 10 iterations to prevent infinite loops)
       let iterations = 0;
@@ -249,7 +268,19 @@ export class AnalyticsChatService {
 
       return { response: finalResponse, toolsUsed, structuredData };
     } catch (error) {
-      this.logger.error(`Chat error: ${error.message}`, error.stack);
+      this.logger.error(`[Quinn Chat] === CHAT ERROR ===`);
+      this.logger.error(`[Quinn Chat] Error type: ${error.constructor?.name}`);
+      this.logger.error(`[Quinn Chat] Error message: ${error.message}`);
+      this.logger.error(`[Quinn Chat] Error stack: ${error.stack}`);
+      
+      // Check for specific Anthropic API errors
+      if (error.status) {
+        this.logger.error(`[Quinn Chat] API status code: ${error.status}`);
+      }
+      if (error.error) {
+        this.logger.error(`[Quinn Chat] API error details: ${JSON.stringify(error.error)}`);
+      }
+      
       throw error;
     }
   }

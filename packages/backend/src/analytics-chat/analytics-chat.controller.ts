@@ -62,15 +62,22 @@ export class AnalyticsChatController {
     @Param('conversationId') conversationId: string,
     @Body() body: ChatRequest,
   ): Promise<ChatResponse> {
-    this.logger.log(
-      `POST /analytics/chat/${conversationId}: "${body.message?.slice(0, 50)}..."`,
-    );
+    const requestId = `be_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const startTime = Date.now();
+    
+    this.logger.log(`[Quinn ${requestId}] === POST REQUEST START ===`);
+    this.logger.log(`[Quinn ${requestId}] ConversationId: ${conversationId}`);
+    this.logger.log(`[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`);
+    this.logger.log(`[Quinn ${requestId}] Context: ${JSON.stringify(body.context || {})}`);
+    this.logger.log(`[Quinn ${requestId}] Service available: ${this.chatService.isAvailable()}`);
 
     if (!body.message?.trim()) {
+      this.logger.warn(`[Quinn ${requestId}] Empty message rejected`);
       throw new HttpException('Message is required', HttpStatus.BAD_REQUEST);
     }
 
     if (!this.chatService.isAvailable()) {
+      this.logger.error(`[Quinn ${requestId}] Service unavailable - ANTHROPIC_API_KEY not configured`);
       throw new HttpException(
         'Chat service not available - API key not configured',
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -78,11 +85,18 @@ export class AnalyticsChatController {
     }
 
     try {
+      this.logger.log(`[Quinn ${requestId}] Calling chat service...`);
+      
       const result = await this.chatService.chat(
         conversationId,
         body.message.trim(),
         body.context,
       );
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`[Quinn ${requestId}] === SUCCESS === Duration: ${duration}ms`);
+      this.logger.log(`[Quinn ${requestId}] Response length: ${result.response?.length || 0}`);
+      this.logger.log(`[Quinn ${requestId}] Tools used: ${result.toolsUsed?.join(', ') || 'none'}`);
 
       return {
         success: true,
@@ -92,7 +106,11 @@ export class AnalyticsChatController {
         conversationId,
       };
     } catch (error) {
-      this.logger.error(`Chat failed: ${error.message}`, error.stack);
+      const duration = Date.now() - startTime;
+      this.logger.error(`[Quinn ${requestId}] === FAILED === Duration: ${duration}ms`);
+      this.logger.error(`[Quinn ${requestId}] Error type: ${error.constructor?.name}`);
+      this.logger.error(`[Quinn ${requestId}] Error message: ${error.message}`);
+      this.logger.error(`[Quinn ${requestId}] Error stack: ${error.stack}`);
 
       // Return structured error instead of throwing
       return {

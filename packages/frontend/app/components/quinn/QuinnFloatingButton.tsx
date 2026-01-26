@@ -82,7 +82,15 @@ export function QuinnFloatingButton() {
   }, [messages, loading]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || !conversationId) return;
+    if (!text.trim() || !conversationId) {
+      console.warn('[Quinn Client] sendMessage blocked:', { hasText: !!text.trim(), hasConversationId: !!conversationId });
+      return;
+    }
+
+    const requestId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    console.log(`[Quinn Client ${requestId}] === SEND MESSAGE START ===`);
+    console.log(`[Quinn Client ${requestId}] Message:`, text.slice(0, 100));
+    console.log(`[Quinn Client ${requestId}] ConversationId:`, conversationId);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -95,8 +103,13 @@ export function QuinnFloatingButton() {
     setInput('');
     setLoading(true);
 
+    const startTime = Date.now();
+    
     try {
-      const response = await fetch(`/api/analytics/chat/${conversationId}`, {
+      const apiUrl = `/api/analytics/chat/${conversationId}`;
+      console.log(`[Quinn Client ${requestId}] Fetching:`, apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,11 +117,40 @@ export function QuinnFloatingButton() {
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
+      const duration = Date.now() - startTime;
+      console.log(`[Quinn Client ${requestId}] Response received in ${duration}ms`);
+      console.log(`[Quinn Client ${requestId}] Status:`, response.status, response.statusText);
+
+      const responseText = await response.text();
+      console.log(`[Quinn Client ${requestId}] Response length:`, responseText.length);
+      console.log(`[Quinn Client ${requestId}] Response preview:`, responseText.slice(0, 300));
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        console.error(`[Quinn Client ${requestId}] JSON parse failed:`, parseErr);
+        console.error(`[Quinn Client ${requestId}] Raw response:`, responseText);
+        throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`);
       }
 
-      const data = await response.json();
+      console.log(`[Quinn Client ${requestId}] Parsed data:`, {
+        success: data.success,
+        hasResponse: !!data.response,
+        hasError: !!data.error,
+        debug: data.debug,
+        toolsUsed: data.toolsUsed,
+      });
+
+      if (!response.ok) {
+        console.error(`[Quinn Client ${requestId}] HTTP error:`, response.status, data.error || data.message);
+        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      }
+
+      if (data.success === false) {
+        console.error(`[Quinn Client ${requestId}] Backend returned success=false:`, data.error);
+        throw new Error(data.error || 'Backend processing failed');
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -117,12 +159,30 @@ export function QuinnFloatingButton() {
         timestamp: new Date().toISOString()
       };
 
+      console.log(`[Quinn Client ${requestId}] === SUCCESS === Response length:`, assistantMessage.content.length);
       setMessages(prev => [...prev, assistantMessage]);
-    } catch {
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      const err = error as Error;
+      
+      console.error(`[Quinn Client ${requestId}] === FAILED after ${duration}ms ===`);
+      console.error(`[Quinn Client ${requestId}] Error:`, err.name, err.message);
+      console.error(`[Quinn Client ${requestId}] Stack:`, err.stack);
+      
+      // Show more helpful error message based on error type
+      let userErrorMessage = 'Sorry, I encountered an error. Please try again.';
+      if (err.message.includes('fetch') || err.message.includes('network')) {
+        userErrorMessage = 'Unable to reach the server. Please check your connection and try again.';
+      } else if (err.message.includes('timeout')) {
+        userErrorMessage = 'The request timed out. Please try again.';
+      } else if (err.message.includes('503') || err.message.includes('unavailable')) {
+        userErrorMessage = 'The AI service is temporarily unavailable. Please try again in a moment.';
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: userErrorMessage,
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
