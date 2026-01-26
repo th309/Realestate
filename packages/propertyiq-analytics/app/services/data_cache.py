@@ -431,8 +431,9 @@ class DataCache:
             try:
                 # Build query step by step for supabase-py v2 compatibility
                 logger.debug(f"  Batch {batch_num}: offset={offset}, range={offset}-{offset + batch_size - 1}")
-                
-                query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
+                # Enforce allowlist so we never request non-existent columns (e.g. geography_name)
+                safe_columns = [c for c in columns if c in self._SCORES_HISTORY_COLUMNS] or list(self._SCORES_HISTORY_COLUMNS)
+                query = self.supabase.table('propertyiq_scores_history').select(','.join(safe_columns))
                 query = query.eq('geography_type', geo_type)
                 query = query.order('period_date', desc=False)
                 query = query.range(offset, offset + batch_size - 1)
@@ -556,10 +557,11 @@ class DataCache:
         all_data = []
         offset = 0
         
+        safe_columns = [c for c in columns if c in self._SCORES_HISTORY_COLUMNS] or list(self._SCORES_HISTORY_COLUMNS)
         while True:
             try:
                 # Build query step by step for supabase-py v2 compatibility
-                query = self.supabase.table('propertyiq_scores_history').select(','.join(columns))
+                query = self.supabase.table('propertyiq_scores_history').select(','.join(safe_columns))
                 query = query.eq('geography_type', geo_type)
                 query = query.gt('period_date', last_date)
                 query = query.order('period_date', desc=False)

@@ -26,39 +26,37 @@ logging.getLogger("hpack").setLevel(logging.WARNING)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
+    import asyncio
     logger.info("=" * 60)
     logger.info("Starting PropertyIQ Analytics service")
     logger.info("=" * 60)
     settings = get_settings()
     logger.info(f"Debug mode: {settings.debug}")
     logger.info(f"Allowed origins: {settings.allowed_origins_list}")
-    
-    # Validate Supabase connection at startup
-    logger.info("Validating Supabase connection...")
-    if settings.supabase_url and settings.supabase_service_key:
-        logger.info(f"  SUPABASE_URL: {settings.supabase_url[:50]}...")
-        logger.info(f"  SUPABASE_SERVICE_KEY: {'*' * 10} (set)")
+    logger.info("PropertyIQ Analytics service ready")
+    logger.info("=" * 60)
+
+    async def validate_supabase():
+        """Run Supabase validation in background so healthcheck can pass immediately."""
+        if not settings.supabase_url or not settings.supabase_service_key:
+            logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set! Quinn will not have market data.")
+            return
+        logger.info("Validating Supabase connection (background)...")
         try:
             from app.services.data_cache import get_data_cache
             cache = get_data_cache()
-            result = cache.validate_connection(timeout_seconds=30)
-            if result['success']:
-                logger.info(f"  Supabase connection: OK")
-                logger.info(f"  Test query returned {result['details'].get('total_count', 0)} records")
+
+            def _validate():
+                return cache.validate_connection(timeout_seconds=10)
+
+            result = await asyncio.get_event_loop().run_in_executor(None, _validate)
+            if result.get("success"):
+                logger.info(f"  Supabase connection: OK (count={result.get('details', {}).get('total_count', 0)})")
             else:
-                logger.error(f"  Supabase connection: FAILED - {result['message']}")
+                logger.error(f"  Supabase connection: FAILED - {result.get('message', 'unknown')}")
         except Exception as e:
             logger.error(f"  Supabase validation error: {e}")
-    else:
-        logger.error("  SUPABASE_URL or SUPABASE_SERVICE_KEY not set!")
-        logger.error("  Quinn will not be able to access market data.")
-    
-    logger.info("=" * 60)
-    logger.info("PropertyIQ Analytics service ready")
-    logger.info("=" * 60)
-    
-    # Load ALL most recent data from DB into cache (covers ~90% of user queries)
-    import asyncio
+
     async def warm_cache():
         try:
             from app.services.data_cache import get_data_cache
@@ -91,10 +89,10 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Market data cache warming failed: {e}")
     
-    # Run in background (don't block startup)
+    # Run in background (don't block startup) so /api/v1/health responds within Railway's 10s window
+    asyncio.create_task(validate_supabase())
     asyncio.create_task(warm_cache())
     asyncio.create_task(warm_market_data_cache())
-    
     yield
     logger.info("Shutting down PropertyIQ Analytics service")
 
