@@ -1,0 +1,62 @@
+# Git and IDE
+.git
+.gitignore
+.idea
+.vscode
+.cursor
+.claude
+.agent
+.gemini
+
+# Dependencies (reinstalled in image)
+node_modules
+packages/*/node_modules
+
+# Build outputs (rebuilt in image)
+.next
+out
+dist
+build
+coverage
+packages/*/dist
+packages/*/.next
+packages/*/out
+
+# Tests (not needed at runtime)
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+e2e
+packages/*/tests
+packages/*/coverage
+
+# Data and scripts (not needed for backend runtime)
+data
+scripts
+redfin_downloads
+PropertyIQ
+
+# Docs and misc
+*.md
+!README.md
+docs
+.backups
+
+# Env (injected at deploy)
+.env
+.env.*
+*.local
+
+# Large/binary
+*.csv
+*.geojson
+*.json.gz
+*.zip
+*.tar
+*.gz
+*.xlsx
+*.xml
+
+# Other services (backend-only deploy)
+packages/propertyiq-analytics
+packages/quinn-widget
