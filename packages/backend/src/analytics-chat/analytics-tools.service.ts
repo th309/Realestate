@@ -37,8 +37,17 @@ export class AnalyticsToolsService {
     this.logger.debug(`Arguments: ${JSON.stringify(args)}`);
 
     try {
-      const endpoint = this.getToolEndpoint(toolName);
-      const method = toolName === 'get_available_filters' ? 'GET' : 'POST';
+      let endpoint = this.getToolEndpoint(toolName);
+      let method = 'POST';
+
+      // Handle special cases
+      if (toolName === 'get_available_filters' || toolName === 'get_database_tables' || toolName === 'get_database_summary') {
+        method = 'GET';
+      } else if (toolName === 'describe_database_table' && args.table_name) {
+        // Append table name to URL for describe endpoint
+        endpoint = `${endpoint}/${args.table_name}`;
+        method = 'GET';
+      }
 
       const url = `${this.analyticsBaseUrl}${endpoint}`;
       this.logger.debug(`Calling ${method} ${url}`);
@@ -82,6 +91,24 @@ export class AnalyticsToolsService {
       // Raw metric tools (query DB directly)
       analyze_raw_metrics: '/api/v1/advanced/raw-metrics/analyze',
       get_raw_metric_summary: '/api/v1/advanced/raw-metrics/summary',
+      // Backtest / Quintile validation tools
+      run_backtest: '/api/v1/advanced/backtest',
+      run_quintile_analysis: '/api/v1/advanced/quintile-analysis',
+      compare_formulas: '/api/v1/advanced/formula-comparison',
+      // Database query tools (direct access to real estate data)
+      get_database_tables: '/api/v1/database/tables',
+      describe_database_table: '/api/v1/database/tables',
+      query_database_table: '/api/v1/database/query',
+      search_database: '/api/v1/database/search',
+      aggregate_database: '/api/v1/database/aggregate',
+      get_database_summary: '/api/v1/database/summary',
+      // News analysis tools
+      search_real_estate_news: '/api/v1/news/search',
+      analyze_news_impact: '/api/v1/news/analyze-impact',
+      // Geography relationship tools
+      find_neighboring_geographies: '/api/v1/geography/neighbors',
+      compare_to_neighbors: '/api/v1/geography/compare-to-neighbors',
+      find_similar_geographies: '/api/v1/geography/find-similar',
     };
 
     const endpoint = endpoints[toolName];
@@ -475,6 +502,409 @@ export class AnalyticsToolsService {
             },
           },
           required: [],
+        },
+      },
+      // === Backtest / Quintile Validation Tools ===
+      {
+        name: 'run_backtest',
+        description:
+          'Run comprehensive backtest analysis with quintile validation. Returns the complete validation report including: quintile breakdown with beat rates, top/bottom quintile excess returns, SPREAD (top - bottom), T-test p-values, Spearman correlation, and confidence grade (A-F). Use this for full validation reports across multiple time horizons.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            score_type: {
+              type: 'string',
+              enum: ['investoredge', 'homeready', 'market_health'],
+              description: 'Score type to validate (default: investoredge)',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['state', 'metro', 'county', 'zip'],
+              description: 'Geography level (default: metro)',
+            },
+            benchmark_type: {
+              type: 'string',
+              enum: ['national', 'regional', 'peer'],
+              description: 'Benchmark type (default: national)',
+            },
+            horizons: {
+              type: 'array',
+              items: { type: 'integer' },
+              description: 'Time horizons in months to test, e.g., [12, 36, 60]. Default: [12, 36, 60]',
+            },
+            use_cache: {
+              type: 'boolean',
+              description: 'Use cached data for faster results (default: true)',
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'run_quintile_analysis',
+        description:
+          'Run quintile validation analysis for a single score and time horizon. Returns detailed quintile breakdown with beat rates in the exact format needed for validation summary tables: Top Quintile Excess Return, Bottom Quintile Excess Return, SPREAD, T-test p-value, Spearman Correlation, and beat rates. Faster than full backtest if you only need one horizon. Use this when the user asks about quintile performance or validation metrics.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            score_type: {
+              type: 'string',
+              enum: ['investoredge', 'homeready', 'market_health'],
+              description: 'Score type to validate',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['state', 'metro', 'county', 'zip'],
+              description: 'Geography level (default: metro)',
+            },
+            horizon_months: {
+              type: 'integer',
+              description: 'Time horizon in months: 12, 36, or 60 (default: 36)',
+            },
+            use_cache: {
+              type: 'boolean',
+              description: 'Use cached data (default: true)',
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'compare_formulas',
+        description:
+          'Compare 3-formula vs 9-formula approach. Analyzes whether to use 3 formulas (one per score type) or 9 formulas (one per score type × geography level). Returns validation metrics for each geography level, spread consistency analysis, and a recommendation with reasoning. Use this when the user asks whether they need different formulas for different geography levels.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_types: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Geography levels to analyze, e.g., ["metro", "county", "zip"]. Default: ["metro", "county", "zip"]',
+            },
+            score_types: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Score types to compare, e.g., ["investoredge", "homeready", "market_health"]. Default: all three',
+            },
+            horizon_months: {
+              type: 'integer',
+              description: 'Time horizon for comparison in months (default: 36)',
+            },
+          },
+          required: [],
+        },
+      },
+      // === Database Query Tools (Direct Access to Real Estate Data) ===
+      {
+        name: 'get_database_tables',
+        description:
+          'Get list of all accessible real estate data tables in the database. Returns table names, row counts, and column information. Use this to discover what data is available. Only returns real estate tables (Zillow, Realtor, Census, Economic, Scores) plus user\'s own saved queries, watchlist, alerts, and conversation history.',
+        input_schema: {
+          type: 'object',
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: 'describe_database_table',
+        description:
+          'Get detailed schema information about a specific table. Returns column names, data types, sample values, and statistics. Use this to understand the structure of a table before querying it. Works with any real estate data table.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            table_name: {
+              type: 'string',
+              description: 'Name of the table to describe (e.g., "zillow_metro", "realtor_county", "propertyiq_scores")',
+            },
+          },
+          required: ['table_name'],
+        },
+      },
+      {
+        name: 'query_database_table',
+        description:
+          'Query a table with filters, sorting, and pagination. Use this to retrieve specific data from any table. Supports complex filters (gte, lte, like, in), sorting (prefix column with - for descending), and pagination. Examples: Get all metros in Texas, Find high scores above 80, Get latest Zillow data sorted by date.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            table_name: {
+              type: 'string',
+              description: 'Table to query',
+            },
+            columns: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Columns to select (omit for all columns)',
+            },
+            filters: {
+              type: 'object',
+              description: 'Filters to apply. Simple: {"column": "value"}. Range: {"column": {"gte": 100, "lte": 200}}. List: {"column": ["val1", "val2"]}. Pattern: {"column": {"like": "%pattern%"}}',
+            },
+            order_by: {
+              type: 'string',
+              description: 'Column to sort by. Prefix with - for descending (e.g., "-period_date")',
+            },
+            limit: {
+              type: 'integer',
+              description: 'Max rows to return (default: 100, max: 1000)',
+            },
+            offset: {
+              type: 'integer',
+              description: 'Number of rows to skip for pagination (default: 0)',
+            },
+          },
+          required: ['table_name'],
+        },
+      },
+      {
+        name: 'search_database',
+        description:
+          'Search across multiple tables for a text term. Searches in name, title, and description columns. Returns matching rows from each table. Example: Search for "Austin" to find all Austin-related data across geographies, scores, and market data.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            search_term: {
+              type: 'string',
+              description: 'Text to search for',
+            },
+            tables: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Tables to search (omit to search common tables: geographies, zillow_metro, realtor_metro, propertyiq_scores)',
+            },
+            columns: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Specific columns to search in (omit to search name/title/description columns)',
+            },
+            limit_per_table: {
+              type: 'integer',
+              description: 'Max results per table (default: 10, max: 100)',
+            },
+          },
+          required: ['search_term'],
+        },
+      },
+      {
+        name: 'aggregate_database',
+        description:
+          'Run aggregation queries (COUNT, SUM, AVG, MIN, MAX) on tables. Use for analytics like "average score by state", "total metros per state", "min/max prices". Supports grouping and filtering. Examples: Count metros by state, Average InvestorEdge score, Sum of population by region.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            table_name: {
+              type: 'string',
+              description: 'Table to aggregate',
+            },
+            aggregations: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  function: {
+                    type: 'string',
+                    enum: ['count', 'sum', 'avg', 'mean', 'min', 'max'],
+                  },
+                  column: {
+                    type: 'string',
+                  },
+                  alias: {
+                    type: 'string',
+                  },
+                },
+              },
+              description: 'List of aggregations like [{"function": "avg", "column": "investoredge_score", "alias": "avg_score"}]',
+            },
+            group_by: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Columns to group by (e.g., ["parent_geography_id"] to group by state)',
+            },
+            filters: {
+              type: 'object',
+              description: 'Filters to apply before aggregating',
+            },
+            limit: {
+              type: 'integer',
+              description: 'Max groups to return (default: 100, max: 1000)',
+            },
+          },
+          required: ['table_name', 'aggregations'],
+        },
+      },
+      {
+        name: 'get_database_summary',
+        description:
+          'Get high-level summary of all real estate data in the database. Returns record counts for each data source (Zillow, Realtor, Census, Economic, Scores), latest data dates, and user analytics stats. Use this to understand what data is available and how current it is.',
+        input_schema: {
+          type: 'object',
+          properties: {},
+          required: [],
+        },
+      },
+      // === News Analysis Tools ===
+      {
+        name: 'search_real_estate_news',
+        description:
+          'Search real estate news articles. Returns matching articles from the news cache. Can filter by search terms (e.g., "housing market", "mortgage rates"), geography (e.g., "Austin", "Texas"), and date range. Use this when the user asks about news, current events, or what\'s happening in the market. Examples: "What\'s the latest news about Austin?", "Any news about mortgage rates?", "What\'s happening in the housing market?"',
+        input_schema: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Search term (e.g., "housing market", "mortgage rates", "recession")',
+            },
+            geography_name: {
+              type: 'string',
+              description: 'Specific geography to search for (e.g., "Austin", "Texas", "California")',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['metro', 'state', 'national'],
+              description: 'Type of geography',
+            },
+            days_back: {
+              type: 'integer',
+              description: 'Number of days to search back (default: 30, max: 365)',
+            },
+            limit: {
+              type: 'integer',
+              description: 'Max articles to return (default: 20, max: 100)',
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'analyze_news_impact',
+        description:
+          'Analyze how a news article might impact a specific market. Takes a news article and geography, returns detailed analysis of relevance, impact direction (positive/negative/neutral), magnitude (high/medium/low), affected factors (prices, demand, supply), specific metrics that might be affected (ZHVI, listings, etc.), time horizon (immediate/short-term/long-term), and confidence level. Use this after searching news to determine if articles are relevant to user\'s markets and how they might be affected. Critical for understanding market impact of current events.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            article_id: {
+              type: 'string',
+              description: 'Article ID from news search results',
+            },
+            article_title: {
+              type: 'string',
+              description: 'Article title (if not using ID)',
+            },
+            article_content: {
+              type: 'string',
+              description: 'Article content or summary',
+            },
+            article_url: {
+              type: 'string',
+              description: 'Article URL',
+            },
+            article_source: {
+              type: 'string',
+              description: 'Article source (e.g., "Wall Street Journal")',
+            },
+            article_date: {
+              type: 'string',
+              description: 'Published date (ISO format)',
+            },
+            geography_id: {
+              type: 'string',
+              description: 'Geography ID to analyze impact for (e.g., CBSA code)',
+            },
+            geography_name: {
+              type: 'string',
+              description: 'Geography name (e.g., "Austin, TX")',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['metro', 'county', 'zip', 'state', 'national'],
+              description: 'Geography type (default: metro)',
+            },
+          },
+          required: ['geography_id', 'geography_name'],
+        },
+      },
+      // === Geographic Relationship Tools ===
+      {
+        name: 'find_neighboring_geographies',
+        description:
+          'Find neighboring or surrounding geographies. Returns geographies in the same state/region. Use when user asks about "surrounding counties", "neighboring metros", "counties around McLean County", etc. Methods: same_state (all in same state - most reliable), adjacent (bordering - requires adjacency data), nearby (within radius).',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_id: {
+              type: 'string',
+              description: 'Geography ID (e.g., FIPS code for counties, CBSA code for metros)',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['county', 'metro', 'zip', 'state'],
+              description: 'Type of geography (default: county)',
+            },
+            method: {
+              type: 'string',
+              enum: ['same_state', 'adjacent', 'nearby'],
+              description: 'Method to find neighbors: same_state (all in state), adjacent (bordering), nearby (within radius). Default: same_state',
+            },
+          },
+          required: ['geography_id'],
+        },
+      },
+      {
+        name: 'compare_to_neighbors',
+        description:
+          'Compare a geography to its neighboring geographies across all key metrics (InvestorEdge, HomeReady, MarketHealth scores). Returns detailed comparison showing how the target ranks vs neighbors, percentile rankings, and whether it performs better/worse than average. Includes overall assessment and human-readable summary. Use when user asks: "How does McLean County compare to surrounding counties?", "Is Austin better than neighboring metros?", "Compare this market to nearby markets".',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_id: {
+              type: 'string',
+              description: 'Geography ID to analyze',
+            },
+            geography_name: {
+              type: 'string',
+              description: 'Geography name (e.g., "McLean County, IL", "Austin, TX")',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['county', 'metro', 'zip'],
+              description: 'Type of geography (default: county)',
+            },
+            metrics: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Metrics to compare (omit for default: investoredge_score, homeready_score, market_health_score)',
+            },
+          },
+          required: ['geography_id', 'geography_name'],
+        },
+      },
+      {
+        name: 'find_similar_geographies',
+        description:
+          'Find geographies similar to the target based on scores and metrics. Uses Euclidean distance to calculate similarity across specified metrics. Returns ranked list of most similar markets (1.0 = identical, 0.0 = very different). Use when user asks: "What counties are similar to McLean County?", "Find metros like Austin", "Show me markets similar to this one".',
+        input_schema: {
+          type: 'object',
+          properties: {
+            geography_id: {
+              type: 'string',
+              description: 'Target geography ID',
+            },
+            geography_type: {
+              type: 'string',
+              enum: ['county', 'metro', 'zip'],
+              description: 'Type of geography (default: county)',
+            },
+            limit: {
+              type: 'integer',
+              description: 'Max similar geographies to return (default: 10, max: 50)',
+            },
+            similarity_metrics: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Metrics to use for similarity (omit for scores: investoredge_score, homeready_score, market_health_score)',
+            },
+          },
+          required: ['geography_id'],
         },
       },
     ];

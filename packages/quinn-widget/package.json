@@ -1,0 +1,47 @@
+{
+  "name": "@propertyiq/quinn-widget",
+  "version": "1.0.0",
+  "description": "Quinn AI Assistant - Embeddable widget for any website",
+  "main": "dist/quinn-widget.js",
+  "module": "dist/quinn-widget.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "quinn",
+    "ai-assistant",
+    "real-estate",
+    "analytics",
+    "widget",
+    "embeddable"
+  ],
+  "author": "PropertyIQ",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-terser": "^0.4.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "rollup": "^3.20.0",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-postcss": "^4.0.2",
+    "tslib": "^2.5.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

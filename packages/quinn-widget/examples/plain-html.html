@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quinn Widget - Plain HTML Example</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { color: #1f2937; }
+    .demo-section {
+      margin: 40px 0;
+      padding: 20px;
+      border: 2px dashed #e5e7eb;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Quinn AI Assistant - Demo</h1>
+  <p>Drop Quinn into any webpage with a simple script tag!</p>
+
+  <!-- Example 1: Inline Panel -->
+  <div class="demo-section">
+    <h2>Example 1: Inline Panel</h2>
+    <p>Quinn embedded directly in the page:</p>
+    <div id="quinn-panel"></div>
+  </div>
+
+  <!-- Example 2: Floating Button -->
+  <div class="demo-section">
+    <h2>Example 2: Floating Button (Bottom-Right)</h2>
+    <p>Look at the bottom-right corner of the page!</p>
+  </div>
+
+  <!-- Load Quinn Widget -->
+  <script src="../dist/quinn-widget.js"></script>
+
+  <!-- Initialize Quinn -->
+  <script>
+    // Example 1: Inline panel
+    QuinnWidget.init({
+      container: '#quinn-panel',
+      apiUrl: 'http://localhost:3001', // Your backend API
+      theme: 'light',
+      width: '100%',
+      height: '600px',
+      starterPrompts: [
+        'What is the InvestorEdge score for Austin?',
+        'Show me Texas metros with high scores',
+        'What\'s the latest real estate news?'
+      ],
+      features: {
+        savedQueries: true,
+        watchlist: true,
+        export: true
+      },
+      onMessage: function(message) {
+        console.log('Quinn message:', message);
+      },
+      onError: function(error) {
+        console.error('Quinn error:', error);
+      }
+    });
+
+    // Example 2: Floating button
+    QuinnWidget.initButton({
+      apiUrl: 'http://localhost:3001',
+      position: 'bottom-right',
+      label: 'Ask Quinn',
+      theme: 'light'
+    });
+  </script>
+</body>
+</html>

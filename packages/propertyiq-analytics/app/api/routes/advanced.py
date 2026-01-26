@@ -297,11 +297,11 @@ async def get_raw_metric_summary(
 ):
     """
     Get summary of available raw metrics from each data source.
-    
+
     Returns list of available metrics from Zillow, Realtor, Census, Economic, Calculated.
     """
     logger.info(f"GET /advanced/raw-metrics/summary: geo={geography_type}")
-    
+
     try:
         service = get_advanced_service()
         state_list = states.split(",") if states else None
@@ -309,8 +309,277 @@ async def get_raw_metric_summary(
             geography_type=geography_type,
             states=state_list
         )
-        
+
         return result
     except Exception as e:
         logger.exception("Raw metric summary failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === BACKTEST / QUINTILE VALIDATION ENDPOINTS ===
+
+class BacktestRequest(BaseModel):
+    """Request for backtest analysis."""
+    score_type: str = Field("investoredge", description="Score type: investoredge, homeready, market_health")
+    geography_type: str = Field("metro", description="Geography level")
+    benchmark_type: str = Field("national", description="Benchmark: national, regional, peer")
+    horizons: Optional[List[int]] = Field(None, description="Time horizons in months (default: [12, 36, 60])")
+    use_cache: bool = Field(True, description="Use cached data for faster results")
+
+
+class QuintileAnalysisRequest(BaseModel):
+    """Request for quintile validation analysis."""
+    score_type: str = Field("investoredge", description="Score type to validate")
+    geography_type: str = Field("metro", description="Geography level")
+    horizon_months: int = Field(36, description="Time horizon in months (12, 36, or 60)")
+    use_cache: bool = Field(True, description="Use cached data")
+
+
+class FormulaComparisonRequest(BaseModel):
+    """Request for comparing 3 vs 9 formula approach."""
+    geography_types: List[str] = Field(["metro", "county", "zip"], description="Geography levels to analyze")
+    score_types: List[str] = Field(["investoredge", "homeready", "market_health"], description="Scores to compare")
+    horizon_months: int = Field(36, description="Time horizon for comparison")
+
+
+@router.post("/backtest")
+async def run_backtest(request: BacktestRequest):
+    """
+    Run comprehensive backtest analysis with quintile validation.
+
+    Returns:
+    - Quintile breakdown with beat rates
+    - Top/Bottom quintile excess returns
+    - SPREAD (top - bottom)
+    - T-test p-values
+    - Spearman correlation
+    - Confidence grade (A-F)
+
+    This is the full backtest report including the exact summary table format
+    with all validation metrics.
+    """
+    logger.info(f"POST /advanced/backtest: {request.score_type} / {request.geography_type}")
+
+    try:
+        from app.services.backtest_service import BacktestService
+
+        service = BacktestService()
+        result = await service.run_full_backtest(
+            score_type=request.score_type,
+            geography_type=request.geography_type,
+            benchmark_type=request.benchmark_type,
+            horizons=request.horizons,
+            use_cache=request.use_cache
+        )
+
+        # Convert dataclass to dict
+        return {
+            "success": True,
+            "score_type": result.score_type,
+            "geography_type": result.geography_type,
+            "benchmark_type": result.benchmark_type,
+            "analysis_date": result.analysis_date,
+            "overall_validated": result.overall_validated,
+            "confidence_grade": result.confidence_grade,
+            "total_observations": result.total_observations,
+            "date_range_start": result.date_range_start,
+            "date_range_end": result.date_range_end,
+            "data_source": result.data_source,
+            "validation_summary": {
+                "score_type": result.validation_summary.score_type,
+                "top_quintile_excess": result.validation_summary.top_quintile_excess,
+                "bottom_quintile_excess": result.validation_summary.bottom_quintile_excess,
+                "spread": result.validation_summary.spread,
+                "top_quintile_beat_rate": result.validation_summary.top_quintile_beat_rate,
+                "bottom_quintile_beat_rate": result.validation_summary.bottom_quintile_beat_rate,
+                "t_test_pvalue": result.validation_summary.t_test_pvalue,
+                "spearman_correlation": result.validation_summary.spearman_correlation,
+                "observations": result.validation_summary.observations,
+                "validated": result.validation_summary.validated
+            } if result.validation_summary else None,
+            "quintile_results": [
+                {
+                    "quintile": q.quintile,
+                    "score_min": q.score_min,
+                    "score_max": q.score_max,
+                    "avg_excess_return": q.avg_excess_return,
+                    "beat_market_rate": q.beat_market_rate,
+                    "observations": q.observations,
+                    "t_statistic": q.t_statistic,
+                    "p_value": q.p_value
+                }
+                for q in result.quintile_results
+            ],
+            "horizons": [
+                {
+                    "horizon_months": h.horizon_months,
+                    "top_decile_excess": h.top_decile_excess,
+                    "bottom_decile_excess": h.bottom_decile_excess,
+                    "spread": h.spread,
+                    "pearson_r": h.pearson_r,
+                    "spearman_r": h.spearman_r,
+                    "r_squared": h.r_squared,
+                    "validated": h.validated,
+                    "sample_size": h.sample_size
+                }
+                for h in result.horizons
+            ]
+        }
+    except Exception as e:
+        logger.exception("Backtest failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quintile-analysis")
+async def run_quintile_analysis(request: QuintileAnalysisRequest):
+    """
+    Run quintile validation analysis for a single score and horizon.
+
+    Returns detailed quintile breakdown with beat rates, the exact format
+    needed for the validation summary table:
+    - Top Quintile Excess Return
+    - Bottom Quintile Excess Return
+    - SPREAD
+    - T-test p-value
+    - Spearman Correlation
+    - Beat rates for top and bottom quintiles
+
+    Faster than full backtest if you only need one horizon.
+    """
+    logger.info(f"POST /advanced/quintile-analysis: {request.score_type} @ {request.horizon_months}m")
+
+    try:
+        from app.services.backtest_service import BacktestService
+
+        service = BacktestService()
+
+        # Run backtest with single horizon
+        result = await service.run_full_backtest(
+            score_type=request.score_type,
+            geography_type=request.geography_type,
+            benchmark_type="national",
+            horizons=[request.horizon_months],
+            use_cache=request.use_cache
+        )
+
+        # Return focused quintile results
+        return {
+            "success": True,
+            "score_type": request.score_type,
+            "geography_type": request.geography_type,
+            "horizon_months": request.horizon_months,
+            "validation_summary": {
+                "top_quintile_excess": result.validation_summary.top_quintile_excess,
+                "bottom_quintile_excess": result.validation_summary.bottom_quintile_excess,
+                "spread": result.validation_summary.spread,
+                "top_quintile_beat_rate": result.validation_summary.top_quintile_beat_rate,
+                "bottom_quintile_beat_rate": result.validation_summary.bottom_quintile_beat_rate,
+                "t_test_pvalue": result.validation_summary.t_test_pvalue,
+                "spearman_correlation": result.validation_summary.spearman_correlation,
+                "observations": result.validation_summary.observations,
+                "validated": result.validation_summary.validated
+            } if result.validation_summary else None,
+            "quintile_details": [
+                {
+                    "quintile": q.quintile,
+                    "score_range": f"{q.score_min:.1f}-{q.score_max:.1f}",
+                    "avg_excess_return": q.avg_excess_return,
+                    "beat_rate": q.beat_market_rate,
+                    "observations": q.observations,
+                    "significant": q.p_value < 0.05
+                }
+                for q in result.quintile_results
+            ],
+            "confidence_grade": result.confidence_grade,
+            "total_observations": result.total_observations
+        }
+    except Exception as e:
+        logger.exception("Quintile analysis failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/formula-comparison")
+async def compare_formulas(request: FormulaComparisonRequest):
+    """
+    Compare 3-formula vs 9-formula approach.
+
+    Analyzes whether you should use:
+    - 3 formulas: One per score type (InvestorEdge, HomeReady, MarketHealth)
+    - 9 formulas: One per score type × geography level (metro, county, zip)
+
+    Returns:
+    - Validation metrics for each geography level
+    - Top predictive metrics per geography
+    - Recommendation: Use 3 or 9 formulas?
+    - Reasoning based on spread consistency and metric overlap
+    """
+    logger.info(f"POST /advanced/formula-comparison: {len(request.geography_types)} geo levels")
+
+    try:
+        from app.services.backtest_service import BacktestService
+
+        service = BacktestService()
+        results_by_geo = {}
+
+        # Run backtest for each geography level
+        for geo_type in request.geography_types:
+            geo_results = {}
+            for score_type in request.score_types:
+                result = await service.run_full_backtest(
+                    score_type=score_type,
+                    geography_type=geo_type,
+                    benchmark_type="national",
+                    horizons=[request.horizon_months],
+                    use_cache=True
+                )
+
+                if result.validation_summary:
+                    geo_results[score_type] = {
+                        "spread": result.validation_summary.spread,
+                        "spearman_r": result.validation_summary.spearman_correlation,
+                        "top_beat_rate": result.validation_summary.top_quintile_beat_rate,
+                        "validated": result.validation_summary.validated,
+                        "observations": result.validation_summary.observations
+                    }
+
+            results_by_geo[geo_type] = geo_results
+
+        # Analyze consistency across geography levels
+        # If metrics are similar, suggest 3 formulas; if different, suggest 9
+        spreads = []
+        for geo_type, scores in results_by_geo.items():
+            for score_type, metrics in scores.items():
+                spreads.append(metrics["spread"])
+
+        # Calculate coefficient of variation for spread
+        import numpy as np
+        spread_mean = np.mean(spreads) if spreads else 0
+        spread_std = np.std(spreads) if spreads else 0
+        spread_cv = (spread_std / spread_mean * 100) if spread_mean != 0 else 0
+
+        # Recommendation logic:
+        # Low CV (<30%) → metrics are consistent → use 3 formulas
+        # High CV (>30%) → metrics vary by geography → use 9 formulas
+        use_9_formulas = spread_cv > 30
+
+        return {
+            "success": True,
+            "recommendation": "9_formulas" if use_9_formulas else "3_formulas",
+            "reasoning": (
+                f"Spread varies significantly across geography levels (CV={spread_cv:.1f}%). "
+                "Different geographies need different formulas."
+                if use_9_formulas
+                else f"Spreads are consistent across geography levels (CV={spread_cv:.1f}%). "
+                "One formula per score type is sufficient."
+            ),
+            "spread_consistency": {
+                "coefficient_of_variation": round(spread_cv, 2),
+                "mean_spread": round(spread_mean, 4),
+                "std_spread": round(spread_std, 4)
+            },
+            "results_by_geography": results_by_geo,
+            "horizon_months": request.horizon_months
+        }
+    except Exception as e:
+        logger.exception("Formula comparison failed")
         raise HTTPException(status_code=500, detail=str(e))

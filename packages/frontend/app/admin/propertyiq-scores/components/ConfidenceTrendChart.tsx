@@ -54,6 +54,7 @@ export function ConfidenceTrendChart({
       setLoading(true);
       setError(null);
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const params = new URLSearchParams({
         scoreType,
         horizon,
@@ -61,7 +62,7 @@ export function ConfidenceTrendChart({
         months: months.toString(),
       });
 
-      const res = await fetch(`/api/admin/backtest-runs/confidence/trend?${params}`);
+      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`);
       if (!res.ok) {
         throw new Error('Failed to fetch trend data');
       }
@@ -394,6 +395,7 @@ export function MultiSeriesTrendChart({
 
         const results: Record<string, TrendDataPoint[]> = {};
 
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         await Promise.all(
           scoreTypes.map(async (scoreType) => {
             const params = new URLSearchParams({
@@ -403,7 +405,7 @@ export function MultiSeriesTrendChart({
               months: months.toString(),
             });
 
-            const res = await fetch(`/api/admin/backtest-runs/confidence/trend?${params}`);
+            const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`);
             if (res.ok) {
               const result = await res.json();
               if (result.success) {

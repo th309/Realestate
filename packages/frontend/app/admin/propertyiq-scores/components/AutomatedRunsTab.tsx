@@ -145,9 +145,10 @@ export function AutomatedRunsTab() {
       setLoading(true);
       setError(null);
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runsRes, statsRes] = await Promise.all([
-        fetch('/api/admin/backtest-runs?limit=10'),
-        fetch('/api/admin/backtest-runs/statistics'),
+        fetch(`${apiUrl}/api/admin/backtest-runs?limit=10`),
+        fetch(`${apiUrl}/api/admin/backtest-runs/statistics`),
       ]);
 
       if (!runsRes.ok || !statsRes.ok) {
@@ -178,9 +179,10 @@ export function AutomatedRunsTab() {
   // Fetch run details
   const fetchRunDetails = async (runId: string) => {
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runRes, samplesRes] = await Promise.all([
-        fetch(`/api/admin/backtest-runs/${runId}`),
-        fetch(`/api/admin/backtest-runs/${runId}/samples`),
+        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}`),
+        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}/samples`),
       ]);
 
       if (runRes.ok) {
@@ -207,7 +209,8 @@ export function AutomatedRunsTab() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/admin/backtest-runs/job/${triggerJobId}/status`);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${apiUrl}/api/admin/backtest-runs/job/${triggerJobId}/status`);
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -232,7 +235,8 @@ export function AutomatedRunsTab() {
       setIsTriggering(true);
       setError(null);
 
-      const res = await fetch('/api/admin/backtest-runs/trigger', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
