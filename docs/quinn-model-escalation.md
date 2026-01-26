@@ -8,9 +8,9 @@ Quinn now uses a **dynamic model escalation** strategy to optimize cost and late
 
 | Model | Use Case | Cost per 1M tokens (input/output) |
 |-------|----------|-----------------------------------|
-| **Haiku** (`claude-haiku-4-20250514`) | Simple queries, greetings, basic lookups | $0.25 / $1.25 |
-| **Sonnet** (`claude-sonnet-4-20250514`) | Moderate analysis, comparisons, standard tools | $3.00 / $15.00 |
-| **Opus** (`claude-opus-4-5-20251101`) | Complex multi-tool orchestration, advanced ML | $15.00 / $75.00 |
+| **Haiku 3.5** (`claude-3-5-haiku-20241022`) | Simple queries, greetings, basic lookups | $0.25 / $1.25 |
+| **Sonnet 4** (`claude-sonnet-4-20250514`) | Moderate analysis, comparisons, standard tools | $3.00 / $15.00 |
+| **Opus 4.5** (`claude-opus-4-5-20251101`) | Complex multi-tool orchestration, advanced ML | $15.00 / $75.00 |
 
 ## How It Works
 

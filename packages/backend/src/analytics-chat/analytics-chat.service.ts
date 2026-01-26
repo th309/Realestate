@@ -86,11 +86,12 @@ export class AnalyticsChatService {
   private readonly logger = new Logger(AnalyticsChatService.name);
   private client: Anthropic | null = null;
 
-  // Model tiers for dynamic escalation
-  // Using actual available model names from Anthropic
-  private readonly MODEL_HAIKU = 'claude-3-5-haiku-20241022';  // Fast, cheap
-  private readonly MODEL_SONNET = 'claude-sonnet-4-20250514';   // Balanced
-  private readonly MODEL_OPUS = 'claude-sonnet-4-20250514';     // Fallback to Sonnet (Opus 4 not yet available)
+  // Model tiers for dynamic escalation - optimized for cost/performance
+  // Pricing: Haiku 3.5 ($0.25/$1.25) < Haiku 4 ($0.40/$2.00) < Sonnet 4 ($3/$15) < Opus 4.5 ($15/$75)
+  private readonly MODEL_TIER_1 = 'claude-3-5-haiku-20241022';   // Cheapest - simple greetings, lookups
+  private readonly MODEL_TIER_2 = 'claude-haiku-4-20250514';     // Fast - basic tool use, single tool
+  private readonly MODEL_TIER_3 = 'claude-sonnet-4-20250514';    // Balanced - multi-tool, analysis
+  private readonly MODEL_TIER_4 = 'claude-opus-4-5-20251101';    // Premium - complex reasoning, 4+ tools
 
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
@@ -109,7 +110,11 @@ export class AnalyticsChatService {
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
       this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
-      this.logger.log(`[Quinn Init] Model escalation enabled: ${this.MODEL_HAIKU} → ${this.MODEL_SONNET} → ${this.MODEL_OPUS}`);
+      this.logger.log(`[Quinn Init] 4-tier model escalation enabled:`);
+      this.logger.log(`[Quinn Init]   Tier 1: ${this.MODEL_TIER_1} ($0.25/$1.25 per MTok)`);
+      this.logger.log(`[Quinn Init]   Tier 2: ${this.MODEL_TIER_2} ($0.40/$2.00 per MTok)`);
+      this.logger.log(`[Quinn Init]   Tier 3: ${this.MODEL_TIER_3} ($3.00/$15.00 per MTok)`);
+      this.logger.log(`[Quinn Init]   Tier 4: ${this.MODEL_TIER_4} ($15.00/$75.00 per MTok)`);
     } else {
       this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
       this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
@@ -125,47 +130,75 @@ export class AnalyticsChatService {
 
   /**
    * Select initial model based on message characteristics
-   * Simple queries start with Haiku, complex patterns start with Sonnet
+   * 4-tier system: Haiku 3.5 → Haiku 4 → Sonnet 4 → Opus 4.5
    */
   private selectInitialModel(message: string): string {
     const lowerMessage = message.toLowerCase();
 
-    // Very simple patterns - start with Haiku
-    const simplePatterns = [
-      /^(hi|hello|hey|thanks|thank you)/i,
-      /^(what is|define)\s+\w+$/i,
+    // Tier 1: Very simple - greetings, thanks, single word queries
+    const tier1Patterns = [
+      /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure)[\s!?.]*$/i,
+      /^what is \w+\??$/i,
+    ];
+
+    // Tier 2: Basic queries - simple lookups, top/bottom lists
+    const tier2Patterns = [
       /^show me (top|bottom)/i,
-      /^(list|get|show)/i,
+      /^(list|get|show|find)\s+\w+/i,
+      /^(top|bottom)\s+\d+/i,
+      /how many/i,
+      /what are the/i,
     ];
 
-    // Complex patterns - start with Sonnet to avoid escalation overhead
-    const complexPatterns = [
+    // Tier 3: Moderate complexity - comparisons, analysis, multiple criteria
+    const tier3Patterns = [
+      /compare.*to|vs\.?|versus/i,
+      /analyze|analysis/i,
+      /trend|over time|historical/i,
+      /why|explain|breakdown/i,
+      /which.*best|which.*worst/i,
+      /rank.*by|sort.*by/i,
+    ];
+
+    // Tier 4: High complexity - ML, optimization, raw data, backtesting
+    const tier4Patterns = [
       /(optimize|regression|cluster|feature importance)/i,
-      /(predict|correlation|statistical)/i,
-      /(raw.*metric|zillow.*data|realtor.*data)/i,
-      /(backtest|validation|test.*strategy)/i,
-      /compare.*across.*and/i, // Multi-step comparisons
+      /(predict|correlation|statistical|significance)/i,
+      /(raw.*metric|zillow.*data|realtor.*data|census.*data)/i,
+      /(backtest|validation|test.*strategy|quintile)/i,
+      /compare.*across.*and.*and/i, // Multi-geography comparisons
+      /(machine learning|ml|model.*weight)/i,
     ];
 
-    // Check for complex queries first
-    if (complexPatterns.some(p => p.test(lowerMessage))) {
-      this.logger.log(`[Quinn Model] Starting with Sonnet (detected complex query)`);
-      return this.MODEL_SONNET;
+    // Check patterns from most complex to simplest
+    if (tier4Patterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Tier 4: Starting with Sonnet 4 (detected complex/ML query) - $3/$15 per MTok`);
+      return this.MODEL_TIER_3; // Start at Sonnet for complex, can escalate to Opus
     }
 
-    // Check for very simple queries
-    if (simplePatterns.some(p => p.test(lowerMessage))) {
-      this.logger.log(`[Quinn Model] Starting with Haiku (detected simple query)`);
-      return this.MODEL_HAIKU;
+    if (tier3Patterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Tier 3: Starting with Haiku 4 (detected moderate query) - $0.40/$2 per MTok`);
+      return this.MODEL_TIER_2; // Can escalate to Sonnet if needed
     }
 
-    // Default: start with Haiku and escalate if needed
-    this.logger.log(`[Quinn Model] Starting with Haiku (default)`);
-    return this.MODEL_HAIKU;
+    if (tier2Patterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Tier 2: Starting with Haiku 4 (detected basic query) - $0.40/$2 per MTok`);
+      return this.MODEL_TIER_2;
+    }
+
+    if (tier1Patterns.some(p => p.test(lowerMessage))) {
+      this.logger.log(`[Quinn Model] Tier 1: Starting with Haiku 3.5 (detected simple query) - $0.25/$1.25 per MTok`);
+      return this.MODEL_TIER_1;
+    }
+
+    // Default: Haiku 4 (good balance of capability and cost)
+    this.logger.log(`[Quinn Model] Default: Starting with Haiku 4 - $0.40/$2 per MTok`);
+    return this.MODEL_TIER_2;
   }
 
   /**
    * Determine if escalation is needed based on tools used
+   * 4-tier escalation: Haiku 3.5 → Haiku 4 → Sonnet 4 → Opus 4.5
    * Returns the target model to escalate to, or null if no escalation needed
    */
   private shouldEscalate(toolsUsed: string[], currentModel: string): string | null {
@@ -183,6 +216,8 @@ export class AnalyticsChatService {
       'get_geographic_comparison',
       'compare_states',
       'get_metro_scores',
+      'search_database',
+      'query_database_table',
     ];
 
     const complexTools = [
@@ -194,35 +229,49 @@ export class AnalyticsChatService {
       'analyze_raw_metrics',
       'get_raw_metric_summary',
       'run_backtest',
-      'validate_strategy',
-      'calculate_backtest_metrics',
-      'get_market_fundamentals',
+      'run_quintile_analysis',
+      'compare_formulas',
+      'aggregate_database',
     ];
 
     const hasComplexTools = toolsUsed.some(t => complexTools.includes(t));
     const hasModerateTools = toolsUsed.some(t => moderateTools.includes(t));
+    const toolCount = toolsUsed.length;
 
-    // If currently on Haiku
-    if (currentModel === this.MODEL_HAIKU) {
+    // Tier 1: Haiku 3.5 - escalate if ANY tool is used
+    if (currentModel === this.MODEL_TIER_1) {
+      if (toolCount > 0) {
+        this.logger.log(`[Quinn Escalation] Haiku 3.5 → Haiku 4 (tool use detected: ${toolsUsed.join(', ')}) - Cost: $0.25 → $0.40/MTok`);
+        return this.MODEL_TIER_2;
+      }
+    }
+
+    // Tier 2: Haiku 4 - escalate to Sonnet if moderate/complex tools or 2+ tools
+    if (currentModel === this.MODEL_TIER_2) {
       if (hasComplexTools) {
-        this.logger.log(`[Quinn Escalation] Haiku → Sonnet (complex tools: ${toolsUsed.filter(t => complexTools.includes(t)).join(', ')})`);
-        return this.MODEL_SONNET;
+        this.logger.log(`[Quinn Escalation] Haiku 4 → Sonnet 4 (complex tools: ${toolsUsed.filter(t => complexTools.includes(t)).join(', ')}) - Cost: $0.40 → $3/MTok`);
+        return this.MODEL_TIER_3;
       }
-      if (hasModerateTools || toolsUsed.length > 2) {
-        this.logger.log(`[Quinn Escalation] Haiku → Sonnet (moderate complexity: ${toolsUsed.length} tools)`);
-        return this.MODEL_SONNET;
+      if (hasModerateTools && toolCount >= 2) {
+        this.logger.log(`[Quinn Escalation] Haiku 4 → Sonnet 4 (${toolCount} moderate tools) - Cost: $0.40 → $3/MTok`);
+        return this.MODEL_TIER_3;
       }
-    }
-
-    // If currently on Sonnet and hitting very complex multi-tool scenarios
-    if (currentModel === this.MODEL_SONNET) {
-      if (hasComplexTools && toolsUsed.length > 3) {
-        this.logger.log(`[Quinn Escalation] Sonnet → Opus (high complexity: ${toolsUsed.length} complex tools)`);
-        return this.MODEL_OPUS;
+      if (toolCount >= 3) {
+        this.logger.log(`[Quinn Escalation] Haiku 4 → Sonnet 4 (${toolCount} tools) - Cost: $0.40 → $3/MTok`);
+        return this.MODEL_TIER_3;
       }
     }
 
-    return null; // No escalation needed
+    // Tier 3: Sonnet 4 - escalate to Opus only for very complex multi-tool scenarios
+    if (currentModel === this.MODEL_TIER_3) {
+      if (hasComplexTools && toolCount >= 4) {
+        this.logger.log(`[Quinn Escalation] Sonnet 4 → Opus 4.5 (${toolCount} complex tools - heavy reasoning needed) - Cost: $3 → $15/MTok`);
+        return this.MODEL_TIER_4;
+      }
+    }
+
+    // Tier 4: Opus 4.5 - no further escalation possible
+    return null;
   }
 
   /**
