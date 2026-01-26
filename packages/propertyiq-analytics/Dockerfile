@@ -20,8 +20,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY --chown=appuser:appgroup . .
 
-# Switch to non-root user
-USER appuser
+# Run as root so entrypoint can chown the volume mount; gosu drops to appuser for the app
+USER root
+RUN apt-get update && apt-get install -y gosu && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Ensure mount point exists and is owned by appuser (volume mount overrides at runtime; entrypoint chowns again)
+RUN mkdir -p /tmp/cache && chown -R appuser:appgroup /tmp/cache
 
 # Expose port (Railway will set PORT env var)
 EXPOSE 8000
@@ -30,5 +37,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:${PORT:-8000}/api/v1/health')" || exit 1
 
-# Start with uvicorn
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
