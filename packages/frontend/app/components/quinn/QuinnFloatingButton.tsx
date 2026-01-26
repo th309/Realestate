@@ -9,7 +9,8 @@
  * Design: Material Design 3 compliant per project_instructions.md §5
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useQuinnUser, generateConversationId } from './useQuinnUser';
 
 interface Message {
   id: string;
@@ -54,8 +55,16 @@ export function QuinnFloatingButton() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [conversationId] = useState(() => `quinn-${Date.now()}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Get user ID (authenticated or anonymous)
+  const { userId, isLoading: isUserLoading } = useQuinnUser();
+  
+  // Generate conversation ID tied to user - stable for this chat session
+  const conversationId = useMemo(() => {
+    if (!userId) return '';
+    return generateConversationId(userId);
+  }, [userId]);
 
   // Show tooltip briefly on mount
   useEffect(() => {
@@ -73,7 +82,7 @@ export function QuinnFloatingButton() {
   }, [messages, loading]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !conversationId) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -87,7 +96,9 @@ export function QuinnFloatingButton() {
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/analytics/chat/${conversationId}`, {
+      // URL-encode the conversation ID since it contains slashes
+      const encodedConversationId = encodeURIComponent(conversationId);
+      const response = await fetch(`/api/analytics/chat/${encodedConversationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,7 +131,7 @@ export function QuinnFloatingButton() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [conversationId]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -153,7 +164,8 @@ export function QuinnFloatingButton() {
         {/* FAB Button */}
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-primary-container text-on-primary-container elevation-3 hover:elevation-4 transition-all duration-200 active:scale-95"
+          disabled={isUserLoading}
+          className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-primary-container text-on-primary-container elevation-3 hover:elevation-4 transition-all duration-200 active:scale-95 disabled:opacity-70"
           aria-label="Open Quinn AI Assistant"
         >
           <MaterialIcon 
@@ -161,7 +173,7 @@ export function QuinnFloatingButton() {
             className="text-[28px] group-hover:scale-110 transition-transform duration-200" 
           />
           {/* Online Status Indicator */}
-          <span className="absolute top-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-surface" />
+          <span className={`absolute top-0 right-0 w-4 h-4 rounded-full border-2 border-surface ${isUserLoading ? 'bg-amber-500' : 'bg-emerald-500'}`} />
         </button>
       </div>
 
