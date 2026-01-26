@@ -865,7 +865,18 @@ export class AnalyticsChatService {
 - Be direct and concise (200-400 words)
 - Present specific numbers, not vague terms
 - Explain what you're analyzing before calling tools
-- If data not found, suggest alternatives`;
+- If data not found, suggest alternatives
+
+## FORMATTING RULES (CRITICAL)
+1. **ALWAYS use geography_name** (e.g., "Austin-Round Rock, TX"), NEVER geography_id (e.g., "47340")
+2. **NO asterisks for bold** - Don't use **text** formatting, just use plain text
+3. **Use numbered lists** for rankings:
+   Example:
+   1. Austin-Round Rock, TX - Score: 78.9, 12M Appreciation: 4.8%
+   2. Dallas-Fort Worth, TX - Score: 77.4, 12M Appreciation: 10.9%
+4. **Include state in parentheses** if not in the name: "Phoenix (AZ)" or use full name "Phoenix-Mesa-Scottsdale, AZ"
+5. **Format appreciation as percentages**: "4.8%" not "0.048"
+6. **Keep it clean** - No emojis, no excessive formatting, just clear data`;
 
     // Add context if provided (e.g., focused on specific geography)
     if (context?.geographyType && context?.geographyId) {

@@ -385,7 +385,8 @@ class DataCache:
         
         if columns is None:
             columns = [
-                'id', 'geography_id', 'geography_type', 'period_date',
+                'id', 'geography_id', 'geography_name', 'geography_type', 'period_date',
+                'parent_geography_id',  # State code for metros/counties
                 'investoredge_score', 'homeready_score', 'market_health_score',
                 'actual_appreciation_12m', 'actual_appreciation_36m',
                 'actual_appreciation_60m',
@@ -536,7 +537,8 @@ class DataCache:
         
         if columns is None:
             columns = [
-                'id', 'geography_id', 'geography_type', 'period_date',
+                'id', 'geography_id', 'geography_name', 'geography_type', 'period_date',
+                'parent_geography_id',  # State code for metros/counties
                 'investoredge_score', 'homeready_score', 'market_health_score',
                 'actual_appreciation_12m', 'actual_appreciation_36m',
                 'actual_appreciation_60m',
