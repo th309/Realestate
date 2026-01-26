@@ -29,6 +29,13 @@ class DataCache:
     
     Supports incremental updates to avoid re-fetching entire dataset.
     """
+
+    # Columns that exist on propertyiq_scores_history (no geography_name/parent_geography_id)
+    _SCORES_HISTORY_COLUMNS = frozenset({
+        'id', 'geography_id', 'geography_type', 'period_date',
+        'investoredge_score', 'homeready_score', 'market_health_score',
+        'actual_appreciation_12m', 'actual_appreciation_36m', 'actual_appreciation_60m',
+    })
     
     # Class-level progress tracking for export operations
     _export_progress: Dict[str, Any] = {}
@@ -384,13 +391,12 @@ class DataCache:
         logger.info("=" * 60)
         
         if columns is None:
-            # propertyiq_scores_history does not have geography_name or parent_geography_id
-            columns = [
-                'id', 'geography_id', 'geography_type', 'period_date',
-                'investoredge_score', 'homeready_score', 'market_health_score',
-                'actual_appreciation_12m', 'actual_appreciation_36m',
-                'actual_appreciation_60m',
-            ]
+            columns = list(self._SCORES_HISTORY_COLUMNS)
+        else:
+            # Only request columns that exist on propertyiq_scores_history
+            columns = [c for c in columns if c in self._SCORES_HISTORY_COLUMNS]
+        if not columns:
+            columns = list(self._SCORES_HISTORY_COLUMNS)
         
         logger.info(f"  Columns to fetch: {columns}")
         
@@ -536,13 +542,11 @@ class DataCache:
             return self.fetch_full_dataset(geo_type, columns, batch_size)
         
         if columns is None:
-            # propertyiq_scores_history does not have geography_name or parent_geography_id
-            columns = [
-                'id', 'geography_id', 'geography_type', 'period_date',
-                'investoredge_score', 'homeready_score', 'market_health_score',
-                'actual_appreciation_12m', 'actual_appreciation_36m',
-                'actual_appreciation_60m',
-            ]
+            columns = list(self._SCORES_HISTORY_COLUMNS)
+        else:
+            columns = [c for c in columns if c in self._SCORES_HISTORY_COLUMNS]
+        if not columns:
+            columns = list(self._SCORES_HISTORY_COLUMNS)
         
         # Supabase has a default limit of 1000 rows per request
         batch_size = min(batch_size, 1000)
