@@ -885,12 +885,30 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
         this.logger.warn('Max tool iterations reached');
       }
 
-      const finalResponse = responseTextParts.length > 0
-        ? responseTextParts.join('\n\n')
-        : 'I was unable to generate a response. Please try again.';
+      let finalResponse = responseTextParts.length > 0
+        ? responseTextParts.join('\n\n').trim()
+        : '';
+
+      const structuredData = this.extractStructuredData(toolResultsData);
+
+      // When we have tool results but no (or empty) model text, build a fallback so the user always gets an answer
+      if (!finalResponse && structuredData) {
+        finalResponse = this.buildFallbackResponseFromStructuredData(structuredData);
+        this.logger.log(`[Quinn Chat] Using fallback response (${finalResponse.length} chars) from structured data`);
+      }
+      if (!finalResponse) {
+        finalResponse = 'I was unable to generate a response. Please try again.';
+      }
+
+      // For ranking queries: append the actual rankings list to the model's intro so the response is complete
+      if (structuredData?.rankings?.items?.length) {
+        const list = this.formatRankingsForResponse(structuredData.rankings);
+        if (list && !finalResponse.includes(list.slice(0, 30))) {
+          finalResponse = finalResponse.trimEnd() + '\n\n' + list;
+        }
+      }
 
       conversation.messages.push({ role: 'assistant', content: finalResponse });
-      const structuredData = this.extractStructuredData(toolResultsData);
       const totalExecutionTime = Date.now() - chatStartTime;
 
       this.logger.log(
@@ -1057,6 +1075,37 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
 
     // Return undefined if no structured data was extracted
     return Object.keys(structured).length > 0 ? structured : undefined;
+  }
+
+  /**
+   * Format rankings for inclusion in the response text (intro + list).
+   */
+  private formatRankingsForResponse(rankings: StructuredData['rankings']): string {
+    if (!rankings?.items?.length) return '';
+    const label = rankings.direction === 'bottom' ? 'Bottom' : 'Top';
+    const top = rankings.items.slice(0, 10);
+    const lines = top.map(
+      (i) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`,
+    );
+    return `${label} markets:\n${lines.join('\n')}`;
+  }
+
+  /**
+   * Build a short fallback text from structured data when the model returned no text.
+   * Ensures the user always receives an answer when tools succeeded.
+   */
+  private buildFallbackResponseFromStructuredData(structured: StructuredData): string {
+    const parts: string[] = [];
+    if (structured.rankings?.items?.length) {
+      parts.push(this.formatRankingsForResponse(structured.rankings));
+    }
+    if (structured.comparison) {
+      parts.push('Comparison to benchmark is available in the data.');
+    }
+    if (structured.table) {
+      parts.push('Analysis results are available in the data.');
+    }
+    return parts.length > 0 ? parts.join('\n\n') : '';
   }
 
   /**

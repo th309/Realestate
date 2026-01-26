@@ -156,7 +156,7 @@ export class AnalyticsChatController {
 
       return {
         success: true,
-        response: result.response,
+        response: typeof result.response === 'string' ? result.response : (result.response ?? ''),
         toolsUsed: result.toolsUsed,
         structuredData: result.structuredData,
         modelUsed: result.modelUsed,

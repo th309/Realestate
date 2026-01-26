@@ -165,10 +165,20 @@ export function QuinnFloatingButton() {
         throw new Error(data.error || 'Backend processing failed');
       }
 
+      let content = typeof data.response === 'string' ? data.response.trim() : '';
+      if (!content && data.message) content = String(data.message).trim();
+      if (!content && data.structuredData?.rankings?.items?.length) {
+        const r = data.structuredData.rankings;
+        const label = r.direction === 'bottom' ? 'Bottom' : 'Top';
+        const top = r.items.slice(0, 5);
+        content = `${label} markets:\n${top.map((i: { rank: number; name: string; score?: number; state?: string }) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`).join('\n')}`;
+      }
+      if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response || data.message || 'I received your message but had trouble processing it.',
+        content,
         timestamp: new Date().toISOString()
       };
 
