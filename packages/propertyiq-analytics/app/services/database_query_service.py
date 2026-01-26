@@ -3,6 +3,7 @@ Database Query Service
 
 Provides Quinn with direct read access to Supabase database.
 Allows natural language queries to be executed against any table.
+Uses market data cache when available to minimize DB load.
 """
 
 import logging
@@ -83,6 +84,109 @@ class DatabaseQueryService:
             logger.warning(f"Access denied to table: {table_name}")
             return False
         return True
+
+    def _apply_filters_to_dataframe(
+        self, df: pd.DataFrame, filters: Optional[Dict[str, Any]]
+    ) -> pd.DataFrame:
+        """Apply filters dict to a DataFrame (eq, in_, gte, lte, gt, lt, neq, like, ilike)."""
+        if not filters or df.empty:
+            return df
+        out = df
+        for col, value in filters.items():
+            if col not in out.columns:
+                continue
+            if isinstance(value, list):
+                out = out[out[col].isin(value)]
+            elif isinstance(value, dict):
+                for op, val in value.items():
+                    if op == "gte":
+                        out = out[out[col] >= val]
+                    elif op == "lte":
+                        out = out[out[col] <= val]
+                    elif op == "gt":
+                        out = out[out[col] > val]
+                    elif op == "lt":
+                        out = out[out[col] < val]
+                    elif op == "eq":
+                        out = out[out[col] == val]
+                    elif op == "neq":
+                        out = out[out[col] != val]
+                    elif op == "like":
+                        pat = "^" + re.escape(str(val)).replace("%", ".*").replace("_", ".") + "$"
+                        out = out[out[col].astype(str).str.match(pat, na=False)]
+                    elif op == "ilike":
+                        pat = "^" + re.escape(str(val)).replace("%", ".*").replace("_", ".").lower() + "$"
+                        out = out[out[col].astype(str).str.lower().str.match(pat, na=False)]
+            else:
+                out = out[out[col] == value]
+        return out
+
+    def _query_table_from_cache(
+        self,
+        table_name: str,
+        columns: Optional[List[str]] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        order_by: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Run query against in-memory market cache. Returns None if cache not used.
+        Return shape matches query_table (success, table, total_count, returned_count, data, limit, offset).
+        """
+        try:
+            from app.services.market_data_cache import get_market_data_cache, TABLES_TO_PRELOAD
+
+            if table_name not in TABLES_TO_PRELOAD:
+                return None
+            cache = get_market_data_cache()
+            if not cache.is_cached(table_name):
+                return None
+            df = cache.get(table_name)
+            if df is None or df.empty:
+                return None
+        except Exception as e:
+            logger.debug(f"Market cache not used for {table_name}: {e}")
+            return None
+
+        try:
+            # Select columns
+            if columns:
+                missing = [c for c in columns if c not in df.columns]
+                if missing:
+                    return None
+                df = df[columns].copy()
+            else:
+                df = df.copy()
+
+            # Filters
+            df = self._apply_filters_to_dataframe(df, filters)
+            total_count = len(df)
+
+            # Order
+            if order_by:
+                desc = order_by.startswith("-")
+                col = order_by.lstrip("-")
+                if col not in df.columns:
+                    return None
+                df = df.sort_values(by=col, ascending=not desc)
+
+            # Offset and limit
+            df = df.iloc[offset : offset + limit]
+            data = df.replace({np.nan: None}).to_dict(orient="records")
+
+            return {
+                "success": True,
+                "table": table_name,
+                "total_count": total_count,
+                "returned_count": len(data),
+                "data": data,
+                "limit": limit,
+                "offset": offset,
+            }
+        except Exception as e:
+            logger.warning(f"Query from cache failed for {table_name}: {e}")
+            return None
 
     def get_all_tables(self) -> Dict[str, Any]:
         """
@@ -231,6 +335,14 @@ class DatabaseQueryService:
                 'success': False,
                 'error': f'Access denied: Table {table_name} is not a real estate data table'
             }
+
+        # Use market data cache when available to avoid DB round-trip
+        cached_result = self._query_table_from_cache(
+            table_name, columns=columns, filters=filters,
+            order_by=order_by, limit=limit, offset=offset
+        )
+        if cached_result is not None:
+            return cached_result
 
         try:
             # Build query

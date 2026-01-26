@@ -1,9 +1,9 @@
 """
-Market Data Cache - preload most recent data from market tables.
+Market Data Cache - preload recent market data for fast Quinn responses.
 
-Loads latest snapshot of Zillow, Realtor, Census, Economic, PropertyIQ scores,
-and related tables so Quinn can serve ~90% of queries from cache without
-hitting the database. Most user queries use current/latest data.
+Loads last 24 months of time-series data (Zillow, Realtor, Census, Economic,
+HUD, Permits, PropertyIQ history) so ~90% of queries hit cache instead of
+the database. Speeds response time and minimizes DB load.
 """
 
 import logging
@@ -14,6 +14,9 @@ import pandas as pd
 from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
+
+# Last N months of data to preload for time-series tables (covers most user queries)
+RECENT_MONTHS = 24
 
 # Preload most recent data for all tables, all geographic levels.
 # Each source has metro/county/zip/state (and national/city/neighborhood where applicable).
@@ -38,7 +41,7 @@ TABLES_TO_PRELOAD = [
     "propertyiq_scores", "propertyiq_scores_history",
 ]
 
-# Time-series: cache only latest period (max period_date). Others: full table up to MAX_ROWS.
+# Time-series: cache last RECENT_MONTHS (24) of data. Others: full table up to MAX_ROWS.
 DATE_COLUMN = "period_date"
 TIME_SERIES_TABLES = {
     "realtor_metro", "realtor_county", "realtor_zip", "realtor_state", "realtor_national",
@@ -52,8 +55,9 @@ TIME_SERIES_TABLES = {
     "propertyiq_scores_history",
 }
 
-MAX_ROWS_FULL_TABLE = 20_000  # for geographies, propertyiq_scores, calculated_metrics
-BATCH_SIZE = 1000  # Supabase default limit
+# Safety cap per table to avoid OOM on misconfigured/huge tables (None = no cap)
+SAFETY_MAX_ROWS_PER_TABLE = 2_000_000
+BATCH_SIZE = 1000  # Supabase default limit; all fetches paginate until no more data
 
 
 class MarketDataCache:
@@ -104,7 +108,7 @@ class MarketDataCache:
             return False
         try:
             if table_name in TIME_SERIES_TABLES:
-                df = self._fetch_latest_period(table_name)
+                df = self._fetch_recent_months(table_name)
             else:
                 df = self._fetch_full_table(table_name)
             if df is not None and len(df) > 0:
@@ -120,26 +124,34 @@ class MarketDataCache:
             logger.exception(f"MarketDataCache: failed to load {table_name}: {e}")
             return False
 
-    def _fetch_latest_period(self, table_name: str) -> Optional[pd.DataFrame]:
-        """Fetch all rows for the most recent period_date."""
-        # Get max date
+    def _fetch_recent_months(self, table_name: str) -> Optional[pd.DataFrame]:
+        """Fetch all rows for the last RECENT_MONTHS (24) of period_date. Fully paginated."""
         try:
             r = self.client.table(table_name).select(DATE_COLUMN).order(DATE_COLUMN, desc=True).limit(1).execute()
         except Exception as e:
-            # Some tables might use different date column
             logger.warning(f"MarketDataCache: no {DATE_COLUMN} in {table_name}, trying full fetch: {e}")
             return self._fetch_full_table(table_name)
         if not r.data:
             return pd.DataFrame()
-        max_date = r.data[0][DATE_COLUMN]
-        # Fetch all rows with that date (paginated)
+        max_date_str = r.data[0][DATE_COLUMN]
+        try:
+            max_ts = pd.Timestamp(max_date_str)
+            cutoff_ts = max_ts - pd.offsets.DateOffset(months=RECENT_MONTHS)
+            cutoff_str = cutoff_ts.strftime("%Y-%m-%d")
+        except Exception as e:
+            logger.warning(f"MarketDataCache: could not parse date {max_date_str}, using single period: {e}")
+            cutoff_str = max_date_str
         all_data: List[Dict] = []
         offset = 0
         while True:
+            if SAFETY_MAX_ROWS_PER_TABLE and len(all_data) >= SAFETY_MAX_ROWS_PER_TABLE:
+                logger.warning(f"MarketDataCache: {table_name} hit safety cap at {SAFETY_MAX_ROWS_PER_TABLE} rows")
+                break
             q = (
                 self.client.table(table_name)
                 .select("*")
-                .eq(DATE_COLUMN, max_date)
+                .gte(DATE_COLUMN, cutoff_str)
+                .order(DATE_COLUMN, desc=False)
                 .range(offset, offset + BATCH_SIZE - 1)
             )
             batch = q.execute()
@@ -149,13 +161,18 @@ class MarketDataCache:
             if len(batch.data) < BATCH_SIZE:
                 break
             offset += BATCH_SIZE
+        if all_data:
+            logger.info(f"MarketDataCache: {table_name} loaded {len(all_data)} rows (last {RECENT_MONTHS} months)")
         return pd.DataFrame(all_data) if all_data else pd.DataFrame()
 
     def _fetch_full_table(self, table_name: str) -> Optional[pd.DataFrame]:
-        """Fetch table with limit (for reference/snapshot tables)."""
+        """Fetch full table. Fully paginated so no data is cut off."""
         all_data: List[Dict] = []
         offset = 0
-        while offset < MAX_ROWS_FULL_TABLE:
+        while True:
+            if SAFETY_MAX_ROWS_PER_TABLE and len(all_data) >= SAFETY_MAX_ROWS_PER_TABLE:
+                logger.warning(f"MarketDataCache: {table_name} hit safety cap at {SAFETY_MAX_ROWS_PER_TABLE} rows")
+                break
             q = self.client.table(table_name).select("*").range(offset, offset + BATCH_SIZE - 1)
             batch = q.execute()
             if not batch.data:
@@ -164,6 +181,8 @@ class MarketDataCache:
             if len(batch.data) < BATCH_SIZE:
                 break
             offset += BATCH_SIZE
+        if all_data:
+            logger.info(f"MarketDataCache: {table_name} loaded {len(all_data)} rows (full table)")
         return pd.DataFrame(all_data) if all_data else pd.DataFrame()
 
     def load_all(self) -> Dict[str, bool]:

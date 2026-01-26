@@ -77,9 +77,23 @@ async def lifespan(app: FastAPI):
             logger.info("Cache warming complete - all geography types loaded from DB")
         except Exception as e:
             logger.error(f"Cache warming failed: {e}")
+
+    async def warm_market_data_cache():
+        """Preload market tables (Zillow, Realtor, Census, etc.) so Quinn hits cache instead of DB."""
+        try:
+            from app.services.market_data_cache import get_market_data_cache
+            cache = get_market_data_cache()
+            logger.info("Market data cache: loading all tables...")
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(None, cache.load_all)
+            ok = sum(1 for v in results.values() if v)
+            logger.info(f"Market data cache: loaded {ok}/{len(results)} tables")
+        except Exception as e:
+            logger.error(f"Market data cache warming failed: {e}")
     
     # Run in background (don't block startup)
     asyncio.create_task(warm_cache())
+    asyncio.create_task(warm_market_data_cache())
     
     yield
     logger.info("Shutting down PropertyIQ Analytics service")
