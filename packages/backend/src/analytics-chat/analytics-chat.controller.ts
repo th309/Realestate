@@ -14,7 +14,12 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  Res,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Response } from 'express';
+import { Observable } from 'rxjs';
 import { AnalyticsChatService } from './analytics-chat.service';
 
 interface ChatRequest {
@@ -55,7 +60,56 @@ export class AnalyticsChatController {
   }
 
   /**
-   * Send a chat message
+   * Send a chat message with streaming response
+   * POST /api/analytics/chat/:conversationId/stream
+   */
+  @Post(':conversationId/stream')
+  async sendMessageStream(
+    @Param('conversationId') conversationId: string,
+    @Body() body: ChatRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+    this.logger.log(`[Quinn ${requestId}] === STREAM REQUEST START ===`);
+    this.logger.log(`[Quinn ${requestId}] ConversationId: ${conversationId}`);
+    this.logger.log(`[Quinn ${requestId}] Message: "${body.message?.slice(0, 100)}..."`);
+
+    if (!body.message?.trim()) {
+      res.status(HttpStatus.BAD_REQUEST).json({ error: 'Message is required' });
+      return;
+    }
+
+    if (!this.chatService.isAvailable()) {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE).json({ error: 'Chat service not available' });
+      return;
+    }
+
+    // Set headers for Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    try {
+      for await (const chunk of this.chatService.chatStream(
+        conversationId,
+        body.message.trim(),
+        body.context,
+      )) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (error) {
+      this.logger.error(`[Quinn ${requestId}] Stream error: ${error.message}`);
+      res.write(`data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`);
+      res.end();
+    }
+  }
+
+  /**
+   * Send a chat message (non-streaming)
    * POST /api/analytics/chat/:conversationId
    */
   @Post(':conversationId')

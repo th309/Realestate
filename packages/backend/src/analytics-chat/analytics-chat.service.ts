@@ -95,6 +95,10 @@ export class AnalyticsChatService {
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
 
+  // Tool result cache with TTL (5 minutes default)
+  private toolCache: Map<string, { result: any; timestamp: number }> = new Map();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(
     private readonly configService: ConfigService,
     private readonly toolsService: AnalyticsToolsService,
@@ -111,6 +115,10 @@ export class AnalyticsChatService {
       this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
       this.logger.log(`[Quinn Init] Using ${this.MODEL_BALANCED} for all queries ($3/$15 per MTok)`);
       this.logger.log(`[Quinn Init] Model escalation DISABLED for optimal performance`);
+      this.logger.log(`[Quinn Init] Tool result caching enabled (TTL: ${this.CACHE_TTL_MS / 1000}s)`);
+
+      // Clean cache every 10 minutes
+      setInterval(() => this.cleanExpiredCache(), 10 * 60 * 1000);
     } else {
       this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
       this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
@@ -219,7 +227,204 @@ export class AnalyticsChatService {
   }
 
   /**
-   * Process a chat message and return response
+   * Generate cache key from tool name and input parameters
+   */
+  private getCacheKey(toolName: string, input: Record<string, any>): string {
+    return `${toolName}::${JSON.stringify(input)}`;
+  }
+
+  /**
+   * Get cached tool result if available and not expired
+   */
+  private getCachedResult(toolName: string, input: Record<string, any>): any | null {
+    const cacheKey = this.getCacheKey(toolName, input);
+    const cached = this.toolCache.get(cacheKey);
+
+    if (!cached) return null;
+
+    const age = Date.now() - cached.timestamp;
+    if (age > this.CACHE_TTL_MS) {
+      // Expired - remove from cache
+      this.toolCache.delete(cacheKey);
+      return null;
+    }
+
+    this.logger.log(`[Quinn Cache] HIT for ${toolName} (age: ${Math.round(age / 1000)}s)`);
+    return cached.result;
+  }
+
+  /**
+   * Store tool result in cache
+   */
+  private cacheResult(toolName: string, input: Record<string, any>, result: any): void {
+    const cacheKey = this.getCacheKey(toolName, input);
+    this.toolCache.set(cacheKey, {
+      result,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Clean up expired cache entries (called periodically)
+   */
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    let removed = 0;
+
+    for (const [key, value] of this.toolCache.entries()) {
+      if (now - value.timestamp > this.CACHE_TTL_MS) {
+        this.toolCache.delete(key);
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      this.logger.log(`[Quinn Cache] Cleaned ${removed} expired entries`);
+    }
+  }
+
+  /**
+   * Process a chat message with streaming response
+   * Yields text chunks as they're generated
+   */
+  async *chatStream(
+    conversationId: string,
+    userMessage: string,
+    context?: Record<string, any>,
+  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
+    if (!this.client) {
+      throw new Error('Claude client not initialized - check ANTHROPIC_API_KEY');
+    }
+
+    // Get or create conversation
+    let conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      conversation = {
+        id: conversationId,
+        messages: [],
+        context,
+        createdAt: new Date().toISOString(),
+        lastMessageAt: new Date().toISOString(),
+      };
+      this.conversations.set(conversationId, conversation);
+    }
+
+    if (context) {
+      conversation.context = { ...conversation.context, ...context };
+    }
+
+    const systemPrompt = this.buildSystemPrompt(conversation.context);
+    const tools = this.getRelevantTools(userMessage);
+
+    conversation.messages.push({ role: 'user', content: userMessage });
+    conversation.lastMessageAt = new Date().toISOString();
+
+    const apiMessages = conversation.messages.slice(-40).map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    const toolsUsed: string[] = [];
+    let fullResponse = '';
+    const currentModel = this.selectInitialModel(userMessage);
+
+    try {
+      this.logger.log(`[Quinn Stream] Starting streaming response`);
+
+      // Use streaming API
+      const stream = await this.client.messages.stream({
+        model: currentModel,
+        max_tokens: 2048,
+        system: systemPrompt,
+        tools: tools as any,
+        messages: apiMessages,
+      });
+
+      // Stream text deltas
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          const text = chunk.delta.text;
+          fullResponse += text;
+          yield { type: 'text', content: text };
+        }
+      }
+
+      // Get final message
+      const finalMessage = await stream.finalMessage();
+
+      // Handle tool calls (non-streaming for now)
+      if (finalMessage.stop_reason === 'tool_use') {
+        const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
+
+        for (const toolUse of toolUseBlocks) {
+          if (toolUse.type !== 'tool_use') continue;
+
+          toolsUsed.push(toolUse.name);
+          yield { type: 'tool', content: { name: toolUse.name, status: 'executing' } };
+
+          // Check cache
+          const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
+          const result = cachedResult || await this.toolsService.executeTool(
+            toolUse.name,
+            toolUse.input as Record<string, any>,
+          );
+
+          if (!cachedResult && result.success) {
+            this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+          }
+
+          yield { type: 'tool', content: { name: toolUse.name, status: 'complete' } };
+        }
+
+        // Continue with tool results - stream the follow-up response
+        yield { type: 'text', content: '\n\n' };
+
+        const followUpStream = await this.client.messages.stream({
+          model: currentModel,
+          max_tokens: 2048,
+          system: systemPrompt,
+          tools: tools as any,
+          messages: [
+            ...apiMessages,
+            { role: 'assistant', content: finalMessage.content },
+            {
+              role: 'user',
+              content: toolUseBlocks.map((tu) => ({
+                type: 'tool_result' as const,
+                tool_use_id: tu.id,
+                content: JSON.stringify({ success: true, data: {} }),
+              })),
+            },
+          ],
+        });
+
+        for await (const chunk of followUpStream) {
+          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+            const text = chunk.delta.text;
+            fullResponse += text;
+            yield { type: 'text', content: text };
+          }
+        }
+      }
+
+      // Save to conversation history
+      conversation.messages.push({ role: 'assistant', content: fullResponse });
+
+      yield {
+        type: 'done',
+        content: {
+          toolsUsed,
+          modelUsed: currentModel,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`[Quinn Stream] Error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Process a chat message and return response (non-streaming)
    */
   async chat(
     conversationId: string,
@@ -338,10 +543,25 @@ export class AnalyticsChatService {
           this.logger.log(`[Quinn Chat] Tool input: ${JSON.stringify(toolUse.input).slice(0, 200)}`);
           toolsUsed.push(toolUse.name);
 
-          const result = await this.toolsService.executeTool(
-            toolUse.name,
-            toolUse.input as Record<string, any>,
-          );
+          // Check cache first
+          const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
+          let result: any;
+
+          if (cachedResult) {
+            // Use cached result
+            result = cachedResult;
+          } else {
+            // Execute tool and cache result
+            result = await this.toolsService.executeTool(
+              toolUse.name,
+              toolUse.input as Record<string, any>,
+            );
+
+            // Cache successful results
+            if (result.success) {
+              this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+            }
+          }
 
           this.logger.log(`[Quinn Chat] Tool ${toolUse.name} result: success=${result.success}`);
           if (!result.success) {
