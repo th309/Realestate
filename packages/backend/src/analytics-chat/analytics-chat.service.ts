@@ -1,5 +1,5 @@
 /**
- * Analytics Chat Service
+ * Analytics Chat Service - v1.0.1
  *
  * Orchestrates natural language analytics queries using Claude tool-use.
  * Handles conversation state and tool execution loop.
