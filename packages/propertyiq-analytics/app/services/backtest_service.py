@@ -360,7 +360,8 @@ class BacktestService:
         r_squared = pearson_r ** 2
         
         # Validation: top decile beats benchmark, bottom trails
-        validated = (
+        # Use bool() to convert numpy.bool_ to native Python bool for JSON serialization
+        validated = bool(
             top_decile and top_decile.beats_benchmark and
             bottom_decile and not bottom_decile.beats_benchmark and
             spread > 0.01  # At least 1% spread
@@ -375,7 +376,7 @@ class BacktestService:
             pearson_r=float(pearson_r),
             spearman_r=float(spearman_r),
             r_squared=float(r_squared),
-            validated=validated,
+            validated=bool(validated),
             sample_size=len(valid_df),
         )
 
@@ -426,14 +427,15 @@ class BacktestService:
                 decile=label,
                 score_min=float(low),
                 score_max=float(high),
-                avg_actual_return=avg_actual,
-                avg_benchmark_return=benchmark_return,
-                avg_excess_return=avg_excess,
-                observations=len(decile_outcomes),
-                std_dev=std_dev,
+                avg_actual_return=float(avg_actual),
+                avg_benchmark_return=float(benchmark_return),
+                avg_excess_return=float(avg_excess),
+                observations=int(len(decile_outcomes)),
+                std_dev=float(std_dev),
                 t_statistic=float(t_stat),
                 p_value=float(p_value),
-                beats_benchmark=avg_excess > 0 and p_value < 0.05,
+                # Use bool() to convert numpy.bool_ to native Python bool for JSON serialization
+                beats_benchmark=bool(avg_excess > 0 and p_value < 0.05),
             ))
         
         return results
@@ -502,12 +504,12 @@ class BacktestService:
                 t_stat, p_value = 0.0, 1.0
             
             quintile_results.append(QuintileResult(
-                quintile=q,
+                quintile=int(q),
                 score_min=float(low),
                 score_max=float(high),
-                avg_excess_return=avg_excess,
-                beat_market_rate=beat_rate,
-                observations=len(q_outcomes),
+                avg_excess_return=float(avg_excess),
+                beat_market_rate=float(beat_rate),
+                observations=int(len(q_outcomes)),
                 t_statistic=float(t_stat) if not np.isnan(t_stat) else 0.0,
                 p_value=float(p_value) if not np.isnan(p_value) else 1.0,
             ))
@@ -543,7 +545,8 @@ class BacktestService:
             # - Top quintile has positive excess
             # - Bottom quintile has negative excess
             # - Statistically significant (p < 0.05)
-            validated = (
+            # Use bool() to convert numpy.bool_ to native Python bool for JSON serialization
+            validated = bool(
                 top_q.avg_excess_return > 0 and
                 bottom_q.avg_excess_return < 0 and
                 overall_pvalue < 0.05
@@ -551,15 +554,15 @@ class BacktestService:
             
             validation_summary = ValidationSummary(
                 score_type=score_type,
-                top_quintile_excess=top_q.avg_excess_return,
-                bottom_quintile_excess=bottom_q.avg_excess_return,
-                spread=spread,
-                top_quintile_beat_rate=top_q.beat_market_rate,
-                bottom_quintile_beat_rate=bottom_q.beat_market_rate,
+                top_quintile_excess=float(top_q.avg_excess_return),
+                bottom_quintile_excess=float(bottom_q.avg_excess_return),
+                spread=float(spread),
+                top_quintile_beat_rate=float(top_q.beat_market_rate),
+                bottom_quintile_beat_rate=float(bottom_q.beat_market_rate),
                 t_test_pvalue=float(overall_pvalue) if not np.isnan(overall_pvalue) else 1.0,
                 spearman_correlation=float(spearman_r),
-                observations=len(valid_df),
-                validated=validated,
+                observations=int(len(valid_df)),
+                validated=bool(validated),
             )
             
             return quintile_results, validation_summary

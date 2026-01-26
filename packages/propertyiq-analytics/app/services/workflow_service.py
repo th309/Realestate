@@ -874,22 +874,22 @@ class WorkflowService:
                             "bottom_beat_rate": f"{vs.bottom_quintile_beat_rate:.1f}%",
                             "t_test_pvalue": p_value_str,
                             "spearman_correlation": f"{vs.spearman_correlation:.2f}" if vs.spearman_correlation else "—",
-                            "validated": vs.validated,
-                            "observations": vs.observations,
+                            "validated": bool(vs.validated),
+                            "observations": int(vs.observations),
                         }
                         
-                        # Store raw values for analysis
+                        # Store raw values for analysis - ensure native Python types for JSON serialization
                         validation_results[score_type] = {
-                            "validated": vs.validated,
-                            "top_quintile_excess": vs.top_quintile_excess,
-                            "bottom_quintile_excess": vs.bottom_quintile_excess,
-                            "spread": vs.spread,
-                            "top_beat_rate": vs.top_quintile_beat_rate,
-                            "bottom_beat_rate": vs.bottom_quintile_beat_rate,
-                            "spearman_r": vs.spearman_correlation,
-                            "p_value": vs.t_test_pvalue,
+                            "validated": bool(vs.validated),
+                            "top_quintile_excess": float(vs.top_quintile_excess),
+                            "bottom_quintile_excess": float(vs.bottom_quintile_excess),
+                            "spread": float(vs.spread),
+                            "top_beat_rate": float(vs.top_quintile_beat_rate),
+                            "bottom_beat_rate": float(vs.bottom_quintile_beat_rate),
+                            "spearman_r": float(vs.spearman_correlation),
+                            "p_value": float(vs.t_test_pvalue),
                             "confidence_grade": result.confidence_grade,
-                            "total_observations": result.total_observations,
+                            "total_observations": int(result.total_observations),
                         }
                     else:
                         logger.warning(f"No validation summary for {score_type}")
@@ -993,8 +993,9 @@ class WorkflowService:
             WorkflowProgress.update_substep(len(score_types) + 2, "Determining final verdict...")
             
             # Determine overall verdict
-            all_validated = all(v.get("validated", False) for v in valid_scores.values()) if valid_scores else False
-            any_significant = any(v.get("p_value", 1) < 0.05 for v in validation_results.values() if "error" not in v)
+            # Use bool() to ensure native Python bool for JSON serialization
+            all_validated = bool(all(v.get("validated", False) for v in valid_scores.values())) if valid_scores else False
+            any_significant = bool(any(v.get("p_value", 1) < 0.05 for v in validation_results.values() if "error" not in v))
             
             if all_validated and any_significant:
                 verdict = "Validation Complete: Scores Beat the Market"
@@ -1014,7 +1015,7 @@ class WorkflowService:
             metrics["key_findings"] = key_findings
             metrics["dollar_impact"] = dollar_impact
             metrics["validation_results"] = validation_results
-            metrics["all_scores_validated"] = all_validated
+            metrics["all_scores_validated"] = bool(all_validated)
             metrics["status"] = "success"
             
             WorkflowProgress.complete_step(success=True)
