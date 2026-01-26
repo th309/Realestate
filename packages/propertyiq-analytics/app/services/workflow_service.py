@@ -826,8 +826,8 @@ class WorkflowService:
             logger.info(f"Starting monthly report for {report_month}...")
             
             # Initialize progress tracking
-            # Only backtest scores that have sufficient data
-            substeps = ["Backtest HomeReady", "Backtest InvestorEdge", "Key findings", "Dollar impact", "Final verdict"]
+            score_types = ['homeready', 'investoredge', 'market_health']
+            substeps = [f"Backtest {st}" for st in score_types] + ["Key findings", "Dollar impact", "Final verdict"]
             WorkflowProgress.start_step(step_id, len(substeps), substeps)
             
             # Import backtest service for analysis
@@ -837,13 +837,11 @@ class WorkflowService:
             logger.info("Backtest service loaded")
             
             # Run analysis for each score type
-            # Only include scores that typically have data
             score_display_names = {
                 'homeready': 'HomeReady',
                 'investoredge': 'InvestorEdge',
+                'market_health': 'MarketHealth',
             }
-            # Removed market_health as it often has insufficient data
-            score_types = ['homeready', 'investoredge']
             
             validation_results = {}
             summary_table = {}
