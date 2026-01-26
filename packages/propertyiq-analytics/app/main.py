@@ -56,6 +56,26 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("PropertyIQ Analytics service ready")
     logger.info("=" * 60)
+    
+    # Start background cache warming for metro data (most commonly used)
+    import asyncio
+    async def warm_cache():
+        try:
+            logger.info("Starting background cache warming for metro data...")
+            from app.services.data_cache import get_data_cache
+            cache = get_data_cache()
+            if not cache.is_cached('metro'):
+                logger.info("Metro cache empty - syncing from Supabase...")
+                cache.sync_cache('metro', force_full=True)
+                logger.info("Metro cache warming complete!")
+            else:
+                logger.info("Metro cache already exists - skipping warm-up")
+        except Exception as e:
+            logger.error(f"Cache warming failed: {e}")
+    
+    # Run cache warming in background (don't block startup)
+    asyncio.create_task(warm_cache())
+    
     yield
     logger.info("Shutting down PropertyIQ Analytics service")
 
