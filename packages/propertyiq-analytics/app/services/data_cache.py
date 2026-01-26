@@ -30,16 +30,20 @@ logger = logging.getLogger(__name__)
 
 def _load_metro_crosswalk(supabase: Client) -> pd.DataFrame:
     """Load metro crosswalk from Supabase for ID->name resolution."""
+    # #region agent log
+    logger.info("[DEBUG-A] Starting metro crosswalk load")
+    # #endregion
     try:
         all_data = []
         offset = 0
         batch_size = 1000
         
         while True:
+            # FIX: Remove .not_() call - supabase-py v2 has different syntax
+            # Just select all and filter nulls via drop_duplicates + dropna
             response = (
                 supabase.table('zillow_metro_crosswalk')
                 .select('cbsa_code, cbsa_title')
-                .not_('cbsa_code', 'is', 'null')
                 .range(offset, offset + batch_size - 1)
                 .execute()
             )
@@ -52,11 +56,20 @@ def _load_metro_crosswalk(supabase: Client) -> pd.DataFrame:
         
         if all_data:
             df = pd.DataFrame(all_data)
+            # Filter out null cbsa_codes and deduplicate
+            df = df.dropna(subset=['cbsa_code'])
             df = df.drop_duplicates(subset=['cbsa_code'])
-            logger.info(f"Loaded {len(df)} metro crosswalk entries")
+            # #region agent log
+            logger.info(f"[DEBUG-A] Metro crosswalk SUCCESS: {len(df)} entries")
+            # #endregion
             return df
+        # #region agent log
+        logger.warning("[DEBUG-A] Metro crosswalk returned no data")
+        # #endregion
     except Exception as e:
-        logger.warning(f"Failed to load metro crosswalk: {e}")
+        # #region agent log
+        logger.error(f"[DEBUG-A] Metro crosswalk FAILED: {e}")
+        # #endregion
     return pd.DataFrame()
 
 
@@ -186,15 +199,26 @@ class DataCache:
         if DataCache._crosswalk_loaded:
             return
         
+        # #region agent log
+        logger.info("[DEBUG-B] Starting crosswalk loading...")
+        # #endregion
+        
         try:
-            logger.info("Loading geography crosswalks for name resolution...")
             DataCache._metro_crosswalk = _load_metro_crosswalk(self.supabase)
             DataCache._geography_crosswalk = _load_geography_crosswalk(self.supabase)
             DataCache._crosswalk_loaded = True
-            logger.info(f"Crosswalks loaded: {len(DataCache._metro_crosswalk or [])} metros, "
-                       f"{len(DataCache._geography_crosswalk or [])} geographies")
+            
+            # FIX: Properly check DataFrame length without using "or" operator
+            metro_count = len(DataCache._metro_crosswalk) if DataCache._metro_crosswalk is not None and not DataCache._metro_crosswalk.empty else 0
+            geo_count = len(DataCache._geography_crosswalk) if DataCache._geography_crosswalk is not None and not DataCache._geography_crosswalk.empty else 0
+            
+            # #region agent log
+            logger.info(f"[DEBUG-B] Crosswalks SUCCESS: {metro_count} metros, {geo_count} geographies")
+            # #endregion
         except Exception as e:
-            logger.warning(f"Failed to load crosswalks (name resolution may be unavailable): {e}")
+            # #region agent log
+            logger.error(f"[DEBUG-B] Crosswalk loading FAILED: {e}")
+            # #endregion
             DataCache._crosswalk_loaded = True  # Don't retry on failure
 
     def _enrich_with_geography_names(self, df: pd.DataFrame, geo_type: str) -> pd.DataFrame:
@@ -203,6 +227,10 @@ class DataCache:
         
         Uses crosswalk tables to resolve geography IDs to human-readable names.
         """
+        # #region agent log
+        logger.info(f"[DEBUG-C] Enriching {geo_type}, df_len={len(df) if df is not None else 0}")
+        # #endregion
+        
         if df is None or len(df) == 0:
             return df
         
@@ -312,6 +340,13 @@ class DataCache:
         
         # Final fallback: use geography_id as name if still null
         df['geography_name'] = df['geography_name'].fillna(df['geography_id'])
+        
+        # #region agent log
+        # Check how many names were resolved vs fell back to ID
+        resolved = (df['geography_name'] != df['geography_id']).sum() if 'geography_name' in df.columns else 0
+        sample_names = df['geography_name'].head(3).tolist() if 'geography_name' in df.columns else []
+        logger.info(f"[DEBUG-C] Enrichment done: {geo_type}, resolved={resolved}/{len(df)}, samples={sample_names}")
+        # #endregion
         
         return df
 
