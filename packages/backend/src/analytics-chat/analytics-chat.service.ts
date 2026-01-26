@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { QUINN_BASE_SYSTEM_PROMPT } from './quinn-system-prompt';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -143,11 +144,173 @@ export class AnalyticsChatService {
     return this.MODEL_BALANCED;
   }
 
+  /** Query intent for tool selection and iteration limits */
+  private getQueryIntent(message: string): 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
+    const lower = message.toLowerCase();
+
+    // RANKING - most common, fastest path
+    const rankingPatterns = [
+      /\b(hot|best|top|worst|bottom|highest|lowest|leading|trailing)\b.*\b(market|area|city|metro|state|county|zip|place|location)\b/,
+      /\b(show|give|list|find).*\b(top|best|worst|bottom|hot|cold)\b/,
+      /\b(rank|ranking|ranked|score|scored)\b/,
+      /\bwhat are the\b.*\b(best|worst|top|bottom)\b/,
+    ];
+    if (rankingPatterns.some((p) => p.test(lower))) return 'ranking';
+
+    // FILTERING
+    const filteringPatterns = [
+      /\b(in|within|around)\b.*\b(texas|california|florida|state|region)\b/,
+      /\b(above|below|over|under|greater|less)\b.*\b(score|price|value)\b/,
+      /\b(filter|where|with)\b/,
+      /\b(affordable|expensive|cheap|pricey)\b.*\b(market|area)\b/,
+    ];
+    if (filteringPatterns.some((p) => p.test(lower))) return 'filtering';
+
+    // COMPARISON
+    if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower)) return 'comparison';
+    if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower)) return 'comparison';
+    if (/\b(difference|delta|gap)\b.*\bbetween\b/.test(lower)) return 'comparison';
+
+    // RAW DATA
+    const rawPatterns = [
+      /\b(raw|actual|database|table|records|query)\b/,
+      /\b(show me|get|pull|fetch|retrieve|extract)\b.*\b(data|table|records|rows)\b/,
+      /\b(zillow|realtor|census)\b.*\b(data|table)\b/,
+    ];
+    if (rawPatterns.some((p) => p.test(lower))) return 'raw_data';
+    if (/\b(price|rent|value|zhvi|zri|unemployment|population|income)\b/.test(lower) &&
+        !/\b(compare|rank|best|top)\b/.test(lower)) {
+      return 'raw_data';
+    }
+
+    // ML/analysis
+    if (/\b(predict|regression|cluster|correlat|feature.*importance|optim.*weight|backtest|validat)\b/.test(lower)) {
+      return 'ml_analysis';
+    }
+
+    // News
+    if (/\b(news|article|happening|recent.*event)\b/.test(lower)) return 'news';
+
+    // Geography
+    if (/\b(similar|neighbor|nearby|like|around)\b/.test(lower)) return 'geography';
+
+    return 'analysis';
+  }
+
   /**
-   * Filter tools based on query type - only show relevant tools
-   * This dramatically reduces Claude's processing overhead
+   * Max allowed tool iterations by intent (prevents over-thinking simple queries).
+   */
+  private getMaxIterations(intent: 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography'): number {
+    switch (intent) {
+      case 'ranking': return 1;
+      case 'filtering': case 'comparison': case 'raw_data': return 2;
+      case 'analysis': case 'ml_analysis': case 'news': case 'geography': return 3;
+      default: return 3;
+    }
+  }
+
+  /**
+   * Build dynamic context sent per-query (session-only, not cached).
+   */
+  private buildDynamicContext(
+    userMode: 'homebuyer' | 'investor',
+    conversationHistory: ChatMessage[],
+    userPreferences?: Record<string, unknown>,
+  ): string {
+    const recentHistory = conversationHistory.slice(-4);
+    const historyContext = recentHistory.length > 0
+      ? recentHistory
+          .map((msg) => {
+            const content = typeof msg.content === 'string' ? msg.content.substring(0, 150) : '[Tool usage]';
+            return `${msg.role}: ${content}`;
+          })
+          .join('\n')
+      : 'First query in conversation';
+
+    return `CURRENT SESSION CONTEXT:
+User Mode: ${userMode === 'homebuyer' ? 'HomeReady (Homebuyer/Renter)' : 'InvestorEdge (Investor)'}
+Primary Score: ${userMode === 'homebuyer' ? 'homeready_score' : 'investoredge_score'}
+${userPreferences?.location ? `User Location: ${userPreferences.location}` : ''}
+${userPreferences?.budget ? `Budget: ${userPreferences.budget}` : ''}
+${userPreferences?.investmentStrategy ? `Strategy: ${userPreferences.investmentStrategy}` : ''}
+
+RECENT CONVERSATION:
+${historyContext}
+
+---
+Respond efficiently. Use the minimum number of tool calls needed.`;
+  }
+
+  /**
+   * Filter tools STRICTLY based on query intent
+   * This is the key to fast responses - Claude sees fewer tools = faster decisions
    */
   private getRelevantTools(message: string): any[] {
+    const allTools = this.toolsService.getToolDefinitions();
+    const intent = this.getQueryIntent(message);
+
+    this.logger.log(`[Quinn Intent] Detected: ${intent}`);
+
+    switch (intent) {
+      case 'ranking':
+        this.logger.log(`[Quinn Tools] Ranking - ONLY get_rankings (1 tool)`);
+        return allTools.filter((t) => t.name === 'get_rankings');
+
+      case 'filtering':
+        this.logger.log(`[Quinn Tools] Filtering - filter_geographies + get_rankings + analyze_data`);
+        return allTools.filter((t) =>
+          ['filter_geographies', 'get_rankings', 'analyze_data'].includes(t.name)
+        );
+
+      case 'comparison':
+        this.logger.log(`[Quinn Tools] Comparison - benchmark + ranking/filter`);
+        return allTools.filter((t) =>
+          ['compare_to_benchmark', 'analyze_data', 'get_rankings', 'filter_geographies'].includes(t.name)
+        );
+
+      case 'analysis':
+        this.logger.log(`[Quinn Tools] Analysis - cached tools only (no raw DB)`);
+        return allTools.filter((t) =>
+          !['query_database_table', 'search_database', 'aggregate_database', 'get_database_summary', 'get_database_tables', 'describe_database_table'].includes(t.name)
+        );
+
+      case 'raw_data':
+        this.logger.log(`[Quinn Tools] Raw data - database tools`);
+        return allTools.filter((t) =>
+          ['query_database_table', 'describe_database_table', 'aggregate_database', 'search_database'].includes(t.name)
+        );
+
+      case 'ml_analysis':
+        this.logger.log(`[Quinn Tools] ML query - analysis tools`);
+        return allTools.filter((t) =>
+          ['run_regression', 'get_feature_importance', 'cluster_markets',
+           'optimize_weights', 'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
+        );
+
+      case 'news':
+        this.logger.log(`[Quinn Tools] News - news tools`);
+        return allTools.filter((t) =>
+          ['search_real_estate_news', 'analyze_news_impact'].includes(t.name)
+        );
+
+      case 'geography':
+        this.logger.log(`[Quinn Tools] Geography - location tools`);
+        return allTools.filter((t) =>
+          ['find_similar_geographies', 'compare_to_neighbors', 'find_neighboring_geographies'].includes(t.name)
+        );
+
+      default:
+        this.logger.log(`[Quinn Tools] Default - core tools`);
+        return allTools.filter((t) =>
+          ['get_rankings', 'filter_geographies', 'analyze_data', 'compare_to_benchmark'].includes(t.name)
+        );
+    }
+  }
+
+  /**
+   * LEGACY - keeping for reference, replaced by intent-based filtering above
+   */
+  private getRelevantToolsLegacy(message: string): any[] {
     const allTools = this.toolsService.getToolDefinitions();
     const lowerMessage = message.toLowerCase();
 
@@ -385,8 +548,13 @@ export class AnalyticsChatService {
       conversation.context = { ...conversation.context, ...context };
     }
 
+    // Detect query intent for tool filtering
+    const queryIntent = this.getQueryIntent(userMessage);
+    this.logger.log(`[Quinn Stream Intent] Detected intent: ${queryIntent}`);
+
     const systemPrompt = this.buildSystemPrompt(conversation.context);
     const tools = this.getRelevantTools(userMessage);
+    this.logger.log(`[Quinn Stream Tools] Providing ${tools.length} tools`);
 
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
@@ -401,7 +569,7 @@ export class AnalyticsChatService {
     const currentModel = this.selectInitialModel(userMessage);
 
     try {
-      this.logger.log(`[Quinn Stream] Starting streaming response`);
+      this.logger.log(`[Quinn Stream] Starting streaming response for ${queryIntent} query`);
 
       // Use streaming API
       const stream = await this.client.messages.stream({
@@ -506,7 +674,8 @@ export class AnalyticsChatService {
     response: string;
     toolsUsed: string[];
     structuredData?: StructuredData;
-    modelUsed?: string; // Track which model was ultimately used
+    modelUsed?: string;
+    metadata?: { intent: string; toolCallCount: number; totalExecutionTime: number };
   }> {
     if (!this.client) {
       throw new Error('Claude client not initialized - check ANTHROPIC_API_KEY');
@@ -531,39 +700,47 @@ export class AnalyticsChatService {
       conversation.context = { ...conversation.context, ...context };
     }
 
-    // Build system prompt
-    const systemPrompt = this.buildSystemPrompt(conversation.context);
+    // Detect query intent for tool filtering and iteration limits
+    const queryIntent = this.getQueryIntent(userMessage);
+    const maxIterations = this.getMaxIterations(queryIntent);
+    this.logger.log(`[Quinn Intent] Detected: ${queryIntent}, max iterations: ${maxIterations}`);
 
-    // Get relevant tools based on query (dynamic filtering)
+    // Get relevant tools based on intent
     const tools = this.getRelevantTools(userMessage);
-    this.logger.log(`[Quinn Tools] Providing ${tools.length} tools (filtered from 27 total)`);
+    this.logger.log(`[Quinn Tools] Providing ${tools.length} tools`);
 
     // Add user message to history
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
 
-    // Prepare messages for API (limit to last 20 exchanges = 40 messages)
-    const apiMessages = conversation.messages.slice(-40).map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    // Dynamic context (session-only); userMode from context or default homebuyer
+    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
+    const dynamicContext = this.buildDynamicContext(
+      userMode,
+      conversation.messages,
+      conversation.context as Record<string, unknown> | undefined,
+    );
+    const userMessageWithContext = `${dynamicContext}\n\nUser Query: ${userMessage}`;
+
+    // Prepare messages for API (last 20 exchanges); inject dynamic context into latest user message
+    const apiMessages = conversation.messages.slice(-40).map((m, i, arr) => {
+      const isLastUser = arr.length - 1 === i && m.role === 'user';
+      return {
+        role: m.role as 'user' | 'assistant',
+        content: isLastUser ? userMessageWithContext : m.content,
+      };
+    });
 
     const toolsUsed: string[] = [];
     const toolResultsData: Array<{ toolName: string; data: any }> = [];
-    const responseTextParts: string[] = []; // Collect text from all responses
+    const responseTextParts: string[] = [];
+    const chatStartTime = Date.now();
 
-    // Select initial model based on query characteristics
     let currentModel = this.selectInitialModel(userMessage);
 
     try {
-      this.logger.log(`[Quinn Chat] Processing message in conversation ${conversationId}`);
-      this.logger.log(`[Quinn Chat] User message: "${userMessage.slice(0, 100)}..."`);
-      this.logger.log(`[Quinn Chat] Conversation history length: ${apiMessages.length} messages`);
-      this.logger.log(`[Quinn Chat] Available tools: ${tools.length}`);
-      this.logger.log(`[Quinn Chat] System prompt length: ${systemPrompt.length} chars`);
+      this.logger.log(`[Quinn Chat] Processing in ${conversationId}, tools: ${tools.length}`);
 
-      // Initial request
-      this.logger.log(`[Quinn Chat] Calling Claude API (model: ${currentModel})...`);
       const apiStartTime = Date.now();
 
       // Add timeout wrapper to prevent hanging (60 second timeout)
@@ -575,7 +752,13 @@ export class AnalyticsChatService {
         this.client.messages.create({
           model: currentModel,
           max_tokens: 2048,
-          system: systemPrompt,
+          system: [
+            {
+              type: 'text' as const,
+              text: QUINN_BASE_SYSTEM_PROMPT,
+              cache_control: { type: 'ephemeral' as const },
+            },
+          ],
           tools: tools as any,
           messages: apiMessages,
         }),
@@ -594,13 +777,14 @@ export class AnalyticsChatService {
         this.logger.log(`[Quinn Chat] Initial response text length: ${initialTextBlock.text.length}`);
       }
 
-      // Process tool calls in a loop (max 10 iterations to prevent infinite loops)
+      // Process tool calls in a loop with intent-based iteration limits
       let iterations = 0;
-      const maxIterations = 10;
+
+      this.logger.log(`[Quinn Chat] Max iterations for ${queryIntent}: ${maxIterations}`);
 
       while (response.stop_reason === 'tool_use' && iterations < maxIterations) {
         iterations++;
-        this.logger.log(`[Quinn Chat] Tool use iteration ${iterations}`);
+        this.logger.log(`[Quinn Chat] Tool use iteration ${iterations}/${maxIterations}`);
 
         const toolUseBlocks = response.content.filter(
           (block) => block.type === 'tool_use',
@@ -666,7 +850,13 @@ export class AnalyticsChatService {
           this.client.messages.create({
             model: currentModel,
             max_tokens: 2048,
-            system: systemPrompt,
+            system: [
+              {
+                type: 'text' as const,
+                text: QUINN_BASE_SYSTEM_PROMPT,
+                cache_control: { type: 'ephemeral' as const },
+              },
+            ],
             tools: tools as any,
             messages: [
               ...apiMessages,
@@ -683,27 +873,28 @@ export class AnalyticsChatService {
           responseTextParts.push(iterationTextBlock.text);
           this.logger.log(`[Quinn Chat] Iteration ${iterations} text length: ${iterationTextBlock.text.length}`);
         }
+
+        // Early termination for ranking queries after first successful tool call
+        if (queryIntent === 'ranking' && iterations === 1 && toolResultsData.length > 0) {
+          this.logger.log(`[Quinn Chat] Ranking query complete in 1 iteration with ${toolResultsData.length} tool results - terminating early`);
+          break;
+        }
       }
 
       if (iterations >= maxIterations) {
         this.logger.warn('Max tool iterations reached');
       }
 
-      // Combine all text parts from all responses
       const finalResponse = responseTextParts.length > 0
         ? responseTextParts.join('\n\n')
         : 'I was unable to generate a response. Please try again.';
 
-      this.logger.log(`[Quinn Chat] Final response combined from ${responseTextParts.length} text parts, total length: ${finalResponse.length}`);
-
-      // Save assistant response to history
       conversation.messages.push({ role: 'assistant', content: finalResponse });
-
-      // Extract structured data from tool results
       const structuredData = this.extractStructuredData(toolResultsData);
+      const totalExecutionTime = Date.now() - chatStartTime;
 
       this.logger.log(
-        `[Quinn Chat] Completed with ${currentModel}, used ${toolsUsed.length} tools`,
+        `[Quinn Chat] Done in ${totalExecutionTime}ms, ${toolsUsed.length} tools, ${currentModel}`,
       );
 
       return {
@@ -711,6 +902,11 @@ export class AnalyticsChatService {
         toolsUsed,
         structuredData,
         modelUsed: currentModel,
+        metadata: {
+          intent: queryIntent,
+          toolCallCount: toolsUsed.length,
+          totalExecutionTime,
+        },
       };
     } catch (error) {
       this.logger.error(`[Quinn Chat] === CHAT ERROR ===`);
@@ -740,6 +936,11 @@ export class AnalyticsChatService {
           toolsUsed,
           structuredData: this.extractStructuredData(toolResultsData),
           modelUsed: currentModel,
+          metadata: {
+            intent: queryIntent,
+            toolCallCount: toolsUsed.length,
+            totalExecutionTime: Date.now() - chatStartTime,
+          },
         };
       }
 
@@ -951,23 +1152,38 @@ export class AnalyticsChatService {
 **ML Tools**: run_regression, get_feature_importance, cluster_markets, optimize_weights
 **Other**: search_real_estate_news, find_similar_geographies, compare_to_neighbors
 
-## RESPONSE STYLE
-- Be direct and concise (200-400 words)
-- Present specific numbers, not vague terms
-- Explain what you're analyzing before calling tools
-- If data not found, suggest alternatives
-- ALWAYS ask about geography level for broad market queries
+## FORMATTING RULES (CRITICAL - READ CAREFULLY)
 
-## FORMATTING RULES (CRITICAL)
-1. **ALWAYS use geography_name** (e.g., "Austin-Round Rock, TX"), NEVER geography_id (e.g., "47340")
-2. **NO asterisks for bold** - Don't use **text** formatting, just use plain text
-3. **Use numbered lists** for rankings:
-   Example:
-   1. Austin-Round Rock, TX - Score: 78.9, 12M Appreciation: 4.8%
-   2. Dallas-Fort Worth, TX - Score: 77.4, 12M Appreciation: 10.9%
-4. **Include state in parentheses** if not in the name: "Phoenix (AZ)" or use full name "Phoenix-Mesa-Scottsdale, AZ"
-5. **Format appreciation as percentages**: "4.8%" not "0.048"
-6. **Keep it clean** - No emojis, no excessive formatting, just clear data`;
+1. **NEVER use markdown symbols in responses**:
+   - ❌ NO bold (**text**), headers (##), bullets (-), asterisks (*)
+   - ✅ Plain conversational text ONLY
+   - The UI will render tool results as interactive charts/tables
+
+2. **Let tool results do the talking**:
+   - When showing rankings → call get_rankings and say "Here are the results:"
+   - When showing comparisons → call compare_to_benchmark and say "Here's the comparison:"
+   - Keep text to 2-3 sentences, let visual data speak for itself
+
+3. **Response structure for ranking queries**:
+   - Brief intro (1 sentence) → call get_rankings → "Here are the top markets:" → DONE
+   - DO NOT list results in text - the UI will render them as a table/chart
+
+4. **Data presentation rules**:
+   - ALWAYS use geography_name ("Austin-Round Rock, TX"), NEVER geography_id ("47340")
+   - Format percentages: "4.8%" not "0.048"
+   - Include state: "Phoenix-Mesa-Scottsdale, AZ" or "Phoenix (AZ)"
+   - Tool results contain complete data - don't duplicate in text
+
+5. **Keep responses SHORT**:
+   - Simple queries: 1-2 sentences max + tool call
+   - Complex queries: 2-3 sentences max + tool calls
+   - NEVER write paragraphs explaining data that's already in tool results
+
+## RESPONSE STYLE
+- Ultra-concise: 2-3 sentences maximum
+- Call tools, let visual data render
+- If data not found, suggest alternatives in 1 sentence
+- ALWAYS ask about geography level for broad market queries (1 sentence question)`;
 
     // Add context if provided (e.g., focused on specific geography)
     if (context?.geographyType && context?.geographyId) {

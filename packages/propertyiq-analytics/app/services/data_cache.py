@@ -566,7 +566,7 @@ class DataCache:
         return cache_info.get('last_date')
 
     def load_from_cache(self, geo_type: str) -> Optional[pd.DataFrame]:
-        """Load data from Parquet cache."""
+        """Load data from Parquet cache. After load, data is in-memory for fast access (<10ms)."""
         cache_path = self._get_cache_path(geo_type)
         
         if not cache_path.exists():

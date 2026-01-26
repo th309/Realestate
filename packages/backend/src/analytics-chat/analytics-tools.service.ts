@@ -18,6 +18,8 @@ export interface ToolResult {
 export class AnalyticsToolsService {
   private readonly logger = new Logger(AnalyticsToolsService.name);
   private readonly analyticsBaseUrl: string;
+  /** Cached tool definitions to avoid rebuilding on every request */
+  private toolDefinitionsCache: any[] | null = null;
 
   constructor(private readonly configService: ConfigService) {
     this.analyticsBaseUrl =
@@ -186,10 +188,13 @@ export class AnalyticsToolsService {
   }
 
   /**
-   * Get tool definitions for Claude
+   * Get tool definitions for Claude (cached after first build).
    */
   getToolDefinitions(): any[] {
-    return [
+    if (this.toolDefinitionsCache) {
+      return this.toolDefinitionsCache;
+    }
+    this.toolDefinitionsCache = [
       {
         name: 'get_available_filters',
         description:
@@ -203,7 +208,7 @@ export class AnalyticsToolsService {
       {
         name: 'filter_geographies',
         description:
-          'Filter the analytics dataset by geography, state, score range, or date. Returns count of matching records. Use this to preview how many results match your criteria.',
+          'Filter PropertyIQ scored data by geography, state, or score range. FAST - uses cached data (<150ms). Use for: "markets in Texas", "metros with score above 80", "affordable areas". Then use get_rankings to sort. Returns record count and geography count.',
         input_schema: {
           type: 'object',
           properties: {
@@ -242,7 +247,7 @@ export class AnalyticsToolsService {
       {
         name: 'analyze_data',
         description:
-          'Run full statistical analysis on filtered data. Returns summary stats, correlations with actual appreciation outcomes, and top/bottom 10 performers.',
+          'Statistical analysis of filtered data (summary stats, correlations with appreciation, top/bottom performers). FAST - uses cached data (<250ms). Use for: "what drives high scores", "correlation between price and score", "statistical summary of top markets". Pass filter with geography_type and optional states, score_type.',
         input_schema: {
           type: 'object',
           properties: {
@@ -276,7 +281,7 @@ export class AnalyticsToolsService {
       {
         name: 'compare_to_benchmark',
         description:
-          'Compare filtered markets to a benchmark (national average). Returns how the filtered group performs vs the benchmark for scores and appreciation.',
+          'Compare specific markets to national (or regional) average. FAST - uses cached data (<200ms). Use for: "compare Austin to national average", "how does Miami benchmark", "is Denver above or below average". Pass filter and benchmark_type (national/regional).',
         input_schema: {
           type: 'object',
           properties: {
@@ -301,7 +306,7 @@ export class AnalyticsToolsService {
       {
         name: 'get_rankings',
         description:
-          'Get a ranked list of top or bottom performing markets based on score. Use ascending=true for bottom performers.',
+          'Get top or bottom performers by score. FASTEST TOOL - cached data (<100ms). Use for: "hot markets", "best cities", "top metros", "worst performing areas". Pass filter: { geography_type, score_type, states? }, limit (default 10), ascending (false = highest first). Prefer this over query_database_table for score-based queries.',
         input_schema: {
           type: 'object',
           properties: {
@@ -689,7 +694,7 @@ export class AnalyticsToolsService {
       {
         name: 'query_database_table',
         description:
-          'Query a table with filters, sorting, and pagination. Use this to retrieve specific data from any table. Supports complex filters (gte, lte, like, in), sorting (prefix column with - for descending), and pagination. Examples: Get all metros in Texas, Find high scores above 80, Get latest Zillow data sorted by date.',
+          'Query raw database tables (Zillow, Realtor, Census, Economic). SLOWER - 200-500ms. Use ONLY when user explicitly asks for "raw data", "database query", "table records", or specific non-score tables. AVOID for score-based queries - use get_rankings, analyze_data, compare_to_benchmark instead.',
         input_schema: {
           type: 'object',
           properties: {
@@ -974,5 +979,7 @@ export class AnalyticsToolsService {
         },
       },
     ];
+    this.logger.debug(`Cached ${this.toolDefinitionsCache.length} tool definitions`);
+    return this.toolDefinitionsCache;
   }
 }

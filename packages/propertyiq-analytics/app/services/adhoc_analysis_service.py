@@ -351,7 +351,12 @@ class AdhocAnalysisService:
         limit: int = 10,
         ascending: bool = False
     ) -> Dict[str, Any]:
-        """Get top or bottom performers from filtered data."""
+        """
+        Get top or bottom performers from filtered data.
+
+        PERFORMANCE TARGET: <100ms when df comes from cache (get_cached_data).
+        Uses in-memory DataFrame only; no database round-trip.
+        """
         if df is None or len(df) == 0:
             return {"error": "No data available", "rankings": []}
         
