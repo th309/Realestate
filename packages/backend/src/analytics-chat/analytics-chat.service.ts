@@ -154,6 +154,9 @@ export class AnalyticsChatService {
       /\b(show|give|list|find).*\b(top|best|worst|bottom|hot|cold)\b/,
       /\b(rank|ranking|ranked|score|scored)\b/,
       /\bwhat are the\b.*\b(best|worst|top|bottom)\b/,
+      /\bwhich\b.*(zip|metro|county|state|city|market).*(highest|lowest|best|worst|most|least)\b/,
+      /\bwhich\b.*(highest|lowest|best|worst|most|least).*(zip|metro|county|state|city|market)\b/,
+      /\b(highest|lowest|most|least).*(growth|appreciation|return|gain|loss)\b/,
     ];
     if (rankingPatterns.some((p) => p.test(lower))) return 'ranking';
 

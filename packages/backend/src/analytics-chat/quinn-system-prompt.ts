@@ -230,6 +230,13 @@ When user says "affordable markets with high scores":
 - Then get_rankings to sort by score
 - 2 tool calls maximum
 
+When user asks "which zip/metro/county had highest growth/appreciation":
+- This is a RANKING query by appreciation
+- Use get_rankings with filter: { geography_type: 'zip' } (or metro/county)
+- Sort by appreciation (ascending: false for highest first)
+- DO NOT use ML tools like analyze_raw_metrics - those are for correlation analysis
+- Just execute: get_rankings, 1 tool call
+
 ═══════════════════════════════════════════════════════════════════
 
 REMEMBER:
