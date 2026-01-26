@@ -104,8 +104,10 @@ export function useQuinnUser(): QuinnUser {
 
 /**
  * Generate a conversation ID for a new chat session
+ * Format: {userId}__chat__{timestamp}
+ * Uses double underscore as separator to avoid URL path issues
  */
 export function generateConversationId(userId: string): string {
   const timestamp = Date.now();
-  return `${userId}/chat_${timestamp}`;
+  return `${userId}__chat__${timestamp}`;
 }

@@ -96,9 +96,7 @@ export function QuinnFloatingButton() {
     setLoading(true);
 
     try {
-      // URL-encode the conversation ID since it contains slashes
-      const encodedConversationId = encodeURIComponent(conversationId);
-      const response = await fetch(`/api/analytics/chat/${encodedConversationId}`, {
+      const response = await fetch(`/api/analytics/chat/${conversationId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
