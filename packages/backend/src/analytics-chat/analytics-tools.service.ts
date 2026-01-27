@@ -207,29 +207,145 @@ export class AnalyticsToolsService {
       },
       {
         name: 'filter_geographies',
-        description:
-          'Filter PropertyIQ scored data by geography, state, or score range. FAST - uses cached data (<150ms). Use for: "markets in Texas", "metros with score above 80", "affordable areas". Then use get_rankings to sort. Returns record count and geography count.',
+        description: `Filter PropertyIQ scored data by geography type, state, or score range.
+
+FAST - uses cached data (<150ms). Use this as STEP 1 before get_rankings when filtering is needed.
+
+═══════════════════════════════════════════════════════════════════
+WHEN TO USE THIS TOOL:
+═══════════════════════════════════════════════════════════════════
+
+Use when query includes filtering criteria:
+  ✓ "markets in Texas" → filter by state
+  ✓ "metros with score above 80" → filter by score threshold
+  ✓ "affordable high-scoring areas" → filter by score range
+  ✓ "counties in the Southeast" → filter by multiple states
+  ✓ "zips with InvestorEdge over 90" → filter by score
+
+DO NOT use if:
+  ✗ Simple ranking query without filters → just use get_rankings
+  ✗ User asking for appreciation data → use get_rankings with sort_by
+
+TYPICAL WORKFLOW:
+  Step 1: Call filter_geographies to narrow dataset
+  Step 2: Call get_rankings to sort the filtered results
+
+═══════════════════════════════════════════════════════════════════
+PARAMETER REFERENCE:
+═══════════════════════════════════════════════════════════════════
+
+geography_type (REQUIRED):
+  - "metro" = Metropolitan areas
+  - "county" = Counties
+  - "zip" = ZIP codes
+  - "state" = States
+  - This determines what level of geography to filter
+
+states (OPTIONAL):
+  - Array of 2-letter uppercase state codes
+  - Examples: ["TX"], ["CA", "FL", "TX"], ["NY", "NJ", "CT"]
+  - Use for queries like "markets in Texas" or "metros in the Southeast"
+
+score_type (REQUIRED):
+  - "investoredge_score" = Filter by InvestorEdge score
+  - "homeready_score" = Filter by HomeReady score
+  - "market_health_score" = Filter by Market Health score
+  - This determines WHICH score to apply min/max filters to
+
+min_score (OPTIONAL):
+  - Minimum score threshold (0-100)
+  - Use for queries like "scores above 80"
+  - Can be combined with max_score for range
+
+max_score (OPTIONAL):
+  - Maximum score threshold (0-100)
+  - Use for queries like "scores below 60"
+  - Can be combined with min_score for range
+
+═══════════════════════════════════════════════════════════════════
+RETURNS:
+═══════════════════════════════════════════════════════════════════
+
+{
+  "filtered_count": 25,              // Number of records after filtering
+  "geography_count": 25,             // Number of unique geographies
+  "filter_applied": {
+    "geography_type": "metro",
+    "states": ["TX"],
+    "score_type": "investoredge_score",
+    "min_score": 80
+  },
+  "summary": "Filtered to 25 metros in Texas with InvestorEdge score >= 80"
+}
+
+NOTE: This tool ONLY returns counts, not the actual data.
+You MUST follow up with get_rankings to retrieve the actual ranked results.
+
+═══════════════════════════════════════════════════════════════════
+USAGE EXAMPLES:
+═══════════════════════════════════════════════════════════════════
+
+Example 1: "Show me metros in Texas"
+Step 1 - Filter:
+{
+  "geography_type": "metro",
+  "states": ["TX"],
+  "score_type": "investoredge_score"
+}
+
+Step 2 - Rank (use same filter):
+get_rankings({
+  "filter": {
+    "geography_type": "metro",
+    "states": ["TX"],
+    "score_type": "investoredge_score"
+  },
+  "limit": 10,
+  "ascending": false
+})
+
+Example 2: "Find counties with HomeReady score above 80"
+Step 1 - Filter:
+{
+  "geography_type": "county",
+  "score_type": "homeready_score",
+  "min_score": 80
+}
+
+Step 2 - Rank (use same filter):
+get_rankings({
+  "filter": {
+    "geography_type": "county",
+    "score_type": "homeready_score",
+    "min_score": 80
+  },
+  "limit": 10,
+  "ascending": false
+})`,
         input_schema: {
           type: 'object',
           properties: {
             geography_type: {
               type: 'string',
               enum: ['state', 'metro', 'county', 'zip'],
-              description: 'Type of geography to analyze (default: metro)',
+              description: 'REQUIRED. Type of geography to filter: metro, county, zip, or state',
             },
             states: {
               type: 'array',
               items: { type: 'string' },
-              description:
-                'State codes to include, e.g., ["TX", "CA"]. Use 2-letter uppercase codes.',
+              description: 'OPTIONAL. State codes to include. Must be 2-letter uppercase codes like ["TX", "CA"]',
             },
             min_score: {
               type: 'number',
-              description: 'Minimum score threshold (0-100)',
+              minimum: 0,
+              maximum: 100,
+              description: 'OPTIONAL. Minimum score threshold (0-100). Use for "scores above X" queries',
             },
             max_score: {
               type: 'number',
-              description: 'Maximum score threshold (0-100)',
+              minimum: 0,
+              maximum: 100,
+              description: 'OPTIONAL. Maximum score threshold (0-100). Use for "scores below X" queries',
             },
             score_type: {
               type: 'string',
@@ -238,41 +354,171 @@ export class AnalyticsToolsService {
                 'homeready_score',
                 'market_health_score',
               ],
-              description: 'Which score to filter/analyze (default: investoredge_score)',
+              description: 'REQUIRED. Which score to filter by: investoredge_score (investors), homeready_score (homebuyers), market_health_score (overall)',
             },
           },
-          required: [],
+          required: ['geography_type', 'score_type'],
         },
       },
       {
         name: 'analyze_data',
-        description:
-          'Statistical analysis of filtered data (summary stats, correlations with appreciation, top/bottom performers). FAST - uses cached data (<250ms). Use for: "what drives high scores", "correlation between price and score", "statistical summary of top markets". Pass filter with geography_type and optional states, score_type.',
+        description: `Perform statistical analysis of PropertyIQ scored data.
+
+FAST - uses cached data (<250ms). Returns summary statistics, correlations, and top/bottom performers.
+
+═══════════════════════════════════════════════════════════════════
+WHEN TO USE THIS TOOL:
+═══════════════════════════════════════════════════════════════════
+
+Use for analytical queries that need statistical insights:
+  ✓ "what drives high scores" → correlation analysis
+  ✓ "correlation between score and appreciation" → correlation analysis
+  ✓ "statistical summary of top markets" → summary stats
+  ✓ "analyze metro performance" → comprehensive analysis
+  ✓ "how do scores correlate with outcomes" → correlation analysis
+
+DO NOT use for:
+  ✗ Simple rankings → use get_rankings instead
+  ✗ Filtering only → use filter_geographies instead
+  ✗ Comparing to benchmark → use compare_to_benchmark instead
+
+═══════════════════════════════════════════════════════════════════
+PARAMETER REFERENCE:
+═══════════════════════════════════════════════════════════════════
+
+filter (REQUIRED):
+  - MUST include geography_type: "metro", "county", "zip", or "state"
+  - MUST include score_type: which score to analyze
+  - OPTIONAL: states array to filter by state
+  - OPTIONAL: min_score/max_score to filter by score range
+
+  Example:
+  {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "states": ["TX", "CA"],
+    "min_score": 70
+  }
+
+horizons (OPTIONAL):
+  - Array of time horizons in months: [12, 36, 60]
+  - Default: [12, 36] (1-year and 3-year)
+  - Used to analyze correlation between scores and future appreciation
+  - Example: [12] for just 1-year forward appreciation
+
+═══════════════════════════════════════════════════════════════════
+RETURNS:
+═══════════════════════════════════════════════════════════════════
+
+{
+  "summary_stats": {
+    "count": 50,                           // Number of geographies analyzed
+    "mean_score": 85.2,                    // Average score
+    "median_score": 84.5,                  // Median score
+    "std_dev": 3.8,                        // Standard deviation
+    "min_score": 78.1,                     // Minimum score
+    "max_score": 95.7                      // Maximum score
+  },
+  "correlations": {
+    "score_vs_appreciation_12m": 0.72,     // Correlation with 12-month appreciation
+    "score_vs_appreciation_36m": 0.68,     // Correlation with 36-month appreciation
+    "p_value_12m": 0.001,                  // Statistical significance
+    "p_value_36m": 0.003
+  },
+  "top_performers": [                      // Top 5 geographies by score
+    {
+      "geography_name": "Austin, TX",
+      "score": 95.7,
+      "appreciation_12m": 18.5
+    },
+    ...
+  ],
+  "bottom_performers": [                   // Bottom 5 geographies by score
+    ...
+  ],
+  "filter_applied": {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "count_before_filter": 384,
+    "count_after_filter": 50
+  }
+}
+
+Interpretation:
+  - Correlation values range from -1 to 1
+  - 0.7 to 1.0 = Strong positive correlation (score predicts appreciation well)
+  - 0.3 to 0.7 = Moderate correlation
+  - -0.3 to 0.3 = Weak/no correlation
+  - p_value < 0.05 = Statistically significant
+
+═══════════════════════════════════════════════════════════════════
+USAGE EXAMPLES:
+═══════════════════════════════════════════════════════════════════
+
+Example 1: "What drives high InvestorEdge scores in Texas?"
+{
+  "filter": {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "states": ["TX"]
+  },
+  "horizons": [12, 36]
+}
+
+Example 2: "Statistical summary of top scoring metros"
+{
+  "filter": {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "min_score": 80
+  },
+  "horizons": [12]
+}
+
+Example 3: "Analyze all counties"
+{
+  "filter": {
+    "geography_type": "county",
+    "score_type": "homeready_score"
+  }
+}`,
         input_schema: {
           type: 'object',
           properties: {
             filter: {
               type: 'object',
-              description: 'Filter criteria to apply before analysis',
+              description: 'REQUIRED. Filter criteria to apply before analysis. Must include geography_type and score_type.',
               properties: {
                 geography_type: {
                   type: 'string',
                   enum: ['state', 'metro', 'county', 'zip'],
+                  description: 'REQUIRED. Geography level to analyze',
                 },
                 states: {
                   type: 'array',
                   items: { type: 'string' },
+                  description: 'OPTIONAL. Filter to specific states: ["TX", "CA"]',
                 },
-                min_score: { type: 'number' },
-                max_score: { type: 'number' },
-                score_type: { type: 'string' },
+                min_score: {
+                  type: 'number',
+                  description: 'OPTIONAL. Minimum score threshold (0-100)',
+                },
+                max_score: {
+                  type: 'number',
+                  description: 'OPTIONAL. Maximum score threshold (0-100)',
+                },
+                score_type: {
+                  type: 'string',
+                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
+                  description: 'REQUIRED. Which score to analyze',
+                },
               },
+              required: ['geography_type', 'score_type'],
             },
             horizons: {
               type: 'array',
               items: { type: 'integer' },
-              description:
-                'Time horizons in months to analyze, e.g., [12, 36] for 1-year and 3-year',
+              description: 'OPTIONAL. Time horizons in months for correlation analysis: [12, 36, 60]. Default: [12, 36]',
             },
           },
           required: ['filter'],
@@ -280,24 +526,151 @@ export class AnalyticsToolsService {
       },
       {
         name: 'compare_to_benchmark',
-        description:
-          'Compare specific markets to national (or regional) average. FAST - uses cached data (<200ms). Use for: "compare Austin to national average", "how does Miami benchmark", "is Denver above or below average". Pass filter and benchmark_type (national/regional).',
+        description: `Compare specific geographies to national or regional benchmarks.
+
+FAST - uses cached data (<200ms). Returns comparison showing how markets perform vs average.
+
+═══════════════════════════════════════════════════════════════════
+WHEN TO USE THIS TOOL:
+═══════════════════════════════════════════════════════════════════
+
+Use for comparison queries:
+  ✓ "compare Austin to national average"
+  ✓ "how does Miami benchmark"
+  ✓ "is Denver above or below average"
+  ✓ "Austin vs national average"
+  ✓ "how do Texas metros compare to the US"
+
+DO NOT use for:
+  ✗ Simple rankings → use get_rankings
+  ✗ Comparing two specific markets → use get_rankings for both
+  ✗ Statistical analysis → use analyze_data
+
+═══════════════════════════════════════════════════════════════════
+PARAMETER REFERENCE:
+═══════════════════════════════════════════════════════════════════
+
+filter (REQUIRED):
+  - Defines which geographies to compare
+  - MUST include geography_type
+  - MUST include score_type
+  - Can include states to filter specific geographies
+  - Can include specific geography names (if backend supports)
+
+  Example:
+  {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "states": ["TX"]
+  }
+
+benchmark_type (REQUIRED):
+  - "national" = Compare to US national average (most common)
+  - "regional" = Compare to regional average (same geographic region)
+  - Default: "national"
+
+═══════════════════════════════════════════════════════════════════
+RETURNS:
+═══════════════════════════════════════════════════════════════════
+
+{
+  "comparisons": [
+    {
+      "geography_id": "12345",
+      "geography_name": "Austin, TX",
+      "score": 95.2,                       // Market's score
+      "benchmark_score": 68.5,             // Benchmark average score
+      "difference": 26.7,                  // Absolute difference
+      "percent_difference": 39.0,          // Percentage difference
+      "percentile": 98.5,                  // Percentile rank nationally
+      "interpretation": "significantly above average"
+    },
+    {
+      "geography_name": "El Paso, TX",
+      "score": 62.1,
+      "benchmark_score": 68.5,
+      "difference": -6.4,
+      "percent_difference": -9.3,
+      "percentile": 42.3,
+      "interpretation": "slightly below average"
+    },
+    ...
+  ],
+  "benchmark_type": "national",
+  "benchmark_score": 68.5,                 // Overall benchmark value
+  "score_type": "investoredge_score",
+  "geography_type": "metro"
+}
+
+Interpretation:
+  - Positive difference = above benchmark (good)
+  - Negative difference = below benchmark (needs attention)
+  - Percentile shows ranking: 90+ = top tier, <50 = below average
+  - Interpretation provides human-readable assessment
+
+═══════════════════════════════════════════════════════════════════
+USAGE EXAMPLES:
+═══════════════════════════════════════════════════════════════════
+
+Example 1: "Compare Austin to national average"
+{
+  "filter": {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "states": ["TX"]
+  },
+  "benchmark_type": "national"
+}
+Note: If you need just Austin, may need to filter results or use geography name filter
+
+Example 2: "How do Texas metros compare nationally?"
+{
+  "filter": {
+    "geography_type": "metro",
+    "score_type": "investoredge_score",
+    "states": ["TX"]
+  },
+  "benchmark_type": "national"
+}
+
+Example 3: "Is Miami above or below average?"
+{
+  "filter": {
+    "geography_type": "metro",
+    "score_type": "homeready_score",
+    "states": ["FL"]
+  },
+  "benchmark_type": "national"
+}`,
         input_schema: {
           type: 'object',
           properties: {
             filter: {
               type: 'object',
-              description: 'Filter criteria for the markets to compare',
+              description: 'REQUIRED. Defines which geographies to compare. Must include geography_type and score_type.',
               properties: {
-                geography_type: { type: 'string' },
-                states: { type: 'array', items: { type: 'string' } },
-                score_type: { type: 'string' },
+                geography_type: {
+                  type: 'string',
+                  enum: ['state', 'metro', 'county', 'zip'],
+                  description: 'REQUIRED. Geography level to compare',
+                },
+                states: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'OPTIONAL. Filter to specific states: ["TX", "FL"]',
+                },
+                score_type: {
+                  type: 'string',
+                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
+                  description: 'REQUIRED. Which score to compare',
+                },
               },
+              required: ['geography_type', 'score_type'],
             },
             benchmark_type: {
               type: 'string',
               enum: ['national', 'regional'],
-              description: 'Benchmark to compare against (default: national)',
+              description: 'REQUIRED. Benchmark to compare against. "national" = US average (most common), "regional" = regional average',
             },
           },
           required: ['filter', 'benchmark_type'],
@@ -305,27 +678,167 @@ export class AnalyticsToolsService {
       },
       {
         name: 'get_rankings',
-        description:
-          'Get top or bottom performers by score. FASTEST TOOL - cached data (<100ms). Use for: "hot markets", "best cities", "top metros", "worst performing areas". Pass filter: { geography_type, score_type, states? }, limit (default 10), ascending (false = highest first). Prefer this over query_database_table for score-based queries.',
+        description: `Get ranked list of top or bottom geographies by SCORE or by APPRECIATION.
+
+FASTEST TOOL - cached data (<100ms). This is your PRIMARY TOOL for most queries.
+
+═══════════════════════════════════════════════════════════════════
+WHEN TO USE THIS TOOL:
+═══════════════════════════════════════════════════════════════════
+
+Use for ANY query asking for "best", "worst", "top", "bottom", "hot", "highest", "lowest" markets/cities/metros/counties/zips.
+
+Examples:
+  ✓ "show me hot markets" → get_rankings
+  ✓ "best cities for investors" → get_rankings
+  ✓ "top 10 metros" → get_rankings
+  ✓ "worst performing areas" → get_rankings
+  ✓ "highest scored markets" → get_rankings
+  ✓ "top zip codes by appreciation" → get_rankings
+  ✓ "fastest growing counties" → get_rankings
+
+═══════════════════════════════════════════════════════════════════
+TWO MODES OF OPERATION:
+═══════════════════════════════════════════════════════════════════
+
+MODE 1: SCORE-BASED RANKINGS (Most Common)
+  - Use when query asks about "best markets", "high scores", "investment opportunities"
+  - MUST include score_type in filter
+  - Valid score_types: "investoredge_score", "homeready_score", "market_health_score"
+  - Omit or set sort_by to "score"
+
+  Example Call:
+  {
+    "filter": {
+      "geography_type": "metro",
+      "score_type": "investoredge_score"
+    },
+    "limit": 10,
+    "ascending": false
+  }
+
+MODE 2: APPRECIATION-BASED RANKINGS
+  - Use when query asks about "appreciation", "growth", "YoY price growth", "price increase"
+  - DO NOT include score_type in filter
+  - MUST set sort_by to "appreciation_12m"
+  - This ranks by ACTUAL PRICE CHANGES, not PropertyIQ scores
+
+  Example Call:
+  {
+    "filter": {
+      "geography_type": "zip"
+    },
+    "sort_by": "appreciation_12m",
+    "limit": 10,
+    "ascending": false
+  }
+
+═══════════════════════════════════════════════════════════════════
+PARAMETER REFERENCE:
+═══════════════════════════════════════════════════════════════════
+
+filter.geography_type (REQUIRED):
+  - "metro" = Metropolitan areas (cities)
+  - "county" = Counties
+  - "zip" = ZIP codes
+  - "state" = States
+
+filter.score_type (REQUIRED for score rankings, OMIT for appreciation rankings):
+  - "investoredge_score" = For investors (cash flow, appreciation, momentum)
+  - "homeready_score" = For homebuyers (affordability, appreciation, quality of life)
+  - "market_health_score" = Overall market condition
+  - INVALID VALUES: "yoy_price_growth", "appreciation", etc. (use sort_by instead)
+
+filter.states (OPTIONAL):
+  - Array of 2-letter uppercase state codes: ["TX", "CA", "FL"]
+  - Use to filter results to specific states
+
+limit (OPTIONAL, default: 10):
+  - Number of results to return
+  - Range: 1-100
+
+ascending (OPTIONAL, default: false):
+  - false = highest first (top performers)
+  - true = lowest first (bottom performers)
+
+sort_by (OPTIONAL, default: "score"):
+  - "score" = Sort by PropertyIQ score (default)
+  - "appreciation_12m" = Sort by 12-month price appreciation
+  - Use "appreciation_12m" ONLY for appreciation queries
+  - Do NOT use score_type when using appreciation_12m
+
+═══════════════════════════════════════════════════════════════════
+RETURNS:
+═══════════════════════════════════════════════════════════════════
+
+{
+  "rankings": [
+    {
+      "geography_id": "12345",
+      "geography_name": "Austin, TX",
+      "geography_type": "metro",
+      "investoredge_score": 95.2,         // If score ranking
+      "appreciation_12m": 15.3,           // If appreciation ranking
+      "rank": 1
+    },
+    ...
+  ],
+  "count": 10,
+  "geography_type": "metro",
+  "sorted_by": "investoredge_score" or "appreciation_12m"
+}
+
+═══════════════════════════════════════════════════════════════════
+COMMON MISTAKES TO AVOID:
+═══════════════════════════════════════════════════════════════════
+
+❌ Using score_type for appreciation: {"score_type": "yoy_price_growth"}
+✅ Use sort_by instead: {"sort_by": "appreciation_12m"}
+
+❌ Including score_type when using appreciation: {"score_type": "investoredge_score", "sort_by": "appreciation_12m"}
+✅ Omit score_type for appreciation: {"sort_by": "appreciation_12m"}
+
+❌ Forgetting geography_type: {"score_type": "investoredge_score"}
+✅ Always include geography_type: {"geography_type": "metro", "score_type": "investoredge_score"}`,
         input_schema: {
           type: 'object',
           properties: {
             filter: {
               type: 'object',
-              description: 'Filter criteria',
+              description: 'Filter criteria. MUST include geography_type. For score rankings add score_type. For appreciation rankings do NOT add score_type.',
               properties: {
-                geography_type: { type: 'string' },
-                states: { type: 'array', items: { type: 'string' } },
-                score_type: { type: 'string' },
+                geography_type: {
+                  type: 'string',
+                  enum: ['state', 'metro', 'county', 'zip'],
+                  description: 'REQUIRED. Type of geography to rank.',
+                },
+                states: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'OPTIONAL. Filter to specific states using 2-letter uppercase codes: ["TX", "CA"]',
+                },
+                score_type: {
+                  type: 'string',
+                  enum: ['investoredge_score', 'homeready_score', 'market_health_score'],
+                  description: 'REQUIRED for score rankings. MUST BE OMITTED for appreciation rankings. Valid values: investoredge_score, homeready_score, market_health_score',
+                },
               },
+              required: ['geography_type'],
             },
             limit: {
               type: 'integer',
-              description: 'Number of results to return (default: 10, max: 100)',
+              description: 'Number of results to return. Default: 10, Max: 100',
+              minimum: 1,
+              maximum: 100,
             },
             ascending: {
               type: 'boolean',
-              description: 'If true, returns bottom performers instead of top',
+              description: 'Sort direction. false = highest first (default), true = lowest first',
+            },
+            sort_by: {
+              type: 'string',
+              enum: ['score', 'appreciation_12m'],
+              description: 'What to sort by. "score" (default) = sort by PropertyIQ score. "appreciation_12m" = sort by 12-month price appreciation. When using appreciation_12m, DO NOT include score_type in filter.',
             },
           },
           required: ['filter'],
