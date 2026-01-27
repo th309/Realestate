@@ -922,10 +922,8 @@ USER QUERY:`;
             this.logger.error(`[Quinn Chat] Tool ${toolUse.name} error: ${result.error}`);
           }
 
-          // Store tool result for structured data extraction
-          if (result.success) {
-            toolResultsData.push({ toolName: toolUse.name, data: result });
-          }
+          // Store every tool result (success or failure) so we can show errorMessage when ranking fails
+          toolResultsData.push({ toolName: toolUse.name, data: result });
 
           let toolResultContent: string;
           if (result.success && result.data?.error) {
@@ -1032,6 +1030,21 @@ USER QUERY:`;
         this.logger.warn(`[Quinn Chat] No rankings to format (structuredData.rankings.items.length = ${structuredData?.rankings?.items?.length || 0})`);
       }
 
+      // When ranking tool failed (e.g. timeout), append a clear, actionable message so the user isn’t left with “try again”
+      if (
+        queryIntent === 'ranking' &&
+        structuredData?.errorMessage &&
+        !structuredData?.rankings?.items?.length
+      ) {
+        const friendly =
+          /aborted|timeout|timed out/i.test(structuredData.errorMessage)
+            ? "The request timed out. Zip-level appreciation rankings are slow; try \"top metros in [state] by appreciation\" for a faster result, or try again in a moment."
+            : `Unable to retrieve rankings: ${structuredData.errorMessage}`;
+        if (!finalResponse.trim().toLowerCase().includes('unable') && !finalResponse.includes(structuredData.errorMessage)) {
+          finalResponse = finalResponse.trimEnd() + "\n\n" + friendly;
+        }
+      }
+
       conversation.messages.push({ role: 'assistant', content: finalResponse });
       const totalExecutionTime = Date.now() - chatStartTime;
 
@@ -1108,12 +1121,15 @@ USER QUERY:`;
       const actualData = data.data || data;
       this.logger.debug(`[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`);
 
-      // Handle rankings from get_rankings tool
+      // Handle rankings from get_rankings tool (including failed calls: data = { success, data, error })
       if (toolName === 'get_rankings') {
-        if (actualData.error && (!actualData.rankings || actualData.rankings.length === 0)) {
+        const isFailed = data?.success === false && data?.error;
+        if (isFailed) {
+          structured.errorMessage = data.error;
+        } else if (actualData?.error && (!actualData.rankings || actualData.rankings.length === 0)) {
           structured.errorMessage = actualData.error;
         }
-        if (actualData.rankings) {
+        if (actualData?.rankings?.length) {
           this.logger.debug(`[Quinn Extract] Found rankings: ${actualData.rankings.length} items`);
           structured.rankings = {
             title: actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',

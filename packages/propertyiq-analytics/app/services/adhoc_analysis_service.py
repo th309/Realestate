@@ -420,7 +420,7 @@ class AdhocAnalysisService:
         if metrics is None:
             metrics = ['investoredge_score']
         
-        df = self.cache.get_cached_data(geography_type, auto_sync=True)
+        df = self.cache.get_cached_data(geography_type, auto_sync=True, latest_only=False)
         if df is None or len(df) == 0:
             return {"error": f"No data available for {geography_type}"}
         

@@ -168,6 +168,8 @@ class DataCache:
         
         self.metadata_file = self.cache_dir / 'cache_metadata.json'
         self._metadata = self._load_metadata()
+        # In-memory cache: avoid re-reading parquet on every request. Filter/sort then stay fast.
+        self._memory_cache: Dict[str, pd.DataFrame] = {}
 
     @property
     def supabase(self) -> Client:
@@ -602,7 +604,8 @@ class DataCache:
                 'last_updated': datetime.utcnow().isoformat(),
             }
             self._save_metadata()
-            
+            self._memory_cache.pop(geo_type, None)
+
             logger.info(f"Saved {len(df)} records to cache for {geo_type}")
         except Exception as e:
             logger.error(f"Failed to save cache for {geo_type}: {e}")
@@ -927,36 +930,58 @@ class DataCache:
         geo_type: str,
         auto_sync: bool = True,
         enrich_names: bool = True,
+        latest_only: bool = True,
     ) -> Optional[pd.DataFrame]:
         """
         Get data for geography type, syncing if needed.
-        
-        Args:
-            geo_type: Geography type
-            auto_sync: Automatically sync if cache is empty
-            enrich_names: Add geography_name column from crosswalk (default: True)
-            
-        Returns:
-            DataFrame or None (with geography_name if enrich_names=True)
+        When latest_only=True (default), keeps only the most recent period per
+        geography in RAM so filter/sort are instant and memory stays small.
+        When latest_only=False, returns full history from disk (no RAM cache).
         """
+        # Full-history callers (e.g. get_time_series) bypass RAM cache
+        if not latest_only:
+            df = None
+            if self.is_cached(geo_type):
+                df = self.load_from_cache(geo_type)
+            elif auto_sync:
+                logger.info(f"Cache empty for {geo_type}, syncing...")
+                self.sync_cache(geo_type)
+                df = self.load_from_cache(geo_type)
+            if df is not None and enrich_names:
+                df = self._enrich_with_geography_names(df, geo_type)
+            return df
+
+        # Serve from memory if already loaded (latest-only, one row per geography)
+        if geo_type in self._memory_cache:
+            df = self._memory_cache[geo_type]
+            logger.debug(f"Loaded {len(df)} {geo_type} records from in-memory cache")
+            return df
+
         df = None
-        
         if self.is_cached(geo_type):
             df = self.load_from_cache(geo_type)
         elif auto_sync:
             logger.info(f"Cache empty for {geo_type}, syncing...")
             self.sync_cache(geo_type)
             df = self.load_from_cache(geo_type)
-        
-        # Enrich with geography names from crosswalk
+
+        if df is not None and latest_only and "period_date" in df.columns and "geography_id" in df.columns:
+            n_before = len(df)
+            df = df.sort_values("period_date", ascending=False).groupby("geography_id", as_index=False).first()
+            logger.info(f"Reduced to latest period per geography: {n_before} -> {len(df)} records for {geo_type}")
+
         if df is not None and enrich_names:
             df = self._enrich_with_geography_names(df, geo_type)
-        
+
+        if df is not None and latest_only:
+            self._memory_cache[geo_type] = df
+
         return df
 
     def clear_cache(self, geo_type: str = None):
         """Clear cache for specific geography or all."""
         if geo_type:
+            self._memory_cache.pop(geo_type, None)
             cache_path = self._get_cache_path(geo_type)
             if cache_path.exists():
                 cache_path.unlink()
@@ -965,6 +990,7 @@ class DataCache:
                 self._save_metadata()
                 logger.info(f"Cleared cache for {geo_type}")
         else:
+            self._memory_cache.clear()
             for geo in ['state', 'metro', 'county', 'zip']:
                 self.clear_cache(geo)
 

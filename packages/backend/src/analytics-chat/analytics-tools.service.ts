@@ -86,10 +86,10 @@ export class AnalyticsToolsService {
       this.logger.log(`[Tool ${toolName}] Calling ${method} ${url}`);
 
       const fetchStart = Date.now();
-      
-      // Add 30 second timeout to prevent hanging
+      // Zip-level rankings (especially appreciation) can take 30–60s; use longer timeout for get_rankings
+      const timeoutMs = toolName === 'get_rankings' ? 60000 : 30000;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
       let response;
       try {
