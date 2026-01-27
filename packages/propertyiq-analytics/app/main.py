@@ -1,4 +1,5 @@
 # PropertyIQ Analytics Service - v1.0.2
+# Build trigger: 2026-01-27-rebuild
 import logging
 import time
 from contextlib import asynccontextmanager
