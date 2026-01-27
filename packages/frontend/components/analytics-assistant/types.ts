@@ -12,6 +12,8 @@ export interface StructuredData {
   table?: DataTableConfig;
   comparison?: ComparisonConfig;
   rankings?: RankingsData;
+  /** Error returned by the analytics service (e.g. no data for filter) */
+  errorMessage?: string;
 }
 
 export interface RankingsData {

@@ -53,6 +53,10 @@ class RankRequest(BaseModel):
     filter: FilterRequest
     limit: int = Field(10, ge=1, le=100, description="Number of results to return")
     ascending: bool = Field(False, description="If true, returns bottom performers")
+    sort_by: Optional[str] = Field(
+        None,
+        description="Sort by 'score' (default) or 'appreciation_12m' for year-over-year appreciation"
+    )
 
 
 class TimeSeriesRequest(BaseModel):
@@ -239,7 +243,8 @@ async def get_rankings(request: RankRequest):
             df,
             score_type=request.filter.score_type,
             limit=request.limit,
-            ascending=request.ascending
+            ascending=request.ascending,
+            sort_by=request.sort_by
         )
         
         return {

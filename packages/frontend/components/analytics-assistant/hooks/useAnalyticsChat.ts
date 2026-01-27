@@ -76,6 +76,9 @@ export function useAnalyticsChat(options: UseChatOptions = {}): UseChatReturn {
           const top = r.items.slice(0, 5);
           content = `${label} markets:\n${top.map((i: { rank: number; name: string; score?: number; state?: string }) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`).join('\n')}`;
         }
+        if (!content && data.structuredData?.errorMessage) {
+          content = `Unable to retrieve rankings: ${data.structuredData.errorMessage}`;
+        }
         if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
 
         const assistantMessage: Message = {

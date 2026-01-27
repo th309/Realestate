@@ -349,31 +349,44 @@ class AdhocAnalysisService:
         df: pd.DataFrame,
         score_type: str = "investoredge_score",
         limit: int = 10,
-        ascending: bool = False
+        ascending: bool = False,
+        sort_by: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Get top or bottom performers from filtered data.
+        sort_by: 'score' (default) or 'appreciation_12m' for year-over-year appreciation.
 
         PERFORMANCE TARGET: <100ms when df comes from cache (get_cached_data).
         Uses in-memory DataFrame only; no database round-trip.
         """
         if df is None or len(df) == 0:
             return {"error": "No data available", "rankings": []}
-        
-        if score_type not in df.columns:
-            return {"error": f"Score type {score_type} not found", "rankings": []}
-        
-        # Get latest data per geography
-        if 'period_date' in df.columns:
-            latest = df.sort_values('period_date', ascending=False)
-            latest_period = latest.groupby('geography_id').first().reset_index()
+
+        use_appreciation = sort_by == "appreciation_12m"
+        sort_column: Optional[str] = None
+        if use_appreciation:
+            if "actual_appreciation_12m" not in df.columns:
+                return {"error": "Appreciation data not available for this geography level", "rankings": []}
+            sort_column = "actual_appreciation_12m"
         else:
-            latest_period = df.drop_duplicates(subset=['geography_id'])
-        
-        # Sort and get rankings
-        sorted_df = latest_period.sort_values(score_type, ascending=ascending)
+            if score_type not in df.columns:
+                return {"error": f"Score type {score_type} not found", "rankings": []}
+            sort_column = score_type
+
+        # Get latest data per geography
+        if "period_date" in df.columns:
+            latest = df.sort_values("period_date", ascending=False)
+            latest_period = latest.groupby("geography_id").first().reset_index()
+        else:
+            latest_period = df.drop_duplicates(subset=["geography_id"])
+
+        # Drop rows with null sort key when sorting by appreciation
+        if use_appreciation:
+            latest_period = latest_period[latest_period[sort_column].notna()]
+
+        sorted_df = latest_period.sort_values(sort_column, ascending=ascending)
         rankings = []
-        
+
         for rank, (_, row) in enumerate(sorted_df.head(limit).iterrows(), 1):
             gid = row.get("geography_id")
             gname = row.get("geography_name", gid)
@@ -381,7 +394,7 @@ class AdhocAnalysisService:
                 "rank": rank,
                 "geography_id": _native_scalar(gid),
                 "geography_name": _native_scalar(gname),
-                "score": round(float(row.get(score_type, 0)), 1) if pd.notna(row.get(score_type)) else None,
+                "score": round(float(row.get(score_type, 0)), 1) if score_type in row and pd.notna(row.get(score_type)) else None,
             }
             if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
                 item["state"] = _native_scalar(row["parent_geography_id"])

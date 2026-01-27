@@ -31,6 +31,8 @@ export interface StructuredData {
   table?: TableConfig;
   comparison?: ComparisonConfig;
   rankings?: RankingsData;
+  /** When the analytics service returns an error in the body (e.g. no data for filter) */
+  errorMessage?: string;
 }
 
 interface ChartConfig {
@@ -832,7 +834,15 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
             toolResultsData.push({ toolName: toolUse.name, data: result });
           }
 
-          const toolResultContent = JSON.stringify(result.success ? result : { error: result.error });
+          let toolResultContent: string;
+          if (result.success && result.data?.error) {
+            toolResultContent = JSON.stringify({
+              ...result.data,
+              note: `Service reported an error. Tell the user: ${result.data.error}`,
+            });
+          } else {
+            toolResultContent = JSON.stringify(result.success ? result : { error: result.error });
+          }
           this.logger.log(`[Quinn Chat] Tool result content length: ${toolResultContent.length}`);
 
           toolResults.push({
@@ -1001,20 +1011,24 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
       this.logger.debug(`[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`);
 
       // Handle rankings from get_rankings tool
-      if (toolName === 'get_rankings' && actualData.rankings) {
-        this.logger.debug(`[Quinn Extract] Found rankings: ${actualData.rankings.length} items`);
-
-        structured.rankings = {
-          title: actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
-          direction: actualData.direction || 'top',
-          items: actualData.rankings.map((item: any) => ({
-            rank: item.rank,
-            name: item.geography_name || item.geography_id,
-            score: item.score,
-            appreciation: item.appreciation_12m,
-            state: item.state,
-          })),
-        };
+      if (toolName === 'get_rankings') {
+        if (actualData.error && (!actualData.rankings || actualData.rankings.length === 0)) {
+          structured.errorMessage = actualData.error;
+        }
+        if (actualData.rankings) {
+          this.logger.debug(`[Quinn Extract] Found rankings: ${actualData.rankings.length} items`);
+          structured.rankings = {
+            title: actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
+            direction: actualData.direction || 'top',
+            items: actualData.rankings.map((item: any) => ({
+              rank: item.rank,
+              name: item.geography_name || item.geography_id,
+              score: item.score,
+              appreciation: item.appreciation_12m,
+              state: item.state,
+            })),
+          };
+        }
       }
 
       // Handle comparison from compare_to_benchmark tool
@@ -1120,6 +1134,9 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
    */
   private buildFallbackResponseFromStructuredData(structured: StructuredData): string {
     const parts: string[] = [];
+    if (structured.errorMessage) {
+      parts.push(`Unable to retrieve rankings: ${structured.errorMessage}`);
+    }
     if (structured.rankings?.items?.length) {
       parts.push(this.formatRankingsForResponse(structured.rankings));
     }
