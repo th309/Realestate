@@ -215,12 +215,106 @@ export class AnalyticsChatService {
   }
 
   /**
+   * Build user profile section for system prompt (cached).
+   * This contains stable user information that rarely changes.
+   */
+  private buildUserProfilePrompt(
+    userMode: 'homebuyer' | 'investor',
+    userPreferences?: Record<string, unknown>,
+  ): string {
+    const modeDescription = userMode === 'homebuyer'
+      ? 'HomeReady (Homebuyer/Renter)'
+      : 'InvestorEdge (Investor)';
+
+    const primaryScore = userMode === 'homebuyer' ? 'homeready_score' : 'investoredge_score';
+
+    // Build profile sections
+    const profileSections: string[] = [];
+
+    profileSections.push(`User Mode: ${modeDescription}`);
+    profileSections.push(`Primary Score: ${primaryScore}`);
+    profileSections.push(`Default Score for Queries: Use ${primaryScore} unless user specifies otherwise`);
+
+    // Geographic preferences
+    if (userPreferences?.location) {
+      profileSections.push(`\nGEOGRAPHIC PREFERENCES:`);
+      profileSections.push(`- Home Location: ${userPreferences.location}`);
+      profileSections.push(`- When user asks for "local markets" or "my area", prioritize this location`);
+    }
+    if (userPreferences?.preferredStates && Array.isArray(userPreferences.preferredStates)) {
+      profileSections.push(`- Preferred States: ${(userPreferences.preferredStates as string[]).join(', ')}`);
+      profileSections.push(`- Consider these states when providing recommendations`);
+    }
+
+    // Financial preferences
+    if (userPreferences?.budget || userPreferences?.priceRange) {
+      profileSections.push(`\nFINANCIAL PREFERENCES:`);
+      if (userPreferences?.budget) {
+        profileSections.push(`- Budget: ${userPreferences.budget}`);
+      }
+      if (userPreferences?.priceRange) {
+        profileSections.push(`- Price Range: ${userPreferences.priceRange}`);
+      }
+    }
+
+    // Investment preferences (for investors)
+    if (userMode === 'investor') {
+      profileSections.push(`\nINVESTMENT PREFERENCES:`);
+      if (userPreferences?.investmentStrategy) {
+        profileSections.push(`- Strategy: ${userPreferences.investmentStrategy}`);
+      }
+      if (userPreferences?.riskTolerance) {
+        profileSections.push(`- Risk Tolerance: ${userPreferences.riskTolerance}`);
+      }
+      if (userPreferences?.timeHorizon) {
+        profileSections.push(`- Time Horizon: ${userPreferences.timeHorizon}`);
+      }
+      if (userPreferences?.propertyTypes && Array.isArray(userPreferences.propertyTypes)) {
+        profileSections.push(`- Property Types: ${(userPreferences.propertyTypes as string[]).join(', ')}`);
+      }
+    }
+
+    // Homebuyer preferences
+    if (userMode === 'homebuyer') {
+      profileSections.push(`\nHOMEBUYER PREFERENCES:`);
+      if (userPreferences?.householdSize) {
+        profileSections.push(`- Household Size: ${userPreferences.householdSize}`);
+      }
+      if (userPreferences?.priorities && Array.isArray(userPreferences.priorities)) {
+        profileSections.push(`- Priorities: ${(userPreferences.priorities as string[]).join(', ')}`);
+      }
+    }
+
+    // Saved searches / watchlist
+    if (userPreferences?.watchlist && Array.isArray(userPreferences.watchlist)) {
+      profileSections.push(`\nWATCHLIST:`);
+      (userPreferences.watchlist as any[]).forEach((item: any) => {
+        profileSections.push(`- ${item.name || item.geography_name} (${item.geography_type})`);
+      });
+      profileSections.push(`- Consider these markets when providing recommendations`);
+    }
+
+    return `
+═══════════════════════════════════════════════════════════════════
+USER PROFILE
+═══════════════════════════════════════════════════════════════════
+
+${profileSections.join('\n')}
+
+IMPORTANT:
+- Use this profile to personalize responses and default assumptions
+- When user asks general queries without specifying location, consider their preferences
+- When choosing which score to use by default, use the Primary Score above
+- This profile persists across the conversation session
+`;
+  }
+
+  /**
    * Build dynamic context sent per-query (session-only, not cached).
+   * Only includes information that changes frequently (conversation history).
    */
   private buildDynamicContext(
-    userMode: 'homebuyer' | 'investor',
     conversationHistory: ChatMessage[],
-    userPreferences?: Record<string, unknown>,
   ): string {
     const recentHistory = conversationHistory.slice(-4);
     const historyContext = recentHistory.length > 0
@@ -232,18 +326,10 @@ export class AnalyticsChatService {
           .join('\n')
       : 'First query in conversation';
 
-    return `CURRENT SESSION CONTEXT:
-User Mode: ${userMode === 'homebuyer' ? 'HomeReady (Homebuyer/Renter)' : 'InvestorEdge (Investor)'}
-Primary Score: ${userMode === 'homebuyer' ? 'homeready_score' : 'investoredge_score'}
-${userPreferences?.location ? `User Location: ${userPreferences.location}` : ''}
-${userPreferences?.budget ? `Budget: ${userPreferences.budget}` : ''}
-${userPreferences?.investmentStrategy ? `Strategy: ${userPreferences.investmentStrategy}` : ''}
-
-RECENT CONVERSATION:
+    return `RECENT CONVERSATION HISTORY:
 ${historyContext}
 
----
-Respond efficiently. Use the minimum number of tool calls needed.`;
+USER QUERY:`;
   }
 
   /**
@@ -718,14 +804,16 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
 
-    // Dynamic context (session-only); userMode from context or default homebuyer
+    // Extract user mode and preferences for profile
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
-    const dynamicContext = this.buildDynamicContext(
-      userMode,
-      conversation.messages,
-      conversation.context as Record<string, unknown> | undefined,
-    );
-    const userMessageWithContext = `${dynamicContext}\n\nUser Query: ${userMessage}`;
+    const userPreferences = conversation.context as Record<string, unknown> | undefined;
+
+    // Build cached user profile section
+    const userProfilePrompt = this.buildUserProfilePrompt(userMode, userPreferences);
+
+    // Build dynamic context (conversation history only - changes per message)
+    const dynamicContext = this.buildDynamicContext(conversation.messages);
+    const userMessageWithContext = `${dynamicContext}\n${userMessage}`;
 
     // Prepare messages for API (last 20 exchanges); inject dynamic context into latest user message
     const apiMessages = conversation.messages.slice(-40).map((m, i, arr) => {
@@ -761,6 +849,11 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
             {
               type: 'text' as const,
               text: QUINN_BASE_SYSTEM_PROMPT,
+              cache_control: { type: 'ephemeral' as const },
+            },
+            {
+              type: 'text' as const,
+              text: userProfilePrompt,
               cache_control: { type: 'ephemeral' as const },
             },
           ],
@@ -867,6 +960,11 @@ Respond efficiently. Use the minimum number of tool calls needed.`;
               {
                 type: 'text' as const,
                 text: QUINN_BASE_SYSTEM_PROMPT,
+                cache_control: { type: 'ephemeral' as const },
+              },
+              {
+                type: 'text' as const,
+                text: userProfilePrompt,
                 cache_control: { type: 'ephemeral' as const },
               },
             ],
