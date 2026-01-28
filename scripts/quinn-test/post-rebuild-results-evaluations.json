@@ -1,0 +1,2622 @@
+[
+  {
+    "prompt": "Where should I buy in Austin?",
+    "durationMs": 8788,
+    "toolsUsed": [
+      "get_rankings",
+      "filter_geographies"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll help you find the best areas to buy in Austin by looking at ZIP codes with high HomeReady scores for homebuyers.\n\nLet me specifically look at ZIP codes within the Austin metro area to give you more targeted recommendations.\n\nTop markets:\n1. Amarillo, TX 79104 (74.8), TX\n2. Bynum, TX 76631 (74.5), TX\n3. Montalba, TX 75853 (73.6), TX\n4. Keene, TX 76059 (72.7), TX\n5. Blackwell, TX 79506 (72.6), TX\n6. Prairie View, TX 77446 (72.5), TX\n7. Tuleta, TX 78162 (72.5), TX\n8. Nazareth, TX 79063 (72.5), TX\n9. Tye, TX 79563 (72), TX\n10. Byers, TX 76357 (71.4), TX",
+    "responseLength": 560,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "durationMs": 9589,
+    "toolsUsed": [
+      "get_time_series",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll check Phoenix's recent price trends to see if prices are rising or falling.\n\nLet me get the current appreciation data for Phoenix to compare recent price movements.\n\nYes, prices are dropping in Phoenix - it shows -3.2% appreciation over the past 12 months, ranking last among Arizona metros for price performance.\n\nTop markets:\n1. Safford, AZ (48.5), AZ\n2. Yuma, AZ (49.5), AZ\n3. Sierra Vista-Douglas, AZ (49), AZ\n4. Flagstaff, AZ (29), AZ\n5. Show Low, AZ (37), AZ\n6. Lake Havasu City-Kingman, AZ (47.6), AZ\n7. Nogales, AZ (41), AZ\n8. Payson, AZ (41.2), AZ\n9. Tucson, AZ (50), AZ\n10. Phoenix-Mesa-Chandler, AZ (45.7), AZ",
+    "responseLength": 625,
+    "brevityScore": 25,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 84.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Best family neighborhoods in Dallas?",
+    "durationMs": 13425,
+    "toolsUsed": [
+      "get_rankings",
+      "filter_geographies",
+      "search_real_estate_news"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find the best family neighborhoods in Dallas using our HomeReady score, which factors in affordability, appreciation potential, and quality of life factors important for families.\n\nLet me get the Dallas-area zip codes specifically, as the state-wide search returned mostly rural areas.\n\nLet me search for Dallas-area zip codes more specifically by looking for zip codes that start with 752 or 750 (Dallas area codes).\n\nTop markets:\n1. Amarillo, TX 79104 (74.8), TX\n2. Bynum, TX 76631 (74.5), TX\n3. Montalba, TX 75853 (73.6), TX\n4. Keene, TX 76059 (72.7), TX\n5. Blackwell, TX 79506 (72.6), TX\n6. Prairie View, TX 77446 (72.5), TX\n7. Tuleta, TX 78162 (72.5), TX\n8. Nazareth, TX 79063 (72.5), TX\n9. Tye, TX 79563 (72), TX\n10. Byers, TX 76357 (71.4), TX",
+    "responseLength": 754,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 78.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Is it a good time to buy in Denver?",
+    "durationMs": 10349,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll analyze Denver's current market conditions to help you determine if it's a good time to buy.\n\nTop markets:\n1. Greeley, CO (55.8), CO\n2. Denver-Aurora-Centennial, CO (54.9), CO\n3. Colorado Springs, CO (52.6), CO\n4. Fort Collins-Loveland, CO (50.7), CO\n5. Boulder, CO (49.2), CO",
+    "responseLength": 281,
+    "brevityScore": 50,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 86.5,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "durationMs": 6899,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I need to find the most affordable metro in Texas. Since you're in HomeReady mode, I'll look at metros ranked by HomeReady score, which factors in affordability among other homebuyer considerations.\n\nHere are the most affordable Texas metros for homebuyers based on HomeReady scores, which factor in affordability alongside appreciation potential and quality of life.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 723,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Compare Houston to San Antonio for first-time buyers",
+    "durationMs": 6995,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Houston and San Antonio using HomeReady scores, which are designed specifically for homebuyers and renters like first-time buyers.\n\nHouston ranks 8th in Texas with a HomeReady score of 51.5, while San Antonio ranks 10th with a score of 51.3 - making them very close for first-time buyers, with Houston having a slight edge in overall homebuyer conditions.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 724,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 76.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Are Seattle suburbs good for families?",
+    "durationMs": 14526,
+    "toolsUsed": [
+      "get_rankings",
+      "filter_geographies",
+      "get_rankings"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll analyze Seattle suburban areas to see how family-friendly they are using our HomeReady scores, which factor in affordability, appreciation potential, and quality of life - all important for families.\n\nNow let me get some Seattle metro areas specifically to focus on the suburbs around Seattle:\n\nBased on the HomeReady scores, several Seattle suburbs show strong family-friendly characteristics, with areas like Woodinville (71.1), Duvall (70.5), Edmonds (69.8), and Snohomish (69.4) scoring well above average for affordability, appreciation potential, and quality of life factors important to families.\n\nTop markets:\n1. Rock Island, WA 98850 (83.3), WA\n2. Suquamish, WA 98392 (75.3), WA\n3. Conconully, WA 98819 (72.5), WA\n4. Indianola, WA 98342 (71.6), WA\n5. Silvana, WA 98287 (71.5), WA\n6. Woodinville, WA 98072 (71.1), WA\n7. Duvall, WA 98019 (70.5), WA\n8. Everson, WA 98247 (70.2), WA\n9. Quinault, WA 98575 (70), WA\n10. Edmonds, WA 98020 (69.8), WA",
+    "responseLength": 956,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 75.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Where can I find good schools in Atlanta?",
+    "durationMs": 5384,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I understand you're looking for good schools in Atlanta, but I should clarify that PropertyIQ focuses on real estate market analytics rather than school ratings or educational data.\n\nHowever, I can help you find markets in the Atlanta area that score well on our HomeReady index, which factors in quality of life metrics that often correlate with good school districts. Would you like me to show you the top-scoring zip codes or counties in the Atlanta metro area? These areas typically have strong fundamentals that align with desirable school districts.\n\nAlternatively, for detailed school ratings and information, I'd recommend checking resources like GreatSchools.org, Niche.com, or the Georgia Department of Education website.",
+    "responseLength": 731,
+    "brevityScore": 75,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 50,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 75.75,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Which markets have the best cash-on-cash returns?",
+    "durationMs": 5333,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the markets with the best investment returns using our InvestorEdge score, which incorporates cap rate as our closest proxy for cash flow returns.\n\nHere are the top 10 metros with the highest InvestorEdge scores, indicating strong potential for cash-on-cash returns based on cap rates and market fundamentals.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 600,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Show me high-growth positive cash flow markets",
+    "durationMs": 6935,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find high-growth markets with positive cash flow potential for you. Since we use InvestorEdge score as our proxy for cash flow opportunities (including cap rate analysis), I'll show you the top markets ranked by this score.\n\nHere are the top metros for high cash flow potential based on InvestorEdge scores, which factor in cap rates as our closest proxy for cash flow opportunities.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 665,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Compare cap rates across Texas metros",
+    "durationMs": 7122,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you Texas metros ranked by InvestorEdge score, which uses cap rate as our closest proxy for cash flow potential.\n\nThese are Texas metros ranked by investment potential, with Abilene leading at 74.3 InvestorEdge score.\n\nTop markets:\n1. Abilene, TX (74.3), TX\n2. Snyder, TX (64.5), TX\n3. Sweetwater, TX (61.4), TX\n4. Huntsville, TX (61), TX\n5. Zapata, TX (59.1), TX\n6. Vernon, TX (58.9), TX\n7. Texarkana, TX-AR (56.6), TX\n8. Beaumont-Port Arthur, TX (56), TX\n9. Amarillo, TX (55), TX\n10. Lubbock, TX (54.2), TX",
+    "responseLength": 518,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "durationMs": 8860,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the hottest markets for rental properties based on InvestorEdge scores, which evaluate cash flow potential, appreciation, and market momentum.\n\nHere are the top 10 metros for rental property investment based on InvestorEdge scores:\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 522,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Best rental yields in Florida",
+    "durationMs": 5379,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find the best rental yield opportunities in Florida for you. Since we don't have direct rental yield data, I'll use InvestorEdge scores which factor in cap rates as the closest proxy for rental yields.\n\nHere are Florida's top metros for rental yield opportunities based on InvestorEdge scores, which use cap rates as our closest proxy for rental yields.\n\nTop markets:\n1. Tallahassee, FL (52.5), FL\n2. Pensacola-Ferry Pass-Brent, FL (52.2), FL\n3. Lakeland-Winter Haven, FL (51.5), FL\n4. Jacksonville, FL (51.4), FL\n5. Palm Bay-Melbourne-Titusville, FL (49.8), FL\n6. Ocala, FL (49.4), FL\n7. Tampa-St. Petersburg-Clearwater, FL (49), FL\n8. Deltona-Daytona Beach-Ormond Beach, FL (48.9), FL\n9. Wildwood-The Villages, FL (48.8), FL\n10. Palatka, FL (48.7), FL",
+    "responseLength": 758,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Which metros have appreciation potential?",
+    "durationMs": 5614,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top metros with the highest appreciation potential based on HomeReady scores, which factor in both affordability and growth prospects for homebuyers.\n\nHere are the top 10 metros with the highest appreciation potential based on HomeReady scores, which balance affordability with growth prospects for homebuyers.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 612,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Where should I invest for passive income?",
+    "durationMs": 6817,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll help you find the best markets for passive income investing by looking at the top-performing areas based on InvestorEdge scores, which factor in cash flow potential, appreciation, and market momentum.\n\nHere are the top 15 metros for passive income investing based on InvestorEdge scores, which evaluate cash flow potential and investment fundamentals.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 633,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Show me markets with strong rent growth",
+    "durationMs": 6383,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you markets with strong rent growth, which aligns well with your homebuyer focus since rent growth often indicates housing demand and potential appreciation.\n\nHere are the metros with the strongest rent/price growth over the past 12 months, which indicates strong housing demand that could benefit both renters considering future moves and potential homebuyers looking at appreciation potential.\n\nTop markets:\n1. Hailey, ID (18.7), ID\n2. Galesburg, IL (77.4), IL\n3. New Ulm, MN (69.7), MN\n4. Pontiac, IL (61), IL\n5. Mexico, MO (61.6), MO\n6. Freeport, IL (74), IL\n7. Sidney, OH (50.7), OH\n8. Stevens Point-Plover, WI (48.5), WI\n9. Taylorville, IL (56.9), IL\n10. Rochelle, IL (65.6), IL",
+    "responseLength": 694,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What's happening in the housing market?",
+    "durationMs": 12910,
+    "toolsUsed": [
+      "search_real_estate_news",
+      "analyze_data",
+      "analyze_data"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'm having trouble accessing the latest news right now due to a technical issue. Let me provide insights on current housing market trends using our market data instead.",
+    "responseLength": 168,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 98.5,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Hot markets right now",
+    "durationMs": 4825,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the hottest markets right now based on HomeReady scores, which evaluate affordability, appreciation potential, and quality of life for homebuyers.\n\nHere are the top 10 hottest markets for homebuyers based on current HomeReady scores.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 531,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Show me top metros",
+    "durationMs": 4952,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top metros for homebuyers based on HomeReady scores.\n\nHere are the top 10 metros for homebuyers based on HomeReady scores, which factor in affordability, appreciation potential, and quality of life.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 500,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Tell me about Austin",
+    "durationMs": 12050,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll provide a comprehensive analysis of Austin, TX covering its current performance, trends, and market context.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 469,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 78.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "How does Miami compare to the national average?",
+    "durationMs": 5667,
+    "toolsUsed": [
+      "compare_to_benchmark"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Miami to the national average using the HomeReady score since you're in homebuyer mode.\n\nMiami-area metros average a HomeReady score of 46.4, which is just slightly above the national average of 45.8 but places them in the 47th percentile nationally.",
+    "responseLength": 263,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "What are the best markets overall?",
+    "durationMs": 6233,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top markets based on HomeReady scores, which are ideal for homebuyers and renters like yourself.\n\nHere are the top 10 metro markets overall based on HomeReady scores, which balance affordability, appreciation potential, and quality of life for homebuyers.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 557,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Best states for investing",
+    "durationMs": 4969,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top states for real estate investing based on InvestorEdge scores.\n\nHere are the top 10 states for real estate investing based on InvestorEdge scores.\n\nTop markets:\n1. Ohio (65.1)\n2. Indiana (59.6)\n3. Pennsylvania (59.4)\n4. Michigan (58.6)\n5. Illinois (58.4)\n6. West Virginia (57.6)\n7. Missouri (56.9)\n8. Kentucky (55.2)\n9. Oklahoma (54.7)\n10. Kansas (54.6)",
+    "responseLength": 375,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Top counties in California",
+    "durationMs": 3921,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top counties in California by HomeReady score for homebuyers:\n\nTop markets:\n1. Glenn County, CA (58.8), CA\n2. San Diego County, CA (57.8), CA\n3. San Mateo County, CA (57.8), CA\n4. Fresno County, CA (57.6), CA\n5. Santa Clara County, CA (57.2), CA\n6. Solano County, CA (57.2), CA\n7. Contra Costa County, CA (56.7), CA\n8. San Benito County, CA (56.7), CA\n9. Sacramento County, CA (56), CA\n10. Merced County, CA (55.8), CA",
+    "responseLength": 431,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Compare zip codes in Seattle metro",
+    "durationMs": 5529,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare the zip codes in the Seattle metro area based on HomeReady scores to help you find the best opportunities for homebuyers.\n\nHere are the top 20 zip codes in Washington state ranked by HomeReady score, which includes several in the Seattle metro area like Woodinville, Duvall, Edmonds, and North Seattle.\n\nTop markets:\n1. Rock Island, WA 98850 (83.3), WA\n2. Suquamish, WA 98392 (75.3), WA\n3. Conconully, WA 98819 (72.5), WA\n4. Indianola, WA 98342 (71.6), WA\n5. Silvana, WA 98287 (71.5), WA\n6. Woodinville, WA 98072 (71.1), WA\n7. Duvall, WA 98019 (70.5), WA\n8. Everson, WA 98247 (70.2), WA\n9. Quinault, WA 98575 (70), WA\n10. Edmonds, WA 98020 (69.8), WA",
+    "responseLength": 663,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Show me cities similar to Boulder",
+    "durationMs": 14658,
+    "toolsUsed": [
+      "find_similar_geographies",
+      "find_neighboring_geographies",
+      "compare_to_neighbors"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find cities similar to Boulder, Colorado for you. Let me search for metros with comparable characteristics based on HomeReady scores and key market metrics.\n\nLet me first find Boulder's geography ID and then locate similar markets.\n\nLet me try a different approach to find markets similar to Boulder by looking at Colorado metros first.\n\nI'm experiencing a technical issue with finding similar markets to Boulder right now. Let me try to show you high-scoring metros in Colorado and nearby states that might have similar characteristics to Boulder.",
+    "responseLength": 553,
+    "brevityScore": 75,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 94.75,
+    "passes": false,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Best metros in the Midwest",
+    "durationMs": 6519,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the best metros in the Midwest based on HomeReady scores, which evaluate affordability, appreciation potential, and quality of life for homebuyers.\n\nHere are the top 15 metros in the Midwest based on HomeReady scores for homebuyers and renters.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. Stevens Point-Plover, WI (67.3), WI\n3. Auburn, IN (67.2), IN\n4. Marshalltown, IA (67.1), IA\n5. Hannibal, MO (66.7), MO\n6. Huntington, IN (66.7), IN\n7. Decatur, IL (66), IL\n8. Chillicothe, OH (65.7), OH\n9. Marion, OH (65.3), OH\n10. Marshall, MN (64.2), MN",
+    "responseLength": 557,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Top 10 states by home prices",
+    "durationMs": 5122,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top 10 states by 12-month price appreciation:\n\nTop markets:\n1. North Dakota (53.8)\n2. Wisconsin (51.1)\n3. Connecticut (51.5)\n4. Illinois (58.4)\n5. New York (42.8)\n6. Alaska (50.9)\n7. Michigan (58.6)\n8. Iowa (52.7)\n9. Ohio (65.1)\n10. New Jersey (47)",
+    "responseLength": 261,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Compare Austin to Nashville",
+    "durationMs": 10568,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Austin and Nashville across key metrics for homebuyers.\n\nBased on the HomeReady scores for homebuyers, Nashville ranks 9th in Tennessee with a score of 52.7, while Austin ranks 7th in Texas with a score of 51.8 - making them very close competitors with Nashville having a slight edge for homebuyers.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 668,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": true,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 76.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text",
+      "CRITICAL: Hallucinated data"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition",
+      "Add \"never make up numbers\" to system prompt"
+    ]
+  },
+  {
+    "prompt": "How does Phoenix stack up against Las Vegas?",
+    "durationMs": 5499,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Phoenix and Las Vegas by getting their HomeReady scores and showing how they rank against each other.\n\nPhoenix scores significantly higher than Las Vegas for homebuyers, with Phoenix ranking #1 in the region at 58.5 compared to Las Vegas at #6 with 49.7 on the HomeReady score.\n\nTop markets:\n1. Phoenix-Mesa-Chandler, AZ (58.5), AZ\n2. Fallon, NV (57.2), NV\n3. Safford, AZ (57), AZ\n4. Carson City, NV (56.5), NV\n5. Tucson, AZ (54), AZ\n6. Las Vegas-Henderson-North Las Vegas, NV (49.7), NV\n7. Flagstaff, AZ (49.5), AZ\n8. Prescott Valley-Prescott, AZ (49.4), AZ\n9. Reno, NV (48.3), NV\n10. Lake Havasu City-Kingman, AZ (47.6), AZ",
+    "responseLength": 638,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What markets are similar to Raleigh?",
+    "durationMs": 10953,
+    "toolsUsed": [
+      "find_similar_geographies",
+      "compare_to_neighbors",
+      "get_rankings"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find markets similar to Raleigh, NC by comparing key characteristics and scores.\n\nLet me try finding Raleigh first to get the correct geography identifier.\n\nLet me find markets similar to Raleigh by first identifying it in our rankings data, then looking for similar characteristics.",
+    "responseLength": 288,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 98.5,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Show me neighbors of Portland OR",
+    "durationMs": 8255,
+    "toolsUsed": [
+      "find_neighboring_geographies",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find the neighboring geographies around Portland, Oregon for you.\n\nLet me try a different approach to find metros near Portland, Oregon by looking at all metros in Oregon and Washington.\n\nHere are the metro areas near Portland, Oregon, including metros in both Oregon and Washington that are geographically close to the Portland metro region.\n\nTop markets:\n1. Longview-Kelso, WA (59.9), WA\n2. Olympia-Lacey-Tumwater, WA (57.5), WA\n3. Eugene-Springfield, OR (56.4), OR\n4. Bremerton-Silverdale-Port Orchard, WA (55.9), WA\n5. Port Angeles, WA (55.5), WA\n6. Portland-Vancouver-Hillsboro, OR-WA (53.9), OR\n7. Spokane-Spokane Valley, WA (53.5), WA\n8. Seattle-Tacoma-Bellevue, WA (53.4), WA\n9. Salem, OR (51.3), OR\n10. Hermiston-Pendleton, OR (51.1), OR",
+    "responseLength": 751,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Is Dallas better than Houston?",
+    "durationMs": 5894,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Dallas and Houston metros using HomeReady scores to help you decide which is better for homebuyers.\n\nDallas-Fort Worth ranks 3rd in Texas with a HomeReady score of 53.9, while Houston ranks 8th with a score of 51.5, making Dallas slightly better for homebuyers.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 630,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 76.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Compare Florida metros to national average",
+    "durationMs": 5658,
+    "toolsUsed": [
+      "compare_to_benchmark"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Florida metros to the national average using your HomeReady score preferences.\n\nFlorida metros slightly outperform the national average on HomeReady scores with an average of 46.4 versus 45.8 nationally, though this represents modest outperformance at the 47th percentile overall.",
+    "responseLength": 293,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "I am interested in investing in McLean County, IL. Can you compare McLean County, IL to the counties that surround it?",
+    "durationMs": 7647,
+    "toolsUsed": [
+      "compare_to_neighbors",
+      "compare_to_neighbors"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare McLean County, IL to its surrounding counties to help you evaluate this investment opportunity.",
+    "responseLength": 108,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 92,
+    "passes": false,
+    "issues": [
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Compare Travis County, TX to its surrounding counties for investment",
+    "durationMs": 7993,
+    "toolsUsed": [
+      "compare_to_neighbors",
+      "compare_to_neighbors"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Travis County, TX to its surrounding counties using InvestorEdge scores to help with your investment analysis.\n\nLet me correct that and compare Travis County to its neighboring counties for investment opportunities.\n\nLet me try a different approach to get the neighboring counties first and then compare their investment scores.",
+    "responseLength": 341,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 92,
+    "passes": false,
+    "issues": [
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "How does Wake County NC compare to neighboring counties?",
+    "durationMs": 10250,
+    "toolsUsed": [
+      "compare_to_neighbors",
+      "compare_to_neighbors"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll compare Wake County, NC to its neighboring counties to show you how it stacks up regionally.\n\nLet me fix that parameter format and compare Wake County to its neighbors.\n\nLet me try a different approach and get Wake County's ranking among NC counties first to understand its position.",
+    "responseLength": 288,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "How accurate is InvestorEdge?",
+    "durationMs": 6889,
+    "toolsUsed": [
+      "run_backtest"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll run a comprehensive validation analysis to show you how accurate InvestorEdge scores are at predicting future appreciation.\n\nInvestorEdge demonstrates solid predictive accuracy with a C confidence grade across 925 metro observations. The top quintile (highest scoring markets) outperformed the national benchmark by 3.8% while the bottom quintile underperformed by 3.4%, creating a 7.2% spread with strong statistical significance (p < 0.001).",
+    "responseLength": 448,
+    "brevityScore": 75,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": true,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 91.75,
+    "passes": false,
+    "issues": [
+      "Data repeated in text",
+      "CRITICAL: Hallucinated data"
+    ],
+    "suggestions": [
+      "Add explicit examples of avoiding data repetition",
+      "Add \"never make up numbers\" to system prompt"
+    ]
+  },
+  {
+    "prompt": "Validate HomeReady scores",
+    "durationMs": 6162,
+    "toolsUsed": [
+      "run_backtest"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll run a comprehensive validation analysis of HomeReady scores to show their accuracy in predicting market outcomes.\n\nHere's the comprehensive validation of HomeReady scores across metro markets with excellent results showing an \"A\" confidence grade.",
+    "responseLength": 252,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 92,
+    "passes": false,
+    "issues": [
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Show me backtest results",
+    "durationMs": 16453,
+    "toolsUsed": [
+      "run_backtest",
+      "run_backtest",
+      "run_backtest"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll run comprehensive backtest validation for HomeReady scores to show you how accurately they predict future market performance.\n\nHere are the comprehensive HomeReady score validation results across all time horizons, showing strong predictive accuracy with an A-grade confidence rating.",
+    "responseLength": 289,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 40,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 72,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Is the scoring reliable?",
+    "durationMs": 5610,
+    "toolsUsed": [
+      "run_backtest"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll run a comprehensive validation analysis to show you how reliable PropertyIQ's scoring system is.\n\nThe HomeReady scoring system shows strong reliability with an **A confidence grade** based on comprehensive backtesting across 925 metro observations.",
+    "responseLength": 253,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 50,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 87,
+    "passes": false,
+    "issues": [
+      "Contains markdown formatting",
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Make \"plain text only\" more prominent",
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "What's the trend in Austin prices?",
+    "durationMs": 6043,
+    "toolsUsed": [
+      "get_time_series"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll check Austin's price trends over the past 24 months to show you how prices have been moving.\n\nAustin's HomeReady score has fluctuated significantly over the past 24 months, peaking around 62-63 in mid-2024 before declining to around 52 by late 2024.",
+    "responseLength": 254,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Show me historical data for Miami",
+    "durationMs": 9473,
+    "toolsUsed": [
+      "search_database",
+      "get_time_series"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll get historical trend data for Miami to show how its HomeReady score and other key metrics have changed over time.",
+    "responseLength": 118,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 75,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic"
+    ]
+  },
+  {
+    "prompt": "Has Denver been growing?",
+    "durationMs": 7099,
+    "toolsUsed": [
+      "get_time_series"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll check Denver's recent price growth trends to see if the market has been growing.\n\nYes, Denver has shown growth over the past two years, with HomeReady scores rising from the low 50s to the mid-60s range, indicating improving market conditions for homebuyers.",
+    "responseLength": 263,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 92,
+    "passes": false,
+    "issues": [
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Are prices rising or falling in Phoenix?",
+    "durationMs": 11431,
+    "toolsUsed": [
+      "get_time_series",
+      "get_rankings",
+      "get_rankings"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Let me get current price trend data for Phoenix using the latest appreciation metrics.\n\nLet me specifically get Phoenix's appreciation data.\n\nBased on the latest data, Phoenix prices are falling with a -3.2% decline over the past 12 months, ranking it last among Arizona metros for price appreciation.\n\nTop markets:\n1. Safford, AZ (48.5), AZ\n2. Yuma, AZ (49.5), AZ\n3. Sierra Vista-Douglas, AZ (49), AZ\n4. Flagstaff, AZ (29), AZ\n5. Show Low, AZ (37), AZ\n6. Lake Havasu City-Kingman, AZ (47.6), AZ\n7. Nogales, AZ (41), AZ\n8. Payson, AZ (41.2), AZ\n9. Tucson, AZ (50), AZ\n10. Phoenix-Mesa-Chandler, AZ (45.7), AZ",
+    "responseLength": 608,
+    "brevityScore": 25,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 82.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Best metros in Texas for investors",
+    "durationMs": 5385,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top metros in Texas for investors based on InvestorEdge scores:\n\nTop markets:\n1. Abilene, TX (74.3), TX\n2. Snyder, TX (64.5), TX\n3. Sweetwater, TX (61.4), TX\n4. Huntsville, TX (61), TX\n5. Zapata, TX (59.1), TX\n6. Vernon, TX (58.9), TX\n7. Texarkana, TX-AR (56.6), TX\n8. Beaumont-Port Arthur, TX (56), TX\n9. Amarillo, TX (55), TX\n10. Lubbock, TX (54.2), TX",
+    "responseLength": 367,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Top 20 markets by appreciation",
+    "durationMs": 4758,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top 20 metros ranked by 12-month price appreciation:\n\nTop markets:\n1. Hailey, ID (18.7), ID\n2. Galesburg, IL (77.4), IL\n3. New Ulm, MN (69.7), MN\n4. Pontiac, IL (61), IL\n5. Mexico, MO (61.6), MO\n6. Freeport, IL (74), IL\n7. Sidney, OH (50.7), OH\n8. Stevens Point-Plover, WI (48.5), WI\n9. Taylorville, IL (56.9), IL\n10. Rochelle, IL (65.6), IL",
+    "responseLength": 354,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Show me high-scoring counties in the Midwest",
+    "durationMs": 7255,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top-scoring counties in the Midwest with HomeReady scores above 70.\n\nTop markets:\n1. Scott County, IL (79.1), IL\n2. Henry County, OH (72.9), OH\n3. Van Wert County, OH (71.2), OH\n4. Union County, OH (71.2), OH\n5. Thomas County, KS (70.3), KS\n6. Pottawattamie County, IA (70.3), IA\n7. Pepin County, WI (70.2), WI",
+    "responseLength": 323,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Filter for positive cash flow markets",
+    "durationMs": 5398,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find markets with strong cash flow potential using our InvestorEdge score as a proxy for rental yield and cash flow opportunities.\n\nHere are the top markets with the strongest cash flow potential based on InvestorEdge scores.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 507,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Give me top 5 metros in California",
+    "durationMs": 5966,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top 5 California metros based on HomeReady scores, which measure affordability, appreciation potential, and quality of life for homebuyers.\n\nHere are the top 5 California metros for homebuyers based on HomeReady scores.\n\nTop markets:\n1. San Jose-Sunnyvale-Santa Clara, CA (58.6), CA\n2. San Diego-Chula Vista-Carlsbad, CA (57.8), CA\n3. San Francisco-Oakland-Fremont, CA (57.3), CA\n4. Vallejo, CA (57.2), CA\n5. Fresno, CA (56.2), CA",
+    "responseLength": 448,
+    "brevityScore": 25,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 84.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What's the latest news about Austin real estate?",
+    "durationMs": 5738,
+    "toolsUsed": [
+      "search_real_estate_news"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll search for the latest Austin real estate news for you.\n\nI apologize, but the news search feature is currently experiencing technical issues with the database. The system is unable to retrieve the latest Austin real estate news at the moment due to a database column error.",
+    "responseLength": 277,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 40,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 88,
+    "passes": false,
+    "issues": [
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Any major developments in Phoenix market?",
+    "durationMs": 10034,
+    "toolsUsed": [
+      "search_real_estate_news",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Let me search for recent news and developments in the Phoenix real estate market.\n\nI apologize, but there seems to be a technical issue with the news search feature at the moment. Let me get you current Phoenix market data instead to show you how the market is performing recently.\n\nHere's Phoenix's current market position among Arizona metros, showing a HomeReady score of 58.5 with recent price declines of 3.2% over 12 months.\n\nTop markets:\n1. Phoenix-Mesa-Chandler, AZ (58.5), AZ\n2. Safford, AZ (57), AZ\n3. Tucson, AZ (54), AZ\n4. Flagstaff, AZ (49.5), AZ\n5. Prescott Valley-Prescott, AZ (49.4), AZ",
+    "responseLength": 602,
+    "brevityScore": 25,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 40,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 70.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text",
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition",
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "Real estate news in Florida",
+    "durationMs": 8390,
+    "toolsUsed": [
+      "search_real_estate_news",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll search for the latest real estate news specifically in Florida.\n\nI encountered an issue with the news search system. Let me try searching the database directly for Florida real estate information instead.\n\nHere are the top Florida metros for homebuyers based on current market conditions and affordability.\n\nTop markets:\n1. Wildwood-The Villages, FL (53.2), FL\n2. Palm Bay-Melbourne-Titusville, FL (52.6), FL\n3. Jacksonville, FL (51.8), FL\n4. Arcadia, FL (50.6), FL\n5. Port St. Lucie, FL (49.6), FL\n6. Pensacola-Ferry Pass-Brent, FL (49.3), FL\n7. Tampa-St. Petersburg-Clearwater, FL (49.1), FL\n8. Cape Coral-Fort Myers, FL (48.7), FL\n9. Orlando-Kissimmee-Sanford, FL (48.6), FL\n10. Ocala, FL (48.1), FL",
+    "responseLength": 707,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What raw metrics predict appreciation?",
+    "durationMs": 10881,
+    "toolsUsed": [
+      "get_feature_importance",
+      "get_feature_importance"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll analyze which raw metrics are most predictive of price appreciation using machine learning feature importance ranking.\n\nLet me try with 12-month appreciation as the target instead:\n\nLet me check what data is available by examining the database structure first:",
+    "responseLength": 265,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 73.5,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic"
+    ]
+  },
+  {
+    "prompt": "Show me Zillow data for Austin",
+    "durationMs": 8769,
+    "toolsUsed": [
+      "search_database"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll get the raw Zillow data for Austin from our database.\n\nHere's the raw Zillow data for Austin markets, including both the Austin metro area and Austin County.",
+    "responseLength": 162,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 75,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic"
+    ]
+  },
+  {
+    "prompt": "Compare Census data across metros",
+    "durationMs": 2849,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "You asked to compare Census data across metros. To do that, I need: (1) Which Census variables — e.g. population, income, housing units? (2) Which metros, or all?",
+    "responseLength": 162,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Tell me everything about Austin",
+    "durationMs": 11396,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll provide a comprehensive analysis of Austin, TX covering all key aspects of the market.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 447,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "What should I know about investing in real estate?",
+    "durationMs": 9619,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the key things to know about real estate investing:\n\n**Market Research & Analysis**\n- Location drives everything - focus on areas with job growth, population growth, and infrastructure development\n- Understand local market cycles, supply/demand dynamics, and price trends\n- Research neighborhood factors like schools, crime rates, and future development plans\n\n**Financial Fundamentals**\n- Calculate cash flow: rental income minus all expenses (mortgage, taxes, insurance, maintenance, vacancy)\n- Understand cap rates (annual income ÷ purchase price) to compare investment returns\n- Factor in appreciation potential but don't rely on it alone\n- Have reserves for repairs, vacancies, and market downturns\n\n**Investment Strategies**\n- Buy-and-hold rental properties for steady cash flow and long-term appreciation\n- House flipping for quicker returns but higher risk and active involvement\n- Real Estate Investment Trusts (REITs) for passive exposure without direct ownership\n- Consider your risk tolerance, available capital, and time commitment\n\n**Due Diligence**\n- Get professional inspections to avoid costly surprises\n- Research comparable sales and rental rates in the area\n- Understand local landlord-tenant laws and regulations\n- Consider property management costs if you won't self-manage\n\n**Common Mistakes to Avoid**\n- Underestimating expenses and vacancy rates\n- Buying in declining markets just because prices are low\n- Overleveraging or not having adequate cash reserves\n- Emotional decision-making instead of data-driven analysis\n\nPropertyIQ's InvestorEdge score can help you identify markets with strong fundamentals for cash flow and appreciation potential. Would you like me to show you some top-scoring investment markets to get started?",
+    "responseLength": 1763,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 50,
+    "toolMentionScore": 100,
+    "intentMatchScore": 50,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 82.5,
+    "passes": false,
+    "issues": [
+      "Contains markdown formatting",
+      "Wrong tools for intent"
+    ],
+    "suggestions": [
+      "Make \"plain text only\" more prominent",
+      "Update intent detection or tool selection logic"
+    ]
+  },
+  {
+    "prompt": "Help me find the perfect market",
+    "durationMs": 4712,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'd love to help you find the perfect market for your home buying needs! To give you the most relevant recommendations, I need to know a bit more about what you're looking for:\n\n1. **Geography**: Are you open to any location, or do you have preferred states/regions in mind?\n\n2. **Budget**: What's your price range or budget for a home?\n\n3. **Priorities**: What matters most to you - affordability, appreciation potential, quality of life, specific amenities like schools or walkability?\n\nOnce I understand your preferences, I can analyze markets using our HomeReady scores and find options that match your criteria perfectly!",
+    "responseLength": 626,
+    "brevityScore": 75,
+    "dataRepetitionScore": 100,
+    "markdownScore": 50,
+    "toolMentionScore": 100,
+    "intentMatchScore": 50,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 70.75,
+    "passes": false,
+    "issues": [
+      "Contains markdown formatting",
+      "Wrong tools for intent",
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Make \"plain text only\" more prominent",
+      "Update intent detection or tool selection logic",
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "What's the best market?",
+    "durationMs": 6426,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the best markets for homebuyers based on HomeReady scores.\n\nHere are the top 10 markets for homebuyers based on HomeReady scores, which factor in affordability, appreciation potential, and quality of life.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 503,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "bets makrets in texas",
+    "durationMs": 4724,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the best markets in Texas for homebuyers based on HomeReady scores.\n\nHere are the top 10 Texas markets for homebuyers based on HomeReady scores:\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 514,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "show me hot markts",
+    "durationMs": 5429,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the hottest markets for homebuyers based on HomeReady scores.\n\nHere are the hottest markets for homebuyers based on HomeReady scores, focusing on affordability and quality of life opportunities.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 492,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "idk maybe something good for investing?",
+    "durationMs": 5822,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top investment markets based on InvestorEdge scores, which analyze cash flow potential, appreciation, and market momentum.\n\nHere are the top 10 investment markets based on InvestorEdge scores, which evaluate factors like rental yield potential and market momentum.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH\n6. Bucyrus, OH (75.8), OH\n7. Coshocton, OH (75.6), OH\n8. Abilene, TX (74.3), TX\n9. Springfield, OH (74.1), OH\n10. 23680 (74.1)",
+    "responseLength": 559,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "help",
+    "durationMs": 8287,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'm Quinn, your PropertyIQ real estate analytics assistant! I help analyze real estate markets using proprietary scoring algorithms.\n\nHere's what I can help you with:\n\n**Market Rankings & Discovery:**\n- \"Show me hot markets for homebuyers\"\n- \"Best counties in Texas\"\n- \"Top zip codes by price appreciation\"\n\n**Market Analysis & Comparison:**\n- \"Tell me about Austin, TX\"\n- \"Compare Miami to national average\"\n- \"Find markets similar to Denver\"\n\n**Trends & Validation:**\n- \"Is Phoenix getting better or worse?\"\n- \"How accurate are these scores?\"\n- \"What drives high HomeReady scores?\"\n\n**Geographic Context:**\n- \"How does McLean County compare to neighboring counties?\"\n- \"Markets near Austin\"\n\n**Current Events:**\n- \"Latest news about Austin real estate\"\n- \"How do rising rates affect markets?\"\n\nSince you're in HomeReady mode, I'll focus on homebuyer-friendly insights using our HomeReady score (affordability + appreciation + quality of life). Just ask me about any markets you're interested in!",
+    "responseLength": 997,
+    "brevityScore": 50,
+    "dataRepetitionScore": 100,
+    "markdownScore": 50,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 87.5,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Contains markdown formatting"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Make \"plain text only\" more prominent"
+    ]
+  },
+  {
+    "prompt": "real estate?",
+    "durationMs": 2173,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "You asked about real estate — which aspect interests you? I can help with market analysis, investment opportunities, homebuying insights, or current market trends.",
+    "responseLength": 163,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 50,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.5,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Incomplete or unclear answer"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Review prompt clarity requirements"
+    ]
+  },
+  {
+    "prompt": "stuff in florida",
+    "durationMs": 5064,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you the top HomeReady markets in Florida for homebuyers and renters.\n\nHere are the top 10 Florida metros ranked by HomeReady score for homebuyers and renters.\n\nTop markets:\n1. Wildwood-The Villages, FL (53.2), FL\n2. Palm Bay-Melbourne-Titusville, FL (52.6), FL\n3. Jacksonville, FL (51.8), FL\n4. Arcadia, FL (50.6), FL\n5. Port St. Lucie, FL (49.6), FL\n6. Pensacola-Ferry Pass-Brent, FL (49.3), FL\n7. Tampa-St. Petersburg-Clearwater, FL (49.1), FL\n8. Cape Coral-Fort Myers, FL (48.7), FL\n9. Orlando-Kissimmee-Sanford, FL (48.6), FL\n10. Ocala, FL (48.1), FL",
+    "responseLength": 564,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "I want to like invest or something",
+    "durationMs": 10660,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings",
+      "get_rankings"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I understand you're interested in real estate investing! Let me show you the top investment opportunities based on our InvestorEdge scores, which analyze cash flow potential, appreciation prospects, and market momentum.\n\nLet me try a different approach to get the investment opportunities for you:",
+    "responseLength": 297,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 73.5,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic"
+    ]
+  },
+  {
+    "prompt": "just give me something",
+    "durationMs": 5090,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll show you some top homebuyer-friendly markets based on the HomeReady score.\n\nHere are the top 10 metros for homebuyers based on affordability, appreciation potential, and quality of life.\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 475,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "austin",
+    "durationMs": 10690,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 3,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll get you comprehensive information about Austin, TX as a market for homebuyers.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 439,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 78.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "show me the best markets and also compare austin to miami and is it a good time",
+    "durationMs": 11495,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll help you with the best markets, compare Austin to Miami, and provide timing insights. Let me gather this information for you.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 486,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "best metros top 10 by score and which have recent news",
+    "durationMs": 5749,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll get you the top 10 metros by HomeReady score and check for recent news about them.\n\nNow let me search for recent news about these top-performing metros:\n\nTop markets:\n1. Van Wert, OH (71.4), OH\n2. 25775 (70.6)\n3. Erie, PA (68.5), PA\n4. Stevens Point-Plover, WI (67.3), WI\n5. Auburn, IN (67.2), IN\n6. Marshalltown, IA (67.1), IA\n7. Hannibal, MO (66.7), MO\n8. Huntington, IN (66.7), IN\n9. Lewisburg, PA (66.5), PA\n10. Decatur, IL (66), IL",
+    "responseLength": 441,
+    "brevityScore": 25,
+    "dataRepetitionScore": 40,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 79.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "rank texas then show me the trend for the bottom 5",
+    "durationMs": 6581,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll rank Texas metros by HomeReady score and then show the trend for the bottom 5 performers.\n\nNow I'll get the trends for the bottom 5 metros from this ranking. The bottom 5 are: Huntsville TX (36.9), Port Lavaca TX (36.8), and I need to get the bottom 3 from the full list since only 50 were shown.\n\nTop markets:\n1. Kingsville, TX (55.7), TX\n2. Dumas, TX (54.8), TX\n3. Dallas-Fort Worth-Arlington, TX (53.9), TX\n4. Borger, TX (53.4), TX\n5. Amarillo, TX (52.5), TX\n6. Pampa, TX (52.3), TX\n7. Austin-Round Rock-San Marcos, TX (51.8), TX\n8. Houston-Pasadena-The Woodlands, TX (51.5), TX\n9. Lubbock, TX (51.4), TX\n10. San Antonio-New Braunfels, TX (51.3), TX",
+    "responseLength": 657,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 76.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Rank the top 5 metros by InvestorEdge, then for #1 show the 24-month trend and compare it to national average",
+    "durationMs": 8786,
+    "toolsUsed": [
+      "get_rankings",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll get the top 5 metros by InvestorEdge score, then analyze the #1 market's trend and benchmark position.\n\nNow let me get the 24-month trend for Wabash, IN (the #1 market) and compare it to the national average.\n\nHere are the top 5 metros by InvestorEdge score, with Wabash, IN leading at 78.9. Wabash significantly outperforms the national average InvestorEdge score of 51.3, ranking in the 85th percentile nationally.\n\nTop markets:\n1. Wabash, IN (78.9), IN\n2. Galesburg, IL (77.4), IL\n3. Huntingdon, PA (77.3), PA\n4. Wilmington, OH (77), OH\n5. Defiance, OH (76.7), OH",
+    "responseLength": 571,
+    "brevityScore": 25,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 84.25,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Which metro has the best InvestorEdge score, what's its 12-month trend, and how does it compare to the worst metro?",
+    "durationMs": 9902,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find the best and worst metros by InvestorEdge score, then analyze the top performer's trend and compare them.\n\nBottom markets:\n1. Kahului-Wailuku, HI (9), HI",
+    "responseLength": 163,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 100,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Find markets similar to Austin, filter to the Southeast, and show me the top 3 by score",
+    "durationMs": 7309,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll find markets similar to Austin, filter to Southeast states, and show you the top 3 by HomeReady score.\n\nHere are the top 3 Southeast markets by HomeReady score: Frankfort KY leads with a 65.7 score, followed by Staunton-Stuarts Draft VA at 63.2, and Richmond VA at 62.3.\n\nTop markets:\n1. Frankfort, KY (65.7), KY\n2. Staunton-Stuarts Draft, VA (63.2), VA\n3. Richmond, VA (62.3), VA\n4. Owensboro, KY (60.2), KY\n5. Lexington-Fayette, KY (59.6), KY\n6. Louisville/Jefferson County, KY-IN (59.4), KY\n7. Parkersburg-Vienna, WV (58.7), WV\n8. Roanoke, VA (58.6), VA\n9. Columbia, SC (58.5), SC\n10. Charleston-North Charleston, SC (58.2), SC",
+    "responseLength": 635,
+    "brevityScore": 25,
+    "dataRepetitionScore": 20,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 76.75,
+    "passes": false,
+    "issues": [
+      "Response too long",
+      "Data repeated in text"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt",
+      "Add explicit examples of avoiding data repetition"
+    ]
+  },
+  {
+    "prompt": "Tell me about Phoenix: current rank, trend, vs national average, and one similar market",
+    "durationMs": 8953,
+    "toolsUsed": [
+      "get_rankings",
+      "compare_to_benchmark"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "I'll provide a comprehensive analysis of Phoenix covering all the aspects you requested.\n\nTop markets:\n1. Phoenix-Mesa-Chandler, AZ (58.5), AZ\n2. Safford, AZ (57), AZ\n3. Tucson, AZ (54), AZ\n4. Flagstaff, AZ (49.5), AZ\n5. Prescott Valley-Prescott, AZ (49.4), AZ",
+    "responseLength": 260,
+    "brevityScore": 50,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 100,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 92.5,
+    "passes": false,
+    "issues": [
+      "Response too long"
+    ],
+    "suggestions": [
+      "Strengthen brevity requirement in system prompt"
+    ]
+  }
+]

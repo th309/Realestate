@@ -144,6 +144,13 @@ export const Dashboard: React.FC = () => {
             toggleSeries={toggleSeries}
           />
 
+          {/* Chart error message */}
+          {chartError && (
+            <div className="rounded-xl border border-outline-variant bg-surface-container-high px-4 py-3 text-on-surface-variant text-sm">
+              Could not load data for this selection. Try a different location, metric, or time range.
+            </div>
+          )}
+
           {/* Two Column Layout: Chart + Insights */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Chart Card - Takes 2 columns on xl */}

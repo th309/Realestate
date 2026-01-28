@@ -1,0 +1,1774 @@
+[
+  {
+    "prompt": "Compare cap rates across Texas metros",
+    "success": true,
+    "durationMs": 8598,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll compare cap rates across Texas metros using our InvestorEdge scores, which incorporate cap rate data as a key investment metric.\n\nHere are Texas metros ranked by InvestorEdge scores, which incorporate cap rate metrics as our closest proxy for investment yield potential.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Abilene, TX",
+            "score": 74.3,
+            "appreciation": 1.8,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Snyder, TX",
+            "score": 64.5,
+            "appreciation": 0.1,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Sweetwater, TX",
+            "score": 61.4,
+            "appreciation": -4.8,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Huntsville, TX",
+            "score": 61,
+            "appreciation": 0.1,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Zapata, TX",
+            "score": 59.1,
+            "appreciation": -8.9,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Vernon, TX",
+            "score": 58.9,
+            "appreciation": -6.7,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Texarkana, TX-AR",
+            "score": 56.6,
+            "appreciation": -3.3,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Beaumont-Port Arthur, TX",
+            "score": 56,
+            "appreciation": 0.9,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Amarillo, TX",
+            "score": 55,
+            "appreciation": 1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "Lubbock, TX",
+            "score": 54.2,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 11,
+            "name": "Beeville, TX",
+            "score": 53.3,
+            "appreciation": -6.9,
+            "state": "TX"
+          },
+          {
+            "rank": 12,
+            "name": "Rio Grande City-Roma, TX",
+            "score": 52,
+            "appreciation": -4.1,
+            "state": "TX"
+          },
+          {
+            "rank": 13,
+            "name": "Laredo, TX",
+            "score": 51.9,
+            "appreciation": 2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 14,
+            "name": "San Antonio-New Braunfels, TX",
+            "score": 51.5,
+            "appreciation": -2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 15,
+            "name": "Jacksonville, TX",
+            "score": 51.2,
+            "appreciation": -6.5,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "bets makrets in texas",
+    "success": true,
+    "durationMs": 6148,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll show you the best markets in Texas for homebuyers based on HomeReady scores.\n\nHere are the top 10 markets in Texas for homebuyers based on HomeReady scores, which emphasize affordability, appreciation potential, and quality of life.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Kingsville, TX",
+            "score": 55.7,
+            "appreciation": 1.3,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Dumas, TX",
+            "score": 54.8,
+            "appreciation": 7.9,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Dallas-Fort Worth-Arlington, TX",
+            "score": 53.9,
+            "appreciation": -3.7,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Borger, TX",
+            "score": 53.4,
+            "appreciation": -2.3,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Amarillo, TX",
+            "score": 52.5,
+            "appreciation": 1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Pampa, TX",
+            "score": 52.3,
+            "appreciation": -2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Austin-Round Rock-San Marcos, TX",
+            "score": 51.8,
+            "appreciation": -5.6,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Houston-Pasadena-The Woodlands, TX",
+            "score": 51.5,
+            "appreciation": -2,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Lubbock, TX",
+            "score": 51.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "San Antonio-New Braunfels, TX",
+            "score": 51.3,
+            "appreciation": -2.8,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "show me hot markts",
+    "success": true,
+    "durationMs": 5070,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll show you the hottest markets for homebuyers based on HomeReady scores.\n\nHere are the hottest markets for homebuyers based on HomeReady scores, which emphasize affordability, appreciation potential, and quality of life.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "idk maybe something good for investing?",
+    "success": true,
+    "durationMs": 5982,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll show you the top markets for investors based on InvestorEdge scores, which evaluate cash flow potential, appreciation, and market momentum.\n\nHere are the top 10 investment markets based on InvestorEdge scores.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Wabash, IN",
+            "score": 78.9,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 2,
+            "name": "Galesburg, IL",
+            "score": 77.4,
+            "appreciation": 10.9,
+            "state": "IL"
+          },
+          {
+            "rank": 3,
+            "name": "Huntingdon, PA",
+            "score": 77.3,
+            "appreciation": 2.4,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Wilmington, OH",
+            "score": 77,
+            "appreciation": 3.3,
+            "state": "OH"
+          },
+          {
+            "rank": 5,
+            "name": "Defiance, OH",
+            "score": 76.7,
+            "appreciation": 3.3,
+            "state": "OH"
+          },
+          {
+            "rank": 6,
+            "name": "Bucyrus, OH",
+            "score": 75.8,
+            "appreciation": 4.3,
+            "state": "OH"
+          },
+          {
+            "rank": 7,
+            "name": "Coshocton, OH",
+            "score": 75.6,
+            "appreciation": 5.1,
+            "state": "OH"
+          },
+          {
+            "rank": 8,
+            "name": "Abilene, TX",
+            "score": 74.3,
+            "appreciation": 1.8,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Springfield, OH",
+            "score": 74.1,
+            "appreciation": 4.7,
+            "state": "OH"
+          },
+          {
+            "rank": 10,
+            "name": "23680",
+            "score": 74.1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "help",
+    "success": true,
+    "durationMs": 8482,
+    "toolsUsed": [],
+    "responseText": "I'm Quinn, your PropertyIQ real estate analytics assistant! I can help you analyze markets using our proprietary scoring algorithms.\n\n**What I can do:**\n- **Find hot markets**: \"Show me top metros for homebuyers\"\n- **Compare markets**: \"How does Austin compare to national average?\"\n- **Analyze trends**: \"Is Miami getting better or worse?\"\n- **Discover opportunities**: \"Find markets similar to Denver\"\n- **Validate performance**: \"How accurate are these scores?\"\n- **Search news**: \"Latest housing market news\"\n- **Deep market analysis**: \"Tell me everything about Phoenix\"\n\nSince you're in HomeReady mode, I'll default to showing homebuyer-focused insights using our HomeReady score (affordability + appreciation + quality of life).\n\n**Try asking me:**\n- \"Show me the best markets for homebuyers\"\n- \"Compare Austin vs Nashville\" \n- \"What's happening in the housing market?\"\n- \"Find affordable markets with high scores\"\n\nWhat would you like to explore?",
+    "structuredData": null
+  },
+  {
+    "prompt": "real estate?",
+    "success": true,
+    "durationMs": 16463,
+    "toolsUsed": [],
+    "responseText": "You asked about real estate — what would you like to know? I can help with market analysis, finding investment opportunities, comparing specific markets, tracking trends, or searching for homebuyer-friendly areas.",
+    "structuredData": null
+  },
+  {
+    "prompt": "stuff in florida",
+    "success": true,
+    "durationMs": 5348,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll help you explore real estate opportunities in Florida. Here are the top markets in Florida ranked by HomeReady score for homebuyers:\n\nHere are the top Florida metros for homebuyers based on HomeReady scores.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Wildwood-The Villages, FL",
+            "score": 53.2,
+            "appreciation": -1.6,
+            "state": "FL"
+          },
+          {
+            "rank": 2,
+            "name": "Palm Bay-Melbourne-Titusville, FL",
+            "score": 52.6,
+            "appreciation": -4.1,
+            "state": "FL"
+          },
+          {
+            "rank": 3,
+            "name": "Jacksonville, FL",
+            "score": 51.8,
+            "appreciation": -3.1,
+            "state": "FL"
+          },
+          {
+            "rank": 4,
+            "name": "Arcadia, FL",
+            "score": 50.6,
+            "appreciation": -4.9,
+            "state": "FL"
+          },
+          {
+            "rank": 5,
+            "name": "Port St. Lucie, FL",
+            "score": 49.6,
+            "appreciation": -4.8,
+            "state": "FL"
+          },
+          {
+            "rank": 6,
+            "name": "Pensacola-Ferry Pass-Brent, FL",
+            "score": 49.3,
+            "appreciation": -1.6,
+            "state": "FL"
+          },
+          {
+            "rank": 7,
+            "name": "Tampa-St. Petersburg-Clearwater, FL",
+            "score": 49.1,
+            "appreciation": -5.6,
+            "state": "FL"
+          },
+          {
+            "rank": 8,
+            "name": "Cape Coral-Fort Myers, FL",
+            "score": 48.7,
+            "appreciation": -9.7,
+            "state": "FL"
+          },
+          {
+            "rank": 9,
+            "name": "Orlando-Kissimmee-Sanford, FL",
+            "score": 48.6,
+            "appreciation": -4.3,
+            "state": "FL"
+          },
+          {
+            "rank": 10,
+            "name": "Ocala, FL",
+            "score": 48.1,
+            "appreciation": -3.6,
+            "state": "FL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "I want to like invest or something",
+    "success": true,
+    "durationMs": 12315,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings",
+      "get_rankings"
+    ],
+    "responseText": "I can help you explore real estate investment opportunities! Let me show you the top markets for investors based on our InvestorEdge scoring system.\n\nLet me fix that parameter structure:",
+    "structuredData": {
+      "errorMessage": "API error: 422 - {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"filter\"],\"msg\":\"Field required\",\"input\":{\"geography_type\":\"metro\",\"score_type\":\"investoredge_score\",\"limit\":\"10\",\"ascending\":\"false\"}}]}"
+    }
+  },
+  {
+    "prompt": "just give me something",
+    "success": true,
+    "durationMs": 16962,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top 10 metros for homebuyers based on HomeReady scores.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "austin",
+    "success": true,
+    "durationMs": 6147,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll show you Austin's current HomeReady score and market data since you're in homebuyer mode.\n\nAustin ranks 7th out of 67 Texas metros with a HomeReady score of 51.8 for homebuyers.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Kingsville, TX",
+            "score": 55.7,
+            "appreciation": 1.3,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Dumas, TX",
+            "score": 54.8,
+            "appreciation": 7.9,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Dallas-Fort Worth-Arlington, TX",
+            "score": 53.9,
+            "appreciation": -3.7,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Borger, TX",
+            "score": 53.4,
+            "appreciation": -2.3,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Amarillo, TX",
+            "score": 52.5,
+            "appreciation": 1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Pampa, TX",
+            "score": 52.3,
+            "appreciation": -2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Austin-Round Rock-San Marcos, TX",
+            "score": 51.8,
+            "appreciation": -5.6,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Houston-Pasadena-The Woodlands, TX",
+            "score": 51.5,
+            "appreciation": -2,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Lubbock, TX",
+            "score": 51.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "San Antonio-New Braunfels, TX",
+            "score": 51.3,
+            "appreciation": -2.8,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "show me the best markets and also compare austin to miami and is it a good time",
+    "success": true,
+    "durationMs": 10088,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings"
+    ],
+    "responseText": "I'll help you with the best markets for homebuyers, compare Austin to Miami, and assess current market timing.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Kingsville, TX",
+            "score": 55.7,
+            "appreciation": 1.3,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Dumas, TX",
+            "score": 54.8,
+            "appreciation": 7.9,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Dallas-Fort Worth-Arlington, TX",
+            "score": 53.9,
+            "appreciation": -3.7,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Borger, TX",
+            "score": 53.4,
+            "appreciation": -2.3,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Amarillo, TX",
+            "score": 52.5,
+            "appreciation": 1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Pampa, TX",
+            "score": 52.3,
+            "appreciation": -2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Austin-Round Rock-San Marcos, TX",
+            "score": 51.8,
+            "appreciation": -5.6,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Houston-Pasadena-The Woodlands, TX",
+            "score": 51.5,
+            "appreciation": -2,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Lubbock, TX",
+            "score": 51.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "San Antonio-New Braunfels, TX",
+            "score": 51.3,
+            "appreciation": -2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 11,
+            "name": "Odessa, TX",
+            "score": 50.2,
+            "appreciation": 4.1,
+            "state": "TX"
+          },
+          {
+            "rank": 12,
+            "name": "Midland, TX",
+            "score": 50.1,
+            "appreciation": 3.5,
+            "state": "TX"
+          },
+          {
+            "rank": 13,
+            "name": "Granbury, TX",
+            "score": 48,
+            "state": "TX"
+          },
+          {
+            "rank": 14,
+            "name": "Tyler, TX",
+            "score": 47.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 15,
+            "name": "Longview, TX",
+            "score": 46.9,
+            "appreciation": -0.5,
+            "state": "TX"
+          },
+          {
+            "rank": 16,
+            "name": "Victoria, TX",
+            "score": 46.8,
+            "appreciation": -1.8,
+            "state": "TX"
+          },
+          {
+            "rank": 17,
+            "name": "San Angelo, TX",
+            "score": 46.7,
+            "appreciation": 2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 18,
+            "name": "El Campo, TX",
+            "score": 46.5,
+            "appreciation": -2.2,
+            "state": "TX"
+          },
+          {
+            "rank": 19,
+            "name": "Wichita Falls, TX",
+            "score": 46.4,
+            "appreciation": -1,
+            "state": "TX"
+          },
+          {
+            "rank": 20,
+            "name": "Plainview, TX",
+            "score": 46.1,
+            "appreciation": -4.2,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "best metros top 10 by score and which have recent news",
+    "success": true,
+    "durationMs": 5401,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll get you the top 10 metros by HomeReady score and check for recent news about them.\n\nNow let me search for recent news about these top-scoring metros.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "rank texas then show me the trend for the bottom 5",
+    "success": true,
+    "durationMs": 7029,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll rank Texas metros by HomeReady score and then show the trend for the bottom 5 performers.\n\nNow I'll get the trend data for the bottom 5 Texas metros by HomeReady score:",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Kingsville, TX",
+            "score": 55.7,
+            "appreciation": 1.3,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Dumas, TX",
+            "score": 54.8,
+            "appreciation": 7.9,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Dallas-Fort Worth-Arlington, TX",
+            "score": 53.9,
+            "appreciation": -3.7,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Borger, TX",
+            "score": 53.4,
+            "appreciation": -2.3,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Amarillo, TX",
+            "score": 52.5,
+            "appreciation": 1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Pampa, TX",
+            "score": 52.3,
+            "appreciation": -2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Austin-Round Rock-San Marcos, TX",
+            "score": 51.8,
+            "appreciation": -5.6,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Houston-Pasadena-The Woodlands, TX",
+            "score": 51.5,
+            "appreciation": -2,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Lubbock, TX",
+            "score": 51.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "San Antonio-New Braunfels, TX",
+            "score": 51.3,
+            "appreciation": -2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 11,
+            "name": "Odessa, TX",
+            "score": 50.2,
+            "appreciation": 4.1,
+            "state": "TX"
+          },
+          {
+            "rank": 12,
+            "name": "Midland, TX",
+            "score": 50.1,
+            "appreciation": 3.5,
+            "state": "TX"
+          },
+          {
+            "rank": 13,
+            "name": "Granbury, TX",
+            "score": 48,
+            "state": "TX"
+          },
+          {
+            "rank": 14,
+            "name": "Tyler, TX",
+            "score": 47.4,
+            "appreciation": -0.8,
+            "state": "TX"
+          },
+          {
+            "rank": 15,
+            "name": "Longview, TX",
+            "score": 46.9,
+            "appreciation": -0.5,
+            "state": "TX"
+          },
+          {
+            "rank": 16,
+            "name": "Victoria, TX",
+            "score": 46.8,
+            "appreciation": -1.8,
+            "state": "TX"
+          },
+          {
+            "rank": 17,
+            "name": "San Angelo, TX",
+            "score": 46.7,
+            "appreciation": 2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 18,
+            "name": "El Campo, TX",
+            "score": 46.5,
+            "appreciation": -2.2,
+            "state": "TX"
+          },
+          {
+            "rank": 19,
+            "name": "Wichita Falls, TX",
+            "score": 46.4,
+            "appreciation": -1,
+            "state": "TX"
+          },
+          {
+            "rank": 20,
+            "name": "Plainview, TX",
+            "score": 46.1,
+            "appreciation": -4.2,
+            "state": "TX"
+          },
+          {
+            "rank": 21,
+            "name": "Bonham, TX",
+            "score": 45.5,
+            "state": "TX"
+          },
+          {
+            "rank": 22,
+            "name": "Killeen-Temple, TX",
+            "score": 45.4,
+            "appreciation": -1.5,
+            "state": "TX"
+          },
+          {
+            "rank": 23,
+            "name": "Big Spring, TX",
+            "score": 44.9,
+            "appreciation": 0,
+            "state": "TX"
+          },
+          {
+            "rank": 24,
+            "name": "Sherman-Denison, TX",
+            "score": 44.8,
+            "appreciation": -3.9,
+            "state": "TX"
+          },
+          {
+            "rank": 25,
+            "name": "Paris, TX",
+            "score": 44.5,
+            "appreciation": 2.8,
+            "state": "TX"
+          },
+          {
+            "rank": 26,
+            "name": "Abilene, TX",
+            "score": 44,
+            "appreciation": 1.8,
+            "state": "TX"
+          },
+          {
+            "rank": 27,
+            "name": "Palestine, TX",
+            "score": 43.6,
+            "appreciation": -6.3,
+            "state": "TX"
+          },
+          {
+            "rank": 28,
+            "name": "Waco, TX",
+            "score": 43.5,
+            "appreciation": -1.4,
+            "state": "TX"
+          },
+          {
+            "rank": 29,
+            "name": "Beaumont-Port Arthur, TX",
+            "score": 43.2,
+            "appreciation": 0.9,
+            "state": "TX"
+          },
+          {
+            "rank": 30,
+            "name": "El Paso, TX",
+            "score": 42.8,
+            "appreciation": 0.6,
+            "state": "TX"
+          },
+          {
+            "rank": 31,
+            "name": "Brownwood, TX",
+            "score": 42.5,
+            "appreciation": -3,
+            "state": "TX"
+          },
+          {
+            "rank": 32,
+            "name": "Lufkin, TX",
+            "score": 42.1,
+            "appreciation": 0.4,
+            "state": "TX"
+          },
+          {
+            "rank": 33,
+            "name": "McAllen-Edinburg-Mission, TX",
+            "score": 41.9,
+            "appreciation": -1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 34,
+            "name": "Beeville, TX",
+            "score": 41.8,
+            "appreciation": -6.9,
+            "state": "TX"
+          },
+          {
+            "rank": 35,
+            "name": "Bay City, TX",
+            "score": 41.6,
+            "appreciation": 1.5,
+            "state": "TX"
+          },
+          {
+            "rank": 36,
+            "name": "Fredericksburg, TX",
+            "score": 41.4,
+            "appreciation": -3.2,
+            "state": "TX"
+          },
+          {
+            "rank": 37,
+            "name": "Corpus Christi, TX",
+            "score": 41.4,
+            "appreciation": -2.2,
+            "state": "TX"
+          },
+          {
+            "rank": 38,
+            "name": "Gainesville, TX",
+            "score": 41.3,
+            "appreciation": -2,
+            "state": "TX"
+          },
+          {
+            "rank": 39,
+            "name": "Laredo, TX",
+            "score": 41,
+            "appreciation": 2.1,
+            "state": "TX"
+          },
+          {
+            "rank": 40,
+            "name": "Athens, TX",
+            "score": 40.9,
+            "appreciation": -2.4,
+            "state": "TX"
+          },
+          {
+            "rank": 41,
+            "name": "Stephenville, TX",
+            "score": 40.5,
+            "appreciation": -0.6,
+            "state": "TX"
+          },
+          {
+            "rank": 42,
+            "name": "College Station-Bryan, TX",
+            "score": 40.2,
+            "appreciation": 0.4,
+            "state": "TX"
+          },
+          {
+            "rank": 43,
+            "name": "Kerrville, TX",
+            "score": 40,
+            "appreciation": -2.9,
+            "state": "TX"
+          },
+          {
+            "rank": 44,
+            "name": "Nacogdoches, TX",
+            "score": 39.7,
+            "appreciation": 0.7,
+            "state": "TX"
+          },
+          {
+            "rank": 45,
+            "name": "Alice, TX",
+            "score": 38.7,
+            "appreciation": -4.9,
+            "state": "TX"
+          },
+          {
+            "rank": 46,
+            "name": "Mount Pleasant, TX",
+            "score": 38,
+            "appreciation": -3.5,
+            "state": "TX"
+          },
+          {
+            "rank": 47,
+            "name": "Sulphur Springs, TX",
+            "score": 37.4,
+            "appreciation": -3.1,
+            "state": "TX"
+          },
+          {
+            "rank": 48,
+            "name": "Brownsville-Harlingen, TX",
+            "score": 37.2,
+            "appreciation": 0.1,
+            "state": "TX"
+          },
+          {
+            "rank": 49,
+            "name": "Huntsville, TX",
+            "score": 36.9,
+            "appreciation": 0.1,
+            "state": "TX"
+          },
+          {
+            "rank": 50,
+            "name": "Port Lavaca, TX",
+            "score": 36.8,
+            "appreciation": -4,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Rank the top 5 metros by InvestorEdge, then for #1 show the 24-month trend and compare it to national average",
+    "success": true,
+    "durationMs": 11243,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "responseText": "Now I'll get the 24-month trend for Wabash, IN (the #1 metro) and compare it to the national average.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Wabash, IN",
+            "score": 78.9,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 2,
+            "name": "Galesburg, IL",
+            "score": 77.4,
+            "appreciation": 10.9,
+            "state": "IL"
+          },
+          {
+            "rank": 3,
+            "name": "Huntingdon, PA",
+            "score": 77.3,
+            "appreciation": 2.4,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Wilmington, OH",
+            "score": 77,
+            "appreciation": 3.3,
+            "state": "OH"
+          },
+          {
+            "rank": 5,
+            "name": "Defiance, OH",
+            "score": 76.7,
+            "appreciation": 3.3,
+            "state": "OH"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Which metro has the best InvestorEdge score, what's its 12-month trend, and how does it compare to the worst metro?",
+    "success": true,
+    "durationMs": 11328,
+    "toolsUsed": [
+      "get_rankings",
+      "get_rankings"
+    ],
+    "responseText": "I'll find the best and worst metros by InvestorEdge score, then analyze the top performer's trend and compare them.",
+    "structuredData": {
+      "rankings": {
+        "title": "Bottom Performers",
+        "direction": "bottom",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Kahului-Wailuku, HI",
+            "score": 9,
+            "appreciation": -6.1,
+            "state": "HI"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Find markets similar to Austin, filter to the Southeast, and show me the top 3 by score",
+    "success": true,
+    "durationMs": 5602,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "I'll find markets similar to Austin, filter to the Southeast, and show you the top 3 by HomeReady score.\n\nHere are the top 3 Southeast metros by HomeReady score for homebuyers:",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Frankfort, KY",
+            "score": 65.7,
+            "appreciation": 3.1,
+            "state": "KY"
+          },
+          {
+            "rank": 2,
+            "name": "Staunton-Stuarts Draft, VA",
+            "score": 63.2,
+            "appreciation": 3.6,
+            "state": "VA"
+          },
+          {
+            "rank": 3,
+            "name": "Richmond, VA",
+            "score": 62.3,
+            "appreciation": 1.6,
+            "state": "VA"
+          },
+          {
+            "rank": 4,
+            "name": "Owensboro, KY",
+            "score": 60.2,
+            "appreciation": 2.1,
+            "state": "KY"
+          },
+          {
+            "rank": 5,
+            "name": "Lexington-Fayette, KY",
+            "score": 59.6,
+            "appreciation": 3,
+            "state": "KY"
+          },
+          {
+            "rank": 6,
+            "name": "Louisville/Jefferson County, KY-IN",
+            "score": 59.4,
+            "appreciation": 2.9,
+            "state": "KY"
+          },
+          {
+            "rank": 7,
+            "name": "Parkersburg-Vienna, WV",
+            "score": 58.7,
+            "appreciation": 1.1,
+            "state": "WV"
+          },
+          {
+            "rank": 8,
+            "name": "Roanoke, VA",
+            "score": 58.6,
+            "appreciation": 3.2,
+            "state": "VA"
+          },
+          {
+            "rank": 9,
+            "name": "Columbia, SC",
+            "score": 58.5,
+            "appreciation": 0.4,
+            "state": "SC"
+          },
+          {
+            "rank": 10,
+            "name": "Charleston-North Charleston, SC",
+            "score": 58.2,
+            "appreciation": -0.8,
+            "state": "SC"
+          },
+          {
+            "rank": 11,
+            "name": "Charleston, WV",
+            "score": 57.9,
+            "appreciation": -1.3,
+            "state": "WV"
+          },
+          {
+            "rank": 12,
+            "name": "Fairmont, WV",
+            "score": 57.4,
+            "appreciation": 0.4,
+            "state": "WV"
+          },
+          {
+            "rank": 13,
+            "name": "Elkins, WV",
+            "score": 57.2,
+            "appreciation": -0.4,
+            "state": "WV"
+          },
+          {
+            "rank": 14,
+            "name": "Harrisonburg, VA",
+            "score": 56.6,
+            "appreciation": 3.4,
+            "state": "VA"
+          },
+          {
+            "rank": 15,
+            "name": "Fayetteville, NC",
+            "score": 56.4,
+            "appreciation": -0.1,
+            "state": "NC"
+          },
+          {
+            "rank": 16,
+            "name": "Knoxville, TN",
+            "score": 56.4,
+            "appreciation": 0.8,
+            "state": "TN"
+          },
+          {
+            "rank": 17,
+            "name": "Raleigh-Cary, NC",
+            "score": 56.2,
+            "appreciation": -2.6,
+            "state": "NC"
+          },
+          {
+            "rank": 18,
+            "name": "Roanoke Rapids, NC",
+            "score": 56,
+            "appreciation": -0.4,
+            "state": "NC"
+          },
+          {
+            "rank": 19,
+            "name": "Martin, TN",
+            "score": 55.9,
+            "appreciation": 7,
+            "state": "TN"
+          },
+          {
+            "rank": 20,
+            "name": "Winchester, VA-WV",
+            "score": 55.8,
+            "appreciation": 1.5,
+            "state": "VA"
+          },
+          {
+            "rank": 21,
+            "name": "Blacksburg-Christiansburg-Radford, VA",
+            "score": 55.5,
+            "appreciation": 1.6,
+            "state": "VA"
+          },
+          {
+            "rank": 22,
+            "name": "Beckley, WV",
+            "score": 55.3,
+            "appreciation": -5.7,
+            "state": "WV"
+          },
+          {
+            "rank": 23,
+            "name": "Huntington-Ashland, WV-KY-OH",
+            "score": 55.3,
+            "appreciation": 1.4,
+            "state": "WV"
+          },
+          {
+            "rank": 24,
+            "name": "Winston-Salem, NC",
+            "score": 55.2,
+            "appreciation": 1.8,
+            "state": "NC"
+          },
+          {
+            "rank": 25,
+            "name": "Charlotte-Concord-Gastonia, NC-SC",
+            "score": 55.2,
+            "appreciation": -0.8,
+            "state": "NC"
+          },
+          {
+            "rank": 26,
+            "name": "Morgantown, WV",
+            "score": 55.1,
+            "appreciation": 1.2,
+            "state": "WV"
+          },
+          {
+            "rank": 27,
+            "name": "Columbus, GA-AL",
+            "score": 54.9,
+            "appreciation": 1.6,
+            "state": "GA"
+          },
+          {
+            "rank": 28,
+            "name": "Spartanburg, SC",
+            "score": 54.8,
+            "appreciation": 2.2,
+            "state": "SC"
+          },
+          {
+            "rank": 29,
+            "name": "Durham-Chapel Hill, NC",
+            "score": 54.7,
+            "appreciation": -1.2,
+            "state": "NC"
+          },
+          {
+            "rank": 30,
+            "name": "Greensboro-High Point, NC",
+            "score": 54.3,
+            "appreciation": 0.3,
+            "state": "NC"
+          },
+          {
+            "rank": 31,
+            "name": "Sanford, NC",
+            "score": 54,
+            "appreciation": 0.6,
+            "state": "NC"
+          },
+          {
+            "rank": 32,
+            "name": "Charlottesville, VA",
+            "score": 54,
+            "appreciation": 0.5,
+            "state": "VA"
+          },
+          {
+            "rank": 33,
+            "name": "Wilson, NC",
+            "score": 53.6,
+            "appreciation": 0,
+            "state": "NC"
+          },
+          {
+            "rank": 34,
+            "name": "Weirton-Steubenville, WV-OH",
+            "score": 53.5,
+            "appreciation": 3.1,
+            "state": "WV"
+          },
+          {
+            "rank": 35,
+            "name": "Henderson, NC",
+            "score": 53.5,
+            "appreciation": -2.7,
+            "state": "NC"
+          },
+          {
+            "rank": 36,
+            "name": "Danville, VA",
+            "score": 53.4,
+            "appreciation": -1.6,
+            "state": "VA"
+          },
+          {
+            "rank": 37,
+            "name": "Mayfield, KY",
+            "score": 53.4,
+            "appreciation": 6.7,
+            "state": "KY"
+          },
+          {
+            "rank": 38,
+            "name": "Memphis, TN-MS-AR",
+            "score": 53.3,
+            "appreciation": -0.4,
+            "state": "TN"
+          },
+          {
+            "rank": 39,
+            "name": "Wildwood-The Villages, FL",
+            "score": 53.2,
+            "appreciation": -1.6,
+            "state": "FL"
+          },
+          {
+            "rank": 40,
+            "name": "Glasgow, KY",
+            "score": 53.1,
+            "appreciation": 0.8,
+            "state": "KY"
+          },
+          {
+            "rank": 41,
+            "name": "Lynchburg, VA",
+            "score": 53,
+            "appreciation": 1.1,
+            "state": "VA"
+          },
+          {
+            "rank": 42,
+            "name": "Lewisburg, TN",
+            "score": 52.8,
+            "appreciation": 2.8,
+            "state": "TN"
+          },
+          {
+            "rank": 43,
+            "name": "Greenville-Anderson-Greer, SC",
+            "score": 52.7,
+            "appreciation": 1,
+            "state": "SC"
+          },
+          {
+            "rank": 44,
+            "name": "Nashville-Davidson--Murfreesboro--Franklin, TN",
+            "score": 52.7,
+            "appreciation": -0.3,
+            "state": "TN"
+          },
+          {
+            "rank": 45,
+            "name": "Palm Bay-Melbourne-Titusville, FL",
+            "score": 52.6,
+            "appreciation": -4.1,
+            "state": "FL"
+          },
+          {
+            "rank": 46,
+            "name": "Gainesville, GA",
+            "score": 52.5,
+            "appreciation": -2,
+            "state": "GA"
+          },
+          {
+            "rank": 47,
+            "name": "Hinesville, GA",
+            "score": 52.3,
+            "appreciation": 1.5,
+            "state": "GA"
+          },
+          {
+            "rank": 48,
+            "name": "Martinsville, VA",
+            "score": 52.3,
+            "appreciation": -4.1,
+            "state": "VA"
+          },
+          {
+            "rank": 49,
+            "name": "Cordele, GA",
+            "score": 52.2,
+            "appreciation": -5.2,
+            "state": "GA"
+          },
+          {
+            "rank": 50,
+            "name": "Newport, TN",
+            "score": 52.2,
+            "appreciation": 3,
+            "state": "TN"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Tell me about Phoenix: current rank, trend, vs national average, and one similar market",
+    "success": true,
+    "durationMs": 8407,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "responseText": "I'll provide a comprehensive analysis of Phoenix covering all the aspects you requested.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Phoenix-Mesa-Chandler, AZ",
+            "score": 58.5,
+            "appreciation": -3.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 2,
+            "name": "Safford, AZ",
+            "score": 57,
+            "appreciation": 4.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 3,
+            "name": "Tucson, AZ",
+            "score": 54,
+            "appreciation": -3,
+            "state": "AZ"
+          },
+          {
+            "rank": 4,
+            "name": "Flagstaff, AZ",
+            "score": 49.5,
+            "appreciation": 0.8,
+            "state": "AZ"
+          },
+          {
+            "rank": 5,
+            "name": "Prescott Valley-Prescott, AZ",
+            "score": 49.4,
+            "state": "AZ"
+          }
+        ]
+      }
+    }
+  }
+]

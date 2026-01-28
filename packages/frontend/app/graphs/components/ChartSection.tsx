@@ -517,11 +517,18 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
       {/* Chart Container */}
       <div className="h-[400px] md:h-[550px] w-full bg-surface-container-lowest rounded-2xl border border-outline-variant p-2 md:p-4 flex flex-col">
-        <div className="flex-1">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
-          </ResponsiveContainer>
-        </div>
+        {(!chartData || chartData.length === 0) ? (
+          <div className="flex flex-1 flex-col items-center justify-center text-center px-4">
+            <p className="text-on-surface-variant font-medium">No data available for this selection.</p>
+            <p className="text-sm text-on-surface-variant mt-1">Try a different location, metric, or time range.</p>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === 'area' ? renderAreaChart() : chartType === 'line' ? renderLineChart() : renderBarChart()}
+            </ResponsiveContainer>
+          </div>
+        )}
         {/* Data Source - simple text line */}
         <div className="text-[10px] text-on-surface-variant text-center pt-1">
           Source: {getMetricSource(metric)}
