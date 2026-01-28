@@ -4,7 +4,10 @@ export type { GeoLevel, MetricConfig, MetricFormat, DataSource } from '@/app/map
 // Graph-specific types
 export interface ComparisonConfig {
   enabled: boolean;
+  /** Display name (e.g. "Austin-Round Rock-Georgetown, TX") */
   area: string;
+  /** API regionId when from search (metro/county/city/zip); omit for state/national dropdown */
+  areaId?: string;
 }
 
 export interface Milestone {

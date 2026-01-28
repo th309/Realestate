@@ -76,11 +76,32 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
     clearSearch
   } = useGraphSearch(geoLevel);
 
+  // Compare-to search: same behavior as primary when geo is metro/county/city/zip
+  const {
+    searchQuery: comparisonSearchQuery,
+    setSearchQuery: setComparisonSearchQuery,
+    searchResults: comparisonSearchResults,
+    searchLoading: comparisonSearchLoading,
+    showSearchResults: showComparisonSearchResults,
+    setShowSearchResults: setShowComparisonSearchResults,
+    searchRef: comparisonSearchRef,
+    handleSearch: handleComparisonSearch,
+    clearSearch: clearComparisonSearch
+  } = useGraphSearch(geoLevel);
+
   const handleSelectResult = (result: SearchResult) => {
-    // Use result.value for ID (cbsa_code, fips, etc.) and result.name for display
     setSelectedArea(result.name);
     setSelectedAreaId(result.value || result.name);
     clearSearch();
+  };
+
+  const handleSelectComparisonResult = (result: SearchResult) => {
+    setComparison((prev) => ({
+      ...prev,
+      area: result.name,
+      areaId: result.value || result.name,
+    }));
+    clearComparisonSearch();
   };
 
   const showSearch = ['metro', 'county', 'city', 'zip'].includes(geoLevel);
@@ -96,8 +117,9 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
     }
   };
 
-  // Show selectedArea in input when not actively searching
+  // Show selected area in input when not actively searching (primary and compare mirror each other)
   const displayValue = showSearchResults ? searchQuery : (searchQuery || selectedArea);
+  const comparisonDisplayValue = showComparisonSearchResults ? comparisonSearchQuery : (comparisonSearchQuery || comparison.area);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -168,13 +190,15 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
           ) : (
             <M3Select
               label="Primary Area"
-              value={selectedArea}
+              value={selectedArea || ''}
               onChange={(val) => {
                 setSelectedArea(val);
-                setSelectedAreaId(val); // For states, they are the same
+                setSelectedAreaId(val); // For state/national, name = ID
               }}
-              options={primaryOptions}
-              disabled={geoLevel === 'national'}
+              options={[
+                { value: '', label: geoLevel === 'national' ? 'Select...' : 'Select state...' },
+                ...primaryOptions,
+              ]}
             />
           )}
 
@@ -200,14 +224,38 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
               </button>
             </div>
           )}
-          {comparison.enabled && (
+          {comparison.enabled && showSearch ? (
+            <div className="w-full -ml-0 md:-ml-0">
+              <div className="relative">
+                <div className="text-xs font-medium text-on-surface-variant mb-1.5">Compare To</div>
+                <SearchBar
+                  className="w-full"
+                  searchRef={comparisonSearchRef}
+                  searchQuery={comparisonDisplayValue}
+                  searchResults={comparisonSearchResults}
+                  searchLoading={comparisonSearchLoading}
+                  showSearchResults={showComparisonSearchResults}
+                  onSearch={handleComparisonSearch}
+                  onSelectResult={handleSelectComparisonResult}
+                  onFocus={() => {
+                    if (comparisonSearchResults.length > 0) setShowComparisonSearchResults(true);
+                    if (!comparisonSearchQuery && comparison.area) setComparisonSearchQuery('');
+                  }}
+                  placeholder={getSearchPlaceholder()}
+                />
+              </div>
+            </div>
+          ) : comparison.enabled ? (
             <M3Select
               label="Compare To"
-              value={comparison.area}
-              onChange={(val) => setComparison((prev) => ({ ...prev, area: val }))}
-              options={primaryOptions.filter((s) => s !== selectedArea)}
+              value={comparison.area || ''}
+              onChange={(val) => setComparison((prev) => ({ ...prev, area: val, areaId: undefined }))}
+              options={[
+                { value: '', label: 'Select...' },
+                ...primaryOptions.filter((s) => s !== selectedArea),
+              ]}
             />
-          )}
+          ) : null}
           {baseline.enabled && (
             <div className="flex gap-2">
               <div className="flex-1">
@@ -224,9 +272,12 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
               <div className="flex-1">
                 <M3Select
                   label="Base Area"
-                  value={baseline.area}
+                  value={baseline.area || ''}
                   onChange={(val) => setBaseline((prev) => ({ ...prev, area: val }))}
-                  options={baselineOptions}
+                  options={[
+                    { value: '', label: baseline.level === 'national' ? 'Select...' : 'Select state...' },
+                    ...baselineOptions,
+                  ]}
                 />
               </div>
             </div>

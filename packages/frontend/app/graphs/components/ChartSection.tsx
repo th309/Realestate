@@ -116,8 +116,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         allValues.push(point[selectedAreaId] as number);
       }
       // Comparison area
-      if (comparison.enabled && visibleSeries.comparison && typeof point[comparison.area] === 'number') {
-        allValues.push(point[comparison.area] as number);
+      if (comparison.enabled && visibleSeries.comparison && typeof point[comparisonDataKey] === 'number') {
+        allValues.push(point[comparisonDataKey] as number);
       }
       // Baseline
       if (baseline.enabled && visibleSeries.baseline && typeof point[baselineKey] === 'number') {
@@ -223,6 +223,8 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
   // Display name for legend
   const baselineDisplayName = `Baseline: ${baseline.area}`;
+  // Comparison data key: areaId when from search (metro/county/city/zip), else area (state name)
+  const comparisonDataKey = comparison.areaId ?? comparison.area;
 
   // Render milestone reference lines
   const renderMilestones = () => {
@@ -293,7 +295,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         {comparison.enabled && visibleSeries.comparison && (
           <Area
             type="monotone"
-            dataKey={comparison.area}
+            dataKey={comparisonDataKey}
             name={comparison.area}
             stroke={CHART_COLORS.comparison}
             strokeWidth={isMobile ? 2 : 3}
@@ -339,7 +341,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
       {comparison.enabled && visibleSeries.comparison && (
         <Line
           type="monotone"
-          dataKey={comparison.area}
+          dataKey={comparisonDataKey}
           name={comparison.area}
           stroke={CHART_COLORS.comparison}
           strokeWidth={isMobile ? 2 : 3}
@@ -383,7 +385,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         )}
         {comparison.enabled && visibleSeries.comparison && (
           <Bar
-            dataKey={comparison.area}
+            dataKey={comparisonDataKey}
             name={comparison.area}
             fill={CHART_COLORS.comparison}
             radius={[4, 4, 0, 0]}

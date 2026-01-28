@@ -34,8 +34,8 @@ export const BASELINE_GEO_LEVELS: { value: GeoLevel; label: string }[] = [
 
 export function useDashboardState() {
   const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
-  const [selectedArea, setSelectedArea] = useState('Florida');
-  const [selectedAreaId, setSelectedAreaId] = useState('Florida'); // For states, Name = ID
+  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedAreaId, setSelectedAreaId] = useState(''); // Empty until user selects (matches metro/county/city/zip)
   const [metric, setMetric] = useState('listing_price'); // Default to listing_price
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Max');
   const [chartType, setChartType] = useState<ChartType>('area');
@@ -45,12 +45,12 @@ export function useDashboardState() {
 
   const [comparison, setComparison] = useState<ComparisonConfig>({
     enabled: false,
-    area: 'Texas',
+    area: '',
   });
   const [baseline, setBaseline] = useState<BaselineConfig>({
     enabled: false,
     level: 'national',
-    area: 'United States',
+    area: '',
   });
 
   const [showMilestones, setShowMilestones] = useState(true);
@@ -115,31 +115,21 @@ export function useDashboardState() {
   const [prevGeoLevel, setPrevGeoLevel] = useState<GeoLevel>(geoLevel);
 
   useEffect(() => {
-    // Only reset selectedArea when geoLevel actually changes
+    // Only reset selectedArea when geoLevel actually changes; keep empty until user selects (match metro/county/city/zip)
     if (geoLevel !== prevGeoLevel) {
       setPrevGeoLevel(geoLevel);
-
-      if (geoLevel === 'national') {
-        setSelectedArea('United States');
-        setSelectedAreaId('United States');
+      setSelectedArea('');
+      setSelectedAreaId('');
+      if (geoLevel !== 'national') {
         setComparison((prev) => ({ ...prev, enabled: false }));
-      } else if (geoLevel === 'state') {
-        // For state, use dropdown options
-        if (!primaryOptions.includes(selectedArea)) {
-          setSelectedArea(primaryOptions[0]);
-          setSelectedAreaId(primaryOptions[0]);
-        }
-      } else {
-        // For metro, county, city, zip - clear the area so user can search
-        setSelectedArea('');
-        setSelectedAreaId('');
       }
     }
-  }, [geoLevel, prevGeoLevel, primaryOptions, selectedArea]);
+  }, [geoLevel, prevGeoLevel]);
 
   useEffect(() => {
-    if (!baselineOptions.includes(baseline.area)) {
-      setBaseline((prev) => ({ ...prev, area: baselineOptions[0] }));
+    // Only reset baseline area when level changes and current area not in new options; allow empty
+    if (baseline.area && baselineOptions.length > 0 && !baselineOptions.includes(baseline.area)) {
+      setBaseline((prev) => ({ ...prev, area: '' }));
     }
   }, [baselineOptions, baseline.area]);
 

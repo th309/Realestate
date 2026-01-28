@@ -102,6 +102,15 @@ export function useChartData({
 
         const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
+        // Skip fetch when no area selected (state/national/metro/county/city/zip start empty)
+        if (!selectedArea?.trim()) {
+          if (isMounted) {
+            setData([]);
+            setLoading(false);
+          }
+          return;
+        }
+
         // Fetch primary series
         const primaryResponse = await timeSeriesApi.getTimeSeries(
           metric,
@@ -121,33 +130,31 @@ export function useChartData({
           };
         });
 
-        // Fetch comparison data if enabled
+        // Comparison regionId: use areaId when from search (metro/county/city/zip), else area (state name)
+        const comparisonRegionId = comparison.areaId ?? comparison.area;
         if (comparison.enabled && comparison.area) {
           try {
             const comparisonResponse = await timeSeriesApi.getTimeSeries(
               metric,
               geoLevel,
-              comparison.area,
+              comparisonRegionId,
               formatDate(startDate),
               formatDate(endDate),
             );
 
-            // Merge comparison data
+            // Merge comparison data under same key used for API (so chart dataKey matches)
             comparisonResponse.data.forEach(point => {
               const existingPoint = chartData.find(d => d.date === point.date);
               if (existingPoint) {
-                existingPoint[comparison.area] = Number(point.value) || 0;
+                existingPoint[comparisonRegionId] = Number(point.value) || 0;
               } else {
-                // If the comparison date doesn't exist in primary data, add a new point
-                // Note: For simplicity we usually assume same dates, but this is safer
                 const newPoint: ChartDataItem = {
                   date: point.date,
-                  [comparison.area]: Number(point.value) || 0
+                  [comparisonRegionId]: Number(point.value) || 0
                 };
                 chartData.push(newPoint);
               }
             });
-            // Re-sort if we added new dates
             chartData.sort((a, b) => a.date.localeCompare(b.date));
           } catch (err) {
             console.error('Failed to fetch comparison data:', err);
@@ -212,8 +219,8 @@ export function useChartData({
             };
 
             if (comparison.enabled && comparison.area) {
-              const compValue = (last[comparison.area] as number) || 0;
-              forecastItem[comparison.area] = Math.round(compValue + growth * 0.5);
+              const compValue = (last[comparisonRegionId] as number) || 0;
+              forecastItem[comparisonRegionId] = Math.round(compValue + growth * 0.5);
             }
 
             if (baseline.enabled && baseline.area) {
@@ -244,7 +251,7 @@ export function useChartData({
     return () => {
       isMounted = false;
     };
-  }, [metric, geoLevel, timeFrame, selectedArea, comparison.enabled, comparison.area, baseline.enabled, baseline.area, baseline.level, showForecast]);
+  }, [metric, geoLevel, timeFrame, selectedArea, comparison.enabled, comparison.area, comparison.areaId, baseline.enabled, baseline.area, baseline.level, showForecast]);
 
   return { data, loading, error };
 }
