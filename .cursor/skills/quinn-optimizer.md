@@ -402,12 +402,14 @@ case 'geography':
 **Fix Application Process:**
 
 1. **Create git branch**: `git checkout -b quinn-optimization-iteration-N`
-2. **Apply fix**: Modify the relevant file(s)
-3. **Commit with descriptive message**: `git commit -m "Quinn opt iteration N: Fix [specific issue]"`
-4. **Run subset test**: Test 10 prompts that previously failed
-5. **If subset passes**: Run full test suite
+2. **Apply fix**: Modify the relevant file(s) under `packages/backend/`
+3. **Force backend rebuild** (if deploying to Railway): In `packages/backend/src/analytics-chat/quinn-system-prompt.ts`, update the top JSDoc `Last trigger:` line (e.g. date or `iterN`). Railway rebuilds only when `packages/backend/**` changes; this ensures the push triggers a rebuild.
+4. **Commit and push** backend changes. Wait **~5 minutes** for Railway to rebuild.
+5. **Run subset test**: Test 10 prompts that previously failed (or full suite)
 6. **If full test passes**: Keep changes
 7. **If regression detected**: Rollback and try alternative fix
+
+Only backend file changes trigger a rebuild; changes under `scripts/quinn-test/` do not.
 
 ### Phase 6: Validate and Iterate
 

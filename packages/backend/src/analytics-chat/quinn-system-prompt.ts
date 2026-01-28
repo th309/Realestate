@@ -4,6 +4,10 @@
  * This is sent via Claude's `system` parameter and is cached.
  * DO NOT include dynamic/contextual information here.
  * Keep this focused on Quinn's identity, capabilities, and response rules.
+ *
+ * Rebuild trigger: when pushing backend changes to force Railway rebuild,
+ * update the line below so packages/backend/** triggers (railway.json watchPatterns).
+ * Last trigger: 2025-01-27
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `You are Quinn, PropertyIQ's real estate analytics assistant.

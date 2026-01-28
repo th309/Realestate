@@ -42,6 +42,16 @@ For each prompt you get:
 
 Exit code is `0` when all pass, `1` when any fail (suitable for CI).
 
+## Forcing a backend rebuild (Railway)
+
+If you push backend changes and Railway does not rebuild, force one by changing a file under `packages/backend/` so `watchPatterns` in `railway.json` sees it:
+
+1. Edit `packages/backend/src/analytics-chat/quinn-system-prompt.ts`.
+2. In the top JSDoc, update the `Last trigger:` line (e.g. set it to today’s date or the iteration id).
+3. Commit and push. Wait **~5 minutes** for Railway to rebuild.
+
+Only backend changes need a rebuild; changes under `scripts/quinn-test/` do not.
+
 ## Example prompts file
 
 See `prompts.example.txt`. Copy and edit:

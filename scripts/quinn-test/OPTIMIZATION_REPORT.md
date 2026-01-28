@@ -96,12 +96,25 @@ Iteration 2 must run against a backend that includes the Iteration 1 prompt chan
 
 ### Option B: After deploy to Railway
 
-1. Deploy the branch that contains the prompt changes.
-2. Run the test script without `--url` (so it uses the default Railway URL):
+1. **Force a backend rebuild** (see “Forcing a backend rebuild” below).
+2. Wait ~5 minutes for Railway to finish rebuilding.
+3. Run the test script without `--url` (so it uses the default Railway URL):
    ```bash
    npx tsx scripts/quinn-test/run-iterative.ts scripts/quinn-test/comprehensive-prompts.txt --output scripts/quinn-test/iter1-results.json
    ```
-3. Run the evaluator as in step 3 above.
+4. Run the evaluator as in Option A step 3.
+
+### Forcing a backend rebuild (Railway)
+
+Pushing backend changes alone may not trigger a rebuild. To force one:
+
+1. Apply your backend fixes (e.g. in `packages/backend/src/analytics-chat/`).
+2. **Update the rebuild trigger** in `packages/backend/src/analytics-chat/quinn-system-prompt.ts`: in the top JSDoc, change the `Last trigger:` line (e.g. to today’s date or `iterN`). That file is under `packages/backend/**`, so Railway’s `watchPatterns` will see a change.
+3. Commit only backend files, push.
+4. Wait **~5 minutes** for Railway to rebuild and deploy.
+5. Re-run tests against the Railway URL (no `--url`).
+
+Only touch backend files when you want a rebuild; changes under `scripts/quinn-test/` do not trigger it.
 
 ### Stopping / success criteria
 
