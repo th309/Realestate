@@ -225,7 +225,9 @@ function calculateCompletenessScore(response: TestResponse): number {
   if (!response.success) return 0;
   if (isVagueCensusClarifyingResponse(response)) return 100;
   if (isUltraVagueHelpResponse(response)) return 100;
-  
+  // "help" with substantive intro (even if a tool was called): treat as complete
+  if (response.prompt.toLowerCase().trim() === 'help' && response.responseText.length >= 80) return 100;
+
   const prompt = response.prompt.toLowerCase();
   const text = response.responseText;
   const tools = response.toolsUsed;
