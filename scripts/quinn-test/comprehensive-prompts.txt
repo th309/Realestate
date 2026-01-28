@@ -46,6 +46,11 @@ Show me neighbors of Portland OR
 Is Dallas better than Houston?
 Compare Florida metros to national average
 
+# DIFFICULT GEOGRAPHIC COMPARISONS (county vs surrounding)
+I am interested in investing in McLean County, IL. Can you compare McLean County, IL to the counties that surround it?
+Compare Travis County, TX to its surrounding counties for investment
+How does Wake County NC compare to neighboring counties?
+
 # VALIDATION & BACKTESTING
 How accurate is InvestorEdge?
 Validate HomeReady scores
