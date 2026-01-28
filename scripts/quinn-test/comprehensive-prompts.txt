@@ -1,0 +1,82 @@
+# Quinn comprehensive test prompts – full optimizer workflow
+# One prompt per line. Lines starting with # are ignored.
+# Run: npx tsx scripts/quinn-test/run-iterative.ts scripts/quinn-test/comprehensive-prompts.txt --output scripts/quinn-test/baseline-results.json
+
+# HOMEBUYER QUESTIONS (HomeReady scoring)
+Where should I buy in Austin?
+Are prices dropping in Phoenix?
+Best family neighborhoods in Dallas?
+Is it a good time to buy in Denver?
+What's the most affordable metro in Texas?
+Compare Houston to San Antonio for first-time buyers
+Are Seattle suburbs good for families?
+Where can I find good schools in Atlanta?
+
+# INVESTOR QUESTIONS (InvestorEdge scoring)
+Which markets have the best cash-on-cash returns?
+Show me high-growth positive cash flow markets
+Compare cap rates across Texas metros
+Hot markets for rental properties
+Best rental yields in Florida
+Which metros have appreciation potential?
+Where should I invest for passive income?
+Show me markets with strong rent growth
+
+# GENERAL MARKET QUESTIONS
+What's happening in the housing market?
+Hot markets right now
+Show me top metros
+Tell me about Austin
+How does Miami compare to the national average?
+What are the best markets overall?
+
+# GEOGRAPHIC LEVEL TESTS
+Best states for investing
+Top counties in California
+Compare zip codes in Seattle metro
+Show me cities similar to Boulder
+Best metros in the Midwest
+Top 10 states by home prices
+
+# COMPARISON & ANALYSIS
+Compare Austin to Nashville
+How does Phoenix stack up against Las Vegas?
+What markets are similar to Raleigh?
+Show me neighbors of Portland OR
+Is Dallas better than Houston?
+Compare Florida metros to national average
+
+# VALIDATION & BACKTESTING
+How accurate is InvestorEdge?
+Validate HomeReady scores
+Show me backtest results
+Is the scoring reliable?
+
+# TIME SERIES & TRENDS
+What's the trend in Austin prices?
+Show me historical data for Miami
+Has Denver been growing?
+Are prices rising or falling in Phoenix?
+
+# FILTERING & RANKING
+Best metros in Texas for investors
+Top 20 markets by appreciation
+Show me high-scoring counties in the Midwest
+Filter for positive cash flow markets
+Give me top 5 metros in California
+
+# NEWS & CURRENT EVENTS
+What's the latest news about Austin real estate?
+Any major developments in Phoenix market?
+Real estate news in Florida
+
+# RAW DATA & METRICS
+What raw metrics predict appreciation?
+Show me Zillow data for Austin
+Compare Census data across metros
+
+# EDGE CASES
+Tell me everything about Austin
+What should I know about investing in real estate?
+Help me find the perfect market
+What's the best market?

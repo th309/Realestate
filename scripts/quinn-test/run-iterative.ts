@@ -17,7 +17,7 @@
  *   QUINN_TEST_BACKEND_URL=<url> npx tsx scripts/quinn-test/run-iterative.ts
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 /** Default: Railway backend. Override with QUINN_TEST_BACKEND_URL or BACKEND_URL. */
@@ -36,6 +36,17 @@ interface ChatResponse {
   structuredData?: unknown;
   modelUsed?: string;
   conversationId: string;
+  error?: string;
+}
+
+/** Shape expected by evaluate-responses.ts (TestResponse) */
+export interface TestResultForEvaluator {
+  prompt: string;
+  success: boolean;
+  durationMs: number;
+  toolsUsed: string[];
+  responseText: string;
+  structuredData: unknown;
   error?: string;
 }
 
@@ -62,14 +73,22 @@ async function sendMessage(
     body: JSON.stringify({ message: message.trim(), context }),
   });
   const durationMs = Date.now() - start;
-  const data = (await res.json()) as ChatResponse;
+  let data: ChatResponse;
+  try {
+    data = (await res.json()) as ChatResponse;
+  } catch {
+    data = { success: false, conversationId, error: `HTTP ${res.status} (no JSON)` };
+  }
   if (!res.ok) {
     return {
       durationMs,
       data: {
         success: false,
         conversationId,
-        error: data?.error ?? `HTTP ${res.status}`,
+        error: (data as any)?.error ?? `HTTP ${res.status}`,
+        response: (data as any)?.response ?? '',
+        toolsUsed: (data as any)?.toolsUsed ?? [],
+        structuredData: (data as any)?.structuredData,
       },
     };
   }
@@ -92,12 +111,14 @@ function loadPrompts(path: string): string[] {
     .filter((s) => !s.startsWith('#'));
 }
 
-function parseArgs(): { promptsPath?: string; backendUrl?: string } {
+function parseArgs(): { promptsPath?: string; backendUrl?: string; outputPath?: string } {
   const args = process.argv.slice(2);
-  const out: { promptsPath?: string; backendUrl?: string } = {};
+  const out: { promptsPath?: string; backendUrl?: string; outputPath?: string } = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--url' && args[i + 1]) {
       out.backendUrl = args[++i];
+    } else if (args[i] === '--output' && args[i + 1]) {
+      out.outputPath = args[++i];
     } else if (!args[i].startsWith('-')) {
       out.promptsPath = args[i];
     }
@@ -106,13 +127,14 @@ function parseArgs(): { promptsPath?: string; backendUrl?: string } {
 }
 
 async function main() {
-  const { promptsPath, backendUrl } = parseArgs();
+  const { promptsPath, backendUrl, outputPath } = parseArgs();
   const baseUrl = backendUrl ?? BACKEND_URL;
   const prompts = promptsPath ? loadPrompts(promptsPath) : DEFAULT_PROMPTS;
 
   console.log('Quinn iterative test');
   console.log('Backend:', baseUrl);
   console.log('Prompts:', prompts.length);
+  if (outputPath) console.log('Output JSON:', outputPath);
   console.log('');
 
   const results: Array<{
@@ -123,6 +145,8 @@ async function main() {
     responseLen: number;
     error?: string;
   }> = [];
+
+  const forEvaluator: TestResultForEvaluator[] = [];
 
   for (let i = 0; i < prompts.length; i++) {
     const prompt = prompts[i];
@@ -139,6 +163,15 @@ async function main() {
         responseLen: (data.response ?? '').length,
         error: data.error,
       });
+      forEvaluator.push({
+        prompt,
+        success: ok,
+        durationMs,
+        toolsUsed: data.toolsUsed ?? [],
+        responseText: data.response ?? '',
+        structuredData: data.structuredData ?? null,
+        error: data.error,
+      });
       const status = ok ? `OK ${durationMs}ms` : `FAIL ${data.error ?? 'unknown'}`;
       console.log(status);
     } catch (e) {
@@ -149,6 +182,15 @@ async function main() {
         durationMs: 0,
         toolsUsed: [],
         responseLen: 0,
+        error: err,
+      });
+      forEvaluator.push({
+        prompt,
+        success: false,
+        durationMs: 0,
+        toolsUsed: [],
+        responseText: '',
+        structuredData: null,
         error: err,
       });
       console.log('FAIL', err);
@@ -169,6 +211,15 @@ async function main() {
     ? Math.round(results.reduce((a, r) => a + r.durationMs, 0) / results.length)
     : 0;
   console.log(`Avg response time: ${avgMs}ms`);
+
+  if (outputPath) {
+    const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
+      ? outputPath
+      : join(process.cwd(), outputPath);
+    writeFileSync(outPath, JSON.stringify(forEvaluator, null, 2), 'utf-8');
+    console.log(`Results JSON written to: ${outPath}`);
+  }
+
   process.exit(failed > 0 ? 1 : 0);
 }
 

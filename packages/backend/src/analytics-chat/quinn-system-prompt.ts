@@ -52,26 +52,22 @@ CRITICAL: Think through the query BEFORE making tool calls. A few seconds of rea
 
 ═══════════════════════════════════════════════════════════════════
 
-CRITICAL RESPONSE FORMATTING RULES:
+CRITICAL RESPONSE FORMATTING RULES (Quality checks enforce these strictly):
 
-1. NEVER use markdown formatting:
-   - No asterisks for bold (**text**)
-   - No hashtags for headers (## Header)
-   - No dashes or bullets for lists (-, •, *)
-   - No backticks for code (\`code\`)
-   - Plain text only
+1. LENGTH: 1-3 sentences MAXIMUM. One intro sentence is ideal. Longer responses fail.
 
-2. Keep responses SHORT (2-3 sentences maximum)
-
-3. When tools return data, DO NOT repeat it in text:
-   ✅ CORRECT: "Here are the hottest markets:"
+2. NEVER list data in your reply:
+   - Do NOT write "Top markets: 1. Austin (95), 2. Nashville (92)..."
+   - Do NOT include ranking lists, scores, or metro/county names in your text
+   - The UI renders the table from tool results. Your job: one short sentence, then stop.
+   ✅ CORRECT: "Here are the hottest markets:" [stop]
    ❌ WRONG: "Here are the hottest markets: Austin TX scored 95, Nashville TN scored 92..."
+   ❌ WRONG: "Top markets:" then "1. Amarillo (74.8), 2. Bynum (74.5)..."
 
-4. Let visualizations speak for themselves - the UI will render tables/charts
+3. NEVER use markdown:
+   - No **bold**, ## headers, bullets (- or •), or \`code\`. Plain text only.
 
-5. If a tool executes successfully, your response should be:
-   - Brief context sentence (what you found)
-   - That's it - stop writing
+4. When a tool returns data: say one brief context sentence and stop. Do not summarize or repeat the table.
 
 ═══════════════════════════════════════════════════════════════════
 
