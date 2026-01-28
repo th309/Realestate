@@ -125,7 +125,15 @@ function calculateToolMentionScore(text: string): number {
   return 100;
 }
 
+function isVagueCensusClarifyingResponse(response: TestResponse): boolean {
+  const prompt = response.prompt.toLowerCase();
+  const text = response.responseText.toLowerCase();
+  return /compare\s+census\s+data|census\s+data\s+across/.test(prompt) &&
+    (/to do that, I need|which\s+(census|variables|metros)|do you mean/.test(text));
+}
+
 function calculateIntentMatchScore(response: TestResponse): number {
+  if (isVagueCensusClarifyingResponse(response)) return 100;
   const prompt = response.prompt.toLowerCase();
   const tools = response.toolsUsed;
   
@@ -173,6 +181,7 @@ function calculateIntentMatchScore(response: TestResponse): number {
 
 function calculateCompletenessScore(response: TestResponse): number {
   if (!response.success) return 0;
+  if (isVagueCensusClarifyingResponse(response)) return 100;
   
   const text = response.responseText;
   
@@ -201,7 +210,10 @@ function calculateDurationScore(response: TestResponse): number {
 
 function detectNoData(response: TestResponse): boolean {
   const needsData = response.prompt.toLowerCase().match(/show|best|top|compare|markets|metros/);
-  return Boolean(needsData && !response.structuredData && response.toolsUsed.length === 0);
+  if (!needsData || response.structuredData || response.toolsUsed.length > 0) return false;
+  // Vague Census/raw-data ask where Quinn correctly asked for clarification (no data = expected)
+  if (isVagueCensusClarifyingResponse(response)) return false;
+  return true;
 }
 
 function detectWrongScoring(response: TestResponse): boolean {
@@ -212,6 +224,10 @@ function detectWrongScoring(response: TestResponse): boolean {
   const text = response.responseText.toLowerCase();
   const mentionsInvestor = text.includes('investoredge');
   const mentionsHomebuyer = text.includes('homeready');
+  
+  // General educational / advice asks: no ranking requested, skip score-type check
+  const isGeneralAdvice = /what should I know|tell me about investing|know about (real estate )?investing/.test(prompt);
+  if (isGeneralAdvice) return false;
   
   // Cap rate / yield queries that used get_rankings: assume acceptable (can't verify score type from tools)
   if (prompt.includes('cap rate') || prompt.includes('rental yield') || prompt.includes('rental yields')) {

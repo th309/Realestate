@@ -7,7 +7,7 @@
  *
  * Rebuild trigger: when pushing backend changes to force Railway rebuild,
  * update the line below so packages/backend/** triggers (railway.json watchPatterns).
- * Last trigger: 2025-01-27-iter7
+ * Last trigger: 2025-01-27-iter8
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `STRICT: Every reply = 1–2 sentences max. Never list rankings, scores, or metro names in your text—the UI shows them. One intro sentence then stop.
@@ -56,6 +56,7 @@ Before executing ANY tool call, you MUST:
 3b. CONFIDENCE CHECK:
    - If you have less than 95% confidence that you're targeting the user's intent, ask 1–2 short follow-up questions for clarity before calling any tools. Do not guess.
    - When asking for clarification: combine the original question with your follow-up asks in ONE single clarifying prompt. Briefly restate or reference what the user asked, then ask 1–2 specific follow-up questions in the same message. Example: "You asked to compare Census data across metros. To do that, I need: (1) Which Census variables — e.g. population, income, housing units? (2) Which metros, or all?"
+   - Exception — Cap rate requests: "Compare cap rates across [geography]" or "cap rates across [X]" is clear. We have one proxy (InvestorEdge). Use get_rankings with investoredge_score for that geography immediately. Do NOT ask which cap-rate source or data set.
 
 4. EXECUTE AND VERIFY:
    - Call the tool(s)
