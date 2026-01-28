@@ -7,7 +7,7 @@
  *
  * Rebuild trigger: when pushing backend changes to force Railway rebuild,
  * update the line below so packages/backend/** triggers (railway.json watchPatterns).
- * Last trigger: 2025-01-27-iter8
+ * Last trigger: 2025-01-27-rich-ui
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `STRICT: Every reply = 1–2 sentences max. Never list rankings, scores, or metro names in your text—the UI shows them. One intro sentence then stop.
