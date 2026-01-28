@@ -1068,6 +1068,11 @@ USER QUERY:`;
    */
   private parseCompareTwoGeographies(userMessage: string): [string, string] | null {
     const m = userMessage.trim();
+    // "compare zip codes 21701 and 22309" / "compare zip code X and Y" / "compare zips X and Y"
+    const zipMatch = m.match(/\bcompare\s+(?:zip\s*codes?|zips?)\s+(\d{5})\s+and\s+(\d{5})/i)
+      || m.match(/\bcompare\s+.+?\s+(\d{5})\s+and\s+(\d{5})/i);
+    if (zipMatch) return [zipMatch[1], zipMatch[2]];
+
     let match = m.match(/\bcompare\s+(.+?)\s+and\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i);
     if (match) {
       const a = match[1].trim().replace(/\s+as\s+.*$/i, '').trim();
@@ -1122,16 +1127,20 @@ USER QUERY:`;
           let items = actualData.rankings.map((item: any) => ({
             rank: item.rank,
             name: item.geography_name || item.geography_id,
+            id: item.geography_id,
             score: item.score,
             appreciation: item.appreciation_12m,
             state: item.state,
           }));
           // "Compare A and B" (any geography): show only the requested geographies, not a generic top-N
           if (compareNames && compareNames.length === 2) {
-            const [na, nb] = compareNames.map((s) => s.toLowerCase());
+            const [na, nb] = compareNames.map((s) => s.toLowerCase().trim());
             items = items.filter(
-              (it: { name: string }) =>
-                (it.name || '').toLowerCase().includes(na) || (it.name || '').toLowerCase().includes(nb),
+              (it: { name: string; id?: string }) => {
+                const name = (it.name || '').toLowerCase();
+                const id = (it.id ?? '').toString().toLowerCase();
+                return name.includes(na) || id.includes(na) || name.includes(nb) || id.includes(nb);
+              },
             );
             if (items.length > 0) {
               this.logger.log(`[Quinn Extract] Filtered to ${items.length} items for "compare ${compareNames[0]} and ${compareNames[1]}"`);
