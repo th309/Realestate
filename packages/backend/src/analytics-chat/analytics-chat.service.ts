@@ -1048,6 +1048,21 @@ USER QUERY:`;
   }
 
   /**
+   * Parse "tell me about [geo]" / "market in [geo]" for single-geography focus. Returns geography name or null.
+   * When present, get_rankings table is filtered to only that geography (no state-wide list).
+   */
+  private parseSingleGeographyFocus(userMessage: string): string | null {
+    const m = userMessage.trim();
+    let match = m.match(/\btell\s+me\s+(?:everything\s+)?about\s+(?:the\s+)?(?:market\s+in\s+)?([^,.?!]+?)(?:\s+market|\s+metro|\s+county|$|\.|\?|,)/i);
+    if (match) return match[1].trim();
+    match = m.match(/(?:market|metro|area)\s+in\s+([^,.?!]+?)(?:\s+market|\s+metro|$|\.|\?|,)/i);
+    if (match) return match[1].trim();
+    match = m.match(/\b(?:analyze|profile|report\s+on)\s+(?:the\s+)?([^,.?!]+?)(?:\s+market|$|\.|\?|,)/i);
+    if (match) return match[1].trim();
+    return null;
+  }
+
+  /**
    * Parse "compare A and B" / "A vs B" from user message. Returns [nameA, nameB] or null.
    * Works for any geography level (metros, counties, zips, states).
    */
@@ -1086,6 +1101,7 @@ USER QUERY:`;
 
     const structured: StructuredData = {};
     const compareNames = userMessage ? this.parseCompareTwoGeographies(userMessage) : null;
+    const singleGeoFocus = userMessage && !compareNames ? this.parseSingleGeographyFocus(userMessage) : null;
 
     for (const { toolName, data } of toolResults) {
       this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
@@ -1120,10 +1136,17 @@ USER QUERY:`;
             if (items.length > 0) {
               this.logger.log(`[Quinn Extract] Filtered to ${items.length} items for "compare ${compareNames[0]} and ${compareNames[1]}"`);
             }
+          } else if (singleGeoFocus) {
+            // "Tell me about [geo]" / "market in [geo]": show only that geography, not full state list
+            const focus = singleGeoFocus.toLowerCase();
+            items = items.filter((it: { name: string }) => (it.name || '').toLowerCase().includes(focus));
+            if (items.length > 0) {
+              this.logger.log(`[Quinn Extract] Filtered to ${items.length} item(s) for single-geo focus "${singleGeoFocus}"`);
+            }
           }
           this.logger.debug(`[Quinn Extract] Found rankings: ${items.length} items`);
           structured.rankings = {
-            title: compareNames ? 'Comparison' : (actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers'),
+            title: compareNames ? 'Comparison' : singleGeoFocus ? `${singleGeoFocus} — Performance` : (actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers'),
             direction: actualData.direction || 'top',
             items,
           };

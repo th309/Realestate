@@ -14,7 +14,8 @@
  *   npx tsx scripts/quinn-test/run-iterative.ts
  *   npx tsx scripts/quinn-test/run-iterative.ts prompts.txt
  *   npx tsx scripts/quinn-test/run-iterative.ts --url <backend-url>
- *   QUINN_TEST_BACKEND_URL=<url> npx tsx scripts/quinn-test/run-iterative.ts
+ *   npx tsx scripts/quinn-test/run-iterative.ts --rerun-failed-from evaluations.json --previous-results results.json --output merged.json
+ * QUINN_TEST_BACKEND_URL=<url> npx tsx scripts/quinn-test/run-iterative.ts
  */
 
 import { readFileSync, existsSync, writeFileSync } from 'fs';
@@ -111,14 +112,32 @@ function loadPrompts(path: string): string[] {
     .filter((s) => !s.startsWith('#'));
 }
 
-function parseArgs(): { promptsPath?: string; backendUrl?: string; outputPath?: string } {
+const PASS_THRESHOLD = 95;
+
+function parseArgs(): {
+  promptsPath?: string;
+  backendUrl?: string;
+  outputPath?: string;
+  rerunFailedFrom?: string;
+  previousResults?: string;
+} {
   const args = process.argv.slice(2);
-  const out: { promptsPath?: string; backendUrl?: string; outputPath?: string } = {};
+  const out: {
+    promptsPath?: string;
+    backendUrl?: string;
+    outputPath?: string;
+    rerunFailedFrom?: string;
+    previousResults?: string;
+  } = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--url' && args[i + 1]) {
       out.backendUrl = args[++i];
     } else if (args[i] === '--output' && args[i + 1]) {
       out.outputPath = args[++i];
+    } else if (args[i] === '--rerun-failed-from' && args[i + 1]) {
+      out.rerunFailedFrom = args[++i];
+    } else if (args[i] === '--previous-results' && args[i + 1]) {
+      out.previousResults = args[++i];
     } else if (!args[i].startsWith('-')) {
       out.promptsPath = args[i];
     }
@@ -126,10 +145,43 @@ function parseArgs(): { promptsPath?: string; backendUrl?: string; outputPath?: 
   return out;
 }
 
+function loadJson(path: string): any[] {
+  const p = path.startsWith('/') || /^[A-Za-z]:/.test(path) ? path : join(process.cwd(), path);
+  if (!existsSync(p)) {
+    console.error(`File not found: ${path}`);
+    process.exit(1);
+  }
+  return JSON.parse(readFileSync(p, 'utf-8'));
+}
+
 async function main() {
-  const { promptsPath, backendUrl, outputPath } = parseArgs();
+  const { promptsPath, backendUrl, outputPath, rerunFailedFrom, previousResults } = parseArgs();
   const baseUrl = backendUrl ?? BACKEND_URL;
-  const prompts = promptsPath ? loadPrompts(promptsPath) : DEFAULT_PROMPTS;
+
+  let prompts: string[];
+  let previousForEvaluator: TestResultForEvaluator[] = [];
+
+  if (rerunFailedFrom && previousResults) {
+    const evaluations = loadJson(rerunFailedFrom) as Array<{ prompt: string; passes?: boolean; overallScore?: number }>;
+    const failedPrompts = evaluations
+      .filter((e) => e.passes === false || (e.overallScore != null && e.overallScore < PASS_THRESHOLD))
+      .map((e) => e.prompt);
+    if (failedPrompts.length === 0) {
+      console.log('No failed prompts (all passed >= 95). Writing previous results to output.');
+      previousForEvaluator = loadJson(previousResults) as TestResultForEvaluator[];
+      if (outputPath) {
+        const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath) ? outputPath : join(process.cwd(), outputPath);
+        writeFileSync(outPath, JSON.stringify(previousForEvaluator, null, 2), 'utf-8');
+      }
+      process.exit(0);
+      return;
+    }
+    prompts = failedPrompts;
+    previousForEvaluator = loadJson(previousResults) as TestResultForEvaluator[];
+    console.log(`Rerun-failed mode: ${prompts.length} failed prompts (score < ${PASS_THRESHOLD}), ${previousForEvaluator.length} total in previous results`);
+  } else {
+    prompts = promptsPath ? loadPrompts(promptsPath) : DEFAULT_PROMPTS;
+  }
 
   console.log('Quinn iterative test');
   console.log('Backend:', baseUrl);
@@ -216,7 +268,14 @@ async function main() {
     const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
       ? outputPath
       : join(process.cwd(), outputPath);
-    writeFileSync(outPath, JSON.stringify(forEvaluator, null, 2), 'utf-8');
+    let toWrite: TestResultForEvaluator[] = forEvaluator;
+    if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
+      const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
+      for (const r of forEvaluator) byPrompt.set(r.prompt, r);
+      toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
+      console.log(`Merged ${forEvaluator.length} rerun results into ${toWrite.length} total`);
+    }
+    writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
     console.log(`Results JSON written to: ${outPath}`);
   }
 
