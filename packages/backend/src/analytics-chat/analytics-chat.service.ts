@@ -948,20 +948,9 @@ USER QUERY:`;
         finalResponse = 'I was unable to generate a response. Please try again.';
       }
 
-      // For ranking queries: append the actual rankings list to the model's intro so the response is complete
+      // When structuredData.rankings is present, the client renders the table from structuredData—do not append the list to response text (keeps reply short for quality checks).
       if (structuredData?.rankings?.items?.length) {
-        this.logger.log(`[Quinn Chat] Formatting ${structuredData.rankings.items.length} rankings for response...`);
-        const list = this.formatRankingsForResponse(structuredData.rankings);
-        this.logger.log(`[Quinn Chat] Formatted list length: ${list.length} chars`);
-        if (list && !finalResponse.includes(list.slice(0, 30))) {
-          this.logger.log(`[Quinn Chat] Appending rankings list to response (prev length: ${finalResponse.length})`);
-          finalResponse = finalResponse.trimEnd() + '\n\n' + list;
-          this.logger.log(`[Quinn Chat] Final response with rankings: ${finalResponse.length} chars`);
-        } else {
-          this.logger.warn(`[Quinn Chat] Skipping list append - already in response or empty`);
-        }
-      } else {
-        this.logger.warn(`[Quinn Chat] No rankings to format (structuredData.rankings.items.length = ${structuredData?.rankings?.items?.length || 0})`);
+        this.logger.log(`[Quinn Chat] Rankings in structuredData (${structuredData.rankings.items.length} items)—client will render table; leaving response as intro only`);
       }
 
       // When ranking tool failed (e.g. timeout), append a clear, actionable message so the user isn’t left with “try again”
@@ -1186,7 +1175,8 @@ USER QUERY:`;
       parts.push(`Unable to retrieve rankings: ${structured.errorMessage}`);
     }
     if (structured.rankings?.items?.length) {
-      parts.push(this.formatRankingsForResponse(structured.rankings));
+      const label = structured.rankings.direction === 'bottom' ? 'bottom' : 'top';
+      parts.push(`Here are the ${label} markets.`);
     }
     if (structured.comparison) {
       parts.push('Comparison to benchmark is available in the data.');
