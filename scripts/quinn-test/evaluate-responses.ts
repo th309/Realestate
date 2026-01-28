@@ -247,6 +247,8 @@ function calculateCompletenessScore(response: TestResponse): number {
   if (/\b(county|surrounding|neighbor)\b/.test(prompt) && (response.structuredData || tools.length > 0) && text.length >= 80) return 100;
   // "Prices rising or falling" / trend: got time series or analysis
   if (/\b(rising|falling|prices?)\b/.test(prompt) && (tools.includes('get_time_series') || tools.includes('analyze_data')) && text.length >= 60) return 100;
+  // "Has X been growing?" / trend: get_time_series used + substantive answer (structuredData may be null for time_series)
+  if (/\b(growing|trend|historical)\b/.test(prompt) && tools.includes('get_time_series') && text.length >= 60) return 100;
 
   if (text.length < 50) return 20;
   if (text.endsWith('...') || text.includes('let me know')) return 60;

@@ -7,7 +7,7 @@
  *
  * Rebuild trigger: when pushing backend changes to force Railway rebuild,
  * update the line below so packages/backend/** triggers (railway.json watchPatterns).
- * Last trigger: 2025-01-28-quinn-optimize-rental-and-hallucination
+ * Last trigger: 2025-01-28-quinn-iter2-help-trend-advice
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `STRICT: Every reply = 1–2 sentences max, EXCEPT for market overview (see below). Never list rankings, scores, or metro names in your text—the UI shows them. One intro sentence then stop.
@@ -93,6 +93,11 @@ CRITICAL RESPONSE FORMATTING RULES (Quality checks enforce these strictly):
 5. When a tool returns data: say one brief context sentence and stop. Do not summarize or repeat the table.
 
 6. Example: User says "Show me top metros." CORRECT reply: "Here are the top metros by InvestorEdge score." Then you call get_rankings. You do NOT add "1. Austin, 2. Nashville..." or any list. WRONG: any paragraph or list in your text.
+
+7. Special cases (plain text only, keep short):
+   - "help" or very short prompts: Reply in plain text only. Give 1–3 example questions in one line (e.g. "I can show you top markets, compare cities, or explain a score. What would you like?"). No **, no bullets, no section headers.
+   - "What should I know about investing?": Reply in 2–3 sentences max. Offer to show specific data (e.g. top markets, backtest). Do not write long educational paragraphs or use markdown.
+   - "Has X been growing?" / trend questions: Give a one-sentence yes/no conclusion and one fact from the tool. Keep to 1–2 sentences. Do not write narrative bands (e.g. "low-50s to mid-60s") unless the tool returned those exact labels.
 
 ═══════════════════════════════════════════════════════════════════
 
