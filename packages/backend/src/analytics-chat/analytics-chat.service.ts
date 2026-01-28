@@ -953,7 +953,7 @@ USER QUERY:`;
         : '';
 
       this.logger.log(`[Quinn Chat] Extracting structured data from ${toolResultsData.length} tool results...`);
-      const structuredData = this.extractStructuredData(toolResultsData);
+      const structuredData = this.extractStructuredData(toolResultsData, userMessage);
       this.logger.log(`[Quinn Chat] Structured data extracted: ${structuredData ? JSON.stringify(Object.keys(structuredData)) : 'undefined'}`);
       if (structuredData?.rankings) {
         this.logger.log(`[Quinn Chat] Rankings found: ${structuredData.rankings.items?.length || 0} items`);
@@ -1032,7 +1032,7 @@ USER QUERY:`;
         return {
           response: finalResponse,
           toolsUsed,
-          structuredData: this.extractStructuredData(toolResultsData),
+          structuredData: this.extractStructuredData(toolResultsData, userMessage),
           modelUsed: currentModel,
           metadata: {
             intent: queryIntent,
@@ -1048,14 +1048,44 @@ USER QUERY:`;
   }
 
   /**
-   * Extract structured data from tool results for visual rendering
+   * Parse "compare A and B" / "A vs B" from user message. Returns [nameA, nameB] or null.
+   * Works for any geography level (metros, counties, zips, states).
+   */
+  private parseCompareTwoGeographies(userMessage: string): [string, string] | null {
+    const m = userMessage.trim();
+    let match = m.match(/\bcompare\s+(.+?)\s+and\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i);
+    if (match) {
+      const a = match[1].trim().replace(/\s+as\s+.*$/i, '').trim();
+      const b = match[2].trim().replace(/\s+as\s+.*$/i, '').trim();
+      if (a && b) return [a, b];
+    }
+    match = m.match(/(.+?)\s+vs\.?\s+(.+?)(?:\s+as|\s+using|$|,|\.)/i);
+    if (match) {
+      const a = match[1].trim();
+      const b = match[2].trim();
+      if (a && b && a.length > 1 && b.length > 1) return [a, b];
+    }
+    match = m.match(/(.+?)\s+and\s+(.+?)\s+as\s+(investment|homebuyer|market)/i);
+    if (match) {
+      const a = match[1].trim();
+      const b = match[2].trim();
+      if (a && b) return [a, b];
+    }
+    return null;
+  }
+
+  /**
+   * Extract structured data from tool results for visual rendering.
+   * When user asked to "compare A and B" (any geography), filters get_rankings to only those geographies.
    */
   private extractStructuredData(
     toolResults: Array<{ toolName: string; data: any }>,
+    userMessage?: string,
   ): StructuredData | undefined {
     if (toolResults.length === 0) return undefined;
 
     const structured: StructuredData = {};
+    const compareNames = userMessage ? this.parseCompareTwoGeographies(userMessage) : null;
 
     for (const { toolName, data } of toolResults) {
       this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
@@ -1073,17 +1103,29 @@ USER QUERY:`;
           structured.errorMessage = actualData.error;
         }
         if (actualData?.rankings?.length) {
-          this.logger.debug(`[Quinn Extract] Found rankings: ${actualData.rankings.length} items`);
+          let items = actualData.rankings.map((item: any) => ({
+            rank: item.rank,
+            name: item.geography_name || item.geography_id,
+            score: item.score,
+            appreciation: item.appreciation_12m,
+            state: item.state,
+          }));
+          // "Compare A and B" (any geography): show only the requested geographies, not a generic top-N
+          if (compareNames && compareNames.length === 2) {
+            const [na, nb] = compareNames.map((s) => s.toLowerCase());
+            items = items.filter(
+              (it: { name: string }) =>
+                (it.name || '').toLowerCase().includes(na) || (it.name || '').toLowerCase().includes(nb),
+            );
+            if (items.length > 0) {
+              this.logger.log(`[Quinn Extract] Filtered to ${items.length} items for "compare ${compareNames[0]} and ${compareNames[1]}"`);
+            }
+          }
+          this.logger.debug(`[Quinn Extract] Found rankings: ${items.length} items`);
           structured.rankings = {
-            title: actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers',
+            title: compareNames ? 'Comparison' : (actualData.direction === 'bottom' ? 'Bottom Performers' : 'Top Performers'),
             direction: actualData.direction || 'top',
-            items: actualData.rankings.map((item: any) => ({
-              rank: item.rank,
-              name: item.geography_name || item.geography_id,
-              score: item.score,
-              appreciation: item.appreciation_12m,
-              state: item.state,
-            })),
+            items,
           };
         }
       }
