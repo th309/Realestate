@@ -108,10 +108,7 @@ export class AnalyticsChatService {
     private readonly supabase: SupabaseService,
   ) {
     const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    this.logger.log(`[Quinn Init] Checking ANTHROPIC_API_KEY...`);
-    this.logger.log(`[Quinn Init] API key present: ${!!apiKey}`);
-    this.logger.log(`[Quinn Init] API key length: ${apiKey?.length || 0}`);
-    this.logger.log(`[Quinn Init] API key prefix: ${apiKey?.slice(0, 10) || 'N/A'}...`);
+    this.logger.log(`[Quinn Init] ANTHROPIC_API_KEY present: ${!!apiKey}`);
     
     if (apiKey) {
       this.client = new Anthropic({ apiKey });
@@ -399,89 +396,6 @@ USER QUERY:`;
   }
 
   /**
-   * LEGACY - keeping for reference, replaced by intent-based filtering above
-   */
-  private getRelevantToolsLegacy(message: string): any[] {
-    const allTools = this.toolsService.getToolDefinitions();
-    const lowerMessage = message.toLowerCase();
-
-    // Score/ranking queries - most common - ONLY action tools, no exploration
-    if (/\b(top|best|rank|score|hot|perform|invest)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Score query detected - providing ONLY action tools (no exploration)`);
-      return allTools.filter(t =>
-        ['get_rankings', 'analyze_data', 'compare_to_benchmark', 'get_time_series'].includes(t.name)
-      );
-    }
-
-    // Market data queries (Zillow, Realtor, Census, Economic)
-    if (/\b(price|rent|value|zillow|realtor|listing|inventory|sale|hotness|zhvi|zri)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Market data query detected - providing Database Query tools`);
-      return allTools.filter(t =>
-        ['query_database_table', 'describe_database_table', 'aggregate_database',
-         'search_database', 'get_database_summary'].includes(t.name)
-      );
-    }
-
-    // Demographics/economic data
-    if (/\b(population|income|unemployment|demographic|census|economic|gdp)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Demographics query detected - providing Database Query tools`);
-      return allTools.filter(t =>
-        ['query_database_table', 'describe_database_table', 'aggregate_database'].includes(t.name)
-      );
-    }
-
-    // ML/analysis queries
-    if (/\b(predict|regression|feature|importance|cluster|correlat|optim|weight|machine learning|ml)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] ML analysis query detected - providing ML tools`);
-      return allTools.filter(t =>
-        ['run_regression', 'get_feature_importance', 'cluster_markets', 'optimize_weights',
-         'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
-      );
-    }
-
-    // Validation/backtest queries
-    if (/\b(backtest|validat|quintile|test|verify|check|perform)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Validation query detected - providing Validation tools`);
-      return allTools.filter(t =>
-        ['run_backtest', 'run_quintile_analysis', 'compare_formulas'].includes(t.name)
-      );
-    }
-
-    // News queries
-    if (/\b(news|article|recent|happening|event|announcement)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] News query detected - providing News tools`);
-      return allTools.filter(t =>
-        ['search_real_estate_news', 'analyze_news_impact'].includes(t.name)
-      );
-    }
-
-    // Geography/comparison queries
-    if (/\b(similar|neighbor|compar|nearby|surrounding|like|near)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Geography query detected - providing Geography tools`);
-      return allTools.filter(t =>
-        ['find_similar_geographies', 'compare_to_neighbors', 'find_neighboring_geographies',
-         'get_rankings', 'query_database_table'].includes(t.name)
-      );
-    }
-
-    // Discovery/exploration queries
-    if (/\b(what|show|available|list|data|table|have|exist)/i.test(lowerMessage)) {
-      this.logger.log(`[Quinn Tools] Discovery query detected - providing Database Query tools`);
-      return allTools.filter(t =>
-        ['get_database_summary', 'get_database_tables', 'describe_database_table',
-         'query_database_table', 'get_available_filters'].includes(t.name)
-      );
-    }
-
-    // Default: provide core tools (Score + Database)
-    this.logger.log(`[Quinn Tools] General query - providing core tools`);
-    return allTools.filter(t =>
-      ['get_rankings', 'query_database_table', 'describe_database_table',
-       'analyze_data', 'search_database'].includes(t.name)
-    );
-  }
-
-  /**
    * Generate cache key from tool name and input parameters
    */
   private getCacheKey(toolName: string, input: Record<string, any>): string {
@@ -643,7 +557,13 @@ USER QUERY:`;
     const queryIntent = this.getQueryIntent(userMessage);
     this.logger.log(`[Quinn Stream Intent] Detected intent: ${queryIntent}`);
 
-    const systemPrompt = this.buildSystemPrompt(conversation.context);
+    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
+    const userPreferences = conversation.context as Record<string, unknown> | undefined;
+    const userProfilePrompt = this.buildUserProfilePrompt(userMode, userPreferences);
+    const systemBlocks = [
+      { type: 'text' as const, text: QUINN_BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } },
+      { type: 'text' as const, text: userProfilePrompt, cache_control: { type: 'ephemeral' as const } },
+    ];
     const tools = this.getRelevantTools(userMessage);
     this.logger.log(`[Quinn Stream Tools] Providing ${tools.length} tools`);
 
@@ -662,11 +582,11 @@ USER QUERY:`;
     try {
       this.logger.log(`[Quinn Stream] Starting streaming response for ${queryIntent} query`);
 
-      // Use streaming API
+      // Use streaming API (cached system blocks match non-streaming chat for cost/latency)
       const stream = await this.client.messages.stream({
         model: currentModel,
         max_tokens: 2048,
-        system: systemPrompt,
+        system: systemBlocks as any,
         tools: tools as any,
         messages: apiMessages,
       });
@@ -686,6 +606,7 @@ USER QUERY:`;
       // Handle tool calls (non-streaming for now)
       if (finalMessage.stop_reason === 'tool_use') {
         const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
+        const toolResultsForFollowUp: Array<{ id: string; content: string }> = [];
 
         for (const toolUse of toolUseBlocks) {
           if (toolUse.type !== 'tool_use') continue;
@@ -704,6 +625,15 @@ USER QUERY:`;
             this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
           }
 
+          const toolResultContent =
+            result.success && result.data?.error
+              ? JSON.stringify({
+                  ...result.data,
+                  note: `Service reported an error. Tell the user: ${result.data.error}`,
+                })
+              : JSON.stringify(result.success ? result : { error: result.error });
+          toolResultsForFollowUp.push({ id: toolUse.id, content: toolResultContent });
+
           yield { type: 'tool', content: { name: toolUse.name, status: 'complete' } };
         }
 
@@ -713,17 +643,17 @@ USER QUERY:`;
         const followUpStream = await this.client.messages.stream({
           model: currentModel,
           max_tokens: 2048,
-          system: systemPrompt,
+          system: systemBlocks as any,
           tools: tools as any,
           messages: [
             ...apiMessages,
             { role: 'assistant', content: finalMessage.content },
             {
               role: 'user',
-              content: toolUseBlocks.map((tu) => ({
+              content: toolResultsForFollowUp.map((tr) => ({
                 type: 'tool_result' as const,
-                tool_use_id: tu.id,
-                content: JSON.stringify({ success: true, data: {} }),
+                tool_use_id: tr.id,
+                content: tr.content,
               })),
             },
           ],
