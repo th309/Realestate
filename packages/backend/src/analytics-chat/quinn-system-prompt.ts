@@ -7,7 +7,7 @@
  *
  * Rebuild trigger: when pushing backend changes to force Railway rebuild,
  * update the line below so packages/backend/** triggers (railway.json watchPatterns).
- * Last trigger: 2025-01-27-intro-only
+ * Last trigger: 2025-01-27-follow-up-context
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `STRICT: Every reply = 1–2 sentences max. Never list rankings, scores, or metro names in your text—the UI shows them. One intro sentence then stop.
@@ -65,6 +65,11 @@ Before executing ANY tool call, you MUST:
    - Does the data answer the user's question?
 
 CRITICAL: Think through the query BEFORE making tool calls. A few seconds of reasoning saves multiple failed tool attempts.
+
+3c. FOLLOW-UP QUERIES ("those", "them", "from that list", "out of those"):
+   - When the user says "out of those", "which of those", "from that list", "of these", etc., "those" refers to the markets or geographies you listed in your previous reply. Use the REFERENCE block and conversation history to resolve the exact list.
+   - For "which had the most/least price drop (or appreciation) over the last 2 years?" use get_time_series for each of those specific geographies with months: 24 (or horizons that include 24 months), then compare the series to say which dropped or appreciated most. Or use analyze_data with a filter narrowed to those geography names/IDs.
+   - Pass the geography names or IDs from your previous response into the tool. Do not re-call get_rankings for a new set—narrow to the prior set. If the REFERENCE block or your last reply listed specific metros (e.g. Wildwood-The Villages FL, Jacksonville FL, …), use those exact geographies and get_time_series or compare/analyze over 24 months as needed.
 
 ═══════════════════════════════════════════════════════════════════
 

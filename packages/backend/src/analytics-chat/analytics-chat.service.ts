@@ -147,6 +147,11 @@ export class AnalyticsChatService {
   private getQueryIntent(message: string): 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
     const lower = message.toLowerCase();
 
+    // FOLLOW-UP: "out of those / of those / from that list" + price/trend → comparison so get_time_series is available
+    const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lower);
+    const priceOrTrend = /\b(price|drop|appreciation|trend|year|growth|drastic)\b/i.test(lower);
+    if (followUpRef && priceOrTrend) return 'comparison';
+
     // COMPARISON - check before ranking so "compare top in A to top in B" gets multiple tools/iterations
     if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower)) return 'comparison';
     if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower)) return 'comparison';
@@ -309,11 +314,18 @@ IMPORTANT:
   /**
    * Build dynamic context sent per-query (session-only, not cached).
    * Only includes information that changes frequently (conversation history).
+   * When the latest user message refers to "those/them/from that list", include
+   * more of the previous assistant reply so "those" is unambiguous.
    */
   private buildDynamicContext(
     conversationHistory: ChatMessage[],
   ): string {
     const recentHistory = conversationHistory.slice(-4);
+    const lastMsg = recentHistory[recentHistory.length - 1];
+    const lastIsUser = lastMsg?.role === 'user';
+    const lastContent = typeof lastMsg?.content === 'string' ? lastMsg.content : '';
+    const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lastContent);
+
     const historyContext = recentHistory.length > 0
       ? recentHistory
           .map((msg) => {
@@ -323,9 +335,17 @@ IMPORTANT:
           .join('\n')
       : 'First query in conversation';
 
-    return `RECENT CONVERSATION HISTORY:
-${historyContext}
+    let refBlock = '';
+    if (followUpRef && lastIsUser && conversationHistory.length >= 2) {
+      const prevAssistant = [...conversationHistory].reverse().find((m) => m.role === 'assistant');
+      if (prevAssistant && typeof prevAssistant.content === 'string') {
+        const excerpt = prevAssistant.content.substring(0, 800);
+        refBlock = `\n\nREFERENCE (what "those" / "that list" refers to — from your previous reply):\n${excerpt}${prevAssistant.content.length > 800 ? '...' : ''}\n\n`;
+      }
+    }
 
+    return `RECENT CONVERSATION HISTORY:
+${historyContext}${refBlock}
 USER QUERY:`;
   }
 
@@ -351,9 +371,9 @@ USER QUERY:`;
         );
 
       case 'comparison':
-        this.logger.log(`[Quinn Tools] Comparison - benchmark + ranking/filter`);
+        this.logger.log(`[Quinn Tools] Comparison - benchmark + ranking/filter + time_series`);
         return allTools.filter((t) =>
-          ['compare_to_benchmark', 'analyze_data', 'get_rankings', 'filter_geographies'].includes(t.name)
+          ['compare_to_benchmark', 'analyze_data', 'get_rankings', 'filter_geographies', 'get_time_series'].includes(t.name)
         );
 
       case 'analysis':
