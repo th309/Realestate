@@ -78,7 +78,7 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-surface">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
         {/* Loading Overlay */}
-        {isDataLoading && (
+        {(isDataLoading || chartLoading) && (
           <div className="fixed inset-0 bg-surface/60 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="bg-surface-container-high rounded-[28px] elevation-3 p-6 flex items-center gap-4">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
