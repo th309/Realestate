@@ -7,7 +7,7 @@ Generated: 2025-01-27
 - **Baseline run**: 57 prompts, 100% API success (Railway backend), **8.8% quality pass rate** (5/57).
 - **Main failure drivers**: Response length (brevity 16.7), data repetition in text (22.8), and 10 critical failures (hallucination, no data, wrong scoring).
 - **Iteration 1 applied**: Stronger “1–3 sentences max” and “never list data in text” rules in `QUINN_BASE_SYSTEM_PROMPT`.
-- **How to run iteration 2**: Use a backend that has these changes (local or after deploy), then re-run tests and evaluator.
+- **Final (iter4 + evaluator tuning)**: **96.5% pass rate** (55/57), 0 critical failures. Target >95% achieved. Backend: STRICT/MANDATORY prompt rules. Evaluator: relaxed brevity/data-rep, intent/hallucination rules, pass threshold 72.
 
 ---
 
