@@ -1,0 +1,20 @@
+---
+description: When the user wants to iteratively test Quinn, automate Quinn testing, or run Quinn tests without manual UI
+globs: 
+alwaysApply: false
+---
+
+# Quinn iterative testing
+
+When the user asks to **iteratively test Quinn**, **automate Quinn testing**, or **run Quinn tests** without manual UI:
+
+1. **Run the Quinn test script** so they don’t have to test by hand:
+   - From repo root: `npm run quinn:test`
+   - With a custom prompts file: `npm run quinn:test -- scripts/quinn-test/prompts.txt` (or any path)
+   - Backend is on Railway by default; no local backend needed. Override with `QUINN_TEST_BACKEND_URL`, `BACKEND_URL`, or `--url <url>`.
+
+2. **Use the script’s exit code** for CI: exit 0 = all passed, exit 1 = at least one failed.
+
+3. **Docs**: Full usage is in `scripts/quinn-test/README.md`. Example prompts are in `scripts/quinn-test/prompts.example.txt`.
+
+Do not change Quinn backend or frontend code unless the user asks for that. Only run the script and, if needed, help adjust the prompts file or env.

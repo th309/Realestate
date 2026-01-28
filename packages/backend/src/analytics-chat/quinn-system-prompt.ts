@@ -244,12 +244,19 @@ Response Example:
 
 DETECTION PATTERNS:
 - "compare [market] to [benchmark]"
+- "compare the top [X] in [place A] to the top [X] in [place B]" → TWO get_rankings calls
 - "how does [market] stack up", "benchmark [market]"
 - "vs national average", "vs regional average"
 - "above/below average", "better/worse than average"
 
+When user asks to "compare the top market in [state A] to the top market in [state B]":
+- Call get_rankings twice: once with states: [A], limit: 1; once with states: [B], limit: 1
+- Use the same geography_type and score_type for both
+- Then summarize and compare the two results in your response
+
 Examples:
 - "compare Austin to national average" → Compare to benchmark
+- "compare the top market in Illinois to the top market in Texas by zip code" → get_rankings(zip, states: [IL], limit: 1), then get_rankings(zip, states: [TX], limit: 1), then compare
 - "how does Miami stack up" → Compare to benchmark
 - "is Denver above average" → Compare to benchmark
 - "Austin vs national average" → Compare to benchmark

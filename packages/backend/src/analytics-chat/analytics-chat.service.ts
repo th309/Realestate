@@ -150,6 +150,11 @@ export class AnalyticsChatService {
   private getQueryIntent(message: string): 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
     const lower = message.toLowerCase();
 
+    // COMPARISON - check before ranking so "compare top in A to top in B" gets multiple tools/iterations
+    if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower)) return 'comparison';
+    if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower)) return 'comparison';
+    if (/\b(difference|delta|gap)\b.*\bbetween\b/.test(lower)) return 'comparison';
+
     // RANKING - most common, fastest path
     const rankingPatterns = [
       /\b(hot|best|top|worst|bottom|highest|lowest|leading|trailing)\b.*\b(market|area|city|metro|state|county|zip|place|location)\b/,
@@ -170,11 +175,6 @@ export class AnalyticsChatService {
       /\b(affordable|expensive|cheap|pricey)\b.*\b(market|area)\b/,
     ];
     if (filteringPatterns.some((p) => p.test(lower))) return 'filtering';
-
-    // COMPARISON
-    if (/\b(compare|versus|vs|against|benchmark)\b/.test(lower)) return 'comparison';
-    if (/\bhow does\b.*\b(compare|stack|rank)\b/.test(lower)) return 'comparison';
-    if (/\b(difference|delta|gap)\b.*\bbetween\b/.test(lower)) return 'comparison';
 
     // RAW DATA
     const rawPatterns = [
@@ -875,8 +875,10 @@ USER QUERY:`;
         this.logger.log(`[Quinn Chat] Initial response text length: ${initialTextBlock.text.length}`);
       }
 
-      // Process tool calls in a loop with intent-based iteration limits
+      // Process tool calls in a loop with intent-based iteration limits.
+      // Accumulate (assistant, user) turns so multi-turn tool use sees prior results.
       let iterations = 0;
+      const messagesWithToolTurns: Anthropic.Messages.MessageParam[] = [...apiMessages];
 
       this.logger.log(`[Quinn Chat] Max iterations for ${queryIntent}: ${maxIterations}`);
 
@@ -945,6 +947,12 @@ USER QUERY:`;
         
         this.logger.log(`[Quinn Chat] Sending ${toolResults.length} tool results back to Claude...`);
 
+        // Append this turn so next round sees prior tool use and results (multi-turn comparisons)
+        messagesWithToolTurns.push(
+          { role: 'assistant', content: response.content },
+          { role: 'user', content: toolResults },
+        );
+
         // Continue conversation with tool results (with timeout)
         const followUpTimeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Claude follow-up API call timed out after 60 seconds')), 60000)
@@ -967,11 +975,7 @@ USER QUERY:`;
               },
             ],
             tools: tools as any,
-            messages: [
-              ...apiMessages,
-              { role: 'assistant', content: response.content },
-              { role: 'user', content: toolResults },
-            ],
+            messages: messagesWithToolTurns,
           }),
           followUpTimeoutPromise
         ]) as Anthropic.Messages.Message;

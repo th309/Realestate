@@ -1,0 +1,9 @@
+# Quinn test prompts – one per line. Lines starting with # are ignored.
+# Save as prompts.txt and run: npx tsx scripts/quinn-test/run-iterative.ts prompts.txt
+
+Find hot markets
+Compare Texas metros to the national average
+What are Austin home prices?
+Which metros have the best rental yields?
+What is the InvestorEdge score for Austin?
+Show me recent news about Austin
