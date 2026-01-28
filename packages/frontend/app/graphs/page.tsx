@@ -1,4 +1,5 @@
 'use client';
+// Deploy trigger: 2026-01-28
 
 import React, { Suspense } from 'react';
 import { Dashboard } from './Dashboard';
