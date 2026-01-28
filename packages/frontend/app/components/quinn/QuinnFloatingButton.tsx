@@ -11,12 +11,15 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useQuinnUser, generateConversationId } from './useQuinnUser';
+import { QuinnRichData } from './QuinnRichData';
+import type { QuinnStructuredData } from './QuinnStructuredData.types';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  structuredData?: QuinnStructuredData;
 }
 
 const STARTER_PROMPTS = [
@@ -167,11 +170,20 @@ export function QuinnFloatingButton() {
 
       let content = typeof data.response === 'string' ? data.response.trim() : '';
       if (!content && data.message) content = String(data.message).trim();
-      if (!content && data.structuredData?.rankings?.items?.length) {
-        const r = data.structuredData.rankings;
+      const structured = data.structuredData as QuinnStructuredData | undefined;
+      const hasRichData = structured && (
+        structured.rankings?.items?.length ||
+        structured.comparison?.metrics?.length ||
+        structured.chart?.data?.length ||
+        structured.table?.rows?.length
+      );
+      if (hasRichData) {
+        const intro = content.split(/\n\n/)[0]?.trim();
+        if (intro) content = intro;
+      } else if (!content && structured?.rankings?.items?.length) {
+        const r = structured.rankings;
         const label = r.direction === 'bottom' ? 'Bottom' : 'Top';
-        const top = r.items.slice(0, 5);
-        content = `${label} markets:\n${top.map((i: { rank: number; name: string; score?: number; state?: string }) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`).join('\n')}`;
+        content = `Here are the ${label.toLowerCase()} markets.`;
       }
       if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
 
@@ -179,7 +191,8 @@ export function QuinnFloatingButton() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...(structured && (structured.rankings || structured.comparison || structured.chart || structured.table) ? { structuredData: structured } : {}),
       };
 
       console.log(`[Quinn Client ${requestId}] === SUCCESS === Response length:`, assistantMessage.content.length);
@@ -337,9 +350,9 @@ export function QuinnFloatingButton() {
                           <span className="text-sm font-bold">Q</span>
                         </div>
                       )}
-                      <div className="flex flex-col gap-1">
+                      <div className={`flex flex-col gap-2 ${msg.role === 'assistant' && msg.structuredData ? 'max-w-[360px]' : ''}`}>
                         <div
-                          className={`max-w-[280px] px-4 py-3 text-sm leading-relaxed ${
+                          className={`${msg.role === 'user' ? 'max-w-[280px]' : 'max-w-[360px]'} px-4 py-3 text-sm leading-relaxed ${
                             msg.role === 'user'
                               ? 'bg-primary text-on-primary rounded-[20px] rounded-br-sm'
                               : 'bg-surface-container-high text-on-surface rounded-[20px] rounded-bl-sm'
@@ -347,6 +360,9 @@ export function QuinnFloatingButton() {
                         >
                           {msg.content}
                         </div>
+                        {msg.role === 'assistant' && msg.structuredData && (
+                          <QuinnRichData data={msg.structuredData} />
+                        )}
                         {msg.role === 'user' && (
                           <span className="text-[10px] text-on-surface-variant text-right">Delivered</span>
                         )}

@@ -1,0 +1,26 @@
+# New prompts + previously failed only. Run: npx tsx scripts/quinn-test/run-iterative.ts scripts/quinn-test/new-and-failed-prompts.txt --output scripts/quinn-test/new-and-failed-results.json
+
+# PREVIOUSLY FAILED (iter7)
+Compare cap rates across Texas metros
+
+# WEIRD / POORLY WORDED
+bets makrets in texas
+show me hot markts
+idk maybe something good for investing?
+help
+real estate?
+stuff in florida
+I want to like invest or something
+just give me something
+austin
+
+# OVERLOADED / RUN-ON
+show me the best markets and also compare austin to miami and is it a good time
+best metros top 10 by score and which have recent news
+rank texas then show me the trend for the bottom 5
+
+# EXTREMELY COMPLEX
+Rank the top 5 metros by InvestorEdge, then for #1 show the 24-month trend and compare it to national average
+Which metro has the best InvestorEdge score, what's its 12-month trend, and how does it compare to the worst metro?
+Find markets similar to Austin, filter to the Southeast, and show me the top 3 by score
+Tell me about Phoenix: current rank, trend, vs national average, and one similar market
