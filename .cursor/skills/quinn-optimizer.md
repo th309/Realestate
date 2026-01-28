@@ -81,12 +81,18 @@ All scores: **higher is better**.
 ## Quality Standards
 
 ### Excellent Response Characteristics
-1. **Brevity**: 1-3 sentences maximum
+1. **Brevity**: 1-3 sentences maximum (exception: market overview — see below)
 2. **No data repetition**: Let UI display tables/charts
 3. **No markdown**: Plain text only (no bold, bullets, headers)
 4. **No tool mentions**: Don't explain which tools were used
 5. **Intent-matched**: Use correct tools for user's actual question
 6. **Outcome-focused**: Insights and synthesis, not methodology
+
+### Market overview / "Tell me about [geo]"
+For queries like "tell me about Tulsa, OK" or "overview of the Austin market":
+- **Data**: Use the last **24 months** of **all relevant data elements** (scores, appreciation; optionally population, income, permits where available). Call get_time_series with months: 24 and metrics including investoredge_score, homeready_score, market_health_score, appreciation_12m. Optionally analyze_data (filter to that geo's state/scope, horizons [12, 36]) and/or query_database_table for richer stats.
+- **Response**: Deliver an **analytical overview** — 3–5 sentences that interpret the data (where it ranks, 24-month trend, vs national, what it means for the market). Do not list raw data points; interpret them (e.g. "steady appreciation", "above national on growth"). The UI shows tables/charts; Quinn's text should synthesize, not repeat.
+- **Quality check**: Pass = 24 months of data used + narrative overview; fail = only a table + one intro sentence with no analysis.
 
 ### Critical Failures (must fix immediately)
 1. **No data returned when data is needed**
@@ -591,6 +597,7 @@ What's happening in the housing market?
 Hot markets right now
 Show me top metros
 Tell me about Austin
+Tell me about Tulsa, OK
 How does Miami compare to the national average?
 What are the best markets overall?
 

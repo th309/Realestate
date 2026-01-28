@@ -4,6 +4,17 @@
 
 Autonomously test and fix the PropertyIQ graphs page at **https://propertyiq.vercel.app/graphs**. Validate data loading, chart rendering, search/filters, comparison/baseline, and performance.
 
+## Self-Modification
+
+**This skill can change itself when it is not getting the results it needs.** If test coverage is too narrow, the suite misses failures, the workflow (batch size, wait time, force-restart steps) is wrong, or instructions are unclear or outdated, **edit this skill file** (`.cursor/skills/graph-page-tester.md`) to:
+
+- Add or adjust test cases, API URLs, or failure classifications.
+- Update the batch-fix workflow (e.g. batch size, commit/push, force-restart, wait time).
+- Clarify or expand auto-fix steps, known issues, or success criteria.
+- Align with changes in the app (e.g. new metrics, geos, or endpoints).
+
+After updating the skill, continue the iterative process using the revised instructions. Do not assume the skill is fixed; update it when results are unsatisfactory.
+
 ## Iterative Behavior (Batches of 20, Commit, Force Restart, Wait)
 
 **The skill is iterative and batches fixes.** Most fixes require a frontend or backend restart (Vercel/Railway). Rebuilds take ~5 minutes, so:
@@ -332,6 +343,7 @@ A passing run should satisfy:
 - Add `scripts/graph-test/run-tests.ts` (or equivalent) and run it in CI or on a schedule.
 - Alert if pass rate drops below 90% or new console errors appear on /graphs.
 - When adding metrics or geos, add matching test cases and keep GRAPH_PAGE_ANALYSIS.md and this skill in sync.
+- **If the skill is not getting the results it needs:** Update this skill file (e.g. test list, workflow, or fixes) and re-run; the skill is allowed to modify itself to improve outcomes.
 
 ---
 
@@ -347,4 +359,4 @@ When the user says **“test graphs page”** (or equivalent):
 6. **Repeat** (collect → batch of 20 → fix → commit & push → trivial frontend/backend bump → wait ~5 min → re-run) until the suite passes or remaining failures are documented.
 7. **Report** at the end: total/passed/failed, fixes applied, remaining issues, performance.
 
-The skill uses **batches of 20 fixes**, then **commit & push**, **trivial frontend+backend changes to force restart**, and **wait ~5 minutes** before continuing.
+The skill uses **batches of 20 fixes**, then **commit & push**, **trivial frontend+backend changes to force restart**, and **wait ~5 minutes** before continuing. If results are unsatisfactory, **the skill may update this file** (`.cursor/skills/graph-page-tester.md`) and continue with the revised instructions.
