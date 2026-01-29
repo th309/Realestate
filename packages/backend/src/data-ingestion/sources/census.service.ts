@@ -347,9 +347,11 @@ export class CensusService {
                         const value = parseFloat(record[metric.variable]);
 
                         if (!isNaN(value) && value !== null) { // Allow 0, just checks validity
-                            // Map metric_name to column name (assuming they match 1:1 in DB schema)
-                            // e.g. 'population' -> 'population', 'median_household_income' -> 'median_household_income'
-                            censusRecord[metric.metric_name] = value;
+                            // Map metric_name to column name
+                            let colName = metric.metric_name;
+                            if (colName === 'population') colName = 'total_population';
+
+                            censusRecord[colName] = value;
                             hasValidMetrics = true;
                         }
                     }
