@@ -67,6 +67,18 @@ export class TimeSeriesService {
       console.log('[TimeSeriesService] No mapping found for metric:', metricId);
       return [];
     }
+
+    // Handle On-the-Fly Calculation for Investment Metrics (Cap Rate, etc.)
+    // This avoids storing millions of rows of derived historical data.
+    if (mapping.source === 'computed_investment') {
+      return this.getComputedInvestmentTimeSeries(metricId, geoLevel, regionId, startDate, endDate, limit, lastPoints);
+    }
+
+    // Handle On-the-Fly for Overvalued (ZHVI vs Income)
+    if (mapping.source === 'computed_overvalued') {
+      return this.getComputedOvervaluedTimeSeries(geoLevel, regionId, startDate, endDate, limit, lastPoints);
+    }
+
     console.log('[TimeSeriesService] Mapping:', {
       source: mapping.source,
       columnName: mapping.columnName,
@@ -86,11 +98,11 @@ export class TimeSeriesService {
     try {
       // Census tables use 'year' field, others use 'period_date'
       // PropertyIQ scores use 'score_date'
-      const dateField = mapping.source === 'census' 
-        ? 'year' 
+      const dateField = mapping.source === 'census'
+        ? 'year'
         : mapping.source === 'propertyiq'
-        ? 'score_date'
-        : 'period_date';
+          ? 'score_date'
+          : 'period_date';
 
       // When lastPoints is set we need most recent points: order desc, limit, then reverse
       const useLastPoints = lastPoints != null && lastPoints > 0 && !startDate && !endDate;
@@ -214,6 +226,198 @@ export class TimeSeriesService {
   }
 
   /**
+   * Helper to fetch raw time series for computation
+   */
+  private async getRawSeries(
+    source: string,
+    metricName: string,
+    geoLevel: string,
+    regionId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<TimeSeriesDataPoint[]> {
+    // Mock mapping for the raw metric
+    const tempMapping = {
+      source: source,
+      columnName: 'value', // Zillow uses 'value'
+      usesMetricName: true,
+      metricNameValue: metricName,
+    };
+
+    const query = this.supabase
+      .from(this.getTableName(source, geoLevel)!)
+      .select('period_date, value')
+      .eq('metric_name', metricName)
+      .order('period_date', { ascending: true }); // Always get ascending for merge
+
+    const qWithGeo = this.addRegionFilter(query, geoLevel, regionId, source);
+
+    // We process filtering in memory if needed, but better to filter in DB
+    if (startDate) qWithGeo.gte('period_date', startDate);
+    if (endDate) qWithGeo.lte('period_date', endDate);
+
+    // Fetch all (paginate if needed, but for single series it handles <1000 usually. 
+    // Actually Zillow series is monthly * 10 years = 120 points. Safe.)
+    const { data, error } = await qWithGeo.limit(2000);
+
+    if (error || !data) return [];
+    return data.map((r: any) => ({ date: r.period_date, value: r.value }));
+  }
+
+  /**
+   * Compute Investment Metrics on the fly
+   */
+  private async getComputedInvestmentTimeSeries(
+    metricId: string,
+    geoLevel: string,
+    regionId: string,
+    startDate?: string,
+    endDate?: string,
+    limit?: number,
+    lastPoints?: number
+  ): Promise<TimeSeriesDataPoint[]> {
+    // 1. Fetch ZHVI (Price)
+    const prices = await this.getRawSeries('zillow', 'zhvi', geoLevel, regionId, startDate, endDate);
+
+    // 2. Fetch ZORI (Rent)
+    // Note: for ZIPs, we might need fallback logic? 
+    // The current frontend requirements are just "get history".
+    // If we want exact parity with CalculateMetricsService fallback, we'd need to fetch County ZORI too.
+    // For now, let's implement direct ZORI. If missing, it will gap.
+    let rents = await this.getRawSeries('zillow', 'zori', geoLevel, regionId, startDate, endDate);
+    if (rents.length === 0 && geoLevel === 'zip') {
+      // Try fetching zordi_sfr (Rent for houses) as backup?
+      rents = await this.getRawSeries('zillow', 'zordi_sfr', geoLevel, regionId, startDate, endDate);
+    }
+
+    if (prices.length === 0 || rents.length === 0) return [];
+
+    // 3. Align and Compute
+    const priceMap = new Map(prices.map(p => [p.date, p.value]));
+    const result: TimeSeriesDataPoint[] = [];
+
+    for (const rent of rents) {
+      const price = priceMap.get(rent.date);
+      if (!price) continue;
+
+      let val = 0;
+      if (metricId === 'cap_rate') {
+        // (Rent * 12 * 0.6) / Price * 100
+        val = ((rent.value * 12 * 0.6) / price) * 100;
+        val = Math.round(val * 100) / 100;
+      } else if (metricId === 'gross_yield') {
+        // (Rent * 12) / Price * 100
+        val = ((rent.value * 12) / price) * 100;
+        val = Math.round(val * 100) / 100;
+      } else if (metricId === 'rent_to_price_ratio') {
+        // Rent / Price
+        val = rent.value / price; // Raw ratio
+        val = Math.round(val * 10000) / 10000;
+      } else if (metricId === 'grm') {
+        // Price / (Rent * 12)
+        val = price / (rent.value * 12);
+        val = Math.round(val * 100) / 100;
+      }
+
+      result.push({ date: rent.date, value: val });
+    }
+
+    // Handle lastPoints logic
+    if (lastPoints && lastPoints > 0) {
+      // Sort desc, take N, reverse back to asc?
+      // Array is currently Ascending (from Zillow queries)
+      // So take LAST N
+      const len = result.length;
+      return result.slice(Math.max(0, len - lastPoints));
+    }
+
+    // Handle limit (if simple limit from start?)
+    if (limit && limit > 0) {
+      return result.slice(0, limit);
+    }
+
+    return result;
+  }
+
+  /**
+   * Compute Overvalued Spectrum on the fly
+   */
+  private async getComputedOvervaluedTimeSeries(
+    geoLevel: string,
+    regionId: string,
+    startDate?: string,
+    endDate?: string,
+    limit?: number,
+    lastPoints?: number
+  ): Promise<TimeSeriesDataPoint[]> {
+    // 1. Fetch ZHVI
+    const prices = await this.getRawSeries('zillow', 'zhvi', geoLevel, regionId, startDate, endDate);
+    if (prices.length === 0) return [];
+
+    // 2. Fetch Income (Annual)
+    // This uses 'census' source, which maps to 'year'. 
+    // We need to fetch it manually because getRawSeries assumes Zillow 'metric_name'.
+    // Implementation: Fetch census_metro/state/county median_income.
+    const incomeTable = this.getTableName('census', geoLevel);
+    if (!incomeTable) return []; // Census only has some geos
+
+    const iQuery = this.supabase
+      .from(incomeTable)
+      .select('year, median_household_income')
+      .order('year', { ascending: true });
+
+    const iQueryGeo = this.addRegionFilter(iQuery, geoLevel, regionId, 'census');
+    const { data: incomeData } = await iQueryGeo;
+
+    if (!incomeData || incomeData.length === 0) return [];
+
+    // Map Year -> Income
+    const incomeMap: Record<number, number> = {};
+    incomeData.forEach((row: any) => {
+      if (row.year && row.median_household_income) {
+        incomeMap[row.year] = row.median_household_income;
+      }
+    });
+    // Get sorted years for fallback
+    const years = Object.keys(incomeMap).map(Number).sort((a, b) => a - b);
+    const latestYear = years[years.length - 1];
+
+    // 3. Merge
+    const result: TimeSeriesDataPoint[] = [];
+    const NATIONAL_MEDIAN_INCOME = 75000; // Fallback if no local data
+    const BENCHMARK = 3.5;
+
+    for (const p of prices) {
+      const y = parseInt(p.date.substring(0, 4));
+      // Find best income year <= y
+      let inc = incomeMap[y];
+      if (!inc) {
+        // Try to find closest year <= y
+        const closeY = years.reverse().find(yr => yr <= y);
+        inc = closeY ? incomeMap[closeY] : incomeMap[years[0]]; // fallback to any
+        years.reverse(); // put back
+      }
+      // Fallback to national if absolutely nothing (unlikely if table exists)
+      if (!inc) inc = NATIONAL_MEDIAN_INCOME;
+
+      const ratio = p.value / inc;
+      const overvalued = ((ratio - BENCHMARK) / BENCHMARK) * 100;
+
+      result.push({
+        date: p.date,
+        value: Math.round(overvalued * 10) / 10
+      });
+    }
+
+    if (lastPoints && lastPoints > 0) {
+      return result.slice(Math.max(0, result.length - lastPoints));
+    }
+    if (limit && limit > 0) return result.slice(0, limit);
+
+    return result;
+  }
+
+  /**
    * Get available date range for a metric/geography
    */
   async getAvailableDates(
@@ -225,7 +429,17 @@ export class TimeSeriesService {
       return { minDate: '', maxDate: '', count: 0 };
     }
 
-    const table = this.getTableName(mapping.source, geoLevel);
+    // For computed metrics, use the availability of the underlying Zillow data (ZHVI)
+    let source = mapping.source;
+    let tableSource = source;
+    let metricNameFilter = mapping.usesMetricName ? mapping.metricNameValue : undefined;
+
+    if (source === 'computed_investment' || source === 'computed_overvalued') {
+      tableSource = 'zillow';
+      metricNameFilter = 'zhvi';
+    }
+
+    const table = this.getTableName(tableSource, geoLevel);
     if (!table) {
       return { minDate: '', maxDate: '', count: 0 };
     }
@@ -236,9 +450,9 @@ export class TimeSeriesService {
         .select('period_date')
         .order('period_date', { ascending: true });
 
-      // For Zillow tables, filter by metric_name
-      if (mapping.usesMetricName) {
-        query = query.eq('metric_name', mapping.metricNameValue);
+      // For Zillow tables (or if we are checking computed metrics backed by zillow), filter by metric_name
+      if (metricNameFilter) {
+        query = query.eq('metric_name', metricNameFilter);
       }
 
       const { data, error } = await query;
@@ -839,10 +1053,10 @@ export class TimeSeriesService {
         usesMetricName: false,
       },
       // ========================================================================
-      // CALCULATED METRICS (from calculated_metrics table)
+      // CALCULATED METRICS (Direct or Computed)
       // ========================================================================
       cap_rate: {
-        source: 'calculated',
+        source: 'computed_investment',
         columnName: 'cap_rate',
         usesMetricName: false,
       },
@@ -862,17 +1076,17 @@ export class TimeSeriesService {
         usesMetricName: false,
       },
       gross_yield: {
-        source: 'calculated',
+        source: 'computed_investment',
         columnName: 'gross_yield',
         usesMetricName: false,
       },
       grm: {
-        source: 'calculated',
+        source: 'computed_investment',
         columnName: 'grm',
         usesMetricName: false,
       },
       rent_to_price_ratio: {
-        source: 'calculated',
+        source: 'computed_investment',
         columnName: 'rent_to_price_ratio',
         usesMetricName: false,
       },
@@ -887,7 +1101,7 @@ export class TimeSeriesService {
         usesMetricName: false,
       },
       overvalued_pct: {
-        source: 'calculated',
+        source: 'computed_overvalued',
         columnName: 'overvalued_pct',
         usesMetricName: false,
       },
