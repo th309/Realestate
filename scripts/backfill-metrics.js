@@ -1,17 +1,23 @@
 const http = require('http');
-
+const https = require('https');
 const url = require('url');
 
+// Default to local, but support override
 const API_URL = process.env.API_URL || 'http://localhost:3001';
 const parsedUrl = url.parse(API_URL);
-const API_HOST = parsedUrl.hostname;
+const client = parsedUrl.protocol === 'https:' ? https : http;
 const API_PORT = parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80);
-const YEARS = process.env.YEAR ? [parseInt(process.env.YEAR)] : [2024, 2023, 2022, 2021, 2020, 2019, 2018];
+
+// Default years or override
+const YEARS = process.env.YEAR ? [parseInt(process.env.YEAR)] : [2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015];
 
 const ENDPOINTS = [
+    // 1. Inventory Surplus
     { path: '/api/metrics/inventory-surplus/calculate/national', name: 'Inventory Surplus (National)' },
     { path: '/api/metrics/inventory-surplus/calculate/states', name: 'Inventory Surplus (States)' },
     { path: '/api/metrics/inventory-surplus/calculate/metros', name: 'Inventory Surplus (Metros)' },
+
+    // 2. 5-Year Growth
     { path: '/api/metrics/calculate-5yr-growth/national', name: '5-Year Growth (National)' },
     { path: '/api/metrics/calculate-5yr-growth/states', name: '5-Year Growth (States)' },
     { path: '/api/metrics/calculate-5yr-growth/metros', name: '5-Year Growth (Metros)' },
@@ -20,7 +26,7 @@ const ENDPOINTS = [
 function postRequest(path) {
     return new Promise((resolve, reject) => {
         const options = {
-            hostname: API_HOST,
+            hostname: parsedUrl.hostname,
             port: API_PORT,
             path: path,
             method: 'POST',
@@ -29,7 +35,7 @@ function postRequest(path) {
             },
         };
 
-        const req = http.request(options, (res) => {
+        const req = client.request(options, (res) => {
             let data = '';
             res.on('data', (chunk) => { data += chunk; });
             res.on('end', () => {
@@ -40,7 +46,13 @@ function postRequest(path) {
                         resolve(data);
                     }
                 } else {
-                    reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                    // Attempt to parse error
+                    try {
+                        const errData = JSON.parse(data);
+                        reject(new Error(`HTTP ${res.statusCode}: ${errData.error || data}`));
+                    } catch {
+                        reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                    }
                 }
             });
         });
@@ -54,7 +66,8 @@ function postRequest(path) {
 }
 
 async function runBackfill() {
-    console.log('Starting Historical Backfill...');
+    console.log(`Starting Historical Backfill against ${API_URL}...`);
+    console.log(`Years: ${YEARS.join(', ')}`);
 
     for (const year of YEARS) {
         console.log(`\n=== Processing Year: ${year} ===`);
@@ -64,11 +77,21 @@ async function runBackfill() {
             try {
                 const start = Date.now();
                 const result = await postRequest(fullPath);
-                const duration = (Date.now() - start) / 1000;
-                console.log(`✅ Success (${duration.toFixed(1)}s): Processed=${result.processed || result.results?.processed || 0}, Stored=${result.stored || result.results?.stored || 0}`);
+                const duration = ((Date.now() - start) / 1000).toFixed(1);
+
+                let processed = result.processed || (result.results ? Object.values(result.results).reduce((a, b) => a + (b.processed || 0), 0) : 0);
+                let stored = result.stored || (result.results ? Object.values(result.results).reduce((a, b) => a + (b.stored || 0), 0) : 0);
+
+                // Adjust for specific nested structure if needed
+                if (result.totals) {
+                    processed = result.totals.processed;
+                    stored = result.totals.stored;
+                }
+
+                console.log(`✅ Success (${duration}s): Processed=${processed}, Stored=${stored}`);
             } catch (err) {
                 console.log('');
-                console.error(`❌ Failed: ${err.message.substring(0, 100)}...`);
+                console.error(`❌ Failed: ${err.message}`);
             }
         }
     }
