@@ -932,85 +932,99 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for national level
    */
-  async calculate5YrGrowthForNational(): Promise<{
+  async calculate5YrGrowthForNational(year?: number): Promise<{
     processed: number;
     stored: number;
   }> {
-    // Get current date
-    const { data: latestDateRow } = await this.supabase
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_national')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0 };
-    }
-
-    const targetDate = latestDateRow.period_date;
-    const fiveYearsAgo = new Date(targetDate);
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(
-      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
-    )
-      .toISOString()
-      .split('T')[0];
-
-    // Get current data
-    const { data: currentData } = await this.supabase
-      .from('realtor_national')
-      .select('median_listing_price')
-      .eq('period_date', targetDate)
-      .eq('country', 'United States')
-      .single();
-
-    if (!currentData) {
-      return { processed: 0, stored: 0 };
-    }
-
-    // Get historical data
-    const { data: pastData } = await this.supabase
-      .from('realtor_national')
-      .select('median_listing_price')
-      .eq('country', 'United States')
-      .gte('period_date', pastDateStr)
-      .lte('period_date', pastDateMax)
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!pastData || !pastData.median_listing_price) {
-      return { processed: 1, stored: 0 };
-    }
-
-    const pastValue = pastData.median_listing_price;
-    const growthPct =
-      ((currentData.median_listing_price - pastValue) / pastValue) * 100;
-
-    const { error } = await this.supabase.from('calculated_metrics').upsert(
-      {
-        geography_id: 'usa', // Standardize ID for National
-        geography_type: 'national',
-        geography_name: 'United States',
-        period_date: targetDate,
-        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
-        calculated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'geography_id,geography_type,period_date',
-      },
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
     );
 
-    return { processed: 1, stored: error ? 0 : 1 };
+    if (year) {
+      console.log(
+        `[CalculatedMetrics] Filtering 5yr growth (national) for year: ${year}`,
+      );
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
+    }
+
+    let totalProcessed = 0;
+    let totalStored = 0;
+
+    for (const dateStr of uniqueDates) {
+
+      const targetDate = dateStr;
+      const fiveYearsAgo = new Date(targetDate);
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+      const pastDateMax = new Date(
+        fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+      )
+        .toISOString()
+        .split('T')[0];
+
+      // Get current data
+      const { data: currentData } = await this.supabase
+        .from('realtor_national')
+        .select('median_listing_price')
+        .eq('period_date', targetDate)
+        .eq('country', 'United States')
+        .single();
+
+      if (!currentData) {
+        return { processed: 0, stored: 0 };
+      }
+
+      // Get historical data
+      const { data: pastData } = await this.supabase
+        .from('realtor_national')
+        .select('median_listing_price')
+        .eq('country', 'United States')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', pastDateMax)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (!pastData || !pastData.median_listing_price) {
+        return { processed: 1, stored: 0 };
+      }
+
+      const pastValue = pastData.median_listing_price;
+      const growthPct =
+        ((currentData.median_listing_price - pastValue) / pastValue) * 100;
+
+      const { error } = await this.supabase.from('calculated_metrics').upsert(
+        {
+          geography_id: 'usa', // Standardize ID for National
+          geography_type: 'national',
+          geography_name: 'United States',
+          period_date: targetDate,
+          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+          calculated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'geography_id,geography_type,period_date',
+        },
+      );
+
+      totalProcessed++;
+      if (!error) totalStored++;
+    }
+
+    return { processed: totalProcessed, stored: totalStored };
   }
 
   /**
    * Calculate 5-year growth for all geographies
    */
-  async calculate5YrGrowthForAll(): Promise<{
+  async calculate5YrGrowthForAll(year?: number): Promise<{
     metros: { processed: number; stored: number };
     states: { processed: number; stored: number };
     counties: { processed: number; stored: number };
@@ -1018,11 +1032,11 @@ export class CalculatedMetricsService {
     national: { processed: number; stored: number };
   }> {
     const [metros, states, counties, zips, national] = await Promise.all([
-      this.calculate5YrGrowthForMetros(),
-      this.calculate5YrGrowthForStates(),
+      this.calculate5YrGrowthForMetros(year),
+      this.calculate5YrGrowthForStates(year),
       this.calculate5YrGrowthForCounties(),
       this.calculate5YrGrowthForZips(),
-      this.calculate5YrGrowthForNational(),
+      this.calculate5YrGrowthForNational(year),
     ]);
 
     return { metros, states, counties, zips, national };

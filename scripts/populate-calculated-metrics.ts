@@ -7,11 +7,16 @@
  * - 5-year home value growth
  * - Inventory surplus
  *
- * Usage: npx ts-node scripts/populate-calculated-metrics.ts
+ * Usage: npx tsx scripts/populate-calculated-metrics.ts
+ *
+ * To avoid API statement timeout on large upserts, set DATABASE_URL (Postgres URI)
+ * or SUPABASE_DB_PASSWORD; then upserts use a direct pg connection with a 10-min timeout.
  */
 
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
+import { normalizeZipKey } from './utils/zip';
+import { Client } from 'pg';
 
 // Try multiple env file locations
 dotenv.config({ path: './packages/backend/.env' });
@@ -30,11 +35,46 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Optional direct Postgres client for upserts (avoids API statement timeout)
+function getDbUrl(): string | null {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const password = process.env.SUPABASE_DB_PASSWORD || process.env.DATABASE_PASSWORD;
+  if (!password) return null;
+  try {
+    const ref = new URL(supabaseUrl).hostname.split('.')[0];
+    return `postgresql://postgres.${ref}:${encodeURIComponent(password)}@aws-1-us-east-1.pooler.supabase.com:6543/postgres`;
+  } catch {
+    return null;
+  }
+}
+
+let pgClient: Client | null = null;
+async function ensurePgClient(): Promise<Client | null> {
+  if (pgClient) return pgClient;
+  const url = getDbUrl();
+  if (!url) return null;
+  const client = new Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  try {
+    await client.connect();
+    await client.query("SET statement_timeout = '600000'"); // 10 min
+    pgClient = client;
+    return client;
+  } catch (e) {
+    console.warn('Direct Postgres connection failed, using Supabase API for upserts:', (e as Error).message);
+    return null;
+  }
+}
+
 // Constants
 const EXPENSE_RATIO = 0.6;
 const PRICE_TO_INCOME_BENCHMARK = 3.5;
 const NATIONAL_MEDIAN_INCOME = 75000;
-const BATCH_SIZE = 100;
+/** Small batches so each upsert finishes under Supabase API timeout (often ~8s). */
+const BATCH_SIZE = 25;
+/** Rows per request; keep small so SELECTs complete quickly. */
+const ROWS_PER_PAGE = 250;
+/** Pause between batches to avoid overwhelming the DB. */
+const BATCH_DELAY_MS = 200;
 
 // Data validation bounds - filter out unreasonable data
 const MIN_VALID_PRICE = 10000;      // $10,000 minimum home price
@@ -97,6 +137,67 @@ function calculateOvervalued(price: number, income: number): number | null {
   return ((priceToIncome - PRICE_TO_INCOME_BENCHMARK) / PRICE_TO_INCOME_BENCHMARK) * 100;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Dedupe by (geography_id, geography_type, period_date); keep last so upsert never sees same row twice. */
+function dedupeByConflictKey(
+  records: Array<{ geography_id: string; geography_type: string; period_date: string; [k: string]: unknown }>,
+): typeof records {
+  const byKey: Record<string, (typeof records)[number]> = {};
+  for (const r of records) {
+    if (!r.geography_id) continue;
+    const key = `${r.geography_id}|${r.geography_type}|${r.period_date}`;
+    byKey[key] = r;
+  }
+  return Object.values(byKey);
+}
+
+type InvestmentMetricRow = {
+  geography_id: string;
+  geography_type: string;
+  geography_name: string | null;
+  period_date: string;
+  cap_rate: number | null;
+  gross_yield: number | null;
+  rent_to_price_ratio: number | null;
+  grm: number | null;
+  calculated_at: string;
+};
+
+/** Upsert batch to calculated_metrics; uses direct pg when available to avoid API timeout. */
+async function upsertCalculatedMetricsBatch(
+  batch: InvestmentMetricRow[],
+): Promise<{ error: string | null }> {
+  const client = await ensurePgClient();
+  if (client && batch.length > 0) {
+    try {
+      const cols = 'geography_id, geography_type, geography_name, period_date, cap_rate, gross_yield, rent_to_price_ratio, grm, calculated_at';
+      const placeholders: string[] = [];
+      const values: (string | number | null)[] = [];
+      let p = 0;
+      for (const row of batch) {
+        placeholders.push(`($${++p}, $${++p}, $${++p}, $${++p}::date, $${++p}, $${++p}, $${++p}, $${++p}, $${++p}::timestamptz)`);
+        values.push(row.geography_id, row.geography_type, row.geography_name, row.period_date, row.cap_rate, row.gross_yield, row.rent_to_price_ratio, row.grm, row.calculated_at);
+      }
+      await client.query(
+        `INSERT INTO calculated_metrics (${cols}) VALUES ${placeholders.join(', ')}
+         ON CONFLICT (geography_id, geography_type, period_date)
+         DO UPDATE SET geography_name = EXCLUDED.geography_name, cap_rate = EXCLUDED.cap_rate, gross_yield = EXCLUDED.gross_yield, rent_to_price_ratio = EXCLUDED.rent_to_price_ratio, grm = EXCLUDED.grm, calculated_at = EXCLUDED.calculated_at`,
+        values,
+      );
+      return { error: null };
+    } catch (e) {
+      return { error: (e as Error).message };
+    }
+  }
+  const { error } = await supabase
+    .from('calculated_metrics')
+    .upsert(batch, { onConflict: 'geography_id,geography_type,period_date' });
+  return { error: error?.message ?? null };
+}
+
 // ============================================================================
 // INVESTMENT METRICS CALCULATION
 // ============================================================================
@@ -118,363 +219,300 @@ const INVESTMENT_GEO_CONFIGS: InvestmentGeoConfig[] = [
   { zillowTable: 'zillow_zip', realtorTable: 'realtor_zip', censusTable: 'census_zip', geoType: 'zip', zillowIdField: 'region_name', realtorIdField: 'postal_code', censusIdField: 'zcta', censusNameField: null },
 ];
 
+/** Row shape from Zillow ZORI select (dynamic id field by geo). */
+type ZorRow = { value?: number; region_name?: string; [k: string]: unknown };
+/** Row shape from Realtor select (dynamic id field by geo). */
+type RealtorPriceRow = { median_listing_price?: number; [k: string]: unknown };
+/** Row shape from Census select (dynamic id/name fields by geo). */
+type CensusRentRow = { median_gross_rent?: number; year?: number; [k: string]: unknown };
+
 async function calculateInvestmentMetricsForGeo(config: InvestmentGeoConfig): Promise<{ processed: number; stored: number; errors: string[] }> {
-  console.log(`\n📊 Calculating investment metrics for ${config.geoType}...`);
+  console.log(`\n📊 Calculating investment metrics for ${config.geoType} (full history)...`);
   const errors: string[] = [];
-  const PAGE_SIZE = 1000;
+  let totalStored = 0;
+  const client = await ensurePgClient();
 
-  // ============================================
-  // STEP 1: Get ZORI data (primary rent source)
-  // ============================================
-  let allZoriData: any[] = [];
-  let offset = 0;
-
-  console.log(`  Fetching ZORI data (primary rent source)...`);
-  while (true) {
-    const { data, error } = await supabase
-      .from(config.zillowTable)
-      .select(`region_id, region_name, value, period_date, ${config.zillowIdField}`)
-      .eq('metric_name', 'zori')
-      .not('value', 'is', null)
-      .order('period_date', { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
-
-    if (error) {
-      errors.push(error.message);
-      break;
+  // Get all distinct period_dates from ZORI (use pg when available to avoid API timeout)
+  console.log(`  Fetching distinct ZORI period_dates (paginated)...`);
+  const periodDates: string[] = [];
+  if (client) {
+    try {
+      const table = config.zillowTable; // zillow_metro, zillow_county, zillow_zip
+      const { rows } = await client.query(
+        `SELECT DISTINCT period_date FROM "${table}" WHERE metric_name = 'zori' AND value IS NOT NULL ORDER BY period_date`,
+      );
+      for (const row of rows) {
+        if (row.period_date) periodDates.push(row.period_date);
+      }
+    } catch (e) {
+      errors.push((e as Error).message);
     }
-    if (!data || data.length === 0) break;
-    allZoriData = allZoriData.concat(data);
-    if (data.length < PAGE_SIZE) break;
-    offset += data.length;
-
-    if (offset % 10000 === 0) {
-      console.log(`    Fetched ${offset} ZORI records...`);
-    }
-  }
-
-  console.log(`  Total ZORI records: ${allZoriData.length}`);
-
-  // Keep only the most recent ZORI value for each geography
-  const rentByGeo: Record<string, { value: number; name: string; date: string; source: 'zori' | 'hud_fmr' | 'census' }> = {};
-  let zoriSkippedInvalid = 0;
-  for (const row of allZoriData) {
-    const geoId = row[config.zillowIdField];
-    if (!geoId) continue;
-
-    // Validate ZORI value
-    if (!isValidRent(row.value)) {
-      zoriSkippedInvalid++;
-      continue;
-    }
-
-    if (!rentByGeo[geoId]) {
-      rentByGeo[geoId] = {
-        value: row.value,
-        name: row.region_name,
-        date: row.period_date,
-        source: 'zori',
-      };
-    }
-  }
-
-  if (zoriSkippedInvalid > 0) {
-    console.log(`    ⚠️ Skipped ${zoriSkippedInvalid} ZORI records with invalid values`);
-  }
-
-  const zoriCount = Object.keys(rentByGeo).length;
-  console.log(`  Unique ${config.geoType}s with ZORI data: ${zoriCount}`);
-
-  // ============================================
-  // STEP 2: Get HUD FMR data (secondary rent source for counties)
-  // ============================================
-  if (config.geoType === 'county') {
-    console.log(`  Fetching HUD FMR data (secondary rent source)...`);
-
-    // Get the most recent year of HUD FMR data
-    const { data: hudYearRow } = await supabase
-      .from('hud_fmr')
-      .select('year')
-      .order('year', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (hudYearRow?.year) {
-      const { data: hudData, error: hudError } = await supabase
-        .from('hud_fmr')
-        .select('fips_code, county_name, state_name, fmr_2br, year')
-        .eq('year', hudYearRow.year)
-        .not('fmr_2br', 'is', null);
-
-      if (hudError) {
-        console.log(`    HUD FMR query error: ${hudError.message}`);
-        errors.push(hudError.message);
-      } else if (hudData && hudData.length > 0) {
-        console.log(`  Total HUD FMR records (FY${hudYearRow.year}): ${hudData.length}`);
-
-        let hudAddedCount = 0;
-        let hudSkippedInvalid = 0;
-        for (const row of hudData) {
-          const geoId = row.fips_code;
-          if (!geoId) continue;
-
-          // Use 2BR FMR as the rent value (most commonly used for calculations)
-          const rentValue = row.fmr_2br;
-          if (!isValidRent(rentValue)) {
-            hudSkippedInvalid++;
-            continue;
-          }
-
-          // Only add if we don't already have rent data (ZORI takes priority)
-          if (!rentByGeo[geoId]) {
-            rentByGeo[geoId] = {
-              value: rentValue,
-              name: row.county_name ? `${row.county_name}` : `County ${geoId}`,
-              date: `${row.year}-10-01`, // HUD FMR effective date
-              source: 'hud_fmr',
-            };
-            hudAddedCount++;
-          }
+  } else {
+    let offset = 0;
+    const seenDates = new Set<string>();
+    while (true) {
+      const { data, error } = await supabase
+        .from(config.zillowTable)
+        .select('period_date')
+        .eq('metric_name', 'zori')
+        .not('value', 'is', null)
+        .order('period_date', { ascending: true })
+        .range(offset, offset + ROWS_PER_PAGE - 1);
+      if (error) {
+        errors.push(error.message);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      for (const row of data) {
+        if (row.period_date && !seenDates.has(row.period_date)) {
+          seenDates.add(row.period_date);
+          periodDates.push(row.period_date);
         }
+      }
+      if (data.length < ROWS_PER_PAGE) break;
+      offset += ROWS_PER_PAGE;
+    }
+  }
 
-        if (hudSkippedInvalid > 0) {
-          console.log(`    ⚠️ Skipped ${hudSkippedInvalid} HUD FMR records with invalid rent values`);
+  console.log(`  Found ${periodDates.length} period_dates with ZORI data`);
+
+  for (let i = 0; i < periodDates.length; i++) {
+    const periodDateRaw = periodDates[i];
+    const periodDate = typeof periodDateRaw === 'string' ? periodDateRaw : new Date(periodDateRaw).toISOString().split('T')[0];
+    if ((i + 1) % 12 === 0 || i === 0 || i === periodDates.length - 1) {
+      console.log(`  Processing date ${i + 1}/${periodDates.length}: ${periodDate}`);
+    }
+
+    // ZORI for this date
+    const rentByGeo: Record<string, { value: number; name: string }> = {};
+    const zoriIdCol = config.zillowIdField;
+    const zoriTable = config.zillowTable;
+    if (client) {
+      try {
+        const { rows } = await client.query(
+          `SELECT region_name, value, ${zoriIdCol} FROM "${zoriTable}" WHERE metric_name = 'zori' AND period_date = $1::date AND value IS NOT NULL`,
+          [periodDate],
+        );
+        for (const row of rows) {
+          let geoId = row[zoriIdCol] != null ? String(row[zoriIdCol]).trim() : '';
+          if (config.geoType === 'zip' && geoId) geoId = normalizeZipKey(geoId);
+          const val = row.value;
+          if (!geoId || val == null || !isValidRent(val)) continue;
+          rentByGeo[geoId] = { value: val, name: (row.region_name as string) ?? '' };
         }
-        console.log(`  Added ${hudAddedCount} counties from HUD FMR (no ZORI coverage)`);
+      } catch (e) {
+        errors.push((e as Error).message);
       }
     } else {
-      console.log(`  No HUD FMR data available (table may be empty)`);
+      let zoriOffset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from(zoriTable)
+          .select(`region_id, region_name, value, ${zoriIdCol}`)
+          .eq('metric_name', 'zori')
+          .eq('period_date', periodDate)
+          .not('value', 'is', null)
+          .range(zoriOffset, zoriOffset + ROWS_PER_PAGE - 1);
+        if (error) {
+          errors.push(error.message);
+          break;
+        }
+        if (!data || data.length === 0) break;
+        for (const row of data as unknown as ZorRow[]) {
+          let geoId = row[zoriIdCol] as string | undefined;
+          if (config.geoType === 'zip' && geoId) geoId = normalizeZipKey(String(geoId));
+          const val = row.value;
+          if (!geoId || val == null || !isValidRent(val)) continue;
+          rentByGeo[geoId] = { value: val, name: (row.region_name as string) ?? '' };
+        }
+        if (data.length < ROWS_PER_PAGE) break;
+        zoriOffset += ROWS_PER_PAGE;
+      }
+    }
+
+    // Realtor price for this date (Realtor uses first-of-month; ZORI may use end-of-month — align by month)
+    const priceByCode: Record<string, number> = {};
+    const realtorIdCol = config.realtorIdField;
+    const realtorTable = config.realtorTable;
+    const realtorDate = periodDate.slice(0, 7) + '-01'; // same month, first day
+    if (client) {
+      try {
+        const { rows } = await client.query(
+          `SELECT ${realtorIdCol}, median_listing_price FROM "${realtorTable}" WHERE period_date = $1::date AND median_listing_price IS NOT NULL`,
+          [realtorDate],
+        );
+        for (const row of rows) {
+          let id = row[realtorIdCol] != null ? String(row[realtorIdCol]).trim() : '';
+          if (config.geoType === 'zip' && id) id = normalizeZipKey(id);
+          const price = row.median_listing_price;
+          if (id && price != null && isValidPrice(price)) priceByCode[id] = price;
+        }
+      } catch (e) {
+        errors.push((e as Error).message);
+      }
+    } else {
+      let priceOffset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from(realtorTable)
+          .select(`${realtorIdCol}, median_listing_price`)
+          .eq('period_date', realtorDate)
+          .not('median_listing_price', 'is', null)
+          .range(priceOffset, priceOffset + ROWS_PER_PAGE - 1);
+        if (error) {
+          errors.push(error.message);
+          break;
+        }
+        if (!data || data.length === 0) break;
+        for (const row of data as unknown as RealtorPriceRow[]) {
+          let id = row[realtorIdCol] as string | undefined;
+          if (config.geoType === 'zip' && id) id = normalizeZipKey(String(id));
+          const price = row.median_listing_price;
+          if (id && price != null && isValidPrice(price)) priceByCode[id] = price;
+        }
+        if (data.length < ROWS_PER_PAGE) break;
+        priceOffset += ROWS_PER_PAGE;
+      }
+    }
+
+    const recordsToUpsert: any[] = [];
+    for (const [geoId, rentInfo] of Object.entries(rentByGeo)) {
+      const price = priceByCode[geoId];
+      if (!price) continue;
+
+      const capRate = calculateCapRate(rentInfo.value, price);
+      const grossYield = calculateGrossYield(rentInfo.value, price);
+      const rentToPriceRatio = calculateRentToPriceRatio(rentInfo.value, price);
+      const grm = calculateGRM(price, rentInfo.value);
+
+      if (capRate === null && grossYield === null && rentToPriceRatio === null && grm === null) continue;
+
+      const geoName = config.geoType === 'zip' ? (rentInfo.name || `ZIP ${geoId}`) : rentInfo.name;
+      recordsToUpsert.push({
+        geography_id: geoId,
+        geography_type: config.geoType,
+        geography_name: geoName,
+        period_date: periodDate,
+        cap_rate: capRate != null ? Math.round(capRate * 100) / 100 : null,
+        gross_yield: grossYield != null ? Math.round(grossYield * 100) / 100 : null,
+        rent_to_price_ratio: rentToPriceRatio != null ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
+        grm: grm != null ? Math.round(grm * 100) / 100 : null,
+        calculated_at: new Date().toISOString(),
+      });
+    }
+
+    // Dedupe by conflict key so one batch never has the same row twice
+    const deduped = dedupeByConflictKey(recordsToUpsert);
+
+    let batchOffset = 0;
+    while (batchOffset < deduped.length) {
+      const batch = deduped.slice(batchOffset, batchOffset + BATCH_SIZE) as InvestmentMetricRow[];
+      const { error } = await upsertCalculatedMetricsBatch(batch);
+      if (error) errors.push(error);
+      else totalStored += batch.length;
+      batchOffset += BATCH_SIZE;
+      if (batchOffset < deduped.length) await delay(BATCH_DELAY_MS);
     }
   }
 
-  // ============================================
-  // STEP 3: Get Census median_gross_rent as fallback
-  // ============================================
-  console.log(`  Fetching Census median_gross_rent (fallback rent source)...`);
-  let allCensusRent: any[] = [];
-  offset = 0;
+  // Fill-in: HUD FMR + Census + latest Realtor for geos with no ZORI (one row per geo at latest date)
+  const rentByGeoFallback: Record<string, { value: number; name: string }> = {};
+  if (config.geoType === 'county') {
+    const { data: hudYearRow } = await supabase.from('hud_fmr').select('year').order('year', { ascending: false }).limit(1).single();
+    if (hudYearRow?.year) {
+      const { data: hudData } = await supabase.from('hud_fmr').select('fips_code, county_name, fmr_2br').eq('year', hudYearRow.year).not('fmr_2br', 'is', null);
+      for (const row of hudData || []) {
+        if (row.fips_code && isValidRent(row.fmr_2br)) {
+          rentByGeoFallback[row.fips_code] = { value: row.fmr_2br, name: row.county_name || `County ${row.fips_code}` };
+        }
+      }
+    }
+  }
 
-  // Build select fields based on config
   const censusSelectFields = config.censusNameField
     ? `${config.censusIdField}, ${config.censusNameField}, median_gross_rent, year`
     : `${config.censusIdField}, median_gross_rent, year`;
-
+  let censusOffset = 0;
   while (true) {
-    const { data, error } = await supabase
-      .from(config.censusTable)
-      .select(censusSelectFields)
-      .not('median_gross_rent', 'is', null)
-      .gt('median_gross_rent', 0) // Filter out negative sentinel values (-666666666)
-      .order('year', { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
-
-    if (error) {
-      console.log(`    Census query error: ${error.message}`);
-      errors.push(error.message);
-      break;
-    }
+    const { data } = await supabase.from(config.censusTable).select(censusSelectFields).not('median_gross_rent', 'is', null).gt('median_gross_rent', 0).order('year', { ascending: false }).range(censusOffset, censusOffset + ROWS_PER_PAGE - 1);
     if (!data || data.length === 0) break;
-    allCensusRent = allCensusRent.concat(data);
-    if (data.length < PAGE_SIZE) break;
-    offset += data.length;
-
-    if (offset % 10000 === 0) {
-      console.log(`    Fetched ${offset} Census rent records...`);
-    }
-  }
-
-  console.log(`  Total Census rent records: ${allCensusRent.length}`);
-
-  // Add Census rent for geographies that don't have ZORI
-  let censusAddedCount = 0;
-  let censusSkippedInvalid = 0;
-  for (const row of allCensusRent) {
-    const geoId = row[config.censusIdField];
-    if (!geoId) continue;
-
-    // Validate rent value
-    const rentValue = row.median_gross_rent;
-    if (!isValidRent(rentValue)) {
-      censusSkippedInvalid++;
-      continue;
-    }
-
-    // Only add if we don't already have rent data (ZORI takes priority)
-    if (!rentByGeo[geoId]) {
-      const geoName = config.censusNameField
-        ? row[config.censusNameField]
-        : `${config.geoType.toUpperCase()} ${geoId}`;
-
-      rentByGeo[geoId] = {
-        value: rentValue,
-        name: geoName || `${config.geoType.toUpperCase()} ${geoId}`,
-        date: `${row.year}-12-31`,
-        source: 'census',
-      };
-      censusAddedCount++;
-    }
-  }
-
-  if (censusSkippedInvalid > 0) {
-    console.log(`    ⚠️ Skipped ${censusSkippedInvalid} Census records with invalid rent values`);
-  }
-
-  console.log(`  Added ${censusAddedCount} ${config.geoType}s from Census (no ZORI coverage)`);
-
-  const totalRentGeos = Object.keys(rentByGeo).length;
-  console.log(`  Total ${config.geoType}s with rent data: ${totalRentGeos}`);
-
-  if (totalRentGeos === 0) {
-    return { processed: 0, stored: 0, errors };
-  }
-
-  // Get ALL Realtor listing price data (most recent per geography)
-  // This maximizes coverage by using whatever price data is available
-  let allPriceData: any[] = [];
-  offset = 0;
-
-  console.log(`  Fetching all price data...`);
-  while (true) {
-    const { data, error } = await supabase
-      .from(config.realtorTable)
-      .select(`${config.realtorIdField}, median_listing_price, period_date`)
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
-
-    if (error) {
-      errors.push(error.message);
-      break;
-    }
-    if (!data || data.length === 0) break;
-    allPriceData = allPriceData.concat(data);
-    if (data.length < PAGE_SIZE) break;
-    offset += data.length;
-
-    if (offset % 10000 === 0) {
-      console.log(`    Fetched ${offset} price records...`);
-    }
-  }
-
-  console.log(`  Total price records: ${allPriceData.length}`);
-
-  // Keep only the most recent valid price for each geography
-  const priceByCode: Record<string, number> = {};
-  let priceSkippedInvalid = 0;
-  for (const row of allPriceData as any[]) {
-    const id = row[config.realtorIdField];
-    const price = row.median_listing_price;
-
-    // Validate price
-    if (!isValidPrice(price)) {
-      priceSkippedInvalid++;
-      continue;
-    }
-
-    if (id && !priceByCode[id]) {
-      priceByCode[id] = price;
-    }
-  }
-
-  if (priceSkippedInvalid > 0) {
-    console.log(`    ⚠️ Skipped ${priceSkippedInvalid} price records with invalid values`);
-  }
-  console.log(`  Unique ${config.geoType}s with valid price data: ${Object.keys(priceByCode).length}`);
-
-  // Get the most recent Realtor date for period_date field
-  const { data: realtorDateRow } = await supabase
-    .from(config.realtorTable)
-    .select('period_date')
-    .order('period_date', { ascending: false })
-    .limit(1)
-    .single();
-
-  const realtorDate = realtorDateRow?.period_date || new Date().toISOString().split('T')[0];
-
-  // Calculate and batch upsert
-  let stored = 0;
-  let matched = 0;
-  let zoriMatched = 0;
-  let hudFmrMatched = 0;
-  let censusMatched = 0;
-  let skippedNoValidMetric = 0;
-  const recordsToUpsert: any[] = [];
-
-  for (const [geoId, rentInfo] of Object.entries(rentByGeo)) {
-    const rent = rentInfo.value;
-    const price = priceByCode[geoId];
-
-    if (!rent || !price) continue;
-    matched++;
-    if (rentInfo.source === 'zori') zoriMatched++;
-    else if (rentInfo.source === 'hud_fmr') hudFmrMatched++;
-    else censusMatched++;
-
-    let geoName = rentInfo.name;
-    if (config.geoType === 'zip') {
-      geoName = geoName || `ZIP ${geoId}`;
-    }
-
-    const capRate = calculateCapRate(rent, price);
-    const grossYield = calculateGrossYield(rent, price);
-    const rentToPriceRatio = calculateRentToPriceRatio(rent, price);
-    const grm = calculateGRM(price, rent);
-
-    // Skip records where all metrics are null (invalid data)
-    if (capRate === null && grossYield === null && rentToPriceRatio === null && grm === null) {
-      skippedNoValidMetric++;
-      continue;
-    }
-
-    recordsToUpsert.push({
-      geography_id: geoId,
-      geography_type: config.geoType,
-      geography_name: geoName,
-      period_date: realtorDate,
-      cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
-      gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
-      rent_to_price_ratio: rentToPriceRatio ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
-      grm: grm ? Math.round(grm * 100) / 100 : null,
-      calculated_at: new Date().toISOString(),
-    });
-
-    if (recordsToUpsert.length >= BATCH_SIZE) {
-      const { error } = await supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
-      if (error) {
-        errors.push(error.message);
-      } else {
-        stored += recordsToUpsert.length;
+    for (const row of data as unknown as CensusRentRow[]) {
+      const geoId = row[config.censusIdField] as string | undefined;
+      const rent = row.median_gross_rent;
+      if (!geoId || rent == null || !isValidRent(rent)) continue;
+      if (!rentByGeoFallback[geoId]) {
+        const geoName = config.censusNameField ? row[config.censusNameField] : `${config.geoType} ${geoId}`;
+        rentByGeoFallback[geoId] = { value: rent, name: (geoName as string) || geoId };
       }
-      recordsToUpsert.length = 0;
     }
+    if (data.length < ROWS_PER_PAGE) break;
+    censusOffset += ROWS_PER_PAGE;
   }
 
-  console.log(`  Matched ${matched} ${config.geoType}s with both rent and price data`);
-  console.log(`    - ${zoriMatched} using ZORI (current rent)`);
-  if (hudFmrMatched > 0) {
-    console.log(`    - ${hudFmrMatched} using HUD FMR (county FMR)`);
-  }
-  console.log(`    - ${censusMatched} using Census median_gross_rent (fallback)`);
-  if (skippedNoValidMetric > 0) {
-    console.log(`    ⚠️ Skipped ${skippedNoValidMetric} records with data outside valid bounds`);
-  }
-
-  // Upsert remaining
-  if (recordsToUpsert.length > 0) {
-    const { error } = await supabase
-      .from('calculated_metrics')
-      .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
-    if (error) {
-      errors.push(error.message);
-    } else {
-      stored += recordsToUpsert.length;
+  const { data: latestRealtorRow } = await supabase.from(config.realtorTable).select('period_date').order('period_date', { ascending: false }).limit(1).single();
+  const latestDate = latestRealtorRow?.period_date;
+  if (latestDate && Object.keys(rentByGeoFallback).length > 0) {
+    const existingAtLatest = new Set<string>();
+    let off = 0;
+    while (true) {
+      const { data: existing } = await supabase.from('calculated_metrics').select('geography_id').eq('geography_type', config.geoType).eq('period_date', latestDate).range(off, off + ROWS_PER_PAGE - 1);
+      if (!existing || existing.length === 0) break;
+      existing.forEach((r: { geography_id: string }) => existingAtLatest.add(r.geography_id));
+      if (existing.length < ROWS_PER_PAGE) break;
+      off += ROWS_PER_PAGE;
     }
+
+    const priceByCode: Record<string, number> = {};
+    let priceOffset = 0;
+    while (true) {
+      const { data } = await supabase.from(config.realtorTable).select(`${config.realtorIdField}, median_listing_price`).eq('period_date', latestDate).not('median_listing_price', 'is', null).range(priceOffset, priceOffset + ROWS_PER_PAGE - 1);
+      if (!data || data.length === 0) break;
+      for (const row of data as unknown as RealtorPriceRow[]) {
+        let id = row[config.realtorIdField] as string | undefined;
+        if (config.geoType === 'zip' && id) id = normalizeZipKey(String(id));
+        const price = row.median_listing_price;
+        if (id && price != null && isValidPrice(price)) priceByCode[id] = price;
+      }
+      if (data.length < ROWS_PER_PAGE) break;
+      priceOffset += ROWS_PER_PAGE;
+    }
+
+    const recordsToUpsert: any[] = [];
+    for (const [geoId, rentInfo] of Object.entries(rentByGeoFallback)) {
+      if (existingAtLatest.has(geoId)) continue;
+      const price = priceByCode[geoId];
+      if (!price) continue;
+      const capRate = calculateCapRate(rentInfo.value, price);
+      const grossYield = calculateGrossYield(rentInfo.value, price);
+      const rentToPriceRatio = calculateRentToPriceRatio(rentInfo.value, price);
+      const grm = calculateGRM(price, rentInfo.value);
+      if (capRate === null && grossYield === null && rentToPriceRatio === null && grm === null) continue;
+      const geoName = config.geoType === 'zip' ? (rentInfo.name || `ZIP ${geoId}`) : rentInfo.name;
+      recordsToUpsert.push({
+        geography_id: geoId,
+        geography_type: config.geoType,
+        geography_name: geoName,
+        period_date: latestDate,
+        cap_rate: capRate != null ? Math.round(capRate * 100) / 100 : null,
+        gross_yield: grossYield != null ? Math.round(grossYield * 100) / 100 : null,
+        rent_to_price_ratio: rentToPriceRatio != null ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
+        grm: grm != null ? Math.round(grm * 100) / 100 : null,
+        calculated_at: new Date().toISOString(),
+      });
+    }
+    let batchOffset = 0;
+    while (batchOffset < recordsToUpsert.length) {
+      const batch = recordsToUpsert.slice(batchOffset, batchOffset + BATCH_SIZE) as InvestmentMetricRow[];
+      const { error } = await upsertCalculatedMetricsBatch(batch);
+      if (!error) totalStored += batch.length;
+      batchOffset += BATCH_SIZE;
+      if (batchOffset < recordsToUpsert.length) await delay(BATCH_DELAY_MS);
+    }
+    console.log(`  Fill-in: stored ${recordsToUpsert.length} ${config.geoType}s from HUD/Census at ${latestDate}`);
   }
 
-  console.log(`  ✓ Stored ${stored} ${config.geoType} investment metrics records`);
-  return { processed: totalRentGeos, stored, errors };
+  console.log(`  ✓ Stored ${totalStored} ${config.geoType} investment metrics records (full history + fill-in)`);
+  return { processed: periodDates.length, stored: totalStored, errors };
 }
 
 async function calculateAllInvestmentMetrics(): Promise<{ processed: number; stored: number; errors: string[]; byGeo: Record<string, number> }> {
@@ -551,51 +589,42 @@ async function calculateOvervaluedForMetros(): Promise<{ processed: number; stor
   }
   console.log(`  Found ${Object.keys(incomeByGeo).length} metros with income data`);
 
-  // Calculate and batch upsert
+  // Calculate and batch upsert (filter null geography_id, dedupe by cbsa to avoid "row a second time")
   let stored = 0;
-  const recordsToUpsert: any[] = [];
+  const byKey: Record<string, { geography_id: string; geography_type: string; geography_name: string | null; period_date: string; overvalued_pct: number; calculated_at: string }> = {};
 
   for (const metro of zhviData) {
     const cbsaCode = metro.cbsa_code;
+    if (!cbsaCode) continue;
+
     const zhvi = metro.value;
-    const medianIncome = (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
-
+    const medianIncome = incomeByGeo[cbsaCode] || NATIONAL_MEDIAN_INCOME;
     const overvaluedPct = calculateOvervalued(zhvi, medianIncome);
-
     if (overvaluedPct === null) continue;
 
-    recordsToUpsert.push({
+    const key = `${cbsaCode}|metro|${targetDate}`;
+    byKey[key] = {
       geography_id: cbsaCode,
       geography_type: 'metro',
       geography_name: metro.region_name,
       period_date: targetDate,
       overvalued_pct: Math.round(overvaluedPct * 10) / 10,
       calculated_at: new Date().toISOString(),
-    });
-
-    if (recordsToUpsert.length >= BATCH_SIZE) {
-      const { error } = await supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
-      if (error) {
-        errors.push(error.message);
-      } else {
-        stored += recordsToUpsert.length;
-      }
-      recordsToUpsert.length = 0;
-    }
+    };
   }
 
-  // Upsert remaining
-  if (recordsToUpsert.length > 0) {
+  const recordsToUpsert = Object.values(byKey);
+  for (let i = 0; i < recordsToUpsert.length; i += BATCH_SIZE) {
+    const batch = recordsToUpsert.slice(i, i + BATCH_SIZE);
     const { error } = await supabase
       .from('calculated_metrics')
-      .upsert(recordsToUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+      .upsert(batch, { onConflict: 'geography_id,geography_type,period_date' });
     if (error) {
       errors.push(error.message);
     } else {
-      stored += recordsToUpsert.length;
+      stored += batch.length;
     }
+    if (i + BATCH_SIZE < recordsToUpsert.length) await delay(BATCH_DELAY_MS);
   }
 
   console.log(`  ✓ Stored ${stored} overvalued percentage records`);
@@ -776,6 +805,15 @@ async function main() {
   console.log('         POPULATE CALCULATED METRICS');
   console.log('═══════════════════════════════════════════════════════════════');
 
+  const dbUrl = getDbUrl();
+  if (dbUrl) {
+    const client = await ensurePgClient();
+    if (client) console.log('Using direct Postgres for calculated_metrics upserts (10-min timeout)\n');
+    else console.log('Direct Postgres connection failed; using Supabase API (may hit timeout)\n');
+  } else {
+    console.log('Tip: Set SUPABASE_DB_PASSWORD or DATABASE_URL in packages/backend/.env to use direct Postgres and avoid upsert timeouts.\n');
+  }
+
   const results: Record<string, any> = {};
 
   // 1. Investment Metrics (cap_rate, gross_yield, rent_to_price, grm) - ALL GEOGRAPHIES
@@ -837,6 +875,11 @@ async function main() {
     .not('cap_rate', 'is', null);
 
   console.log(`\n✓ Total records with cap_rate: ${count}`);
+
+  if (pgClient) {
+    await pgClient.end();
+    pgClient = null;
+  }
 }
 
 main().catch(console.error);

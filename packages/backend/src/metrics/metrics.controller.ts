@@ -18,7 +18,7 @@ export class MetricsController {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly calculatedMetricsService: CalculatedMetricsService,
-  ) {}
+  ) { }
 
   /**
    * Get overvalued percentage for metros
@@ -408,10 +408,14 @@ export class MetricsController {
    * Trigger batch calculation of 5-year growth for all geographies
    * Should be called monthly after new data is imported
    */
+  /**
+   * Trigger batch calculation of 5-year growth for all geographies
+   * Should be called monthly after new data is imported
+   */
   @Post('calculate-5yr-growth')
-  async calculate5YrGrowthBatch() {
+  async calculate5YrGrowthBatch(@Query('year') year?: number) {
     const results =
-      await this.calculatedMetricsService.calculate5YrGrowthForAll();
+      await this.calculatedMetricsService.calculate5YrGrowthForAll(year);
     return {
       success: true,
       message: 'Batch calculation completed',
@@ -420,18 +424,21 @@ export class MetricsController {
         states: results.states,
         counties: results.counties,
         zips: results.zips,
+        national: results.national,
       },
       totals: {
         processed:
           results.metros.processed +
           results.states.processed +
           results.counties.processed +
-          results.zips.processed,
+          results.zips.processed +
+          results.national.processed,
         stored:
           results.metros.stored +
           results.states.stored +
           results.counties.stored +
-          results.zips.stored,
+          results.zips.stored +
+          results.national.stored,
       },
     };
   }
@@ -440,17 +447,20 @@ export class MetricsController {
    * Trigger batch calculation for a specific geography type
    */
   @Post('calculate-5yr-growth/:geoType')
-  async calculate5YrGrowthByGeo(@Param('geoType') geoType?: string) {
+  async calculate5YrGrowthByGeo(
+    @Param('geoType') geoType: string,
+    @Query('year') year?: number,
+  ) {
     let result: { processed: number; stored: number };
 
     switch (geoType) {
       case 'metros':
         result =
-          await this.calculatedMetricsService.calculate5YrGrowthForMetros();
+          await this.calculatedMetricsService.calculate5YrGrowthForMetros(year);
         break;
       case 'states':
         result =
-          await this.calculatedMetricsService.calculate5YrGrowthForStates();
+          await this.calculatedMetricsService.calculate5YrGrowthForStates(year);
         break;
       case 'counties':
         result =
@@ -462,7 +472,9 @@ export class MetricsController {
         break;
       case 'national':
         result =
-          await this.calculatedMetricsService.calculate5YrGrowthForNational();
+          await this.calculatedMetricsService.calculate5YrGrowthForNational(
+            year,
+          );
         break;
       default:
         return { success: false, error: `Invalid geography type: ${geoType}` };
