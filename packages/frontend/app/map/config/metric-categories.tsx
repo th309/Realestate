@@ -285,12 +285,54 @@ export function getMetricCategories(viewMode: ViewMode): MetricCategory[] {
   ];
 }
 
-// Legacy export for backwards compatibility
-export const METRIC_CATEGORIES: MetricCategory[] = getMetricCategories('homebuyer');
+
+// ============================================================================
+// HELPER: Get flat list of all metric IDs in order
+// ============================================================================
+
+export function getAllOrderedMetricIds(): string[] {
+  // Use Homebuyer view as the primary order source (contains all metrics except maybe some investor-specific ones?)
+  // Actually, let's combine categories intelligently or just use the homebuyer set if it covers everything.
+  // Looking at the file, both views share most categories.
+  // Let's iterate through the categories provided by getMetricCategories('homebuyer') plus any unique ones from investor?
+  // Current logic in useMetricOptions.ts seemed to try to list them all.
+
+  // Let's just walk the categories in 'homebuyer' view + 'scores' (which is in both).
+  // Check if Investor has unique attributes.
+  // Investor has Cash Flow, Appreciation, Demand/Risk.
+  // Homebuyer has Affordability, Competition, Pricing.
+  // They cover slightly different sets or verify if they overlap 100%.
+
+  // Strategy: Collect from all category definitions directly.
+  const categories = [
+    // Homebuyer
+    HOMEBUYER_AFFORDABILITY,
+    HOMEBUYER_COMPETITION,
+    HOMEBUYER_PRICING,
+    // Investor
+    INVESTOR_CASHFLOW,
+    INVESTOR_APPRECIATION,
+    INVESTOR_DEMAND_RISK,
+    // Shared
+    AREA_PROFILE,
+    LOCAL_ECONOMY,
+    NEW_CONSTRUCTION,
+    SCORES_CATEGORY
+  ];
+
+  const ids = new Set<string>();
+  categories.forEach(cat => {
+    cat.metrics?.forEach(m => ids.add(m.id));
+  });
+
+  return Array.from(ids);
+}
 
 // Legacy exports for backwards compatibility
+export const METRIC_CATEGORIES: MetricCategory[] = getMetricCategories('homebuyer');
 export const SHARED_CATEGORIES: MetricCategory[] = [AREA_PROFILE, LOCAL_ECONOMY, NEW_CONSTRUCTION];
 export const INVESTOR_CATEGORIES: MetricCategory[] = [INVESTOR_CASHFLOW, INVESTOR_APPRECIATION, INVESTOR_DEMAND_RISK];
 export function getPopularDataCategory(viewMode: ViewMode): MetricCategory {
   return viewMode === 'homebuyer' ? HOMEBUYER_AFFORDABILITY : INVESTOR_CASHFLOW;
 }
+

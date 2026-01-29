@@ -1,5 +1,6 @@
 import { MetricOption, MetricCategory, Milestone } from './types';
 import { getMetricTitle, METRICS } from '@/app/map/config/metrics';
+import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 
 // Mock data for chart display (placeholder)
 export const MOCK_INVENTORY_DATA = [
@@ -32,58 +33,29 @@ export const STATES = [
   'Wisconsin', 'Wyoming',
 ];
 
-// 1. Define the Master Order based on the Map Page Sidebar
-const ORDERED_IDS = [
-  // Affordability
-  'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
-  'years_to_save', 'homeowner_affordability', 'home_value_yoy', 'home_value_5yr',
+// 1. Get Master Order from Map Page Sidebar configuration (Single Source of Truth)
+// We rely on getAllOrderedMetricIds from metric-categories.tsx
+const ORDERED_IDS = getAllOrderedMetricIds();
 
-  // Market Competition
-  'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
-  'new_listings_yoy', 'hotness_score', 'market_heat', 'sale_to_list',
-
-  // Pricing & Deals
-  'home_value_mom', 'home_price_forecast', 'price_cut_pct', 'price_increase_pct',
-  'new_listings', 'inventory_surplus',
-
-  // Cash Flow
-  'cap_rate', 'rent_index', 'rent_for_houses', 'income_to_rent', 'renter_affordability',
-  // 'gross_yield', // Not in current METRICS config, excluded to prevent errors
-
-  // Appreciation
-  'home_value', 'overvalued_pct',
-
-  // Demand & Risk (duplicates removed: DOM, Inventory, etc.)
-  // 'vacancy_rate', // Not in METRICS
-  'demand_score', 'supply_score',
-
-  // Area Profile
-  'population', 'population_growth', 'median_income', 'income_growth',
-  'median_age', 'homeownership_rate',
-
-  // Local Economy
-  'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
-
-  // New Construction
-  'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
-
-  // Scores
-  // 'homeready_score', // Not in METRICS
-  // 'investoredge_score', // Not in METRICS
-];
-
-// 2. Define Pro Metrics
-// 2. Define Pro Metrics (Dynamic)
-// TODO: This should eventually be fetched from an Admin Configuration API
+// 2. Identify Pro Metrics dynamically from the categories config
 function getProMetrics(): Set<string> {
-  return new Set([
-    'years_to_save', 'homeowner_affordability', 'home_value_5yr',
-    'sale_to_list', 'home_value_mom', 'home_price_forecast', 'inventory_surplus',
-    'cap_rate', 'renter_affordability', 'overvalued_pct',
-    'population_growth', 'income_growth', 'median_age', 'homeownership_rate',
-    'job_growth', 'gdp_growth', 'cost_of_living',
-    'new_construction_ppsf'
-  ]);
+  const proIds = new Set<string>();
+
+  // Helper to traverse categories
+  const traverse = (categories: MetricCategory[]) => {
+    categories.forEach(cat => {
+      cat.metrics?.forEach(m => {
+        if (m.isPremium) proIds.add(m.id);
+      });
+    });
+  }
+
+  // Check Homebuyer categories
+  traverse(getMetricCategories('homebuyer'));
+  // Check Investor categories (in case there are unique ones)
+  traverse(getMetricCategories('investor'));
+
+  return proIds;
 }
 
 const PRO_IDS = getProMetrics();
@@ -138,6 +110,7 @@ export const METRIC_CATEGORIES: MetricCategory[] = [
 ];
 
 // Descriptions for metrics (Legacy/Helper)
+// TODO: Migrate these descriptions to central config or derived from tooltips
 export const DESCRIPTIONS: Record<string, string> = {
   // Affordability
   listing_price: 'Median listing price of homes currently on the market.',

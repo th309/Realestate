@@ -29,7 +29,7 @@ import {
     isMetricSupportedForGeo,
 } from '@/app/map/config/metrics';
 import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
-import { getMetricCategories } from '@/app/map/config/metric-categories';
+import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 
 export interface MetricOption {
     label: string;
@@ -195,34 +195,8 @@ export function useMetricCategories(): { label: string; value: string }[] {
  * IMPORTANT: This list must match metric-categories.tsx exactly
  */
 export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
-  // Master ordered list matching map page sidebar (metric-categories.tsx)
-  const ORDERED_IDS = [
-    // Affordability (HOMEBUYER_AFFORDABILITY)
-    'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
-    'years_to_save', 'home_value_yoy', 'home_value_5yr',
-    // Market Competition (HOMEBUYER_COMPETITION)
-    'days_on_market', 'for_sale_inventory', 'inventory_yoy', 'pending_ratio',
-    'new_listings_yoy', 'hotness_score', 'sale_to_list',
-    // Pricing & Deals (HOMEBUYER_PRICING)
-    'home_value_mom', 'price_cut_pct', 'price_increase_pct',
-    'new_listings', 'inventory_surplus',
-    // Cash Flow (INVESTOR_CASHFLOW)
-    'cap_rate', 'rent_index', 'rent_for_houses',
-    // Appreciation (INVESTOR_APPRECIATION)
-    'home_value', 'overvalued_pct',
-    // Demand & Risk (INVESTOR_DEMAND_RISK) - uses same metrics as HOMEBUYER_COMPETITION
-    // Area Profile (AREA_PROFILE)
-    'population', 'population_growth', 'median_income', 'income_growth',
-    'median_age', 'homeownership_rate',
-    // Local Economy (LOCAL_ECONOMY)
-    'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
-    // New Construction (NEW_CONSTRUCTION)
-    'sf_permits', 'mf_permits', 'total_permits', 'permits_yoy',
-    'sf_mf_ratio', 'permit_value_per_unit',
-    'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
-    // PropertyIQ Scores (SCORES_CATEGORY)
-    'homeready_score', 'investoredge_score', 'market_health_score',
-  ];
+    // Master ordered list matching map page sidebar (metric-categories.tsx)
+    const ORDERED_IDS = useMemo(() => getAllOrderedMetricIds(), []);
 
     const options = useMemo(() => {
         const result: MetricOption[] = [];
