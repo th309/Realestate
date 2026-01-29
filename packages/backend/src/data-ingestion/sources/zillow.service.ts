@@ -108,11 +108,23 @@ export class ZillowService {
 
                     marketsCreated++;
 
-                    // Step 2: Extract and insert time series data
-                    const timeSeriesData: TimeSeriesRecord[] = [];
+                    // Determine target table based on region type
+                    let tableName = '';
+                    switch (regionType) {
+                        case 'state': tableName = 'zillow_state'; break;
+                        case 'msa': tableName = 'zillow_metro'; break;
+                        case 'county': tableName = 'zillow_county'; break;
+                        case 'zip': tableName = 'zillow_zip'; break;
+                        case 'city': tableName = 'zillow_city'; break;
+                        default:
+                            this.logger.warn(`Skipping unsupported region type: ${regionType}`);
+                            continue;
+                    }
+
+                    // Prepare batch for insertion
+                    const recordsToInsert: any[] = [];
 
                     // Get all date columns (format: YYYY-MM-DD)
-                    // Note: Zillow CSVs often use YYYY-MM-DD format for columns
                     const dateColumns = Object.keys(record).filter(key =>
                         /^\d{4}-\d{2}-\d{2}$/.test(key)
                     );
@@ -122,36 +134,32 @@ export class ZillowService {
 
                         // Skip null/empty values
                         if (!isNaN(value) && value !== null && value !== 0) {
-                            timeSeriesData.push({
+                            recordsToInsert.push({
                                 region_id: regionId,
-                                date: dateCol,
+                                region_name: regionName,
+                                period_date: dateCol,
                                 metric_name: metricName,
-                                metric_value: value,
-                                data_source: 'zillow',
-                                attributes: {
-                                    property_type: 'sfrcondo',
-                                    tier: 'middle'
-                                }
+                                value: value
                             });
                         }
                     }
 
-                    if (timeSeriesData.length > 0) {
+                    if (recordsToInsert.length > 0) {
                         const batchSize = 100;
-                        for (let i = 0; i < timeSeriesData.length; i += batchSize) {
-                            const batch = timeSeriesData.slice(i, i + batchSize);
+                        for (let i = 0; i < recordsToInsert.length; i += batchSize) {
+                            const batch = recordsToInsert.slice(i, i + batchSize);
 
                             try {
                                 const { data: tsResult, error: tsError } = await supabase
-                                    .from('market_time_series')
+                                    .from(tableName)
                                     .upsert(batch, {
-                                        onConflict: 'region_id,date,metric_name,data_source,attributes',
+                                        onConflict: 'region_id,period_date,metric_name',
                                         ignoreDuplicates: false
                                     })
                                     .select();
 
                                 if (tsError) {
-                                    this.logger.error(`Error upserting time series batch for ${regionId}: ${tsError.message}`);
+                                    this.logger.error(`Error upserting batch to ${tableName} for ${regionId}: ${tsError.message}`);
                                     errorDetails.push({
                                         region: regionId,
                                         error: tsError.message,
@@ -176,7 +184,7 @@ export class ZillowService {
 
             this.logger.log(`Import Summary: Markets created: ${marketsCreated}, Time series inserted: ${timeSeriesInserted}, Errors: ${errors}`);
 
-            // Log to data_ingestion_logs (optional but recommended)
+            // Log to data_ingestion_logs
             await supabase.from('data_ingestion_logs').insert({
                 source: 'zillow',
                 dataset: metricName,
@@ -196,7 +204,6 @@ export class ZillowService {
                     errorDetails
                 }
             };
-
         } catch (error: any) {
             this.logger.error(`Error downloading or parsing Zillow data: ${error.message}`);
             throw error;

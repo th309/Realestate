@@ -322,41 +322,54 @@ export class CensusService {
                         }
                     }
 
+                    // Determine Census table name
+                    let tableName = '';
+                    switch (geoLevel) {
+                        case 'state': tableName = 'census_state'; break;
+                        case 'metropolitan statistical area/micropolitan statistical area': tableName = 'census_metro'; break;
+                        case 'place': tableName = 'census_city'; break;
+                        case 'zip code tabulation area': tableName = 'census_zip'; break;
+                        default:
+                            this.logger.warn(`Skipping unsupported census geography: ${geoLevel}`);
+                            continue;
+                    }
+
+                    // Construct single record for the region/year
+                    // Census tables typically use: region_id, year, [metric_columns...]
+                    const censusRecord: Record<string, any> = {
+                        region_id: regionId,
+                        year: year
+                    };
+
+                    let hasValidMetrics = false;
+
                     for (const metric of variableMetrics) {
                         const value = parseFloat(record[metric.variable]);
 
-                        if (!isNaN(value) && value > 0) {
-                            const timeSeriesRecord: TimeSeriesRecord = {
-                                region_id: regionId,
-                                date: `${year}-01-01`,
-                                metric_name: metric.metric_name,
-                                metric_value: value,
-                                data_source: 'census',
-                                attributes: {
-                                    survey_type: 'acs_5yr',
-                                    year: year,
-                                    variable: metric.variable,
-                                    geo_level: geoLevel
-                                }
-                            };
+                        if (!isNaN(value) && value !== null) { // Allow 0, just checks validity
+                            // Map metric_name to column name (assuming they match 1:1 in DB schema)
+                            // e.g. 'population' -> 'population', 'median_household_income' -> 'median_household_income'
+                            censusRecord[metric.metric_name] = value;
+                            hasValidMetrics = true;
+                        }
+                    }
 
-                            const { error } = await supabase
-                                .from('market_time_series')
-                                .upsert(timeSeriesRecord, {
-                                    onConflict: 'region_id,date,metric_name,data_source,attributes',
-                                    ignoreDuplicates: false
-                                });
+                    if (hasValidMetrics) {
+                        const { error } = await supabase
+                            .from(tableName)
+                            .upsert(censusRecord, {
+                                onConflict: 'region_id,year', // Census data allows 1 record per region per year
+                                ignoreDuplicates: false
+                            });
 
-                            if (error) {
-                                this.logger.error(`Error upserting ${metric.metric_name} for ${name}: ${error.message}`);
-                                errors.push({
-                                    geography: name,
-                                    metric: metric.metric_name,
-                                    error: error.message
-                                });
-                            } else {
-                                totalRecordsInserted++;
-                            }
+                        if (error) {
+                            this.logger.error(`Error upserting census record for ${name}: ${error.message}`);
+                            errors.push({
+                                geography: name,
+                                error: error.message
+                            });
+                        } else {
+                            totalRecordsInserted++;
                         }
                     }
 

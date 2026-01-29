@@ -115,22 +115,36 @@ export class FredService {
                 this.logger.log(`Prepared ${timeSeriesData.length} records for insertion`);
 
                 if (timeSeriesData.length > 0) {
-                    const batchSize = 100;
+                    const batchSize = 1000; // Increased batch size
                     let inserted = 0;
 
-                    for (let i = 0; i < timeSeriesData.length; i += batchSize) {
-                        const batch = timeSeriesData.slice(i, i + batchSize);
+                    // Convert to wide format for economic_national table
+                    // Since FRED fetches one series at a time, we upsert rows with just that column.
+                    // Table: economic_national (region_id, period_date, metric_column...)
+
+                    const tableName = 'economic_national';
+                    const columnName = series.metric_name;
+
+                    // Map timeSeriesData (metrics) to table records
+                    const recordsToUpsert = timeSeriesData.map(ts => ({
+                        region_id: ts.region_id,
+                        period_date: ts.date,
+                        [columnName]: ts.metric_value
+                    }));
+
+                    for (let i = 0; i < recordsToUpsert.length; i += batchSize) {
+                        const batch = recordsToUpsert.slice(i, i + batchSize);
 
                         try {
                             const { error } = await supabase
-                                .from('market_time_series')
+                                .from(tableName)
                                 .upsert(batch, {
-                                    onConflict: 'region_id,date,metric_name,data_source,attributes',
-                                    ignoreDuplicates: false
+                                    onConflict: 'region_id,period_date',
+                                    ignoreDuplicates: false // Should update the column if row exists
                                 });
 
                             if (error) {
-                                this.logger.error(`Error upserting batch: ${error.message}`);
+                                this.logger.error(`Error upserting batch to ${tableName}: ${error.message}`);
                                 errors.push({
                                     series: seriesKey,
                                     error: error.message,
@@ -140,7 +154,7 @@ export class FredService {
                                 inserted += batch.length;
                             }
                         } catch (err: any) {
-                            this.logger.error(`Exception during upsert: ${err.message}`);
+                            this.logger.error(`Exception during upsert to ${tableName}: ${err.message}`);
                             errors.push({
                                 series: seriesKey,
                                 error: err.message
