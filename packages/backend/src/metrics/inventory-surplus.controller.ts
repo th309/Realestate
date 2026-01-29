@@ -11,7 +11,7 @@ import { InventorySurplusService } from './inventory-surplus.service';
 export class InventorySurplusController {
   constructor(
     private readonly inventorySurplusService: InventorySurplusService,
-  ) {}
+  ) { }
 
   // ============================================================================
   // DATA RETRIEVAL ENDPOINTS
@@ -152,8 +152,8 @@ export class InventorySurplusController {
    * Trigger batch calculation for all geographies
    */
   @Post('calculate')
-  async calculateAll() {
-    const results = await this.inventorySurplusService.calculateForAll();
+  async calculateAll(@Query('year') year?: number) {
+    const results = await this.inventorySurplusService.calculateForAll(year);
 
     return {
       success: true,
@@ -186,24 +186,27 @@ export class InventorySurplusController {
    * Trigger batch calculation for a specific geography type
    */
   @Post('calculate/:geoType')
-  async calculateByGeo(@Param('geoType') geoType: string) {
+  async calculateByGeo(
+    @Param('geoType') geoType: string,
+    @Query('year') year?: number,
+  ) {
     let result: { processed: number; stored: number };
 
     switch (geoType) {
       case 'national':
-        result = await this.inventorySurplusService.calculateForNational();
+        result = await this.inventorySurplusService.calculateForNational(year);
         break;
       case 'metros':
-        result = await this.inventorySurplusService.calculateForMetros();
+        result = await this.inventorySurplusService.calculateForMetros(year);
         break;
       case 'states':
-        result = await this.inventorySurplusService.calculateForStates();
+        result = await this.inventorySurplusService.calculateForStates(year);
         break;
       case 'counties':
-        result = await this.inventorySurplusService.calculateForCounties();
+        result = await this.inventorySurplusService.calculateForCounties(year);
         break;
       case 'zips':
-        result = await this.inventorySurplusService.calculateForZips();
+        result = await this.inventorySurplusService.calculateForZips(year);
         break;
       default:
         return { success: false, error: `Invalid geography type: ${geoType}` };

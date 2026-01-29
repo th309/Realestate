@@ -50,7 +50,7 @@ export class CalculatedMetricsService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Calculate Cap Rate: (ZORI × 12 × expense_ratio) / price × 100
@@ -462,175 +462,229 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store 5-year home value growth for all metros
    */
-  async calculate5YrGrowthForMetros(): Promise<{
+  async calculate5YrGrowthForMetros(year?: number): Promise<{
     processed: number;
     stored: number;
+    debug?: any;
   }> {
-    // Get current date (latest data)
-    const { data: latestDateRow } = await this.supabase
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_metro')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0 };
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      console.log(`[CalculatedMetrics] Filtering 5yr growth (metros) for year: ${year}`);
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = latestDateRow.period_date;
-    const fiveYearsAgo = new Date(targetDate);
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(
-      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
-    )
-      .toISOString()
-      .split('T')[0];
+    let totalProcessed = 0;
+    let totalStored = 0;
+    const allUpsertErrors: string[] = [];
+    const BATCH_SIZE = 100;
 
-    // Get current data
-    const { data: currentData } = await this.supabase
-      .from('realtor_metro')
-      .select('cbsa_code, cbsa_title, median_listing_price')
-      .eq('period_date', targetDate)
-      .not('median_listing_price', 'is', null);
+    console.log(
+      `[CalculatedMetrics] Backfilling 5yr growth (metros) for ${uniqueDates.length} dates...`,
+    );
 
-    if (!currentData || currentData.length === 0) {
-      return { processed: 0, stored: 0 };
-    }
+    for (const dateStr of uniqueDates) {
+      const targetDate = dateStr;
+      const fiveYearsAgo = new Date(targetDate);
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+      const pastDateMax = new Date(
+        fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+      )
+        .toISOString()
+        .split('T')[0];
 
-    // Get historical data
-    const { data: pastData } = await this.supabase
-      .from('realtor_metro')
-      .select('cbsa_code, median_listing_price')
-      .gte('period_date', pastDateStr)
-      .lte('period_date', pastDateMax)
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: true });
+      // Get current data
+      const { data: currentData } = await this.supabase
+        .from('realtor_metro')
+        .select('cbsa_code, cbsa_title, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null);
 
-    // Build lookup for past values (earliest available per region)
-    const pastByRegion: Record<string, number> = {};
-    if (pastData) {
-      for (const row of pastData) {
-        if (!pastByRegion[row.cbsa_code]) {
-          pastByRegion[row.cbsa_code] = row.median_listing_price;
+      if (!currentData || currentData.length === 0) continue;
+
+      // Get historical data
+      const { data: pastData } = await this.supabase
+        .from('realtor_metro')
+        .select('cbsa_code, median_listing_price')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', pastDateMax)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true });
+
+      // Build lookup
+      const pastByRegion: Record<string, number> = {};
+      if (pastData) {
+        for (const row of pastData) {
+          if (!pastByRegion[row.cbsa_code]) {
+            pastByRegion[row.cbsa_code] = row.median_listing_price;
+          }
         }
       }
-    }
 
-    // Calculate and store
-    let stored = 0;
-    for (const metro of currentData) {
-      const pastValue = pastByRegion[metro.cbsa_code];
-      if (!pastValue || pastValue === 0) continue;
+      let recordsToUpsert: any[] = [];
 
-      const growthPct =
-        ((metro.median_listing_price - pastValue) / pastValue) * 100;
+      for (const metro of currentData) {
+        const pastValue = pastByRegion[metro.cbsa_code];
+        if (!pastValue || pastValue === 0) continue;
 
-      const { error } = await this.supabase.from('calculated_metrics').upsert(
-        {
+        const growthPct =
+          ((metro.median_listing_price - pastValue) / pastValue) * 100;
+
+        recordsToUpsert.push({
           geography_id: metro.cbsa_code,
           geography_type: 'metro',
           geography_name: metro.cbsa_title,
           period_date: targetDate,
           home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'geography_id,geography_type,period_date',
-        },
-      );
+        });
 
-      if (!error) stored++;
+        if (recordsToUpsert.length >= BATCH_SIZE) {
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(recordsToUpsert, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (error) {
+            allUpsertErrors.push(`${dateStr}: ${error.message}`);
+          } else {
+            totalStored += recordsToUpsert.length;
+          }
+          recordsToUpsert = [];
+        }
+      }
+
+      if (recordsToUpsert.length > 0) {
+        const { error } = await this.supabase
+          .from('calculated_metrics')
+          .upsert(recordsToUpsert, {
+            onConflict: 'geography_id,geography_type,period_date',
+          });
+        if (error) {
+          allUpsertErrors.push(`${dateStr} (last batch): ${error.message}`);
+        } else {
+          totalStored += recordsToUpsert.length;
+        }
+      }
+      totalProcessed += currentData.length;
     }
 
-    return { processed: currentData.length, stored };
+    return {
+      processed: totalProcessed,
+      stored: totalStored,
+      debug: {
+        errors: allUpsertErrors.length > 0 ? allUpsertErrors : undefined,
+      },
+    };
   }
 
   /**
    * Calculate and store 5-year home value growth for all states
    */
-  async calculate5YrGrowthForStates(): Promise<{
+  async calculate5YrGrowthForStates(year?: number): Promise<{
     processed: number;
     stored: number;
   }> {
-    // Get current date
-    const { data: latestDateRow } = await this.supabase
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_state')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0 };
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      console.log(
+        `[CalculatedMetrics] Filtering 5yr growth (states) for year: ${year}`,
+      );
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = latestDateRow.period_date;
-    const fiveYearsAgo = new Date(targetDate);
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-    const pastDateMax = new Date(
-      fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
-    )
-      .toISOString()
-      .split('T')[0];
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-    // Get current data
-    const { data: currentData } = await this.supabase
-      .from('realtor_state')
-      .select('state_id, state_name, median_listing_price')
-      .eq('period_date', targetDate)
-      .not('median_listing_price', 'is', null);
+    for (const dateStr of uniqueDates) {
 
-    if (!currentData || currentData.length === 0) {
-      return { processed: 0, stored: 0 };
-    }
+      const targetDate = dateStr;
+      const fiveYearsAgo = new Date(targetDate);
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
+      const pastDateMax = new Date(
+        fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+      )
+        .toISOString()
+        .split('T')[0];
 
-    // Get historical data
-    const { data: pastData } = await this.supabase
-      .from('realtor_state')
-      .select('state_id, median_listing_price')
-      .gte('period_date', pastDateStr)
-      .lte('period_date', pastDateMax)
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: true });
+      // Get current data
+      const { data: currentData } = await this.supabase
+        .from('realtor_state')
+        .select('state_id, state_name, median_listing_price')
+        .eq('period_date', targetDate)
+        .not('median_listing_price', 'is', null);
 
-    const pastByRegion: Record<string, number> = {};
-    if (pastData) {
-      for (const row of pastData) {
-        if (!pastByRegion[row.state_id]) {
-          pastByRegion[row.state_id] = row.median_listing_price;
+      if (!currentData || currentData.length === 0) {
+        return { processed: 0, stored: 0 };
+      }
+
+      // Get historical data
+      const { data: pastData } = await this.supabase
+        .from('realtor_state')
+        .select('state_id, median_listing_price')
+        .gte('period_date', pastDateStr)
+        .lte('period_date', pastDateMax)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true });
+
+      const pastByRegion: Record<string, number> = {};
+      if (pastData) {
+        for (const row of pastData) {
+          if (!pastByRegion[row.state_id]) {
+            pastByRegion[row.state_id] = row.median_listing_price;
+          }
         }
       }
+
+      let stored = 0;
+      for (const state of currentData) {
+        const pastValue = pastByRegion[state.state_id];
+        if (!pastValue || pastValue === 0) continue;
+
+        const growthPct =
+          ((state.median_listing_price - pastValue) / pastValue) * 100;
+
+        const { error } = await this.supabase.from('calculated_metrics').upsert(
+          {
+            geography_id: state.state_id,
+            geography_type: 'state',
+            geography_name: state.state_name,
+            period_date: targetDate,
+            home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+            calculated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'geography_id,geography_type,period_date',
+          },
+        );
+
+        if (!error) stored++;
+      }
+
+      totalProcessed += currentData.length;
+      totalStored += stored;
     }
 
-    let stored = 0;
-    for (const state of currentData) {
-      const pastValue = pastByRegion[state.state_id];
-      if (!pastValue || pastValue === 0) continue;
-
-      const growthPct =
-        ((state.median_listing_price - pastValue) / pastValue) * 100;
-
-      const { error } = await this.supabase.from('calculated_metrics').upsert(
-        {
-          geography_id: state.state_id,
-          geography_type: 'state',
-          geography_name: state.state_name,
-          period_date: targetDate,
-          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
-          calculated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'geography_id,geography_type,period_date',
-        },
-      );
-
-      if (!error) stored++;
-    }
-
-    return { processed: currentData.length, stored };
+    return { processed: totalProcessed, stored: totalStored };
   }
 
   /**
@@ -1088,13 +1142,13 @@ export class CalculatedMetricsService {
       .not('value', 'is', null);
 
     // Fallback if exact date match fails (ZHVI might be updated at different cadence than ZORI)
-    if (!zhviData || zhviData.length === 0) {
-      // Find closest ZHVI date
+    let zhviRows: Array<{ region_id: number; value: number; cbsa_code: string | null }> = zhviData ?? [];
+    if (zhviRows.length === 0) {
       const { data: zhviDateRow } = await this.supabase
         .from('zillow_metro')
         .select('period_date')
         .eq('metric_name', 'zhvi')
-        .lte('period_date', targetDate) // Look for same or previous month
+        .lte('period_date', targetDate)
         .order('period_date', { ascending: false })
         .limit(1)
         .single();
@@ -1107,26 +1161,17 @@ export class CalculatedMetricsService {
           .eq('period_date', zhviDateRow.period_date)
           .not('value', 'is', null);
 
-        if (zhviDataFallback) {
-          // Proceed with fallback data
-          // We need to map it
-          // Let's refactor this block to be cleaner or re-assign zhviData
-          // But const cannot be reassigned.
-          // Let's just create a map here
+        if (zhviDataFallback && zhviDataFallback.length > 0) {
+          zhviRows = zhviDataFallback;
         }
       }
     }
 
-    // Simpler approach: Fetch ZHVI for the target date. If empty, warn/skip.
-    // Assuming Zillow data is monthly aligned.
-
-    // Build price lookup by CBSA code
+    // Build price lookup by CBSA code (from matched or fallback ZHVI date)
     const priceByCode: Record<string, number> = {};
-    if (zhviData) {
-      for (const row of zhviData) {
-        if (row.cbsa_code && row.value) {
-          priceByCode[row.cbsa_code] = row.value;
-        }
+    for (const row of zhviRows) {
+      if (row.cbsa_code && row.value) {
+        priceByCode[row.cbsa_code] = row.value;
       }
     }
 

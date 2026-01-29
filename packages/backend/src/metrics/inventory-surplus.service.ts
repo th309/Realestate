@@ -30,7 +30,7 @@ export class InventorySurplusService {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   // ============================================================================
   // CACHE HELPERS
@@ -128,143 +128,112 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all metros
    */
-  async calculateForMetros(): Promise<{
+  async calculateForMetros(year?: number): Promise<{
     processed: number;
     stored: number;
     debug?: any;
   }> {
-    // Get latest period date
-    const { data: latestDateRow } = await this.supabase
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_metro')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return {
-        processed: 0,
-        stored: 0,
-        debug: { error: 'No latest date found' },
-      };
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      console.log(`[InventorySurplus] Filtering metros for year: ${year}`);
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = new Date(latestDateRow.period_date);
-    const targetYear = targetDate.getUTCFullYear();
-    const targetMonth = targetDate.getUTCMonth() + 1;
-    const targetDay = targetDate.getUTCDate();
+    let totalProcessed = 0;
+    let totalStored = 0;
+    const allUpsertErrors: string[] = [];
 
     console.log(
-      `[InventorySurplus] Target date: ${latestDateRow.period_date}, Year: ${targetYear}, Month: ${targetMonth}, Day: ${targetDay}`,
+      `[InventorySurplus] Backfilling metros for ${uniqueDates.length} dates...`,
     );
 
-    // Get current inventory data
-    const { data: currentData } = await this.supabase
-      .from('realtor_metro')
-      .select('cbsa_code, cbsa_title, active_listing_count')
-      .eq('period_date', latestDateRow.period_date)
-      .not('active_listing_count', 'is', null);
+    for (const dateStr of uniqueDates) {
+      const targetDate = new Date(dateStr);
+      const targetYear = targetDate.getUTCFullYear();
+      const targetMonth = targetDate.getUTCMonth() + 1;
+      const targetDay = targetDate.getUTCDate();
 
-    if (!currentData || currentData.length === 0) {
-      return {
-        processed: 0,
-        stored: 0,
-        debug: { error: 'No current data found' },
-      };
-    }
+      const { data: currentData } = await this.supabase
+        .from('realtor_metro')
+        .select('cbsa_code, cbsa_title, active_listing_count')
+        .eq('period_date', dateStr)
+        .not('active_listing_count', 'is', null);
 
-    console.log(
-      `[InventorySurplus] Found ${currentData.length} metros with current data`,
-    );
+      if (!currentData || currentData.length === 0) continue;
 
-    // Get historical data (same month in previous 5 years)
-    const historicalByRegion = await this.getHistoricalInventory(
-      'realtor_metro',
-      'cbsa_code',
-      targetYear,
-      targetMonth,
-      targetDay,
-    );
+      const historicalByRegion = await this.getHistoricalInventory(
+        'realtor_metro',
+        'cbsa_code',
+        targetYear,
+        targetMonth,
+        targetDay,
+      );
 
-    console.log(
-      `[InventorySurplus] Historical data for ${historicalByRegion.size} regions`,
-    );
+      let recordsToUpsert: any[] = [];
 
-    // Calculate and store
-    let stored = 0;
-    let skippedNoHistory = 0;
-    const upsertErrors: string[] = [];
-    const recordsToUpsert: any[] = [];
+      for (const metro of currentData) {
+        const historicalValues = historicalByRegion.get(metro.cbsa_code);
+        const avg = this.calculate5YearAverage(historicalValues || []);
 
-    for (const metro of currentData) {
-      const historicalValues = historicalByRegion.get(metro.cbsa_code);
-      const avg = this.calculate5YearAverage(historicalValues || []);
+        if (avg === null) continue;
 
-      if (avg === null) {
-        skippedNoHistory++;
-        continue;
+        // Calculate as percentage: ((current - avg) / avg) * 100
+        const surplusPct = ((metro.active_listing_count - avg) / avg) * 100;
+
+        recordsToUpsert.push({
+          geography_id: metro.cbsa_code,
+          geography_type: 'metro',
+          geography_name: metro.cbsa_title,
+          period_date: dateStr,
+          inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
+          calculated_at: new Date().toISOString(),
+        });
+
+        if (recordsToUpsert.length >= this.BATCH_SIZE) {
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(recordsToUpsert, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (error) {
+            allUpsertErrors.push(`${dateStr}: ${error.message}`);
+          } else {
+            totalStored += recordsToUpsert.length;
+          }
+          recordsToUpsert = [];
+        }
       }
 
-      // Calculate as percentage: ((current - avg) / avg) * 100
-      const surplusPct = ((metro.active_listing_count - avg) / avg) * 100;
-
-      recordsToUpsert.push({
-        geography_id: metro.cbsa_code,
-        geography_type: 'metro',
-        geography_name: metro.cbsa_title,
-        period_date: latestDateRow.period_date,
-        inventory_surplus_pct: Math.round(surplusPct * 100) / 100, // 2 decimal places
-        calculated_at: new Date().toISOString(),
-      });
-
-      if (recordsToUpsert.length >= this.BATCH_SIZE) {
+      // Upsert remaining records
+      if (recordsToUpsert.length > 0) {
         const { error } = await this.supabase
           .from('calculated_metrics')
           .upsert(recordsToUpsert, {
             onConflict: 'geography_id,geography_type,period_date',
           });
         if (error) {
-          upsertErrors.push(error.message);
-          console.error(`[InventorySurplus] Upsert error: ${error.message}`);
+          allUpsertErrors.push(`${dateStr} (last batch): ${error.message}`);
         } else {
-          stored += recordsToUpsert.length;
+          totalStored += recordsToUpsert.length;
         }
-        recordsToUpsert.length = 0;
       }
+      totalProcessed += currentData.length;
     }
-
-    // Upsert remaining records
-    if (recordsToUpsert.length > 0) {
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, {
-          onConflict: 'geography_id,geography_type,period_date',
-        });
-      if (error) {
-        upsertErrors.push(error.message);
-        console.error(
-          `[InventorySurplus] Final upsert error: ${error.message}`,
-        );
-      } else {
-        stored += recordsToUpsert.length;
-      }
-    }
-
-    console.log(
-      `[InventorySurplus] Processed: ${currentData.length}, Stored: ${stored}, SkippedNoHistory: ${skippedNoHistory}`,
-    );
 
     return {
-      processed: currentData.length,
-      stored,
+      processed: totalProcessed,
+      stored: totalStored,
       debug: {
-        targetDate: latestDateRow.period_date,
-        targetYear,
-        targetMonth,
-        targetDay,
-        historicalRegions: historicalByRegion.size,
-        skippedNoHistory,
-        upsertErrors: upsertErrors.length > 0 ? upsertErrors : undefined,
+        errors: allUpsertErrors.length > 0 ? allUpsertErrors : undefined,
       },
     };
   }
@@ -272,151 +241,178 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for national level
    */
-  async calculateForNational(): Promise<{ processed: number; stored: number }> {
-    const { data: latestDateRow } = await this.supabase
+  async calculateForNational(year?: number): Promise<{ processed: number; stored: number }> {
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_national')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0 };
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      console.log(`[InventorySurplus] Filtering national for year: ${year}`);
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = new Date(latestDateRow.period_date);
-    const targetYear = targetDate.getUTCFullYear();
-    const targetMonth = targetDate.getUTCMonth() + 1;
-    const targetDay = targetDate.getUTCDate();
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-    // Get current national inventory
-    const { data: currentData } = await this.supabase
-      .from('realtor_national')
-      .select('country, active_listing_count')
-      .eq('period_date', latestDateRow.period_date)
-      .not('active_listing_count', 'is', null);
+    for (const dateStr of uniqueDates) {
+      const targetDate = new Date(dateStr);
+      const targetYear = targetDate.getUTCFullYear();
+      const targetMonth = targetDate.getUTCMonth() + 1;
+      const targetDay = targetDate.getUTCDate();
 
-    if (!currentData || currentData.length === 0) {
-      return { processed: 0, stored: 0 };
-    }
-
-    // Get historical data for national level
-    const historicalValues: number[] = [];
-    for (let i = 1; i <= 5; i++) {
-      const year = targetYear - i;
-      const month = String(targetMonth).padStart(2, '0');
-      const day = String(targetDay).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-
-      const { data } = await this.supabase
+      // Get current national inventory
+      const { data: currentData } = await this.supabase
         .from('realtor_national')
-        .select('active_listing_count')
+        .select('country, active_listing_count')
         .eq('period_date', dateStr)
-        .not('active_listing_count', 'is', null)
-        .single();
+        .not('active_listing_count', 'is', null);
 
-      if (data?.active_listing_count) {
-        historicalValues.push(data.active_listing_count);
+      if (!currentData || currentData.length === 0) continue;
+
+      // Get historical data for national level
+      const historicalValues: number[] = [];
+      for (let i = 1; i <= 5; i++) {
+        const year = targetYear - i;
+        const month = String(targetMonth).padStart(2, '0');
+        const day = String(targetDay).padStart(2, '0');
+        const pastDateStr = `${year}-${month}-${day}`;
+
+        const { data } = await this.supabase
+          .from('realtor_national')
+          .select('active_listing_count')
+          .eq('period_date', pastDateStr)
+          .not('active_listing_count', 'is', null)
+          .single();
+
+        if (data?.active_listing_count) {
+          historicalValues.push(data.active_listing_count);
+        }
       }
+
+      for (const national of currentData) {
+        const avg = this.calculate5YearAverage(historicalValues);
+
+        if (avg === null) continue;
+
+        // Calculate as percentage: ((current - avg) / avg) * 100
+        const surplusPct = ((national.active_listing_count - avg) / avg) * 100;
+
+        const { error } = await this.supabase.from('calculated_metrics').upsert(
+          {
+            geography_id: 'US',
+            geography_type: 'national',
+            geography_name: national.country || 'United States',
+            period_date: dateStr,
+            inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
+            calculated_at: new Date().toISOString(),
+          },
+          { onConflict: 'geography_id,geography_type,period_date' },
+        );
+
+        if (!error) totalStored++;
+      }
+      totalProcessed += currentData.length;
     }
 
-    let stored = 0;
-    for (const national of currentData) {
-      const avg = this.calculate5YearAverage(historicalValues);
-
-      if (avg === null) continue;
-
-      // Calculate as percentage: ((current - avg) / avg) * 100
-      const surplusPct = ((national.active_listing_count - avg) / avg) * 100;
-
-      const { error } = await this.supabase.from('calculated_metrics').upsert(
-        {
-          geography_id: 'US',
-          geography_type: 'national',
-          geography_name: national.country || 'United States',
-          period_date: latestDateRow.period_date,
-          inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
-          calculated_at: new Date().toISOString(),
-        },
-        { onConflict: 'geography_id,geography_type,period_date' },
-      );
-
-      if (!error) stored++;
-    }
-
-    return { processed: currentData.length, stored };
+    return { processed: totalProcessed, stored: totalStored };
   }
 
   /**
    * Calculate and store inventory surplus for all states
    */
-  async calculateForStates(): Promise<{ processed: number; stored: number }> {
-    const { data: latestDateRow } = await this.supabase
+  async calculateForStates(year?: number): Promise<{ processed: number; stored: number }> {
+    // Get ALL unique dates (descending)
+    const { data: allDates } = await this.supabase
       .from('realtor_state')
       .select('period_date')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!latestDateRow?.period_date) {
-      return { processed: 0, stored: 0 };
-    }
-
-    const targetDate = new Date(latestDateRow.period_date);
-    const targetYear = targetDate.getUTCFullYear();
-    const targetMonth = targetDate.getUTCMonth() + 1;
-    const targetDay = targetDate.getUTCDate();
-
-    const { data: currentData } = await this.supabase
-      .from('realtor_state')
-      .select('state_id, state_name, active_listing_count')
-      .eq('period_date', latestDateRow.period_date)
-      .not('active_listing_count', 'is', null);
-
-    if (!currentData || currentData.length === 0) {
-      return { processed: 0, stored: 0 };
-    }
-
-    const historicalByRegion = await this.getHistoricalInventory(
-      'realtor_state',
-      'state_id',
-      targetYear,
-      targetMonth,
-      targetDay,
+    let uniqueDates = Array.from(
+      new Set(allDates?.map((d) => d.period_date) || []),
     );
 
-    let stored = 0;
-    for (const state of currentData) {
-      const historicalValues = historicalByRegion.get(state.state_id);
-      const avg = this.calculate5YearAverage(historicalValues || []);
+    if (year) {
+      console.log(`[InventorySurplus] Filtering states for year: ${year}`);
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
+    }
 
-      if (avg === null) continue;
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-      // Calculate as percentage: ((current - avg) / avg) * 100
-      const surplusPct = ((state.active_listing_count - avg) / avg) * 100;
+    console.log(
+      `[InventorySurplus] Backfilling states for ${uniqueDates.length} dates...`,
+    );
 
-      const { error } = await this.supabase.from('calculated_metrics').upsert(
-        {
+    for (const dateStr of uniqueDates) {
+      const targetDate = new Date(dateStr);
+      const targetYear = targetDate.getUTCFullYear();
+      const targetMonth = targetDate.getUTCMonth() + 1;
+      const targetDay = targetDate.getUTCDate();
+
+      const { data: currentData } = await this.supabase
+        .from('realtor_state')
+        .select('state_id, state_name, active_listing_count')
+        .eq('period_date', dateStr)
+        .not('active_listing_count', 'is', null);
+
+      if (!currentData || currentData.length === 0) continue;
+
+      const historicalByRegion = await this.getHistoricalInventory(
+        'realtor_state',
+        'state_id',
+        targetYear,
+        targetMonth,
+        targetDay,
+      );
+
+      const recordsToUpsert: any[] = [];
+
+      for (const state of currentData) {
+        const historicalValues = historicalByRegion.get(state.state_id);
+        const avg = this.calculate5YearAverage(historicalValues || []);
+
+        if (avg === null) continue;
+
+        // Calculate as percentage: ((current - avg) / avg) * 100
+        const surplusPct = ((state.active_listing_count - avg) / avg) * 100;
+
+        recordsToUpsert.push({
           geography_id: state.state_id,
           geography_type: 'state',
           geography_name: state.state_name,
-          period_date: latestDateRow.period_date,
+          period_date: dateStr,
           inventory_surplus_pct: Math.round(surplusPct * 100) / 100,
           calculated_at: new Date().toISOString(),
-        },
-        { onConflict: 'geography_id,geography_type,period_date' },
-      );
+        });
+      }
 
-      if (!error) stored++;
+      if (recordsToUpsert.length > 0) {
+        const { error } = await this.supabase.from('calculated_metrics').upsert(
+          recordsToUpsert,
+          { onConflict: 'geography_id,geography_type,period_date' },
+        );
+        if (!error) totalStored += recordsToUpsert.length;
+      }
+
+      totalProcessed += currentData.length;
     }
 
-    return { processed: currentData.length, stored };
+    console.log(
+      `[InventorySurplus] Finished states. Processed: ${totalProcessed}, Stored: ${totalStored}`,
+    );
+    return { processed: totalProcessed, stored: totalStored };
   }
 
   /**
    * Calculate and store inventory surplus for all counties (paginated)
    */
-  async calculateForCounties(): Promise<{ processed: number; stored: number }> {
+  async calculateForCounties(year?: number): Promise<{ processed: number; stored: number }> {
     const { data: latestDateRow } = await this.supabase
       .from('realtor_county')
       .select('period_date')
@@ -511,7 +507,7 @@ export class InventorySurplusService {
   /**
    * Calculate and store inventory surplus for all zip codes (paginated)
    */
-  async calculateForZips(): Promise<{ processed: number; stored: number }> {
+  async calculateForZips(year?: number): Promise<{ processed: number; stored: number }> {
     const { data: latestDateRow } = await this.supabase
       .from('realtor_zip')
       .select('period_date')
@@ -654,7 +650,7 @@ export class InventorySurplusService {
   /**
    * Calculate inventory surplus for all geographies
    */
-  async calculateForAll(): Promise<{
+  async calculateForAll(year?: number): Promise<{
     national: { processed: number; stored: number };
     metros: { processed: number; stored: number };
     states: { processed: number; stored: number };
@@ -662,9 +658,9 @@ export class InventorySurplusService {
     zips: { processed: number; stored: number };
   }> {
     const [national, metros, states, counties, zips] = await Promise.all([
-      this.calculateForNational(),
-      this.calculateForMetros(),
-      this.calculateForStates(),
+      this.calculateForNational(year),
+      this.calculateForMetros(year),
+      this.calculateForStates(year),
       this.calculateForCounties(),
       this.calculateForZips(),
     ]);
