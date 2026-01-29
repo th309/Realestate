@@ -389,9 +389,9 @@ export class MetricsController {
    * Should be called monthly after new data is imported
    */
   @Post('calculate-investment-metrics')
-  async calculateInvestmentMetricsBatch() {
+  async calculateInvestmentMetricsBatch(@Query('year') year?: number) {
     const results =
-      await this.calculatedMetricsService.calculateAllInvestmentMetrics();
+      await this.calculatedMetricsService.calculateAllInvestmentMetrics(year);
     return {
       success: true,
       message: 'Investment metrics batch calculation completed',

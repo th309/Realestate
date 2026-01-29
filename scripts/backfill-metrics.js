@@ -21,6 +21,9 @@ const ENDPOINTS = [
     { path: '/api/metrics/calculate-5yr-growth/national', name: '5-Year Growth (National)' },
     { path: '/api/metrics/calculate-5yr-growth/states', name: '5-Year Growth (States)' },
     { path: '/api/metrics/calculate-5yr-growth/metros', name: '5-Year Growth (Metros)' },
+
+    // 3. Investment Metrics
+    { path: '/api/metrics/calculate-investment-metrics', name: 'Investment Metrics (All Geos)' },
 ];
 
 function postRequest(path) {

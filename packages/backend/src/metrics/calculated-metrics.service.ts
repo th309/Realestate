@@ -1107,156 +1107,169 @@ export class CalculatedMetricsService {
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all metros
    * Combines Zillow ZORI data with Realtor median_listing_price
    */
-  async calculateInvestmentMetricsForMetros(): Promise<{
+  async calculateInvestmentMetricsForMetros(year?: number): Promise<{
     processed: number;
     stored: number;
     errors: string[];
   }> {
     const errors: string[] = [];
 
-    // Get latest ZORI date from zillow_metro table (long format)
-    const { data: zoriDateRow } = await this.supabase
+    // Get ALL unique ZORI dates (descending)
+    const { data: zoriDates } = await this.supabase
       .from('zillow_metro')
       .select('period_date')
       .eq('metric_name', 'zori')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!zoriDateRow?.period_date) {
-      return { processed: 0, stored: 0, errors: ['No ZORI data available'] };
+    let uniqueDates = Array.from(
+      new Set(zoriDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      console.log(
+        `[CalculatedMetrics] Filtering investment metrics (metros) for year: ${year}`,
+      );
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = zoriDateRow.period_date;
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-    // Get ZORI (rent) data for all metros from zillow_metro table
-    const { data: zoriData, error: zoriError } = await this.supabase
-      .from('zillow_metro')
-      .select('region_id, region_name, value, cbsa_code')
-      .eq('metric_name', 'zori')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null);
-
-    if (zoriError || !zoriData) {
-      return {
-        processed: 0,
-        stored: 0,
-        errors: [zoriError?.message || 'Failed to fetch ZORI data'],
-      };
-    }
-
-    // Get ZHVI (value) data for all metros from zillow_metro table
-    // Use same date as ZORI if possible, or latest available
-    const { data: zhviData, error: zhviError } = await this.supabase
-      .from('zillow_metro')
-      .select('region_id, value, cbsa_code')
-      .eq('metric_name', 'zhvi')
-      .eq('period_date', targetDate) // Ideally matched
-      // If strict date matching fails often, we might need fallback logic to find closest zhvi date
-      .not('value', 'is', null);
-
-    // Fallback if exact date match fails (ZHVI might be updated at different cadence than ZORI)
-    let zhviRows: Array<{ region_id: number; value: number; cbsa_code: string | null }> = zhviData ?? [];
-    if (zhviRows.length === 0) {
-      const { data: zhviDateRow } = await this.supabase
+    for (const targetDate of uniqueDates) {
+      // Get ZORI (rent) data for all metros from zillow_metro table
+      const { data: zoriData, error: zoriError } = await this.supabase
         .from('zillow_metro')
-        .select('period_date')
+        .select('region_id, region_name, value, cbsa_code')
+        .eq('metric_name', 'zori')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null);
+
+      if (zoriError || !zoriData) {
+        errors.push(
+          `${targetDate}: ${zoriError?.message || 'Failed to fetch ZORI data'}`,
+        );
+        continue;
+      }
+
+      // Get ZHVI (value) data for all metros from zillow_metro table
+      // Use same date as ZORI if possible, or latest available at that time
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_metro')
+        .select('region_id, value, cbsa_code')
         .eq('metric_name', 'zhvi')
-        .lte('period_date', targetDate)
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
+        .eq('period_date', targetDate) // Ideally matched
+        .not('value', 'is', null);
 
-      if (zhviDateRow?.period_date) {
-        const { data: zhviDataFallback } = await this.supabase
+      // Fallback if exact date match fails (ZHVI might be updated at different cadence than ZORI)
+      let zhviRows: Array<{
+        region_id: number;
+        value: number;
+        cbsa_code: string | null;
+      }> = zhviData ?? [];
+      if (zhviRows.length === 0) {
+        const { data: zhviDateRow } = await this.supabase
           .from('zillow_metro')
-          .select('region_id, value, cbsa_code')
+          .select('period_date')
           .eq('metric_name', 'zhvi')
-          .eq('period_date', zhviDateRow.period_date)
-          .not('value', 'is', null);
+          .lte('period_date', targetDate)
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
 
-        if (zhviDataFallback && zhviDataFallback.length > 0) {
-          zhviRows = zhviDataFallback;
+        if (zhviDateRow?.period_date) {
+          const { data: zhviDataFallback } = await this.supabase
+            .from('zillow_metro')
+            .select('region_id, value, cbsa_code')
+            .eq('metric_name', 'zhvi')
+            .eq('period_date', zhviDateRow.period_date)
+            .not('value', 'is', null);
+
+          if (zhviDataFallback && zhviDataFallback.length > 0) {
+            zhviRows = zhviDataFallback;
+          }
         }
       }
-    }
 
-    // Build price lookup by CBSA code (from matched or fallback ZHVI date)
-    const priceByCode: Record<string, number> = {};
-    for (const row of zhviRows) {
-      if (row.cbsa_code && row.value) {
-        priceByCode[row.cbsa_code] = row.value;
+      // Build price lookup by CBSA code (from matched or fallback ZHVI date)
+      const priceByCode: Record<string, number> = {};
+      for (const row of zhviRows) {
+        if (row.cbsa_code && row.value) {
+          priceByCode[row.cbsa_code] = row.value;
+        }
       }
-    }
 
-    // Calculate and batch upsert
-    let stored = 0;
-    const batchSize = 100;
-    const recordsToUpsert: any[] = [];
+      // Calculate and batch upsert
+      let storedInBatch = 0;
+      const batchSize = 100;
+      let recordsToUpsert: any[] = [];
 
-    for (const metro of zoriData) {
-      const cbsaCode = metro.cbsa_code;
-      const zori = metro.value;
-      const price = cbsaCode ? priceByCode[cbsaCode] : null;
+      for (const metro of zoriData) {
+        const cbsaCode = metro.cbsa_code;
+        const zori = metro.value;
+        const price = cbsaCode ? priceByCode[cbsaCode] : null;
 
-      if (!zori || !price) continue;
+        if (!zori || !price) continue;
 
-      const capRate = this.calculateCapRate(zori, price);
-      const grossYield = this.calculateGrossYield(zori, price);
-      const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-      const grm = this.calculateGRM(price, zori);
+        const capRate = this.calculateCapRate(zori, price);
+        const grossYield = this.calculateGrossYield(zori, price);
+        const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
+        const grm = this.calculateGRM(price, zori);
 
-      recordsToUpsert.push({
-        geography_id: cbsaCode,
-        geography_type: 'metro',
-        geography_name: metro.region_name,
-        period_date: targetDate,
-        cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
-        gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
-        rent_to_price_ratio: rentToPriceRatio
-          ? Math.round(rentToPriceRatio * 10000) / 10000
-          : null,
-        grm: grm ? Math.round(grm * 100) / 100 : null,
-        calculated_at: new Date().toISOString(),
-      });
+        recordsToUpsert.push({
+          geography_id: cbsaCode,
+          geography_type: 'metro',
+          geography_name: metro.region_name,
+          period_date: targetDate,
+          cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
+          gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
+          rent_to_price_ratio: rentToPriceRatio
+            ? Math.round(rentToPriceRatio * 10000) / 10000
+            : null,
+          grm: grm ? Math.round(grm * 100) / 100 : null,
+          calculated_at: new Date().toISOString(),
+        });
 
-      if (recordsToUpsert.length >= batchSize) {
+        if (recordsToUpsert.length >= batchSize) {
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(recordsToUpsert, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (error) {
+            errors.push(`${targetDate}: ${error.message}`);
+          } else {
+            storedInBatch += recordsToUpsert.length;
+          }
+          recordsToUpsert = [];
+        }
+      }
+
+      // Upsert remaining
+      if (recordsToUpsert.length > 0) {
         const { error } = await this.supabase
           .from('calculated_metrics')
           .upsert(recordsToUpsert, {
             onConflict: 'geography_id,geography_type,period_date',
           });
         if (error) {
-          errors.push(error.message);
+          errors.push(`${targetDate}: ${error.message}`);
         } else {
-          stored += recordsToUpsert.length;
+          storedInBatch += recordsToUpsert.length;
         }
-        recordsToUpsert.length = 0;
       }
+
+      totalProcessed += zoriData.length;
+      totalStored += storedInBatch;
     }
 
-    // Upsert remaining
-    if (recordsToUpsert.length > 0) {
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, {
-          onConflict: 'geography_id,geography_type,period_date',
-        });
-      if (error) {
-        errors.push(error.message);
-      } else {
-        stored += recordsToUpsert.length;
-      }
-    }
-
-    return { processed: zoriData.length, stored, errors };
+    return { processed: totalProcessed, stored: totalStored, errors };
   }
 
   /**
    * Calculate and store overvalued percentage for all metros
    * Uses ZHVI and Census median income data
    */
-  async calculateOvervaluedForMetros(): Promise<{
+  async calculateOvervaluedForMetros(year?: number): Promise<{
     processed: number;
     stored: number;
     errors: string[];
@@ -1264,109 +1277,125 @@ export class CalculatedMetricsService {
     const errors: string[] = [];
     const NATIONAL_MEDIAN_INCOME = 75000;
 
-    // Get latest ZHVI date from zillow_metro table (long format)
-    const { data: zhviDateRow } = await this.supabase
+    // Get ALL unique ZHVI dates
+    const { data: zhviDates } = await this.supabase
       .from('zillow_metro')
       .select('period_date')
       .eq('metric_name', 'zhvi')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!zhviDateRow?.period_date) {
-      return { processed: 0, stored: 0, errors: ['No ZHVI data available'] };
+    let uniqueDates = Array.from(
+      new Set(zhviDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
     }
 
-    const targetDate = zhviDateRow.period_date;
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-    // Get ZHVI data for all metros from zillow_metro table
-    const { data: zhviData, error: zhviError } = await this.supabase
-      .from('zillow_metro')
-      .select('region_id, region_name, value, cbsa_code')
-      .eq('metric_name', 'zhvi')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null);
-
-    if (zhviError || !zhviData) {
-      return {
-        processed: 0,
-        stored: 0,
-        errors: [zhviError?.message || 'Failed to fetch ZHVI data'],
-      };
-    }
-
-    // Get Census median income data
+    // Pre-fetch all census income data to avoid fetching in loop
     const { data: incomeData } = await this.supabase
       .from('census_data')
-      .select('geography_id, value')
+      .select('geography_id, value, year')
       .eq('geography_type', 'metro')
       .eq('metric_name', 'median_income')
       .order('year', { ascending: false });
 
-    // Build income lookup
-    const incomeByGeo: Record<string, number> = {};
+    // Group income by year (year -> cbsa -> income)
+    const incomeByYearAndGeo: Record<number, Record<string, number>> = {};
     if (incomeData) {
       for (const row of incomeData) {
-        if (row.value && !incomeByGeo[row.geography_id]) {
-          incomeByGeo[row.geography_id] = Number(row.value);
-        }
+        const y = row.year;
+        if (!incomeByYearAndGeo[y]) incomeByYearAndGeo[y] = {};
+        // Assuming row.value is numeric string
+        if (row.value) incomeByYearAndGeo[y][row.geography_id] = Number(row.value);
       }
     }
+    const availableIncomeYears = Object.keys(incomeByYearAndGeo).map(Number).sort((a, b) => b - a);
 
-    // Calculate and batch upsert
-    let stored = 0;
-    const batchSize = 100;
-    const recordsToUpsert: any[] = [];
+    for (const targetDate of uniqueDates) {
+      // Get ZHVI data for all metros for this date
+      const { data: zhviData, error: zhviError } = await this.supabase
+        .from('zillow_metro')
+        .select('region_id, region_name, value, cbsa_code')
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null);
 
-    for (const metro of zhviData) {
-      const cbsaCode = metro.cbsa_code;
-      const zhvi = metro.value;
-      const medianIncome =
-        (cbsaCode && incomeByGeo[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
+      if (zhviError || !zhviData) {
+        errors.push(`${targetDate}: ${zhviError?.message}`);
+        continue;
+      }
 
-      const overvaluedPct = this.calculateOvervalued(zhvi, medianIncome);
+      // Determine efficient income year for this targetDate
+      const targetYear = parseInt(targetDate.substring(0, 4));
+      // Find closest year <= targetYear
+      let bestIncomeYear = availableIncomeYears.find(y => y <= targetYear);
+      // If none found (targetYear is older than oldest census data), use oldest available?
+      // Or if targetYear is newer than newest census, use newest.
+      if (!bestIncomeYear) {
+        if (availableIncomeYears.length > 0) bestIncomeYear = availableIncomeYears[0]; // Newest
+      }
 
-      if (overvaluedPct === null) continue;
+      const incomeMap = bestIncomeYear ? incomeByYearAndGeo[bestIncomeYear] : {};
 
-      recordsToUpsert.push({
-        geography_id: cbsaCode,
-        geography_type: 'metro',
-        geography_name: metro.region_name,
-        period_date: targetDate,
-        overvalued_pct: Math.round(overvaluedPct * 10) / 10,
-        calculated_at: new Date().toISOString(),
-      });
+      let storedInBatch = 0;
+      const batchSize = 100;
+      let recordsToUpsert: any[] = [];
 
-      if (recordsToUpsert.length >= batchSize) {
+      for (const metro of zhviData) {
+        const cbsaCode = metro.cbsa_code;
+        const zhvi = metro.value;
+        const medianIncome = (cbsaCode && incomeMap[cbsaCode]) || NATIONAL_MEDIAN_INCOME;
+
+        const overvaluedPct = this.calculateOvervalued(zhvi, medianIncome);
+
+        if (overvaluedPct === null) continue;
+
+        recordsToUpsert.push({
+          geography_id: cbsaCode,
+          geography_type: 'metro',
+          geography_name: metro.region_name,
+          period_date: targetDate,
+          overvalued_pct: Math.round(overvaluedPct * 10) / 10,
+          calculated_at: new Date().toISOString(),
+        });
+
+        if (recordsToUpsert.length >= batchSize) {
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(recordsToUpsert, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (error) {
+            errors.push(`${targetDate}: ${error.message}`);
+          } else {
+            storedInBatch += recordsToUpsert.length;
+          }
+          recordsToUpsert = [];
+        }
+      }
+
+      if (recordsToUpsert.length > 0) {
         const { error } = await this.supabase
           .from('calculated_metrics')
           .upsert(recordsToUpsert, {
             onConflict: 'geography_id,geography_type,period_date',
           });
         if (error) {
-          errors.push(error.message);
+          errors.push(`${targetDate}: ${error.message}`);
         } else {
-          stored += recordsToUpsert.length;
+          storedInBatch += recordsToUpsert.length;
         }
-        recordsToUpsert.length = 0;
       }
+
+      totalProcessed += zhviData.length;
+      totalStored += storedInBatch;
     }
 
-    // Upsert remaining
-    if (recordsToUpsert.length > 0) {
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, {
-          onConflict: 'geography_id,geography_type,period_date',
-        });
-      if (error) {
-        errors.push(error.message);
-      } else {
-        stored += recordsToUpsert.length;
-      }
-    }
-
-    return { processed: zhviData.length, stored, errors };
+    return { processed: totalProcessed, stored: totalStored, errors };
   }
 
   /**
@@ -1438,173 +1467,296 @@ export class CalculatedMetricsService {
   /**
    * Calculate and store investment metrics (cap_rate, gross_yield, rent_to_price, grm) for all counties
    */
-  async calculateInvestmentMetricsForCounties(): Promise<{
+  async calculateInvestmentMetricsForCounties(year?: number): Promise<{
     processed: number;
     stored: number;
     errors: string[];
   }> {
     const errors: string[] = [];
 
-    // Get latest ZORI date from zillow_county table
-    const { data: zoriDateRow } = await this.supabase
+    // Get ALL unique ZORI dates from zillow_county table matches
+    const { data: zoriDates } = await this.supabase
       .from('zillow_county')
       .select('period_date')
       .eq('metric_name', 'zori')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+      .order('period_date', { ascending: false });
 
-    if (!zoriDateRow?.period_date) {
-      return {
-        processed: 0,
-        stored: 0,
-        errors: ['No County ZORI data available'],
-      };
-    }
-
-    const targetDate = zoriDateRow.period_date;
-
-    // Get ZORI (rent) data for all counties
-    // Note: Zillow county table has fips_code
-    const { data: zoriData } = await this.supabase
-      .from('zillow_county')
-      .select('region_id, region_name, value, fips_code')
-      .eq('metric_name', 'zori')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null);
-
-    if (!zoriData || zoriData.length === 0) {
-      return { processed: 0, stored: 0, errors: ['No County ZORI data found'] };
-    }
-
-    // Get ZHVI data (property value) for all counties
-    const { data: zhviData } = await this.supabase
-      .from('zillow_county')
-      .select('region_id, region_name, value, fips_code')
-      .eq('metric_name', 'zhvi')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null);
-
-    // Build price and name lookups by FIPS (5-digit normalized)
-    const priceByCode: Record<string, number> = {};
-    const nameByCode: Record<string, string> = {};
-    const normalizeFips = (f: string | null | undefined) =>
-      f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f;
-    if (zhviData) {
-      for (const row of zhviData) {
-        const fips = normalizeFips(row.fips_code);
-        if (fips && row.value) {
-          priceByCode[fips] = row.value;
-          if (row.region_name) nameByCode[fips] = row.region_name;
-        }
-      }
-    }
-
-    const countyFipsWithZori = new Set(
-      zoriData.map((c) => normalizeFips(c.fips_code)).filter(Boolean),
+    let uniqueDates = Array.from(
+      new Set(zoriDates?.map((d) => d.period_date) || []),
     );
 
-    // Calculate and batch upsert (ZORI-based)
-    let stored = 0;
-    const batchSize = 100;
-    const recordsToUpsert: any[] = [];
+    if (year) {
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
+    }
 
-    for (const county of zoriData) {
-      const fipsCode = normalizeFips(county.fips_code);
-      if (!fipsCode) continue;
-      const zori = county.value;
-      const price = priceByCode[fipsCode];
+    let totalProcessed = 0;
+    let totalStored = 0;
 
-      if (!zori || !price) continue;
+    for (const targetDate of uniqueDates) {
+      // Get ZORI (rent) data for all counties
+      const { data: zoriData } = await this.supabase
+        .from('zillow_county')
+        .select('region_id, region_name, value, fips_code')
+        .eq('metric_name', 'zori')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null);
 
-      const capRate = this.calculateCapRate(zori, price);
-      const grossYield = this.calculateGrossYield(zori, price);
-      const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-      const grm = this.calculateGRM(price, zori);
+      if (!zoriData || zoriData.length === 0) {
+        // Skip dates with no data (common if ZORI is less frequent)
+        continue;
+      }
 
-      recordsToUpsert.push({
-        geography_id: fipsCode,
-        geography_type: 'county',
-        geography_name: county.region_name,
-        period_date: targetDate,
-        cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
-        gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
-        rent_to_price_ratio: rentToPriceRatio
-          ? Math.round(rentToPriceRatio * 10000) / 10000
-          : null,
-        grm: grm ? Math.round(grm * 100) / 100 : null,
-        calculated_at: new Date().toISOString(),
-      });
+      // Get ZHVI data (property value) for all counties
+      const { data: zhviData } = await this.supabase
+        .from('zillow_county')
+        .select('region_id, region_name, value, fips_code')
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null);
 
-      if (recordsToUpsert.length >= batchSize) {
+      // Build price and name lookups by FIPS (5-digit normalized)
+      const priceByCode: Record<string, number> = {};
+      const nameByCode: Record<string, string> = {};
+      const normalizeFips = (f: string | null | undefined) =>
+        f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f;
+      if (zhviData) {
+        for (const row of zhviData) {
+          const fips = normalizeFips(row.fips_code);
+          if (fips && row.value) {
+            priceByCode[fips] = row.value;
+            if (row.region_name) nameByCode[fips] = row.region_name;
+          }
+        }
+      }
+
+      const countyFipsWithZori = new Set(
+        zoriData.map((c) => normalizeFips(c.fips_code)).filter(Boolean),
+      );
+
+      // Calculate and batch upsert (ZORI-based)
+      let storedInBatch = 0;
+      const batchSize = 100;
+      let recordsToUpsert: any[] = [];
+
+      for (const county of zoriData) {
+        const fipsCode = normalizeFips(county.fips_code);
+        if (!fipsCode) continue;
+        const zori = county.value;
+        const price = priceByCode[fipsCode];
+
+        if (!zori || !price) continue;
+
+        const capRate = this.calculateCapRate(zori, price);
+        const grossYield = this.calculateGrossYield(zori, price);
+        const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
+        const grm = this.calculateGRM(price, zori);
+
+        recordsToUpsert.push({
+          geography_id: fipsCode,
+          geography_type: 'county',
+          geography_name: county.region_name,
+          period_date: targetDate,
+          cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
+          gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
+          rent_to_price_ratio: rentToPriceRatio
+            ? Math.round(rentToPriceRatio * 10000) / 10000
+            : null,
+          grm: grm ? Math.round(grm * 100) / 100 : null,
+          calculated_at: new Date().toISOString(),
+        });
+
+        if (recordsToUpsert.length >= batchSize) {
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(recordsToUpsert, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (error) {
+            errors.push(`${targetDate}: ${error.message}`);
+          } else {
+            storedInBatch += recordsToUpsert.length;
+          }
+          recordsToUpsert = [];
+        }
+      }
+
+      if (recordsToUpsert.length > 0) {
         const { error } = await this.supabase
           .from('calculated_metrics')
           .upsert(recordsToUpsert, {
             onConflict: 'geography_id,geography_type,period_date',
           });
         if (error) {
-          errors.push(error.message);
+          errors.push(`${targetDate}: ${error.message}`);
         } else {
-          stored += recordsToUpsert.length;
+          storedInBatch += recordsToUpsert.length;
         }
-        recordsToUpsert.length = 0;
       }
-    }
 
-    if (recordsToUpsert.length > 0) {
-      const { error } = await this.supabase
-        .from('calculated_metrics')
-        .upsert(recordsToUpsert, {
-          onConflict: 'geography_id,geography_type,period_date',
-        });
-      if (error) {
-        errors.push(error.message);
-      } else {
-        stored += recordsToUpsert.length;
-      }
-      recordsToUpsert.length = 0;
-    }
+      // County fallback logic skipped inside loop for brevity unless critical?
+      // The original code had HUD FMR fallback. I should include it.
+      // But HUD FMR is annual. Doing it for EVERY month in history might be redundant/slow if data doesn't change.
+      // However, if we filter by year, we can run it once per year if targetDate is relevant?
+      // Or just include it. The original code ran it for the single Latest Date.
+      // If I run history, I should ideally match HUD year to targetDate year.
+      // Original code Logic: `const { data: latestYearRow } = ... limit(1)`.
+      // I will adapt HUD logic to find FMR for `targetDate.getFullYear()`.
 
-    // County fallback: HUD FMR as rent where we have ZHVI but no ZORI (reliable county rent coverage)
-    const fipsWithZhviOnly = Object.keys(priceByCode).filter(
-      (fips) => !countyFipsWithZori.has(fips),
-    );
-    if (fipsWithZhviOnly.length > 0) {
-      const { data: latestYearRow } = await this.supabase
-        .from('hud_fmr')
-        .select('year')
-        .order('year', { ascending: false })
-        .limit(1)
-        .single();
-      const fmrYear = latestYearRow?.year;
-      if (fmrYear != null) {
+      const targetYear = parseInt(targetDate.substring(0, 4));
+
+      const fipsWithZhviOnly = Object.keys(priceByCode).filter(
+        (fips) => !countyFipsWithZori.has(fips),
+      );
+
+      if (fipsWithZhviOnly.length > 0) {
+        // Fetch HUD for targetYear
+        // Check if data exists for this year
         const { data: fmrRows } = await this.supabase
           .from('hud_fmr')
           .select('fips_code, fmr_2br, county_name')
-          .eq('year', fmrYear)
+          .eq('year', targetYear)
           .not('fmr_2br', 'is', null);
-        const fmrByFips: Record<string, { rent: number; name?: string }> = {};
-        if (fmrRows) {
+
+        if (fmrRows && fmrRows.length > 0) {
+          const fmrByFips: Record<string, { rent: number; name?: string }> = {};
           for (const r of fmrRows) {
             const fips = normalizeFips(r.fips_code);
             if (fips && r.fmr_2br != null) {
               fmrByFips[fips] = { rent: r.fmr_2br, name: r.county_name ?? undefined };
             }
           }
+
+          let hudUpsert: any[] = [];
+          for (const fips of fipsWithZhviOnly) {
+            const fmr = fmrByFips[fips];
+            const price = priceByCode[fips];
+            if (!fmr || !price || fmr.rent <= 0) continue;
+
+            const capRate = this.calculateCapRate(fmr.rent, price);
+            const grossYield = this.calculateGrossYield(fmr.rent, price);
+            const rentToPriceRatio = this.calculateRentToPriceRatio(fmr.rent, price);
+            const grm = this.calculateGRM(price, fmr.rent);
+
+            hudUpsert.push({
+              geography_id: fips,
+              geography_type: 'county',
+              geography_name: fmr.name || nameByCode[fips] || `County ${fips}`,
+              period_date: targetDate,
+              cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
+              gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
+              rent_to_price_ratio: rentToPriceRatio ? Math.round(rentToPriceRatio * 10000) / 10000 : null,
+              grm: grm ? Math.round(grm * 100) / 100 : null,
+              calculated_at: new Date().toISOString(),
+            });
+          }
+
+          if (hudUpsert.length > 0) {
+            // Batch HUD upsert if large? usually small subset? 
+            // Counties are ~3000. Just upsert all is fine or batch 1000.
+            const { error } = await this.supabase.from('calculated_metrics').upsert(hudUpsert, { onConflict: 'geography_id,geography_type,period_date' });
+            if (!error) storedInBatch += hudUpsert.length;
+          }
         }
-        const hudUpsert: any[] = [];
-        for (const fips of fipsWithZhviOnly) {
-          const fmr = fmrByFips[fips];
-          const price = priceByCode[fips];
-          if (!fmr || !price || fmr.rent <= 0) continue;
-          const capRate = this.calculateCapRate(fmr.rent, price);
-          const grossYield = this.calculateGrossYield(fmr.rent, price);
-          const rentToPriceRatio = this.calculateRentToPriceRatio(fmr.rent, price);
-          const grm = this.calculateGRM(price, fmr.rent);
-          hudUpsert.push({
-            geography_id: fips,
-            geography_type: 'county',
-            geography_name: fmr.name || nameByCode[fips] || `County ${fips}`,
+      }
+
+      totalProcessed += zoriData.length;
+      totalStored += storedInBatch;
+    }
+
+    return { processed: totalProcessed, stored: totalStored, errors };
+  }
+
+  /**
+   * Calculate and store investment metrics for all ZIP codes
+   */
+  async calculateInvestmentMetricsForZips(year?: number): Promise<{
+    processed: number;
+    stored: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+
+    // Get ALL unique ZORI dates from zillow_metro table as proxy
+    const { data: zoriDates } = await this.supabase
+      .from('zillow_metro')
+      .select('period_date')
+      .eq('metric_name', 'zori')
+      .order('period_date', { ascending: false });
+
+    let uniqueDates = Array.from(
+      new Set(zoriDates?.map((d) => d.period_date) || []),
+    );
+
+    if (year) {
+      uniqueDates = uniqueDates.filter((d) => d.startsWith(`${year}-`));
+    }
+
+    let totalProcessed = 0;
+    let totalStored = 0;
+
+    for (const targetDate of uniqueDates) {
+      // Get ZHVI data for all zips in the same period
+      // Limit to 50k to prevent OOM, though zips are ~33k usually.
+      const { data: zhviData } = await this.supabase
+        .from('zillow_zip')
+        .select('region_name, value, county_fips')
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null)
+        .limit(50000);
+
+      if (!zhviData || zhviData.length === 0) {
+        continue;
+      }
+
+      const priceByZip: Record<string, number> = {};
+      const zipToCounty: Record<string, string> = {};
+      const normalizeFipsZip = (f: string | null | undefined) =>
+        f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f ?? null;
+
+      for (const row of zhviData) {
+        priceByZip[row.region_name] = row.value;
+        if (row.county_fips) {
+          const fips = normalizeFipsZip(row.county_fips);
+          if (fips) zipToCounty[row.region_name] = fips;
+        }
+      }
+
+      const zipsWithZori = new Set<string>();
+      let offset = 0;
+      const pageSize = 5000;
+
+      // Fetch ZORI data for this date (paginated)
+      while (true) {
+        const { data: zoriData } = await this.supabase
+          .from('zillow_zip')
+          .select('region_id, region_name, value')
+          .eq('metric_name', 'zori')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(offset, offset + pageSize - 1);
+
+        if (!zoriData || zoriData.length === 0) break;
+
+        const recordsToUpsert: any[] = [];
+
+        for (const zip of zoriData) {
+          const zipCode = zip.region_name;
+          zipsWithZori.add(zipCode);
+          const zori = zip.value;
+          const price = priceByZip[zipCode];
+
+          if (!zori || !price) continue;
+
+          const capRate = this.calculateCapRate(zori, price);
+          const grossYield = this.calculateGrossYield(zori, price);
+          const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
+          const grm = this.calculateGRM(price, zori);
+
+          recordsToUpsert.push({
+            geography_id: zipCode,
+            geography_type: 'zip',
+            geography_name: zipCode,
             period_date: targetDate,
             cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
             gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
@@ -1615,113 +1767,71 @@ export class CalculatedMetricsService {
             calculated_at: new Date().toISOString(),
           });
         }
-        if (hudUpsert.length > 0) {
+
+        if (recordsToUpsert.length > 0) {
           const { error } = await this.supabase
             .from('calculated_metrics')
-            .upsert(hudUpsert, {
+            .upsert(recordsToUpsert, {
               onConflict: 'geography_id,geography_type,period_date',
             });
           if (error) {
-            errors.push(error.message);
+            errors.push(`${targetDate}: ${error.message}`);
           } else {
-            stored += hudUpsert.length;
+            totalStored += recordsToUpsert.length;
+          }
+        }
+
+        totalProcessed += zoriData.length;
+
+        if (zoriData.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      // ZIP fallback: estimated cap rate
+      const countyRentByFips: Record<string, number> = {};
+      const { data: countyZoriRows } = await this.supabase
+        .from('zillow_county')
+        .select('fips_code, value')
+        .eq('metric_name', 'zori')
+        .eq('period_date', targetDate)
+        .not('value', 'is', null);
+
+      if (countyZoriRows) {
+        for (const r of countyZoriRows) {
+          const fips = normalizeFipsZip(r.fips_code);
+          if (fips && r.value) countyRentByFips[fips] = r.value;
+        }
+      }
+
+      const targetYear = parseInt(targetDate.substring(0, 4));
+      const { data: fmrRows } = await this.supabase
+        .from('hud_fmr')
+        .select('fips_code, fmr_2br')
+        .eq('year', targetYear)
+        .not('fmr_2br', 'is', null);
+
+      if (fmrRows) {
+        for (const r of fmrRows) {
+          const fips = normalizeFipsZip(r.fips_code);
+          if (fips && r.fmr_2br && countyRentByFips[fips] == null) {
+            countyRentByFips[fips] = r.fmr_2br;
           }
         }
       }
-    }
 
-    return { processed: zoriData.length, stored, errors };
-  }
+      const zipFallbackBatch: any[] = [];
+      for (const [zipCode, price] of Object.entries(priceByZip)) {
+        if (zipsWithZori.has(zipCode) || !price) continue;
+        const countyFips = zipToCounty[zipCode];
+        const countyRent = countyFips ? countyRentByFips[countyFips] : null;
+        if (!countyRent) continue;
 
-  /**
-   * Calculate and store investment metrics for all ZIP codes
-   */
-  async calculateInvestmentMetricsForZips(): Promise<{
-    processed: number;
-    stored: number;
-    errors: string[];
-  }> {
-    const errors: string[] = [];
+        const capRate = this.calculateCapRate(countyRent, price);
+        const grossYield = this.calculateGrossYield(countyRent, price);
+        const rentToPriceRatio = this.calculateRentToPriceRatio(countyRent, price);
+        const grm = this.calculateGRM(price, countyRent);
 
-    // Get latest ZORI date from zillow_zip table estimated
-    // Since ZIP table is huge, we try to get one row
-    const { data: zoriDateRow } = await this.supabase
-      .from('zillow_zip')
-      .select('period_date')
-      .eq('metric_name', 'zori')
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!zoriDateRow?.period_date) {
-      return {
-        processed: 0,
-        stored: 0,
-        errors: ['No Zip ZORI data available'],
-      };
-    }
-
-    const targetDate = zoriDateRow.period_date;
-
-    // Get ZHVI data (property value + county_fips for fallback) for all zips in the same period
-    const { data: zhviData } = await this.supabase
-      .from('zillow_zip')
-      .select('region_name, value, county_fips')
-      .eq('metric_name', 'zhvi')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null)
-      .limit(50000);
-
-    if (!zhviData || zhviData.length === 0) {
-      return { processed: 0, stored: 0, errors: ['No ZHVI Zip data found'] };
-    }
-
-    const priceByZip: Record<string, number> = {};
-    const zipToCounty: Record<string, string> = {};
-    const normalizeFipsZip = (f: string | null | undefined) =>
-      f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f ?? null;
-    for (const row of zhviData) {
-      priceByZip[row.region_name] = row.value;
-      if (row.county_fips) {
-        const fips = normalizeFipsZip(row.county_fips);
-        if (fips) zipToCounty[row.region_name] = fips;
-      }
-    }
-
-    const zipsWithZori = new Set<string>();
-    let offset = 0;
-    const pageSize = 5000;
-    let processed = 0;
-    let stored = 0;
-
-    while (true) {
-      const { data: zoriData } = await this.supabase
-        .from('zillow_zip')
-        .select('region_id, region_name, value')
-        .eq('metric_name', 'zori')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null)
-        .range(offset, offset + pageSize - 1);
-
-      if (!zoriData || zoriData.length === 0) break;
-
-      processed += zoriData.length;
-      const recordsToUpsert: any[] = [];
-
-      for (const zip of zoriData) {
-        const zipCode = zip.region_name;
-        zipsWithZori.add(zipCode);
-        const zori = zip.value;
-        const price = priceByZip[zipCode];
-
-        if (!zori || !price) continue;
-
-        const capRate = this.calculateCapRate(zori, price);
-        const grossYield = this.calculateGrossYield(zori, price);
-        const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
-        const grm = this.calculateGRM(price, zori);
-
-        recordsToUpsert.push({
+        zipFallbackBatch.push({
           geography_id: zipCode,
           geography_type: 'zip',
           geography_name: zipCode,
@@ -1736,115 +1846,40 @@ export class CalculatedMetricsService {
         });
       }
 
-      if (recordsToUpsert.length > 0) {
-        const { error } = await this.supabase
-          .from('calculated_metrics')
-          .upsert(recordsToUpsert, {
-            onConflict: 'geography_id,geography_type,period_date',
-          });
-        if (error) {
-          errors.push(error.message);
-        } else {
-          stored += recordsToUpsert.length;
-        }
-      }
-
-      if (zoriData.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    // ZIP fallback: estimated cap rate using county rent (ZORI then HUD FMR) when ZIP has ZHVI but no ZORI
-    const countyRentByFips: Record<string, number> = {};
-    const { data: countyZoriRows } = await this.supabase
-      .from('zillow_county')
-      .select('fips_code, value')
-      .eq('metric_name', 'zori')
-      .eq('period_date', targetDate)
-      .not('value', 'is', null);
-    if (countyZoriRows) {
-      for (const r of countyZoriRows) {
-        const fips = normalizeFipsZip(r.fips_code);
-        if (fips && r.value) countyRentByFips[fips] = r.value;
-      }
-    }
-    const { data: latestFmrYear } = await this.supabase
-      .from('hud_fmr')
-      .select('year')
-      .order('year', { ascending: false })
-      .limit(1)
-      .single();
-    const fmrYear = latestFmrYear?.year ?? new Date().getFullYear();
-    const { data: fmrRows } = await this.supabase
-      .from('hud_fmr')
-      .select('fips_code, fmr_2br')
-      .eq('year', fmrYear)
-      .not('fmr_2br', 'is', null);
-    if (fmrRows) {
-      for (const r of fmrRows) {
-        const fips = normalizeFipsZip(r.fips_code);
-        if (fips && r.fmr_2br && countyRentByFips[fips] == null) {
-          countyRentByFips[fips] = r.fmr_2br;
+      if (zipFallbackBatch.length > 0) {
+        const zipFallbackChunkSize = 500;
+        for (let i = 0; i < zipFallbackBatch.length; i += zipFallbackChunkSize) {
+          const chunk = zipFallbackBatch.slice(i, i + zipFallbackChunkSize);
+          const { error } = await this.supabase
+            .from('calculated_metrics')
+            .upsert(chunk, {
+              onConflict: 'geography_id,geography_type,period_date',
+            });
+          if (!error) {
+            totalStored += chunk.length;
+          } else {
+            errors.push(`${targetDate}: ${error.message}`);
+          }
         }
       }
     }
 
-    const zipFallbackBatch: any[] = [];
-    for (const [zipCode, price] of Object.entries(priceByZip)) {
-      if (zipsWithZori.has(zipCode) || !price) continue;
-      const countyFips = zipToCounty[zipCode];
-      const countyRent = countyFips ? countyRentByFips[countyFips] : null;
-      if (!countyRent) continue;
-      const capRate = this.calculateCapRate(countyRent, price);
-      const grossYield = this.calculateGrossYield(countyRent, price);
-      const rentToPriceRatio = this.calculateRentToPriceRatio(countyRent, price);
-      const grm = this.calculateGRM(price, countyRent);
-      zipFallbackBatch.push({
-        geography_id: zipCode,
-        geography_type: 'zip',
-        geography_name: zipCode,
-        period_date: targetDate,
-        cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
-        gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
-        rent_to_price_ratio: rentToPriceRatio
-          ? Math.round(rentToPriceRatio * 10000) / 10000
-          : null,
-        grm: grm ? Math.round(grm * 100) / 100 : null,
-        calculated_at: new Date().toISOString(),
-      });
-    }
-    const zipFallbackChunkSize = 500;
-    if (zipFallbackBatch.length > 0) {
-      for (let i = 0; i < zipFallbackBatch.length; i += zipFallbackChunkSize) {
-        const chunk = zipFallbackBatch.slice(i, i + zipFallbackChunkSize);
-        const { error } = await this.supabase
-          .from('calculated_metrics')
-          .upsert(chunk, {
-            onConflict: 'geography_id,geography_type,period_date',
-          });
-        if (error) {
-          errors.push(error.message);
-        } else {
-          stored += chunk.length;
-        }
-      }
-    }
-
-    return { processed, stored, errors };
+    return { processed: totalProcessed, stored: totalStored, errors };
   }
 
   /**
    * Calculate all investment metrics for all metros (master batch)
    */
-  async calculateAllInvestmentMetrics(): Promise<{
+  async calculateAllInvestmentMetrics(year?: number): Promise<{
     investmentMetrics: { processed: number; stored: number; errors: string[] };
     overvalued: { processed: number; stored: number; errors: string[] };
   }> {
     const [metroResult, countyResult, zipResult, overvalued] =
       await Promise.all([
-        this.calculateInvestmentMetricsForMetros(),
-        this.calculateInvestmentMetricsForCounties(),
-        this.calculateInvestmentMetricsForZips(),
-        this.calculateOvervaluedForMetros(),
+        this.calculateInvestmentMetricsForMetros(year),
+        this.calculateInvestmentMetricsForCounties(year),
+        this.calculateInvestmentMetricsForZips(year),
+        this.calculateOvervaluedForMetros(year),
       ]);
 
     // Aggregate investment metric results
