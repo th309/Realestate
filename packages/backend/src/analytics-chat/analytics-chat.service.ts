@@ -630,9 +630,12 @@ USER QUERY:`;
       const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
       const toolResultsForFollowUp: Array<{ id: string; content: string }> = [];
 
+      this.logger.log(`[Quinn Stream Anthropic] Processing ${toolUseBlocks.length} tool calls`);
+
       for (const toolUse of toolUseBlocks) {
         if (toolUse.type !== 'tool_use') continue;
 
+        this.logger.log(`[Quinn Stream Anthropic] Executing tool: ${toolUse.name}`);
         toolsUsed.push(toolUse.name);
         yield { type: 'tool', content: { name: toolUse.name, status: 'executing' } };
 
@@ -770,6 +773,8 @@ USER QUERY:`;
 
     while (currentToolCalls.length > 0 && iterations < maxIterations) {
       iterations++;
+      this.logger.log(`[Quinn Stream OpenAI] Processing ${currentToolCalls.length} tool calls (Iteration ${iterations})`);
+
       const toolResultsForFollowUp: any[] = [];
 
       const assistantMessage = {
@@ -788,6 +793,7 @@ USER QUERY:`;
         let args = {};
         try { args = JSON.parse(argsString); } catch (e) { this.logger.error(`Failed to parse args for ${name}`); }
 
+        this.logger.log(`[Quinn Stream OpenAI] Executing tool: ${name}`);
         toolsUsed.push(name);
         yield { type: 'tool', content: { name: name, status: 'executing' } };
 
@@ -813,6 +819,8 @@ USER QUERY:`;
       }
 
       yield { type: 'text', content: '\n\n' };
+
+      this.logger.log(`[Quinn Stream OpenAI] Sending ${toolResultsForFollowUp.length} tool results to model`);
 
       messages.push(assistantMessage as any);
       messages.push(...toolResultsForFollowUp);
