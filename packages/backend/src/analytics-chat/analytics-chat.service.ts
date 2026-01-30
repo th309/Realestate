@@ -8,12 +8,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { QUINN_BASE_SYSTEM_PROMPT } from './quinn-system-prompt';
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -87,13 +88,19 @@ interface RankingsData {
 @Injectable()
 export class AnalyticsChatService {
   private readonly logger = new Logger(AnalyticsChatService.name);
-  private client: Anthropic | null = null;
 
-  // Model tiers for dynamic escalation - optimized for cost/performance
-  // Pricing: Haiku 3.5 ($0.25/$1.25) < Sonnet 4 ($3/$15) < Opus 4.5 ($15/$75)
-  private readonly MODEL_FAST = 'claude-3-5-haiku-20241022';     // Cheapest - simple queries, basic tools
-  private readonly MODEL_BALANCED = 'claude-sonnet-4-20250514';  // Balanced - multi-tool, analysis
-  private readonly MODEL_POWERFUL = 'claude-opus-4-5-20251101';  // Premium - complex reasoning, 4+ tools
+  // Clients
+  private anthropicClient: Anthropic | null = null;
+  private openaiClient: OpenAI | null = null;
+
+  // Configuration
+  private provider: 'anthropic' | 'openai' | 'novita' = 'anthropic';
+  private modelName: string = '';
+
+  // Model tiers for dynamic escalation (Anthropic)
+  private readonly MODEL_FAST = 'claude-3-5-haiku-latest';
+  private readonly MODEL_BALANCED = 'claude-3-5-sonnet-latest';
+  private readonly MODEL_POWERFUL = 'claude-3-5-sonnet-latest';
 
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
@@ -107,23 +114,44 @@ export class AnalyticsChatService {
     private readonly toolsService: AnalyticsToolsService,
     private readonly supabase: SupabaseService,
   ) {
-    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    this.logger.log(`[Quinn Init] ANTHROPIC_API_KEY present: ${!!apiKey}`);
-    
-    if (apiKey) {
-      this.client = new Anthropic({ apiKey });
-      this.logger.log('[Quinn Init] Analytics Chat Service initialized with Claude');
-      this.logger.log(`[Quinn Init] Using ${this.MODEL_BALANCED} for all queries ($3/$15 per MTok)`);
-      this.logger.log(`[Quinn Init] Model escalation DISABLED for optimal performance`);
-      this.logger.log(`[Quinn Init] Tool result caching enabled (TTL: ${this.CACHE_TTL_MS / 1000}s)`);
+    // Determine Provider
+    const configuredProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
+    this.provider = (['openai', 'novita', 'groq', 'deepseek'].includes(configuredProvider) ? 'openai' : 'anthropic') as any;
 
-      // Clean cache every 10 minutes
-      setInterval(() => this.cleanExpiredCache(), 10 * 60 * 1000);
-      // Warm tool result cache in background (most common queries)
-      this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+    // Load API Keys
+    const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    const openaiKey = this.configService.get<string>('OPENAI_API_KEY') ||
+                      this.configService.get<string>('NOVITA_API_KEY') ||
+                      this.configService.get<string>('DEEPSEEK_API_KEY');
+    const baseURL = this.configService.get<string>('AI_BASE_URL');
+
+    // Model Selection
+    this.modelName = this.configService.get<string>('AI_MODEL') ||
+      (this.provider === 'openai' ? 'gpt-4o' : this.MODEL_BALANCED);
+
+    this.logger.log(`[Quinn Init] Provider: ${this.provider.toUpperCase()}`);
+    this.logger.log(`[Quinn Init] Model: ${this.modelName}`);
+
+    if (this.provider === 'openai' && openaiKey) {
+      this.openaiClient = new OpenAI({
+        apiKey: openaiKey,
+        baseURL: baseURL, // Optional for real OpenAI, required for Novita/Groq
+      });
+      this.logger.log(`[Quinn Init] OpenAI-compatible client initialized (BaseURL: ${baseURL || 'default'})`);
+    } else if (anthropicKey) {
+      // Fallback or explicit Anthropic
+      this.anthropicClient = new Anthropic({ apiKey: anthropicKey });
+      this.provider = 'anthropic'; // Force fallback if openai failed
+      this.logger.log('[Quinn Init] Anthropic client initialized');
     } else {
-      this.logger.error('[Quinn Init] ANTHROPIC_API_KEY not configured - chat DISABLED');
-      this.logger.error('[Quinn Init] Set ANTHROPIC_API_KEY in environment variables');
+      this.logger.error('[Quinn Init] No valid API keys found!');
+    }
+
+    if (this.isAvailable()) {
+      // Warm cache
+      this.logger.log(`[Quinn Init] Tool result caching enabled (TTL: ${this.CACHE_TTL_MS / 1000}s)`);
+      setInterval(() => this.cleanExpiredCache(), 10 * 60 * 1000);
+      this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
     }
   }
 
@@ -131,16 +159,14 @@ export class AnalyticsChatService {
    * Check if the service is available
    */
   isAvailable(): boolean {
-    return !!this.client;
+    return !!this.anthropicClient || !!this.openaiClient;
   }
 
   /**
-   * Select model - ALWAYS use Sonnet for consistent performance
-   * No escalation overhead, no model switching delays
+   * Select model - Can be overridden by AI_MODEL env var
    */
   private selectInitialModel(_message: string): string {
-    this.logger.log(`[Quinn Model] Using Sonnet 4 - $3/$15 per MTok`);
-    return this.MODEL_BALANCED;
+    return this.modelName;
   }
 
   /** Query intent for tool selection and iteration limits */
@@ -186,7 +212,7 @@ export class AnalyticsChatService {
     ];
     if (rawPatterns.some((p) => p.test(lower))) return 'raw_data';
     if (/\b(price|rent|value|zhvi|zri|unemployment|population|income)\b/.test(lower) &&
-        !/\b(compare|rank|best|top)\b/.test(lower)) {
+      !/\b(compare|rank|best|top)\b/.test(lower)) {
       return 'raw_data';
     }
 
@@ -328,11 +354,11 @@ IMPORTANT:
 
     const historyContext = recentHistory.length > 0
       ? recentHistory
-          .map((msg) => {
-            const content = typeof msg.content === 'string' ? msg.content.substring(0, 150) : '[Tool usage]';
-            return `${msg.role}: ${content}`;
-          })
-          .join('\n')
+        .map((msg) => {
+          const content = typeof msg.content === 'string' ? msg.content.substring(0, 150) : '[Tool usage]';
+          return `${msg.role}: ${content}`;
+        })
+        .join('\n')
       : 'First query in conversation';
 
     let refBlock = '';
@@ -392,7 +418,7 @@ USER QUERY:`;
         this.logger.log(`[Quinn Tools] ML query - analysis tools`);
         return allTools.filter((t) =>
           ['run_regression', 'get_feature_importance', 'cluster_markets',
-           'optimize_weights', 'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
+            'optimize_weights', 'analyze_raw_metrics', 'get_raw_metric_summary'].includes(t.name)
         );
 
       case 'news':
@@ -552,8 +578,8 @@ USER QUERY:`;
     userMessage: string,
     context?: Record<string, any>,
   ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
-    if (!this.client) {
-      throw new Error('Claude client not initialized - check ANTHROPIC_API_KEY');
+    if (!this.isAvailable()) {
+      throw new Error('AI Provider not initialized - check API Keys');
     }
 
     // Get or create conversation
@@ -580,110 +606,239 @@ USER QUERY:`;
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userPreferences = conversation.context as Record<string, unknown> | undefined;
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, userPreferences);
-    const systemBlocks = [
-      { type: 'text' as const, text: QUINN_BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } },
-      { type: 'text' as const, text: userProfilePrompt, cache_control: { type: 'ephemeral' as const } },
-    ];
-    const tools = this.getRelevantTools(userMessage);
-    this.logger.log(`[Quinn Stream Tools] Providing ${tools.length} tools`);
+
+    // Tools
+    const rawTools = this.getRelevantTools(userMessage);
+    this.logger.log(`[Quinn Stream Tools] Providing ${rawTools.length} tools`);
 
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
-
-    const apiMessages = conversation.messages.slice(-40).map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
 
     const toolsUsed: string[] = [];
     let fullResponse = '';
     const currentModel = this.selectInitialModel(userMessage);
 
     try {
-      this.logger.log(`[Quinn Stream] Starting streaming response for ${queryIntent} query`);
+      this.logger.log(`[Quinn Stream] Starting streaming response (${this.provider})`);
 
-      // Use streaming API (cached system blocks match non-streaming chat for cost/latency)
-      const stream = await this.client.messages.stream({
-        model: currentModel,
-        max_tokens: 2048,
-        system: systemBlocks as any,
-        tools: tools as any,
-        messages: apiMessages,
-      });
+      if (this.provider === 'openai' && this.openaiClient) {
+        // ==========================================================================================
+        // OPENAI / NOVITA STREAMING PATH
+        // ==========================================================================================
 
-      // Stream text deltas
-      for await (const chunk of stream) {
-        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-          const text = chunk.delta.text;
-          fullResponse += text;
-          yield { type: 'text', content: text };
-        }
-      }
+        // Adapt Tools
+        const openaiTools = rawTools.map(t => ({
+          type: 'function',
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema // Anthropic uses input_schema, map to parameters
+          }
+        }));
 
-      // Get final message
-      const finalMessage = await stream.finalMessage();
+        // Adapt Messages (Inject System Prompt)
+        const systemContent = `${QUINN_BASE_SYSTEM_PROMPT}\n\n${userProfilePrompt}`;
+        const messages = [
+          { role: 'system', content: systemContent },
+          ...conversation.messages.slice(-40).map(m => ({
+            role: m.role as 'system' | 'user' | 'assistant',
+            content: m.content
+          }))
+        ];
 
-      // Handle tool calls (non-streaming for now)
-      if (finalMessage.stop_reason === 'tool_use') {
-        const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
-        const toolResultsForFollowUp: Array<{ id: string; content: string }> = [];
+        const stream = await this.openaiClient.chat.completions.create({
+          model: currentModel,
+          messages: messages as any,
+          tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+          stream: true,
+        });
 
-        for (const toolUse of toolUseBlocks) {
-          if (toolUse.type !== 'tool_use') continue;
+        let toolCalls: any[] = [];
 
-          toolsUsed.push(toolUse.name);
-          yield { type: 'tool', content: { name: toolUse.name, status: 'executing' } };
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta;
 
-          // Check cache
-          const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
-          const result = cachedResult || await this.toolsService.executeTool(
-            toolUse.name,
-            toolUse.input as Record<string, any>,
-          );
-
-          if (!cachedResult && result.success) {
-            this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+          if (delta?.content) {
+            fullResponse += delta.content;
+            yield { type: 'text', content: delta.content };
           }
 
-          const toolResultContent =
-            result.success && result.data?.error
-              ? JSON.stringify({
-                  ...result.data,
-                  note: `Service reported an error. Tell the user: ${result.data.error}`,
-                })
-              : JSON.stringify(result.success ? result : { error: result.error });
-          toolResultsForFollowUp.push({ id: toolUse.id, content: toolResultContent });
-
-          yield { type: 'tool', content: { name: toolUse.name, status: 'complete' } };
+          if (delta?.tool_calls) {
+            // Accumulate tool calls (chunks come with partial args)
+            for (const tc of delta.tool_calls) {
+              if (!toolCalls[tc.index]) toolCalls[tc.index] = { id: '', function: { name: '', arguments: '' } };
+              if (tc.id) toolCalls[tc.index].id += tc.id;
+              if (tc.function?.name) toolCalls[tc.index].function.name += tc.function.name;
+              if (tc.function?.arguments) toolCalls[tc.index].function.arguments += tc.function.arguments;
+            }
+          }
         }
 
-        // Continue with tool results - stream the follow-up response
-        yield { type: 'text', content: '\n\n' };
+        // Handle Tool Execution (if any)
+        if (toolCalls.length > 0) {
+          const toolResultsForFollowUp: any[] = [];
 
-        const followUpStream = await this.client.messages.stream({
+          // 1. Send all tool outputs first
+          // OpenAI requires us to append the assistant message with tool_calls first
+          // We need to reconstruct the assistant message from chunks
+          const assistantMessage = {
+            role: 'assistant',
+            content: fullResponse || null,
+            tool_calls: toolCalls.map(tc => ({
+              id: tc.id,
+              type: 'function',
+              function: tc.function
+            }))
+          };
+
+          // We can't push this to `conversation.messages` easily because our internal format is simple
+          // But strictly we need to send it in the follow-up request.
+
+          for (const tc of toolCalls) {
+            const name = tc.function.name;
+            const argsString = tc.function.arguments;
+            let args = {};
+            try { args = JSON.parse(argsString); } catch (e) { this.logger.error(`Failed to parse args for ${name}`); }
+
+            toolsUsed.push(name);
+            yield { type: 'tool', content: { name: name, status: 'executing' } };
+
+            // Cache/Exec
+            const cachedResult = this.getCachedResult(name, args);
+            const result = cachedResult || await this.toolsService.executeTool(name, args);
+
+            if (!cachedResult && result.success) {
+              this.cacheResult(name, args, result);
+            }
+
+            const content = result.success && result.data?.error
+              ? JSON.stringify({ ...result.data, note: `Error: ${result.data.error}` })
+              : JSON.stringify(result.success ? result : { error: result.error });
+
+            toolResultsForFollowUp.push({
+              tool_call_id: tc.id,
+              role: 'tool',
+              name: name,
+              content: content
+            });
+
+            yield { type: 'tool', content: { name: name, status: 'complete' } };
+          }
+
+          yield { type: 'text', content: '\n\n' };
+
+          // Follow-up Stream
+          const followUpStream = await this.openaiClient.chat.completions.create({
+            model: currentModel,
+            messages: [
+              ...messages as any,
+              assistantMessage,
+              ...toolResultsForFollowUp
+            ],
+            stream: true
+          });
+
+          for await (const chunk of followUpStream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+              fullResponse += content;
+              yield { type: 'text', content: content };
+            }
+          }
+        }
+
+      } else if (this.anthropicClient) {
+        // ==========================================================================================
+        // ANTHROPIC STREAMING PATH (Original Logic)
+        // ==========================================================================================
+
+        const systemBlocks = [
+          { type: 'text' as const, text: QUINN_BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } },
+          { type: 'text' as const, text: userProfilePrompt, cache_control: { type: 'ephemeral' as const } },
+        ];
+
+        const apiMessages = conversation.messages.slice(-40).map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
+
+        const stream = await this.anthropicClient.messages.stream({
           model: currentModel,
           max_tokens: 2048,
           system: systemBlocks as any,
-          tools: tools as any,
-          messages: [
-            ...apiMessages,
-            { role: 'assistant', content: finalMessage.content },
-            {
-              role: 'user',
-              content: toolResultsForFollowUp.map((tr) => ({
-                type: 'tool_result' as const,
-                tool_use_id: tr.id,
-                content: tr.content,
-              })),
-            },
-          ],
+          tools: rawTools as any,
+          messages: apiMessages,
         });
 
-        for await (const chunk of followUpStream) {
+        for await (const chunk of stream) {
           if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
             const text = chunk.delta.text;
             fullResponse += text;
             yield { type: 'text', content: text };
+          }
+        }
+
+        const finalMessage = await stream.finalMessage();
+
+        if (finalMessage.stop_reason === 'tool_use') {
+          const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
+          const toolResultsForFollowUp: Array<{ id: string; content: string }> = [];
+
+          for (const toolUse of toolUseBlocks) {
+            if (toolUse.type !== 'tool_use') continue;
+
+            toolsUsed.push(toolUse.name);
+            yield { type: 'tool', content: { name: toolUse.name, status: 'executing' } };
+
+            const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
+            const result = cachedResult || await this.toolsService.executeTool(
+              toolUse.name,
+              toolUse.input as Record<string, any>,
+            );
+
+            if (!cachedResult && result.success) {
+              this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+            }
+
+            const toolResultContent =
+              result.success && result.data?.error
+                ? JSON.stringify({
+                  ...result.data,
+                  note: `Service reported an error. Tell the user: ${result.data.error}`,
+                })
+                : JSON.stringify(result.success ? result : { error: result.error });
+            toolResultsForFollowUp.push({ id: toolUse.id, content: toolResultContent });
+
+            yield { type: 'tool', content: { name: toolUse.name, status: 'complete' } };
+          }
+
+          yield { type: 'text', content: '\n\n' };
+
+          const followUpStream = await this.anthropicClient.messages.stream({
+            model: currentModel,
+            max_tokens: 2048,
+            system: systemBlocks as any,
+            tools: rawTools as any,
+            messages: [
+              ...apiMessages,
+              { role: 'assistant', content: finalMessage.content },
+              {
+                role: 'user',
+                content: toolResultsForFollowUp.map((tr) => ({
+                  type: 'tool_result' as const,
+                  tool_use_id: tr.id,
+                  content: tr.content,
+                })),
+              },
+            ],
+          });
+
+          for await (const chunk of followUpStream) {
+            if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+              const text = chunk.delta.text;
+              fullResponse += text;
+              yield { type: 'text', content: text };
+            }
           }
         }
       }
@@ -707,6 +862,9 @@ USER QUERY:`;
   /**
    * Process a chat message and return response (non-streaming)
    */
+  /**
+   * Process a chat message and return response (non-streaming)
+   */
   async chat(
     conversationId: string,
     userMessage: string,
@@ -718,8 +876,8 @@ USER QUERY:`;
     modelUsed?: string;
     metadata?: { intent: string; toolCallCount: number; totalExecutionTime: number };
   }> {
-    if (!this.client) {
-      throw new Error('Claude client not initialized - check ANTHROPIC_API_KEY');
+    if (!this.isAvailable()) {
+      throw new Error('AI Provider not initialized - check API Keys');
     }
 
     // Get or create conversation
@@ -747,305 +905,269 @@ USER QUERY:`;
     this.logger.log(`[Quinn Intent] Detected: ${queryIntent}, max iterations: ${maxIterations}`);
 
     // Get relevant tools based on intent
-    const tools = this.getRelevantTools(userMessage);
-    this.logger.log(`[Quinn Tools] Providing ${tools.length} tools`);
+    const rawTools = this.getRelevantTools(userMessage);
+    this.logger.log(`[Quinn Tools] Providing ${rawTools.length} tools`);
 
     // Add user message to history
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
 
-    // Extract user mode and preferences for profile
+    // Context setup
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userPreferences = conversation.context as Record<string, unknown> | undefined;
-
-    // Build cached user profile section
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, userPreferences);
-
-    // Build dynamic context (conversation history only - changes per message)
     const dynamicContext = this.buildDynamicContext(conversation.messages);
     const userMessageWithContext = `${dynamicContext}\n${userMessage}`;
-
-    // Prepare messages for API (last 20 exchanges); inject dynamic context into latest user message
-    const apiMessages = conversation.messages.slice(-40).map((m, i, arr) => {
-      const isLastUser = arr.length - 1 === i && m.role === 'user';
-      return {
-        role: m.role as 'user' | 'assistant',
-        content: isLastUser ? userMessageWithContext : m.content,
-      };
-    });
 
     const toolsUsed: string[] = [];
     const toolResultsData: Array<{ toolName: string; data: any }> = [];
     const responseTextParts: string[] = [];
     const chatStartTime = Date.now();
-
     let currentModel = this.selectInitialModel(userMessage);
 
     try {
-      this.logger.log(`[Quinn Chat] Processing in ${conversationId}, tools: ${tools.length}`);
+      this.logger.log(`[Quinn Chat] Processing in ${conversationId}, tools: ${rawTools.length} (${this.provider})`);
 
-      const apiStartTime = Date.now();
-
-      // Add timeout wrapper to prevent hanging (60 second timeout)
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Claude API call timed out after 60 seconds')), 60000)
+        setTimeout(() => reject(new Error('AI API call timed out after 60 seconds')), 60000)
       );
 
-      let response = await Promise.race([
-        this.client.messages.create({
-          model: currentModel,
-          max_tokens: 2048,
-          system: [
-            {
-              type: 'text' as const,
-              text: QUINN_BASE_SYSTEM_PROMPT,
-              cache_control: { type: 'ephemeral' as const },
-            },
-            {
-              type: 'text' as const,
-              text: userProfilePrompt,
-              cache_control: { type: 'ephemeral' as const },
-            },
-          ],
-          tools: tools as any,
-          messages: apiMessages,
-        }),
-        timeoutPromise
-      ]) as Anthropic.Messages.Message;
+      let finalContent = '';
+      let toolCallCount = 0;
 
-      const apiDuration = Date.now() - apiStartTime;
-      this.logger.log(`[Quinn Chat] Claude API responded in ${apiDuration}ms`);
-      this.logger.log(`[Quinn Chat] Stop reason: ${response.stop_reason}`);
-      this.logger.log(`[Quinn Chat] Content blocks: ${response.content.length}`);
+      if (this.provider === 'openai' && this.openaiClient) {
+        // =================================================================================
+        // OPENAI PATH
+        // =================================================================================
 
-      // Extract text from initial response (if any)
-      const initialTextBlock = response.content.find((block) => block.type === 'text');
-      if (initialTextBlock && 'text' in initialTextBlock) {
-        responseTextParts.push(initialTextBlock.text);
-        this.logger.log(`[Quinn Chat] Initial response text length: ${initialTextBlock.text.length}`);
-      }
+        const openaiTools = rawTools.map(t => ({
+          type: 'function',
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema
+          }
+        }));
 
-      // Process tool calls in a loop with intent-based iteration limits.
-      // Accumulate (assistant, user) turns so multi-turn tool use sees prior results.
-      let iterations = 0;
-      const messagesWithToolTurns: Anthropic.Messages.MessageParam[] = [...apiMessages];
+        const systemContent = `${QUINN_BASE_SYSTEM_PROMPT}\n\n${userProfilePrompt}`;
+        const messages = [
+          { role: 'system', content: systemContent },
+          ...conversation.messages.slice(-40).map((m, i, arr) => {
+            const isLastUser = arr.length - 1 === i && m.role === 'user';
+            return {
+              role: m.role as 'system' | 'user' | 'assistant',
+              content: isLastUser ? userMessageWithContext : m.content
+            };
+          })
+        ];
 
-      this.logger.log(`[Quinn Chat] Max iterations for ${queryIntent}: ${maxIterations}`);
+        const start = Date.now();
+        let response = await Promise.race([
+          this.openaiClient.chat.completions.create({
+            model: currentModel,
+            messages: messages as any,
+            tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+          }),
+          timeoutPromise
+        ]) as any;
+        this.logger.log(`[Quinn Chat] OpenAI API First Response: ${Date.now() - start}ms`);
 
-      while (response.stop_reason === 'tool_use' && iterations < maxIterations) {
-        iterations++;
-        this.logger.log(`[Quinn Chat] Tool use iteration ${iterations}/${maxIterations}`);
+        const msg = response.choices[0].message;
+        finalContent = msg.content || '';
+        if (finalContent) responseTextParts.push(finalContent);
 
-        const toolUseBlocks = response.content.filter(
-          (block) => block.type === 'tool_use',
-        );
+        // Handle Tool Calls
+        let iterations = 0;
+        let currentMsg = msg;
 
-        const toolResults: any[] = [];
+        while (currentMsg.tool_calls && iterations < maxIterations) {
+          iterations++;
+          toolCallCount += currentMsg.tool_calls.length;
+          const toolResults: any[] = [];
 
-        for (const toolUse of toolUseBlocks) {
-          if (toolUse.type !== 'tool_use') continue;
+          for (const tc of currentMsg.tool_calls) {
+            toolsUsed.push(tc.function.name);
+            let args = {};
+            try { args = JSON.parse(tc.function.arguments); } catch (e) { this.logger.error('Args parse error'); }
 
-          this.logger.log(`[Quinn Chat] Executing tool: ${toolUse.name}`);
-          this.logger.log(`[Quinn Chat] Tool input: ${JSON.stringify(toolUse.input).slice(0, 200)}`);
-          toolsUsed.push(toolUse.name);
-
-          // Check cache first
-          const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
-          let result: any;
-
-          if (cachedResult) {
-            // Use cached result
-            result = cachedResult;
-          } else {
-            // Execute tool and cache result
-            result = await this.toolsService.executeTool(
-              toolUse.name,
-              toolUse.input as Record<string, any>,
-            );
-
-            // Cache successful results
-            if (result.success) {
-              this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+            const cachedResult = this.getCachedResult(tc.function.name, args);
+            let result;
+            if (cachedResult) result = cachedResult;
+            else {
+              result = await this.toolsService.executeTool(tc.function.name, args);
+              if (result.success) this.cacheResult(tc.function.name, args, result);
             }
-          }
 
-          this.logger.log(`[Quinn Chat] Tool ${toolUse.name} result: success=${result.success}`);
-          if (!result.success) {
-            this.logger.error(`[Quinn Chat] Tool ${toolUse.name} error: ${result.error}`);
-          }
+            if (result.data) toolResultsData.push({ toolName: tc.function.name, data: result.data });
 
-          // Store every tool result (success or failure) so we can show errorMessage when ranking fails
-          toolResultsData.push({ toolName: toolUse.name, data: result });
+            const content = JSON.stringify(result.success ? result : { error: result.error });
 
-          let toolResultContent: string;
-          if (result.success && result.data?.error) {
-            toolResultContent = JSON.stringify({
-              ...result.data,
-              note: `Service reported an error. Tell the user: ${result.data.error}`,
+            toolResults.push({
+              tool_call_id: tc.id,
+              role: 'tool',
+              name: tc.function.name,
+              content: content
             });
-          } else {
-            toolResultContent = JSON.stringify(result.success ? result : { error: result.error });
           }
-          this.logger.log(`[Quinn Chat] Tool result content length: ${toolResultContent.length}`);
 
-          toolResults.push({
-            type: 'tool_result' as const,
-            tool_use_id: toolUse.id,
-            content: toolResultContent,
-          });
+          // Append history for next turn
+          messages.push(currentMsg);
+          messages.push(...toolResults as any);
+
+          // Follow-up
+          response = await Promise.race([
+            this.openaiClient.chat.completions.create({
+              model: currentModel,
+              messages: messages as any,
+              tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+            }),
+            timeoutPromise
+          ]) as any;
+
+          currentMsg = response.choices[0].message;
+          finalContent = currentMsg.content || '';
+          if (finalContent) responseTextParts.push(finalContent);
+
+          // Break if no more tool calls
+          if (!currentMsg.tool_calls) break;
         }
-        
-        this.logger.log(`[Quinn Chat] Sending ${toolResults.length} tool results back to Claude...`);
 
-        // Append this turn so next round sees prior tool use and results (multi-turn comparisons)
-        messagesWithToolTurns.push(
-          { role: 'assistant', content: response.content },
-          { role: 'user', content: toolResults },
-        );
+        finalContent = responseTextParts.join('\n\n').trim();
 
-        // Continue conversation with tool results (with timeout)
-        const followUpTimeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Claude follow-up API call timed out after 60 seconds')), 60000)
-        );
+      } else if (this.anthropicClient) {
+        // =================================================================================
+        // ANTHROPIC PATH
+        // =================================================================================
 
-        response = await Promise.race([
-          this.client.messages.create({
+        const systemBlocks = [
+          { type: 'text' as const, text: QUINN_BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } },
+          { type: 'text' as const, text: userProfilePrompt, cache_control: { type: 'ephemeral' as const } },
+        ];
+
+        const apiMessages = conversation.messages.slice(-40).map((m, i, arr) => {
+          const isLastUser = arr.length - 1 === i && m.role === 'user';
+          return {
+            role: m.role as 'user' | 'assistant',
+            content: isLastUser ? userMessageWithContext : m.content,
+          };
+        });
+
+        let response = await Promise.race([
+          this.anthropicClient.messages.create({
             model: currentModel,
             max_tokens: 2048,
-            system: [
-              {
-                type: 'text' as const,
-                text: QUINN_BASE_SYSTEM_PROMPT,
-                cache_control: { type: 'ephemeral' as const },
-              },
-              {
-                type: 'text' as const,
-                text: userProfilePrompt,
-                cache_control: { type: 'ephemeral' as const },
-              },
-            ],
-            tools: tools as any,
-            messages: messagesWithToolTurns,
+            system: systemBlocks as any,
+            tools: rawTools as any,
+            messages: apiMessages,
           }),
-          followUpTimeoutPromise
+          timeoutPromise
         ]) as Anthropic.Messages.Message;
 
-        // Extract text from this response iteration (if any)
-        const iterationTextBlock = response.content.find((block) => block.type === 'text');
-        if (iterationTextBlock && 'text' in iterationTextBlock) {
-          responseTextParts.push(iterationTextBlock.text);
-          this.logger.log(`[Quinn Chat] Iteration ${iterations} text length: ${iterationTextBlock.text.length}`);
+        if (response.content.length > 0) {
+          const textBlock = response.content.find(b => b.type === 'text');
+          if (textBlock && 'text' in textBlock) responseTextParts.push(textBlock.text);
         }
 
-        // Early termination for ranking queries after first successful tool call
-        if (queryIntent === 'ranking' && iterations === 1 && toolResultsData.length > 0) {
-          this.logger.log(`[Quinn Chat] Ranking query complete in 1 iteration with ${toolResultsData.length} tool results - terminating early`);
-          break;
+        let iterations = 0;
+        const messagesWithToolTurns: Anthropic.Messages.MessageParam[] = [...apiMessages];
+
+        while (response.stop_reason === 'tool_use' && iterations < maxIterations) {
+          iterations++;
+          const toolUseBlocks = response.content.filter(b => b.type === 'tool_use');
+          toolCallCount += toolUseBlocks.length;
+
+          const toolResults: any[] = [];
+          for (const toolUse of toolUseBlocks) {
+            if (toolUse.type !== 'tool_use') continue;
+            toolsUsed.push(toolUse.name);
+
+            const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
+            let result;
+            if (cachedResult) result = cachedResult;
+            else {
+              result = await this.toolsService.executeTool(toolUse.name, toolUse.input as any);
+              if (result.success) this.cacheResult(toolUse.name, toolUse.input as any, result);
+            }
+
+            if (result.data) toolResultsData.push({ toolName: toolUse.name, data: result.data });
+
+            const content = JSON.stringify(result.success ? result : { error: result.error });
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: toolUse.id,
+              content: content
+            });
+          }
+
+          messagesWithToolTurns.push(
+            { role: 'assistant', content: response.content },
+            { role: 'user', content: toolResults as any }
+          );
+
+          response = await Promise.race([
+            this.anthropicClient.messages.create({
+              model: currentModel,
+              max_tokens: 2048,
+              system: systemBlocks as any,
+              tools: rawTools as any,
+              messages: messagesWithToolTurns
+            }),
+            timeoutPromise
+          ]) as Anthropic.Messages.Message;
+
+          if (response.content.length > 0) {
+            const textBlock = response.content.find(b => b.type === 'text');
+            if (textBlock && 'text' in textBlock) responseTextParts.push(textBlock.text);
+          }
         }
+
+        finalContent = responseTextParts.join('\n\n').trim();
       }
 
-      if (iterations >= maxIterations) {
-        this.logger.warn('Max tool iterations reached');
-      }
-
-      let finalResponse = responseTextParts.length > 0
-        ? responseTextParts.join('\n\n').trim()
-        : '';
-
-      this.logger.log(`[Quinn Chat] Extracting structured data from ${toolResultsData.length} tool results...`);
+      // Extract structure from tool results
       const structuredData = this.extractStructuredData(toolResultsData, userMessage);
-      this.logger.log(`[Quinn Chat] Structured data extracted: ${structuredData ? JSON.stringify(Object.keys(structuredData)) : 'undefined'}`);
-      if (structuredData?.rankings) {
-        this.logger.log(`[Quinn Chat] Rankings found: ${structuredData.rankings.items?.length || 0} items`);
+
+      // Fallback if empty
+      if (!finalContent && structuredData) {
+        finalContent = this.buildFallbackResponseFromStructuredData(structuredData);
+      }
+      if (!finalContent) {
+        finalContent = 'I was unable to generate a response. Please try again.';
       }
 
-      // When we have tool results but no (or empty) model text, build a fallback so the user always gets an answer
-      if (!finalResponse && structuredData) {
-        finalResponse = this.buildFallbackResponseFromStructuredData(structuredData);
-        this.logger.log(`[Quinn Chat] Using fallback response (${finalResponse.length} chars) from structured data`);
-      }
-      if (!finalResponse) {
-        finalResponse = 'I was unable to generate a response. Please try again.';
-      }
+      // Save history & Return
+      conversation.messages.push({ role: 'assistant', content: finalContent });
 
-      // When structuredData.rankings is present, the client renders the table from structuredData—do not append the list to response text (keeps reply short for quality checks).
-      if (structuredData?.rankings?.items?.length) {
-        this.logger.log(`[Quinn Chat] Rankings in structuredData (${structuredData.rankings.items.length} items)—client will render table; leaving response as intro only`);
-      }
-
-      // When ranking tool failed (e.g. timeout), append a clear, actionable message so the user isn’t left with “try again”
-      if (
-        queryIntent === 'ranking' &&
-        structuredData?.errorMessage &&
-        !structuredData?.rankings?.items?.length
-      ) {
-        const friendly =
-          /aborted|timeout|timed out/i.test(structuredData.errorMessage)
-            ? "The request timed out. Zip-level appreciation rankings are slow; try \"top metros in [state] by appreciation\" for a faster result, or try again in a moment."
-            : `Unable to retrieve rankings: ${structuredData.errorMessage}`;
-        if (!finalResponse.trim().toLowerCase().includes('unable') && !finalResponse.includes(structuredData.errorMessage)) {
-          finalResponse = finalResponse.trimEnd() + "\n\n" + friendly;
-        }
-      }
-
-      conversation.messages.push({ role: 'assistant', content: finalResponse });
-      const totalExecutionTime = Date.now() - chatStartTime;
-
-      this.logger.log(
-        `[Quinn Chat] Done in ${totalExecutionTime}ms, ${toolsUsed.length} tools, ${currentModel}`,
-      );
+      const processingTime = Date.now() - chatStartTime;
+      this.logger.log(`[Quinn Chat] Completed. Tools: ${toolsUsed.length}, Time: ${processingTime}ms`);
 
       return {
-        response: finalResponse,
+        response: finalContent,
         toolsUsed,
         structuredData,
         modelUsed: currentModel,
         metadata: {
           intent: queryIntent,
-          toolCallCount: toolsUsed.length,
-          totalExecutionTime,
-        },
+          toolCallCount,
+          totalExecutionTime: processingTime
+        }
       };
+
     } catch (error) {
-      this.logger.error(`[Quinn Chat] === CHAT ERROR ===`);
-      this.logger.error(`[Quinn Chat] Error type: ${error.constructor?.name}`);
-      this.logger.error(`[Quinn Chat] Error message: ${error.message}`);
-      this.logger.error(`[Quinn Chat] Error stack: ${error.stack}`);
-
-      // Check for specific Anthropic API errors
-      if (error.status) {
-        this.logger.error(`[Quinn Chat] API status code: ${error.status}`);
-      }
-      if (error.error) {
-        this.logger.error(`[Quinn Chat] API error details: ${JSON.stringify(error.error)}`);
-      }
-
-      // If we have any partial response text, return it with an error notice
+      this.logger.error(`[Quinn Chat] Error: ${error.message}`);
+      // Return partial if possible
       if (responseTextParts.length > 0) {
-        const partialResponse = responseTextParts.join('\n\n');
-        const errorMessage = `\n\n---\n\n⚠️ I encountered an error while completing this response: ${error.message}. The information above may be incomplete.`;
-        const finalResponse = partialResponse + errorMessage;
-
-        this.logger.warn(`[Quinn Chat] Returning partial response (${partialResponse.length} chars) due to error`);
-        conversation.messages.push({ role: 'assistant', content: finalResponse });
-
         return {
-          response: finalResponse,
+          response: responseTextParts.join('\n\n') + `\n\nError: ${error.message}`,
           toolsUsed,
           structuredData: this.extractStructuredData(toolResultsData, userMessage),
-          modelUsed: currentModel,
-          metadata: {
-            intent: queryIntent,
-            toolCallCount: toolsUsed.length,
-            totalExecutionTime: Date.now() - chatStartTime,
-          },
-        };
+          metadata: { intent: queryIntent, toolCallCount: 0, totalExecutionTime: Date.now() - chatStartTime }
+        }
       }
-
-      // No partial response available, throw the error
       throw error;
     }
   }
+  // [REMOVED DETACHED JUNK CODE]
 
   /**
    * Parse "tell me about [geo]" / "market in [geo]" for single-geography focus. Returns geography name or null.
