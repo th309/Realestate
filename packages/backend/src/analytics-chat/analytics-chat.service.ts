@@ -121,8 +121,8 @@ export class AnalyticsChatService {
     // Load API Keys
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     const openaiKey = this.configService.get<string>('OPENAI_API_KEY') ||
-                      this.configService.get<string>('NOVITA_API_KEY') ||
-                      this.configService.get<string>('DEEPSEEK_API_KEY');
+      this.configService.get<string>('NOVITA_API_KEY') ||
+      this.configService.get<string>('DEEPSEEK_API_KEY');
     const baseURL = this.configService.get<string>('AI_BASE_URL');
 
     // Model Selection
@@ -140,6 +140,9 @@ export class AnalyticsChatService {
       this.logger.log(`[Quinn Init] OpenAI-compatible client initialized (BaseURL: ${baseURL || 'default'})`);
     } else if (anthropicKey) {
       // Fallback or explicit Anthropic
+      if (anthropicKey.includes(' ') || anthropicKey.length < 10) {
+        this.logger.error(`[Quinn Init] Invalid Anthropic API Key detected in .env: "${anthropicKey}". Please set valid ANTHROPIC_API_KEY.`);
+      }
       this.anthropicClient = new Anthropic({ apiKey: anthropicKey });
       this.provider = 'anthropic'; // Force fallback if openai failed
       this.logger.log('[Quinn Init] Anthropic client initialized');
