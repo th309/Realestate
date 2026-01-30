@@ -1,42 +1,38 @@
 # Quinn AI Provider Configuration Guide
 
-## Current Setup: Deepseek Primary, Claude Secondary
+## Current Setup: Claude Primary
 
-### Deepseek Models
+### Anthropic Models
 
-1. **deepseek-chat** (V3.2)
-   - Balanced inference vs. length
-   - Your daily driver at GPT-5 level performance
-   - Fast and cost-effective
+1. **claude-3-5-sonnet-latest**
+   - Best-in-class reasoning and coding
+   - Primary model for all complex analysis
+   - Use for reliable tool usage and broad context understanding
 
-2. **deepseek-reasoner** (V3.2-Special)
-   - Maxed-out reasoning capabilities
-   - Rivals Gemini-3.0-Pro
-   - Use for complex analytical queries
+### Previous Setup (Deepseek) - DEPRECATED
+Deepseek (V3.2) was previously used but encountered reliability issues. It remains available as a fallback option via the `openai` provider setting.
 
 ### Configuration
 
-Your current `.env` is configured to use **Deepseek V3.2 (deepseek-chat)** as primary:
+### Configuration
+
+Your current `.env` is configured to use **Anthropic (Claude)** as primary:
 
 ```env
-AI_PROVIDER=deepseek
-AI_BASE_URL=https://api.deepseek.com/v1
-AI_MODEL=deepseek-chat
-DEEPSEEK_API_KEY=sk-61962ff95c1c4a8684417f907da0d573
+AI_PROVIDER=anthropic
+AI_BASE_URL=https://api.anthropic.com
+AI_MODEL=claude-3-5-sonnet-latest
+ANTHROPIC_API_KEY=sk-ant-api...
 ```
 
 ### Switching Models
 
-#### Use Deepseek V3.2 (Balanced - Default)
+#### Use Deepseek V3.2 (Legacy/Fallback)
 ```env
 AI_PROVIDER=deepseek
+AI_BASE_URL=https://api.deepseek.com/v1
 AI_MODEL=deepseek-chat
-```
-
-#### Use Deepseek V3.2-Special (Maxed Reasoning)
-```env
-AI_PROVIDER=deepseek
-AI_MODEL=deepseek-reasoner
+DEEPSEEK_API_KEY=...
 ```
 
 #### Fallback to Claude (Secondary)
