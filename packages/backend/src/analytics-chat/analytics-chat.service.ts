@@ -127,26 +127,39 @@ export class AnalyticsChatService {
 
     // Model Selection
     this.modelName = this.configService.get<string>('AI_MODEL') ||
-      (this.provider === 'openai' ? 'gpt-4o' : this.MODEL_BALANCED);
+      (this.provider === 'openai' ? 'deepseek-chat' : this.MODEL_BALANCED);
 
-    this.logger.log(`[Quinn Init] Provider: ${this.provider.toUpperCase()}`);
+    this.logger.log(`[Quinn Init] Configured Provider: ${this.provider.toUpperCase()}`);
     this.logger.log(`[Quinn Init] Model: ${this.modelName}`);
 
-    if (this.provider === 'openai' && openaiKey) {
-      this.openaiClient = new OpenAI({
-        apiKey: openaiKey,
-        baseURL: baseURL, // Optional for real OpenAI, required for Novita/Groq
-      });
-      this.logger.log(`[Quinn Init] OpenAI-compatible client initialized (BaseURL: ${baseURL || 'default'})`);
-    } else if (anthropicKey) {
-      // Fallback or explicit Anthropic
-      if (anthropicKey.includes(' ') || anthropicKey.length < 10) {
-        this.logger.error(`[Quinn Init] Invalid Anthropic API Key detected in .env: "${anthropicKey}". Please set valid ANTHROPIC_API_KEY.`);
+    // Initialize OpenAI Client
+    if (openaiKey) {
+      try {
+        this.openaiClient = new OpenAI({
+          apiKey: openaiKey,
+          baseURL: baseURL,
+        });
+        this.logger.log(`[Quinn Init] OpenAI client initialized (BaseURL: ${baseURL || 'default'})`);
+      } catch (e) {
+        this.logger.error(`[Quinn Init] Failed to initialize OpenAI client: ${e.message}`);
       }
-      this.anthropicClient = new Anthropic({ apiKey: anthropicKey });
-      this.provider = 'anthropic'; // Force fallback if openai failed
-      this.logger.log('[Quinn Init] Anthropic client initialized');
-    } else {
+    }
+
+    // Initialize Anthropic Client
+    if (anthropicKey) {
+      if (anthropicKey.includes(' ') || anthropicKey.length < 10) {
+        this.logger.error(`[Quinn Init] Invalid Anthropic API Key detected in .env: "${anthropicKey}".`);
+      } else {
+        try {
+          this.anthropicClient = new Anthropic({ apiKey: anthropicKey });
+          this.logger.log('[Quinn Init] Anthropic client initialized');
+        } catch (e) {
+          this.logger.error(`[Quinn Init] Failed to initialize Anthropic client: ${e.message}`);
+        }
+      }
+    }
+
+    if (!this.openaiClient && !this.anthropicClient) {
       this.logger.error('[Quinn Init] No valid API keys found!');
     }
 
@@ -573,10 +586,374 @@ USER QUERY:`;
   }
 
   /**
+   * Execute streaming chat with Anthropic (Claude)
+   */
+  private async *streamResponseAnthropic(
+    currentModel: string,
+    conversation: ConversationState,
+    conversationId: string,
+    toolsUsed: string[],
+    rawTools: any[],
+    userProfilePrompt: string,
+    maxIterations: number,
+  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
+    const systemBlocks = [
+      { type: 'text' as const, text: QUINN_BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } },
+      { type: 'text' as const, text: userProfilePrompt, cache_control: { type: 'ephemeral' as const } },
+    ];
+
+    const apiMessages = conversation.messages.slice(-40).map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    let fullResponse = '';
+    let stream = await this.anthropicClient!.messages.stream({
+      model: currentModel,
+      max_tokens: 2048,
+      system: systemBlocks as any,
+      tools: rawTools as any,
+      messages: apiMessages,
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+        const text = chunk.delta.text;
+        fullResponse += text;
+        yield { type: 'text', content: text };
+      }
+    }
+
+    let finalMessage = await stream.finalMessage();
+
+    while (finalMessage.stop_reason === 'tool_use') {
+      const toolUseBlocks = finalMessage.content.filter((b) => b.type === 'tool_use');
+      const toolResultsForFollowUp: Array<{ id: string; content: string }> = [];
+
+      for (const toolUse of toolUseBlocks) {
+        if (toolUse.type !== 'tool_use') continue;
+
+        toolsUsed.push(toolUse.name);
+        yield { type: 'tool', content: { name: toolUse.name, status: 'executing' } };
+
+        const cachedResult = this.getCachedResult(toolUse.name, toolUse.input as Record<string, any>);
+        const result = cachedResult || await this.toolsService.executeTool(
+          toolUse.name,
+          toolUse.input as Record<string, any>,
+        );
+
+        if (!cachedResult && result.success) {
+          this.cacheResult(toolUse.name, toolUse.input as Record<string, any>, result);
+        }
+
+        const toolResultContent =
+          result.success && result.data?.error
+            ? JSON.stringify({
+              ...result.data,
+              note: `Service reported an error. Tell the user: ${result.data.error}`,
+            })
+            : JSON.stringify(result.success ? result : { error: result.error });
+        toolResultsForFollowUp.push({ id: toolUse.id, content: toolResultContent });
+
+        yield { type: 'tool', content: { name: toolUse.name, status: 'complete' } };
+      }
+
+      yield { type: 'text', content: '\n\n' };
+
+      this.logger.log(`[Quinn Stream Anthropic] Sending ${toolResultsForFollowUp.length} tool results`);
+
+      const nextStream = await this.anthropicClient!.messages.stream({
+        model: currentModel,
+        max_tokens: 2048,
+        system: systemBlocks as any,
+        tools: rawTools as any,
+        messages: [
+          ...apiMessages,
+          { role: 'assistant', content: finalMessage.content },
+          {
+            role: 'user',
+            content: toolResultsForFollowUp.map((tr) => ({
+              type: 'tool_result' as const,
+              tool_use_id: tr.id,
+              content: tr.content,
+            })),
+          },
+        ],
+      });
+
+      stream = nextStream;
+
+      for await (const chunk of nextStream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          const text = chunk.delta.text;
+          fullResponse += text;
+          yield { type: 'text', content: text };
+        }
+      }
+
+      finalMessage = await nextStream.finalMessage();
+    }
+
+    // Save to conversation history
+    conversation.messages.push({ role: 'assistant', content: fullResponse });
+
+    yield {
+      type: 'done',
+      content: {
+        toolsUsed,
+        modelUsed: currentModel,
+      },
+    };
+  }
+
+  /**
+   * Execute streaming chat with OpenAI/DeepSeek
+   */
+  private async *streamResponseOpenAI(
+    currentModel: string,
+    conversation: ConversationState,
+    conversationId: string,
+    toolsUsed: string[],
+    rawTools: any[],
+    userProfilePrompt: string,
+    maxIterations: number,
+  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
+    let fullResponse = '';
+
+    // Adapt Tools
+    const openaiTools = rawTools.map(t => ({
+      type: 'function',
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.input_schema
+      }
+    }));
+
+    // Adapt Messages (Inject System Prompt)
+    const systemContent = `${QUINN_BASE_SYSTEM_PROMPT}\n\n${userProfilePrompt}`;
+    const messages = [
+      { role: 'system', content: systemContent },
+      ...conversation.messages.slice(-40).map(m => ({
+        role: m.role as 'system' | 'user' | 'assistant',
+        content: m.content
+      }))
+    ];
+
+    const stream = await this.openaiClient!.chat.completions.create({
+      model: currentModel,
+      messages: messages as any,
+      tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+      stream: true,
+    });
+
+    let toolCalls: any[] = [];
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      if (delta?.content) {
+        fullResponse += delta.content;
+        yield { type: 'text', content: delta.content };
+      }
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          if (!toolCalls[tc.index]) toolCalls[tc.index] = { id: '', function: { name: '', arguments: '' } };
+          if (tc.id) toolCalls[tc.index].id += tc.id;
+          if (tc.function?.name) toolCalls[tc.index].function.name += tc.function.name;
+          if (tc.function?.arguments) toolCalls[tc.index].function.arguments += tc.function.arguments;
+        }
+      }
+    }
+
+    let currentToolCalls = toolCalls;
+    let iterations = 0;
+
+    while (currentToolCalls.length > 0 && iterations < maxIterations) {
+      iterations++;
+      const toolResultsForFollowUp: any[] = [];
+
+      const assistantMessage = {
+        role: 'assistant',
+        content: fullResponse || null,
+        tool_calls: currentToolCalls.map(tc => ({
+          id: tc.id,
+          type: 'function',
+          function: tc.function
+        }))
+      };
+
+      for (const tc of currentToolCalls) {
+        const name = tc.function.name;
+        const argsString = tc.function.arguments;
+        let args = {};
+        try { args = JSON.parse(argsString); } catch (e) { this.logger.error(`Failed to parse args for ${name}`); }
+
+        toolsUsed.push(name);
+        yield { type: 'tool', content: { name: name, status: 'executing' } };
+
+        const cachedResult = this.getCachedResult(name, args);
+        const result = cachedResult || await this.toolsService.executeTool(name, args);
+
+        if (!cachedResult && result.success) {
+          this.cacheResult(name, args, result);
+        }
+
+        const content = result.success && result.data?.error
+          ? JSON.stringify({ ...result.data, note: `Error: ${result.data.error}` })
+          : JSON.stringify(result.success ? result : { error: result.error });
+
+        toolResultsForFollowUp.push({
+          tool_call_id: tc.id,
+          role: 'tool',
+          name: name,
+          content: content
+        });
+
+        yield { type: 'tool', content: { name: name, status: 'complete' } };
+      }
+
+      yield { type: 'text', content: '\n\n' };
+
+      messages.push(assistantMessage as any);
+      messages.push(...toolResultsForFollowUp);
+
+      const followUpStream = await this.openaiClient!.chat.completions.create({
+        model: currentModel,
+        messages: messages as any,
+        stream: true
+      });
+
+      fullResponse = '';
+      toolCalls = [];
+      for await (const chunk of followUpStream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          fullResponse += content;
+          yield { type: 'text', content: content };
+        }
+      }
+      currentToolCalls = [];
+    }
+
+    conversation.messages.push({ role: 'assistant', content: fullResponse || 'Reference tool results above.' });
+
+    yield {
+      type: 'done',
+      content: {
+        toolsUsed,
+        modelUsed: currentModel,
+      },
+    };
+  }
+
+  /**
    * Process a chat message with streaming response
    * Yields text chunks as they're generated
    */
-  async *chatStream(
+  async * chatStream(
+    conversationId: string,
+    userMessage: string,
+    context?: Record<string, any>,
+  ): AsyncGenerator<{ type: 'text' | 'tool' | 'done'; content: any }> {
+    if (!this.isAvailable()) {
+      throw new Error('AI Provider not initialized - check API Keys');
+    }
+
+    // Get or create conversation
+    let conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      conversation = {
+        id: conversationId,
+        messages: [],
+        context,
+        createdAt: new Date().toISOString(),
+        lastMessageAt: new Date().toISOString(),
+      };
+      this.conversations.set(conversationId, conversation);
+    }
+
+    if (context) {
+      conversation.context = { ...conversation.context, ...context };
+    }
+
+    // Detect query intent
+    const queryIntent = this.getQueryIntent(userMessage);
+    const maxIterations = this.getMaxIterations(queryIntent);
+    this.logger.log(`[Quinn Stream Intent] Detected intent: ${queryIntent}`);
+
+    const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
+    const userPreferences = conversation.context as Record<string, unknown> | undefined;
+    const userProfilePrompt = this.buildUserProfilePrompt(userMode, userPreferences);
+
+    const rawTools = this.getRelevantTools(userMessage);
+    this.logger.log(`[Quinn Stream Tools] Providing ${rawTools.length} tools`);
+
+    conversation.messages.push({ role: 'user', content: userMessage });
+    conversation.lastMessageAt = new Date().toISOString();
+
+    const toolsUsed: string[] = [];
+    const currentModel = this.selectInitialModel(userMessage);
+
+    const providers = this.provider === 'anthropic'
+      ? ['anthropic', 'openai']
+      : ['openai', 'anthropic'];
+
+    let lastError: Error | null = null;
+    let successful = false;
+
+    // determine model for each provider
+    const getModelForProvider = (p: string) => {
+      // If this is the configured primary provider, use the configured model
+      if (p === this.provider) return currentModel;
+
+      // Otherwise use safe defaults for fallback
+      if (p === 'anthropic') return this.MODEL_BALANCED;
+      return 'deepseek-chat';
+    };
+
+    for (const provider of providers) {
+      if (provider === 'anthropic' && !this.anthropicClient) continue;
+      if (provider === 'openai' && !this.openaiClient) continue;
+
+      const loopModel = getModelForProvider(provider);
+
+      try {
+        if (provider === 'anthropic') {
+          this.logger.log(`[Quinn Stream] Starting via Anthropic (${loopModel})...`);
+          yield* this.streamResponseAnthropic(
+            loopModel,
+            conversation,
+            conversationId,
+            toolsUsed,
+            rawTools,
+            userProfilePrompt,
+            maxIterations
+          );
+        } else {
+          this.logger.log(`[Quinn Stream] Starting via OpenAI/DeepSeek (${loopModel})...`);
+          yield* this.streamResponseOpenAI(
+            loopModel,
+            conversation,
+            conversationId,
+            toolsUsed,
+            rawTools,
+            userProfilePrompt,
+            maxIterations
+          );
+        }
+        successful = true;
+        break;
+      } catch (e) {
+        this.logger.warn(`[Quinn Stream] Provider ${provider} failed: ${e.message}`);
+        lastError = e;
+      }
+    }
+
+    if (!successful) throw lastError || new Error('No AI provider available');
+  }
+
+  /** @deprecated */
+  private async * chatStreamLegacy(
     conversationId: string,
     userMessage: string,
     context?: Record<string, any>,

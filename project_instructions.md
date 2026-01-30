@@ -63,6 +63,11 @@
 ### 2.3 Architecture Style: Full-Stack Monorepo
 **Pattern:** Modular monolith with clear frontend/backend separation.
 
+**Deployment Targets (STRICT):**
+*   **Frontend:** Vercel (Production/Staging).
+*   **Backend:** Railway (Production/Staging).
+*   **Infrastructure Rule:** Code changes to `.env` files affect **LOCAL ONLY**. Production/Staging variables must be updated in the respective cloud dashboards (Vercel/Railway). **NEVER** assume a local `.env` change enables a feature in production.
+
 ```text
 rei-platform/
 ├── packages/
