@@ -103,7 +103,7 @@ export class AnalyticsChatService {
 
   // Model tiers for dynamic escalation (Anthropic)
   private readonly MODEL_FAST = 'claude-3-haiku-20240307';
-  private readonly MODEL_BALANCED = 'claude-3-5-sonnet-latest';
+  private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
   private readonly MODEL_POWERFUL = 'claude-3-opus-20240229';
 
   // In-memory conversation store (for MVP - consider Redis/DB for production)
@@ -119,13 +119,17 @@ export class AnalyticsChatService {
     private readonly supabase: SupabaseService,
   ) {
     // Determine Provider
-    const configuredProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
-    this.provider = (['openai', 'novita', 'groq', 'deepseek'].includes(configuredProvider) ? 'openai' : 'anthropic') as any;
+    const rawProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
+    this.provider = (['openai', 'novita', 'groq', 'deepseek'].includes(rawProvider) ? 'openai' : 'anthropic') as any;
 
-    // Load API Keys
+    // Load API Keys - Prioritize DeepSeek key if explicitly requested
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    const openaiKey = this.configService.get<string>('OPENAI_API_KEY') ||
-      this.configService.get<string>('DEEPSEEK_API_KEY');
+    const isDeepSeekRequest = rawProvider === 'deepseek' || rawProvider === 'novita';
+
+    const openaiKey = isDeepSeekRequest
+      ? (this.configService.get<string>('DEEPSEEK_API_KEY') || this.configService.get<string>('OPENAI_API_KEY'))
+      : (this.configService.get<string>('OPENAI_API_KEY') || this.configService.get<string>('DEEPSEEK_API_KEY'));
+
     const baseURL = this.configService.get<string>('AI_BASE_URL');
 
     // Model Selection

@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AnalyticsToolsService } from '../analytics-tools.service';
 import { AIProvider, ChatOptions, ChatResponse, ChatStreamChunk } from '../interfaces/ai-provider.interface';
+import { QUINN_DEEPSEEK_SYSTEM_PROMPT } from '../quinn-deepseek-system-prompt';
 
 export class OpenAIProvider implements AIProvider {
     private readonly logger = new Logger(OpenAIProvider.name);
@@ -29,7 +30,7 @@ export class OpenAIProvider implements AIProvider {
         // Construct Messages (Stateless API: requires full history)
         // DeepSeek/OpenAI expects system prompt first, then history
         const apiMessages = [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: `${QUINN_DEEPSEEK_SYSTEM_PROMPT}\n\n${systemPrompt}` },
             ...messages.map(m => ({
                 role: m.role,
                 content: m.content
@@ -160,7 +161,7 @@ export class OpenAIProvider implements AIProvider {
         }));
 
         const apiMessages = [
-            { role: 'system', content: systemPrompt },
+            { role: 'system', content: `${QUINN_DEEPSEEK_SYSTEM_PROMPT}\n\n${systemPrompt}` },
             ...messages.map(m => ({
                 role: m.role,
                 content: m.content
