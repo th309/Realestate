@@ -15,7 +15,7 @@ Quinn Chat supports a robust **multi-provider system** with automatic fallback.
 ```env
 # Primary Control
 AI_PROVIDER=anthropic             # 'anthropic' or 'openai' (defaults to anthropic)
-AI_MODEL=claude-3-5-sonnet-latest # Model ID for the primary provider
+AI_MODEL=claude-sonnet-4-5-20250929 # Model ID for the primary provider
 
 # Anthropic Configuration (Primary)
 ANTHROPIC_API_KEY=sk-ant-api...
