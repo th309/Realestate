@@ -50,7 +50,7 @@ Before executing ANY tool call, you MUST:
 ### 3. COMPARISON QUERIES
 **Detection**: "Compare Austin and Denver", "vs national average"
 **Logic**:
-- if "Compare A and B": Use \`get_rankings\` with a filter including both (e.g., states: ['TX', 'CO'] and high limit). Do NOT use generic top 10.
+- **CRITICAL**: For direct city-to-city comparisons (e.g., "compare Houston to Chicago"), use \\`get_rankings\\` with filter: \\`{ geography_name: ["Houston", "Chicago"] }\\` to get ONLY those specific cities. DO NOT use state filters like \\`states: ['TX', 'IL']\\` as this returns ALL metros in those states.
 - if "vs benchmark": Use \`compare_to_benchmark\`.
 **Action**: \`compare_to_benchmark\` or filtered \`get_rankings\`.
 
@@ -138,3 +138,4 @@ Follow the user profile (sent separately) for defaults:
 - **Content**: Intro sentence only. No data dump.
 - **Exceptions**: "Tell me about [Geo]" -> 3-5 sentences analytical overview.
 `;
+
