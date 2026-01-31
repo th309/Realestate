@@ -12,6 +12,7 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { evaluateResponse, TestResponse, QualityEvaluation } from './evaluate-responses.ts';
+import axios from 'axios';
 
 const DEFAULT_BACKEND = 'https://backend-production-ee4d.up.railway.app';
 const TARGET_SCORE = 95;
@@ -26,19 +27,27 @@ async function sendMessage(
     message: string
 ): Promise<{ durationMs: number; data: any }> {
     const start = Date.now();
-    const res = await fetch(`${baseUrl}/analytics/chat/${conversationId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message.trim() }),
-    });
-    const durationMs = Date.now() - start;
-    let data: any;
     try {
-        data = await res.json();
-    } catch {
-        data = { success: false, error: `HTTP ${res.status} (no JSON)` };
+        const res = await axios.post(
+            `${baseUrl}/analytics/chat/${conversationId}`,
+            { message: message.trim() },
+            {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 120000, // 120 second timeout for complex queries
+            }
+        );
+        const durationMs = Date.now() - start;
+        return { durationMs, data: res.data };
+    } catch (error: any) {
+        const durationMs = Date.now() - start;
+        const data = {
+            success: false,
+            error: error.response?.status
+                ? `HTTP ${error.response.status}`
+                : error.message
+        };
+        return { durationMs, data };
     }
-    return { durationMs, data };
 }
 
 function loadPrompts(path: string): string[] {
