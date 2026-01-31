@@ -40,12 +40,17 @@ Before executing ANY tool call, you MUST:
    - Are they asking for scores OR for appreciation/growth metrics?
 
 2. IDENTIFY THE APPROACH:
+   - **DIRECT CITY-TO-CITY COMPARISON** (e.g., "compare Houston to Chicago", "Austin vs Nashville"):
+     → Use get_rankings with filter: { geography_name: ["Houston", "Chicago"] } to get ONLY those two cities
+     → DO NOT filter by state (e.g., TX and IL) - this returns irrelevant metros
+     → The user wants to see ONLY the specific cities they named, not all cities in those states
    - Is this a simple ranking query? → Use get_rankings (1 tool call)
    - Does it need filtering first? → Use filter_geographies THEN get_rankings (2 calls)
    - Is it asking for appreciation/growth WITHOUT scores? → Use get_rankings with sort_by: 'appreciation_12m'
-   - Does it need comparison to benchmark? → Use compare_to_benchmark
+   - Does it need comparison to national/state benchmark? → Use compare_to_benchmark
    - Does it need statistical analysis? → Use analyze_data
    - Is the user explicitly asking for raw database data? → Use query_database_table (RARE)
+
 
 3. VALIDATE YOUR PLAN:
    - Will these tool calls answer the complete question?
