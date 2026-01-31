@@ -197,6 +197,7 @@ export class OpenAIProvider implements AIProvider {
 
             // Process tools
             for (const tc of msg.tool_calls as any[]) {
+                this.logger.log(`[OpenAIProvider] Executing tool: ${tc.function.name} with args: ${tc.function.arguments}`);
                 toolsUsed.push(tc.function.name);
                 let args = {};
                 try { args = JSON.parse(tc.function.arguments); } catch (e) { this.logger.error('Args parse error'); }
@@ -213,6 +214,8 @@ export class OpenAIProvider implements AIProvider {
                     result = { success: false, error: 'Tool execution failed silently (null result)' };
                 }
 
+                this.logger.debug(`[OpenAIProvider] Tool ${tc.function.name} result data keys: ${JSON.stringify(Object.keys(result?.data || {}))}`);
+
                 toolResults.push({
                     toolName: tc.function.name,
                     data: result
@@ -228,6 +231,8 @@ export class OpenAIProvider implements AIProvider {
                 } as any);
             }
         }
+
+        this.logger.log(`[OpenAIProvider] Chat loop finished. Total tools used: ${toolsUsed.length}`);
 
         return {
             content: finalContent,

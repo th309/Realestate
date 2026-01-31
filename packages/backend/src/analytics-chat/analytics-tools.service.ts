@@ -26,11 +26,11 @@ export class AnalyticsToolsService {
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
     this.logger.log(`[Analytics Tools] Service URL: ${this.analyticsBaseUrl}`);
-    
+
     // Test connectivity on startup
     this.testConnectivity();
   }
-  
+
   /**
    * Test connectivity to analytics service on startup
    */
@@ -39,13 +39,13 @@ export class AnalyticsToolsService {
       this.logger.log(`[Analytics Tools] Testing connectivity to ${this.analyticsBaseUrl}...`);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch(`${this.analyticsBaseUrl}/health`, {
         method: 'GET',
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      
+
       if (response.ok) {
         this.logger.log(`[Analytics Tools] ✓ Connected successfully (status: ${response.status})`);
       } else {
@@ -90,7 +90,7 @@ export class AnalyticsToolsService {
       const timeoutMs = toolName === 'get_rankings' ? 60000 : 30000;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      
+
       let response;
       try {
         response = await fetch(url, {
@@ -113,8 +113,9 @@ export class AnalyticsToolsService {
       }
 
       const responseText = await response.text();
+      this.logger.log(`[Tool ${toolName}] Raw response (first 1000 chars): ${responseText.slice(0, 1000)}`);
       this.logger.log(`[Tool ${toolName}] Response size: ${responseText.length} bytes`);
-      
+
       let data;
       try {
         data = JSON.parse(responseText);
@@ -126,11 +127,8 @@ export class AnalyticsToolsService {
 
       const totalDuration = Date.now() - startTime;
       this.logger.log(`[Tool ${toolName}] === SUCCESS === (${totalDuration}ms total)`);
-      
-      // Log a preview of the data
-      const dataPreview = JSON.stringify(data).slice(0, 300);
-      this.logger.log(`[Tool ${toolName}] Data preview: ${dataPreview}...`);
-      
+      this.logger.debug(`[Tool ${toolName}] Final data keys: ${JSON.stringify(Object.keys(data || {}))}`);
+
       return { success: true, data };
     } catch (error) {
       const totalDuration = Date.now() - startTime;

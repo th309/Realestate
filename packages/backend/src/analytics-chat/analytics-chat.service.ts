@@ -803,12 +803,22 @@ USER QUERY:`;
     if (!successful) throw lastError || new Error('No AI provider available');
 
     // Extract structured data fallback logic
-    const toolResultsData = finalResult.toolResults.map((r: any) => ({
-      toolName: r.data?.toolName || 'unknown',
-      data: r.data
-    }));
+    this.logger.debug(`[Quinn Chat] Mapping ${finalResult.toolResults.length} tool results for extraction`);
+    const toolResultsData = finalResult.toolResults.map((r: any, idx: number) => {
+      this.logger.debug(`[Quinn Chat] Result ${idx}: toolName=${r.toolName || 'MISSING'}, dataKeys=${JSON.stringify(Object.keys(r.data || {}))}`);
+      return {
+        toolName: r.toolName || 'unknown',
+        data: r.data
+      };
+    });
 
+    this.logger.debug(`[Quinn Chat] Starting structured data extraction for message: "${userMessage?.slice(0, 50)}..."`);
     const structuredData = this.extractStructuredData(toolResultsData, userMessage);
+    if (structuredData) {
+      this.logger.log(`[Quinn Chat] Extraction SUCCESS: ${JSON.stringify(Object.keys(structuredData))}`);
+    } else {
+      this.logger.warn(`[Quinn Chat] Extraction returned UNDEFINED`);
+    }
 
     // Fallback response generation
     if (!finalResult.content && structuredData) {
