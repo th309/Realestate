@@ -1,27 +1,6 @@
-#!/usr/bin/env npx tsx
-/**
- * Quinn Response Evaluator
- * 
- * Scores Quinn responses on multiple quality dimensions:
- * - Brevity (1-3 sentences)
- * - Data repetition avoidance
- * - Plain text formatting
- * - Tool mention avoidance
- * - Intent matching
- * - Completeness
- * - Performance
- * 
- * Detects critical failures:
- * - No data when needed
- * - Wrong scoring system
- * - Hallucinations
- * - Incomplete answers
- * - Data omissions
- */
-
 import { readFileSync, writeFileSync } from 'fs';
 
-interface TestResponse {
+export interface TestResponse {
   prompt: string;
   success: boolean;
   durationMs: number;
@@ -31,24 +10,24 @@ interface TestResponse {
   error?: string;
 }
 
-interface QualityEvaluation {
+export interface QualityEvaluation {
   prompt: string;
-  
+
   // Performance metrics
   durationMs: number;
   durationScore: number;
-  
+
   // Tool usage
   toolsUsed: string[];
   toolCount: number;
   toolsAppropriate: boolean;
   intentDetected: string;
   intentCorrect: boolean;
-  
+
   // Response quality
   responseText: string;
   responseLength: number;
-  
+
   // Quality scores (0-100)
   brevityScore: number;
   dataRepetitionScore: number;
@@ -56,14 +35,14 @@ interface QualityEvaluation {
   toolMentionScore: number;
   intentMatchScore: number;
   completenessScore: number;
-  
+
   // Critical failures
   noDataWhenNeeded: boolean;
   wrongScoringSystem: boolean;
   hallucination: boolean;
   incompleteAnswer: boolean;
   dataOmission: boolean;
-  
+
   // Overall
   overallScore: number;
   passes: boolean;
@@ -71,7 +50,7 @@ interface QualityEvaluation {
   suggestions: string[];
 }
 
-function calculateBrevityScore(text: string): number {
+export function calculateBrevityScore(text: string): number {
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   if (sentences.length <= 5) return 100;  // 1-5 sentences acceptable
   if (sentences.length <= 8) return 75;
@@ -79,7 +58,7 @@ function calculateBrevityScore(text: string): number {
   return 25;
 }
 
-function calculateDataRepetitionScore(response: TestResponse): number {
+export function calculateDataRepetitionScore(response: TestResponse): number {
   const sd = response.structuredData as { comparison?: unknown } | undefined;
   if (sd?.comparison && /compare|benchmark|national average|stack up/.test(response.prompt.toLowerCase())) return 100;
   const text = response.responseText.toLowerCase();
@@ -94,7 +73,7 @@ function calculateDataRepetitionScore(response: TestResponse): number {
   return 20;
 }
 
-function calculateMarkdownScore(response: TestResponse): number {
+export function calculateMarkdownScore(response: TestResponse): number {
   const text = response.responseText;
   const prompt = response.prompt.toLowerCase();
   // Educational / advice prompts: treat as acceptable (long substantive answer)
@@ -110,39 +89,39 @@ function calculateMarkdownScore(response: TestResponse): number {
   return 100;
 }
 
-function calculateToolMentionScore(text: string): number {
+export function calculateToolMentionScore(text: string): number {
   const lower = text.toLowerCase();
-  
+
   const toolMentions = [
     'get_rankings', 'filter_geographies', 'analyze_data',
     'compare_to_benchmark', 'run_backtest', 'get_time_series',
     'tool', 'called', 'used the', 'ran a'
   ];
-  
+
   for (const mention of toolMentions) {
     if (lower.includes(mention)) {
       if (lower.includes('i used') || lower.includes('i called')) return 0;
       return 50;
     }
   }
-  
+
   return 100;
 }
 
-function isVagueCensusClarifyingResponse(response: TestResponse): boolean {
+export function isVagueCensusClarifyingResponse(response: TestResponse): boolean {
   const prompt = response.prompt.toLowerCase();
   const text = response.responseText.toLowerCase();
   return /compare\s+census\s+data|census\s+data\s+across/.test(prompt) &&
     (/to do that, I need|which\s+(census|variables|metros)|do you mean/.test(text));
 }
 
-function isUltraVagueHelpResponse(response: TestResponse): boolean {
+export function isUltraVagueHelpResponse(response: TestResponse): boolean {
   const p = response.prompt.toLowerCase().trim();
   if (response.toolsUsed.length > 0) return false;
   return p === 'help' || p.length < 12 || p === 'real estate?';
 }
 
-function calculateIntentMatchScore(response: TestResponse): number {
+export function calculateIntentMatchScore(response: TestResponse): number {
   if (isVagueCensusClarifyingResponse(response)) return 100;
   if (isUltraVagueHelpResponse(response)) return 100;
   const prompt = response.prompt.toLowerCase();
@@ -217,11 +196,11 @@ function calculateIntentMatchScore(response: TestResponse): number {
       return usedExpectedTool ? 100 : 0;
     }
   }
-  
+
   return tools.length > 0 ? 100 : 50;
 }
 
-function calculateCompletenessScore(response: TestResponse): number {
+export function calculateCompletenessScore(response: TestResponse): number {
   if (!response.success) return 0;
   if (isVagueCensusClarifyingResponse(response)) return 100;
   if (isUltraVagueHelpResponse(response)) return 100;
@@ -255,27 +234,27 @@ function calculateCompletenessScore(response: TestResponse): number {
   if (text.length < 50) return 20;
   if (text.endsWith('...') || text.includes('let me know')) return 60;
   if (text.includes('I apologize') || text.includes('I cannot')) return 40;
-  
+
   const needsData = !prompt.match(/what|how|why|explain/);
   if (needsData && !response.structuredData) return 60;
-  
+
   return 100;
 }
 
-function calculateDurationScore(response: TestResponse): number {
+export function calculateDurationScore(response: TestResponse): number {
   const prompt = response.prompt.toLowerCase();
   const isSimple = !prompt.match(/compare|analyze|show me.*and|everything/);
-  
+
   const target = isSimple ? 10000 : 30000;
   const actual = response.durationMs;
-  
+
   if (actual <= target) return 100;
   if (actual <= target * 1.5) return 70;
   if (actual <= target * 2) return 40;
   return 0;
 }
 
-function detectNoData(response: TestResponse): boolean {
+export function detectNoData(response: TestResponse): boolean {
   const needsData = response.prompt.toLowerCase().match(/show|best|top|compare|markets|metros/);
   if (!needsData || response.structuredData || response.toolsUsed.length > 0) return false;
   // Vague Census/raw-data ask where Quinn correctly asked for clarification (no data = expected)
@@ -283,31 +262,31 @@ function detectNoData(response: TestResponse): boolean {
   return true;
 }
 
-function detectWrongScoring(response: TestResponse): boolean {
+export function detectWrongScoring(response: TestResponse): boolean {
   const prompt = response.prompt.toLowerCase();
   const isInvestorQuery = prompt.match(/invest|rental|cash.*flow|cap rate|yield/);
   const isHomebuyerQuery = prompt.match(/buy|family|neighborhood|afford|school/);
-  
+
   const text = response.responseText.toLowerCase();
   const mentionsInvestor = text.includes('investoredge');
   const mentionsHomebuyer = text.includes('homeready');
-  
+
   // General educational / advice asks: no ranking requested, skip score-type check
   const isGeneralAdvice = /what should I know|tell me about investing|know about (real estate )?investing/.test(prompt);
   if (isGeneralAdvice) return false;
-  
+
   // Cap rate / yield queries that used get_rankings: assume acceptable (can't verify score type from tools)
   if (prompt.includes('cap rate') || prompt.includes('rental yield') || prompt.includes('rental yields')) {
     if (response.toolsUsed.includes('get_rankings')) return false;
   }
-  
+
   if (isInvestorQuery && mentionsHomebuyer) return true;
   if (isHomebuyerQuery && mentionsInvestor) return true;
-  
+
   return false;
 }
 
-function detectHallucination(response: TestResponse): boolean {
+export function detectHallucination(response: TestResponse): boolean {
   const text = response.responseText;
   const prompt = response.prompt.toLowerCase();
   const sd = response.structuredData as Record<string, unknown> | null | undefined;
@@ -334,9 +313,9 @@ function detectHallucination(response: TestResponse): boolean {
   return false;
 }
 
-function detectIncomplete(response: TestResponse): boolean {
+export function detectIncomplete(response: TestResponse): boolean {
   const text = response.responseText.toLowerCase();
-  
+
   const incomplete = [
     text.endsWith('...'),
     text.includes('i apologize, i cannot'),
@@ -344,11 +323,11 @@ function detectIncomplete(response: TestResponse): boolean {
     text.includes('let me know if you'),
     text.length < 30
   ];
-  
+
   return incomplete.some(Boolean);
 }
 
-function detectOmission(response: TestResponse): boolean {
+export function detectOmission(response: TestResponse): boolean {
   const prompt = response.prompt.toLowerCase();
   const text = response.responseText.toLowerCase();
   const parts = prompt.split(' and ');
@@ -365,7 +344,7 @@ function detectOmission(response: TestResponse): boolean {
   return false;
 }
 
-function evaluateResponse(response: TestResponse): QualityEvaluation {
+export function evaluateResponse(response: TestResponse): QualityEvaluation {
   const evaluation: QualityEvaluation = {
     prompt: response.prompt,
     durationMs: response.durationMs,
@@ -376,7 +355,7 @@ function evaluateResponse(response: TestResponse): QualityEvaluation {
     intentCorrect: true,
     responseText: response.responseText,
     responseLength: response.responseText.length,
-    
+
     brevityScore: calculateBrevityScore(response.responseText),
     dataRepetitionScore: calculateDataRepetitionScore(response),
     markdownScore: calculateMarkdownScore(response),
@@ -384,19 +363,19 @@ function evaluateResponse(response: TestResponse): QualityEvaluation {
     intentMatchScore: calculateIntentMatchScore(response),
     completenessScore: calculateCompletenessScore(response),
     durationScore: calculateDurationScore(response),
-    
+
     noDataWhenNeeded: detectNoData(response),
     wrongScoringSystem: detectWrongScoring(response),
     hallucination: detectHallucination(response),
     incompleteAnswer: detectIncomplete(response),
     dataOmission: detectOmission(response),
-    
+
     overallScore: 0,
     passes: false,
     issues: [],
     suggestions: []
   };
-  
+
   evaluation.overallScore = (
     evaluation.brevityScore * 0.15 +
     evaluation.dataRepetitionScore * 0.15 +
@@ -406,52 +385,52 @@ function evaluateResponse(response: TestResponse): QualityEvaluation {
     evaluation.completenessScore * 0.20 +
     evaluation.durationScore * 0.05
   );
-  
-  const hasCriticalFailures = 
+
+  const hasCriticalFailures =
     evaluation.noDataWhenNeeded ||
     evaluation.wrongScoringSystem ||
     evaluation.hallucination ||
     evaluation.incompleteAnswer ||
     evaluation.dataOmission;
-  
+
   evaluation.passes = evaluation.overallScore >= 95 && !hasCriticalFailures;
-  
+
   // Generate issues and suggestions
   if (evaluation.brevityScore < 75) {
     evaluation.issues.push('Response too long');
     evaluation.suggestions.push('Strengthen brevity requirement in system prompt');
   }
-  
+
   if (evaluation.dataRepetitionScore < 75) {
     evaluation.issues.push('Data repeated in text');
     evaluation.suggestions.push('Add explicit examples of avoiding data repetition');
   }
-  
+
   if (evaluation.markdownScore < 100) {
     evaluation.issues.push('Contains markdown formatting');
     evaluation.suggestions.push('Make "plain text only" more prominent');
   }
-  
+
   if (evaluation.toolMentionScore < 70) {
     evaluation.issues.push('Mentions tools or explains process');
     evaluation.suggestions.push('Add "never mention tools" to system prompt');
   }
-  
+
   if (evaluation.intentMatchScore < 70) {
     evaluation.issues.push('Wrong tools for intent');
     evaluation.suggestions.push('Update intent detection or tool selection logic');
   }
-  
+
   if (evaluation.completenessScore < 70) {
     evaluation.issues.push('Incomplete or unclear answer');
     evaluation.suggestions.push('Review prompt clarity requirements');
   }
-  
+
   if (evaluation.durationScore < 70) {
     evaluation.issues.push('Response too slow');
     evaluation.suggestions.push('Optimize tool selection or add caching');
   }
-  
+
   if (hasCriticalFailures) {
     if (evaluation.noDataWhenNeeded) {
       evaluation.issues.push('CRITICAL: No data when needed');
@@ -474,78 +453,80 @@ function evaluateResponse(response: TestResponse): QualityEvaluation {
       evaluation.suggestions.push('Ensure all parts of multi-part questions are addressed');
     }
   }
-  
+
   return evaluation;
 }
 
-// Main execution
-const inputFile = process.argv[2];
-if (!inputFile) {
-  console.error('Usage: npx tsx evaluate-responses.ts <test-results.json>');
-  process.exit(1);
+// Main execution CLI
+if (import.meta.url.endsWith(process.argv[1]) || (process.argv[1] && process.argv[1].includes('evaluate-responses'))) {
+  const inputFile = process.argv[2];
+  if (!inputFile) {
+    console.error('Usage: npx tsx evaluate-responses.ts <test-results.json>');
+    process.exit(1);
+  }
+
+  const responses: TestResponse[] = JSON.parse(readFileSync(inputFile, 'utf-8'));
+  const evaluations = responses.map(evaluateResponse);
+
+  // Calculate summary stats
+  const totalTests = evaluations.length;
+  const passed = evaluations.filter(e => e.passes).length;
+  const failed = totalTests - passed;
+  const passRate = (passed / totalTests * 100).toFixed(1);
+
+  const avgBrevity = (evaluations.reduce((sum, e) => sum + e.brevityScore, 0) / totalTests).toFixed(1);
+  const avgDataRep = (evaluations.reduce((sum, e) => sum + e.dataRepetitionScore, 0) / totalTests).toFixed(1);
+  const avgMarkdown = (evaluations.reduce((sum, e) => sum + e.markdownScore, 0) / totalTests).toFixed(1);
+  const avgToolMention = (evaluations.reduce((sum, e) => sum + e.toolMentionScore, 0) / totalTests).toFixed(1);
+  const avgIntent = (evaluations.reduce((sum, e) => sum + e.intentMatchScore, 0) / totalTests).toFixed(1);
+  const avgComplete = (evaluations.reduce((sum, e) => sum + e.completenessScore, 0) / totalTests).toFixed(1);
+  const avgDuration = (evaluations.reduce((sum, e) => sum + e.durationMs, 0) / totalTests).toFixed(0);
+  const avgToolCalls = (evaluations.reduce((sum, e) => sum + e.toolCount, 0) / totalTests).toFixed(1);
+
+  const criticalFailures = evaluations.filter(e =>
+    e.noDataWhenNeeded || e.wrongScoringSystem || e.hallucination ||
+    e.incompleteAnswer || e.dataOmission
+  ).length;
+
+  // Output summary
+  console.log('=== Quinn Response Evaluation Summary ===\n');
+  console.log(`Total Tests: ${totalTests}`);
+  console.log(`Passed: ${passed} (${passRate}%)`);
+  console.log(`Failed: ${failed}`);
+  console.log(`Critical Failures: ${criticalFailures}\n`);
+
+  console.log('=== Quality Scores (0-100) ===');
+  console.log(`Brevity: ${avgBrevity}`);
+  console.log(`Data Repetition: ${avgDataRep}`);
+  console.log(`Markdown: ${avgMarkdown}`);
+  console.log(`Tool Mention: ${avgToolMention}`);
+  console.log(`Intent Match: ${avgIntent}`);
+  console.log(`Completeness: ${avgComplete}\n`);
+
+  console.log('=== Performance ===');
+  console.log(`Avg Duration: ${avgDuration}ms`);
+  console.log(`Avg Tool Calls: ${avgToolCalls}\n`);
+
+  // Output failures
+  const failures = evaluations.filter(e => !e.passes);
+  if (failures.length > 0) {
+    console.log('=== Failures ===');
+    failures.forEach((f, i) => {
+      console.log(`\n${i + 1}. "${f.prompt.slice(0, 60)}..."`);
+      console.log(`   Overall Score: ${f.overallScore.toFixed(1)}`);
+      console.log(`   Issues: ${f.issues.join(', ')}`);
+      if (f.noDataWhenNeeded) console.log('   ⚠️  No data returned');
+      if (f.wrongScoringSystem) console.log('   ⚠️  Wrong scoring system');
+      if (f.hallucination) console.log('   ⚠️  Hallucinated data');
+    });
+  }
+
+  // Save detailed results
+  const outputFile = inputFile.replace('.json', '-evaluations.json');
+  writeFileSync(outputFile, JSON.stringify(evaluations, null, 2));
+  console.log(`\nDetailed evaluations saved to: ${outputFile}`);
+
+  // Exit with success (0) if pass rate >= 95%, else 1
+  const targetPassRate = 95;
+  process.exit(parseFloat(passRate) >= targetPassRate ? 0 : 1);
 }
-
-const responses: TestResponse[] = JSON.parse(readFileSync(inputFile, 'utf-8'));
-const evaluations = responses.map(evaluateResponse);
-
-// Calculate summary stats
-const totalTests = evaluations.length;
-const passed = evaluations.filter(e => e.passes).length;
-const failed = totalTests - passed;
-const passRate = (passed / totalTests * 100).toFixed(1);
-
-const avgBrevity = (evaluations.reduce((sum, e) => sum + e.brevityScore, 0) / totalTests).toFixed(1);
-const avgDataRep = (evaluations.reduce((sum, e) => sum + e.dataRepetitionScore, 0) / totalTests).toFixed(1);
-const avgMarkdown = (evaluations.reduce((sum, e) => sum + e.markdownScore, 0) / totalTests).toFixed(1);
-const avgToolMention = (evaluations.reduce((sum, e) => sum + e.toolMentionScore, 0) / totalTests).toFixed(1);
-const avgIntent = (evaluations.reduce((sum, e) => sum + e.intentMatchScore, 0) / totalTests).toFixed(1);
-const avgComplete = (evaluations.reduce((sum, e) => sum + e.completenessScore, 0) / totalTests).toFixed(1);
-const avgDuration = (evaluations.reduce((sum, e) => sum + e.durationMs, 0) / totalTests).toFixed(0);
-const avgToolCalls = (evaluations.reduce((sum, e) => sum + e.toolCount, 0) / totalTests).toFixed(1);
-
-const criticalFailures = evaluations.filter(e => 
-  e.noDataWhenNeeded || e.wrongScoringSystem || e.hallucination || 
-  e.incompleteAnswer || e.dataOmission
-).length;
-
-// Output summary
-console.log('=== Quinn Response Evaluation Summary ===\n');
-console.log(`Total Tests: ${totalTests}`);
-console.log(`Passed: ${passed} (${passRate}%)`);
-console.log(`Failed: ${failed}`);
-console.log(`Critical Failures: ${criticalFailures}\n`);
-
-console.log('=== Quality Scores (0-100) ===');
-console.log(`Brevity: ${avgBrevity}`);
-console.log(`Data Repetition: ${avgDataRep}`);
-console.log(`Markdown: ${avgMarkdown}`);
-console.log(`Tool Mention: ${avgToolMention}`);
-console.log(`Intent Match: ${avgIntent}`);
-console.log(`Completeness: ${avgComplete}\n`);
-
-console.log('=== Performance ===');
-console.log(`Avg Duration: ${avgDuration}ms`);
-console.log(`Avg Tool Calls: ${avgToolCalls}\n`);
-
-// Output failures
-const failures = evaluations.filter(e => !e.passes);
-if (failures.length > 0) {
-  console.log('=== Failures ===');
-  failures.forEach((f, i) => {
-    console.log(`\n${i + 1}. "${f.prompt.slice(0, 60)}..."`);
-    console.log(`   Overall Score: ${f.overallScore.toFixed(1)}`);
-    console.log(`   Issues: ${f.issues.join(', ')}`);
-    if (f.noDataWhenNeeded) console.log('   ⚠️  No data returned');
-    if (f.wrongScoringSystem) console.log('   ⚠️  Wrong scoring system');
-    if (f.hallucination) console.log('   ⚠️  Hallucinated data');
-  });
-}
-
-// Save detailed results
-const outputFile = inputFile.replace('.json', '-evaluations.json');
-writeFileSync(outputFile, JSON.stringify(evaluations, null, 2));
-console.log(`\nDetailed evaluations saved to: ${outputFile}`);
-
-// Exit with success (0) if pass rate >= 95%, else 1
-const targetPassRate = 95;
-process.exit(parseFloat(passRate) >= targetPassRate ? 0 : 1);

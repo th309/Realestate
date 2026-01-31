@@ -1,0 +1,11 @@
+Starting optimization run against: https://backend-production-ee4d.up.railway.app
+Target Score: 95
+
+[1/76] Testing: "Where should I buy in Austin?"
+  Success: Γ£à
+  Score:   95.0
+  Tools:   [filter_geographies, get_rankings]
+  Time:    46401ms
+------------------------------------------
+
+[2/76] Testing: "Are prices dropping in Phoenix?"

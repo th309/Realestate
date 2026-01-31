@@ -1,0 +1,115 @@
+[
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": true,
+    "durationMs": 36121,
+    "toolsUsed": [],
+    "responseText": "To give you the most relevant recommendations, are you looking for specific neighborhoods within Austin city or broader recommendations for the Austin metro area including surrounding suburbs?",
+    "structuredData": null
+  },
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "success": true,
+    "durationMs": 55023,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "responseText": "Yes, Phoenix has experienced a 3.2% price decline over the past year based on the latest data. The market remains one of the higher-scored areas in Arizona for homebuyers despite this recent downward trend.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Phoenix-Mesa-Chandler, AZ",
+            "id": "38060",
+            "score": 58.5,
+            "appreciation": -3.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 2,
+            "name": "Safford, AZ",
+            "id": "40940",
+            "score": 57,
+            "appreciation": 4.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 3,
+            "name": "Tucson, AZ",
+            "id": "46060",
+            "score": 54,
+            "appreciation": -3,
+            "state": "AZ"
+          },
+          {
+            "rank": 4,
+            "name": "Flagstaff, AZ",
+            "id": "22380",
+            "score": 49.5,
+            "appreciation": 0.8,
+            "state": "AZ"
+          },
+          {
+            "rank": 5,
+            "name": "Prescott Valley-Prescott, AZ",
+            "id": "39150",
+            "score": 49.4,
+            "state": "AZ"
+          },
+          {
+            "rank": 6,
+            "name": "Lake Havasu City-Kingman, AZ",
+            "id": "29420",
+            "score": 47.6,
+            "appreciation": -0.1,
+            "state": "AZ"
+          },
+          {
+            "rank": 7,
+            "name": "Nogales, AZ",
+            "id": "35700",
+            "score": 45.4,
+            "appreciation": -0.6,
+            "state": "AZ"
+          },
+          {
+            "rank": 8,
+            "name": "Sierra Vista-Douglas, AZ",
+            "id": "43420",
+            "score": 45.3,
+            "appreciation": 1.3,
+            "state": "AZ"
+          },
+          {
+            "rank": 9,
+            "name": "Yuma, AZ",
+            "id": "49740",
+            "score": 45.1,
+            "appreciation": 1.4,
+            "state": "AZ"
+          },
+          {
+            "rank": 10,
+            "name": "Payson, AZ",
+            "id": "37740",
+            "score": 41.5,
+            "appreciation": -2,
+            "state": "AZ"
+          },
+          {
+            "rank": 11,
+            "name": "Show Low, AZ",
+            "id": "43320",
+            "score": 40.6,
+            "appreciation": 0.5,
+            "state": "AZ"
+          }
+        ]
+      }
+    }
+  }
+]

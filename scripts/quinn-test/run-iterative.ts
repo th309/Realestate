@@ -155,6 +155,13 @@ function loadJson(path: string): any[] {
 }
 
 async function main() {
+  // Global 30-minute timeout (1,800,000 ms)
+  const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000;
+  setTimeout(() => {
+    console.error(`\n\n[ERROR] Global timeout of 30 minutes reached. Exiting...`);
+    process.exit(1);
+  }, GLOBAL_TIMEOUT_MS);
+
   const { promptsPath, backendUrl, outputPath, rerunFailedFrom, previousResults } = parseArgs();
   const baseUrl = backendUrl ?? BACKEND_URL;
 
@@ -226,6 +233,20 @@ async function main() {
       });
       const status = ok ? `OK ${durationMs}ms` : `FAIL ${data.error ?? 'unknown'}`;
       console.log(status);
+
+      // Incremental save
+      if (outputPath) {
+        const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
+          ? outputPath
+          : join(process.cwd(), outputPath);
+        let toWrite: TestResultForEvaluator[] = forEvaluator;
+        if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
+          const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
+          for (const r of forEvaluator) byPrompt.set(r.prompt, r);
+          toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
+        }
+        writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
+      }
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e);
       results.push({
@@ -246,6 +267,20 @@ async function main() {
         error: err,
       });
       console.log('FAIL', err);
+
+      // Incremental save even on failure
+      if (outputPath) {
+        const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
+          ? outputPath
+          : join(process.cwd(), outputPath);
+        let toWrite: TestResultForEvaluator[] = forEvaluator;
+        if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
+          const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
+          for (const r of forEvaluator) byPrompt.set(r.prompt, r);
+          toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
+        }
+        writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
+      }
     }
   }
 
@@ -265,18 +300,7 @@ async function main() {
   console.log(`Avg response time: ${avgMs}ms`);
 
   if (outputPath) {
-    const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
-      ? outputPath
-      : join(process.cwd(), outputPath);
-    let toWrite: TestResultForEvaluator[] = forEvaluator;
-    if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
-      const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
-      for (const r of forEvaluator) byPrompt.set(r.prompt, r);
-      toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
-      console.log(`Merged ${forEvaluator.length} rerun results into ${toWrite.length} total`);
-    }
-    writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
-    console.log(`Results JSON written to: ${outPath}`);
+    console.log(`Final results saved to: ${outputPath}`);
   }
 
   process.exit(failed > 0 ? 1 : 0);
