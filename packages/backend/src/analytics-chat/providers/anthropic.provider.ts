@@ -167,8 +167,6 @@ export class AnthropicProvider implements AIProvider {
                 if (toolUse.type !== 'tool_use') continue;
                 toolsUsed.push(toolUse.name);
 
-                this.logger.log(`[AnthropicProvider] Executing tool: ${toolUse.name}`);
-
                 let result: any;
                 try {
                     result = await this.toolsService.executeTool(toolUse.name, toolUse.input as any);
@@ -176,7 +174,10 @@ export class AnthropicProvider implements AIProvider {
                     result = { success: false, error: e.message };
                 }
 
-                toolResults.push(result);
+                toolResults.push({
+                    toolName: toolUse.name,
+                    data: result
+                });
 
                 turnToolResults.push({
                     type: 'tool_result',

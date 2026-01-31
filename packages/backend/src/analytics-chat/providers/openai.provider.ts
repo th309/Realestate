@@ -201,10 +201,22 @@ export class OpenAIProvider implements AIProvider {
                 let args = {};
                 try { args = JSON.parse(tc.function.arguments); } catch (e) { this.logger.error('Args parse error'); }
 
-                this.logger.log(`[OpenAIProvider] Executing tool: ${tc.function.name}`);
-                const result = await this.toolsService.executeTool(tc.function.name, args);
+                let result: any;
+                try {
+                    result = await this.toolsService.executeTool(tc.function.name, args);
+                } catch (e) {
+                    this.logger.error(`Tool execution error: ${e.message}`);
+                    result = { success: false, error: e.message };
+                }
 
-                toolResults.push(result);
+                if (!result) {
+                    result = { success: false, error: 'Tool execution failed silently (null result)' };
+                }
+
+                toolResults.push({
+                    toolName: tc.function.name,
+                    data: result
+                });
 
                 const content = JSON.stringify(result.success ? result : { error: result.error });
 

@@ -269,10 +269,12 @@ export class AnalyticsChatService {
    */
   private getMaxIterations(intent: 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography'): number {
     switch (intent) {
-      case 'ranking': return 1;
-      case 'filtering': case 'comparison': case 'raw_data': return 2;
-      case 'analysis': case 'ml_analysis': case 'news': case 'geography': return 3;
-      default: return 3;
+      case 'ranking': return 2; // Allow 1 retry or refinement
+      case 'filtering': return 3;
+      case 'comparison': return 5; // Comparison often needs multiple lookups
+      case 'raw_data': return 3;
+      case 'analysis': case 'ml_analysis': case 'news': case 'geography': return 5;
+      default: return 5;
     }
   }
 
@@ -819,7 +821,9 @@ USER QUERY:`;
     this.logger.log(`[Quinn Chat] Completed. Tools: ${accumulatedToolsUsed.length}, Time: ${processingTime}ms`);
 
     return {
-      response: finalResult.content || 'I processed that but have no text response.',
+      response: finalResult.content || (finalResult.toolsUsed && finalResult.toolsUsed.length > 0 ?
+        'Here are the results from your request.' :
+        'I processed that but have no text response.'),
       toolsUsed: accumulatedToolsUsed,
       structuredData,
       modelUsed: usedModel,
@@ -893,10 +897,18 @@ USER QUERY:`;
     const singleGeoFocus = userMessage && !compareNames ? this.parseSingleGeographyFocus(userMessage) : null;
 
     for (const { toolName, data } of toolResults) {
+      if (!data) {
+        this.logger.warn(`[Quinn Extract] Skipping tool ${toolName} due to null data`);
+        continue;
+      }
       this.logger.debug(`[Quinn Extract] Processing tool: ${toolName}, data keys: ${JSON.stringify(Object.keys(data || {}))}`);
 
       // Unwrap if data is nested under data.data (analytics service wraps responses)
       const actualData = data.data || data;
+      if (!actualData) {
+        this.logger.warn(`[Quinn Extract] Skipping tool ${toolName} due to null actualData`);
+        continue;
+      }
       this.logger.debug(`[Quinn Extract] Actual data keys: ${JSON.stringify(Object.keys(actualData || {}))}`);
 
       // Handle rankings from get_rankings tool (including failed calls: data = { success, data, error })

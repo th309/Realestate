@@ -1,0 +1,186 @@
+
+> backend@0.1.1 test
+> jest src/analytics-chat/providers/__tests__/ai-providers.integration.spec.ts
+
+  console.log
+    [dotenv@17.2.3] injecting env (16) from .env -- tip: Γ£à audit secrets and track compliance: https://dotenvx.com/ops
+
+      at _log (../../../node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    OpenAI Provider initialized with Base URL: https://api.anthropic.com
+
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:76:21)
+
+  console.log
+    [OpenAI] Testing with model: claude-3-5-sonnet-latest
+
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:123:21)
+
+  console.error
+    [OpenAI] Basic Chat Failed: NotFoundError: 404 status code (no body)
+        at Function.generate (D:\Projects\rei-platform\node_modules\openai\src\core\error.ts:84:14)
+        at OpenAI.makeStatusError (D:\Projects\rei-platform\node_modules\openai\src\client.ts:478:28)
+        at OpenAI.makeRequest (D:\Projects\rei-platform\node_modules\openai\src\client.ts:728:24)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at OpenAIProvider.chat (D:\Projects\rei-platform\packages\backend\src\analytics-chat\providers\openai.provider.ts:177:30)
+        at Object.<anonymous> (D:\Projects\rei-platform\packages\backend\src\analytics-chat\providers\__tests__\ai-providers.integration.spec.ts:133:34) {
+      status: 404,
+      headers: Headers {
+        date: 'Sat, 31 Jan 2026 00:00:02 GMT',
+        'transfer-encoding': 'chunked',
+        connection: 'keep-alive',
+        vary: 'Accept-Encoding',
+        server: 'cloudflare',
+        'cf-cache-status': 'DYNAMIC',
+        'x-robots-tag': 'none',
+        'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+        'cf-ray': '9c64ed2d182ac5ce-IAD'
+      },
+      requestID: null,
+      error: undefined,
+      code: undefined,
+      param: undefined,
+      type: undefined
+    }
+
+    [0m [90m 136 |[39m                 expect(response[33m.[39mcontent[33m.[39mtoLowerCase())[33m.[39mtoContain([32m'hello'[39m)[33m;[39m
+     [90m 137 |[39m             } [36mcatch[39m (e) {
+    [31m[1m>[22m[39m[90m 138 |[39m                 console[33m.[39merror([32m'[OpenAI] Basic Chat Failed:'[39m[33m,[39m e)[33m;[39m
+     [90m     |[39m                         [31m[1m^[22m[39m
+     [90m 139 |[39m                 [36mthrow[39m e[33m;[39m
+     [90m 140 |[39m             }
+     [90m 141 |[39m         })[33m;[39m[0m
+
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:138:25)
+
+  console.error
+    [OpenAI] Tool Chat Failed: NotFoundError: 404 status code (no body)
+        at Function.generate (D:\Projects\rei-platform\node_modules\openai\src\core\error.ts:84:14)
+        at OpenAI.makeStatusError (D:\Projects\rei-platform\node_modules\openai\src\client.ts:478:28)
+        at OpenAI.makeRequest (D:\Projects\rei-platform\node_modules\openai\src\client.ts:728:24)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at OpenAIProvider.chat (D:\Projects\rei-platform\packages\backend\src\analytics-chat\providers\openai.provider.ts:177:30)
+        at Object.<anonymous> (D:\Projects\rei-platform\packages\backend\src\analytics-chat\providers\__tests__\ai-providers.integration.spec.ts:156:34) {
+      status: 404,
+      headers: Headers {
+        date: 'Sat, 31 Jan 2026 00:00:02 GMT',
+        'transfer-encoding': 'chunked',
+        connection: 'keep-alive',
+        vary: 'Accept-Encoding',
+        server: 'cloudflare',
+        'cf-cache-status': 'DYNAMIC',
+        'x-robots-tag': 'none',
+        'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+        'cf-ray': '9c64ed2dd9a0e5b4-IAD'
+      },
+      requestID: null,
+      error: undefined,
+      code: undefined,
+      param: undefined,
+      type: undefined
+    }
+
+    [0m [90m 161 |[39m                 expect(mockToolsService[33m.[39mexecuteTool)[33m.[39mtoHaveBeenCalledWith([32m'test_tool'[39m[33m,[39m expect[33m.[39mobjectContaining({ query[33m:[39m [32m'bananas'[39m }))[33m;[39m
+     [90m 162 |[39m             } [36mcatch[39m (e) {
+    [31m[1m>[22m[39m[90m 163 |[39m                 console[33m.[39merror([32m'[OpenAI] Tool Chat Failed:'[39m[33m,[39m e)[33m;[39m
+     [90m     |[39m                         [31m[1m^[22m[39m
+     [90m 164 |[39m                 [36mthrow[39m e[33m;[39m
+     [90m 165 |[39m             }
+     [90m 166 |[39m         })[33m;[39m[0m
+
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:163:25)
+
+FAIL src/analytics-chat/providers/__tests__/ai-providers.integration.spec.ts
+  AI Providers Integration
+    Anthropic Provider (Claude)
+      ├ù should perform a basic chat (351 ms)
+      ├ù should use tools when requested (203 ms)
+    OpenAI Provider (DeepSeek/OpenAI)
+      ├ù should perform a basic chat (77 ms)
+      ├ù should use tools when requested (109 ms)
+
+  ΓùÅ AI Providers Integration ΓÇ║ Anthropic Provider (Claude) ΓÇ║ should perform a basic chat
+
+    404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-3-5-sonnet-latest"},"request_id":"req_011CXeUKjupWYpZmzX1qGZcn"}
+
+      142 |         }));
+      143 |
+    > 144 |         let response = await this.client.messages.create({
+          |                        ^
+      145 |             model: model,
+      146 |             max_tokens: 2048,
+      147 |             system: systemBlocks as any,
+
+      at Function.generate (../../../node_modules/@anthropic-ai/sdk/src/core/error.ts:75:14)
+      at Anthropic.makeStatusError (../../../node_modules/@anthropic-ai/sdk/src/client.ts:443:28)
+      at Anthropic.makeRequest (../../../node_modules/@anthropic-ai/sdk/src/client.ts:678:24)
+      at AnthropicProvider.chat (analytics-chat/providers/anthropic.provider.ts:144:24)
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:91:30)
+
+  ΓùÅ AI Providers Integration ΓÇ║ Anthropic Provider (Claude) ΓÇ║ should use tools when requested
+
+    404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-3-5-sonnet-latest"},"request_id":"req_011CXeUKkrsgGtjFSNqRev68"}
+
+      142 |         }));
+      143 |
+    > 144 |         let response = await this.client.messages.create({
+          |                        ^
+      145 |             model: model,
+      146 |             max_tokens: 2048,
+      147 |             system: systemBlocks as any,
+
+      at Function.generate (../../../node_modules/@anthropic-ai/sdk/src/core/error.ts:75:14)
+      at Anthropic.makeStatusError (../../../node_modules/@anthropic-ai/sdk/src/client.ts:443:28)
+      at Anthropic.makeRequest (../../../node_modules/@anthropic-ai/sdk/src/client.ts:678:24)
+      at AnthropicProvider.chat (analytics-chat/providers/anthropic.provider.ts:144:24)
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:107:30)
+
+  ΓùÅ AI Providers Integration ΓÇ║ OpenAI Provider (DeepSeek/OpenAI) ΓÇ║ should perform a basic chat
+
+    404 status code (no body)
+
+      175 |         while (iterations < maxIterations) {
+      176 |             iterations++;
+    > 177 |             const response = await this.client.chat.completions.create({
+          |                              ^
+      178 |                 model: model,
+      179 |                 messages: currentContextMessages as any,
+      180 |                 tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+
+      at Function.generate (../../../node_modules/openai/src/core/error.ts:84:14)
+      at OpenAI.makeStatusError (../../../node_modules/openai/src/client.ts:478:28)
+      at OpenAI.makeRequest (../../../node_modules/openai/src/client.ts:728:24)
+      at OpenAIProvider.chat (analytics-chat/providers/openai.provider.ts:177:30)
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:133:34)
+
+  ΓùÅ AI Providers Integration ΓÇ║ OpenAI Provider (DeepSeek/OpenAI) ΓÇ║ should use tools when requested
+
+    404 status code (no body)
+
+      175 |         while (iterations < maxIterations) {
+      176 |             iterations++;
+    > 177 |             const response = await this.client.chat.completions.create({
+          |                              ^
+      178 |                 model: model,
+      179 |                 messages: currentContextMessages as any,
+      180 |                 tools: openaiTools.length > 0 ? openaiTools as any : undefined,
+
+      at Function.generate (../../../node_modules/openai/src/core/error.ts:84:14)
+      at OpenAI.makeStatusError (../../../node_modules/openai/src/client.ts:478:28)
+      at OpenAI.makeRequest (../../../node_modules/openai/src/client.ts:728:24)
+      at OpenAIProvider.chat (analytics-chat/providers/openai.provider.ts:177:30)
+      at Object.<anonymous> (analytics-chat/providers/__tests__/ai-providers.integration.spec.ts:156:34)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 4 total
+Snapshots:   0 total
+Time:        1.268 s, estimated 2 s
+Ran all test suites matching src/analytics-chat/providers/__tests__/ai-providers.integration.spec.ts.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path D:\Projects\rei-platform\packages\backend
+npm error workspace backend@0.1.1
+npm error location D:\Projects\rei-platform\packages\backend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c jest src/analytics-chat/providers/__tests__/ai-providers.integration.spec.ts
