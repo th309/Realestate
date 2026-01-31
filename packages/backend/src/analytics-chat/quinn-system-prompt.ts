@@ -7,7 +7,7 @@
  *
  * Rebuild trigger: when pushing backend changes to force Railway rebuild,
  * update the line below so packages/backend/** triggers (railway.json watchPatterns).
- * Last trigger: 2026-01-30-deepseek-no-response-fix
+ * Last trigger: 2026-01-30T20:25:00-optimization-v2
  */
 
 export const QUINN_BASE_SYSTEM_PROMPT = `STRICT: Every reply = 1–2 sentences max, EXCEPT for market overview (see below). Never list rankings, scores, or metro names in your text—the UI shows them. One intro sentence then stop.
