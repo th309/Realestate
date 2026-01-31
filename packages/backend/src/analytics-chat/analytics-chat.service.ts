@@ -113,6 +113,9 @@ export class AnalyticsChatService {
   private toolCache: Map<string, { result: any; timestamp: number }> = new Map();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+  // Compact text digest of warm cache data — injected into LLM prompt for direct answers
+  private dataDigest: string = '';
+
   constructor(
     private readonly configService: ConfigService,
     private readonly toolsService: AnalyticsToolsService,
@@ -204,8 +207,14 @@ export class AnalyticsChatService {
   }
 
   /** Query intent for tool selection and iteration limits */
-  private getQueryIntent(message: string): 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
-    const lower = message.toLowerCase();
+  private getQueryIntent(message: string): 'conversational' | 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
+    const lower = message.toLowerCase().trim();
+
+    // CONVERSATIONAL - no tools needed, answer from digest/context/knowledge
+    if (/^(hi|hello|hey|thanks|thank you|ok|okay|got it|cool|great)\b/i.test(lower)) return 'conversational';
+    if (/^(help|what can you do|what do you do)\b/i.test(lower)) return 'conversational';
+    if (/\b(how does|how do).*(scor|rating|algorithm|methodology|work)\b/.test(lower)) return 'conversational';
+    if (/\bwhat('s| is) a good (score|rating)\b/.test(lower)) return 'conversational';
 
     // FOLLOW-UP: "out of those / of those / from that list" + price/trend → comparison so get_time_series is available
     const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lower);
@@ -259,7 +268,7 @@ export class AnalyticsChatService {
     if (/\b(news|article|happening|recent.*event)\b/.test(lower)) return 'news';
 
     // Geography
-    if (/\b(similar|neighbor|nearby|like|around)\b/.test(lower)) return 'geography';
+    if (/\b(similar|neighbors?|nearby|like|around)\b/.test(lower)) return 'geography';
 
     return 'analysis';
   }
@@ -267,8 +276,9 @@ export class AnalyticsChatService {
   /**
    * Max allowed tool iterations by intent (prevents over-thinking simple queries).
    */
-  private getMaxIterations(intent: 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography'): number {
+  private getMaxIterations(intent: 'conversational' | 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography'): number {
     switch (intent) {
+      case 'conversational': return 1; // No tools, direct answer
       case 'ranking': return 2; // Allow 1 retry or refinement
       case 'filtering': return 3;
       case 'comparison': return 5; // Comparison often needs multiple lookups
@@ -422,6 +432,10 @@ USER QUERY:`;
     this.logger.log(`[Quinn Intent] Detected: ${intent}`);
 
     switch (intent) {
+      case 'conversational':
+        this.logger.log(`[Quinn Tools] Conversational - NO tools (direct answer from digest/context)`);
+        return [];
+
       case 'ranking':
         this.logger.log(`[Quinn Tools] Ranking - ONLY get_rankings (1 tool)`);
         return allTools.filter((t) => t.name === 'get_rankings');
@@ -535,6 +549,109 @@ USER QUERY:`;
   }
 
   /**
+   * Build a compact text digest from warm cache results.
+   * Injected into the LLM system prompt so it can answer common queries
+   * directly without tool calls. ~5-8 KB of dense text.
+   */
+  private buildDataDigest(): void {
+    const lines: string[] = [];
+    lines.push('CURRENT DATA SNAPSHOT (answer directly from this when possible, no tool call needed):');
+    lines.push(`Data as of: ${new Date().toISOString().slice(0, 10)}`);
+    lines.push('');
+
+    // Helper: extract ranking lines from a cached tool result
+    const formatRankings = (toolName: string, params: Record<string, any>, label: string): string | null => {
+      const cacheKey = this.getCacheKey(toolName, params);
+      const cached = this.toolCache.get(cacheKey);
+      if (!cached?.result?.success) return null;
+
+      const rankings = cached.result.data?.rankings;
+      if (!Array.isArray(rankings) || rankings.length === 0) return null;
+
+      const items = rankings.map((r: any) => {
+        const name = (r.geography_name || r.name || r.geography_id || '').replace(/,/g, '');
+        const score = r.score != null ? r.score.toFixed(1) : '';
+        const appr = r.appreciation_12m != null ? ` (${(r.appreciation_12m * 100).toFixed(1)}%)` : '';
+        return `${name} ${score}${appr}`;
+      });
+
+      return `${label}: ${items.join(', ')}`;
+    };
+
+    // Helper: extract benchmark data
+    const formatBenchmark = (params: Record<string, any>): string | null => {
+      const cacheKey = this.getCacheKey('compare_to_benchmark', params);
+      const cached = this.toolCache.get(cacheKey);
+      if (!cached?.result?.success) return null;
+
+      const comp = cached.result.data?.comparison;
+      if (!comp) return null;
+
+      const parts: string[] = [];
+      if (comp.benchmark_avg_score != null) parts.push(`avg score ${comp.benchmark_avg_score.toFixed(1)}`);
+      if (comp.benchmark_avg_appreciation_12m != null) parts.push(`avg 12m appr ${(comp.benchmark_avg_appreciation_12m * 100).toFixed(1)}%`);
+      if (comp.avg_investoredge_score != null) parts.push(`avg investoredge ${comp.avg_investoredge_score.toFixed(1)}`);
+      if (comp.avg_homeready_score != null) parts.push(`avg homeready ${comp.avg_homeready_score.toFixed(1)}`);
+      if (comp.avg_market_health_score != null) parts.push(`avg market_health ${comp.avg_market_health_score.toFixed(1)}`);
+
+      return parts.length > 0 ? `NATIONAL BENCHMARK: ${parts.join(', ')}` : null;
+    };
+
+    // Top/bottom metros by each score type
+    const scoreTypes = ['investoredge_score', 'homeready_score', 'market_health_score'];
+    const scoreLabels: Record<string, string> = {
+      investoredge_score: 'INVESTOREDGE',
+      homeready_score: 'HOMEREADY',
+      market_health_score: 'MARKET_HEALTH',
+    };
+
+    for (const scoreType of scoreTypes) {
+      const label = scoreLabels[scoreType];
+      const top = formatRankings('get_rankings', {
+        filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: false,
+      }, `TOP 10 METROS BY ${label}`);
+      if (top) lines.push(top);
+    }
+
+    // Bottom 10 metros
+    const bottom = formatRankings('get_rankings', {
+      filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: true,
+    }, 'BOTTOM 10 METROS BY INVESTOREDGE');
+    if (bottom) lines.push(bottom);
+
+    // Top 10 by popular states
+    const states = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA'];
+    for (const state of states) {
+      const line = formatRankings('get_rankings', {
+        filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [state] }, limit: 10, ascending: false,
+      }, `TOP ${state} METROS`);
+      if (line) lines.push(line);
+    }
+
+    // Top counties
+    const counties = formatRankings('get_rankings', {
+      filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false,
+    }, 'TOP 10 COUNTIES BY INVESTOREDGE');
+    if (counties) lines.push(counties);
+
+    // National benchmark
+    const benchmark = formatBenchmark({
+      filter: { geography_type: 'metro', score_type: 'investoredge_score' }, benchmark_type: 'national',
+    });
+    if (benchmark) lines.push('');
+    if (benchmark) lines.push(benchmark);
+
+    // Only set digest if we got meaningful content (more than just the header)
+    if (lines.length > 3) {
+      this.dataDigest = lines.join('\n');
+      this.logger.log(`[Quinn Digest] Built data digest: ${this.dataDigest.length} bytes, ${lines.length} lines`);
+    } else {
+      this.dataDigest = '';
+      this.logger.warn('[Quinn Digest] No cached data available for digest');
+    }
+  }
+
+  /**
    * Warm cache on startup with most common queries
    * Covers ~90% of typical user queries
    */
@@ -603,6 +720,9 @@ USER QUERY:`;
     const duration = Date.now() - startTime;
     this.logger.log(`[Quinn Cache] ✓ Warm-up complete: ${cached}/${commonQueries.length} queries cached in ${duration}ms`);
     this.logger.log(`[Quinn Cache] Cache now contains ${this.toolCache.size} entries`);
+
+    // Build compact text digest from cached results for LLM prompt injection
+    this.buildDataDigest();
   }
 
 
@@ -642,6 +762,9 @@ USER QUERY:`;
 
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
+    const systemPrompt = this.dataDigest
+      ? `${userProfilePrompt}\n${this.dataDigest}`
+      : userProfilePrompt;
 
     conversation.messages.push({ role: 'user', content: userMessage });
     conversation.lastMessageAt = new Date().toISOString();
@@ -669,7 +792,7 @@ USER QUERY:`;
           conversationId,
           messages: conversation.messages,
           tools: rawTools,
-          systemPrompt: userProfilePrompt,
+          systemPrompt,
           model: loopModel,
           maxIterations
         });
@@ -744,6 +867,9 @@ USER QUERY:`;
 
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
+    const systemPrompt = this.dataDigest
+      ? `${userProfilePrompt}\n${this.dataDigest}`
+      : userProfilePrompt;
     const dynamicContext = this.buildDynamicContext(conversation.messages);
 
     // Initial Model Selection
@@ -782,7 +908,7 @@ USER QUERY:`;
           conversationId,
           messages: messagesForProvider,
           tools: rawTools,
-          systemPrompt: userProfilePrompt,
+          systemPrompt,
           model: loopModel,
           maxIterations
         });
