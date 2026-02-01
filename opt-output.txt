@@ -9,3 +9,38 @@ Target Score: 95
 ------------------------------------------
 
 [2/76] Testing: "Are prices dropping in Phoenix?"
+  Success: Γ£à
+  Score:   95.0
+  Tools:   [filter_geographies, get_rankings]
+  Time:    38456ms
+------------------------------------------
+
+[3/76] Testing: "Best family neighborhoods in Dallas?"
+node:internal/deps/undici/undici:13510
+      Error.captureStackTrace(err);
+            ^
+
+TypeError: fetch failed
+    at node:internal/deps/undici/undici:13510:13
+    at async sendMessage (D:\Projects\rei-platform\scripts\quinn-test\optimize-prompts.ts:29:17)
+    at async main (D:\Projects\rei-platform\scripts\quinn-test\optimize-prompts.ts:87:38) {
+  [cause]: SocketError: other side closed
+      at TLSSocket.<anonymous> (node:internal/deps/undici/undici:6294:28)
+      at TLSSocket.emit (node:events:530:35)
+      at endReadableNT (node:internal/streams/readable:1698:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'UND_ERR_SOCKET',
+    socket: {
+      localAddress: '10.5.0.2',
+      localPort: 50859,
+      remoteAddress: '66.33.22.225',
+      remotePort: 443,
+      remoteFamily: 'IPv4',
+      timeout: undefined,
+      bytesWritten: 340,
+      bytesRead: 0
+    }
+  }
+}
+
+Node.js v22.18.0

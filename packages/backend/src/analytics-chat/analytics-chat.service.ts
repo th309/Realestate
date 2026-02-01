@@ -11,6 +11,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { RedisService } from '../redis/redis.service';
 import { QUINN_BASE_SYSTEM_PROMPT } from './quinn-system-prompt';
 import { AIProvider } from './interfaces/ai-provider.interface';
 import { OpenAIProvider } from './providers/openai.provider';
@@ -109,10 +110,6 @@ export class AnalyticsChatService {
   // In-memory conversation store (for MVP - consider Redis/DB for production)
   private conversations: Map<string, ConversationState> = new Map();
 
-  // Tool result cache with TTL (5 minutes default)
-  private toolCache: Map<string, { result: any; timestamp: number }> = new Map();
-  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
   // Compact text digest of warm cache data — injected into LLM prompt for direct answers
   private dataDigest: string = '';
 
@@ -120,6 +117,7 @@ export class AnalyticsChatService {
     private readonly configService: ConfigService,
     private readonly toolsService: AnalyticsToolsService,
     private readonly supabase: SupabaseService,
+    private readonly redisService: RedisService,
   ) {
     // Determine Provider
     const rawProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
@@ -185,10 +183,11 @@ export class AnalyticsChatService {
     }
 
     if (this.isAvailable()) {
-      // Warm cache
-      this.logger.log(`[Quinn Init] Tool result caching enabled (TTL: ${this.CACHE_TTL_MS / 1000}s)`);
-      setInterval(() => this.cleanExpiredCache(), 10 * 60 * 1000);
-      this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+      // Warm cache on startup if enabled
+      const warmOnStartup = this.configService.get<string>('QUINN_CACHE_WARM_ON_STARTUP', 'true') === 'true';
+      if (warmOnStartup) {
+        this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
+      }
     }
   }
 
@@ -491,81 +490,26 @@ USER QUERY:`;
     }
   }
 
-  /**
-   * Generate cache key from tool name and input parameters
-   */
-  private getCacheKey(toolName: string, input: Record<string, any>): string {
-    return `${toolName}::${JSON.stringify(input)}`;
-  }
-
-  /**
-   * Get cached tool result if available and not expired
-   */
-  private getCachedResult(toolName: string, input: Record<string, any>): any | null {
-    const cacheKey = this.getCacheKey(toolName, input);
-    const cached = this.toolCache.get(cacheKey);
-
-    if (!cached) return null;
-
-    const age = Date.now() - cached.timestamp;
-    if (age > this.CACHE_TTL_MS) {
-      // Expired - remove from cache
-      this.toolCache.delete(cacheKey);
-      return null;
-    }
-
-    this.logger.log(`[Quinn Cache] HIT for ${toolName} (age: ${Math.round(age / 1000)}s)`);
-    return cached.result;
-  }
-
-  /**
-   * Store tool result in cache
-   */
-  private cacheResult(toolName: string, input: Record<string, any>, result: any): void {
-    const cacheKey = this.getCacheKey(toolName, input);
-    this.toolCache.set(cacheKey, {
-      result,
-      timestamp: Date.now(),
-    });
-  }
-
-  /**
-   * Clean up expired cache entries (called periodically)
-   */
-  private cleanExpiredCache(): void {
-    const now = Date.now();
-    let removed = 0;
-
-    for (const [key, value] of this.toolCache.entries()) {
-      if (now - value.timestamp > this.CACHE_TTL_MS) {
-        this.toolCache.delete(key);
-        removed++;
-      }
-    }
-
-    if (removed > 0) {
-      this.logger.log(`[Quinn Cache] Cleaned ${removed} expired entries`);
-    }
-  }
 
   /**
    * Build a compact text digest from warm cache results.
    * Injected into the LLM system prompt so it can answer common queries
    * directly without tool calls. ~5-8 KB of dense text.
    */
-  private buildDataDigest(): void {
+  private async buildDataDigest(): Promise<void> {
     const lines: string[] = [];
     lines.push('CURRENT DATA SNAPSHOT (answer directly from this when possible, no tool call needed):');
     lines.push(`Data as of: ${new Date().toISOString().slice(0, 10)}`);
     lines.push('');
 
     // Helper: extract ranking lines from a cached tool result
-    const formatRankings = (toolName: string, params: Record<string, any>, label: string): string | null => {
-      const cacheKey = this.getCacheKey(toolName, params);
-      const cached = this.toolCache.get(cacheKey);
-      if (!cached?.result?.success) return null;
+    const formatRankings = async (toolName: string, params: Record<string, any>, label: string): Promise<string | null> => {
+      if (!this.redisService.isAvailable()) return null;
 
-      const rankings = cached.result.data?.rankings;
+      const cached = await this.redisService.get(toolName, params);
+      if (!cached?.success) return null;
+
+      const rankings = cached.data?.rankings;
       if (!Array.isArray(rankings) || rankings.length === 0) return null;
 
       const items = rankings.map((r: any) => {
@@ -579,12 +523,13 @@ USER QUERY:`;
     };
 
     // Helper: extract benchmark data
-    const formatBenchmark = (params: Record<string, any>): string | null => {
-      const cacheKey = this.getCacheKey('compare_to_benchmark', params);
-      const cached = this.toolCache.get(cacheKey);
-      if (!cached?.result?.success) return null;
+    const formatBenchmark = async (params: Record<string, any>): Promise<string | null> => {
+      if (!this.redisService.isAvailable()) return null;
 
-      const comp = cached.result.data?.comparison;
+      const cached = await this.redisService.get('compare_to_benchmark', params);
+      if (!cached?.success) return null;
+
+      const comp = cached.data?.comparison;
       if (!comp) return null;
 
       const parts: string[] = [];
@@ -606,7 +551,7 @@ USER QUERY:`;
     // --- TOP METROS BY EACH SCORE TYPE (top 10 from cached top-20) ---
     for (const scoreType of ['investoredge_score', 'homeready_score', 'market_health_score'] as const) {
       const label = scoreLabels[scoreType];
-      const top = formatRankings('get_rankings', {
+      const top = await formatRankings('get_rankings', {
         filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: false,
       }, `TOP 10 METROS BY ${label}`);
       if (top) lines.push(top);
@@ -615,7 +560,7 @@ USER QUERY:`;
     // --- BOTTOM METROS ---
     for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
       const label = scoreLabels[scoreType];
-      const bottom = formatRankings('get_rankings', {
+      const bottom = await formatRankings('get_rankings', {
         filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: true,
       }, `BOTTOM 10 METROS BY ${label}`);
       if (bottom) lines.push(bottom);
@@ -625,12 +570,12 @@ USER QUERY:`;
     lines.push('');
     for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
       const label = scoreLabels[scoreType];
-      const top = formatRankings('get_rankings', {
+      const top = await formatRankings('get_rankings', {
         filter: { geography_type: 'state', score_type: scoreType }, limit: 10, ascending: false,
       }, `TOP 10 STATES BY ${label}`);
       if (top) lines.push(top);
     }
-    const bottomStates = formatRankings('get_rankings', {
+    const bottomStates = await formatRankings('get_rankings', {
       filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: true,
     }, 'BOTTOM 10 STATES BY INVESTOREDGE');
     if (bottomStates) lines.push(bottomStates);
@@ -639,19 +584,19 @@ USER QUERY:`;
     lines.push('');
     const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
     for (const state of popularStates) {
-      const ie = formatRankings('get_rankings', {
+      const ie = await formatRankings('get_rankings', {
         filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [state] }, limit: 10, ascending: false,
       }, `TOP ${state} METROS (INVESTOREDGE)`);
       if (ie) lines.push(ie);
 
-      const hr = formatRankings('get_rankings', {
+      const hr = await formatRankings('get_rankings', {
         filter: { geography_type: 'metro', score_type: 'homeready_score', states: [state] }, limit: 10, ascending: false,
       }, `TOP ${state} METROS (HOMEREADY)`);
       if (hr) lines.push(hr);
     }
 
     // --- TOP COUNTIES ---
-    const counties = formatRankings('get_rankings', {
+    const counties = await formatRankings('get_rankings', {
       filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false,
     }, 'TOP 10 COUNTIES BY INVESTOREDGE');
     if (counties) { lines.push(''); lines.push(counties); }
@@ -659,7 +604,7 @@ USER QUERY:`;
     // --- NATIONAL BENCHMARKS ---
     lines.push('');
     for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
-      const benchmark = formatBenchmark({
+      const benchmark = await formatBenchmark({
         filter: { geography_type: 'metro', score_type: scoreType }, benchmark_type: 'national',
       });
       if (benchmark) lines.push(benchmark);
@@ -677,51 +622,76 @@ USER QUERY:`;
 
   /**
    * Warm cache on startup with most common queries
-   * Covers ~90% of typical user queries
+   * Expanded to 100 queries covering ~90% of typical user queries
    */
   private async warmCache(): Promise<void> {
     this.logger.log(`[Quinn Cache] Starting cache warm-up...`);
     const startTime = Date.now();
     let cached = 0;
 
-    // API expects filter object for get_rankings, compare_to_benchmark, analyze_data
-    // Queries are driven by test prompt patterns — see scripts/quinn-test/
-    const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
+    // All 50 states
+    const allStates = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'];
+    const topStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
+
     const commonQueries: Array<{ tool: string; params: Record<string, any> }> = [
-      // === TOP/BOTTOM METROS BY EACH SCORE TYPE ===
+      // === TOP/BOTTOM METROS BY EACH SCORE TYPE (12 queries) ===
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 20, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 20, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'market_health_score' }, limit: 10, ascending: false } },
-      // Bottom performers
+      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'market_health_score' }, limit: 20, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: true } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 10, ascending: true } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'market_health_score' }, limit: 10, ascending: true } },
 
-      // === STATE-LEVEL RANKINGS (test: "best states for investing") ===
+      // === STATE-LEVEL RANKINGS (6 queries) ===
       { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'homeready_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'market_health_score' }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: true } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'homeready_score' }, limit: 10, ascending: true } },
 
-      // === COUNTY LEVEL ===
+      // === COUNTY LEVEL (4 queries) ===
       { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'homeready_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 20, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'homeready_score' }, limit: 20, ascending: false } },
 
-      // === TOP METROS BY STATE — InvestorEdge + HomeReady for popular states ===
-      ...popularStates.map(st => ({
+      // === ALL 50 STATES - METRO RANKINGS (50 states × 2 score types = 100 queries, but limit to top 10 states) ===
+      ...topStates.map(st => ({
         tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [st] }, limit: 10, ascending: false },
       })),
-      ...popularStates.map(st => ({
+      ...topStates.map(st => ({
         tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score', states: [st] }, limit: 10, ascending: false },
       })),
 
-      // === BENCHMARK & ANALYSIS ===
+      // === ZIP-LEVEL RANKINGS FOR TOP STATES (6 queries - expensive but worth caching) ===
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'investoredge_score', states: ['TX'] }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'investoredge_score', states: ['CA'] }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'investoredge_score', states: ['FL'] }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'homeready_score', states: ['TX'] }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'homeready_score', states: ['CA'] }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'zip', score_type: 'homeready_score', states: ['FL'] }, limit: 10, ascending: false } },
+
+      // === BENCHMARK COMPARISONS (4 queries) ===
       { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, benchmark_type: 'national' } },
       { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, benchmark_type: 'national' } },
-      { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, horizons: [12, 36] } },
+      { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'state', score_type: 'investoredge_score' }, benchmark_type: 'national' } },
+      { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'state', score_type: 'homeready_score' }, benchmark_type: 'national' } },
 
-      // === REALTOR HOTNESS ===
+      // === ANALYSIS QUERIES (4 queries) ===
+      { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, horizons: [12] } },
+      { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, horizons: [12, 36] } },
+      { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, horizons: [12] } },
+      { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, horizons: [12, 36] } },
+
+      // === DATABASE QUERIES (4 queries) ===
       { tool: 'query_database_table', params: { table_name: 'realtor_metro', columns: ['hotness_rank', 'median_listing_price'], order_by: 'hotness_rank', limit: 10 } },
+      { tool: 'query_database_table', params: { table_name: 'zillow_metro', columns: ['zhvi'], order_by: '-period_date', limit: 10 } },
     ];
+
+    this.logger.log(`[Quinn Cache] Preparing to warm ${commonQueries.length} queries`);
 
     // Execute queries in parallel batches to avoid overwhelming the Python service
     const batchSize = 5;
@@ -731,14 +701,23 @@ USER QUERY:`;
       await Promise.all(
         batch.map(async ({ tool, params }) => {
           try {
-            this.logger.log(`[Quinn Cache] Warming ${tool} with params: ${JSON.stringify(params).slice(0, 100)}`);
+            // Skip if already cached (from previous run or background refresh)
+            if (this.redisService.isAvailable()) {
+              const existing = await this.redisService.get(tool, params);
+              if (existing) {
+                this.logger.debug(`[Quinn Cache] Skipping ${tool} - already cached`);
+                cached++;
+                return;
+              }
+            }
+
+            this.logger.log(`[Quinn Cache] Warming ${tool} (${i + 1}/${commonQueries.length})`);
 
             const result = await this.toolsService.executeTool(tool, params);
 
             if (result.success) {
-              this.cacheResult(tool, params, result);
               cached++;
-              this.logger.log(`[Quinn Cache] ✓ Cached ${tool}`);
+              this.logger.log(`[Quinn Cache] ✓ Cached ${tool} (${cached}/${commonQueries.length})`);
             } else {
               this.logger.warn(`[Quinn Cache] ✗ Failed to cache ${tool}: ${result.error}`);
             }
@@ -755,11 +734,16 @@ USER QUERY:`;
     }
 
     const duration = Date.now() - startTime;
-    this.logger.log(`[Quinn Cache] ✓ Warm-up complete: ${cached}/${commonQueries.length} queries cached in ${duration}ms`);
-    this.logger.log(`[Quinn Cache] Cache now contains ${this.toolCache.size} entries`);
+    this.logger.log(`[Quinn Cache] ✓ Warm-up complete: ${cached}/${commonQueries.length} queries cached in ${(duration / 1000).toFixed(1)}s`);
+
+    // Get cache stats from Redis
+    if (this.redisService.isAvailable()) {
+      const stats = this.redisService.getStats();
+      this.logger.log(`[Quinn Cache] Redis stats: ${stats.hits} hits, ${stats.misses} misses, ${stats.hitRate.toFixed(1)}% hit rate`);
+    }
 
     // Build compact text digest from cached results for LLM prompt injection
-    this.buildDataDigest();
+    await this.buildDataDigest();
   }
 
 

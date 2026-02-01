@@ -1,0 +1,935 @@
+[
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "success": true,
+    "durationMs": 30701,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Kingsville, TX has the highest HomeReady score in Texas at 55.7, indicating strong affordability and homebuyer value.",
+    "structuredData": {
+      "rankings": {
+        "title": "Texas — Performance",
+        "direction": "top",
+        "items": []
+      }
+    }
+  },
+  {
+    "prompt": "Compare Houston to San Antonio",
+    "success": true,
+    "durationMs": 19603,
+    "toolsUsed": [],
+    "responseText": "Houston scores 51.5 on HomeReady, slightly above San Antonio's 51.3.",
+    "structuredData": null
+  },
+  {
+    "prompt": "Show me top metros",
+    "success": false,
+    "durationMs": 0,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "fetch failed"
+  },
+  {
+    "prompt": "Best family neighborhoods in Dallas?",
+    "success": false,
+    "durationMs": 0,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "fetch failed"
+  },
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": true,
+    "durationMs": 55986,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings",
+      "get_rankings"
+    ],
+    "responseText": "Here are the top markets.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Amarillo, TX 79104",
+            "id": "79104",
+            "score": 74.8,
+            "appreciation": 1.5,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Bynum, TX 76631",
+            "id": "76631",
+            "score": 74.5,
+            "appreciation": -7.4,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Montalba, TX 75853",
+            "id": "75853",
+            "score": 73.6,
+            "appreciation": 0.9,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Keene, TX 76059",
+            "id": "76059",
+            "score": 72.7,
+            "appreciation": -5.4,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Blackwell, TX 79506",
+            "id": "79506",
+            "score": 72.6,
+            "appreciation": -5.1,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Prairie View, TX 77446",
+            "id": "77446",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Tuleta, TX 78162",
+            "id": "78162",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Nazareth, TX 79063",
+            "id": "79063",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Tye, TX 79563",
+            "id": "79563",
+            "score": 72,
+            "appreciation": -14.9,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "Byers, TX 76357",
+            "id": "76357",
+            "score": 71.4,
+            "state": "TX"
+          },
+          {
+            "rank": 11,
+            "name": "San Antonio, TX 78264",
+            "id": "78264",
+            "score": 70.7,
+            "appreciation": 0.7,
+            "state": "TX"
+          },
+          {
+            "rank": 12,
+            "name": "San Antonio, TX 78263",
+            "id": "78263",
+            "score": 70.7,
+            "appreciation": -0.1,
+            "state": "TX"
+          },
+          {
+            "rank": 13,
+            "name": "Fruitvale, TX 75127",
+            "id": "75127",
+            "score": 70.1,
+            "state": "TX"
+          },
+          {
+            "rank": 14,
+            "name": "Carlsbad, TX 76934",
+            "id": "76934",
+            "score": 70,
+            "state": "TX"
+          },
+          {
+            "rank": 15,
+            "name": "Friendswood, TX 77549",
+            "id": "77549",
+            "score": 70,
+            "state": "TX"
+          },
+          {
+            "rank": 16,
+            "name": "Houston, TX 77081",
+            "id": "77081",
+            "score": 69.8,
+            "appreciation": 1.9,
+            "state": "TX"
+          },
+          {
+            "rank": 17,
+            "name": "Era, TX 76238",
+            "id": "76238",
+            "score": 69.8,
+            "state": "TX"
+          },
+          {
+            "rank": 18,
+            "name": "Arlington, TX 76002",
+            "id": "76002",
+            "score": 69.6,
+            "appreciation": -3.6,
+            "state": "TX"
+          },
+          {
+            "rank": 19,
+            "name": "Amarillo, TX 79101",
+            "id": "79101",
+            "score": 69.5,
+            "appreciation": -4.8,
+            "state": "TX"
+          },
+          {
+            "rank": 20,
+            "name": "Elmendorf, TX 78112",
+            "id": "78112",
+            "score": 68.1,
+            "appreciation": -0.2,
+            "state": "TX"
+          },
+          {
+            "rank": 21,
+            "name": "Mesquite, TX 75181",
+            "id": "75181",
+            "score": 68,
+            "appreciation": -5.5,
+            "state": "TX"
+          },
+          {
+            "rank": 22,
+            "name": "Dennis, TX 76439",
+            "id": "76439",
+            "score": 68,
+            "state": "TX"
+          },
+          {
+            "rank": 23,
+            "name": "Maypearl, TX 76064",
+            "id": "76064",
+            "score": 67.5,
+            "appreciation": 1,
+            "state": "TX"
+          },
+          {
+            "rank": 24,
+            "name": "Fort Worth, TX 76164",
+            "id": "76164",
+            "score": 67.2,
+            "appreciation": -6.1,
+            "state": "TX"
+          },
+          {
+            "rank": 25,
+            "name": "Dime Box, TX 77853",
+            "id": "77853",
+            "score": 67.2,
+            "appreciation": 3.5,
+            "state": "TX"
+          },
+          {
+            "rank": 26,
+            "name": "Granger, TX 76530",
+            "id": "76530",
+            "score": 66.6,
+            "appreciation": -7.8,
+            "state": "TX"
+          },
+          {
+            "rank": 27,
+            "name": "Wilmer, TX 75172",
+            "id": "75172",
+            "score": 65.8,
+            "appreciation": -5.8,
+            "state": "TX"
+          },
+          {
+            "rank": 28,
+            "name": "Beaumont, TX 77708",
+            "id": "77708",
+            "score": 65.2,
+            "appreciation": 2,
+            "state": "TX"
+          },
+          {
+            "rank": 29,
+            "name": "Palmer, TX 75152",
+            "id": "75152",
+            "score": 65.1,
+            "appreciation": -1.1,
+            "state": "TX"
+          },
+          {
+            "rank": 30,
+            "name": "Mcallen, TX 78505",
+            "id": "78505",
+            "score": 65,
+            "state": "TX"
+          },
+          {
+            "rank": 31,
+            "name": "Bardwell, TX 75101",
+            "id": "75101",
+            "score": 65,
+            "state": "TX"
+          },
+          {
+            "rank": 32,
+            "name": "Adrian, TX 79001",
+            "id": "79001",
+            "score": 64.9,
+            "state": "TX"
+          },
+          {
+            "rank": 33,
+            "name": "Rhome, TX 76078",
+            "id": "76078",
+            "score": 64.8,
+            "appreciation": -2.7,
+            "state": "TX"
+          },
+          {
+            "rank": 34,
+            "name": "Houston, TX 77046",
+            "id": "77046",
+            "score": 64.7,
+            "appreciation": -1.7,
+            "state": "TX"
+          },
+          {
+            "rank": 35,
+            "name": "George West, TX 78022",
+            "id": "78022",
+            "score": 64.4,
+            "appreciation": 0.5,
+            "state": "TX"
+          },
+          {
+            "rank": 36,
+            "name": "Houston, TX 77037",
+            "id": "77037",
+            "score": 64.2,
+            "appreciation": -3.9,
+            "state": "TX"
+          },
+          {
+            "rank": 37,
+            "name": "Mckinney, TX 75071",
+            "id": "75071",
+            "score": 64.2,
+            "appreciation": -6.1,
+            "state": "TX"
+          },
+          {
+            "rank": 38,
+            "name": "Fort Worth, TX 76109",
+            "id": "76109",
+            "score": 64.2,
+            "appreciation": 4.1,
+            "state": "TX"
+          },
+          {
+            "rank": 39,
+            "name": "Spring, TX 77391",
+            "id": "77391",
+            "score": 64.2,
+            "state": "TX"
+          },
+          {
+            "rank": 40,
+            "name": "Fort Worth, TX 76155",
+            "id": "76155",
+            "score": 64.1,
+            "state": "TX"
+          },
+          {
+            "rank": 41,
+            "name": "Irving, TX 75061",
+            "id": "75061",
+            "score": 64,
+            "appreciation": -4.2,
+            "state": "TX"
+          },
+          {
+            "rank": 42,
+            "name": "Hubbard, TX 76648",
+            "id": "76648",
+            "score": 63.9,
+            "appreciation": -3.6,
+            "state": "TX"
+          },
+          {
+            "rank": 43,
+            "name": "Maxwell, TX 78656",
+            "id": "78656",
+            "score": 63.6,
+            "appreciation": -4.8,
+            "state": "TX"
+          },
+          {
+            "rank": 44,
+            "name": "Edmonson, TX 79032",
+            "id": "79032",
+            "score": 63.5,
+            "state": "TX"
+          },
+          {
+            "rank": 45,
+            "name": "Batesville, TX 78829",
+            "id": "78829",
+            "score": 63.5,
+            "state": "TX"
+          },
+          {
+            "rank": 46,
+            "name": "Boys Ranch, TX 79010",
+            "id": "79010",
+            "score": 63.5,
+            "state": "TX"
+          },
+          {
+            "rank": 47,
+            "name": "Dallas, TX 75233",
+            "id": "75233",
+            "score": 63.5,
+            "appreciation": -2.7,
+            "state": "TX"
+          },
+          {
+            "rank": 48,
+            "name": "Iraan, TX 79744",
+            "id": "79744",
+            "score": 63.4,
+            "state": "TX"
+          },
+          {
+            "rank": 49,
+            "name": "Marion, TX 78124",
+            "id": "78124",
+            "score": 63.4,
+            "appreciation": -1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 50,
+            "name": "Gilmer, TX 75645",
+            "id": "75645",
+            "score": 63.3,
+            "appreciation": 0.2,
+            "state": "TX"
+          },
+          {
+            "rank": 51,
+            "name": "Dallas, TX 75206",
+            "id": "75206",
+            "score": 63.2,
+            "appreciation": 1.3,
+            "state": "TX"
+          },
+          {
+            "rank": 52,
+            "name": "Damon, TX 77430",
+            "id": "77430",
+            "score": 63,
+            "appreciation": -2.9,
+            "state": "TX"
+          },
+          {
+            "rank": 53,
+            "name": "Houston, TX 77086",
+            "id": "77086",
+            "score": 62.9,
+            "appreciation": -3.6,
+            "state": "TX"
+          },
+          {
+            "rank": 54,
+            "name": "Duncanville, TX 75116",
+            "id": "75116",
+            "score": 62.8,
+            "appreciation": -3.8,
+            "state": "TX"
+          },
+          {
+            "rank": 55,
+            "name": "Austin, TX 78747",
+            "id": "78747",
+            "score": 62.6,
+            "appreciation": -8,
+            "state": "TX"
+          },
+          {
+            "rank": 56,
+            "name": "Fort Worth, TX 76134",
+            "id": "76134",
+            "score": 62.6,
+            "appreciation": -3.8,
+            "state": "TX"
+          },
+          {
+            "rank": 57,
+            "name": "Waller, TX 77484",
+            "id": "77484",
+            "score": 62.6,
+            "appreciation": -1.4,
+            "state": "TX"
+          },
+          {
+            "rank": 58,
+            "name": "Austin, TX 78728",
+            "id": "78728",
+            "score": 62.6,
+            "appreciation": -6.6,
+            "state": "TX"
+          },
+          {
+            "rank": 59,
+            "name": "San Antonio, TX 78214",
+            "id": "78214",
+            "score": 62.6,
+            "appreciation": -5.8,
+            "state": "TX"
+          },
+          {
+            "rank": 60,
+            "name": "Melvin, TX 76858",
+            "id": "76858",
+            "score": 62.5,
+            "state": "TX"
+          },
+          {
+            "rank": 61,
+            "name": "Goree, TX 76363",
+            "id": "76363",
+            "score": 62.5,
+            "state": "TX"
+          },
+          {
+            "rank": 62,
+            "name": "Forestburg, TX 76239",
+            "id": "76239",
+            "score": 62.4,
+            "appreciation": -5,
+            "state": "TX"
+          },
+          {
+            "rank": 63,
+            "name": "Sebastian, TX 78594",
+            "id": "78594",
+            "score": 62.3,
+            "appreciation": 4.3,
+            "state": "TX"
+          },
+          {
+            "rank": 64,
+            "name": "Westhoff, TX 77994",
+            "id": "77994",
+            "score": 62.1,
+            "state": "TX"
+          },
+          {
+            "rank": 65,
+            "name": "Dallas, TX 75243",
+            "id": "75243",
+            "score": 62,
+            "appreciation": -4.6,
+            "state": "TX"
+          },
+          {
+            "rank": 66,
+            "name": "Arlington, TX 76006",
+            "id": "76006",
+            "score": 62,
+            "appreciation": -2.7,
+            "state": "TX"
+          },
+          {
+            "rank": 67,
+            "name": "Peaster, TX 76485",
+            "id": "76485",
+            "score": 61.9,
+            "state": "TX"
+          },
+          {
+            "rank": 68,
+            "name": "Odessa, TX 79762",
+            "id": "79762",
+            "score": 61.9,
+            "appreciation": 5,
+            "state": "TX"
+          },
+          {
+            "rank": 69,
+            "name": "Fort Worth, TX 76140",
+            "id": "76140",
+            "score": 61.9,
+            "appreciation": -4,
+            "state": "TX"
+          },
+          {
+            "rank": 70,
+            "name": "San Antonio, TX 78227",
+            "id": "78227",
+            "score": 61.8,
+            "appreciation": -4.7,
+            "state": "TX"
+          },
+          {
+            "rank": 71,
+            "name": "Wallisville, TX 77597",
+            "id": "77597",
+            "score": 61.7,
+            "appreciation": 2.3,
+            "state": "TX"
+          },
+          {
+            "rank": 72,
+            "name": "Sunset, TX 76270",
+            "id": "76270",
+            "score": 61.7,
+            "appreciation": -0.5,
+            "state": "TX"
+          },
+          {
+            "rank": 73,
+            "name": "Mckinney, TX 75069",
+            "id": "75069",
+            "score": 61.6,
+            "appreciation": -5.5,
+            "state": "TX"
+          },
+          {
+            "rank": 74,
+            "name": "Wall, TX 76957",
+            "id": "76957",
+            "score": 61.5,
+            "state": "TX"
+          },
+          {
+            "rank": 75,
+            "name": "Lavon, TX 75166",
+            "id": "75166",
+            "score": 61.5,
+            "appreciation": -7.3,
+            "state": "TX"
+          },
+          {
+            "rank": 76,
+            "name": "Crandall, TX 75114",
+            "id": "75114",
+            "score": 61.5,
+            "appreciation": -4.4,
+            "state": "TX"
+          },
+          {
+            "rank": 77,
+            "name": "Celina, TX 75009",
+            "id": "75009",
+            "score": 61.3,
+            "appreciation": -7,
+            "state": "TX"
+          },
+          {
+            "rank": 78,
+            "name": "El Paso, TX 79903",
+            "id": "79903",
+            "score": 61.3,
+            "appreciation": -1.1,
+            "state": "TX"
+          },
+          {
+            "rank": 79,
+            "name": "Garland, TX 75041",
+            "id": "75041",
+            "score": 61.3,
+            "appreciation": -8,
+            "state": "TX"
+          },
+          {
+            "rank": 80,
+            "name": "Austin, TX 78732",
+            "id": "78732",
+            "score": 61.2,
+            "appreciation": -4,
+            "state": "TX"
+          },
+          {
+            "rank": 81,
+            "name": "Fort Worth, TX 76177",
+            "id": "76177",
+            "score": 61.2,
+            "appreciation": -3.6,
+            "state": "TX"
+          },
+          {
+            "rank": 82,
+            "name": "Commerce, TX 75428",
+            "id": "75428",
+            "score": 61.2,
+            "appreciation": -6.7,
+            "state": "TX"
+          },
+          {
+            "rank": 83,
+            "name": "Carrollton, TX 75007",
+            "id": "75007",
+            "score": 61.2,
+            "appreciation": -5.2,
+            "state": "TX"
+          },
+          {
+            "rank": 84,
+            "name": "Crosby, TX 77532",
+            "id": "77532",
+            "score": 61.1,
+            "appreciation": -0.5,
+            "state": "TX"
+          },
+          {
+            "rank": 85,
+            "name": "Princeton, TX 75407",
+            "id": "75407",
+            "score": 61.1,
+            "appreciation": -8.4,
+            "state": "TX"
+          },
+          {
+            "rank": 86,
+            "name": "San Antonio, TX 78213",
+            "id": "78213",
+            "score": 61.1,
+            "appreciation": -5.1,
+            "state": "TX"
+          },
+          {
+            "rank": 87,
+            "name": "Desoto, TX 75115",
+            "id": "75115",
+            "score": 61,
+            "appreciation": -3.2,
+            "state": "TX"
+          },
+          {
+            "rank": 88,
+            "name": "Houston, TX 77041",
+            "id": "77041",
+            "score": 61,
+            "appreciation": -2.5,
+            "state": "TX"
+          },
+          {
+            "rank": 89,
+            "name": "Ponder, TX 76259",
+            "id": "76259",
+            "score": 61,
+            "appreciation": -2.6,
+            "state": "TX"
+          },
+          {
+            "rank": 90,
+            "name": "Broaddus, TX 75929",
+            "id": "75929",
+            "score": 60.8,
+            "appreciation": -2.5,
+            "state": "TX"
+          },
+          {
+            "rank": 91,
+            "name": "Austin, TX 78748",
+            "id": "78748",
+            "score": 60.5,
+            "appreciation": -6.9,
+            "state": "TX"
+          },
+          {
+            "rank": 92,
+            "name": "San Antonio, TX 78222",
+            "id": "78222",
+            "score": 60.5,
+            "appreciation": -4.4,
+            "state": "TX"
+          },
+          {
+            "rank": 93,
+            "name": "Wallis, TX 77485",
+            "id": "77485",
+            "score": 60.4,
+            "appreciation": 0.3,
+            "state": "TX"
+          },
+          {
+            "rank": 94,
+            "name": "Austin, TX 78730",
+            "id": "78730",
+            "score": 60.4,
+            "appreciation": -4.5,
+            "state": "TX"
+          },
+          {
+            "rank": 95,
+            "name": "Grand Prairie, TX 75052",
+            "id": "75052",
+            "score": 60.3,
+            "appreciation": -3.5,
+            "state": "TX"
+          },
+          {
+            "rank": 96,
+            "name": "Dallas, TX 75287",
+            "id": "75287",
+            "score": 60.3,
+            "appreciation": -5,
+            "state": "TX"
+          },
+          {
+            "rank": 97,
+            "name": "Brookshire, TX 77423",
+            "id": "77423",
+            "score": 60.2,
+            "appreciation": -1.9,
+            "state": "TX"
+          },
+          {
+            "rank": 98,
+            "name": "Taylor, TX 76574",
+            "id": "76574",
+            "score": 60.2,
+            "appreciation": -5.8,
+            "state": "TX"
+          },
+          {
+            "rank": 99,
+            "name": "Lubbock, TX 79413",
+            "id": "79413",
+            "score": 60.2,
+            "appreciation": -1.2,
+            "state": "TX"
+          },
+          {
+            "rank": 100,
+            "name": "Austin, TX 78739",
+            "id": "78739",
+            "score": 60.1,
+            "appreciation": -3.3,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "success": true,
+    "durationMs": 13459,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top metro markets for rental properties based on HomeReady score, which considers rental affordability and quality of life.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "id": "46780",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "id": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "id": "21500",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "id": "44620",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "id": "12140",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "id": "32260",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "id": "25300",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "id": "26540",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "id": "30260",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "id": "19500",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  }
+]

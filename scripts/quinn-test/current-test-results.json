@@ -1,0 +1,11 @@
+[
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": false,
+    "durationMs": 35381,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "HTTP 502"
+  }
+]

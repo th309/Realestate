@@ -7,6 +7,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../redis/redis.service';
 
 export interface ToolResult {
   success: boolean;
@@ -21,7 +22,10 @@ export class AnalyticsToolsService {
   /** Cached tool definitions to avoid rebuilding on every request */
   private toolDefinitionsCache: any[] | null = null;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
+  ) {
     this.analyticsBaseUrl =
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
@@ -59,6 +63,7 @@ export class AnalyticsToolsService {
 
   /**
    * Execute a tool call against the analytics service
+   * Now with Redis caching layer
    */
   async executeTool(
     toolName: string,
@@ -68,6 +73,16 @@ export class AnalyticsToolsService {
     this.logger.log(`[Tool ${toolName}] === EXECUTING ===`);
     this.logger.log(`[Tool ${toolName}] Analytics base URL: ${this.analyticsBaseUrl}`);
     this.logger.log(`[Tool ${toolName}] Arguments: ${JSON.stringify(args)}`);
+
+    // Check Redis cache first
+    if (this.redisService.isAvailable()) {
+      const cached = await this.redisService.get(toolName, args);
+      if (cached) {
+        const duration = Date.now() - startTime;
+        this.logger.log(`[Tool ${toolName}] === CACHE HIT === (${duration}ms)`);
+        return cached;
+      }
+    }
 
     try {
       let endpoint = this.getToolEndpoint(toolName);
@@ -129,7 +144,14 @@ export class AnalyticsToolsService {
       this.logger.log(`[Tool ${toolName}] === SUCCESS === (${totalDuration}ms total)`);
       this.logger.debug(`[Tool ${toolName}] Final data keys: ${JSON.stringify(Object.keys(data || {}))}`);
 
-      return { success: true, data };
+      const result = { success: true, data };
+
+      // Cache successful responses in Redis
+      if (this.redisService.isAvailable()) {
+        await this.redisService.set(toolName, args, result);
+      }
+
+      return result;
     } catch (error) {
       const totalDuration = Date.now() - startTime;
       this.logger.error(`[Tool ${toolName}] === FAILED === (${totalDuration}ms)`);

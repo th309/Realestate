@@ -1,0 +1,816 @@
+[
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "success": true,
+    "durationMs": 32349,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "responseText": "Yes, Phoenix prices have declined 3.2% over the past year based on the latest HomeReady data.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Phoenix-Mesa-Chandler, AZ",
+            "id": "38060",
+            "score": 58.5,
+            "appreciation": -3.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 2,
+            "name": "Safford, AZ",
+            "id": "40940",
+            "score": 57,
+            "appreciation": 4.2,
+            "state": "AZ"
+          },
+          {
+            "rank": 3,
+            "name": "Tucson, AZ",
+            "id": "46060",
+            "score": 54,
+            "appreciation": -3,
+            "state": "AZ"
+          },
+          {
+            "rank": 4,
+            "name": "Flagstaff, AZ",
+            "id": "22380",
+            "score": 49.5,
+            "appreciation": 0.8,
+            "state": "AZ"
+          },
+          {
+            "rank": 5,
+            "name": "Prescott Valley-Prescott, AZ",
+            "id": "39150",
+            "score": 49.4,
+            "state": "AZ"
+          },
+          {
+            "rank": 6,
+            "name": "Lake Havasu City-Kingman, AZ",
+            "id": "29420",
+            "score": 47.6,
+            "appreciation": -0.1,
+            "state": "AZ"
+          },
+          {
+            "rank": 7,
+            "name": "Nogales, AZ",
+            "id": "35700",
+            "score": 45.4,
+            "appreciation": -0.6,
+            "state": "AZ"
+          },
+          {
+            "rank": 8,
+            "name": "Sierra Vista-Douglas, AZ",
+            "id": "43420",
+            "score": 45.3,
+            "appreciation": 1.3,
+            "state": "AZ"
+          },
+          {
+            "rank": 9,
+            "name": "Yuma, AZ",
+            "id": "49740",
+            "score": 45.1,
+            "appreciation": 1.4,
+            "state": "AZ"
+          },
+          {
+            "rank": 10,
+            "name": "Payson, AZ",
+            "id": "37740",
+            "score": 41.5,
+            "appreciation": -2,
+            "state": "AZ"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Tell me about Austin",
+    "success": true,
+    "durationMs": 45999,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings",
+      "compare_to_benchmark",
+      "get_time_series"
+    ],
+    "responseText": "Austin ranks 7th among Texas metros with a HomeReady score of 51.8, above the national average of 45.8. The market has seen significant volatility, peaking at 62.9 in mid-2024 before declining to its current level. Over the past year, Austin experienced -5.6% appreciation, well below the national average of +0.6%.",
+    "structuredData": {
+      "rankings": {
+        "title": "Austin — Performance",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 7,
+            "name": "Austin-Round Rock-San Marcos, TX",
+            "id": "12420",
+            "score": 51.8,
+            "appreciation": -5.6,
+            "state": "TX"
+          }
+        ]
+      },
+      "comparison": {
+        "title": "Benchmark Comparison",
+        "filteredLabel": "Selected Markets",
+        "benchmarkLabel": "National",
+        "metrics": [
+          {
+            "label": "Average Score",
+            "filtered": 41.02,
+            "benchmark": 45.78,
+            "unit": "score",
+            "higherIsBetter": true
+          },
+          {
+            "label": "1-Year Appreciation",
+            "filtered": -1.47,
+            "benchmark": 0.62,
+            "unit": "percent",
+            "higherIsBetter": true
+          },
+          {
+            "label": "3-Year Appreciation",
+            "filtered": -1.87,
+            "benchmark": 6.22,
+            "unit": "percent",
+            "higherIsBetter": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "success": true,
+    "durationMs": 21915,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top rental markets for homebuyers based on HomeReady scores.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "id": "46780",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "id": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "id": "21500",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "id": "44620",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "id": "12140",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "id": "32260",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "id": "25300",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "id": "26540",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "id": "30260",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "id": "19500",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Best rental yields in Florida",
+    "success": true,
+    "durationMs": 37435,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are Florida's top metros for rental yields based on InvestorEdge scoring.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Tallahassee, FL",
+            "id": "45220",
+            "score": 52.5,
+            "appreciation": -1.1,
+            "state": "FL"
+          },
+          {
+            "rank": 2,
+            "name": "Pensacola-Ferry Pass-Brent, FL",
+            "id": "37860",
+            "score": 52.2,
+            "appreciation": -1.6,
+            "state": "FL"
+          },
+          {
+            "rank": 3,
+            "name": "Lakeland-Winter Haven, FL",
+            "id": "29460",
+            "score": 51.5,
+            "appreciation": -4.2,
+            "state": "FL"
+          },
+          {
+            "rank": 4,
+            "name": "Jacksonville, FL",
+            "id": "27260",
+            "score": 51.4,
+            "appreciation": -3.1,
+            "state": "FL"
+          },
+          {
+            "rank": 5,
+            "name": "Palm Bay-Melbourne-Titusville, FL",
+            "id": "37340",
+            "score": 49.8,
+            "appreciation": -4.1,
+            "state": "FL"
+          },
+          {
+            "rank": 6,
+            "name": "Ocala, FL",
+            "id": "36100",
+            "score": 49.4,
+            "appreciation": -3.6,
+            "state": "FL"
+          },
+          {
+            "rank": 7,
+            "name": "Tampa-St. Petersburg-Clearwater, FL",
+            "id": "45300",
+            "score": 49,
+            "appreciation": -5.6,
+            "state": "FL"
+          },
+          {
+            "rank": 8,
+            "name": "Deltona-Daytona Beach-Ormond Beach, FL",
+            "id": "19660",
+            "score": 48.9,
+            "appreciation": -4.8,
+            "state": "FL"
+          },
+          {
+            "rank": 9,
+            "name": "Wildwood-The Villages, FL",
+            "id": "48680",
+            "score": 48.8,
+            "appreciation": -1.6,
+            "state": "FL"
+          },
+          {
+            "rank": 10,
+            "name": "Palatka, FL",
+            "id": "37260",
+            "score": 48.7,
+            "appreciation": -1.7,
+            "state": "FL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Hot markets right now",
+    "success": true,
+    "durationMs": 17770,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top 10 hottest markets for homebuyers right now, led by Van Wert, OH with a HomeReady score of 71.4.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Van Wert, OH",
+            "id": "46780",
+            "score": 71.4,
+            "appreciation": 5.7,
+            "state": "OH"
+          },
+          {
+            "rank": 2,
+            "name": "25775",
+            "id": "25775",
+            "score": 70.6
+          },
+          {
+            "rank": 3,
+            "name": "Erie, PA",
+            "id": "21500",
+            "score": 68.5,
+            "appreciation": 4.9,
+            "state": "PA"
+          },
+          {
+            "rank": 4,
+            "name": "Stevens Point-Plover, WI",
+            "id": "44620",
+            "score": 67.3,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 5,
+            "name": "Auburn, IN",
+            "id": "12140",
+            "score": 67.2,
+            "appreciation": 4.8,
+            "state": "IN"
+          },
+          {
+            "rank": 6,
+            "name": "Marshalltown, IA",
+            "id": "32260",
+            "score": 67.1,
+            "appreciation": 3.6,
+            "state": "IA"
+          },
+          {
+            "rank": 7,
+            "name": "Hannibal, MO",
+            "id": "25300",
+            "score": 66.7,
+            "appreciation": 5.1,
+            "state": "MO"
+          },
+          {
+            "rank": 8,
+            "name": "Huntington, IN",
+            "id": "26540",
+            "score": 66.7,
+            "appreciation": 2.8,
+            "state": "IN"
+          },
+          {
+            "rank": 9,
+            "name": "Lewisburg, PA",
+            "id": "30260",
+            "score": 66.5,
+            "appreciation": 7,
+            "state": "PA"
+          },
+          {
+            "rank": 10,
+            "name": "Decatur, IL",
+            "id": "19500",
+            "score": 66,
+            "appreciation": 6.6,
+            "state": "IL"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Show me top metros",
+    "success": true,
+    "durationMs": 17369,
+    "toolsUsed": [],
+    "responseText": "Based on the latest data, here are the top metros for homebuyers.",
+    "structuredData": null
+  },
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": true,
+    "durationMs": 58984,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings"
+    ],
+    "responseText": "Here are the top zip codes in Texas for homebuyers, though none are specifically in Austin among the highest-rated areas.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Amarillo, TX 79104",
+            "id": "79104",
+            "score": 74.8,
+            "appreciation": 1.5,
+            "state": "TX"
+          },
+          {
+            "rank": 2,
+            "name": "Bynum, TX 76631",
+            "id": "76631",
+            "score": 74.5,
+            "appreciation": -7.4,
+            "state": "TX"
+          },
+          {
+            "rank": 3,
+            "name": "Montalba, TX 75853",
+            "id": "75853",
+            "score": 73.6,
+            "appreciation": 0.9,
+            "state": "TX"
+          },
+          {
+            "rank": 4,
+            "name": "Keene, TX 76059",
+            "id": "76059",
+            "score": 72.7,
+            "appreciation": -5.4,
+            "state": "TX"
+          },
+          {
+            "rank": 5,
+            "name": "Blackwell, TX 79506",
+            "id": "79506",
+            "score": 72.6,
+            "appreciation": -5.1,
+            "state": "TX"
+          },
+          {
+            "rank": 6,
+            "name": "Prairie View, TX 77446",
+            "id": "77446",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 7,
+            "name": "Tuleta, TX 78162",
+            "id": "78162",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 8,
+            "name": "Nazareth, TX 79063",
+            "id": "79063",
+            "score": 72.5,
+            "state": "TX"
+          },
+          {
+            "rank": 9,
+            "name": "Tye, TX 79563",
+            "id": "79563",
+            "score": 72,
+            "appreciation": -14.9,
+            "state": "TX"
+          },
+          {
+            "rank": 10,
+            "name": "Byers, TX 76357",
+            "id": "76357",
+            "score": 71.4,
+            "state": "TX"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Best states for investing",
+    "success": true,
+    "durationMs": 12022,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top 10 states for investing based on InvestorEdge score.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Ohio",
+            "id": "OH",
+            "score": 65.1,
+            "appreciation": 3
+          },
+          {
+            "rank": 2,
+            "name": "Indiana",
+            "id": "IN",
+            "score": 59.6,
+            "appreciation": 2.3
+          },
+          {
+            "rank": 3,
+            "name": "Pennsylvania",
+            "id": "PA",
+            "score": 59.4,
+            "appreciation": 2.3
+          },
+          {
+            "rank": 4,
+            "name": "Michigan",
+            "id": "MI",
+            "score": 58.6,
+            "appreciation": 3.2
+          },
+          {
+            "rank": 5,
+            "name": "Illinois",
+            "id": "IL",
+            "score": 58.4,
+            "appreciation": 3.9
+          },
+          {
+            "rank": 6,
+            "name": "West Virginia",
+            "id": "WV",
+            "score": 57.6,
+            "appreciation": 0.3
+          },
+          {
+            "rank": 7,
+            "name": "Missouri",
+            "id": "MO",
+            "score": 56.9,
+            "appreciation": 1.8
+          },
+          {
+            "rank": 8,
+            "name": "Kentucky",
+            "id": "KY",
+            "score": 55.2,
+            "appreciation": 1.6
+          },
+          {
+            "rank": 9,
+            "name": "Oklahoma",
+            "id": "OK",
+            "score": 54.7,
+            "appreciation": 1.2
+          },
+          {
+            "rank": 10,
+            "name": "Kansas",
+            "id": "KS",
+            "score": 54.6,
+            "appreciation": 2.2
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Top 20 markets by appreciation",
+    "success": true,
+    "durationMs": 12067,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Here are the top 20 metros by 12-month price appreciation, with Hailey, ID leading at 12.8% growth.",
+    "structuredData": {
+      "rankings": {
+        "title": "Top Performers",
+        "direction": "top",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Hailey, ID",
+            "id": "25200",
+            "score": 18.7,
+            "appreciation": 12.8,
+            "state": "ID"
+          },
+          {
+            "rank": 2,
+            "name": "Galesburg, IL",
+            "id": "23660",
+            "score": 77.4,
+            "appreciation": 10.9,
+            "state": "IL"
+          },
+          {
+            "rank": 3,
+            "name": "New Ulm, MN",
+            "id": "35580",
+            "score": 69.7,
+            "appreciation": 10.3,
+            "state": "MN"
+          },
+          {
+            "rank": 4,
+            "name": "Pontiac, IL",
+            "id": "38700",
+            "score": 61,
+            "appreciation": 10.3,
+            "state": "IL"
+          },
+          {
+            "rank": 5,
+            "name": "Mexico, MO",
+            "id": "33020",
+            "score": 61.6,
+            "appreciation": 10.2,
+            "state": "MO"
+          },
+          {
+            "rank": 6,
+            "name": "Freeport, IL",
+            "id": "23300",
+            "score": 74,
+            "appreciation": 10,
+            "state": "IL"
+          },
+          {
+            "rank": 7,
+            "name": "Sidney, OH",
+            "id": "43380",
+            "score": 50.7,
+            "appreciation": 9.5,
+            "state": "OH"
+          },
+          {
+            "rank": 8,
+            "name": "Stevens Point-Plover, WI",
+            "id": "44620",
+            "score": 48.5,
+            "appreciation": 9.4,
+            "state": "WI"
+          },
+          {
+            "rank": 9,
+            "name": "Taylorville, IL",
+            "id": "45380",
+            "score": 56.9,
+            "appreciation": 9.3,
+            "state": "IL"
+          },
+          {
+            "rank": 10,
+            "name": "Rochelle, IL",
+            "id": "40300",
+            "score": 65.6,
+            "appreciation": 8.9,
+            "state": "IL"
+          },
+          {
+            "rank": 11,
+            "name": "Peoria, IL",
+            "id": "37900",
+            "score": 72.5,
+            "appreciation": 8.6,
+            "state": "IL"
+          },
+          {
+            "rank": 12,
+            "name": "Jamestown, ND",
+            "id": "27420",
+            "score": 71.5,
+            "appreciation": 8.4,
+            "state": "ND"
+          },
+          {
+            "rank": 13,
+            "name": "Ketchikan, AK",
+            "id": "28540",
+            "score": 34.3,
+            "appreciation": 8.3,
+            "state": "AK"
+          },
+          {
+            "rank": 14,
+            "name": "Shawano, WI",
+            "id": "43020",
+            "score": 54.4,
+            "appreciation": 8.3,
+            "state": "WI"
+          },
+          {
+            "rank": 15,
+            "name": "Peru, IN",
+            "id": "37940",
+            "score": 71.3,
+            "appreciation": 8.3,
+            "state": "IN"
+          },
+          {
+            "rank": 16,
+            "name": "Escanaba, MI",
+            "id": "21540",
+            "score": 55,
+            "appreciation": 8.2,
+            "state": "MI"
+          },
+          {
+            "rank": 17,
+            "name": "Saginaw, MI",
+            "id": "40980",
+            "score": 57.3,
+            "appreciation": 7.9,
+            "state": "MI"
+          },
+          {
+            "rank": 18,
+            "name": "Dumas, TX",
+            "id": "20300",
+            "score": 44.1,
+            "appreciation": 7.9,
+            "state": "TX"
+          },
+          {
+            "rank": 19,
+            "name": "Rockford, IL",
+            "id": "40420",
+            "score": 67,
+            "appreciation": 7.9,
+            "state": "IL"
+          },
+          {
+            "rank": 20,
+            "name": "Wisconsin Rapids-Marshfield, WI",
+            "id": "49220",
+            "score": 60.5,
+            "appreciation": 7.7,
+            "state": "WI"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "prompt": "Compare Houston to San Antonio",
+    "success": true,
+    "durationMs": 17733,
+    "toolsUsed": [],
+    "responseText": "Houston scores 51.5 while San Antonio scores 51.3 on HomeReady, both slightly below average for Texas metros.",
+    "structuredData": null
+  }
+]

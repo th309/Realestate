@@ -1,0 +1,37 @@
+[
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "durationMs": 37059,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Kingsville, TX has the highest HomeReady score in Texas at 55.7, indicating strong affordability and quality of life for homebuyers.",
+    "responseLength": 132,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": true,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": false,
+    "issues": [
+      "Response too slow",
+      "CRITICAL: Hallucinated data"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching",
+      "Add \"never make up numbers\" to system prompt"
+    ]
+  }
+]

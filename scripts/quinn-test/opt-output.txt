@@ -1,0 +1,18 @@
+Starting optimization run against: https://backend-production-ee4d.up.railway.app
+Target Score: 95
+
+[1/76] Testing: "Where should I buy in Austin?"
+  Success: ❌
+  Score:   62.5
+  Tools:   []
+  Time:    60165ms
+
+--- FAILURE DETAILS ---
+Issues: Wrong tools for intent, Incomplete or unclear answer, Response too slow, CRITICAL: Incomplete answer
+⚠️  Critical: Incomplete answer
+
+Response:
+
+
+Optimization stopped at index 0. Fix the issue and restart with:
+npx tsx scripts/quinn-test/optimize-prompts.ts comprehensive-prompts.txt --url https://backend-production-ee4d.up.railway.app --resume 0

@@ -1,8 +1,17 @@
+# Reliability Check: Sanitization & Hallucination
+Are prices dropping in Phoenix?
+Tell me about Austin
+
+# Optimization Check: Digest/Context (Fixing "No tool called")
+Hot markets for rental properties
+Best rental yields in Florida
+Hot markets right now
+Show me top metros
+
+# Reliability Check: Fetch Failures
+Where should I buy in Austin?
+
+# Optimizations (New Patterns)
 Best states for investing
-What's the most affordable metro in Texas?
 Top 20 markets by appreciation
-Worst performing areas
 Compare Houston to San Antonio
-Show me top metros in Ohio
-What are the best counties for investment?
-Values in Tennessee

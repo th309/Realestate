@@ -1,0 +1,52 @@
+[
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "success": true,
+    "durationMs": 21140,
+    "toolsUsed": [],
+    "responseText": "Kingsville, Texas has the highest HomeReady score among Texas metros at 55.7, indicating strong affordability for homebuyers.",
+    "structuredData": null
+  },
+  {
+    "prompt": "Compare Houston to San Antonio",
+    "success": true,
+    "durationMs": 21512,
+    "toolsUsed": [],
+    "responseText": "Houston scores 51.5 on HomeReady, slightly higher than San Antonio's 51.3, ranking 8th and 10th among Texas metros respectively.",
+    "structuredData": null
+  },
+  {
+    "prompt": "Show me top metros",
+    "success": true,
+    "durationMs": 14022,
+    "toolsUsed": [],
+    "responseText": "Here are the top metros for homebuyers based on HomeReady scores.",
+    "structuredData": null
+  },
+  {
+    "prompt": "Best family neighborhoods in Dallas?",
+    "success": false,
+    "durationMs": 0,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "fetch failed"
+  },
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": false,
+    "durationMs": 0,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "fetch failed"
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "success": true,
+    "durationMs": 24927,
+    "toolsUsed": [],
+    "responseText": "Based on your HomeReady preferences, here are the top metros for rental properties.",
+    "structuredData": null
+  }
+]

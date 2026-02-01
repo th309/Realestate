@@ -1,0 +1,71 @@
+[
+  {
+    "prompt": "Where should I buy in Austin?",
+    "durationMs": 36121,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "To give you the most relevant recommendations, are you looking for specific neighborhoods within Austin city or broader recommendations for the Austin metro area including surrounding suburbs?",
+    "responseLength": 192,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 50,
+    "completenessScore": 60,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 74.5,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Incomplete or unclear answer",
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Review prompt clarity requirements",
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "durationMs": 55023,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Yes, Phoenix has experienced a 3.2% price decline over the past year based on the latest data. The market remains one of the higher-scored areas in Arizona for homebuyers despite this recent downward trend.",
+    "responseLength": 206,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": true,
+    "issues": [
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching"
+    ]
+  }
+]

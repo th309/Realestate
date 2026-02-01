@@ -247,4 +247,80 @@ export class AnalyticsChatController {
       }),
     };
   }
+
+  /**
+   * Explain a result with detailed reasoning (hybrid mode)
+   * POST /api/analytics/chat/:conversationId/explain
+   */
+  @Post(':conversationId/explain')
+  async explainResult(
+    @Param('conversationId') conversationId: string,
+    @Body() body: { resultContext: string; userQuery: string },
+  ): Promise<ChatResponse> {
+    const requestId = `explain_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+    this.logger.log(`[Quinn Explain ${requestId}] === REQUEST START ===`);
+    this.logger.log(`[Quinn Explain ${requestId}] ConversationId: ${conversationId}`);
+    this.logger.log(`[Quinn Explain ${requestId}] User query: "${body.userQuery?.slice(0, 100)}..."`);
+    this.logger.log(`[Quinn Explain ${requestId}] Context length: ${body.resultContext?.length || 0} chars`);
+
+    if (!body.resultContext || !body.userQuery) {
+      throw new HttpException(
+        'Both resultContext and userQuery are required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!this.chatService.isAvailable()) {
+      throw new HttpException(
+        'Chat service not available',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    try {
+      // Build explanation prompt
+      const explanationPrompt = `The user asked: "${body.userQuery}"
+
+Here's the data they received:
+${body.resultContext}
+
+Please provide a detailed 5-10 sentence analysis explaining:
+1. What these results mean for the user
+2. Why these markets ranked this way (key factors)
+3. What trends or patterns are visible
+4. Any recommendations or insights based on the data
+
+Be thorough but conversational. Focus on actionable insights.`;
+
+      const startTime = Date.now();
+
+      const result = await this.chatService.chat(
+        conversationId,
+        explanationPrompt,
+        { detailedAnalysis: true },
+      );
+
+      const duration = Date.now() - startTime;
+      this.logger.log(`[Quinn Explain ${requestId}] === SUCCESS === Duration: ${duration}ms`);
+
+      return {
+        success: true,
+        response: result.response,
+        toolsUsed: result.toolsUsed,
+        structuredData: result.structuredData,
+        modelUsed: result.modelUsed,
+        conversationId,
+      };
+    } catch (error) {
+      this.logger.error(`[Quinn Explain ${requestId}] === FAILED ===`);
+      this.logger.error(`[Quinn Explain ${requestId}] Error: ${error.message}`);
+
+      return {
+        success: false,
+        error: error.message || 'Failed to generate explanation',
+        conversationId,
+      };
+    }
+  }
 }

@@ -7,7 +7,7 @@
  */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Send, Sparkles, Loader2, RotateCcw, Trophy, Medal } from 'lucide-react';
+import { Send, Sparkles, Loader2, RotateCcw, Trophy, Medal, MessageCircle } from 'lucide-react';
 import { useAnalyticsChat } from './hooks/useAnalyticsChat';
 import { AnalyticsAssistantProps, Message, RankingsData } from './types';
 import { ChartRenderer, DataTable, ComparisonCard } from './visuals';
@@ -90,11 +90,20 @@ function RankingsList({ data }: { data: RankingsData }) {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({
+  message,
+  onExplain,
+  isExplaining
+}: {
+  message: Message;
+  onExplain?: (messageId: string) => void;
+  isExplaining?: boolean;
+}) {
   const isUser = message.role === 'user';
   const hasVisuals = message.data && (
     message.data.chart || message.data.table || message.data.comparison || message.data.rankings
   );
+  const canExplain = !isUser && hasVisuals && !message.isError && !message.isExplanation;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -104,11 +113,20 @@ function MessageBubble({ message }: { message: Message }) {
             ? 'max-w-[85%] bg-primary text-on-primary rounded-br-md'
             : message.isError
               ? 'max-w-[85%] bg-error-container text-on-error-container rounded-bl-md'
-              : hasVisuals
-                ? 'max-w-[95%] w-full bg-surface-container-high text-on-surface rounded-bl-md'
-                : 'max-w-[85%] bg-surface-container-high text-on-surface rounded-bl-md'
+              : message.isExplanation
+                ? 'max-w-[95%] w-full bg-tertiary-container text-on-tertiary-container rounded-bl-md'
+                : hasVisuals
+                  ? 'max-w-[95%] w-full bg-surface-container-high text-on-surface rounded-bl-md'
+                  : 'max-w-[85%] bg-surface-container-high text-on-surface rounded-bl-md'
         }`}
       >
+        {message.isExplanation && (
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-current/10">
+            <MessageCircle className="w-4 h-4 opacity-70" />
+            <span className="text-xs font-medium opacity-70">Detailed Explanation</span>
+          </div>
+        )}
+
         <div className="text-sm leading-relaxed whitespace-pre-wrap">
           {message.content}
         </div>
@@ -136,6 +154,29 @@ function MessageBubble({ message }: { message: Message }) {
           <RankingsList data={message.data.rankings} />
         )}
 
+        {/* Explain This button for assistant messages with data */}
+        {canExplain && onExplain && (
+          <div className="mt-3 pt-3 border-t border-outline-variant/30">
+            <button
+              onClick={() => onExplain(message.id)}
+              disabled={isExplaining}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isExplaining ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Generating explanation...</span>
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-3 h-3" />
+                  <span>Explain This</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {message.toolsUsed && message.toolsUsed.length > 0 && (
           <div className="mt-2 pt-2 border-t border-current/10 flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 opacity-60" />
@@ -159,7 +200,7 @@ export function AnalyticsAssistantPanel({
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, isLoading, sendMessage, clearMessages } = useAnalyticsChat({
+  const { messages, isLoading, isExplaining, sendMessage, explainResult, clearMessages } = useAnalyticsChat({
     context,
   });
 
@@ -243,7 +284,12 @@ export function AnalyticsAssistantPanel({
         ) : (
           <>
             {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onExplain={explainResult}
+                isExplaining={isExplaining}
+              />
             ))}
             {isLoading && (
               <div className="flex justify-start">
@@ -251,6 +297,16 @@ export function AnalyticsAssistantPanel({
                   <div className="flex items-center gap-2 text-on-surface-variant">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span className="text-sm">Analyzing...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {isExplaining && (
+              <div className="flex justify-start">
+                <div className="bg-tertiary-container/50 rounded-2xl rounded-bl-md px-4 py-3">
+                  <div className="flex items-center gap-2 text-on-tertiary-container">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Generating detailed explanation...</span>
                   </div>
                 </div>
               </div>

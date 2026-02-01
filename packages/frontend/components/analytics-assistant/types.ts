@@ -35,6 +35,7 @@ export interface Message {
   toolsUsed?: string[];
   timestamp: string;
   isError?: boolean;
+  isExplanation?: boolean;
   /** Structured data for visual rendering */
   data?: StructuredData;
 }

@@ -238,10 +238,11 @@ async def get_rankings(request: RankRequest):
             score_type=request.filter.score_type
         )
         
-        df = service.filter_data(criteria)
-        rankings = service.get_rankings(
-            df,
-            score_type=request.filter.score_type,
+        # Use direct DB query for performance (SQL Pushdown)
+        # Fallback to cached approach if complex non-pushable filters exist? 
+        # For now, get_rankings_direct handles the logic.
+        rankings = service.get_rankings_direct(
+            criteria,
             limit=request.limit,
             ascending=request.ascending,
             sort_by=request.sort_by

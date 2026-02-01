@@ -1,6 +1,7 @@
 // Backend v1.2.0 - Added affordable_home_price endpoints
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -21,6 +22,8 @@ import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
 import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
 import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-persistence.module';
 import { FeaturesModule } from './admin/features/features.module';
+import { RedisModule } from './redis/redis.module';
+import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
   imports: [
@@ -28,6 +31,8 @@ import { FeaturesModule } from './admin/features/features.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
+    RedisModule,
     SupabaseModule,
     MarketsModule,
     ZillowModule,
@@ -48,6 +53,6 @@ import { FeaturesModule } from './admin/features/features.module';
     FeaturesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CacheRefreshJob],
 })
 export class AppModule { }

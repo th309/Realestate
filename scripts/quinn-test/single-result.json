@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "success": true,
+    "durationMs": 37059,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "responseText": "Kingsville, TX has the highest HomeReady score in Texas at 55.7, indicating strong affordability and quality of life for homebuyers.",
+    "structuredData": {
+      "rankings": {
+        "title": "Texas — Performance",
+        "direction": "top",
+        "items": []
+      }
+    }
+  }
+]

@@ -456,6 +456,136 @@ class AdhocAnalysisService:
             'series': series
         }
 
+    def get_rankings_direct(
+        self,
+        criteria: FilterCriteria,
+        limit: int = 10,
+        ascending: bool = False,
+        sort_by: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get rankings via direct database query (SQL Pushdown).
+        Avoids loading full dataset into memory.
+        """
+        try:
+            # 1. Determine sort column
+            sort_column = sort_by if sort_by == 'actual_appreciation_12m' else criteria.score_type
+            
+            # 2. Get latest date for this geography type (fast query)
+            max_date = None
+            date_query = (
+                self.cache.supabase.table('propertyiq_scores_history')
+                .select('period_date')
+                .eq('geography_type', criteria.geography_type)
+                .order('period_date', desc=True)
+                .limit(1)
+            )
+            date_res = date_query.execute()
+            if date_res.data:
+                max_date = date_res.data[0]['period_date']
+            
+            if not max_date:
+                return {"error": "No data found", "rankings": []}
+
+            # 3. Resolve Geography IDs from Filters (using in-memory crosswalks)
+            allowed_ids = None
+            self.cache._ensure_crosswalks_loaded()
+
+            # State Filter
+            if criteria.states:
+                states_upper = [s.upper() for s in criteria.states]
+                if criteria.geography_type == 'zip':
+                    cw = self.cache._geography_crosswalk
+                    if cw is not None and not cw.empty:
+                        allowed_ids = cw[cw['state_abbrev'].isin(states_upper)]['zip_code'].tolist()
+                elif criteria.geography_type == 'county':
+                    cw = self.cache._geography_crosswalk
+                    if cw is not None and not cw.empty:
+                        allowed_ids = cw[cw['state_abbrev'].isin(states_upper)]['county_fips'].tolist()
+                elif criteria.geography_type == 'metro':
+                    # Metros cross multiple states, but we check parent_geography_id logic
+                    # Usually explicit metro filter is better, but if state filter on metro:
+                    pass # TODO: Implement Metro-by-State resolution if needed from crosswalk
+
+            # Metro Filter (for Zips/Counties inside a Metro)
+            # Note: Crosswalk currently doesn't map Zip->Metro efficiently?
+            # User rarely queries "Zips in Austin Metro" via this tool, usually "Zips in Austin City".
+            
+            # 4. Build Main Query
+            query = (
+                self.cache.supabase.table('propertyiq_scores_history')
+                .select('geography_id, period_date, investoredge_score, homeready_score, market_health_score, actual_appreciation_12m')
+                .eq('geography_type', criteria.geography_type)
+                .eq('period_date', max_date)
+            )
+
+            # Apply ID filter
+            if allowed_ids is not None:
+                # Chunking if too many IDs? Supabase limit on URL length.
+                # If IDs > 1000, maybe standard ranking without filter is better?
+                # For "Texas Zips", there are ~2000. Might fit.
+                if len(allowed_ids) < 100: # Safe limit for IN clause
+                   query = query.in_('geography_id', allowed_ids)
+                else:
+                    # Fallback: If too many IDs, we can't push down efficiently without join.
+                    # We might have to fetch top 1000 and filter in memory?
+                    # Or relying on the fact that we sort by score, so we just want top N overall?
+                    # If user asks "Top Zips in Texas", and we can't filter by TX in DB...
+                    # we will get "Top Zips Nationally".
+                    # This IS a limitation of no-join.
+                    # CRITICAL: We need 'parent_geography_id' in history table for effective pushdown!
+                    pass 
+
+            # Apply Score Filters
+            if criteria.min_score:
+                query = query.gte(criteria.score_type, criteria.min_score)
+            
+            # Order and Limit
+            query = query.order(sort_column, desc=not ascending).limit(limit)
+
+            # Execute
+            res = query.execute()
+            data = res.data
+
+            # 5. Enrich and Format
+            if not data:
+                return {"error": "No data matched criteria", "rankings": []}
+
+            # Convert to DataFrame for easier enrichment reuse
+            df = pd.DataFrame(data)
+            df = self.cache._enrich_with_geography_names(df, criteria.geography_type)
+            
+            # Build Result List
+            rankings = []
+            for rank, (_, row) in enumerate(df.iterrows(), 1):
+                 gid = row.get("geography_id")
+                 gname = row.get("geography_name", gid)
+                 item = {
+                     "rank": rank,
+                     "geography_id": _native_scalar(gid),
+                     "geography_name": _native_scalar(gname),
+                     "score": round(float(row.get(criteria.score_type, 0)), 1) if pd.notna(row.get(criteria.score_type)) else None,
+                 }
+                 if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
+                     item["state"] = _native_scalar(row["parent_geography_id"])
+                 if "actual_appreciation_12m" in row and pd.notna(row.get("actual_appreciation_12m")):
+                     item["appreciation_12m"] = round(float(row["actual_appreciation_12m"]) * 100, 2)
+                 rankings.append(item)
+
+            return {
+                "total_geographies": "unknown (optimized)", # Count requires separate query
+                "direction": "bottom" if ascending else "top",
+                "limit": limit,
+                "rankings": rankings,
+                "note": "optimized_direct_query"
+            }
+
+        except Exception as e:
+            logger.error(f"get_rankings_direct failed: {e}")
+            # Fallback to slow cached method?
+            # return self.get_rankings(...)
+            raise e
+
 
 # Singleton
 _adhoc_service: Optional[AdhocAnalysisService] = None

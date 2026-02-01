@@ -155,10 +155,10 @@ function loadJson(path: string): any[] {
 }
 
 async function main() {
-  // Global 30-minute timeout (1,800,000 ms)
-  const GLOBAL_TIMEOUT_MS = 30 * 60 * 1000;
+  // Global 45-minute timeout (2,700,000 ms)
+  const GLOBAL_TIMEOUT_MS = 45 * 60 * 1000;
   setTimeout(() => {
-    console.error(`\n\n[ERROR] Global timeout of 30 minutes reached. Exiting...`);
+    console.error(`\n\n[ERROR] Global timeout of 45 minutes reached. Exiting...`);
     process.exit(1);
   }, GLOBAL_TIMEOUT_MS);
 
@@ -213,97 +213,96 @@ async function main() {
     process.stdout.write(`[${i + 1}/${prompts.length}] ${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''} ... `);
     try {
       const { durationMs, data } = await sendMessage(conversationId, prompt);
-      const ok = data.success === true;
-      results.push({
-        prompt,
-        ok,
-        durationMs,
+      const durationOk = durationMs <= 30000; // User-defined 30s limit
+      const ok = data.success === true && durationOk;
+      const errorMsg = !data.success ? (data.error ?? 'unknown') : (!durationOk ? `TOO SLOW (${durationMs}ms > 30000ms)` : undefined);
+      durationMs,
         toolsUsed: data.toolsUsed ?? [],
-        responseLen: (data.response ?? '').length,
-        error: data.error,
+          responseLen: (data.response ?? '').length,
+            error: data.error,
       });
-      forEvaluator.push({
-        prompt,
-        success: ok,
-        durationMs,
-        toolsUsed: data.toolsUsed ?? [],
-        responseText: data.response ?? '',
-        structuredData: data.structuredData ?? null,
-        error: data.error,
-      });
-      const status = ok ? `OK ${durationMs}ms` : `FAIL ${data.error ?? 'unknown'}`;
-      console.log(status);
+    forEvaluator.push({
+      prompt,
+      success: ok,
+      durationMs,
+      toolsUsed: data.toolsUsed ?? [],
+      responseText: data.response ?? '',
+      structuredData: data.structuredData ?? null,
+      error: data.error,
+    });
+    const status = ok ? `OK ${durationMs}ms` : `FAIL ${data.error ?? 'unknown'}`;
+    console.log(status);
 
-      // Incremental save
-      if (outputPath) {
-        const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
-          ? outputPath
-          : join(process.cwd(), outputPath);
-        let toWrite: TestResultForEvaluator[] = forEvaluator;
-        if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
-          const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
-          for (const r of forEvaluator) byPrompt.set(r.prompt, r);
-          toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
-        }
-        writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
+    // Incremental save
+    if (outputPath) {
+      const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
+        ? outputPath
+        : join(process.cwd(), outputPath);
+      let toWrite: TestResultForEvaluator[] = forEvaluator;
+      if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
+        const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
+        for (const r of forEvaluator) byPrompt.set(r.prompt, r);
+        toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
       }
-    } catch (e) {
-      const err = e instanceof Error ? e.message : String(e);
-      results.push({
-        prompt,
-        ok: false,
-        durationMs: 0,
-        toolsUsed: [],
-        responseLen: 0,
-        error: err,
-      });
-      forEvaluator.push({
-        prompt,
-        success: false,
-        durationMs: 0,
-        toolsUsed: [],
-        responseText: '',
-        structuredData: null,
-        error: err,
-      });
-      console.log('FAIL', err);
+      writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
+    }
+  } catch (e) {
+    const err = e instanceof Error ? e.message : String(e);
+    results.push({
+      prompt,
+      ok: false,
+      durationMs: 0,
+      toolsUsed: [],
+      responseLen: 0,
+      error: err,
+    });
+    forEvaluator.push({
+      prompt,
+      success: false,
+      durationMs: 0,
+      toolsUsed: [],
+      responseText: '',
+      structuredData: null,
+      error: err,
+    });
+    console.log('FAIL', err);
 
-      // Incremental save even on failure
-      if (outputPath) {
-        const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
-          ? outputPath
-          : join(process.cwd(), outputPath);
-        let toWrite: TestResultForEvaluator[] = forEvaluator;
-        if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
-          const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
-          for (const r of forEvaluator) byPrompt.set(r.prompt, r);
-          toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
-        }
-        writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
+    // Incremental save even on failure
+    if (outputPath) {
+      const outPath = outputPath.startsWith('/') || /^[A-Za-z]:/.test(outputPath)
+        ? outputPath
+        : join(process.cwd(), outputPath);
+      let toWrite: TestResultForEvaluator[] = forEvaluator;
+      if (rerunFailedFrom && previousResults && previousForEvaluator.length > 0) {
+        const byPrompt = new Map<string, TestResultForEvaluator>(previousForEvaluator.map((r) => [r.prompt, r]));
+        for (const r of forEvaluator) byPrompt.set(r.prompt, r);
+        toWrite = previousForEvaluator.map((r) => byPrompt.get(r.prompt)!);
       }
+      writeFileSync(outPath, JSON.stringify(toWrite, null, 2), 'utf-8');
     }
   }
+}
 
-  console.log('');
-  console.log('--- Summary ---');
-  const passed = results.filter((r) => r.ok).length;
-  const failed = results.length - passed;
-  console.log(`Passed: ${passed}  Failed: ${failed}`);
-  if (failed > 0) {
-    results.filter((r) => !r.ok).forEach((r) => {
-      console.log(`  FAIL: "${r.prompt.slice(0, 40)}..." -> ${r.error}`);
-    });
-  }
-  const avgMs = results.length
-    ? Math.round(results.reduce((a, r) => a + r.durationMs, 0) / results.length)
-    : 0;
-  console.log(`Avg response time: ${avgMs}ms`);
+console.log('');
+console.log('--- Summary ---');
+const passed = results.filter((r) => r.ok).length;
+const failed = results.length - passed;
+console.log(`Passed: ${passed}  Failed: ${failed}`);
+if (failed > 0) {
+  results.filter((r) => !r.ok).forEach((r) => {
+    console.log(`  FAIL: "${r.prompt.slice(0, 40)}..." -> ${r.error}`);
+  });
+}
+const avgMs = results.length
+  ? Math.round(results.reduce((a, r) => a + r.durationMs, 0) / results.length)
+  : 0;
+console.log(`Avg response time: ${avgMs}ms`);
 
-  if (outputPath) {
-    console.log(`Final results saved to: ${outputPath}`);
-  }
+if (outputPath) {
+  console.log(`Final results saved to: ${outputPath}`);
+}
 
-  process.exit(failed > 0 ? 1 : 0);
+process.exit(failed > 0 ? 1 : 0);
 }
 
 main();

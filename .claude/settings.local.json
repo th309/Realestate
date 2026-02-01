@@ -144,7 +144,11 @@
       "Bash(node scripts/check-schema.js:*)",
       "Bash(node scripts/check-formula-versions.js:*)",
       "Bash(git status:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx tsx:*)",
+      "Bash(tee:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(node analyze-results.js:*)"
     ]
   }
 }

@@ -1,0 +1,341 @@
+[
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "durationMs": 32349,
+    "toolsUsed": [
+      "get_rankings",
+      "get_time_series"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Yes, Phoenix prices have declined 3.2% over the past year based on the latest HomeReady data.",
+    "responseLength": 93,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": true,
+    "issues": [
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Tell me about Austin",
+    "durationMs": 45999,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings",
+      "compare_to_benchmark",
+      "get_time_series"
+    ],
+    "toolCount": 4,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Austin ranks 7th among Texas metros with a HomeReady score of 51.8, above the national average of 45.8. The market has seen significant volatility, peaking at 62.9 in mid-2024 before declining to its current level. Over the past year, Austin experienced -5.6% appreciation, well below the national average of +0.6%.",
+    "responseLength": 315,
+    "brevityScore": 75,
+    "dataRepetitionScore": 70,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": true,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 86.75,
+    "passes": false,
+    "issues": [
+      "Data repeated in text",
+      "Response too slow",
+      "CRITICAL: Hallucinated data"
+    ],
+    "suggestions": [
+      "Add explicit examples of avoiding data repetition",
+      "Optimize tool selection or add caching",
+      "Add \"never make up numbers\" to system prompt"
+    ]
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "durationMs": 21915,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top rental markets for homebuyers based on HomeReady scores.",
+    "responseLength": 73,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": true,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": false,
+    "issues": [
+      "Response too slow",
+      "CRITICAL: Wrong scoring system"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching",
+      "Add scoring system detection logic"
+    ]
+  },
+  {
+    "prompt": "Best rental yields in Florida",
+    "durationMs": 37435,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are Florida's top metros for rental yields based on InvestorEdge scoring.",
+    "responseLength": 78,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": true,
+    "issues": [
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Hot markets right now",
+    "durationMs": 17770,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top 10 hottest markets for homebuyers right now, led by Van Wert, OH with a HomeReady score of 71.4.",
+    "responseLength": 113,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 40,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 97,
+    "passes": true,
+    "issues": [
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Show me top metros",
+    "durationMs": 17369,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Based on the latest data, here are the top metros for homebuyers.",
+    "responseLength": 65,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 100,
+    "durationScore": 40,
+    "noDataWhenNeeded": true,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 72,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Response too slow",
+      "CRITICAL: No data when needed"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Optimize tool selection or add caching",
+      "Fix tool selection for this intent"
+    ]
+  },
+  {
+    "prompt": "Where should I buy in Austin?",
+    "durationMs": 58984,
+    "toolsUsed": [
+      "filter_geographies",
+      "get_rankings"
+    ],
+    "toolCount": 2,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top zip codes in Texas for homebuyers, though none are specifically in Austin among the highest-rated areas.",
+    "responseLength": 121,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 0,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 95,
+    "passes": true,
+    "issues": [
+      "Response too slow"
+    ],
+    "suggestions": [
+      "Optimize tool selection or add caching"
+    ]
+  },
+  {
+    "prompt": "Best states for investing",
+    "durationMs": 12022,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top 10 states for investing based on InvestorEdge score.",
+    "responseLength": 69,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 98.5,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Top 20 markets by appreciation",
+    "durationMs": 12067,
+    "toolsUsed": [
+      "get_rankings"
+    ],
+    "toolCount": 1,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Here are the top 20 metros by 12-month price appreciation, with Hailey, ID leading at 12.8% growth.",
+    "responseLength": 99,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 100,
+    "completenessScore": 100,
+    "durationScore": 70,
+    "noDataWhenNeeded": false,
+    "wrongScoringSystem": false,
+    "hallucination": false,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 98.5,
+    "passes": true,
+    "issues": [],
+    "suggestions": []
+  },
+  {
+    "prompt": "Compare Houston to San Antonio",
+    "durationMs": 17733,
+    "toolsUsed": [],
+    "toolCount": 0,
+    "toolsAppropriate": true,
+    "intentDetected": "",
+    "intentCorrect": true,
+    "responseText": "Houston scores 51.5 while San Antonio scores 51.3 on HomeReady, both slightly below average for Texas metros.",
+    "responseLength": 109,
+    "brevityScore": 100,
+    "dataRepetitionScore": 100,
+    "markdownScore": 100,
+    "toolMentionScore": 100,
+    "intentMatchScore": 0,
+    "completenessScore": 60,
+    "durationScore": 100,
+    "noDataWhenNeeded": true,
+    "wrongScoringSystem": false,
+    "hallucination": true,
+    "incompleteAnswer": false,
+    "dataOmission": false,
+    "overallScore": 67,
+    "passes": false,
+    "issues": [
+      "Wrong tools for intent",
+      "Incomplete or unclear answer",
+      "CRITICAL: No data when needed",
+      "CRITICAL: Hallucinated data"
+    ],
+    "suggestions": [
+      "Update intent detection or tool selection logic",
+      "Review prompt clarity requirements",
+      "Fix tool selection for this intent",
+      "Add \"never make up numbers\" to system prompt"
+    ]
+  }
+]
