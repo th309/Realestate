@@ -1,5 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+// Trigger redeploy: Map search and highlighting updates
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { normalizeZipKey } from '../common/zip';
 import {
