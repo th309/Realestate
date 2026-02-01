@@ -148,7 +148,13 @@
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx tsx:*)",
       "Bash(tee:*)",
       "Bash(npm run start:dev:*)",
-      "Bash(node analyze-results.js:*)"
+      "Bash(node analyze-results.js:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(winget install:*)",
+      "Bash(net start:*)",
+      "Bash(net stop:*)",
+      "Bash(sc config:*)"
     ]
   }
 }

@@ -311,6 +311,12 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   useEffect(() => {
     let isMounted = true;
 
+    if (!selectedArea || geoLevel === 'state' || geoLevel === 'national') {
+      setScores(null);
+      setLoading(false);
+      return;
+    }
+
     async function fetchScores() {
       try {
         setLoading(true);
@@ -358,6 +364,21 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   const investoredgeScore = scores?.scores?.investoredge?.score ?? 0;
   const marketHealthScore = scores?.scores?.markethealth?.score ?? 0;
   const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'MEDIUM';
+
+  const scoresUnavailable = geoLevel === 'state' || geoLevel === 'national';
+
+  if (scoresUnavailable) {
+    return (
+      <div className="flex flex-col gap-3">
+        <M3Card className="p-6 text-center">
+          <div className="text-sm font-medium text-on-surface-variant mb-1">Scores Unavailable</div>
+          <p className="text-xs text-on-surface-variant/70">
+            Scores are available at the metro, county, and zip level where they are most predictive. Select a more specific geography to see scores.
+          </p>
+        </M3Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">

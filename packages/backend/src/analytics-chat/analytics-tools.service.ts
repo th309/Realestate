@@ -190,9 +190,9 @@ export class AnalyticsToolsService {
       search_database: '/api/v1/database/search',
       aggregate_database: '/api/v1/database/aggregate',
       get_database_summary: '/api/v1/database/summary',
-      // News analysis tools
-      search_real_estate_news: '/api/v1/news/search',
-      analyze_news_impact: '/api/v1/news/analyze-impact',
+      // News analysis tools (disabled — endpoint unreliable)
+      // search_real_estate_news: '/api/v1/news/search',
+      // analyze_news_impact: '/api/v1/news/analyze-impact',
       // Geography relationship tools
       find_neighboring_geographies: '/api/v1/geography/neighbors',
       compare_to_neighbors: '/api/v1/geography/compare-to-neighbors',
@@ -1346,87 +1346,7 @@ COMMON MISTAKES TO AVOID:
           required: [],
         },
       },
-      // === News Analysis Tools ===
-      {
-        name: 'search_real_estate_news',
-        description:
-          'Search real estate news articles. Returns matching articles from the news cache. Can filter by search terms (e.g., "housing market", "mortgage rates"), geography (e.g., "Austin", "Texas"), and date range. Use this when the user asks about news, current events, or what\'s happening in the market. Examples: "What\'s the latest news about Austin?", "Any news about mortgage rates?", "What\'s happening in the housing market?"',
-        input_schema: {
-          type: 'object',
-          properties: {
-            query: {
-              type: 'string',
-              description: 'Search term (e.g., "housing market", "mortgage rates", "recession")',
-            },
-            geography_name: {
-              type: 'string',
-              description: 'Specific geography to search for (e.g., "Austin", "Texas", "California")',
-            },
-            geography_type: {
-              type: 'string',
-              enum: ['metro', 'state', 'national'],
-              description: 'Type of geography',
-            },
-            days_back: {
-              type: 'integer',
-              description: 'Number of days to search back (default: 30, max: 365)',
-            },
-            limit: {
-              type: 'integer',
-              description: 'Max articles to return (default: 20, max: 100)',
-            },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'analyze_news_impact',
-        description:
-          'Analyze how a news article might impact a specific market. Takes a news article and geography, returns detailed analysis of relevance, impact direction (positive/negative/neutral), magnitude (high/medium/low), affected factors (prices, demand, supply), specific metrics that might be affected (ZHVI, listings, etc.), time horizon (immediate/short-term/long-term), and confidence level. Use this after searching news to determine if articles are relevant to user\'s markets and how they might be affected. Critical for understanding market impact of current events.',
-        input_schema: {
-          type: 'object',
-          properties: {
-            article_id: {
-              type: 'string',
-              description: 'Article ID from news search results',
-            },
-            article_title: {
-              type: 'string',
-              description: 'Article title (if not using ID)',
-            },
-            article_content: {
-              type: 'string',
-              description: 'Article content or summary',
-            },
-            article_url: {
-              type: 'string',
-              description: 'Article URL',
-            },
-            article_source: {
-              type: 'string',
-              description: 'Article source (e.g., "Wall Street Journal")',
-            },
-            article_date: {
-              type: 'string',
-              description: 'Published date (ISO format)',
-            },
-            geography_id: {
-              type: 'string',
-              description: 'Geography ID to analyze impact for (e.g., CBSA code)',
-            },
-            geography_name: {
-              type: 'string',
-              description: 'Geography name (e.g., "Austin, TX")',
-            },
-            geography_type: {
-              type: 'string',
-              enum: ['metro', 'county', 'zip', 'state', 'national'],
-              description: 'Geography type (default: metro)',
-            },
-          },
-          required: ['geography_id', 'geography_name'],
-        },
-      },
+      // === News Analysis Tools (disabled — endpoint unreliable) ===
       // === Geographic Relationship Tools ===
       {
         name: 'find_neighboring_geographies',
