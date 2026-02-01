@@ -5,6 +5,8 @@ import mapboxgl from 'mapbox-gl';
 import type { SearchResult, GeoLevel } from '../types';
 import { ANIMATION_DURATIONS, MAP_PADDING } from '../config';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 // Mapbox Geocoding API response types
 interface MapboxContext {
   id: string;
@@ -102,7 +104,7 @@ export function useMapSearch({
           `types=region,place,postcode,district,locality&` +
           `limit=8`
         ),
-        fetch(`/api/geography/search?query=${encodeURIComponent(query)}&type=metro&limit=3`)
+        fetch(`${API_URL}/api/geography/search?query=${encodeURIComponent(query)}&type=metro&limit=3`)
       ]);
 
       if (!mapboxRes.ok) throw new Error(`Mapbox search failed: ${mapboxRes.statusText}`);
@@ -171,6 +173,17 @@ export function useMapSearch({
             };
             return [primaryResult, metroResult];
           }
+
+          // 2. Synthetic Fallback if no matching official metro found
+          // This ensures a "seamless" discoverability path even if backend data is missing.
+          const metroResultFallback: SearchResult = {
+            ...primaryResult,
+            id: `${feature.id}-metro-companion`,
+            name: `${baseName} Metro Area`,
+            type: 'metro',
+            subtitle: 'Metropolitan Statistical Area',
+          };
+          return [primaryResult, metroResultFallback];
         }
 
         // If the result itself was identified as a metro by Mapbox, try to fix its name and coords to official
