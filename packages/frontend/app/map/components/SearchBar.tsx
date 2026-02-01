@@ -1,6 +1,6 @@
 'use client';
 
-import { SearchIcon, LocationPinIcon, MailboxIcon, BuildingIcon } from './Icons';
+import { SearchIcon, LocationPinIcon, MailboxIcon, BuildingIcon, MetroIcon } from './Icons';
 import type { SearchResult } from '../types';
 
 interface SearchBarProps {
@@ -70,6 +70,8 @@ export function SearchBar({
                           <LocationPinIcon />
                         ) : result.type === 'zip' ? (
                           <MailboxIcon />
+                        ) : result.type === 'metro' ? (
+                          <MetroIcon />
                         ) : (
                           <BuildingIcon />
                         )}

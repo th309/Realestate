@@ -15,6 +15,7 @@ interface MapboxContext {
 interface MapboxFeature {
   id: string;
   place_name: string;
+  text?: string;
   place_type: string[];
   center: [number, number];
   bbox?: [number, number, number, number];
@@ -106,37 +107,63 @@ export function useMapSearch({
       console.log('Search response:', data);
 
       const features: MapboxFeature[] = data.features || [];
-      const results: SearchResult[] = features.map((feature: MapboxFeature) => {
-        let type: SearchResult['type'] = 'city';
+      const results: SearchResult[] = features.flatMap((feature: MapboxFeature) => {
         const name = feature.place_name;
+        let type: SearchResult['type'] = 'city';
 
         if (feature.place_type.includes('region')) type = 'state';
         else if (feature.place_type.includes('postcode')) type = 'zip';
         else if (feature.place_type.includes('district')) type = 'county';
         else if (feature.place_type.includes('place') || feature.place_type.includes('locality')) type = 'city';
 
-        // Detect Metro areas (Mapbox often returns these as 'place' or 'district')
-        if (name.toLowerCase().includes('metro') ||
+        // Detect Metro intent (user specifically asked for metro)
+        const queryLower = query.toLowerCase();
+        const hasMetroIntent = queryLower.includes('metro') || queryLower.includes('msa');
+
+        // Check if the result itself is a metro (Mapbox sometimes returns MSAs as places)
+        const isMetroFeature = name.toLowerCase().includes('metro') ||
           name.toLowerCase().includes('metropolitan area') ||
           name.toLowerCase().includes('msa') ||
-          (name.includes('-') && name.includes(','))) { // e.g. "Dallas-Fort Worth, TX"
-          type = 'metro';
-        }
+          (name.includes('-') && name.includes(','));
 
         const stateContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('region'));
         const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
 
-        return {
+        // Determine effective type - explicitly type to avoid union narrowing
+        let effectiveType: SearchResult['type'] = type;
+        if (isMetroFeature || (hasMetroIntent && type === 'city')) {
+          effectiveType = 'metro';
+        }
+
+        const primaryResult: SearchResult = {
           id: feature.id,
-          name: type === 'zip' ? (feature as any).text || feature.place_name : feature.place_name,
-          type,
+          name: effectiveType === 'zip' ? feature.text || name : name,
+          type: effectiveType,
+          subtitle: effectiveType === 'metro' ? 'Metropolitan Statistical Area' : undefined,
           center: feature.center,
           bbox: feature.bbox,
           state: stateAbbrev,
         };
+
+        // If it's a city and NOT already identified as a metro, ALWAYS offer a Metro Area companion
+        // This makes MSAs discoverable even if users don't know the formal name.
+        if (type === 'city' && effectiveType !== 'metro') {
+          const baseName = feature.text || name.split(',')[0];
+          const metroResult: SearchResult = {
+            ...primaryResult,
+            id: `${feature.id}-metro-companion`,
+            name: `${baseName} Metro`,
+            type: 'metro',
+            subtitle: 'Metropolitan Statistical Area',
+          };
+          return [primaryResult, metroResult];
+        }
+
+        return [primaryResult];
       });
 
-      setSearchResults(results);
+      // Cap at 10 results but keep the pairs together
+      setSearchResults(results.slice(0, 10));
     } catch (err) {
       console.error('Search error:', err);
       setSearchResults([]);
