@@ -17,6 +17,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   const {
     selectedTemplate,
     geoLevel,
+    setGeoLevel,
     primaryGeography,
     setPrimaryGeography,
     comparisonGeographies,
@@ -76,7 +77,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
       center: result.center || [0, 0], // Default
     };
 
-    // 2. Optimistically set it (to show selection immediately with placeholder or no map)
+    // 2. Optimistically set it (to show selection immediately)
     setPrimaryGeography(geo);
     primarySearch.clearSearch();
 
@@ -106,12 +107,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
     };
     addComparisonGeography(geo);
     comparisonSearch.clearSearch();
-
-    // Comparison cards don't currently show maps, so strictly strictly fetching coords is optional.
-    // However, for consistency in the data model (e.g. if the report needs to plot them later), it's good practice.
-    // But since we can't easily update a single comparison geography in the current wizardState hook 
-    // (addComparisonGeography just pushes), we'll skip it for now to avoid complexity/bugs.
-    // The primary use case (Map Preview) is for the Primary Geography.
+    // No map fetch for comparison currently
   };
 
   const getIconForType = (type: GeographyType) => {
@@ -125,7 +121,6 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   };
 
   const mapUrl = primaryGeography ? getStaticMapUrl(primaryGeography, 600, 200) : '';
-  // Show map if we have a URL (implies we have coords)
   const showMap = !!mapUrl;
 
   const getSearchPlaceholder = () => {
@@ -145,6 +140,32 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
         <label className="block text-sm font-medium text-on-surface mb-3">
           {isComparison ? 'Primary Market' : 'Select Market'}
         </label>
+
+        {/* Geography Type Selector - Only show if no primary selection yet */}
+        {!primaryGeography && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {(selectedTemplate?.config.supported_geography_types || ['metro', 'city', 'county', 'zip']).map((type) => {
+              // Optional: prettify labels
+              const label = type === 'metro' ? 'Metro' :
+                type === 'zip' ? 'Zip Code' :
+                  type.charAt(0).toUpperCase() + type.slice(1);
+              const isActive = geoLevel === type;
+
+              return (
+                <button
+                  key={type}
+                  onClick={() => setGeoLevel(type)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${isActive
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
+                    }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {primaryGeography ? (
           <div className="space-y-3">

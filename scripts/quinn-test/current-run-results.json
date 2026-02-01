@@ -1,0 +1,686 @@
+[
+  {
+    "prompt": "Where should I buy in Austin?",
+    "success": false,
+    "durationMs": 908,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Are prices dropping in Phoenix?",
+    "success": false,
+    "durationMs": 885,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Best family neighborhoods in Dallas?",
+    "success": false,
+    "durationMs": 834,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Is it a good time to buy in Denver?",
+    "success": false,
+    "durationMs": 718,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What's the most affordable metro in Texas?",
+    "success": false,
+    "durationMs": 615,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare Houston to San Antonio for first-time buyers",
+    "success": false,
+    "durationMs": 630,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Are Seattle suburbs good for families?",
+    "success": false,
+    "durationMs": 896,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Where can I find good schools in Atlanta?",
+    "success": false,
+    "durationMs": 807,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Which markets have the best cash-on-cash returns?",
+    "success": false,
+    "durationMs": 613,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me high-growth positive cash flow markets",
+    "success": false,
+    "durationMs": 1009,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare cap rates across Texas metros",
+    "success": false,
+    "durationMs": 661,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Hot markets for rental properties",
+    "success": false,
+    "durationMs": 748,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Best rental yields in Florida",
+    "success": false,
+    "durationMs": 637,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Which metros have appreciation potential?",
+    "success": false,
+    "durationMs": 790,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Where should I invest for passive income?",
+    "success": false,
+    "durationMs": 686,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me markets with strong rent growth",
+    "success": false,
+    "durationMs": 711,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What's happening in the housing market?",
+    "success": false,
+    "durationMs": 513,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Hot markets right now",
+    "success": false,
+    "durationMs": 759,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me top metros",
+    "success": false,
+    "durationMs": 616,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Tell me about Austin",
+    "success": false,
+    "durationMs": 654,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "How does Miami compare to the national average?",
+    "success": false,
+    "durationMs": 601,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What are the best markets overall?",
+    "success": false,
+    "durationMs": 544,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Best states for investing",
+    "success": false,
+    "durationMs": 814,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Top counties in California",
+    "success": false,
+    "durationMs": 671,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare zip codes in Seattle metro",
+    "success": false,
+    "durationMs": 683,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me cities similar to Boulder",
+    "success": false,
+    "durationMs": 499,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Best metros in the Midwest",
+    "success": false,
+    "durationMs": 895,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Top 10 states by home prices",
+    "success": false,
+    "durationMs": 767,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare Austin to Nashville",
+    "success": false,
+    "durationMs": 634,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "How does Phoenix stack up against Las Vegas?",
+    "success": false,
+    "durationMs": 650,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What markets are similar to Raleigh?",
+    "success": false,
+    "durationMs": 554,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me neighbors of Portland OR",
+    "success": false,
+    "durationMs": 768,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Is Dallas better than Houston?",
+    "success": false,
+    "durationMs": 744,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare Florida metros to national average",
+    "success": false,
+    "durationMs": 589,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "I am interested in investing in McLean County, IL. Can you compare McLean County, IL to the counties that surround it?",
+    "success": false,
+    "durationMs": 1283,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare Travis County, TX to its surrounding counties for investment",
+    "success": false,
+    "durationMs": 684,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "How does Wake County NC compare to neighboring counties?",
+    "success": false,
+    "durationMs": 730,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "How accurate is InvestorEdge?",
+    "success": false,
+    "durationMs": 1013,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Validate HomeReady scores",
+    "success": false,
+    "durationMs": 979,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me backtest results",
+    "success": false,
+    "durationMs": 549,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Is the scoring reliable?",
+    "success": false,
+    "durationMs": 746,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What's the trend in Austin prices?",
+    "success": false,
+    "durationMs": 2452,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me historical data for Miami",
+    "success": false,
+    "durationMs": 700,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Has Denver been growing?",
+    "success": false,
+    "durationMs": 750,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Are prices rising or falling in Phoenix?",
+    "success": false,
+    "durationMs": 739,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Best metros in Texas for investors",
+    "success": false,
+    "durationMs": 610,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Top 20 markets by appreciation",
+    "success": false,
+    "durationMs": 736,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me high-scoring counties in the Midwest",
+    "success": false,
+    "durationMs": 851,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Filter for positive cash flow markets",
+    "success": false,
+    "durationMs": 730,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Give me top 5 metros in California",
+    "success": false,
+    "durationMs": 741,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What's the latest news about Austin real estate?",
+    "success": false,
+    "durationMs": 620,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Any major developments in Phoenix market?",
+    "success": false,
+    "durationMs": 775,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Real estate news in Florida",
+    "success": false,
+    "durationMs": 736,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What raw metrics predict appreciation?",
+    "success": false,
+    "durationMs": 525,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Show me Zillow data for Austin",
+    "success": false,
+    "durationMs": 552,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Compare Census data across metros",
+    "success": false,
+    "durationMs": 629,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Tell me everything about Austin",
+    "success": false,
+    "durationMs": 731,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What should I know about investing in real estate?",
+    "success": false,
+    "durationMs": 926,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Help me find the perfect market",
+    "success": false,
+    "durationMs": 606,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "What's the best market?",
+    "success": false,
+    "durationMs": 575,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "bets makrets in texas",
+    "success": false,
+    "durationMs": 659,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "show me hot markts",
+    "success": false,
+    "durationMs": 1206,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "idk maybe something good for investing?",
+    "success": false,
+    "durationMs": 864,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "help",
+    "success": false,
+    "durationMs": 710,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "real estate?",
+    "success": false,
+    "durationMs": 839,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "stuff in florida",
+    "success": false,
+    "durationMs": 746,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "I want to like invest or something",
+    "success": false,
+    "durationMs": 605,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "just give me something",
+    "success": false,
+    "durationMs": 766,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "austin",
+    "success": false,
+    "durationMs": 681,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "show me the best markets and also compare austin to miami and is it a good time",
+    "success": false,
+    "durationMs": 704,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "best metros top 10 by score and which have recent news",
+    "success": false,
+    "durationMs": 593,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "rank texas then show me the trend for the bottom 5",
+    "success": false,
+    "durationMs": 649,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Rank the top 5 metros by InvestorEdge, then for #1 show the 24-month trend and compare it to national average",
+    "success": false,
+    "durationMs": 629,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Which metro has the best InvestorEdge score, what's its 12-month trend, and how does it compare to the worst metro?",
+    "success": false,
+    "durationMs": 657,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Find markets similar to Austin, filter to the Southeast, and show me the top 3 by score",
+    "success": false,
+    "durationMs": 639,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  },
+  {
+    "prompt": "Tell me about Phoenix: current rank, trend, vs national average, and one similar market",
+    "success": false,
+    "durationMs": 722,
+    "toolsUsed": [],
+    "responseText": "",
+    "structuredData": null,
+    "error": "401 Authentication Fails, Your api key: ****_key is invalid"
+  }
+]
