@@ -531,9 +531,9 @@ export class TimeSeriesService {
           return query.eq('geography_id', regionId);
 
         case 'state':
-          // States: geography_id is state code; accept FIPS, code, or name
+          // States: geography_id might be state code (AL) or FIPS (01) depending on source
           if (stateKey) {
-            return query.eq('geography_id', stateKey.code);
+            return query.or(`geography_id.eq.${stateKey.code},geography_id.eq.${stateKey.fips}`);
           }
           return query.or(`geography_id.ilike.${regionId},geography_name.ilike.${regionId}`);
 

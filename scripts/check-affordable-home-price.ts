@@ -105,29 +105,24 @@ async function check() {
   console.log(`  Affordable Home Price: $${Math.round(homePrice).toLocaleString()}`);
 
 
-  // Check date distribution for County and Zip
-  console.log('\n=== Date Distribution ===');
-  for (const geoType of ['county', 'zip']) {
-    console.log(`\n${geoType.toUpperCase()} Date Distribution:`);
-    const { data: dateCounts } = await supabase
-      .from('calculated_metrics')
-      .select('period_date')
-      .eq('geography_type', geoType)
-      .not('affordable_home_price', 'is', null);
 
-    // Group and count
-    const counts: Record<string, number> = {};
-    for (const row of dateCounts || []) {
-      const date = row.period_date;
-      counts[date] = (counts[date] || 0) + 1;
-    }
+  // Check Alabama state history
+  console.log('\n=== Alabama State History ===');
+  const { data: alabamaHistory } = await supabase
+    .from('calculated_metrics')
+    .select('geography_id, geography_name, period_date, affordable_home_price')
+    .eq('geography_type', 'state')
+    .ilike('geography_name', 'Alabama')
+    .not('affordable_home_price', 'is', null)
+    .order('period_date', { ascending: false });
 
-    // Sort and display
-    Object.entries(counts)
-      .sort((a, b) => b[0].localeCompare(a[0])) // Descending date
-      .forEach(([date, count]) => {
-        console.log(`  ${date}: ${count} records`);
-      });
+  if (alabamaHistory && alabamaHistory.length > 0) {
+    console.log(`Found ${alabamaHistory.length} records for Alabama:`);
+    alabamaHistory.forEach(row => {
+      console.log(`  ${row.period_date}: $${Number(row.affordable_home_price).toLocaleString()}`);
+    });
+  } else {
+    console.log('No historical data found for Alabama.');
   }
 }
 
