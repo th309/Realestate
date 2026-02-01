@@ -906,8 +906,10 @@ USER QUERY:`;
 
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
-    // Only inject data digest for intents that benefit from it (saves tokens for ML/news/raw_data/geography)
-    const digestIntents = new Set(['conversational', 'ranking', 'filtering', 'comparison']);
+    // Only inject data digest for 'conversational' intent (e.g. "How is the market?")
+    // For specific data queries (ranking, filtering, comparison), we WANT tool calls for UI rendering,
+    // so we deliberately withhold the digest to force the model to fetch data.
+    const digestIntents = new Set(['conversational']);
     const systemPrompt = this.dataDigest && digestIntents.has(queryIntent)
       ? `${userProfilePrompt}\n${this.dataDigest}`
       : userProfilePrompt;
@@ -1384,7 +1386,15 @@ USER QUERY:`;
 - **ACCURACY**:
   - NEVER invent numbers. If data is missing in the tool output, say "I don't have that data".
   - Trust the tool output matching user geographic level exactly.
-  - If a number looks like a decimal (e.g. 0.05), treat it as 5%. If it looks like a whole number (e.g. 5.0), treat it as 5%. Use context.`;
+  - If a number looks like a decimal (e.g. 0.05), treat it as 5%. If it looks like a whole number (e.g. 5.0), treat it as 5%. Use context.
+  
+## VISUALIZATION PRIORITY (CRITICAL)
+- If the user asks for a LIST, RANKING, CHART, or COMPARISON, you **MUST** call the corresponding tool to trigger the UI widget.
+- **EVEN IF** you know the answer from the injected context (Data Digest), you **MUST STILL CALL THE TOOL**.
+- The text answer alone is **INSUFFICIENT**. The UI widget is required.
+- Example: User asks "Top markets in Texas". Context says "Top market is Kingsville". You MUST still call \`get_rankings\` to show the full list in a table.`;
+
+
 
     // Add context if provided (e.g., focused on specific geography)
     if (context?.geographyType && context?.geographyId) {

@@ -87,7 +87,7 @@ export class AnalyticsToolsService {
 
       const fetchStart = Date.now();
       // Zip-level rankings (especially appreciation) can take 30–60s; use longer timeout for get_rankings
-      const timeoutMs = toolName === 'get_rankings' ? 60000 : 30000;
+      const timeoutMs = toolName === 'get_rankings' ? 90000 : 60000;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
