@@ -24,7 +24,7 @@ export class GeographyService implements OnModuleInit {
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Pre-warm the cache on module initialization for frequently accessed data
@@ -218,5 +218,35 @@ export class GeographyService implements OnModuleInit {
     );
     this.setCache(cacheKey, data);
     return data;
+  }
+
+  /**
+   * Search for geographies by name (primarily for official CBSA/Metro lookups)
+   */
+  async searchGeographies(
+    query: string,
+    type?: string,
+    limit: number = 5,
+  ): Promise<any[]> {
+    this.logger.log(`Searching geographies: "${query}" (type: ${type || 'all'})`);
+
+    let dbQuery = this.supabase
+      .from('geographies')
+      .select('geography_id, geography_type, name, name_short, state_code, cbsa_code, cbsa_name, latitude, longitude')
+      .ilike('name', `%${query}%`)
+      .limit(limit);
+
+    if (type) {
+      dbQuery = dbQuery.eq('geography_type', type);
+    }
+
+    const { data, error } = await dbQuery;
+
+    if (error) {
+      this.logger.error(`Error searching geographies: ${error.message}`);
+      throw error;
+    }
+
+    return data || [];
   }
 }

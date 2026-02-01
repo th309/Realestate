@@ -91,22 +91,26 @@ export function useMapSearch({
       }
 
       console.log('Searching for:', query);
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-        `access_token=${token}&` +
-        `country=US&` +
-        `types=region,place,postcode,district,locality&` +
-        `limit=8`
-      );
+      const queryLower = query.toLowerCase();
 
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
-      }
+      // Parallel fetch: Mapbox for standard geos, and our backend for official CBSA metas
+      const [mapboxRes, backendRes] = await Promise.all([
+        fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
+          `access_token=${token}&` +
+          `country=US&` +
+          `types=region,place,postcode,district,locality&` +
+          `limit=8`
+        ),
+        fetch(`/api/geography/search?query=${encodeURIComponent(query)}&type=metro&limit=3`)
+      ]);
 
-      const data = await response.json();
-      console.log('Search response:', data);
+      if (!mapboxRes.ok) throw new Error(`Mapbox search failed: ${mapboxRes.statusText}`);
 
-      const features: MapboxFeature[] = data.features || [];
+      const mapboxData = await mapboxRes.json();
+      const officialMetros: any[] = backendRes.ok ? await backendRes.json() : [];
+
+      const features: MapboxFeature[] = mapboxData.features || [];
       const results: SearchResult[] = features.flatMap((feature: MapboxFeature) => {
         const name = feature.place_name;
         let type: SearchResult['type'] = 'city';
@@ -117,7 +121,6 @@ export function useMapSearch({
         else if (feature.place_type.includes('place') || feature.place_type.includes('locality')) type = 'city';
 
         // Detect Metro intent (user specifically asked for metro)
-        const queryLower = query.toLowerCase();
         const hasMetroIntent = queryLower.includes('metro') || queryLower.includes('msa');
 
         // Check if the result itself is a metro (Mapbox sometimes returns MSAs as places)
@@ -145,25 +148,62 @@ export function useMapSearch({
           state: stateAbbrev,
         };
 
-        // If it's a city and NOT already identified as a metro, ALWAYS offer a Metro Area companion
-        // This makes MSAs discoverable even if users don't know the formal name.
-        if (type === 'city' && effectiveType !== 'metro') {
+        // If it's a city, we'll try to find a matching official metro from our backend results
+        if (type === 'city') {
           const baseName = feature.text || name.split(',')[0];
-          const metroResult: SearchResult = {
-            ...primaryResult,
-            id: `${feature.id}-metro-companion`,
-            name: `${baseName} Metro`,
-            type: 'metro',
-            subtitle: 'Metropolitan Statistical Area',
-          };
-          return [primaryResult, metroResult];
+
+          // Find if we have an official metro starting with this city's name
+          const matchingMetro = officialMetros.find(m =>
+            m.name.toLowerCase().startsWith(baseName.toLowerCase()) ||
+            m.cbsa_name?.toLowerCase().includes(baseName.toLowerCase())
+          );
+
+          if (matchingMetro) {
+            const metroResult: SearchResult = {
+              id: matchingMetro.geography_id,
+              name: matchingMetro.name,
+              type: 'metro',
+              subtitle: 'Metropolitan Statistical Area',
+              center: (matchingMetro.longitude && matchingMetro.latitude)
+                ? [Number(matchingMetro.longitude), Number(matchingMetro.latitude)]
+                : (feature.center as [number, number]),
+              state: matchingMetro.state_code,
+            };
+            return [primaryResult, metroResult];
+          }
+        }
+
+        // If the result itself was identified as a metro by Mapbox, try to fix its name and coords to official
+        if (effectiveType === 'metro') {
+          const officialMatch = officialMetros[0]; // Use first official result as bias
+          if (officialMatch) {
+            primaryResult.name = officialMatch.name;
+            primaryResult.id = officialMatch.geography_id;
+            if (officialMatch.longitude && officialMatch.latitude) {
+              primaryResult.center = [Number(officialMatch.longitude), Number(officialMatch.latitude)];
+            }
+          }
         }
 
         return [primaryResult];
       });
 
-      // Cap at 10 results but keep the pairs together
-      setSearchResults(results.slice(0, 10));
+      // Also add any official metros that didn't match a city specifically
+      const matchedIds = new Set(results.filter(r => r.type === 'metro').map(r => r.id));
+      const extraMetros: SearchResult[] = officialMetros
+        .filter(m => !matchedIds.has(m.geography_id))
+        .map(m => ({
+          id: m.geography_id,
+          name: m.name,
+          type: 'metro',
+          subtitle: 'Metropolitan Statistical Area',
+          state: m.state_code,
+          center: (m.longitude && m.latitude)
+            ? [Number(m.longitude), Number(m.latitude)]
+            : undefined,
+        }));
+
+      setSearchResults([...results, ...extraMetros].slice(0, 10));
     } catch (err) {
       console.error('Search error:', err);
       setSearchResults([]);

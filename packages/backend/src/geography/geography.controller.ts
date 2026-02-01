@@ -6,6 +6,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { normalizeStateToCode } from '../common/geo';
@@ -19,7 +20,7 @@ import {
 export class GeographyController {
   private readonly logger = new Logger(GeographyController.name);
 
-  constructor(private readonly geographyService: GeographyService) {}
+  constructor(private readonly geographyService: GeographyService) { }
 
   @Get('national')
   @ApiOperation({ summary: 'Get US national boundary as GeoJSON' })
@@ -160,6 +161,38 @@ export class GeographyController {
       this.logger.error(`Error fetching cities GeoJSON for ${state}`, error);
       throw new HttpException(
         'Failed to fetch cities GeoJSON',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search for geographies by name' })
+  @ApiParam({
+    name: 'query',
+    description: 'Search string (e.g., "Chicago")',
+  })
+  @ApiParam({
+    name: 'type',
+    description: 'Optional geography type filter (e.g., "metro")',
+    required: false,
+  })
+  async search(
+    @Query('query') query: string,
+    @Query('type') type?: string,
+  ): Promise<any[]> {
+    if (!query || query.length < 2) {
+      throw new HttpException(
+        'Query must be at least 2 characters',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    try {
+      return await this.geographyService.searchGeographies(query, type);
+    } catch (error: any) {
+      this.logger.error(`Error searching geographies for "${query}"`, error);
+      throw new HttpException(
+        'Failed to search geographies',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
