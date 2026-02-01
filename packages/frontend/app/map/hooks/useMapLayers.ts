@@ -477,7 +477,12 @@ function addMapLayers(
     paint: {
       'line-color': '#ffffff',
       'line-width': lineWidth,
+      'line-opacity': 0.8, // Slightly softer white
     },
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round',
+    }
   });
 
   // Highlight layer - for searched geography
@@ -488,10 +493,22 @@ function addMapLayers(
       id: 'geo-highlight',
       type: 'line',
       source: 'geo-data',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
       paint: {
-        'line-color': '#6200ee', // Primary Purple
-        'line-width': lineWidth * 6, // Thick enough to be distinct
-        'line-opacity': 0.9,
+        'line-color': '#8b5cf6', // Vibrant Violet
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          5, lineWidth * 3,
+          10, lineWidth * 6,
+          15, lineWidth * 12
+        ],
+        'line-opacity': 1,
+        'line-blur': 0.4, // Soft premium glow
       },
       filter
     });
