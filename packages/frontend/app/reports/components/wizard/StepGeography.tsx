@@ -105,8 +105,8 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   const showMap = !!mapUrl;
 
   const getSearchPlaceholder = () => {
-    if (!primaryGeography) return 'Search primary market (e.g., Chicago, 90210, Cook)...';
-    return 'Add comparison market widget...';
+    if (!primaryGeography) return 'Enter a city, zip, or county...';
+    return 'Add another location...';
   };
 
   const canAddMore = !primaryGeography || (isComparison && comparisonGeographies.length < maxComparisons - 1);
@@ -117,7 +117,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
       <div>
         <div className="flex justify-between items-center mb-3">
           <label className="text-sm font-medium text-on-surface">
-            {primaryGeography ? 'Add Comparisons Widget' : 'Search Widget'}
+            {primaryGeography ? 'Add Comparisons' : 'Search for the main location of your report'}
           </label>
         </div>
 
