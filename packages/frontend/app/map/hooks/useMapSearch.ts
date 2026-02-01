@@ -233,8 +233,9 @@ export function useMapSearch({
       console.error('Map not initialized - cannot zoom');
     } else {
       // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
-      // IMPORTANT: BBox provides the "correct" zoom to see the whole geometry
-      if (result.bbox) {
+      // IMPORTANT: BBox provides the "correct" zoom to see the whole geometry.
+      // However, for metros, we currently lack MSA-level bboxes, so we force a bird's-eye view.
+      if (result.bbox && result.type !== 'metro') {
         console.log('Fitting to bounds:', result.bbox);
         mapRef.current.fitBounds(
           [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
@@ -246,7 +247,7 @@ export function useMapSearch({
           result.type === 'zip' ? 12 :
             result.type === 'county' ? 8 :
               result.type === 'city' ? 10 :
-                result.type === 'metro' ? 8 : 10;
+                result.type === 'metro' ? 7 : 10;
 
         console.log('Flying to:', result.center, 'zoom:', zoomLevel);
         mapRef.current.flyTo({
