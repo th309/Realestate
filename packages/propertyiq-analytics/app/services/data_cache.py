@@ -347,7 +347,7 @@ class DataCache:
         # Check how many names were resolved vs fell back to ID
         resolved = (df['geography_name'] != df['geography_id']).sum() if 'geography_name' in df.columns else 0
         sample_names = df['geography_name'].head(3).tolist() if 'geography_name' in df.columns else []
-        logger.info(f"[DEBUG-C] Enrichment done: {geo_type}, resolved={resolved}/{len(df)}, samples={sample_names}")
+        logger.debug(f"[DEBUG-C] Enrichment done: {geo_type}, resolved={resolved}/{len(df)}, samples={sample_names}")
         # #endregion
         
         return df
