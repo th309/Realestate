@@ -68,7 +68,12 @@ export default function MapPage() {
   const {
     searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
     handleSearch, handleSelectSearchResult, setShowSearchResults
-  } = useMapSearch({ mapRef: map, onGeoLevelChange: setGeoLevel, onStateChange: setSelectedState });
+  } = useMapSearch({
+    mapRef: map,
+    onGeoLevelChange: setGeoLevel,
+    onStateChange: setSelectedState,
+    accessToken: mapboxgl.accessToken || ''
+  });
   // Handle feature click - open right panel with geography details
   const handleFeatureClick = useCallback((geography: SelectedGeography | null) => {
     setSelectedGeography(geography);

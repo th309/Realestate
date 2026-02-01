@@ -25,6 +25,7 @@ interface UseMapSearchProps {
   mapRef: React.MutableRefObject<mapboxgl.Map | null>;
   onGeoLevelChange: (level: GeoLevel) => void;
   onStateChange: (state: string) => void;
+  accessToken: string;
 }
 
 interface UseMapSearchReturn {
@@ -43,6 +44,7 @@ export function useMapSearch({
   mapRef,
   onGeoLevelChange,
   onStateChange,
+  accessToken,
 }: UseMapSearchProps): UseMapSearchReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -76,14 +78,28 @@ export function useMapSearch({
     setShowSearchResults(true);
 
     try {
+      const token = accessToken || mapboxgl.accessToken;
+      if (!token) {
+        console.error('Mapbox access token is missing');
+        setSearchLoading(false);
+        return;
+      }
+
+      console.log('Searching for:', query);
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
-        `access_token=${mapboxgl.accessToken}&` +
+        `access_token=${token}&` +
         `country=US&` +
         `types=region,place,postcode,district&` +
         `limit=8`
       );
+
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log('Search response:', data);
 
       const features: MapboxFeature[] = data.features || [];
       const results: SearchResult[] = features.map((feature: MapboxFeature) => {
@@ -113,55 +129,74 @@ export function useMapSearch({
     } finally {
       setSearchLoading(false);
     }
-  }, []);
+  }, [accessToken]);
 
   // Handle search result selection
   const handleSelectSearchResult = (result: SearchResult) => {
     console.log('Search result clicked:', result);
 
     if (!mapRef.current) {
-      console.error('Map not initialized');
-      return;
-    }
-
-    // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
-    if (result.bbox) {
-      console.log('Fitting to bounds:', result.bbox);
-      mapRef.current.fitBounds(
-        [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
-        { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
-      );
-    } else if (result.center) {
-      // Fallback zoom levels if no bbox available
-      const zoomLevel = result.type === 'state' ? 5.5 :
-                        result.type === 'zip' ? 12 :
-                        result.type === 'county' ? 8 :
-                        result.type === 'city' ? 10 : 8;
-
-      console.log('Flying to:', result.center, 'zoom:', zoomLevel);
-      mapRef.current.flyTo({
-        center: result.center,
-        zoom: zoomLevel,
-        duration: ANIMATION_DURATIONS.MAP_FLY,
-      });
+      console.error('Map not initialized - cannot zoom');
+      // Even if map is not ready, we can still set the state/geoLevel
+      // but zooming won't work immediately.
     } else {
-      console.error('No location data for result');
-      return;
+      // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
+      if (result.bbox) {
+        console.log('Fitting to bounds:', result.bbox);
+        mapRef.current.fitBounds(
+          [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
+          { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
+        );
+      } else if (result.center) {
+        // Fallback zoom levels if no bbox available
+        const zoomLevel = result.type === 'state' ? 5.5 :
+          result.type === 'zip' ? 12 :
+            result.type === 'county' ? 8 :
+              result.type === 'city' ? 10 : 8;
+
+        console.log('Flying to:', result.center, 'zoom:', zoomLevel);
+        mapRef.current.flyTo({
+          center: result.center,
+          zoom: zoomLevel,
+          duration: ANIMATION_DURATIONS.MAP_FLY,
+        });
+      } else {
+        console.error('No location data for result');
+      }
     }
 
     // Mark that search initiated this navigation (so geo level effect skips its zoom)
     searchNavigatedRef.current = true;
 
     // Update geo level and state based on result type
+    // Ensure we set state for levels that require it (city, zip)
     if (result.type === 'state') {
       onGeoLevelChange('state');
+      // For state, we might want to set the selected state too? 
+      // Current behavior: State search sets geoLevel to state.
+      // But clearing selectedState happens in handleGeoLevelChange in Page.
+      // We are passing setGeoLevel directly. So selectedState persists. 
+      // If I search "Texas", I get Texas view. 
     } else if (result.type === 'zip' && result.state) {
       onGeoLevelChange('zip');
       onStateChange(result.state);
     } else if (result.type === 'county') {
       onGeoLevelChange('county');
+      // County allows state filtering but works without it.
+      if (result.state) {
+        // Optional: onStateChange(result.state);
+      }
     } else if (result.type === 'city') {
-      onGeoLevelChange('metro');
+      // Corrected: Map City search to City level (not Metro)
+      // City level REQUIRES state selection.
+      if (result.state) {
+        onGeoLevelChange('city');
+        onStateChange(result.state);
+      } else {
+        // Fallback if no state found (unlikely for city)
+        console.warn('City result missing state - defaulting to metro');
+        onGeoLevelChange('metro');
+      }
     }
 
     // Clear search

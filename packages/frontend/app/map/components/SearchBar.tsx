@@ -40,6 +40,12 @@ export function SearchBar({
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           onFocus={onFocus}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && searchResults.length > 0) {
+              onSelectResult(searchResults[0]);
+              e.currentTarget.blur();
+            }
+          }}
           placeholder={placeholder}
           className="w-full h-14 pl-10 md:pl-12 pr-3 md:pr-4 bg-surface-container-high rounded-full text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all duration-200"
         />
