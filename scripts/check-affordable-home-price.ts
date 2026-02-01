@@ -103,6 +103,32 @@ async function check() {
   console.log(`  Tax+Insurance monthly rate: ${(taxInsuranceMonthlyRate * 100).toFixed(4)}%`);
   console.log(`  Denominator: ${denominator.toFixed(6)}`);
   console.log(`  Affordable Home Price: $${Math.round(homePrice).toLocaleString()}`);
+
+
+  // Check date distribution for County and Zip
+  console.log('\n=== Date Distribution ===');
+  for (const geoType of ['county', 'zip']) {
+    console.log(`\n${geoType.toUpperCase()} Date Distribution:`);
+    const { data: dateCounts } = await supabase
+      .from('calculated_metrics')
+      .select('period_date')
+      .eq('geography_type', geoType)
+      .not('affordable_home_price', 'is', null);
+
+    // Group and count
+    const counts: Record<string, number> = {};
+    for (const row of dateCounts || []) {
+      const date = row.period_date;
+      counts[date] = (counts[date] || 0) + 1;
+    }
+
+    // Sort and display
+    Object.entries(counts)
+      .sort((a, b) => b[0].localeCompare(a[0])) // Descending date
+      .forEach(([date, count]) => {
+        console.log(`  ${date}: ${count} records`);
+      });
+  }
 }
 
 check().catch(console.error);
