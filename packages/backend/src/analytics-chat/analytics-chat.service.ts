@@ -597,15 +597,14 @@ USER QUERY:`;
       return parts.length > 0 ? `NATIONAL BENCHMARK: ${parts.join(', ')}` : null;
     };
 
-    // Top/bottom metros by each score type
-    const scoreTypes = ['investoredge_score', 'homeready_score', 'market_health_score'];
     const scoreLabels: Record<string, string> = {
       investoredge_score: 'INVESTOREDGE',
       homeready_score: 'HOMEREADY',
       market_health_score: 'MARKET_HEALTH',
     };
 
-    for (const scoreType of scoreTypes) {
+    // --- TOP METROS BY EACH SCORE TYPE (top 10 from cached top-20) ---
+    for (const scoreType of ['investoredge_score', 'homeready_score', 'market_health_score'] as const) {
       const label = scoreLabels[scoreType];
       const top = formatRankings('get_rankings', {
         filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: false,
@@ -613,33 +612,58 @@ USER QUERY:`;
       if (top) lines.push(top);
     }
 
-    // Bottom 10 metros
-    const bottom = formatRankings('get_rankings', {
-      filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: true,
-    }, 'BOTTOM 10 METROS BY INVESTOREDGE');
-    if (bottom) lines.push(bottom);
-
-    // Top 10 by popular states
-    const states = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA'];
-    for (const state of states) {
-      const line = formatRankings('get_rankings', {
-        filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [state] }, limit: 10, ascending: false,
-      }, `TOP ${state} METROS`);
-      if (line) lines.push(line);
+    // --- BOTTOM METROS ---
+    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
+      const label = scoreLabels[scoreType];
+      const bottom = formatRankings('get_rankings', {
+        filter: { geography_type: 'metro', score_type: scoreType }, limit: 10, ascending: true,
+      }, `BOTTOM 10 METROS BY ${label}`);
+      if (bottom) lines.push(bottom);
     }
 
-    // Top counties
+    // --- STATE-LEVEL RANKINGS ---
+    lines.push('');
+    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
+      const label = scoreLabels[scoreType];
+      const top = formatRankings('get_rankings', {
+        filter: { geography_type: 'state', score_type: scoreType }, limit: 10, ascending: false,
+      }, `TOP 10 STATES BY ${label}`);
+      if (top) lines.push(top);
+    }
+    const bottomStates = formatRankings('get_rankings', {
+      filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: true,
+    }, 'BOTTOM 10 STATES BY INVESTOREDGE');
+    if (bottomStates) lines.push(bottomStates);
+
+    // --- TOP METROS BY STATE (InvestorEdge + HomeReady) ---
+    lines.push('');
+    const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
+    for (const state of popularStates) {
+      const ie = formatRankings('get_rankings', {
+        filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [state] }, limit: 10, ascending: false,
+      }, `TOP ${state} METROS (INVESTOREDGE)`);
+      if (ie) lines.push(ie);
+
+      const hr = formatRankings('get_rankings', {
+        filter: { geography_type: 'metro', score_type: 'homeready_score', states: [state] }, limit: 10, ascending: false,
+      }, `TOP ${state} METROS (HOMEREADY)`);
+      if (hr) lines.push(hr);
+    }
+
+    // --- TOP COUNTIES ---
     const counties = formatRankings('get_rankings', {
       filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false,
     }, 'TOP 10 COUNTIES BY INVESTOREDGE');
-    if (counties) lines.push(counties);
+    if (counties) { lines.push(''); lines.push(counties); }
 
-    // National benchmark
-    const benchmark = formatBenchmark({
-      filter: { geography_type: 'metro', score_type: 'investoredge_score' }, benchmark_type: 'national',
-    });
-    if (benchmark) lines.push('');
-    if (benchmark) lines.push(benchmark);
+    // --- NATIONAL BENCHMARKS ---
+    lines.push('');
+    for (const scoreType of ['investoredge_score', 'homeready_score'] as const) {
+      const benchmark = formatBenchmark({
+        filter: { geography_type: 'metro', score_type: scoreType }, benchmark_type: 'national',
+      });
+      if (benchmark) lines.push(benchmark);
+    }
 
     // Only set digest if we got meaningful content (more than just the header)
     if (lines.length > 3) {
@@ -661,29 +685,42 @@ USER QUERY:`;
     let cached = 0;
 
     // API expects filter object for get_rankings, compare_to_benchmark, analyze_data
+    // Queries are driven by test prompt patterns — see scripts/quinn-test/
+    const popularStates = ['TX', 'CA', 'FL', 'AZ', 'NC', 'GA', 'TN', 'CO', 'WA', 'OH'];
     const commonQueries: Array<{ tool: string; params: Record<string, any> }> = [
-      // Top markets (InvestorEdge - most common)
+      // === TOP/BOTTOM METROS BY EACH SCORE TYPE ===
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 20, ascending: false } },
-      // Other score types
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 20, ascending: false } },
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'market_health_score' }, limit: 10, ascending: false } },
-      // County level
-      { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
       // Bottom performers
       { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, limit: 10, ascending: true } },
-      // Top by state (popular states)
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['TX'] }, limit: 10, ascending: false } },
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['CA'] }, limit: 10, ascending: false } },
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['FL'] }, limit: 10, ascending: false } },
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['AZ'] }, limit: 10, ascending: false } },
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['NC'] }, limit: 10, ascending: false } },
-      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: ['GA'] }, limit: 10, ascending: false } },
-      // Realtor hotness (order_by: asc = low rank first). realtor_metro has no geography_name column.
-      { tool: 'query_database_table', params: { table_name: 'realtor_metro', columns: ['hotness_rank', 'median_listing_price'], order_by: 'hotness_rank', limit: 10 } },
-      // Benchmark & analysis
+      { tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, limit: 10, ascending: true } },
+
+      // === STATE-LEVEL RANKINGS (test: "best states for investing") ===
+      { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'homeready_score' }, limit: 10, ascending: false } },
+      { tool: 'get_rankings', params: { filter: { geography_type: 'state', score_type: 'investoredge_score' }, limit: 10, ascending: true } },
+
+      // === COUNTY LEVEL ===
+      { tool: 'get_rankings', params: { filter: { geography_type: 'county', score_type: 'investoredge_score' }, limit: 10, ascending: false } },
+
+      // === TOP METROS BY STATE — InvestorEdge + HomeReady for popular states ===
+      ...popularStates.map(st => ({
+        tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score', states: [st] }, limit: 10, ascending: false },
+      })),
+      ...popularStates.map(st => ({
+        tool: 'get_rankings', params: { filter: { geography_type: 'metro', score_type: 'homeready_score', states: [st] }, limit: 10, ascending: false },
+      })),
+
+      // === BENCHMARK & ANALYSIS ===
       { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, benchmark_type: 'national' } },
+      { tool: 'compare_to_benchmark', params: { filter: { geography_type: 'metro', score_type: 'homeready_score' }, benchmark_type: 'national' } },
       { tool: 'analyze_data', params: { filter: { geography_type: 'metro', score_type: 'investoredge_score' }, horizons: [12, 36] } },
+
+      // === REALTOR HOTNESS ===
+      { tool: 'query_database_table', params: { table_name: 'realtor_metro', columns: ['hotness_rank', 'median_listing_price'], order_by: 'hotness_rank', limit: 10 } },
     ];
 
     // Execute queries in parallel batches to avoid overwhelming the Python service
@@ -762,7 +799,9 @@ USER QUERY:`;
 
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
-    const systemPrompt = this.dataDigest
+    // Only inject data digest for intents that benefit from it (saves tokens for ML/news/raw_data/geography)
+    const digestIntents = new Set(['conversational', 'ranking', 'filtering', 'comparison']);
+    const systemPrompt = this.dataDigest && digestIntents.has(queryIntent)
       ? `${userProfilePrompt}\n${this.dataDigest}`
       : userProfilePrompt;
 
@@ -867,7 +906,9 @@ USER QUERY:`;
 
     const userMode = (conversation.context?.userMode as 'homebuyer' | 'investor') || 'homebuyer';
     const userProfilePrompt = this.buildUserProfilePrompt(userMode, conversation.context as any);
-    const systemPrompt = this.dataDigest
+    // Only inject data digest for intents that benefit from it (saves tokens for ML/news/raw_data/geography)
+    const digestIntents = new Set(['conversational', 'ranking', 'filtering', 'comparison']);
+    const systemPrompt = this.dataDigest && digestIntents.has(queryIntent)
       ? `${userProfilePrompt}\n${this.dataDigest}`
       : userProfilePrompt;
     const dynamicContext = this.buildDynamicContext(conversation.messages);
@@ -1061,7 +1102,9 @@ USER QUERY:`;
             name: item.geography_name || item.geography_id,
             id: item.geography_id,
             score: item.score,
-            appreciation: item.appreciation_12m,
+            appreciation: (Math.abs(item.appreciation_12m) > 100)
+              ? item.appreciation_12m / 100
+              : item.appreciation_12m,
             state: item.state,
           }));
           // "Compare A and B" (any geography): show only the requested geographies, not a generic top-N
@@ -1337,7 +1380,11 @@ USER QUERY:`;
 - Ultra-concise: 2-3 sentences maximum
 - Call tools, let visual data render
 - If data not found, suggest alternatives in 1 sentence
-- ALWAYS ask about geography level for broad market queries (1 sentence question)`;
+- ALWAYS ask about geography level for broad market queries (1 sentence question)
+- **ACCURACY**:
+  - NEVER invent numbers. If data is missing in the tool output, say "I don't have that data".
+  - Trust the tool output matching user geographic level exactly.
+  - If a number looks like a decimal (e.g. 0.05), treat it as 5%. If it looks like a whole number (e.g. 5.0), treat it as 5%. Use context.`;
 
     // Add context if provided (e.g., focused on specific geography)
     if (context?.geographyType && context?.geographyId) {
