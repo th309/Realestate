@@ -105,7 +105,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   const showMap = !!mapUrl;
 
   const getSearchPlaceholder = () => {
-    if (!primaryGeography) return 'Enter a city, zip, or county...';
+    if (!primaryGeography) return 'Enter a state, metro, county, or zip...';
     return 'Add another location...';
   };
 
