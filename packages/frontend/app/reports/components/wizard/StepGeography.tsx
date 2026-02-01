@@ -27,6 +27,11 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
     removeComparisonGeography,
   } = wizardState;
 
+  // Determine search filter:
+  // - If no primary is selected: Universal search (no filter)
+  // - If primary is selected: Lock to that type for comparisons
+  const searchFilter = primaryGeography ? primaryGeography.type : undefined;
+
   // Use the universal search hook
   const {
     searchQuery,
@@ -39,7 +44,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
     clearSearch,
   } = useUniversalSearch({
     accessToken: '', // Mapbox accessToken is handled internally or by global mapboxgl
-    filterByGeoLevel: geoLevel
+    filterByGeoLevel: searchFilter
   });
 
   const isComparison = selectedTemplate?.config.comparison !== undefined;
@@ -66,6 +71,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
     // 2. Decide role: Primary if none, otherwise comparison
     if (!primaryGeography) {
       setPrimaryGeography(geo);
+      setGeoLevel(geo.type as any); // Lock the wizard level to the selected type
       clearSearch();
 
       // 3. Hydrate coordinates if needed for map preview
@@ -100,15 +106,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   const showMap = !!mapUrl;
 
   const getSearchPlaceholder = () => {
-    if (!primaryGeography) {
-      switch (geoLevel) {
-        case 'metro': return 'Search primary metro (e.g., Chicago, Miami)';
-        case 'county': return 'Search primary county (e.g., Cook, Harris)';
-        case 'city': return 'Search primary city (e.g., Austin, Denver)';
-        case 'zip': return 'Search primary ZIP (e.g., 90210)';
-        default: return 'Search primary market';
-      }
-    }
+    if (!primaryGeography) return 'Search primary market (e.g., Chicago, 90210, Cook)...';
     return 'Add comparison market widget...';
   };
 
@@ -122,32 +120,6 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
           <label className="text-sm font-medium text-on-surface">
             {primaryGeography ? 'Add Comparisons Widget' : 'Search Widget'}
           </label>
-
-          {/* Geo Level Pills - Show even if primary is selected to allow switching if needed */}
-          <div className="flex gap-2">
-            {(selectedTemplate?.config.supported_geography_types || ['metro', 'city', 'county', 'zip']).map((type) => {
-              const label = type === 'metro' ? 'Metro' :
-                type === 'zip' ? 'Zip' :
-                  type.charAt(0).toUpperCase() + type.slice(1);
-              const isActive = geoLevel === type;
-
-              return (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setGeoLevel(type);
-                    clearSearch();
-                  }}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${isActive
-                    ? 'bg-primary text-on-primary elevation-1'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-                    }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {canAddMore ? (
