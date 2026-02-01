@@ -6,7 +6,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Import types and constants
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode, SelectedGeography } from './types';
+import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode, SelectedGeography, SearchResult } from './types';
 import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
@@ -63,17 +63,20 @@ export default function MapPage() {
   // Compute metric categories based on view mode
   const metricCategories = useMemo(() => getMetricCategories(viewMode), [viewMode]);
 
+  const [highlightedFeature, setHighlightedFeature] = useState<SearchResult | null>(null);
+
   // Use extracted hooks
   const { mapData, dataLoading, fetchMapData } = useMapData();
   const {
     searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
-    highlightedFeature, handleSearch, handleSelectSearchResult, setShowSearchResults
+    handleSearch, handleSelectSearchResult, setShowSearchResults
   } = useMapSearch({
     mapRef: map,
     onGeoLevelChange: setGeoLevel,
     onStateChange: setSelectedState,
     accessToken: mapboxgl.accessToken || '',
-    geoLevel
+    geoLevel,
+    onHighlightFeature: setHighlightedFeature
   });
   // Handle feature click - open right panel with geography details
   const handleFeatureClick = useCallback((geography: SelectedGeography | null) => {
@@ -193,20 +196,6 @@ export default function MapPage() {
       fetchMapData(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
     }
   }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchMapData]);
-
-  // Update layers when mapData or geoLevel changes
-  // Always update when geoLevel changes to ensure correct geographic shapes are shown
-  useEffect(() => {
-    if (!mapLoaded) return;
-
-    // Some levels require state selection before we can show anything
-    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
-    if (requiresState && !selectedState) return;
-
-    // Always update layers when geoLevel changes - shapes should update immediately
-    // Data coloring will show "no data" until mapData loads
-    updateMapLayers();
-  }, [mapData, geoLevel, selectedState, mapLoaded, updateMapLayers]);
 
   // Handle Mapbox resize when right panel opens/closes
   useEffect(() => {

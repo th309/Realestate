@@ -89,15 +89,21 @@ export function useMapLayers({
 }: UseMapLayersProps) {
   // Store current geoLevel in ref for click handler
   const geoLevelRef = useRef(geoLevel);
+  const updateIdRef = useRef(0);
+
   useEffect(() => {
     geoLevelRef.current = geoLevel;
   }, [geoLevel]);
 
   const updateMapLayers = useCallback(async () => {
+    const updateId = ++updateIdRef.current;
+
     if (!map.current || !mapLoaded) return;
 
     if (!map.current.isStyleLoaded()) {
-      map.current.once('idle', () => updateMapLayers());
+      map.current.once('idle', () => {
+        if (updateId === updateIdRef.current) updateMapLayers();
+      });
       return;
     }
 
@@ -114,7 +120,12 @@ export function useMapLayers({
       const response = useRetry
         ? await fetchWithRetry(geojsonUrl, 3, 1000)
         : await fetch(geojsonUrl);
+
+      if (updateId !== updateIdRef.current) return;
+
       const geojson = await response.json();
+
+      if (updateId !== updateIdRef.current) return;
 
       // Add values to features
       addValuesToFeatures(geojson, geoLevel, mapData);
@@ -157,7 +168,58 @@ export function useMapLayers({
     }
   }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, highlightedFeature, onFeatureClick]);
 
+  // Effect to trigger logic when core dependencies change
+  useEffect(() => {
+    if (!mapLoaded) return;
+
+    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    if (requiresState && !selectedState) {
+      // Clear layers if state is required but not selected
+      if (map.current) {
+        removeExistingLayers(map.current);
+      }
+      return;
+    }
+
+    updateMapLayers();
+  }, [geoLevel, selectedState, mapLoaded, updateMapLayers]);
+
+  // Effect for instant highlight update without full re-fetch if level/state didn't change
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !map.current.getLayer('geo-highlight')) return;
+
+    const filter = calculateHighlightFilter(highlightedFeature, geoLevel);
+    map.current.setFilter('geo-highlight', filter);
+  }, [highlightedFeature, geoLevel, mapLoaded]);
+
   return { updateMapLayers };
+}
+
+/**
+ * Filter logic for geographic highlighting
+ */
+function calculateHighlightFilter(highlightedFeature: SearchResult | null | undefined, geoLevel: GeoLevel): any[] {
+  if (!highlightedFeature) return ['==', ['get', 'id'], '___none___'];
+
+  const searchName = highlightedFeature.name;
+  const searchId = highlightedFeature.id.replace(/.*?\./, ''); // Strip Mapbox prefix
+
+  if (geoLevel === 'metro') {
+    return ['any',
+      ['==', ['get', 'name'], searchName],
+      ['in', searchName, ['get', 'name']],
+      ['==', ['get', 'id'], searchName]
+    ];
+  } else if (geoLevel === 'zip') {
+    return ['==', ['get', 'id'], searchName];
+  } else {
+    return ['any',
+      ['==', ['get', 'name'], searchName],
+      ['==', ['get', 'id'], searchName],
+      ['==', ['get', 'id'], searchId],
+      ['in', searchName, ['get', 'displayName']]
+    ];
+  }
 }
 
 function removeExistingLayers(map: mapboxgl.Map): void {
@@ -420,29 +482,7 @@ function addMapLayers(
 
   // Highlight layer - for searched geography
   if (highlightedFeature) {
-    const searchName = highlightedFeature.name;
-    const searchId = highlightedFeature.id.replace(/.*?\./, ''); // Strip Mapbox prefix if present
-
-    let filter: any[];
-    if (geoLevel === 'metro') {
-      // Metros often have long names in GeoJSON but short names in search
-      filter = ['any',
-        ['==', ['get', 'name'], searchName],
-        ['in', searchName, ['get', 'name']],
-        ['==', ['get', 'id'], searchName]
-      ];
-    } else if (geoLevel === 'zip') {
-      // Zips match by ID (the zip code)
-      filter = ['==', ['get', 'id'], searchName];
-    } else {
-      // General robust match for city, county, state
-      filter = ['any',
-        ['==', ['get', 'name'], searchName],
-        ['==', ['get', 'id'], searchName],
-        ['==', ['get', 'id'], searchId],
-        ['in', searchName, ['get', 'displayName']]
-      ];
-    }
+    const filter = calculateHighlightFilter(highlightedFeature, geoLevel);
 
     map.addLayer({
       id: 'geo-highlight',

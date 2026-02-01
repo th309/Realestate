@@ -27,6 +27,7 @@ interface UseMapSearchProps {
   onStateChange: (state: string) => void;
   accessToken: string;
   geoLevel: GeoLevel;
+  onHighlightFeature: (feature: SearchResult | null) => void;
 }
 
 interface UseMapSearchReturn {
@@ -36,7 +37,6 @@ interface UseMapSearchReturn {
   showSearchResults: boolean;
   searchRef: React.RefObject<HTMLDivElement | null>;
   searchNavigatedRef: React.MutableRefObject<boolean>;
-  highlightedFeature: SearchResult | null;
   handleSearch: (query: string) => Promise<void>;
   handleSelectSearchResult: (result: SearchResult) => void;
   setShowSearchResults: (show: boolean) => void;
@@ -48,6 +48,7 @@ export function useMapSearch({
   onStateChange,
   accessToken,
   geoLevel,
+  onHighlightFeature,
 }: UseMapSearchProps): UseMapSearchReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -55,8 +56,6 @@ export function useMapSearch({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchNavigatedRef = useRef(false);
-
-  const [highlightedFeature, setHighlightedFeature] = useState<SearchResult | null>(null);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -189,7 +188,7 @@ export function useMapSearch({
       cleanName = cleanName.replace(/ County$/i, '').replace(/ Parish$/i, '');
     }
 
-    setHighlightedFeature({
+    onHighlightFeature({
       ...result,
       name: cleanName
     });
@@ -228,7 +227,6 @@ export function useMapSearch({
     showSearchResults,
     searchRef,
     searchNavigatedRef,
-    highlightedFeature,
     handleSearch,
     handleSelectSearchResult,
     setShowSearchResults,
