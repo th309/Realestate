@@ -11,7 +11,7 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchBar, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
+import { SearchWidget, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
@@ -22,7 +22,9 @@ import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfi
 
 const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
 
-mapboxgl.accessToken = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
+import { MAPBOX_ACCESS_TOKEN } from './config';
+
+mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -280,7 +282,7 @@ export default function MapPage() {
 
             {/* Search Bar - Flexible Width */}
             <div className="flex-1 max-w-xl">
-              <SearchBar
+              <SearchWidget
                 searchRef={searchRef}
                 searchQuery={searchQuery}
                 searchResults={searchResults}

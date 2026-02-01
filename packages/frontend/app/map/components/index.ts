@@ -1,6 +1,6 @@
 // Map components barrel exports
 export * from './Icons';
-export * from './SearchBar';
+export * from './SearchWidget';
 export * from './GeoLevelPills';
 export * from './Legend';
 export * from './Sidebar';

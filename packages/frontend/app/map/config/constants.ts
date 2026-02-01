@@ -63,8 +63,11 @@ export const ANIMATION_DURATIONS = {
 } as const;
 
 // ============================================================================
-// MAP DEFAULTS
+// API & EXTERNAL SERVICES
 // ============================================================================
+
+export const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * Default padding for map bounds

@@ -7,7 +7,7 @@ import { GeoLevel } from '@/app/map/config/metrics';
 import { GEO_LEVEL_OPTIONS, BASELINE_GEO_LEVELS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
 import { M3Card, M3CardHeader } from './M3Card';
-import { SearchBar } from '@/app/map/components';
+import { SearchWidget } from '@/app/map/components';
 import { useGraphSearch } from '../hooks/useGraphSearch';
 import { SearchResult } from '@/app/map/types';
 import { MetricSelector } from '@/app/map/components/MetricSelector';
@@ -169,7 +169,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
                       I should probably edit SearchBar to accept className prop for flexibility.
                       But for now, I will use it as is.
                   */}
-                <SearchBar
+                <SearchWidget
                   className="w-full"
                   searchRef={searchRef}
                   searchQuery={displayValue}
@@ -228,7 +228,7 @@ export const FilterHeader: React.FC<FilterHeaderProps> = ({
             <div className="w-full -ml-0 md:-ml-0">
               <div className="relative">
                 <div className="text-xs font-medium text-on-surface-variant mb-1.5">Compare To</div>
-                <SearchBar
+                <SearchWidget
                   className="w-full"
                   searchRef={comparisonSearchRef}
                   searchQuery={comparisonDisplayValue}
