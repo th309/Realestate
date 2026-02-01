@@ -70,8 +70,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
 
     // 2. Decide role: Primary if none, otherwise comparison
     if (!primaryGeography) {
-      setPrimaryGeography(geo);
-      setGeoLevel(geo.type as any); // Lock the wizard level to the selected type
+      wizardState.setGeographySelection(geo);
       clearSearch();
 
       // 3. Hydrate coordinates if needed for map preview

@@ -34,6 +34,7 @@ export interface UseWizardStateReturn extends WizardState {
   // Geography selection
   setGeoLevel: (level: GeographyType) => void;
   setPrimaryGeography: (geo: Geography | null) => void;
+  setGeographySelection: (geo: Geography) => void;
   addComparisonGeography: (geo: Geography) => void;
   removeComparisonGeography: (geoId: string) => void;
   clearComparisonGeographies: () => void;
@@ -51,6 +52,40 @@ export interface UseWizardStateReturn extends WizardState {
 
 export function useWizardState(): UseWizardStateReturn {
   const [state, setState] = useState<WizardState>(initialState);
+
+  // Validation
+  const isStepValid = useCallback(
+    (step: number): boolean => {
+      switch (step) {
+        case 1:
+          return state.selectedTemplate !== null;
+        case 2:
+          if (!state.primaryGeography) return false;
+          // Check comparison requirements
+          if (state.selectedTemplate?.config.comparison) {
+            const { min_geographies } = state.selectedTemplate.config.comparison;
+            return state.comparisonGeographies.length >= (min_geographies - 1);
+          }
+          return true;
+        case 3:
+          // Check required user inputs
+          if (!state.selectedTemplate) return true;
+          const requiredInputs = state.selectedTemplate.config.user_inputs.filter(
+            (input) => input.required
+          );
+          return requiredInputs.every(
+            (input) =>
+              state.userInputs[input.field_name] !== undefined &&
+              state.userInputs[input.field_name] !== ''
+          );
+        case 4:
+          return true;
+        default:
+          return false;
+      }
+    },
+    [state]
+  );
 
   // Navigation
   const goToStep = useCallback((step: number) => {
@@ -75,7 +110,7 @@ export function useWizardState(): UseWizardStateReturn {
 
   const canGoNext = useCallback(() => {
     return state.step < 4 && isStepValid(state.step);
-  }, [state.step, state.selectedTemplate, state.primaryGeography]);
+  }, [state.step, state.selectedTemplate, state.primaryGeography, state.comparisonGeographies, state.userInputs, isStepValid]);
 
   const canGoPrev = useCallback(() => {
     return state.step > 1;
@@ -112,6 +147,15 @@ export function useWizardState(): UseWizardStateReturn {
 
   const setPrimaryGeography = useCallback((geo: Geography | null) => {
     setState((prev) => ({ ...prev, primaryGeography: geo }));
+  }, []);
+
+  const setGeographySelection = useCallback((geo: Geography) => {
+    setState((prev) => ({
+      ...prev,
+      geoLevel: geo.type as GeographyType,
+      primaryGeography: geo,
+      comparisonGeographies: prev.geoLevel === geo.type ? prev.comparisonGeographies : [],
+    }));
   }, []);
 
   const addComparisonGeography = useCallback((geo: Geography) => {
@@ -158,40 +202,6 @@ export function useWizardState(): UseWizardStateReturn {
     setState(initialState);
   }, []);
 
-  // Validation
-  const isStepValid = useCallback(
-    (step: number): boolean => {
-      switch (step) {
-        case 1:
-          return state.selectedTemplate !== null;
-        case 2:
-          if (!state.primaryGeography) return false;
-          // Check comparison requirements
-          if (state.selectedTemplate?.config.comparison) {
-            const { min_geographies } = state.selectedTemplate.config.comparison;
-            return state.comparisonGeographies.length >= (min_geographies - 1);
-          }
-          return true;
-        case 3:
-          // Check required user inputs
-          if (!state.selectedTemplate) return true;
-          const requiredInputs = state.selectedTemplate.config.user_inputs.filter(
-            (input) => input.required
-          );
-          return requiredInputs.every(
-            (input) =>
-              state.userInputs[input.field_name] !== undefined &&
-              state.userInputs[input.field_name] !== ''
-          );
-        case 4:
-          return true;
-        default:
-          return false;
-      }
-    },
-    [state]
-  );
-
   return {
     ...state,
     goToStep,
@@ -203,6 +213,7 @@ export function useWizardState(): UseWizardStateReturn {
     setSelectedTemplate,
     setGeoLevel,
     setPrimaryGeography,
+    setGeographySelection,
     addComparisonGeography,
     removeComparisonGeography,
     clearComparisonGeographies,
