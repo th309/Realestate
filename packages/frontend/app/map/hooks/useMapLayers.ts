@@ -4,7 +4,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
-import type { GeoLevel, ForecastHorizon, MapData, SelectedGeography } from '../types';
+import type { GeoLevel, ForecastHorizon, MapData, SelectedGeography, SearchResult } from '../types';
 import { GEOJSON_SOURCES, FIPS_TO_STATE, STATE_NAME_TO_FIPS, getValueFromEntry, getDateFromEntry } from '../types';
 import {
   getColorScale,
@@ -71,6 +71,7 @@ interface UseMapLayersProps {
   forecastHorizon: ForecastHorizon;
   mapData: MapData;
   mapLoaded: boolean;
+  highlightedFeature?: SearchResult | null;
   onFeatureClick?: (geography: SelectedGeography | null) => void;
 }
 
@@ -83,6 +84,7 @@ export function useMapLayers({
   forecastHorizon,
   mapData,
   mapLoaded,
+  highlightedFeature,
   onFeatureClick
 }: UseMapLayersProps) {
   // Store current geoLevel in ref for click handler
@@ -121,7 +123,7 @@ export function useMapLayers({
       // This is needed because another updateMapLayers call may have started
       // while we were fetching the GeoJSON
       if (map.current!.getSource('geo-data')) {
-        const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels'];
+        const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels', 'geo-highlight'];
         layersToRemove.forEach(layerId => {
           if (map.current!.getLayer(layerId)) {
             map.current!.removeLayer(layerId);
@@ -146,20 +148,20 @@ export function useMapLayers({
       const { min: minVal, max: maxVal } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
 
       // Add layers - uses same min/max as legend for consistent colors
-      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson);
+      addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson, highlightedFeature);
 
       // Setup hover and click interactions
       setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, onFeatureClick]);
+  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, highlightedFeature, onFeatureClick]);
 
   return { updateMapLayers };
 }
 
 function removeExistingLayers(map: mapboxgl.Map): void {
-  const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels'];
+  const layersToRemove = ['geo-fills', 'geo-borders', 'geo-labels', 'geo-highlight'];
   layersToRemove.forEach(layerId => {
     if (map.getLayer(layerId)) {
       map.removeLayer(layerId);
@@ -251,6 +253,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = cbsaCode;
       feature.properties.displayName = feature.properties.NAME || feature.properties.NAMELSAD || 'Metro Area';
+      feature.properties.name = feature.properties.NAME || feature.properties.NAMELSAD;
     });
   } else if (geoLevel === 'city') {
     geojson.features.forEach((feature: any) => {
@@ -266,6 +269,7 @@ function addValuesToFeatures(geojson: any, geoLevel: GeoLevel, mapData: MapData)
       feature.properties.dataDate = getDateFromEntry(entry);
       feature.properties.id = placeId;
       feature.properties.displayName = stateAbbr ? `${placeName}, ${stateAbbr}` : placeName;
+      feature.properties.name = placeName;
     });
   } else if (geoLevel === 'zip') {
     geojson.features.forEach((feature: any) => {
@@ -384,7 +388,8 @@ function addMapLayers(
   metricFormat: MetricFormat,
   minVal: number,
   maxVal: number,
-  labelPointsGeojson?: any
+  labelPointsGeojson?: any,
+  highlightedFeature?: SearchResult | null
 ): void {
   // Fill layer - uses dynamic min/max from calculateValueRange (same as legend)
   map.addLayer({
@@ -412,6 +417,45 @@ function addMapLayers(
       'line-width': lineWidth,
     },
   });
+
+  // Highlight layer - for searched geography
+  if (highlightedFeature) {
+    const searchName = highlightedFeature.name;
+    const searchId = highlightedFeature.id.replace(/.*?\./, ''); // Strip Mapbox prefix if present
+
+    let filter: any[];
+    if (geoLevel === 'metro') {
+      // Metros often have long names in GeoJSON but short names in search
+      filter = ['any',
+        ['==', ['get', 'name'], searchName],
+        ['in', searchName, ['get', 'name']],
+        ['==', ['get', 'id'], searchName]
+      ];
+    } else if (geoLevel === 'zip') {
+      // Zips match by ID (the zip code)
+      filter = ['==', ['get', 'id'], searchName];
+    } else {
+      // General robust match for city, county, state
+      filter = ['any',
+        ['==', ['get', 'name'], searchName],
+        ['==', ['get', 'id'], searchName],
+        ['==', ['get', 'id'], searchId],
+        ['in', searchName, ['get', 'displayName']]
+      ];
+    }
+
+    map.addLayer({
+      id: 'geo-highlight',
+      type: 'line',
+      source: 'geo-data',
+      paint: {
+        'line-color': '#6200ee', // Primary Purple
+        'line-width': lineWidth * 6, // Thick enough to be distinct
+        'line-opacity': 0.9,
+      },
+      filter
+    });
+  }
 
   // Labels for state and national level - use separate point source for centered labels
   if ((geoLevel === 'state' || geoLevel === 'national') && labelPointsGeojson) {

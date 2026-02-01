@@ -26,6 +26,7 @@ interface UseMapSearchProps {
   onGeoLevelChange: (level: GeoLevel) => void;
   onStateChange: (state: string) => void;
   accessToken: string;
+  geoLevel: GeoLevel;
 }
 
 interface UseMapSearchReturn {
@@ -35,6 +36,7 @@ interface UseMapSearchReturn {
   showSearchResults: boolean;
   searchRef: React.RefObject<HTMLDivElement | null>;
   searchNavigatedRef: React.MutableRefObject<boolean>;
+  highlightedFeature: SearchResult | null;
   handleSearch: (query: string) => Promise<void>;
   handleSelectSearchResult: (result: SearchResult) => void;
   setShowSearchResults: (show: boolean) => void;
@@ -45,6 +47,7 @@ export function useMapSearch({
   onGeoLevelChange,
   onStateChange,
   accessToken,
+  geoLevel,
 }: UseMapSearchProps): UseMapSearchReturn {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -52,6 +55,8 @@ export function useMapSearch({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchNavigatedRef = useRef(false);
+
+  const [highlightedFeature, setHighlightedFeature] = useState<SearchResult | null>(null);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -90,7 +95,7 @@ export function useMapSearch({
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
         `access_token=${token}&` +
         `country=US&` +
-        `types=region,place,postcode,district&` +
+        `types=region,place,postcode,district,locality&` +
         `limit=8`
       );
 
@@ -104,17 +109,27 @@ export function useMapSearch({
       const features: MapboxFeature[] = data.features || [];
       const results: SearchResult[] = features.map((feature: MapboxFeature) => {
         let type: SearchResult['type'] = 'city';
+        const name = feature.place_name;
+
         if (feature.place_type.includes('region')) type = 'state';
         else if (feature.place_type.includes('postcode')) type = 'zip';
         else if (feature.place_type.includes('district')) type = 'county';
-        else if (feature.place_type.includes('place')) type = 'city';
+        else if (feature.place_type.includes('place') || feature.place_type.includes('locality')) type = 'city';
+
+        // Detect Metro areas (Mapbox often returns these as 'place' or 'district')
+        if (name.toLowerCase().includes('metro') ||
+          name.toLowerCase().includes('metropolitan area') ||
+          name.toLowerCase().includes('msa') ||
+          (name.includes('-') && name.includes(','))) { // e.g. "Dallas-Fort Worth, TX"
+          type = 'metro';
+        }
 
         const stateContext = feature.context?.find((c: MapboxContext) => c.id.startsWith('region'));
         const stateAbbrev = stateContext?.short_code?.replace('US-', '') || '';
 
         return {
           id: feature.id,
-          name: feature.place_name,
+          name: type === 'zip' ? (feature as any).text || feature.place_name : feature.place_name,
           type,
           center: feature.center,
           bbox: feature.bbox,
@@ -137,10 +152,9 @@ export function useMapSearch({
 
     if (!mapRef.current) {
       console.error('Map not initialized - cannot zoom');
-      // Even if map is not ready, we can still set the state/geoLevel
-      // but zooming won't work immediately.
     } else {
       // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
+      // IMPORTANT: BBox provides the "correct" zoom to see the whole geometry
       if (result.bbox) {
         console.log('Fitting to bounds:', result.bbox);
         mapRef.current.fitBounds(
@@ -152,7 +166,8 @@ export function useMapSearch({
         const zoomLevel = result.type === 'state' ? 5.5 :
           result.type === 'zip' ? 12 :
             result.type === 'county' ? 8 :
-              result.type === 'city' ? 10 : 8;
+              result.type === 'city' ? 10 :
+                result.type === 'metro' ? 8 : 10;
 
         console.log('Flying to:', result.center, 'zoom:', zoomLevel);
         mapRef.current.flyTo({
@@ -160,42 +175,43 @@ export function useMapSearch({
           zoom: zoomLevel,
           duration: ANIMATION_DURATIONS.MAP_FLY,
         });
-      } else {
-        console.error('No location data for result');
       }
     }
 
     // Mark that search initiated this navigation (so geo level effect skips its zoom)
     searchNavigatedRef.current = true;
 
+    // Set highlighted feature - strip common suffixes for better matching with backend data
+    let cleanName = result.name.split(',')[0]; // Take first part "Austin" from "Austin, Texas"
+
+    // For County, strip " County" or " Parish" if present (backend usually just has "Travis")
+    if (result.type === 'county') {
+      cleanName = cleanName.replace(/ County$/i, '').replace(/ Parish$/i, '');
+    }
+
+    setHighlightedFeature({
+      ...result,
+      name: cleanName
+    });
+
     // Update geo level and state based on result type
-    // Ensure we set state for levels that require it (city, zip)
+    // Universal logic: The search result determines the mode.
     if (result.type === 'state') {
       onGeoLevelChange('state');
-      // For state, we might want to set the selected state too? 
-      // Current behavior: State search sets geoLevel to state.
-      // But clearing selectedState happens in handleGeoLevelChange in Page.
-      // We are passing setGeoLevel directly. So selectedState persists. 
-      // If I search "Texas", I get Texas view. 
     } else if (result.type === 'zip' && result.state) {
       onGeoLevelChange('zip');
       onStateChange(result.state);
+    } else if (result.type === 'metro') {
+      onGeoLevelChange('metro');
     } else if (result.type === 'county') {
       onGeoLevelChange('county');
-      // County allows state filtering but works without it.
-      if (result.state) {
-        // Optional: onStateChange(result.state);
-      }
     } else if (result.type === 'city') {
-      // Corrected: Map City search to City level (not Metro)
-      // City level REQUIRES state selection.
       if (result.state) {
         onGeoLevelChange('city');
         onStateChange(result.state);
       } else {
-        // Fallback if no state found (unlikely for city)
-        console.warn('City result missing state - defaulting to metro');
-        onGeoLevelChange('metro');
+        // Fallback to city anyway if state missing, backend might still match
+        onGeoLevelChange('city');
       }
     }
 
@@ -212,6 +228,7 @@ export function useMapSearch({
     showSearchResults,
     searchRef,
     searchNavigatedRef,
+    highlightedFeature,
     handleSearch,
     handleSelectSearchResult,
     setShowSearchResults,
