@@ -21,8 +21,8 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-/** Default: Railway backend. Override with QUINN_TEST_BACKEND_URL or BACKEND_URL. */
-const DEFAULT_BACKEND = 'https://backend-production-ee4d.up.railway.app';
+/** Default: Local backend. Override with QUINN_TEST_BACKEND_URL or BACKEND_URL for production testing. */
+const DEFAULT_BACKEND = 'http://localhost:3005';
 
 const BACKEND_URL =
   process.env.QUINN_TEST_BACKEND_URL ||
@@ -65,10 +65,12 @@ function generateConversationId(): string {
 async function sendMessage(
   conversationId: string,
   message: string,
-  context?: { geographyType?: string; geographyId?: string; geographyName?: string }
+  context?: { geographyType?: string; geographyId?: string; geographyName?: string },
+  baseUrl?: string,
 ): Promise<{ durationMs: number; data: ChatResponse }> {
   const start = Date.now();
-  const res = await fetch(`${BACKEND_URL}/analytics/chat/${conversationId}`, {
+  const url = baseUrl || BACKEND_URL;
+  const res = await fetch(`${url}/analytics/chat/${conversationId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: message.trim(), context }),
@@ -212,16 +214,19 @@ async function main() {
     const conversationId = generateConversationId();
     process.stdout.write(`[${i + 1}/${prompts.length}] ${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''} ... `);
     try {
-      const { durationMs, data } = await sendMessage(conversationId, prompt);
+      const { durationMs, data } = await sendMessage(conversationId, prompt, undefined, baseUrl);
       const durationOk = durationMs <= 30000; // User-defined 30s limit
       const ok = data.success === true && durationOk;
       const errorMsg = !data.success ? (data.error ?? 'unknown') : (!durationOk ? `TOO SLOW (${durationMs}ms > 30000ms)` : undefined);
-      durationMs,
+      results.push({
+        prompt,
+        ok,
+        durationMs,
         toolsUsed: data.toolsUsed ?? [],
-          responseLen: (data.response ?? '').length,
-            error: data.error,
+        responseLen: (data.response ?? '').length,
+        error: errorMsg,
       });
-    forEvaluator.push({
+      forEvaluator.push({
       prompt,
       success: ok,
       durationMs,

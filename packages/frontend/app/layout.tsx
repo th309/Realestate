@@ -3,7 +3,7 @@ import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
-import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton";
+// import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -122,7 +122,7 @@ export default function RootLayout({
               Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
             </p>
           </footer>
-          <QuinnFloatingButton />
+          {/* <QuinnFloatingButton /> */} {/* PAUSED: Quinn development on hold */}
         </Providers>
       </body>
     </html>
