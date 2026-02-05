@@ -237,7 +237,7 @@ export interface DataRequirements {
   current_metrics: string[];
   historical_metrics: { metric: string; periods: number }[];
   benchmarks: ('national' | 'state' | 'similar_metros')[];
-  scores: ('homeready' | 'investoredge')[];
+  scores: ('homeready' | 'investoredge' | 'markethealth')[];
   score_components?: boolean;
   demographics?: string[];
   migration?: {

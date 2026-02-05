@@ -58,7 +58,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
       // TODO: Get actual user ID from auth context
       const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
-      const response = await fetch(`${API_BASE_URL}/reports/generate`, {
+      const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
