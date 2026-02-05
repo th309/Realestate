@@ -26,6 +26,7 @@ import { AppModule } from '../app.module';
 import { OutcomeGeneratorService } from '../scoring/backtest/outcome-generator.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import type { GeographyType, ScoreType } from '../scoring/scoring.types';
+import type { OutcomeRecord } from '../scoring/backtest/outcome-generator.service';
 
 interface CliArgs {
   scoreDate: string | null;
@@ -219,7 +220,7 @@ async function main() {
 
           for (let i = 0; i < scores.length; i += args.batchSize) {
             const batch = scores.slice(i, i + args.batchSize);
-            const outcomes = [];
+            const outcomes: OutcomeRecord[] = [];
 
             for (const score of batch) {
               try {
