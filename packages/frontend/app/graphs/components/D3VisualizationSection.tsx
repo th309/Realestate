@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Sparkles,
   ScatterChart,
@@ -10,6 +10,8 @@ import {
   GitCompare,
   Settings2,
   Info,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   ScatterPlot,
@@ -19,18 +21,13 @@ import {
   CorrelationMatrix,
 } from '@/lib/visualizations/d3';
 import { M3Card } from './M3Card';
-import {
-  generateSampleScatterData,
-  generateSampleBoxPlotData,
-  generateSampleHeatmapData,
-  generateSampleTreemapData,
-  generateSampleCorrelationData,
-} from '../hooks/useMultiMetricData';
+import { fetchSnapshotData, getMetricTitle, type GeoLevel } from '@/lib/data';
+import type { ScatterDataPoint, BoxPlotDataPoint, HeatmapDataPoint, TreemapNode, CorrelationMetric } from '../hooks/useMultiMetricData';
 
 type D3VisualizationType = 'scatter' | 'boxplot' | 'treemap' | 'heatmap' | 'correlation';
 
 interface D3VisualizationSectionProps {
-  geoLevel: string;
+  geoLevel: GeoLevel;
   selectedArea?: string;
   className?: string;
 }
@@ -40,33 +37,69 @@ const visualizationTypes = [
     type: 'scatter' as D3VisualizationType,
     icon: ScatterChart,
     label: 'Scatter Plot',
-    description: 'Compare two metrics across regions',
+    description: 'Compare two metrics across all regions',
   },
   {
     type: 'boxplot' as D3VisualizationType,
     icon: BarChart3,
     label: 'Distribution',
-    description: 'View statistical distribution',
+    description: 'View statistical distribution of a metric',
   },
   {
     type: 'treemap' as D3VisualizationType,
     icon: LayoutGrid,
     label: 'Treemap',
-    description: 'Market composition breakdown',
+    description: 'Market composition by size and performance',
   },
   {
     type: 'heatmap' as D3VisualizationType,
     icon: Grid3x3,
     label: 'Heatmap',
-    description: 'Metric patterns over time',
+    description: 'Compare multiple metrics across regions',
   },
   {
     type: 'correlation' as D3VisualizationType,
     icon: GitCompare,
     label: 'Correlation',
-    description: 'Metric relationships',
+    description: 'Discover relationships between metrics',
   },
 ];
+
+// Metrics available for visualization - organized by category
+const SCATTER_METRICS = [
+  { id: 'home_value', label: 'Median Home Value', format: 'currency' as const },
+  { id: 'listing_price', label: 'Listing Price', format: 'currency' as const },
+  { id: 'price_per_sqft', label: 'Price per Sq Ft', format: 'currency' as const },
+  { id: 'rent_index', label: 'Rent Index', format: 'currency' as const },
+  { id: 'home_value_yoy', label: 'Price Change (YoY)', format: 'percent' as const },
+  { id: 'home_value_5yr', label: 'Price Change (5Y)', format: 'percent' as const },
+  { id: 'days_on_market', label: 'Days on Market', format: 'number' as const },
+  { id: 'for_sale_inventory', label: 'Inventory', format: 'number' as const },
+  { id: 'market_heat', label: 'Market Heat Index', format: 'number' as const },
+  { id: 'cap_rate', label: 'Cap Rate', format: 'percent' as const },
+  { id: 'gross_yield', label: 'Gross Yield', format: 'percent' as const },
+  { id: 'sale_to_list', label: 'Sale-to-List Ratio', format: 'percent' as const },
+  { id: 'price_cut_pct', label: 'Price Cut %', format: 'percent' as const },
+  { id: 'homeowner_affordability', label: 'Homeowner Affordability', format: 'number' as const },
+];
+
+// Categories for bubble colors
+const CATEGORY_THRESHOLDS = {
+  'market_heat': [
+    { max: 40, label: 'Cold Market', color: '#3b82f6' },
+    { max: 60, label: 'Balanced', color: '#a855f7' },
+    { max: Infinity, label: 'Hot Market', color: '#f97316' },
+  ],
+  'home_value_yoy': [
+    { max: 0, label: 'Declining', color: '#ef4444' },
+    { max: 5, label: 'Stable', color: '#a855f7' },
+    { max: Infinity, label: 'Growing', color: '#22c55e' },
+  ],
+};
+
+interface MetricData {
+  [regionId: string]: { value: number; name?: string };
+}
 
 export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   geoLevel,
@@ -75,6 +108,18 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 }) => {
   const [visualizationType, setVisualizationType] = useState<D3VisualizationType>('scatter');
   const [showSettings, setShowSettings] = useState(false);
+
+  // Metric selections
+  const [xMetric, setXMetric] = useState('home_value');
+  const [yMetric, setYMetric] = useState('home_value_yoy');
+  const [sizeMetric, setSizeMetric] = useState('for_sale_inventory');
+  const [colorMetric, setColorMetric] = useState('market_heat');
+  const [distributionMetric, setDistributionMetric] = useState('home_value');
+
+  // Data state
+  const [metricDataCache, setMetricDataCache] = useState<Record<string, MetricData>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Settings for each visualization type
   const [scatterSettings, setScatterSettings] = useState({
@@ -102,23 +147,287 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
     showValues: true,
   });
 
-  // Generate sample data (in production, this would come from useMultiMetricData)
-  const scatterData = useMemo(() => generateSampleScatterData(30), []);
-  const boxPlotData = useMemo(() => generateSampleBoxPlotData(), []);
-  const heatmapData = useMemo(() => generateSampleHeatmapData(), []);
-  const treemapData = useMemo(() => generateSampleTreemapData(), []);
-  const correlationData = useMemo(() => generateSampleCorrelationData(), []);
-
-  const renderVisualization = () => {
+  // Determine which metrics we need based on visualization type
+  const requiredMetrics = useMemo(() => {
     switch (visualizationType) {
       case 'scatter':
+        return [xMetric, yMetric, sizeMetric, colorMetric].filter(Boolean);
+      case 'boxplot':
+        return [distributionMetric, colorMetric];
+      case 'treemap':
+        return [xMetric, yMetric]; // size and color
+      case 'heatmap':
+      case 'correlation':
+        return SCATTER_METRICS.slice(0, 6).map(m => m.id); // First 6 metrics
+      default:
+        return [];
+    }
+  }, [visualizationType, xMetric, yMetric, sizeMetric, colorMetric, distributionMetric]);
+
+  // Fetch data for required metrics
+  useEffect(() => {
+    if (geoLevel === 'national') return;
+
+    const metricsToFetch = requiredMetrics.filter(m => !metricDataCache[m]);
+    if (metricsToFetch.length === 0) return;
+
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    async function fetchData() {
+      try {
+        const results: Record<string, MetricData> = {};
+
+        for (const metricId of metricsToFetch) {
+          const data = await fetchSnapshotData(metricId, geoLevel);
+          const transformed: MetricData = {};
+
+          Object.entries(data).forEach(([key, entry]) => {
+            if (entry && typeof entry === 'object' && 'value' in entry && entry.value != null) {
+              transformed[key] = { value: entry.value as number, name: key };
+            }
+          });
+
+          results[metricId] = transformed;
+        }
+
+        if (isMounted) {
+          setMetricDataCache(prev => ({ ...prev, ...results }));
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch metric data:', err);
+        if (isMounted) {
+          setError('Failed to load data. Try a different geography level.');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { isMounted = false; };
+  }, [geoLevel, requiredMetrics, metricDataCache]);
+
+  // Transform data for scatter plot
+  const scatterData = useMemo((): ScatterDataPoint[] => {
+    const xData = metricDataCache[xMetric];
+    const yData = metricDataCache[yMetric];
+    const sData = metricDataCache[sizeMetric];
+    const cData = metricDataCache[colorMetric];
+
+    if (!xData || !yData) return [];
+
+    const result: ScatterDataPoint[] = [];
+    const regions = Object.keys(xData).filter(k => yData[k]);
+
+    regions.forEach(region => {
+      const x = xData[region]?.value;
+      const y = yData[region]?.value;
+      if (x == null || y == null) return;
+
+      // Determine category based on color metric
+      let category = 'Unknown';
+      const colorValue = cData?.[region]?.value;
+      if (colorValue != null && CATEGORY_THRESHOLDS[colorMetric as keyof typeof CATEGORY_THRESHOLDS]) {
+        const thresholds = CATEGORY_THRESHOLDS[colorMetric as keyof typeof CATEGORY_THRESHOLDS];
+        for (const t of thresholds) {
+          if (colorValue <= t.max) {
+            category = t.label;
+            break;
+          }
+        }
+      } else if (colorValue != null) {
+        // Generic categorization
+        if (colorValue < 33) category = 'Low';
+        else if (colorValue < 66) category = 'Medium';
+        else category = 'High';
+      }
+
+      result.push({
+        id: region,
+        label: region,
+        x,
+        y,
+        size: sData?.[region]?.value ?? 10,
+        color: colorValue,
+        category,
+      });
+    });
+
+    return result;
+  }, [metricDataCache, xMetric, yMetric, sizeMetric, colorMetric]);
+
+  // Transform data for box plot
+  const boxPlotData = useMemo((): BoxPlotDataPoint[] => {
+    const distData = metricDataCache[distributionMetric];
+    const cData = metricDataCache[colorMetric];
+    if (!distData) return [];
+
+    // Group by category
+    const groups: Record<string, number[]> = {};
+    const thresholds = CATEGORY_THRESHOLDS[colorMetric as keyof typeof CATEGORY_THRESHOLDS];
+
+    Object.entries(distData).forEach(([region, data]) => {
+      const value = data.value;
+      if (value == null) return;
+
+      let category = 'All Regions';
+      if (cData?.[region] && thresholds) {
+        const cv = cData[region].value;
+        for (const t of thresholds) {
+          if (cv <= t.max) {
+            category = t.label;
+            break;
+          }
+        }
+      }
+
+      if (!groups[category]) groups[category] = [];
+      groups[category].push(value);
+    });
+
+    return Object.entries(groups).map(([category, values]) => ({
+      category,
+      values,
+    }));
+  }, [metricDataCache, distributionMetric, colorMetric]);
+
+  // Transform data for treemap
+  const treemapData = useMemo((): TreemapNode => {
+    const sizeData = metricDataCache[xMetric];
+    const colorData = metricDataCache[yMetric];
+    if (!sizeData) return { name: 'root', children: [] };
+
+    // Group by first letter for now (could be by state/region later)
+    const groups: Record<string, TreemapNode[]> = {};
+
+    Object.entries(sizeData).forEach(([region, data]) => {
+      const value = data.value;
+      if (value == null || value <= 0) return;
+
+      const group = region.charAt(0).toUpperCase();
+      if (!groups[group]) groups[group] = [];
+
+      groups[group].push({
+        name: region,
+        value: Math.abs(value),
+        colorValue: colorData?.[region]?.value,
+      });
+    });
+
+    return {
+      name: 'Markets',
+      children: Object.entries(groups)
+        .filter(([, items]) => items.length > 0)
+        .slice(0, 10) // Limit groups
+        .map(([name, children]) => ({
+          name,
+          children: children.slice(0, 15), // Limit items per group
+        })),
+    };
+  }, [metricDataCache, xMetric, yMetric]);
+
+  // Transform data for heatmap
+  const heatmapData = useMemo((): HeatmapDataPoint[] => {
+    const metricsForHeatmap = SCATTER_METRICS.slice(0, 6);
+    const regions = new Set<string>();
+
+    // Find common regions
+    metricsForHeatmap.forEach(m => {
+      const data = metricDataCache[m.id];
+      if (data) Object.keys(data).forEach(r => regions.add(r));
+    });
+
+    const result: HeatmapDataPoint[] = [];
+    const regionList = Array.from(regions).slice(0, 15); // Limit regions
+
+    regionList.forEach(region => {
+      metricsForHeatmap.forEach(m => {
+        const value = metricDataCache[m.id]?.[region]?.value;
+        if (value != null) {
+          result.push({
+            x: m.label.replace(/\s+/g, '\n').substring(0, 15),
+            y: region.substring(0, 20),
+            value,
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [metricDataCache]);
+
+  // Transform data for correlation matrix
+  const correlationData = useMemo((): CorrelationMetric[] => {
+    const metricsForCorr = SCATTER_METRICS.slice(0, 6);
+    const regions = new Set<string>();
+
+    // Find common regions
+    metricsForCorr.forEach(m => {
+      const data = metricDataCache[m.id];
+      if (data) Object.keys(data).forEach(r => regions.add(r));
+    });
+
+    const regionList = Array.from(regions);
+
+    return metricsForCorr.map(m => ({
+      id: m.id,
+      label: m.label.substring(0, 15),
+      values: regionList.map(r => metricDataCache[m.id]?.[r]?.value ?? 0),
+    })).filter(m => m.values.some(v => v !== 0));
+  }, [metricDataCache]);
+
+  // Get format for metric
+  const getMetricFormat = (metricId: string) => {
+    return SCATTER_METRICS.find(m => m.id === metricId)?.format ?? 'number';
+  };
+
+  const renderVisualization = () => {
+    if (geoLevel === 'national') {
+      return (
+        <div className="flex flex-col items-center justify-center h-[400px] text-center">
+          <Info className="w-12 h-12 text-on-surface-variant mb-4" />
+          <h3 className="text-lg font-semibold text-on-surface mb-2">Select a Geography Level</h3>
+          <p className="text-sm text-on-surface-variant max-w-md">
+            Advanced visualizations compare data across multiple regions.
+            Select State, Metro, County, or ZIP to see comparisons.
+          </p>
+        </div>
+      );
+    }
+
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[400px]">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+          <p className="text-sm text-on-surface-variant">Loading {geoLevel} data...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[400px] text-center">
+          <AlertCircle className="w-12 h-12 text-error mb-4" />
+          <h3 className="text-lg font-semibold text-on-surface mb-2">Data Unavailable</h3>
+          <p className="text-sm text-on-surface-variant max-w-md">{error}</p>
+        </div>
+      );
+    }
+
+    switch (visualizationType) {
+      case 'scatter':
+        if (scatterData.length === 0) {
+          return <EmptyState message="No data available for selected metrics" />;
+        }
         return (
           <ScatterPlot
             data={scatterData}
-            xLabel="Median Home Price ($)"
-            yLabel="Year-over-Year Appreciation (%)"
-            xFormat="currency"
-            yFormat="percent"
+            xLabel={getMetricTitle(xMetric)}
+            yLabel={getMetricTitle(yMetric)}
+            xFormat={getMetricFormat(xMetric)}
+            yFormat={getMetricFormat(yMetric)}
             showRegression={scatterSettings.showRegression}
             showQuadrants={scatterSettings.showQuadrants}
             colorByCategory={scatterSettings.colorByCategory}
@@ -127,33 +436,42 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           />
         );
       case 'boxplot':
+        if (boxPlotData.length === 0) {
+          return <EmptyState message="No data available for distribution" />;
+        }
         return (
           <BoxPlot
             data={boxPlotData}
-            yLabel="Median Home Price ($)"
-            yFormat="currency"
+            yLabel={getMetricTitle(distributionMetric)}
+            yFormat={getMetricFormat(distributionMetric)}
             showOutliers={boxPlotSettings.showOutliers}
             horizontal={boxPlotSettings.horizontal}
             height={500}
           />
         );
       case 'treemap':
+        if (!treemapData.children?.length) {
+          return <EmptyState message="No data available for treemap" />;
+        }
         return (
           <Treemap
             data={treemapData}
             colorBy={treemapSettings.colorBy}
-            valueFormat="number"
+            valueFormat="currency"
             colorFormat="percent"
             height={500}
             onNodeClick={(node, path) => console.log('Clicked:', node, path)}
           />
         );
       case 'heatmap':
+        if (heatmapData.length === 0) {
+          return <EmptyState message="No data available for heatmap" />;
+        }
         return (
           <Heatmap
             data={heatmapData}
-            xLabel="Month"
-            yLabel="Metro Area"
+            xLabel="Metric"
+            yLabel="Region"
             colorScheme={heatmapSettings.colorScheme}
             showValues={heatmapSettings.showValues}
             valueFormat="number"
@@ -162,6 +480,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           />
         );
       case 'correlation':
+        if (correlationData.length < 2) {
+          return <EmptyState message="Need at least 2 metrics for correlation" />;
+        }
         return (
           <CorrelationMatrix
             data={correlationData}
@@ -174,6 +495,117 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       default:
         return null;
     }
+  };
+
+  const renderMetricSelectors = () => {
+    if (geoLevel === 'national') return null;
+
+    switch (visualizationType) {
+      case 'scatter':
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <MetricSelector
+              label="X-Axis"
+              value={xMetric}
+              onChange={setXMetric}
+              options={SCATTER_METRICS}
+            />
+            <MetricSelector
+              label="Y-Axis"
+              value={yMetric}
+              onChange={setYMetric}
+              options={SCATTER_METRICS}
+            />
+            <MetricSelector
+              label="Bubble Size"
+              value={sizeMetric}
+              onChange={setSizeMetric}
+              options={SCATTER_METRICS}
+            />
+            <MetricSelector
+              label="Color By"
+              value={colorMetric}
+              onChange={setColorMetric}
+              options={SCATTER_METRICS}
+            />
+          </div>
+        );
+      case 'boxplot':
+        return (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <MetricSelector
+              label="Distribution Metric"
+              value={distributionMetric}
+              onChange={setDistributionMetric}
+              options={SCATTER_METRICS}
+            />
+            <MetricSelector
+              label="Group By"
+              value={colorMetric}
+              onChange={setColorMetric}
+              options={SCATTER_METRICS}
+            />
+          </div>
+        );
+      case 'treemap':
+        return (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <MetricSelector
+              label="Box Size"
+              value={xMetric}
+              onChange={setXMetric}
+              options={SCATTER_METRICS}
+            />
+            <MetricSelector
+              label="Box Color"
+              value={yMetric}
+              onChange={setYMetric}
+              options={SCATTER_METRICS}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderLegend = () => {
+    if (geoLevel === 'national' || loading) return null;
+
+    if (visualizationType === 'scatter' && scatterData.length > 0) {
+      const categories = [...new Set(scatterData.map(d => d.category).filter((c): c is string => !!c))];
+      const colorMap: Record<string, string> = {
+        'Hot Market': 'bg-orange-500',
+        'Balanced': 'bg-purple-500',
+        'Cold Market': 'bg-blue-500',
+        'Growing': 'bg-green-500',
+        'Stable': 'bg-purple-500',
+        'Declining': 'bg-red-500',
+        'High': 'bg-green-500',
+        'Medium': 'bg-purple-500',
+        'Low': 'bg-blue-500',
+      };
+
+      return (
+        <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-outline-variant">
+          <span className="text-xs font-medium text-on-surface-variant">Legend:</span>
+          {categories.map(cat => (
+            <div key={cat} className="flex items-center gap-1.5">
+              <div className={`w-3 h-3 rounded-full ${colorMap[cat] || 'bg-gray-500'}`} />
+              <span className="text-xs text-on-surface-variant">{cat}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 ml-4">
+            <div className="w-2 h-2 rounded-full bg-on-surface-variant" />
+            <div className="w-3 h-3 rounded-full bg-on-surface-variant" />
+            <div className="w-4 h-4 rounded-full bg-on-surface-variant" />
+            <span className="text-xs text-on-surface-variant ml-1">= {getMetricTitle(sizeMetric)}</span>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const renderSettings = () => {
@@ -190,7 +622,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
                 }
                 className="rounded border-outline text-primary focus:ring-primary"
               />
-              <span className="text-sm text-on-surface">Show regression line</span>
+              <span className="text-sm text-on-surface">Show trend line</span>
             </label>
             <label className="flex items-center gap-2">
               <input
@@ -336,6 +768,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   };
 
   const currentVizInfo = visualizationTypes.find((v) => v.type === visualizationType);
+  const dataCount = visualizationType === 'scatter' ? scatterData.length :
+                    visualizationType === 'boxplot' ? boxPlotData.reduce((acc, g) => acc + g.values.length, 0) :
+                    visualizationType === 'heatmap' ? heatmapData.length : 0;
 
   return (
     <M3Card variant="elevated" size="lg" className={`overflow-hidden ${className}`}>
@@ -344,6 +779,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-medium text-on-surface">Advanced Analysis</h3>
+          {dataCount > 0 && !loading && (
+            <span className="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+              {dataCount} {geoLevel}s
+            </span>
+          )}
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
@@ -384,6 +824,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         </div>
       )}
 
+      {/* Metric Selectors */}
+      {renderMetricSelectors()}
+
       {/* Settings Panel (collapsible) */}
       {showSettings && (
         <div className="mb-4 p-4 rounded-xl bg-surface-container border border-outline-variant">
@@ -399,12 +842,45 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         {renderVisualization()}
       </div>
 
+      {/* Legend */}
+      {renderLegend()}
+
       {/* Data Source */}
-      <div className="text-[10px] text-on-surface-variant text-center mt-2">
-        Sample data for demonstration • Real data available in production
-      </div>
+      {!loading && dataCount > 0 && (
+        <div className="text-[10px] text-on-surface-variant text-center mt-2">
+          Live data from PropertyIQ • {geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1)} level
+        </div>
+      )}
     </M3Card>
   );
 };
+
+// Helper Components
+const MetricSelector: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { id: string; label: string }[];
+}> = ({ label, value, onChange, options }) => (
+  <div>
+    <label className="text-xs font-medium text-on-surface-variant mb-1 block">{label}</label>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full px-3 py-2 rounded-lg border border-outline bg-surface text-on-surface text-sm focus:ring-2 focus:ring-primary"
+    >
+      {options.map((opt) => (
+        <option key={opt.id} value={opt.id}>{opt.label}</option>
+      ))}
+    </select>
+  </div>
+);
+
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <div className="flex flex-col items-center justify-center h-[400px] text-center">
+    <Info className="w-10 h-10 text-on-surface-variant mb-3" />
+    <p className="text-sm text-on-surface-variant">{message}</p>
+  </div>
+);
 
 export default D3VisualizationSection;
