@@ -23,7 +23,7 @@ import {
   CreateShareDto,
 } from './dto/generate-report.dto';
 
-@Controller('reports')
+@Controller('api/reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
