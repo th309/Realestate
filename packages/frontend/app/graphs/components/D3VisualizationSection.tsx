@@ -22,6 +22,7 @@ import {
 } from '@/lib/visualizations/d3';
 import { M3Card } from './M3Card';
 import { fetchSnapshotData, getMetricTitle, type GeoLevel } from '@/lib/data';
+import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 import type { ScatterDataPoint, BoxPlotDataPoint, HeatmapDataPoint, TreemapNode, CorrelationMetric } from '../hooks/useMultiMetricData';
 
 type D3VisualizationType = 'scatter' | 'boxplot' | 'treemap' | 'heatmap' | 'correlation';
@@ -109,17 +110,55 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   const [visualizationType, setVisualizationType] = useState<D3VisualizationType>('scatter');
   const [showSettings, setShowSettings] = useState(false);
 
-  // Metric selections
+  // Filter metrics based on what's available at the current geo level
+  const availableMetrics = useMemo(() => {
+    return SCATTER_METRICS.filter(m => isMetricAvailableForGeo(m.id, geoLevel));
+  }, [geoLevel]);
+
+  // Metric selections - use first available metric as defaults
   const [xMetric, setXMetric] = useState('home_value');
   const [yMetric, setYMetric] = useState('home_value_yoy');
   const [sizeMetric, setSizeMetric] = useState('for_sale_inventory');
   const [colorMetric, setColorMetric] = useState('market_heat');
   const [distributionMetric, setDistributionMetric] = useState('home_value');
 
-  // Multi-select for heatmap and correlation (default to first 6 metrics)
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(
-    SCATTER_METRICS.slice(0, 6).map(m => m.id)
-  );
+  // Multi-select for heatmap and correlation
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+
+  // Update metric selections when geoLevel changes (if current selection becomes unavailable)
+  useEffect(() => {
+    const availableIds = availableMetrics.map(m => m.id);
+
+    // Update single selectors if their current value is not available
+    if (!availableIds.includes(xMetric) && availableIds.length > 0) {
+      setXMetric(availableIds[0]);
+    }
+    if (!availableIds.includes(yMetric) && availableIds.length > 1) {
+      setYMetric(availableIds[1] || availableIds[0]);
+    }
+    if (!availableIds.includes(sizeMetric) && availableIds.length > 2) {
+      setSizeMetric(availableIds[2] || availableIds[0]);
+    }
+    if (!availableIds.includes(colorMetric) && availableIds.length > 3) {
+      setColorMetric(availableIds[3] || availableIds[0]);
+    }
+    if (!availableIds.includes(distributionMetric) && availableIds.length > 0) {
+      setDistributionMetric(availableIds[0]);
+    }
+
+    // Update multi-select to only include available metrics
+    setSelectedMetrics(prev => {
+      const filtered = prev.filter(id => availableIds.includes(id));
+      // If we have less than 2, select first 6 available
+      if (filtered.length < 2) {
+        return availableIds.slice(0, Math.min(6, availableIds.length));
+      }
+      return filtered;
+    });
+
+    // Clear the cache when geo level changes
+    setMetricDataCache({});
+  }, [geoLevel, availableMetrics]);
 
   // Data state
   const [metricDataCache, setMetricDataCache] = useState<Record<string, MetricData>>({});
@@ -523,25 +562,25 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
               label="X-Axis"
               value={xMetric}
               onChange={setXMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
             <MetricSelector
               label="Y-Axis"
               value={yMetric}
               onChange={setYMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
             <MetricSelector
               label="Bubble Size"
               value={sizeMetric}
               onChange={setSizeMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
             <MetricSelector
               label="Color By"
               value={colorMetric}
               onChange={setColorMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
           </div>
         );
@@ -552,13 +591,13 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
               label="Distribution Metric"
               value={distributionMetric}
               onChange={setDistributionMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
             <MetricSelector
               label="Group By"
               value={colorMetric}
               onChange={setColorMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
           </div>
         );
@@ -569,13 +608,13 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
               label="Box Size"
               value={xMetric}
               onChange={setXMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
             <MetricSelector
               label="Box Color"
               value={yMetric}
               onChange={setYMetric}
-              options={SCATTER_METRICS}
+              options={availableMetrics}
             />
           </div>
         );
@@ -587,7 +626,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
               Select Metrics to Compare ({selectedMetrics.length} selected, min 2)
             </label>
             <div className="flex flex-wrap gap-2">
-              {SCATTER_METRICS.map((m) => {
+              {availableMetrics.map((m) => {
                 const isSelected = selectedMetrics.includes(m.id);
                 return (
                   <button
