@@ -5,6 +5,7 @@ import { ComparisonConfig } from '../types';
 import type { GeoLevel } from '@/lib/data';
 import { STATES } from '../constants';
 import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
+import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 
 export interface BaselineConfig {
   enabled: boolean;
@@ -123,8 +124,18 @@ export function useDashboardState() {
       if (geoLevel !== 'national') {
         setComparison((prev) => ({ ...prev, enabled: false }));
       }
+
+      // Validate current metric is available at new geo level
+      // If not, switch to first available metric
+      if (!isMetricAvailableForGeo(metric, geoLevel)) {
+        // Find the first enabled metric option
+        const firstAvailable = metricOptionsList.find((opt) => !opt.disabled);
+        if (firstAvailable) {
+          setMetric(firstAvailable.value);
+        }
+      }
     }
-  }, [geoLevel, prevGeoLevel]);
+  }, [geoLevel, prevGeoLevel, metric, metricOptionsList]);
 
   useEffect(() => {
     // Only reset baseline area when level changes and current area not in new options; allow empty

@@ -68,6 +68,7 @@ export {
 
   // Functions
   metricHasTimeSeries,
+  isScoreMetric,
 } from './registry';
 
 // ============================================================================

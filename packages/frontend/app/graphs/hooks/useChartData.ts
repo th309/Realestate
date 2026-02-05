@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ComparisonConfig } from '../types';
 import { BaselineConfig, TimeFrame } from './useDashboardState';
-import { timeSeriesApi, type GeoLevel } from '@/lib/data';
+import { timeSeriesApi, metricHasTimeSeries, isScoreMetric, type GeoLevel } from '@/lib/data';
 
 interface ChartDataItem {
   date: string;
@@ -57,6 +57,16 @@ function extractRegionId(area: string, level: GeoLevel): string {
   }
 }
 
+interface UseChartDataResult {
+  data: ChartDataItem[];
+  loading: boolean;
+  error: string | null;
+  /** True if this metric supports time series data */
+  hasTimeSeries: boolean;
+  /** True if this is a PropertyIQ score metric (requires different visualization) */
+  isScore: boolean;
+}
+
 export function useChartData({
   metric,
   geoLevel,
@@ -65,15 +75,29 @@ export function useChartData({
   comparison,
   baseline,
   showForecast,
-}: UseChartDataParams): { data: ChartDataItem[]; loading: boolean; error: string | null } {
+}: UseChartDataParams): UseChartDataResult {
   const [data, setData] = useState<ChartDataItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if metric supports time series or is a score
+  const hasTimeSeries = metricHasTimeSeries(metric);
+  const isScore = isScoreMetric(metric);
 
   useEffect(() => {
     let isMounted = true;
 
     async function fetchData() {
+      // Skip fetching for score metrics (handled by ScoreVisualization)
+      if (isScore || !hasTimeSeries) {
+        if (isMounted) {
+          setData([]);
+          setLoading(false);
+          setError(null);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -250,7 +274,7 @@ export function useChartData({
     return () => {
       isMounted = false;
     };
-  }, [metric, geoLevel, timeFrame, selectedArea, comparison.enabled, comparison.area, comparison.areaId, baseline.enabled, baseline.area, baseline.level, showForecast]);
+  }, [metric, geoLevel, timeFrame, selectedArea, comparison.enabled, comparison.area, comparison.areaId, baseline.enabled, baseline.area, baseline.level, showForecast, hasTimeSeries, isScore]);
 
-  return { data, loading, error };
+  return { data, loading, error, hasTimeSeries, isScore };
 }

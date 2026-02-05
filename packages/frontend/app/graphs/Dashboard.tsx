@@ -13,6 +13,7 @@ import { InsightsPanel } from './components/InsightsPanel';
 import { ChartSection } from './components/ChartSection';
 import { ScoreCards } from './components/ScoreCards';
 import { D3VisualizationSection } from './components/D3VisualizationSection';
+import { ScoreVisualization } from './components/ScoreVisualization';
 
 type VisualizationMode = 'timeSeries' | 'advanced';
 
@@ -52,7 +53,7 @@ export const Dashboard: React.FC = () => {
     metricOptions,
   } = useDashboardState();
 
-  const { data: chartData, loading: chartLoading, error: chartError } = useChartData({
+  const { data: chartData, loading: chartLoading, error: chartError, isScore } = useChartData({
     metric,
     geoLevel,
     timeFrame,
@@ -196,24 +197,35 @@ export const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Chart Card - Takes 2 columns on xl */}
               <div className="xl:col-span-2">
-                <ChartSection
-                  chartData={chartData}
-                  selectedArea={selectedArea}
-                  selectedAreaId={selectedAreaId}
-                  comparison={comparison}
-                  baseline={baseline}
-                  metric={metric}
-                  timeFrame={timeFrame}
-                  setTimeFrame={setTimeFrame}
-                  chartType={chartType}
-                  setChartType={setChartType}
-                  showMilestones={showMilestones}
-                  setShowMilestones={setShowMilestones}
-                  showForecast={showForecast}
-                  setShowForecast={setShowForecast}
-                  visibleSeries={visibleSeries}
-                  toggleSeries={toggleSeries}
-                />
+                {isScore ? (
+                  /* Score metrics get specialized visualization */
+                  <ScoreVisualization
+                    scoreType={metric as 'homeready_score' | 'investoredge_score' | 'market_health_score'}
+                    geoLevel={geoLevel}
+                    selectedArea={selectedArea}
+                    selectedAreaId={selectedAreaId}
+                  />
+                ) : (
+                  /* Regular time series chart */
+                  <ChartSection
+                    chartData={chartData}
+                    selectedArea={selectedArea}
+                    selectedAreaId={selectedAreaId}
+                    comparison={comparison}
+                    baseline={baseline}
+                    metric={metric}
+                    timeFrame={timeFrame}
+                    setTimeFrame={setTimeFrame}
+                    chartType={chartType}
+                    setChartType={setChartType}
+                    showMilestones={showMilestones}
+                    setShowMilestones={setShowMilestones}
+                    showForecast={showForecast}
+                    setShowForecast={setShowForecast}
+                    visibleSeries={visibleSeries}
+                    toggleSeries={toggleSeries}
+                  />
+                )}
               </div>
 
               {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}

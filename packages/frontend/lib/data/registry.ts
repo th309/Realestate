@@ -325,6 +325,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'years_to_save',
+    hasTimeSeries: true,
   },
 
   income_to_buy: {
@@ -336,6 +337,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'income_to_buy',
+    hasTimeSeries: true,
   },
 
   income_to_rent: {
@@ -358,6 +360,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'affordable_home_price',
+    hasTimeSeries: true,
   },
 
   // ============================================================================
@@ -452,6 +455,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'cap_rate',
+    hasTimeSeries: true,
   },
 
   gross_yield: {
@@ -463,6 +467,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'gross_yield',
+    hasTimeSeries: true,
   },
 
   grm: {
@@ -474,6 +479,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'grm',
+    hasTimeSeries: true,
   },
 
   rent_to_price_ratio: {
@@ -485,6 +491,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'rent_to_price_ratio',
+    hasTimeSeries: true,
   },
 
   investment_score: {
@@ -496,6 +503,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'investment_score',
+    hasTimeSeries: true,
   },
 
   long_term_growth_score: {
@@ -507,6 +515,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'long_term_growth_score',
+    hasTimeSeries: true,
   },
 
   overvalued_pct: {
@@ -518,6 +527,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'overvalued_pct',
+    hasTimeSeries: true,
   },
 
   inventory_surplus: {
@@ -529,6 +539,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'inventory_surplus',
+    hasTimeSeries: true,
   },
 
   // ============================================================================
@@ -798,7 +809,7 @@ export const METRICS: Record<string, MetricConfig> = {
 
 /**
  * Check if a metric has time series data available.
- * Defaults true for zillow/realtor/census/fred, false for propertyiq/calculated.
+ * Defaults true for zillow/realtor/census/fred/calculated, false for propertyiq (scores).
  */
 export function metricHasTimeSeries(metricId: string): boolean {
   const config = METRICS[metricId];
@@ -815,11 +826,19 @@ export function metricHasTimeSeries(metricId: string): boolean {
     case 'realtor':
     case 'census':
     case 'fred':
+    case 'calculated':
       return true;
     case 'propertyiq':
-    case 'calculated':
       return false;
     default:
       return false;
   }
+}
+
+/**
+ * Check if a metric is a PropertyIQ score metric.
+ * These require special handling (score API instead of time series).
+ */
+export function isScoreMetric(metricId: string): boolean {
+  return ['homeready_score', 'investoredge_score', 'market_health_score'].includes(metricId);
 }
