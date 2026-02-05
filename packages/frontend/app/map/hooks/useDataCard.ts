@@ -17,9 +17,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useMetricData, MetricDataPoint } from './useMetricData';
-import { getMetricConfig, GeoLevel, MetricFormat, getGeoPathSegment } from '@/app/map/config/metrics';
+import { getMetricConfig, type GeoLevel, type MetricFormat, timeSeriesApi } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
-import { api } from '@/lib/api/client';
 
 const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -64,7 +63,7 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
         queryFn: async () => {
             // Use historyMonths instead of date range filtering
             // This gets the most recent 4 months of data regardless of actual dates
-            const response = await api.getTimeSeries(
+            const response = await timeSeriesApi.getTimeSeries(
                 metricId,
                 geoLevel,
                 regionId,

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { api } from '@/lib/api/client';
-import type { GeoLevel } from '../types';
+import { timeSeriesApi, type GeoLevel } from '@/lib/data';
 
 export interface SparklineData {
   /** Array of values for sparkline (most recent last) */
@@ -67,7 +66,7 @@ export function useTrendSparklines(
           try {
             // Use historyMonths instead of date range filtering
             // This gets the most recent N months of data regardless of actual dates
-            const response = await api.getTimeSeries(
+            const response = await timeSeriesApi.getTimeSeries(
               metricId,
               geoLevel,
               regionId,

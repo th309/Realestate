@@ -11,11 +11,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, GeoLevel, MetricFormat } from '@/app/map/config/metrics';
+import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, API_URL, type GeoLevel, type MetricFormat } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
 import { normalizeZipKey } from '@/lib/format/zip';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Standard cache time: 2 hours
 const CACHE_TIME = 2 * 60 * 60 * 1000;

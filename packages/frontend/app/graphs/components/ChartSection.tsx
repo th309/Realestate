@@ -28,7 +28,7 @@ import {
 } from 'recharts';
 import { ComparisonConfig } from '../types';
 import { MILESTONES, getMetricSource } from '../constants';
-import { getMetricTitle } from '@/app/map/config/metrics';
+import { getMetricTitle } from '@/lib/data';
 import { CustomTooltip } from './CustomTooltip';
 import { M3Card } from './M3Card';
 

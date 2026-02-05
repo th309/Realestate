@@ -1,8 +1,7 @@
 'use client';
 
 import { MetricSelector } from '../MetricSelector';
-import { getMetricConfig } from '../../config/metrics';
-import { GeoLevel } from '@/app/map/config/metrics';
+import { getMetricConfig, type GeoLevel } from '@/lib/data';
 
 interface MarketFactor {
   id: string;

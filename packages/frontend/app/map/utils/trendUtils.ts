@@ -5,8 +5,7 @@
  * Used by the data binding layer for real-time trend calculations.
  */
 
-import { api, type TimeSeriesDataPoint } from '@/lib/api/client';
-import type { GeoLevel } from '../types';
+import { timeSeriesApi, type GeoLevel, type TimeSeriesDataPoint } from '@/lib/data';
 
 export interface TrendData {
   /** Array of values for sparkline (most recent last) */
@@ -30,7 +29,7 @@ export async function calculate3MonthTrend(
   try {
     // Use historyMonths instead of date range filtering
     // This gets the most recent 3 months of data regardless of actual dates
-    const response = await api.getTimeSeries(
+    const response = await timeSeriesApi.getTimeSeries(
       metricId,
       geoLevel,
       regionId,

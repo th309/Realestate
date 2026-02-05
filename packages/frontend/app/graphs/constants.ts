@@ -1,5 +1,5 @@
 import { MetricOption, MetricCategory, Milestone } from './types';
-import { getMetricTitle, METRICS } from '@/app/map/config/metrics';
+import { getMetricTitle, METRICS } from '@/lib/data';
 import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 
 // Mock data for chart display (placeholder)

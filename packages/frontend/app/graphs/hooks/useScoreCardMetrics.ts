@@ -16,8 +16,7 @@
 
 import { useMemo } from 'react';
 import { useDataCardBatch, DataCardResult } from '@/app/map/hooks/useDataCard';
-import { getMetricConfig } from '@/app/map/config/metrics';
-import type { GeoLevel } from '@/app/map/config/metrics';
+import { getMetricConfig, type GeoLevel } from '@/lib/data';
 
 export interface ScoreCardIndicator {
     metricId: string;

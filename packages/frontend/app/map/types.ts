@@ -1,15 +1,16 @@
 // Map page types and constants
 
-// GeoLevel is defined in config/metrics.ts to avoid circular imports
-import type { GeoLevel as GeoLevelType } from './config/metrics';
-export type GeoLevel = GeoLevelType;
+// GeoLevel and DataSource are now defined in lib/data - re-export for backward compatibility
+export type { GeoLevel, DataSource } from '@/lib/data';
+import type { SnapshotEntry, DataSource } from '@/lib/data';
+
 export type ForecastHorizon = '1m' | '3m' | '12m';
 export type RentIndexType = 'all' | 'sfr' | 'mfr';
 export type RenterDemandType = 'all' | 'sfr' | 'mfr';
 
 // Map data entries can be simple numbers or objects with value and date
 // value may be null for metrics where the measure is undefined (e.g. SF/MF ratio when no permits)
-export type MapDataEntry = number | { value: number | null; date?: string };
+export type MapDataEntry = number | SnapshotEntry;
 export type MapData = Record<string, MapDataEntry>;
 
 // Legacy aliases for backward compatibility (deprecated - use MapData/MapDataEntry)
@@ -38,8 +39,7 @@ export interface NavItem {
   href: string;
 }
 
-// Data source types for metrics
-export type DataSource = 'realtor' | 'zillow' | 'calculated' | 'census' | 'fred';
+// Note: DataSource type is now re-exported from @/lib/data
 
 export interface Metric {
   id: string;
@@ -83,13 +83,13 @@ export interface SearchResult {
 export interface SelectedGeography {
   id: string;
   name: string;
-  geoLevel: GeoLevel;
+  geoLevel: import('@/lib/data').GeoLevel;
   value: number | null;
   stateAbbr?: string;
 }
 
 // GeoJSON sources - re-exported from central config
-export { GEOJSON_SOURCES } from './config/metrics';
+export { GEOJSON_SOURCES } from '@/lib/data';
 
 // FIPS code to state abbreviation mapping
 export const FIPS_TO_STATE: Record<string, string> = {
@@ -222,4 +222,4 @@ export const STATE_CENTERS: Record<string, { lat: number; lng: number; zoom: num
 };
 
 // Zoom levels - re-exported from central config
-export { GEO_ZOOM_LEVELS, getDefaultZoom } from './config/metrics';
+export { GEO_ZOOM_LEVELS, getDefaultZoom } from '@/lib/data';

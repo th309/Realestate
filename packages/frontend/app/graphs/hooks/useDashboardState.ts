@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ComparisonConfig } from '../types';
-import { GeoLevel } from '@/app/map/config/metrics';
+import type { GeoLevel } from '@/lib/data';
 import { STATES } from '../constants';
 import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
 

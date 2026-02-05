@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check, X } from 'lucide-react';
 import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
-import { GeoLevel } from '@/app/map/config/metrics';
+import type { GeoLevel } from '@/lib/data';
 
 // Available metrics for selection
 interface AvailableMetric {

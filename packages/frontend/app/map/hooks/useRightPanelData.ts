@@ -4,8 +4,31 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api/client';
 import type { GeoLevel, ViewMode, SelectedGeography } from '../types';
 import type { TrendDirection } from '../components/sidebar-components/TrendArrow';
-import type { PricingData, InventoryData, InsightData } from '../components/RightDetailPanel/ContextualDataCards';
-import type { MarketFactor } from '../components/RightDetailPanel/MarketFactorsGrid';
+
+// Local type definitions (these components were removed)
+interface PricingData {
+  medianPrice: string;
+  progress: number;
+  changeDescription: string;
+}
+
+interface InventoryData {
+  supplyMonths: string;
+  level: 'Low' | 'Medium' | 'High';
+  progress: number;
+  description: string;
+}
+
+interface InsightData {
+  text: string;
+}
+
+interface MarketFactor {
+  id: string;
+  label: string;
+  value: string;
+  icon: string;
+}
 
 interface RightPanelData {
   // Score data
@@ -50,7 +73,7 @@ function formatCurrency(value: number): string {
 function getTrend(change: number, threshold = 0.5): TrendDirection {
   if (change > threshold) return 'up';
   if (change < -threshold) return 'down';
-  return 'stable';
+  return 'flat';
 }
 
 /**

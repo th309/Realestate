@@ -46,17 +46,17 @@ export function useReportGeneration(): UseReportGenerationReturn {
         },
         comparison_geographies: comparisonGeographies.length > 0
           ? comparisonGeographies.map((geo) => ({
-              id: geo.id,
-              type: geo.type,
-              name: geo.name,
-              state: geo.state,
-            }))
+            id: geo.id,
+            type: geo.type,
+            name: geo.name,
+            state: geo.state,
+          }))
           : undefined,
         user_inputs: Object.keys(userInputs).length > 0 ? userInputs : undefined,
       };
 
       // TODO: Get actual user ID from auth context
-      const userId = 'demo-user-001';
+      const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
       const response = await fetch(`${API_BASE_URL}/reports/generate`, {
         method: 'POST',

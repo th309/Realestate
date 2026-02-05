@@ -24,10 +24,10 @@
 import { useMemo } from 'react';
 import {
     METRICS,
-    GeoLevel,
     getMetricConfig,
     isMetricSupportedForGeo,
-} from '@/app/map/config/metrics';
+    type GeoLevel,
+} from '@/lib/data';
 import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 

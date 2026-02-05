@@ -154,7 +154,12 @@
       "Bash(winget install:*)",
       "Bash(net start:*)",
       "Bash(net stop:*)",
-      "Bash(sc config:*)"
+      "Bash(sc config:*)",
+      "Bash(railway environment:*)",
+      "Bash(railway add:*)",
+      "Bash(railway domain:*)",
+      "Bash(railway deployment --help:*)",
+      "Bash(npx next build:*)"
     ]
   }
 }

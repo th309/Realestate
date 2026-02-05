@@ -11,10 +11,8 @@
 
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { api } from '@/lib/api/client';
-import { getMetricConfig } from '@/app/map/config/metrics';
+import { getMetricConfig, timeSeriesApi, type GeoLevel } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
-import type { GeoLevel } from '../config/metrics';
 
 const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -57,7 +55,7 @@ export function useMarketFactorsData(
         // Use historyMonths instead of date range filtering
         // This tells the backend to get the most recent N months of data
         // regardless of actual dates (handles stale data gracefully)
-        const response = await api.getTimeSeries(
+        const response = await timeSeriesApi.getTimeSeries(
           metricId,
           geoLevel!,
           regionId!,

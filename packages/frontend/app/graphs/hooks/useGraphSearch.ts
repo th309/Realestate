@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
 import { US_STATES } from '@/app/map/types';
-import type { GeoLevel } from '@/app/map/config/metrics';
+import type { GeoLevel } from '@/lib/data';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 

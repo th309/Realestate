@@ -1,0 +1,41 @@
+# REI Platform - NestJS Backend (Railway)
+# Optimized for layer caching: APT and npm install only re-run when deps change.
+# Uses Node 22 on Debian Bookworm; system Chromium for Puppeteer (Redfin ingestion).
+
+FROM node:22-bookworm-slim AS base
+
+# 1. System dependencies (Puppeteer/Chromium) - cached unless this layer changes
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0 \
+    libgbm-dev \
+    fonts-liberation \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Puppeteer: use system Chromium (no NPM download)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+WORKDIR /app
+
+# 2. Install Node dependencies (monorepo) - cached unless package*.json or lockfile change
+COPY package.json package-lock.json ./
+COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/quinn-widget/package.json ./packages/quinn-widget/
+
+RUN npm ci
+
+# 3. Copy source and build backend only (Railway runs backend)
+COPY . .
+
+RUN npm run build:backend
+
+# 4. Start
+CMD ["node", "packages/backend/dist/main.js"]

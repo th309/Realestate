@@ -1,6 +1,7 @@
-# REI Platform - NestJS Backend (Railway)
+# REI Platform - Next.js Frontend (Railway)
 # Optimized for layer caching: APT and npm install only re-run when deps change.
-# Uses Node 22 on Debian Bookworm; system Chromium for Puppeteer (Redfin ingestion).
+# Uses Node 22 on Debian Bookworm; system Chromium for Puppeteer (Redfin scraping).
+# Next.js standalone output mode for minimal image size.
 
 FROM node:22-bookworm-slim AS base
 
@@ -32,10 +33,17 @@ COPY packages/quinn-widget/package.json ./packages/quinn-widget/
 
 RUN npm ci
 
-# 3. Copy source and build backend only (Railway runs backend)
+# 3. Copy source and build frontend
+# NEXT_PUBLIC_* env vars must be provided at build time via Railway service settings
 COPY . .
 
-RUN npm run build:backend
+RUN npm run build:frontend
 
-# 4. Start (matches nixpacks.toml start command)
-CMD ["node", "packages/backend/dist/main.js"]
+# 4. Next.js standalone doesn't include public/ or .next/static/ — copy them manually
+RUN cp -r packages/frontend/public packages/frontend/.next/standalone/packages/frontend/public
+RUN cp -r packages/frontend/.next/static packages/frontend/.next/standalone/packages/frontend/.next/static
+
+# 5. Start Next.js standalone server
+# Railway injects PORT dynamically; Next.js standalone respects it via hostname/port env
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "packages/frontend/.next/standalone/server.js"]

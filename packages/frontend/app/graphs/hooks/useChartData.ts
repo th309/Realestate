@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ComparisonConfig } from '../types';
 import { BaselineConfig, TimeFrame } from './useDashboardState';
-import { timeSeriesApi } from '@/lib/api/client';
-import { GeoLevel } from '@/app/map/config/metrics';
+import { timeSeriesApi, type GeoLevel } from '@/lib/data';
 
 interface ChartDataItem {
   date: string;

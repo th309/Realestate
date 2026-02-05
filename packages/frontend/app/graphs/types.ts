@@ -1,5 +1,5 @@
-// Re-export types from central metric config
-export type { GeoLevel, MetricConfig, MetricFormat, DataSource } from '@/app/map/config/metrics';
+// Re-export types from unified data layer
+export type { GeoLevel, MetricConfig, MetricFormat, DataSource } from '@/lib/data';
 
 // Graph-specific types
 export interface ComparisonConfig {

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Loader2, TrendingUp } from 'lucide-react';
 import { getMetricDescription } from './constants';
-import { getMetricTitle } from '@/app/map/config/metrics';
+import { getMetricTitle } from '@/lib/data';
 import { getInsights } from './services/geminiService';
 import { useDashboardState } from './hooks/useDashboardState';
 import { useChartData } from './hooks/useChartData';

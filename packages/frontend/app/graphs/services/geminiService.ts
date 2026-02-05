@@ -1,4 +1,4 @@
-import { getMetricTitle } from '@/app/map/config/metrics';
+import { getMetricTitle } from '@/lib/data';
 
 interface DataPoint {
   year: number;

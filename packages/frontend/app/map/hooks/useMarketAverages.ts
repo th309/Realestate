@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api/client';
-import type { GeoLevel } from '../types';
+import type { GeoLevel } from '@/lib/data';
 
 interface MetricAverage {
   metricId: string;

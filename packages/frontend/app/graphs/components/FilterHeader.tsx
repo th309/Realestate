@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { MapPin, BarChart2, Globe } from 'lucide-react';
 import { ComparisonConfig, MetricOption } from '../types';
-import { GeoLevel } from '@/app/map/config/metrics';
+import type { GeoLevel } from '@/lib/data';
 import { GEO_LEVEL_OPTIONS, BASELINE_GEO_LEVELS } from '../hooks/useDashboardState';
 import { M3Select } from './M3Select';
 import { M3Card, M3CardHeader } from './M3Card';

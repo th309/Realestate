@@ -47,9 +47,8 @@ docs
 .env.*
 *.local
 
-# Large/binary
+# Large/binary (*.geojson excluded — frontend needs GeoJSON files in public/)
 *.csv
-*.geojson
 *.json.gz
 *.zip
 *.tar
@@ -57,6 +56,6 @@ docs
 *.xlsx
 *.xml
 
-# Other services (backend-only deploy)
+# Other services (not needed by backend or frontend)
 packages/propertyiq-analytics
 packages/quinn-widget
