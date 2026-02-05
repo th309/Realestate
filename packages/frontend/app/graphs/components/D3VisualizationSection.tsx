@@ -932,6 +932,13 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
                     visualizationType === 'boxplot' ? boxPlotData.reduce((acc, g) => acc + g.values.length, 0) :
                     visualizationType === 'heatmap' ? heatmapData.length : 0;
 
+  // Pluralize geography level correctly
+  const geoLevelPlural = geoLevel === 'metro' ? 'metros' :
+                         geoLevel === 'county' ? 'counties' :
+                         geoLevel === 'zip' ? 'ZIP codes' :
+                         geoLevel === 'state' ? 'states' :
+                         `${geoLevel}s`;
+
   return (
     <M3Card variant="elevated" size="lg" className={`overflow-hidden ${className}`}>
       {/* Header */}
@@ -941,7 +948,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           <h3 className="text-lg font-medium text-on-surface">Advanced Analysis</h3>
           {dataCount > 0 && !loading && (
             <span className="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
-              {dataCount} {geoLevel}s
+              Comparing all {dataCount} {geoLevelPlural}
             </span>
           )}
         </div>
@@ -984,6 +991,18 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         </div>
       )}
 
+      {/* Context Note - explains scope of comparison */}
+      {geoLevel !== 'national' && !loading && dataCount > 0 && (
+        <div className="text-xs text-on-surface-variant bg-surface-container/50 px-3 py-2 rounded-lg mb-4">
+          <strong>Scope:</strong> This chart compares <em>all</em> {geoLevelPlural} nationwide, not just areas within {selectedArea || 'your selection'}.
+          {selectedArea && (
+            <span className="ml-1">
+              To see areas within {selectedArea}, change the geography level to a more specific type (e.g., County or ZIP).
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Metric Selectors */}
       {renderMetricSelectors()}
 
@@ -1017,7 +1036,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       {/* Data Source */}
       {!loading && dataCount > 0 && (
         <div className="text-[10px] text-on-surface-variant text-center mt-2">
-          Live data from PropertyIQ • {geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1)} level
+          Live data from PropertyIQ • Comparing {dataCount} {geoLevelPlural} nationwide
         </div>
       )}
 
