@@ -14,6 +14,7 @@ interface HeatmapCell {
   x: string;
   y: string;
   value: number;
+  normalizedValue?: number; // 0-1 normalized value for coloring
 }
 
 interface HeatmapProps {
@@ -26,6 +27,7 @@ interface HeatmapProps {
   colorScale?: 'sequential' | 'diverging';
   colorScheme?: 'purple' | 'bluePurple' | 'warm' | 'cool' | 'redBlue' | 'redGreen';
   showValues?: boolean;
+  normalizePerColumn?: boolean; // Normalize each column independently for better comparison
   height?: number;
   className?: string;
   onCellClick?: (cell: HeatmapCell) => void;
@@ -41,6 +43,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
   colorScale = 'sequential',
   colorScheme = 'purple',
   showValues = true,
+  normalizePerColumn = true,
   height = 400,
   className = '',
   onCellClick,
@@ -58,6 +61,37 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     () => providedYLabels || [...new Set(data.map((d) => d.y))],
     [data, providedYLabels]
   );
+
+  // Normalize data per column when metrics have different scales
+  const normalizedData = useMemo(() => {
+    if (!normalizePerColumn) return data;
+
+    // Group data by x (metric/column)
+    const columnGroups = new Map<string, HeatmapCell[]>();
+    data.forEach((cell) => {
+      const group = columnGroups.get(cell.x) || [];
+      group.push(cell);
+      columnGroups.set(cell.x, group);
+    });
+
+    // Normalize each column independently
+    const result: HeatmapCell[] = [];
+    columnGroups.forEach((cells) => {
+      const values = cells.map((c) => c.value);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1; // Avoid division by zero
+
+      cells.forEach((cell) => {
+        result.push({
+          ...cell,
+          normalizedValue: (cell.value - min) / range,
+        });
+      });
+    });
+
+    return result;
+  }, [data, normalizePerColumn]);
 
   // Calculate dimensions
   const margins = useMemo(
@@ -97,24 +131,29 @@ export const Heatmap: React.FC<HeatmapProps> = ({
     [yLabels, chartHeight]
   );
 
-  // Color scale
+  // Color scale - uses normalized values (0-1) when normalizePerColumn is true
   const colorFn = useMemo(() => {
-    const values = data.map((d) => d.value);
-    const extent = d3.extent(values) as [number, number];
+    if (normalizePerColumn) {
+      // Use 0-1 range for normalized values
+      const scale = createValueScale([0, 1], colorScale, colorScheme as any);
+      return (value: number, normalizedValue?: number) =>
+        scale(normalizedValue ?? value) as string;
+    } else {
+      const values = data.map((d) => d.value);
+      const extent = d3.extent(values) as [number, number];
+      const scale = createValueScale(extent, colorScale, colorScheme as any);
+      return (value: number) => scale(value) as string;
+    }
+  }, [data, normalizePerColumn, colorScale, colorScheme]);
 
-    const scale = createValueScale(extent, colorScale, colorScheme as any);
-
-    return (value: number) => scale(value) as string;
-  }, [data, colorScale, colorScheme]);
-
-  // Create data map for quick lookup
+  // Create data map for quick lookup (using normalized data)
   const dataMap = useMemo(() => {
     const map = new Map<string, HeatmapCell>();
-    data.forEach((d) => {
+    normalizedData.forEach((d) => {
       map.set(`${d.x}|${d.y}`, d);
     });
     return map;
-  }, [data]);
+  }, [normalizedData]);
 
   // Handle tooltip
   const handleMouseOver = useCallback(
@@ -163,7 +202,7 @@ export const Heatmap: React.FC<HeatmapProps> = ({
               const height = yScale.bandwidth();
 
               // Determine text color based on background
-              const bgColor = colorFn(cell.value);
+              const bgColor = colorFn(cell.value, cell.normalizedValue);
               const rgb = d3.rgb(bgColor);
               const luminance = 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b;
               const textColor = luminance > 128 ? '#1d1b20' : '#ffffff';

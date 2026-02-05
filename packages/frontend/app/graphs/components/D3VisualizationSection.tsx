@@ -73,6 +73,59 @@ const visualizationTypes = [
   },
 ];
 
+// Layman's terms explanations for each visualization
+const VISUALIZATION_INSIGHTS: Record<D3VisualizationType, {
+  whatItShows: string;
+  howToRead: string;
+  lookFor: string[];
+}> = {
+  scatter: {
+    whatItShows: 'Each bubble represents a geographic area. The position shows how it performs on two different metrics at once.',
+    howToRead: 'Bubbles in the upper-right corner are high on both metrics. Bubble size shows a third metric, and color shows market category.',
+    lookFor: [
+      'Clusters of similar markets',
+      'Outliers that stand out from the crowd',
+      'The trend line shows if the two metrics move together',
+    ],
+  },
+  boxplot: {
+    whatItShows: 'Shows how values are spread out across all areas. The box shows where most values fall, and dots are unusual outliers.',
+    howToRead: 'The middle line is the median (typical value). The box covers the middle 50% of all areas. Whiskers show the range.',
+    lookFor: [
+      'Wide boxes mean high variation between areas',
+      'Outlier dots are areas performing very differently',
+      'Compare boxes to see which groups perform better',
+    ],
+  },
+  treemap: {
+    whatItShows: 'Each rectangle is a market. Bigger rectangles have higher values for the size metric. Color intensity shows the color metric.',
+    howToRead: 'Area size = one metric value, Color darkness = another metric value. Click rectangles to explore.',
+    lookFor: [
+      'Large dark boxes = high on both metrics',
+      'Large light boxes = big market, lower on color metric',
+      'Small dark boxes = smaller market outperforming on color metric',
+    ],
+  },
+  heatmap: {
+    whatItShows: 'A grid comparing multiple metrics across many areas at once. Each row is an area, each column is a metric.',
+    howToRead: 'Darker purple = higher relative value for that metric. Colors are normalized per column so you can compare across different metric types.',
+    lookFor: [
+      'Rows with many dark cells = areas strong across multiple metrics',
+      'Columns with variation = metrics where areas differ most',
+      'Patterns of dark/light help identify market types',
+    ],
+  },
+  correlation: {
+    whatItShows: 'Shows how strongly different metrics move together. Blue means they rise together, red means one rises when the other falls.',
+    howToRead: 'Numbers from -1 to +1. Near +1 (dark blue) = strong positive relationship. Near -1 (dark red) = strong negative relationship. Near 0 = no relationship.',
+    lookFor: [
+      'Strong positive (blue): When one goes up, so does the other',
+      'Strong negative (red): When one goes up, the other goes down',
+      'Use this to understand which metrics predict others',
+    ],
+  },
+};
+
 // Build metrics list dynamically from the registry
 // For percent metrics with asPercent: true, the fetcher already multiplied by 100,
 // so we use 'percentAbs' (just adds %) instead of 'percent' (which would multiply by 100 again)
@@ -111,6 +164,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   const [visualizationType, setVisualizationType] = useState<D3VisualizationType>('scatter');
   const [showSettings, setShowSettings] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<ScatterDataPoint | null>(null);
+  const [showInsight, setShowInsight] = useState(true); // Default to showing insight
 
   // Filter metrics based on what's available at the current geo level
   const availableMetrics = useMemo(() => {
@@ -951,6 +1005,15 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       {/* Legend */}
       {renderLegend()}
 
+      {/* Insight Panel - explains the chart in layman's terms */}
+      {geoLevel !== 'national' && !loading && dataCount > 0 && (
+        <InsightPanel
+          visualizationType={visualizationType}
+          isExpanded={showInsight}
+          onToggle={() => setShowInsight(!showInsight)}
+        />
+      )}
+
       {/* Data Source */}
       {!loading && dataCount > 0 && (
         <div className="text-[10px] text-on-surface-variant text-center mt-2">
@@ -999,6 +1062,71 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
     <p className="text-sm text-on-surface-variant">{message}</p>
   </div>
 );
+
+// Insight Panel - explains the visualization in layman's terms
+const InsightPanel: React.FC<{
+  visualizationType: D3VisualizationType;
+  isExpanded: boolean;
+  onToggle: () => void;
+}> = ({ visualizationType, isExpanded, onToggle }) => {
+  const insight = VISUALIZATION_INSIGHTS[visualizationType];
+
+  return (
+    <div className="mt-4 rounded-xl bg-primary-container/30 border border-primary/20 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-primary-container/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-on-surface">What does this chart show?</span>
+        </div>
+        <span className="text-xs text-primary font-medium">
+          {isExpanded ? 'Hide' : 'Show'}
+        </span>
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-4">
+          {/* What it shows */}
+          <div>
+            <h4 className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">
+              What You're Looking At
+            </h4>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              {insight.whatItShows}
+            </p>
+          </div>
+
+          {/* How to read */}
+          <div>
+            <h4 className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">
+              How to Read It
+            </h4>
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              {insight.howToRead}
+            </p>
+          </div>
+
+          {/* What to look for */}
+          <div>
+            <h4 className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">
+              What to Look For
+            </h4>
+            <ul className="space-y-1.5">
+              {insight.lookFor.map((tip, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-on-surface-variant">
+                  <span className="text-primary mt-1">•</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Geography Detail Popup Component
 interface GeographyPopupProps {
