@@ -19,7 +19,7 @@ interface ReportViewerProps {
 // Fetch report from backend API
 async function fetchReport(reportId: string): Promise<ReportInstance | null> {
   // TODO: Replace with actual user ID from auth context
-  const userId = 'user-123';
+  const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
   const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
     headers: {

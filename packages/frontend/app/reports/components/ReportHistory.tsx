@@ -25,7 +25,7 @@ export const ReportHistory: React.FC = () => {
 
   useEffect(() => {
     // TODO: Replace with actual user ID from auth context
-    const userId = 'user-123';
+    const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
     fetch(`${API_URL}/api/reports/history`, {
       headers: {
