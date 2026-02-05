@@ -38,8 +38,8 @@ export function Header() {
     return (
         <header
             className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled
-                    ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100'
-                    : 'bg-white border-b border-transparent'
+                    ? 'bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-outline-variant'
+                    : 'bg-surface-container-lowest border-b border-transparent'
                 }`}
         >
             <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -48,7 +48,7 @@ export function Header() {
                     {/* Logo */}
                     <div className="flex-shrink-0 flex items-center">
                         <Link href="/" className="flex items-center gap-2 group">
-                            <span className="text-xl font-bold tracking-tight text-[var(--md-primary)] group-hover:opacity-90 transition-opacity">
+                            <span className="text-xl font-bold tracking-tight text-primary group-hover:opacity-90 transition-opacity">
                                 PropertyIQ
                             </span>
                         </Link>
@@ -63,8 +63,8 @@ export function Header() {
                                     key={link.name}
                                     href={link.href}
                                     className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isActive
-                                            ? 'text-[var(--md-primary)] bg-[var(--md-primary-container)]/30'
-                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                            ? 'text-primary bg-primary-container/30'
+                                            : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                                         }`}
                                 >
                                     {link.name}
@@ -80,21 +80,21 @@ export function Header() {
                                 <button
                                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                                     onBlur={() => setTimeout(() => setIsProfileOpen(false), 200)}
-                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-[var(--md-primary)] to-[var(--md-secondary)] text-white shadow-md hover:shadow-lg transition-all active:scale-95"
+                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
                                 >
                                     <PersonIcon className="w-5 h-5" />
                                 </button>
 
                                 {/* Profile Dropdown */}
                                 <div
-                                    className={`absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 transition-all duration-200 origin-top-right overflow-hidden ${isProfileOpen
+                                    className={`absolute right-0 mt-2 w-64 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant transition-all duration-200 origin-top-right overflow-hidden ${isProfileOpen
                                             ? 'transform opacity-100 scale-100 visible'
                                             : 'transform opacity-0 scale-95 invisible'
                                         }`}
                                 >
-                                    <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                                        <p className="text-sm font-semibold text-gray-900">John Doe</p>
-                                        <p className="text-xs text-gray-500 truncate">john.doe@example.com</p>
+                                    <div className="p-4 border-b border-outline-variant bg-surface-container/50">
+                                        <p className="text-sm font-semibold text-on-surface">John Doe</p>
+                                        <p className="text-xs text-on-surface-variant truncate">john.doe@example.com</p>
                                     </div>
                                     <div className="p-2 space-y-0.5">
                                         <DropdownItem icon={HomeIcon} label="Home" href="/" />
@@ -103,10 +103,10 @@ export function Header() {
                                         <DropdownItem icon={BookIcon} label="Data Glossary" href="/glossary" />
                                         <DropdownItem icon={HierarchyIcon} label="Manage Seats" href="/team" />
                                         <DropdownItem icon={HelpIcon} label="Help" href="/help" />
-                                        <div className="my-1 h-px bg-gray-100" />
+                                        <div className="my-1 h-px bg-outline-variant" />
                                         <button
                                             onClick={() => setIsLoggedIn(false)}
-                                            className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                            className="w-full flex items-center px-3 py-2 text-sm font-medium text-error rounded-lg hover:bg-error-container/30 transition-colors"
                                         >
                                             <LogoutIcon className="w-4 h-4 mr-3" />
                                             Sign out
@@ -118,13 +118,13 @@ export function Header() {
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => setIsLoggedIn(true)}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-[var(--md-primary)] transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors"
                                 >
                                     Log in
                                 </button>
                                 <button
                                     onClick={() => setIsLoggedIn(true)}
-                                    className="px-5 py-2.5 text-sm font-medium text-white bg-[var(--md-primary)] rounded-full hover:bg-opacity-90 transition-all shadow-sm hover:shadow-md active:scale-95"
+                                    className="px-5 py-2.5 text-sm font-medium text-on-primary bg-primary rounded-full hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
                                 >
                                     Get Started
                                 </button>
@@ -136,7 +136,7 @@ export function Header() {
                     <div className="md:hidden">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+                            className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
                         >
                             {isMenuOpen ? <CloseIcon className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
                         </button>
@@ -146,24 +146,24 @@ export function Header() {
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden border-t border-gray-100 bg-white absolute w-full shadow-lg">
+                <div className="md:hidden border-t border-outline-variant bg-surface-container-lowest absolute w-full shadow-lg">
                     <div className="px-4 py-4 space-y-2">
                         {NAV_LINKS.map((link) => (
                             <Link
                                 key={link.name}
                                 href={link.href}
-                                className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-[var(--md-primary)] sidebar-item-transition"
+                                className="flex items-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors"
                                 onClick={() => setIsMenuOpen(false)}
                             >
-                                <link.icon className="w-5 h-5 mr-3 text-gray-400" />
+                                <link.icon className="w-5 h-5 mr-3 text-on-surface-variant" />
                                 {link.name}
                             </Link>
                         ))}
-                        <div className="h-px bg-gray-100 my-3" />
+                        <div className="h-px bg-outline-variant my-3" />
                         {isLoggedIn ? (
                             <button
                                 onClick={() => { setIsLoggedIn(false); setIsMenuOpen(false); }}
-                                className="w-full flex items-center px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50"
+                                className="w-full flex items-center px-4 py-3 rounded-xl text-base font-medium text-error hover:bg-error-container/30"
                             >
                                 <LogoutIcon className="w-5 h-5 mr-3" />
                                 Sign out
@@ -172,13 +172,13 @@ export function Header() {
                             <div className="space-y-3 pt-2">
                                 <button
                                     onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
-                                    className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-gray-700 border border-gray-200 hover:bg-gray-50"
+                                    className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant border border-outline-variant hover:bg-surface-container"
                                 >
                                     Log in
                                 </button>
                                 <button
                                     onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
-                                    className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-white bg-[var(--md-primary)] hover:bg-opacity-90 shadow-md"
+                                    className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-primary bg-primary hover:bg-primary/90 shadow-md"
                                 >
                                     Get Started
                                 </button>
@@ -195,9 +195,9 @@ function DropdownItem({ icon: Icon, label, href }: { icon: any, label: string, h
     return (
         <Link
             href={href}
-            className="group flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[var(--md-primary)] transition-colors"
+            className="group flex items-center px-3 py-2 text-sm font-medium text-on-surface-variant rounded-lg hover:bg-surface-container hover:text-primary transition-colors"
         >
-            <Icon className="w-4 h-4 mr-3 text-gray-400 group-hover:text-[var(--md-primary)] transition-colors" />
+            <Icon className="w-4 h-4 mr-3 text-on-surface-variant group-hover:text-primary transition-colors" />
             {label}
         </Link>
     );
