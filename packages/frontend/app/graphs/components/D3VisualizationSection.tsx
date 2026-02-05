@@ -244,21 +244,25 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   // Update metric selections when geoLevel changes (if current selection becomes unavailable)
   useEffect(() => {
     const availableIds = availableMetrics.map(m => m.id);
+    if (availableIds.length === 0) return;
 
     // Update single selectors if their current value is not available
-    if (!availableIds.includes(xMetric) && availableIds.length > 0) {
+    if (!availableIds.includes(xMetric)) {
       setXMetric(availableIds[0]);
     }
-    if (!availableIds.includes(yMetric) && availableIds.length > 1) {
-      setYMetric(availableIds[1] || availableIds[0]);
+    if (!availableIds.includes(yMetric)) {
+      setYMetric(availableIds[Math.min(1, availableIds.length - 1)]);
     }
-    if (!availableIds.includes(sizeMetric) && availableIds.length > 2) {
-      setSizeMetric(availableIds[2] || availableIds[0]);
+    if (!availableIds.includes(sizeMetric)) {
+      setSizeMetric(availableIds[Math.min(2, availableIds.length - 1)]);
     }
-    if (!availableIds.includes(colorMetric) && availableIds.length > 3) {
-      setColorMetric(availableIds[3] || availableIds[0]);
+    if (!availableIds.includes(colorMetric)) {
+      // Try to pick a good default color metric (prefer hotness_score, market_heat, or home_value_yoy)
+      const preferredColorMetrics = ['hotness_score', 'market_heat', 'home_value_yoy'];
+      const defaultColor = preferredColorMetrics.find(m => availableIds.includes(m)) || availableIds[Math.min(3, availableIds.length - 1)];
+      setColorMetric(defaultColor);
     }
-    if (!availableIds.includes(distributionMetric) && availableIds.length > 0) {
+    if (!availableIds.includes(distributionMetric)) {
       setDistributionMetric(availableIds[0]);
     }
 
