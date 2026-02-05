@@ -104,24 +104,16 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
   const mapUrl = primaryGeography ? getStaticMapUrl(primaryGeography, 600, 200) : '';
   const showMap = !!mapUrl;
 
-  const getSearchPlaceholder = () => {
-    if (!primaryGeography) return 'Enter a state, metro, county, or zip...';
-    return 'Add another location...';
-  };
-
-  const canAddMore = !primaryGeography || (isComparison && comparisonGeographies.length < maxComparisons - 1);
-
   return (
     <div className="space-y-6">
-      {/* Universal Search Box */}
-      <div>
-        <div className="flex justify-between items-center mb-3">
-          <label className="text-sm font-medium text-on-surface">
-            {primaryGeography ? 'Add Comparisons' : 'Search for the main location of your report'}
-          </label>
-        </div>
-
-        {canAddMore ? (
+      {/* Primary Location Search */}
+      {!primaryGeography && (
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <label className="text-sm font-medium text-on-surface">
+              Search for the main location of your report
+            </label>
+          </div>
           <SearchWidget
             className="w-full"
             searchRef={searchRef}
@@ -134,14 +126,44 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
             onFocus={() => {
               if (searchResults.length > 0) setShowSearchResults(true);
             }}
-            placeholder={getSearchPlaceholder()}
+            placeholder="Enter a state, metro, county, or zip..."
           />
-        ) : (
-          <div className="p-4 bg-surface-container rounded-2xl border border-outline-variant/30 text-center text-sm text-on-surface-variant">
-            Maximum of {maxComparisons} markets selected.
+        </div>
+      )}
+
+      {/* Comparison Search - only show for comparison templates */}
+      {primaryGeography && isComparison && (
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <label className="text-sm font-medium text-on-surface">
+              Add Comparisons
+            </label>
+            <span className="text-xs text-on-surface-variant">
+              {comparisonGeographies.length + 1} / {maxComparisons} markets
+            </span>
           </div>
-        )}
-      </div>
+          {comparisonGeographies.length < maxComparisons - 1 ? (
+            <SearchWidget
+              className="w-full"
+              searchRef={searchRef}
+              searchQuery={searchQuery}
+              searchResults={availableResults}
+              searchLoading={searchLoading}
+              showSearchResults={showSearchResults}
+              onSearch={handleSearch}
+              onSelectResult={handleSelectResult}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowSearchResults(true);
+              }}
+              placeholder="Add another location to compare..."
+            />
+          ) : (
+            <div className="p-4 bg-surface-container rounded-2xl border border-outline-variant/30 text-center text-sm text-on-surface-variant">
+              Maximum of {maxComparisons} markets selected.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Selected Markets Display */}
       <div className="space-y-4">
