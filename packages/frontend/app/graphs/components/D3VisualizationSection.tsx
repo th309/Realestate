@@ -152,7 +152,7 @@ const CATEGORY_THRESHOLDS = {
 };
 
 interface MetricData {
-  [regionId: string]: { value: number; name?: string };
+  [regionId: string]: { value: number; name?: string; displayName?: string };
 }
 
 export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
@@ -240,6 +240,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   const [heatmapSettings, setHeatmapSettings] = useState({
     colorScheme: 'purple' as 'purple' | 'bluePurple' | 'warm' | 'cool',
     showValues: true,
+    regionLimit: 50 as number | 'all',
   });
 
   const [correlationSettings, setCorrelationSettings] = useState({
@@ -293,7 +294,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
           Object.entries(data).forEach(([key, entry]) => {
             if (entry && typeof entry === 'object' && 'value' in entry && entry.value != null) {
-              transformed[key] = { value: entry.value as number, name: key };
+              // Use the human-readable name from API, fallback to key
+              const displayName = (entry as any).name || key;
+              transformed[key] = { value: entry.value as number, name: key, displayName };
             }
           });
 
@@ -334,6 +337,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       const y = yData[region]?.value;
       if (x == null || y == null) return;
 
+      // Use human-readable name for display
+      const displayName = xData[region]?.displayName || yData[region]?.displayName || region;
+
       // Determine category based on color metric
       let category = 'Unknown';
       const colorValue = cData?.[region]?.value;
@@ -354,7 +360,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
       result.push({
         id: region,
-        label: region,
+        label: displayName,
         x,
         y,
         size: sData?.[region]?.value ?? 10,
@@ -407,18 +413,20 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
     const colorData = metricDataCache[yMetric];
     if (!sizeData) return { name: 'root', children: [] };
 
-    // Group by first letter for now (could be by state/region later)
+    // Group by first letter of display name
     const groups: Record<string, TreemapNode[]> = {};
 
     Object.entries(sizeData).forEach(([region, data]) => {
       const value = data.value;
       if (value == null || value <= 0) return;
 
-      const group = region.charAt(0).toUpperCase();
+      // Use human-readable display name
+      const displayName = data.displayName || region;
+      const group = displayName.charAt(0).toUpperCase();
       if (!groups[group]) groups[group] = [];
 
       groups[group].push({
-        name: region,
+        name: displayName,
         value: Math.abs(value),
         colorValue: colorData?.[region]?.value,
       });
@@ -437,12 +445,12 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   }, [metricDataCache, xMetric, yMetric]);
 
   // Transform data for heatmap
-  const heatmapData = useMemo((): HeatmapDataPoint[] => {
+  const { heatmapData, totalHeatmapRegions } = useMemo(() => {
     const metricsForHeatmap = selectedMetrics
       .map(id => ALL_METRICS.find(m => m.id === id))
       .filter((m): m is typeof ALL_METRICS[0] => !!m);
 
-    if (metricsForHeatmap.length === 0) return [];
+    if (metricsForHeatmap.length === 0) return { heatmapData: [] as HeatmapDataPoint[], totalHeatmapRegions: 0 };
 
     const regions = new Set<string>();
 
@@ -452,27 +460,44 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       if (data) Object.keys(data).forEach(r => regions.add(r));
     });
 
-    const result: HeatmapDataPoint[] = [];
-    // Sort regions alphabetically and include all of them
-    const regionList = Array.from(regions).sort();
+    // Sort regions alphabetically
+    const allRegions = Array.from(regions).sort();
+    const totalRegions = allRegions.length;
 
+    // Apply limit if set
+    const regionLimit = heatmapSettings.regionLimit;
+    const regionList = regionLimit === 'all'
+      ? allRegions
+      : allRegions.slice(0, regionLimit);
+
+    const result: HeatmapDataPoint[] = [];
     regionList.forEach(region => {
+      // Get display name from first metric that has this region
+      let displayName = region;
+      for (const m of metricsForHeatmap) {
+        const entry = metricDataCache[m.id]?.[region];
+        if (entry?.displayName) {
+          displayName = entry.displayName;
+          break;
+        }
+      }
+
       metricsForHeatmap.forEach(m => {
         const value = metricDataCache[m.id]?.[region]?.value;
         if (value != null) {
           result.push({
-            x: m.label.substring(0, 12),
-            y: region.substring(0, 20),
+            x: m.label.substring(0, 15),
+            y: displayName.substring(0, 25),
             value,
           });
         }
       });
     });
 
-    return result;
-  }, [metricDataCache, selectedMetrics]);
+    return { heatmapData: result, totalHeatmapRegions: totalRegions };
+  }, [metricDataCache, selectedMetrics, heatmapSettings.regionLimit]);
 
-  // Count unique regions in heatmap data
+  // Count unique regions shown in heatmap (may be limited)
   const heatmapRegionCount = useMemo(() => {
     return new Set(heatmapData.map(d => d.y)).size;
   }, [heatmapData]);
@@ -866,6 +891,28 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         return (
           <div className="space-y-3">
             <div>
+              <label className="text-sm text-on-surface-variant mb-1 block">
+                Show regions {totalHeatmapRegions > 0 && <span className="text-xs opacity-70">({totalHeatmapRegions} available)</span>}
+              </label>
+              <select
+                value={heatmapSettings.regionLimit}
+                onChange={(e) =>
+                  setHeatmapSettings((s) => ({
+                    ...s,
+                    regionLimit: e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10),
+                  }))
+                }
+                className="w-full px-3 py-2 rounded-lg border border-outline bg-surface text-on-surface text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value={10}>Top 10</option>
+                <option value={20}>Top 20</option>
+                <option value={50}>Top 50</option>
+                <option value={100}>Top 100</option>
+                <option value={200}>Top 200</option>
+                <option value="all">All ({totalHeatmapRegions})</option>
+              </select>
+            </div>
+            <div>
               <label className="text-sm text-on-surface-variant mb-1 block">Color scheme</label>
               <select
                 value={heatmapSettings.colorScheme}
@@ -940,6 +987,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
                     visualizationType === 'heatmap' ? heatmapRegionCount :
                     visualizationType === 'correlation' ? correlationData.length : 0;
 
+  // For heatmap, show "X of Y" when limited
+  const isHeatmapLimited = visualizationType === 'heatmap' && heatmapRegionCount < totalHeatmapRegions;
+
   // Pluralize geography level correctly
   const geoLevelPlural = geoLevel === 'metro' ? 'metros' :
                          geoLevel === 'county' ? 'counties' :
@@ -956,7 +1006,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           <h3 className="text-lg font-medium text-on-surface">Advanced Analysis</h3>
           {dataCount > 0 && !loading && (
             <span className="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
-              Comparing all {dataCount} {geoLevelPlural}
+              {isHeatmapLimited
+                ? `Showing ${heatmapRegionCount} of ${totalHeatmapRegions} ${geoLevelPlural}`
+                : `Comparing all ${dataCount} ${geoLevelPlural}`}
             </span>
           )}
         </div>

@@ -271,6 +271,7 @@ function transformResponse(
     result[key] = {
       value: finalValue,
       date: item.date,
+      name: item.region_name || key, // Include human-readable name
     };
   });
 

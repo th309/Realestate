@@ -80,6 +80,8 @@ export interface MetricConfig {
 export interface SnapshotEntry {
   value: number | null;
   date?: string;
+  /** Human-readable name for the region (e.g., "Chicago-Naperville-Elgin" instead of "16980") */
+  name?: string;
 }
 
 /**
