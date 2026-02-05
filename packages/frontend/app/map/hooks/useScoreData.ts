@@ -14,7 +14,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchAPI } from '@/lib/api/client';
+import { fetchAPI } from '@/lib/data';
 
 export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
 export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
@@ -128,6 +128,10 @@ interface UseScoreDataOptions {
   expanded?: boolean;
   /** 0-6; omit for latest scores only. Pass only when you need trend/history (e.g. 3-month change). */
   historyMonths?: number;
+  /** 3 or 5; for extended history with outcomes validation. */
+  historyYears?: number;
+  /** true to include actual returns and benchmark comparisons. */
+  includeOutcomes?: boolean;
   userTier?: string;
 }
 
@@ -171,7 +175,7 @@ export function useScoreData(
   geographyId: string | null,
   options: UseScoreDataOptions = {}
 ): UseScoreDataReturn {
-  const { expanded = false, historyMonths = 0, userTier } = options;
+  const { expanded = false, historyMonths = 0, historyYears = 0, includeOutcomes = false, userTier } = options;
 
   const [data, setData] = useState<AllScoresResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -206,6 +210,8 @@ export function useScoreData(
       const params = new URLSearchParams();
       if (expanded) params.append('expanded', 'true');
       if (historyMonths > 0) params.append('historyMonths', historyMonths.toString());
+      if (historyYears > 0) params.append('historyYears', historyYears.toString());
+      if (includeOutcomes) params.append('includeOutcomes', 'true');
 
       const queryString = params.toString();
       const endpoint = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
@@ -301,7 +307,7 @@ export function useScoreData(
         setLoading(false);
       }
     }
-  }, [geographyType, geographyId, expanded, historyMonths, userTier]);
+  }, [geographyType, geographyId, expanded, historyMonths, historyYears, includeOutcomes, userTier]);
 
   // Fetch on mount and when params change
   useEffect(() => {

@@ -38,6 +38,9 @@ import { BacktestRunsService, BacktestRunsController } from './backtest-runs';
 // Import admin controller
 import { AdminController } from './admin';
 
+// Import validation services
+import { ValidationService, ValidationController } from './validation';
+
 // Legacy services (may still be imported elsewhere)
 // These are now simplified or merged into ScoringService
 import { InheritanceService } from './inheritance.service';
@@ -72,12 +75,16 @@ import { PerformanceTrackingService } from './performance-tracking.service';
 
     // Backtest runs services
     BacktestRunsService,
+
+    // Score validation services
+    ValidationService,
   ],
   controllers: [
     ScoringController,
     MLValidationController,
     BacktestRunsController,
     AdminController,
+    ValidationController,
   ],
   exports: [
     ScoringService,
@@ -99,6 +106,9 @@ import { PerformanceTrackingService } from './performance-tracking.service';
 
     // Backtest runs services
     BacktestRunsService,
+
+    // Score validation services
+    ValidationService,
   ],
 })
 export class ScoringModule {}

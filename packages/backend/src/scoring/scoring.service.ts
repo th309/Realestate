@@ -223,6 +223,188 @@ export class ScoringService {
   }
 
   /**
+   * Get score with extended history (up to 5 years) and outcome data.
+   * Used for historical score tracking and validation displays.
+   */
+  async getScoreWithExtendedHistory(
+    locationId: string,
+    geography: GeographyLevel,
+    options: {
+      historyYears?: number;
+      includeOutcomes?: boolean;
+    } = {},
+  ): Promise<ScoreResult & {
+    extendedHistory?: {
+      data: Array<{
+        date: string;
+        score: number | null;
+        actualReturn1Y?: number | null;
+        actualReturn3Y?: number | null;
+        benchmarkReturn1Y?: number | null;
+        benchmarkReturn3Y?: number | null;
+        excessReturn3Y?: number | null;
+      }>;
+      years: number;
+      trend: 'up' | 'down' | 'stable';
+      scoreChange: number;
+    };
+    validation?: {
+      hasOutcomes: boolean;
+      excessReturn3Y?: number;
+      predictedVsActual?: 'outperformed' | 'underperformed' | 'matched';
+    };
+  } | null> {
+    const { historyYears = 3, includeOutcomes = false } = options;
+    const targetDate = await this.getLatestScoreDate(geography);
+    if (!targetDate) return null;
+
+    const result = await this.getScoreForDate(locationId, geography, targetDate);
+    if (!result) return null;
+
+    // Calculate how many months to fetch
+    const monthsToFetch = Math.min(historyYears * 12, 60);
+
+    // Get all score dates for this location (up to N years)
+    const allDates = await this.getScoreDatesForLocation(locationId, geography, monthsToFetch);
+    if (allDates.length === 0) return result;
+
+    // Fetch scores for each date
+    const historyByDate: Array<{ date: string; result: ScoreResult }> = [];
+    for (const d of allDates) {
+      const r = await this.getScoreForDate(locationId, geography, d);
+      if (r) historyByDate.push({ date: d, result: r });
+    }
+
+    // If no history, return basic result
+    if (historyByDate.length < 2) return result;
+
+    // Get outcomes if requested
+    let outcomes: Map<string, {
+      return1y?: number;
+      return3y?: number;
+      stateReturn1y?: number;
+      stateReturn3y?: number;
+      excessVsState3y?: number;
+    }> = new Map();
+
+    if (includeOutcomes) {
+      outcomes = await this.getOutcomesForLocation(locationId, geography);
+    }
+
+    // Build extended history for each score type
+    for (const key of ['homeready', 'investoredge', 'markethealth'] as const) {
+      const curr = result.scores[key];
+      const oldest = historyByDate[historyByDate.length - 1]?.result.scores[key];
+
+      const scoreChange =
+        curr && oldest && typeof curr.score === 'number' && typeof oldest.score === 'number'
+          ? Number((curr.score - oldest.score).toFixed(1))
+          : 0;
+
+      const trend: 'up' | 'down' | 'stable' =
+        scoreChange > 2 ? 'up' : scoreChange < -2 ? 'down' : 'stable';
+
+      const historyData = historyByDate.map(({ date, result: r }) => {
+        const outcomeData = outcomes.get(date);
+        return {
+          date,
+          score: r.scores[key]?.score ?? null,
+          actualReturn1Y: outcomeData?.return1y,
+          actualReturn3Y: outcomeData?.return3y,
+          benchmarkReturn1Y: outcomeData?.stateReturn1y,
+          benchmarkReturn3Y: outcomeData?.stateReturn3y,
+          excessReturn3Y: outcomeData?.excessVsState3y,
+        };
+      });
+
+      (curr as any).extendedHistory = {
+        data: historyData,
+        years: historyYears,
+        trend,
+        scoreChange,
+      };
+
+      // Add validation data if outcomes available
+      if (includeOutcomes) {
+        const latestOutcome = outcomes.get(allDates[allDates.length - 1]);
+        if (latestOutcome?.excessVsState3y != null) {
+          (curr as any).validation = {
+            hasOutcomes: true,
+            excessReturn3Y: latestOutcome.excessVsState3y,
+            predictedVsActual:
+              latestOutcome.excessVsState3y > 2
+                ? 'outperformed'
+                : latestOutcome.excessVsState3y < -2
+                  ? 'underperformed'
+                  : 'matched',
+          };
+        } else {
+          (curr as any).validation = { hasOutcomes: false };
+        }
+      }
+    }
+
+    return result as any;
+  }
+
+  /**
+   * Get score dates for a specific location (newest first).
+   */
+  private async getScoreDatesForLocation(
+    locationId: string,
+    geography: GeographyLevel,
+    limit: number,
+  ): Promise<string[]> {
+    const { data } = await this.supabase
+      .from('propertyiq_scores')
+      .select('score_date')
+      .eq('geography', geography)
+      .eq('location_id', locationId)
+      .order('score_date', { ascending: false })
+      .limit(limit);
+
+    if (!data?.length) return [];
+    return [...new Set(data.map((r: { score_date: string }) => r.score_date))].sort(
+      (a, b) => b.localeCompare(a),
+    );
+  }
+
+  /**
+   * Get outcomes for a location from backtest table.
+   */
+  private async getOutcomesForLocation(
+    locationId: string,
+    geography: GeographyLevel,
+  ): Promise<Map<string, {
+    return1y?: number;
+    return3y?: number;
+    stateReturn1y?: number;
+    stateReturn3y?: number;
+    excessVsState3y?: number;
+  }>> {
+    const { data } = await this.supabase
+      .from('propertyiq_backtest_outcomes')
+      .select('score_date, outcome_1y_value, outcome_3y_value, state_return_1y, state_return_3y_cagr, excess_vs_state_3y')
+      .eq('geography_id', locationId)
+      .eq('geography_type', geography)
+      .order('score_date', { ascending: false });
+
+    const outcomes = new Map<string, any>();
+    if (data) {
+      for (const row of data) {
+        outcomes.set(row.score_date, {
+          return1y: row.outcome_1y_value,
+          return3y: row.outcome_3y_value,
+          stateReturn1y: row.state_return_1y,
+          stateReturn3y: row.state_return_3y_cagr,
+          excessVsState3y: row.excess_vs_state_3y,
+        });
+      }
+    }
+    return outcomes;
+  }
+
+  /**
    * Get distinct score_dates for a geography (newest first), up to limit.
    */
   private async getScoreDates(geography: GeographyLevel, limit: number): Promise<string[]> {

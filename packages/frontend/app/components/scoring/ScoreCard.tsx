@@ -6,15 +6,28 @@
  * - FullScoreCard: Complete details for users with full access
  * - TeaserScoreCard: Blurred preview with upgrade CTA for locked scores
  *
+ * Features:
+ * - Component breakdown
+ * - Short-term sparkline history
+ * - View History button for extended (3Y/5Y) history with outcomes
+ * - Validation badge for scores with actual return data
+ *
  * Material Design 3 compliant with semantic color roles.
  */
 
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { ScoreBadge, ScoreType, TrendDirection, ScoreAccess, ScoreStatus } from './ScoreBadge';
 import { ComponentBar } from './ComponentBar';
 import { ConfidenceDisplay } from './ConfidenceDisplay';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the history chart to avoid SSR issues with recharts
+const ScoreHistoryChart = dynamic(
+  () => import('./ScoreHistoryChart').then((mod) => mod.ScoreHistoryChart),
+  { ssr: false, loading: () => <div className="h-48 bg-outline-variant/20 rounded animate-pulse" /> }
+);
 
 // Types for score card data
 interface MetricDetail {
@@ -60,6 +73,12 @@ interface UpgradeCta {
   features: string[];
 }
 
+interface ValidationInfo {
+  hasOutcomes: boolean;
+  excessReturn3Y?: number;
+  predictedVsActual?: 'outperformed' | 'underperformed' | 'matched';
+}
+
 interface ScoreCardProps {
   type: ScoreType;
   label: string;
@@ -77,6 +96,11 @@ interface ScoreCardProps {
   onUpgradeClick?: () => void;
   onClose?: () => void;
   className?: string;
+  // Extended history support
+  geographyType?: string;
+  geographyId?: string;
+  validation?: ValidationInfo;
+  showHistoryButton?: boolean;
 }
 
 /**
@@ -184,8 +208,16 @@ export const ScoreCard = memo(function ScoreCard({
   onUpgradeClick,
   onClose,
   className = '',
+  geographyType,
+  geographyId,
+  validation,
+  showHistoryButton = false,
 }: ScoreCardProps) {
+  const [showExtendedHistory, setShowExtendedHistory] = useState(false);
   const isTeaser = access === 'teaser';
+
+  // Map score type for history chart
+  const scoreTypeForChart = type === 'market_health' ? 'markethealth' : type;
 
   return (
     <div className={`relative bg-surface-container-low rounded-xl shadow-sm border border-outline-variant overflow-hidden ${className}`}>
@@ -208,10 +240,26 @@ export const ScoreCard = memo(function ScoreCard({
               showLabel={false}
             />
             <div>
-              <h3 className="text-lg font-semibold text-on-surface">{label}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-on-surface">{label}</h3>
+                {/* Validation badge */}
+                {validation?.hasOutcomes && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-container text-on-primary-container">
+                    Validated
+                  </span>
+                )}
+              </div>
               {statusMessage && <p className="text-xs text-on-surface-variant">{statusMessage}</p>}
               {dataCompleteness !== undefined && dataCompleteness < 100 && (
                 <p className="text-xs text-amber-600">Based on {dataCompleteness.toFixed(0)}% of data</p>
+              )}
+              {/* 3Y Excess Return summary */}
+              {validation?.hasOutcomes && validation.excessReturn3Y != null && (
+                <p className={`text-xs font-medium ${
+                  validation.excessReturn3Y > 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  3Y Excess: {validation.excessReturn3Y > 0 ? '+' : ''}{validation.excessReturn3Y.toFixed(1)}% vs state
+                </p>
               )}
             </div>
           </div>
@@ -226,9 +274,20 @@ export const ScoreCard = memo(function ScoreCard({
           )}
         </div>
 
-        {/* History and confidence row */}
+        {/* History, confidence, and View History button row */}
         <div className="flex items-center justify-between mt-3 gap-4">
-          {history && history.length > 0 && <HistorySparkline data={history} />}
+          <div className="flex items-center gap-3">
+            {history && history.length > 0 && <HistorySparkline data={history} />}
+            {/* View History button */}
+            {showHistoryButton && geographyType && geographyId && !isTeaser && (
+              <button
+                onClick={() => setShowExtendedHistory(!showExtendedHistory)}
+                className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                {showExtendedHistory ? 'Hide History' : 'View History'}
+              </button>
+            )}
+          </div>
           {confidence && (
             <ConfidenceDisplay
               level={confidence.level}
@@ -243,6 +302,17 @@ export const ScoreCard = memo(function ScoreCard({
           )}
         </div>
       </div>
+
+      {/* Extended History Chart */}
+      {showExtendedHistory && geographyType && geographyId && (
+        <div className="p-4 border-b border-outline-variant">
+          <ScoreHistoryChart
+            geographyType={geographyType}
+            geographyId={geographyId}
+            scoreType={scoreTypeForChart as 'homeready' | 'investoredge' | 'markethealth'}
+          />
+        </div>
+      )}
 
       {/* Components breakdown */}
       {components.length > 0 && (

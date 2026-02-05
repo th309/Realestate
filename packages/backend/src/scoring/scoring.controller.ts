@@ -260,6 +260,11 @@ export class ScoringController {
    * Get score by path (legacy format)
    *
    * GET /api/scores/:geography/:locationId
+   *
+   * Query params:
+   * - historyMonths: 0-6 for short-term trend data
+   * - historyYears: 3 or 5 for extended history with outcomes
+   * - includeOutcomes: true to include actual returns and benchmark comparisons
    */
   @Get(':geography/:locationId')
   @ApiOperation({ summary: 'Get scores for a location (path format)' })
@@ -267,13 +272,41 @@ export class ScoringController {
   @ApiParam({ name: 'locationId', description: 'Location identifier' })
   @ApiQuery({ name: 'date', required: false })
   @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations` })
+  @ApiQuery({ name: 'historyYears', required: false, description: '3 or 5; include extended history with outcomes' })
+  @ApiQuery({ name: 'includeOutcomes', required: false, description: 'true to include actual returns and benchmarks' })
   async getScoreByPath(
     @Param('geography') geography: string,
     @Param('locationId') locationId: string,
     @Query('date') date?: string,
     @Query('historyMonths') historyMonths?: string,
+    @Query('historyYears') historyYears?: string,
+    @Query('includeOutcomes') includeOutcomes?: string,
   ): Promise<ScoreResult> {
     const geoLevel = this.validateGeography(geography);
+
+    // If extended history requested, use the new method
+    if (historyYears && parseInt(historyYears, 10) > 0) {
+      const years = Math.min(Math.max(parseInt(historyYears, 10), 1), 5);
+      const score = await this.scoringService.getScoreWithExtendedHistory(
+        locationId,
+        geoLevel,
+        {
+          historyYears: years,
+          includeOutcomes: includeOutcomes === 'true',
+        },
+      );
+
+      if (!score) {
+        throw new HttpException(
+          `No scores found for ${geography}/${locationId}`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      return score;
+    }
+
+    // Otherwise use standard method
     const options = historyMonths != null
       ? { historyMonths: parseHistoryMonths(historyMonths) }
       : undefined;

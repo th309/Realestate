@@ -92,10 +92,13 @@ export interface ScoreResult {
   return_3y_ann?: number;
 }
 
-import { HISTORY_MONTHS_MAX } from '../common/history.constants';
+import { HISTORY_MONTHS_MAX, SCORE_HISTORY_YEARS_MAX } from '../common/history.constants';
 
 /** Maximum months of history (shared across all data types). */
 export const SCORE_HISTORY_MONTHS_MAX = HISTORY_MONTHS_MAX;
+
+/** Maximum years of history for extended views. */
+export { SCORE_HISTORY_YEARS_MAX };
 
 /** One point in time for a single score type. */
 export interface ScoreHistoryPoint {
