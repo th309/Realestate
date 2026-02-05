@@ -288,10 +288,37 @@ export interface ReportInstance {
   // Populated data
   populated_data: PopulatedReportData | null;
   ai_narratives: Record<string, string | string[] | Record<string, any>> | null;
+  /** Singular form used by backend */
+  ai_narrative?: {
+    market_summary?: string;
+    trend_observations?: string;
+    affordability_analysis?: string;
+    investment_analysis?: string;
+    [key: string]: string | undefined;
+  } | null;
+  ai_model_used?: string;
 
   // Scores
   homeready_score: number | null;
   investoredge_score: number | null;
+  /** Full score details from scoring service */
+  scores_snapshot?: {
+    homeready_score?: number;
+    homeready_details?: {
+      affordability?: number;
+      stability?: number;
+      value?: number;
+      competition?: number;
+    };
+    investoredge_score?: number;
+    investoredge_details?: {
+      cash_flow?: number;
+      appreciation?: number;
+      risk?: number;
+      liquidity?: number;
+    };
+    scores?: any;
+  } | null;
 
   // Status
   status: ReportStatus;
@@ -343,6 +370,18 @@ export interface PopulatedReportData {
     historical_trough: { date: string; value: number };
   };
   pro_forma?: ProFormaData;
+  /** Real-time data from news and economic indicators */
+  realtime?: {
+    news?: NewsItem[];
+    indicators?: Record<string, any>;
+    sentiment?: {
+      sentiment: 'bullish' | 'neutral' | 'bearish';
+      confidence: number;
+      summary: string;
+      factors: string[];
+    };
+    fetched_at?: string;
+  };
 }
 
 export interface TimeSeriesPoint {

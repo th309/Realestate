@@ -10,86 +10,33 @@ import { ReportInstance, UserType } from '../types';
 import { ArrowLeft, Download, Share2, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 interface ReportViewerProps {
   reportId: string;
 }
 
-// Mock fetch - replace with actual API call
+// Fetch report from backend API
 async function fetchReport(reportId: string): Promise<ReportInstance | null> {
-  // Simulate API delay
-  await new Promise((r) => setTimeout(r, 800));
+  // TODO: Replace with actual user ID from auth context
+  const userId = 'user-123';
 
-  // Mock report data
-  return {
-    id: reportId,
-    user_id: 'user-123',
-    template_id: 'tmpl-1',
-    template_version: 1,
-    report_type: 'market_snapshot',
-    title: 'Phoenix-Mesa-Chandler, AZ - Market Snapshot',
-    user_type: 'homebuyer',
-    primary_geography_id: '38060',
-    primary_geography_type: 'metro',
-    primary_geography_name: 'Phoenix-Mesa-Chandler, AZ',
-    status: 'ready',
-    homeready_score: 72,
-    investoredge_score: 68,
-    scores_snapshot: {
-      homeready_score: 72,
-      homeready_details: {
-        affordability: 65,
-        stability: 78,
-        value: 70,
-        competition: 75,
-      },
-      investoredge_score: 68,
-      investoredge_details: {
-        cash_flow: 62,
-        appreciation: 74,
-        risk: 70,
-        liquidity: 66,
-      },
+  const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
+    headers: {
+      'x-user-id': userId,
+      'Content-Type': 'application/json',
     },
-    populated_data: {
-      realtime: {
-        news: [
-          {
-            headline: 'Phoenix Housing Inventory Rises 15% Year-Over-Year',
-            summary: 'The Phoenix metro area sees continued inventory growth...',
-            source: 'Arizona Republic',
-            category: 'housing',
-            relevance_score: 0.92,
-          },
-          {
-            headline: 'Tech Companies Continue Arizona Expansion',
-            summary: 'Major tech employers announce new facilities in the Valley...',
-            source: 'Phoenix Business Journal',
-            category: 'economy',
-            relevance_score: 0.85,
-          },
-        ],
-        sentiment: {
-          sentiment: 'neutral',
-          confidence: 0.75,
-          summary: 'Market shows balanced conditions with improving inventory.',
-          factors: ['Rising inventory', 'Stable prices', 'Strong job growth'],
-        },
-        fetched_at: new Date().toISOString(),
-      },
-    },
-    ai_narrative: {
-      market_summary:
-        'Phoenix remains one of the most dynamic housing markets in the Southwest. After significant price corrections in 2023, the market has stabilized with improving affordability metrics. The HomeReady Score of 72 indicates favorable conditions for homebuyers, particularly due to rising inventory levels and moderating price growth.',
-      trend_observations:
-        'Key trends include: (1) Inventory up 15% YoY providing more options for buyers, (2) Median days on market increasing to 45 days, (3) Price growth moderating to 3-4% annually, and (4) Strong employment fundamentals supporting demand.',
-      affordability_analysis:
-        'With a median home price of $445,000 and median household income of $72,000, the price-to-income ratio of 6.2x is slightly elevated but improving. First-time buyers may find opportunities in suburban submarkets.',
-    },
-    ai_model_used: 'claude-sonnet-4-20250514',
-    data_as_of_date: new Date().toISOString().split('T')[0],
-    confidence_level: 'high',
-    created_at: new Date().toISOString(),
-  };
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error(`Failed to fetch report: ${response.statusText}`);
+  }
+
+  const report = await response.json();
+  return report;
 }
 
 export function ReportViewer({ reportId }: ReportViewerProps) {
