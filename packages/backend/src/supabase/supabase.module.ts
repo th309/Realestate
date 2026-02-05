@@ -34,8 +34,12 @@ const customFetch = (url: string | URL | Request, init?: RequestInit) => {
     {
       provide: SUPABASE_CLIENT,
       useFactory: (configService: ConfigService): SupabaseClient => {
-        const supabaseUrl = configService.get<string>('SUPABASE_URL');
-        const supabaseKey = configService.get<string>('SUPABASE_SERVICE_KEY');
+        const supabaseUrl =
+          configService.get<string>('SUPABASE_URL') ||
+          configService.get<string>('NEXT_PUBLIC_SUPABASE_URL');
+        const supabaseKey =
+          configService.get<string>('SUPABASE_SERVICE_KEY') ||
+          configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
 
         console.log('=== Supabase Configuration ===');
         console.log('SUPABASE_URL:', supabaseUrl);

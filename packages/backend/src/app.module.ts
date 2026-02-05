@@ -29,7 +29,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     ScheduleModule.forRoot(),
     RedisModule,
