@@ -446,14 +446,15 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
     const regions = new Set<string>();
 
-    // Find common regions
+    // Find all regions that have data for at least one metric
     metricsForHeatmap.forEach(m => {
       const data = metricDataCache[m.id];
       if (data) Object.keys(data).forEach(r => regions.add(r));
     });
 
     const result: HeatmapDataPoint[] = [];
-    const regionList = Array.from(regions).slice(0, 20); // Limit regions
+    // Sort regions alphabetically and include all of them
+    const regionList = Array.from(regions).sort();
 
     regionList.forEach(region => {
       metricsForHeatmap.forEach(m => {
@@ -470,6 +471,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
     return result;
   }, [metricDataCache, selectedMetrics]);
+
+  // Count unique regions in heatmap data
+  const heatmapRegionCount = useMemo(() => {
+    return new Set(heatmapData.map(d => d.y)).size;
+  }, [heatmapData]);
 
   // Transform data for correlation matrix
   const correlationData = useMemo((): CorrelationMetric[] => {
@@ -928,9 +934,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   };
 
   const currentVizInfo = visualizationTypes.find((v) => v.type === visualizationType);
+  // Count regions/areas, not cells
   const dataCount = visualizationType === 'scatter' ? scatterData.length :
                     visualizationType === 'boxplot' ? boxPlotData.reduce((acc, g) => acc + g.values.length, 0) :
-                    visualizationType === 'heatmap' ? heatmapData.length : 0;
+                    visualizationType === 'heatmap' ? heatmapRegionCount :
+                    visualizationType === 'correlation' ? correlationData.length : 0;
 
   // Pluralize geography level correctly
   const geoLevelPlural = geoLevel === 'metro' ? 'metros' :
