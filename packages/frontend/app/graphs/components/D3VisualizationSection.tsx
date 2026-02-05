@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Sparkles,
   ScatterChart,
@@ -12,6 +12,12 @@ import {
   Info,
   Loader2,
   AlertCircle,
+  X,
+  MapPin,
+  TrendingUp,
+  DollarSign,
+  Home,
+  Target,
 } from 'lucide-react';
 import {
   ScatterPlot,
@@ -31,6 +37,7 @@ interface D3VisualizationSectionProps {
   geoLevel: GeoLevel;
   selectedArea?: string;
   className?: string;
+  onFocusGeography?: (geoId: string, geoName: string) => void;
 }
 
 const visualizationTypes = [
@@ -99,9 +106,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   geoLevel,
   selectedArea,
   className = '',
+  onFocusGeography,
 }) => {
   const [visualizationType, setVisualizationType] = useState<D3VisualizationType>('scatter');
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<ScatterDataPoint | null>(null);
 
   // Filter metrics based on what's available at the current geo level
   const availableMetrics = useMemo(() => {
@@ -184,11 +193,19 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
     showValues: true,
   });
 
+  // Key metrics to always load for the popup detail view
+  const POPUP_KEY_METRICS = ['home_value', 'home_value_yoy', 'median_rent', 'cap_rate', 'market_heat', 'for_sale_inventory'];
+
   // Determine which metrics we need based on visualization type
   const requiredMetrics = useMemo(() => {
+    // For scatter plots, also include popup key metrics
+    const popupMetrics = visualizationType === 'scatter'
+      ? POPUP_KEY_METRICS.filter(m => isMetricAvailableForGeo(m, geoLevel))
+      : [];
+
     switch (visualizationType) {
       case 'scatter':
-        return [xMetric, yMetric, sizeMetric, colorMetric].filter(Boolean);
+        return [...new Set([xMetric, yMetric, sizeMetric, colorMetric, ...popupMetrics].filter(Boolean))];
       case 'boxplot':
         return [distributionMetric, colorMetric];
       case 'treemap':
@@ -199,7 +216,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       default:
         return [];
     }
-  }, [visualizationType, xMetric, yMetric, sizeMetric, colorMetric, distributionMetric, selectedMetrics]);
+  }, [visualizationType, xMetric, yMetric, sizeMetric, colorMetric, distributionMetric, selectedMetrics, geoLevel]);
 
   // Fetch data for required metrics
   useEffect(() => {
@@ -479,7 +496,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
             showQuadrants={scatterSettings.showQuadrants}
             colorByCategory={scatterSettings.colorByCategory}
             height={500}
-            onPointClick={(point) => console.log('Clicked:', point)}
+            onPointClick={(point) => setSelectedPoint(point)}
           />
         );
       case 'boxplot':
@@ -940,6 +957,17 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           Live data from PropertyIQ • {geoLevel.charAt(0).toUpperCase() + geoLevel.slice(1)} level
         </div>
       )}
+
+      {/* Geography Detail Popup */}
+      {selectedPoint && (
+        <GeographyPopup
+          point={selectedPoint}
+          geoLevel={geoLevel}
+          metricDataCache={metricDataCache}
+          onClose={() => setSelectedPoint(null)}
+          onFocus={onFocusGeography}
+        />
+      )}
     </M3Card>
   );
 };
@@ -971,5 +999,152 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
     <p className="text-sm text-on-surface-variant">{message}</p>
   </div>
 );
+
+// Geography Detail Popup Component
+interface GeographyPopupProps {
+  point: ScatterDataPoint;
+  geoLevel: GeoLevel;
+  metricDataCache: Record<string, MetricData>;
+  onClose: () => void;
+  onFocus?: (geoId: string, geoName: string) => void;
+}
+
+const GeographyPopup: React.FC<GeographyPopupProps> = ({
+  point,
+  geoLevel,
+  metricDataCache,
+  onClose,
+  onFocus,
+}) => {
+  // Get key metrics for this geography
+  const keyMetrics = [
+    { id: 'home_value', label: 'Home Value', icon: Home, format: 'currency' as const },
+    { id: 'home_value_yoy', label: 'YoY Change', icon: TrendingUp, format: 'percent' as const },
+    { id: 'median_rent', label: 'Median Rent', icon: DollarSign, format: 'currency' as const },
+    { id: 'cap_rate', label: 'Cap Rate', icon: Target, format: 'percent' as const },
+    { id: 'market_heat', label: 'Market Heat', icon: TrendingUp, format: 'number' as const },
+    { id: 'for_sale_inventory', label: 'Inventory', icon: Home, format: 'number' as const },
+  ];
+
+  const formatValue = (value: number | undefined, format: 'currency' | 'percent' | 'number') => {
+    if (value === undefined || value === null) return 'N/A';
+    switch (format) {
+      case 'currency':
+        return value >= 1000000
+          ? `$${(value / 1000000).toFixed(2)}M`
+          : value >= 1000
+            ? `$${(value / 1000).toFixed(0)}K`
+            : `$${value.toLocaleString()}`;
+      case 'percent':
+        return `${value.toFixed(1)}%`;
+      default:
+        return value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-surface-container-high rounded-3xl elevation-3 p-6 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary-container">
+              <MapPin className="w-5 h-5 text-on-primary-container" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-on-surface">{point.label}</h3>
+              <p className="text-sm text-on-surface-variant capitalize">{geoLevel}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Category Badge */}
+        {point.category && (
+          <div className="mb-4">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              point.category === 'Hot Market' || point.category === 'Growing' || point.category === 'High'
+                ? 'bg-green-500/20 text-green-700 dark:text-green-400'
+                : point.category === 'Cold Market' || point.category === 'Declining' || point.category === 'Low'
+                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                  : 'bg-purple-500/20 text-purple-700 dark:text-purple-400'
+            }`}>
+              {point.category}
+            </span>
+          </div>
+        )}
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {keyMetrics.map(({ id, label, icon: Icon, format }) => {
+            const value = metricDataCache[id]?.[point.id]?.value;
+            return (
+              <div key={id} className="bg-surface-container rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Icon className="w-3.5 h-3.5 text-on-surface-variant" />
+                  <span className="text-xs text-on-surface-variant">{label}</span>
+                </div>
+                <div className="text-base font-semibold text-on-surface">
+                  {formatValue(value, format)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Current Selection Info */}
+        <div className="bg-surface-container-low rounded-xl p-3 mb-4 border border-outline-variant">
+          <p className="text-xs text-on-surface-variant mb-2">Selected in chart:</p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-on-surface-variant">X:</span>{' '}
+              <span className="font-medium text-on-surface">{point.x.toLocaleString()}</span>
+            </div>
+            <div>
+              <span className="text-on-surface-variant">Y:</span>{' '}
+              <span className="font-medium text-on-surface">{point.y.toLocaleString()}</span>
+            </div>
+            {point.size !== undefined && (
+              <div>
+                <span className="text-on-surface-variant">Size:</span>{' '}
+                <span className="font-medium text-on-surface">{point.size.toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-surface-container text-on-surface font-medium text-sm hover:bg-surface-container-high transition-colors"
+          >
+            Close
+          </button>
+          {onFocus && (
+            <button
+              onClick={() => {
+                onFocus(point.id, point.label);
+                onClose();
+              }}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-on-primary font-medium text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              Focus on this {geoLevel}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default D3VisualizationSection;

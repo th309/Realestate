@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
-import { useD3, useD3Tooltip, D3Tooltip, useResponsiveD3 } from './hooks/useD3';
+import { useD3Tooltip, D3Tooltip, useResponsiveD3 } from './hooks/useD3';
 import {
   CHART_COLORS,
   createLinearScale,
@@ -11,13 +11,6 @@ import {
   FormatType,
   getFormatter,
 } from './utils/scales';
-import {
-  createXAxis,
-  createYAxis,
-  renderXAxis,
-  renderYAxis,
-  getChartDimensions,
-} from './utils/axes';
 
 export interface ScatterDataPoint {
   id: string;
@@ -25,6 +18,7 @@ export interface ScatterDataPoint {
   x: number;
   y: number;
   size?: number;
+  color?: number;
   category?: string;
   tooltip?: React.ReactNode;
 }
@@ -67,34 +61,46 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
 }) => {
   const { containerRef, width } = useResponsiveD3<HTMLDivElement>(16 / 10, height);
   const { tooltip, showTooltip, hideTooltip, moveTooltip } = useD3Tooltip();
+  const svgRef = useRef<SVGSVGElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
 
-  // Calculate dimensions
-  const { width: chartWidth, height: chartHeight, margins } = useMemo(
-    () =>
-      getChartDimensions(width || 600, height, {
-        left: 60,
-        bottom: 50,
-        right: 20,
-        top: 20,
-      }),
-    [width, height]
-  );
+  // Margins
+  const margins = useMemo(() => ({
+    left: 70,
+    right: 30,
+    top: 20,
+    bottom: 50,
+  }), []);
 
-  // Calculate scales
-  const scales = useMemo(() => {
+  const chartWidth = (width || 600) - margins.left - margins.right;
+  const chartHeight = height - margins.top - margins.bottom;
+
+  // Calculate base scales
+  const baseScales = useMemo(() => {
     if (data.length === 0) return null;
 
     const xExtent = d3.extent(data, (d) => d.x) as [number, number];
     const yExtent = d3.extent(data, (d) => d.y) as [number, number];
 
-    const xScale = createLinearScale(xExtent, [0, chartWidth]);
-    const yScale = createLinearScale(yExtent, [chartHeight, 0]);
+    // Add padding to extents
+    const xPadding = (xExtent[1] - xExtent[0]) * 0.05;
+    const yPadding = (yExtent[1] - yExtent[0]) * 0.05;
+
+    const xScale = createLinearScale(
+      [xExtent[0] - xPadding, xExtent[1] + xPadding],
+      [0, chartWidth]
+    );
+    const yScale = createLinearScale(
+      [yExtent[0] - yPadding, yExtent[1] + yPadding],
+      [chartHeight, 0]
+    );
 
     // Size scale
     const sizeExtent: [number, number] = sizeByValue
       ? (d3.extent(data, (d) => d.size ?? 1) as [number, number])
       : [1, 1];
-    const sizeScale = createSizeScale(sizeExtent, [6, 24]);
+    const sizeScale = createSizeScale(sizeExtent, [5, 20]);
 
     // Color scale
     const categories = [...new Set(data.map((d) => d.category || 'default'))];
@@ -102,6 +108,20 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
 
     return { xScale, yScale, sizeScale, colorScale, xExtent, yExtent };
   }, [data, chartWidth, chartHeight, sizeByValue]);
+
+  // Apply zoom transform to scales
+  const scales = useMemo(() => {
+    if (!baseScales) return null;
+
+    const newXScale = zoomTransform.rescaleX(baseScales.xScale as d3.ScaleLinear<number, number>);
+    const newYScale = zoomTransform.rescaleY(baseScales.yScale as d3.ScaleLinear<number, number>);
+
+    return {
+      ...baseScales,
+      xScale: newXScale,
+      yScale: newYScale,
+    };
+  }, [baseScales, zoomTransform]);
 
   // Calculate regression line
   const regressionLine = useMemo(() => {
@@ -116,31 +136,87 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / n;
 
-    const x1 = scales.xExtent[0];
-    const x2 = scales.xExtent[1];
+    // Get visible x range from current zoom
+    const xDomain = scales.xScale.domain();
+    const x1 = xDomain[0];
+    const x2 = xDomain[1];
     const y1 = slope * x1 + intercept;
     const y2 = slope * x2 + intercept;
 
     return { x1, y1, x2, y2, slope, intercept };
   }, [data, showRegression, scales]);
 
+  // Setup zoom behavior
+  useEffect(() => {
+    if (!svgRef.current || !baseScales) return;
+
+    const svg = d3.select(svgRef.current);
+
+    // Create zoom behavior
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.5, 10])
+      .extent([[0, 0], [chartWidth, chartHeight]])
+      .translateExtent([[-chartWidth, -chartHeight], [chartWidth * 2, chartHeight * 2]])
+      .on('zoom', (event) => {
+        setZoomTransform(event.transform);
+      });
+
+    zoomRef.current = zoom;
+    svg.call(zoom);
+
+    // Add zoom reset on double-click
+    svg.on('dblclick.zoom', () => {
+      svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+    });
+
+    return () => {
+      svg.on('.zoom', null);
+    };
+  }, [baseScales, chartWidth, chartHeight]);
+
   // Handle point interactions
   const handleMouseOver = useCallback(
     (event: React.MouseEvent, point: ScatterDataPoint) => {
+      const xFormatter = getFormatter(xFormat);
+      const yFormatter = getFormatter(yFormat);
+
       const content = point.tooltip || (
-        <div>
-          <div className="font-medium">{point.label}</div>
-          <div className="text-xs opacity-75">
-            {xLabel}: {getFormatter(xFormat)(point.x)}
+        <div className="min-w-[180px]">
+          <div className="font-semibold text-sm border-b border-white/20 pb-1 mb-1.5">
+            {point.label}
           </div>
-          <div className="text-xs opacity-75">
-            {yLabel}: {getFormatter(yFormat)(point.y)}
+          <div className="space-y-0.5 text-xs">
+            <div className="flex justify-between gap-4">
+              <span className="opacity-70">{xLabel || 'X'}:</span>
+              <span className="font-medium">{xFormatter(point.x)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="opacity-70">{yLabel || 'Y'}:</span>
+              <span className="font-medium">{yFormatter(point.y)}</span>
+            </div>
+            {point.size !== undefined && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-70">Size:</span>
+                <span className="font-medium">{point.size.toLocaleString()}</span>
+              </div>
+            )}
+            {point.category && (
+              <div className="flex justify-between gap-4">
+                <span className="opacity-70">Category:</span>
+                <span className="font-medium">{point.category}</span>
+              </div>
+            )}
           </div>
+          {onPointClick && (
+            <div className="text-[10px] opacity-60 mt-2 pt-1 border-t border-white/20">
+              Click for details
+            </div>
+          )}
         </div>
       );
       showTooltip(event.clientX, event.clientY, content);
     },
-    [showTooltip, xLabel, yLabel, xFormat, yFormat]
+    [showTooltip, xLabel, yLabel, xFormat, yFormat, onPointClick]
   );
 
   const handleMouseMove = useCallback(
@@ -150,159 +226,9 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
     [moveTooltip]
   );
 
-  // Render
-  const svgRef = useD3<SVGSVGElement>(
-    (svg) => {
-      if (!scales) return;
-
-      svg.selectAll('*').remove();
-
-      const { xScale, yScale, sizeScale, colorScale } = scales;
-
-      // Create main group with margins
-      const g = svg
-        .append('g')
-        .attr('transform', `translate(${margins.left},${margins.top})`);
-
-      // Quadrants
-      if (showQuadrants) {
-        const midX = (scales.xExtent[0] + scales.xExtent[1]) / 2;
-        const midY = (scales.yExtent[0] + scales.yExtent[1]) / 2;
-
-        // Vertical line
-        g.append('line')
-          .attr('x1', xScale(midX))
-          .attr('x2', xScale(midX))
-          .attr('y1', 0)
-          .attr('y2', chartHeight)
-          .attr('stroke', CHART_COLORS.outlineVariant)
-          .attr('stroke-dasharray', '4,4')
-          .attr('stroke-opacity', 0.5);
-
-        // Horizontal line
-        g.append('line')
-          .attr('x1', 0)
-          .attr('x2', chartWidth)
-          .attr('y1', yScale(midY))
-          .attr('y2', yScale(midY))
-          .attr('stroke', CHART_COLORS.outlineVariant)
-          .attr('stroke-dasharray', '4,4')
-          .attr('stroke-opacity', 0.5);
-
-        // Quadrant labels
-        if (quadrantLabels) {
-          const labelStyle = {
-            fill: CHART_COLORS.onSurfaceVariant,
-            'font-size': '10px',
-            'font-weight': '500',
-            opacity: 0.6,
-          };
-
-          if (quadrantLabels.topLeft) {
-            g.append('text')
-              .attr('x', 10)
-              .attr('y', 20)
-              .attr('fill', labelStyle.fill)
-              .attr('font-size', labelStyle['font-size'])
-              .attr('opacity', labelStyle.opacity)
-              .text(quadrantLabels.topLeft);
-          }
-          if (quadrantLabels.topRight) {
-            g.append('text')
-              .attr('x', chartWidth - 10)
-              .attr('y', 20)
-              .attr('text-anchor', 'end')
-              .attr('fill', labelStyle.fill)
-              .attr('font-size', labelStyle['font-size'])
-              .attr('opacity', labelStyle.opacity)
-              .text(quadrantLabels.topRight);
-          }
-          if (quadrantLabels.bottomLeft) {
-            g.append('text')
-              .attr('x', 10)
-              .attr('y', chartHeight - 10)
-              .attr('fill', labelStyle.fill)
-              .attr('font-size', labelStyle['font-size'])
-              .attr('opacity', labelStyle.opacity)
-              .text(quadrantLabels.bottomLeft);
-          }
-          if (quadrantLabels.bottomRight) {
-            g.append('text')
-              .attr('x', chartWidth - 10)
-              .attr('y', chartHeight - 10)
-              .attr('text-anchor', 'end')
-              .attr('fill', labelStyle.fill)
-              .attr('font-size', labelStyle['font-size'])
-              .attr('opacity', labelStyle.opacity)
-              .text(quadrantLabels.bottomRight);
-          }
-        }
-      }
-
-      // Regression line
-      if (regressionLine) {
-        g.append('line')
-          .attr('x1', xScale(regressionLine.x1))
-          .attr('x2', xScale(regressionLine.x2))
-          .attr('y1', yScale(regressionLine.y1))
-          .attr('y2', yScale(regressionLine.y2))
-          .attr('stroke', CHART_COLORS.baseline)
-          .attr('stroke-width', 2)
-          .attr('stroke-dasharray', '6,4')
-          .attr('opacity', 0.7);
-      }
-
-      // Points
-      g.selectAll('circle')
-        .data(data)
-        .join('circle')
-        .attr('cx', (d) => xScale(d.x))
-        .attr('cy', (d) => yScale(d.y))
-        .attr('r', (d) => (sizeByValue ? sizeScale(d.size ?? 1) : 8))
-        .attr('fill', (d) =>
-          colorByCategory ? colorScale(d.category || 'default') : CHART_COLORS.primary
-        )
-        .attr('fill-opacity', 0.7)
-        .attr('stroke', '#fff')
-        .attr('stroke-width', 1.5)
-        .attr('cursor', onPointClick ? 'pointer' : 'default')
-        .on('mouseenter', function () {
-          d3.select(this).attr('fill-opacity', 1).attr('stroke-width', 2);
-        })
-        .on('mouseleave', function () {
-          d3.select(this).attr('fill-opacity', 0.7).attr('stroke-width', 1.5);
-        });
-
-      // Axes
-      const xAxis = createXAxis({
-        scale: xScale as unknown as d3.AxisScale<d3.AxisDomain>,
-        formatType: xFormat,
-        gridLines: true,
-      });
-
-      const yAxis = createYAxis({
-        scale: yScale as unknown as d3.AxisScale<d3.AxisDomain>,
-        formatType: yFormat,
-        gridLines: true,
-      });
-
-      const xAxisG = g.append('g');
-      renderXAxis(xAxisG, xAxis, {
-        height: chartHeight,
-        gridLines: true,
-        gridHeight: chartHeight,
-        label: xLabel,
-      });
-
-      const yAxisG = g.append('g');
-      renderYAxis(yAxisG, yAxis, {
-        gridLines: true,
-        gridWidth: chartWidth,
-        label: yLabel,
-      });
-    },
-    [data, scales, regressionLine, chartWidth, chartHeight, margins, showQuadrants, quadrantLabels, colorByCategory, sizeByValue, xFormat, yFormat, xLabel, yLabel, onPointClick]
-  );
+  // Formatters for axes
+  const xFormatter = getFormatter(xFormat);
+  const yFormatter = getFormatter(yFormat);
 
   if (!data || data.length === 0) {
     return (
@@ -319,26 +245,202 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
         width={width || '100%'}
         height={height}
         className="overflow-visible"
+        style={{ cursor: 'grab' }}
       >
-        {/* Points need event handlers from React */}
+        <defs>
+          <clipPath id="scatter-clip">
+            <rect x={0} y={0} width={chartWidth} height={chartHeight} />
+          </clipPath>
+        </defs>
+
         <g transform={`translate(${margins.left},${margins.top})`}>
-          {scales &&
-            data.map((point) => (
-              <circle
-                key={point.id}
-                cx={scales.xScale(point.x)}
-                cy={scales.yScale(point.y)}
-                r={sizeByValue ? scales.sizeScale(point.size ?? 1) : 8}
-                fill="transparent"
-                onMouseEnter={(e) => handleMouseOver(e, point)}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={hideTooltip}
-                onClick={() => onPointClick?.(point)}
-                style={{ cursor: onPointClick ? 'pointer' : 'default' }}
-              />
-            ))}
+          {/* Background for zoom area */}
+          <rect
+            x={0}
+            y={0}
+            width={chartWidth}
+            height={chartHeight}
+            fill="transparent"
+          />
+
+          {scales && (
+            <>
+              {/* Grid lines */}
+              <g className="grid-lines" opacity={0.3}>
+                {scales.xScale.ticks(6).map((tick) => (
+                  <line
+                    key={`x-grid-${tick}`}
+                    x1={scales.xScale(tick)}
+                    x2={scales.xScale(tick)}
+                    y1={0}
+                    y2={chartHeight}
+                    stroke={CHART_COLORS.outlineVariant}
+                    strokeDasharray="2,2"
+                  />
+                ))}
+                {scales.yScale.ticks(6).map((tick) => (
+                  <line
+                    key={`y-grid-${tick}`}
+                    x1={0}
+                    x2={chartWidth}
+                    y1={scales.yScale(tick)}
+                    y2={scales.yScale(tick)}
+                    stroke={CHART_COLORS.outlineVariant}
+                    strokeDasharray="2,2"
+                  />
+                ))}
+              </g>
+
+              {/* Quadrant lines */}
+              {showQuadrants && baseScales && (
+                <g className="quadrants" opacity={0.5}>
+                  <line
+                    x1={scales.xScale((baseScales.xExtent[0] + baseScales.xExtent[1]) / 2)}
+                    x2={scales.xScale((baseScales.xExtent[0] + baseScales.xExtent[1]) / 2)}
+                    y1={0}
+                    y2={chartHeight}
+                    stroke={CHART_COLORS.outlineVariant}
+                    strokeDasharray="4,4"
+                  />
+                  <line
+                    x1={0}
+                    x2={chartWidth}
+                    y1={scales.yScale((baseScales.yExtent[0] + baseScales.yExtent[1]) / 2)}
+                    y2={scales.yScale((baseScales.yExtent[0] + baseScales.yExtent[1]) / 2)}
+                    stroke={CHART_COLORS.outlineVariant}
+                    strokeDasharray="4,4"
+                  />
+                </g>
+              )}
+
+              {/* Regression line */}
+              {regressionLine && (
+                <line
+                  x1={scales.xScale(regressionLine.x1)}
+                  x2={scales.xScale(regressionLine.x2)}
+                  y1={scales.yScale(regressionLine.y1)}
+                  y2={scales.yScale(regressionLine.y2)}
+                  stroke={CHART_COLORS.baseline}
+                  strokeWidth={2}
+                  strokeDasharray="6,4"
+                  opacity={0.7}
+                  clipPath="url(#scatter-clip)"
+                />
+              )}
+
+              {/* Data points */}
+              <g clipPath="url(#scatter-clip)">
+                {data.map((point) => {
+                  const cx = scales.xScale(point.x);
+                  const cy = scales.yScale(point.y);
+                  const r = sizeByValue ? scales.sizeScale(point.size ?? 1) : 8;
+
+                  // Skip points outside visible area (with padding for size)
+                  if (cx < -r || cx > chartWidth + r || cy < -r || cy > chartHeight + r) {
+                    return null;
+                  }
+
+                  return (
+                    <circle
+                      key={point.id}
+                      cx={cx}
+                      cy={cy}
+                      r={r}
+                      fill={colorByCategory ? scales.colorScale(point.category || 'default') : CHART_COLORS.primary}
+                      fillOpacity={0.7}
+                      stroke="#fff"
+                      strokeWidth={1.5}
+                      style={{
+                        cursor: onPointClick ? 'pointer' : 'default',
+                        transition: 'fill-opacity 0.15s, stroke-width 0.15s, r 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.setAttribute('fill-opacity', '1');
+                        e.currentTarget.setAttribute('stroke-width', '2.5');
+                        e.currentTarget.setAttribute('r', String(r * 1.2));
+                        handleMouseOver(e, point);
+                      }}
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.setAttribute('fill-opacity', '0.7');
+                        e.currentTarget.setAttribute('stroke-width', '1.5');
+                        e.currentTarget.setAttribute('r', String(r));
+                        hideTooltip();
+                      }}
+                      onClick={() => onPointClick?.(point)}
+                    />
+                  );
+                })}
+              </g>
+
+              {/* X Axis */}
+              <g transform={`translate(0,${chartHeight})`}>
+                <line x1={0} x2={chartWidth} y1={0} y2={0} stroke={CHART_COLORS.outline} />
+                {scales.xScale.ticks(6).map((tick) => (
+                  <g key={`x-${tick}`} transform={`translate(${scales.xScale(tick)},0)`}>
+                    <line y2={6} stroke={CHART_COLORS.outline} />
+                    <text
+                      y={20}
+                      textAnchor="middle"
+                      fill={CHART_COLORS.onSurfaceVariant}
+                      fontSize={11}
+                    >
+                      {xFormatter(tick)}
+                    </text>
+                  </g>
+                ))}
+                {xLabel && (
+                  <text
+                    x={chartWidth}
+                    y={40}
+                    textAnchor="end"
+                    fill={CHART_COLORS.onSurfaceVariant}
+                    fontSize={12}
+                    fontWeight={500}
+                  >
+                    {xLabel}
+                  </text>
+                )}
+              </g>
+
+              {/* Y Axis */}
+              <g>
+                <line x1={0} x2={0} y1={0} y2={chartHeight} stroke={CHART_COLORS.outline} />
+                {scales.yScale.ticks(6).map((tick) => (
+                  <g key={`y-${tick}`} transform={`translate(0,${scales.yScale(tick)})`}>
+                    <line x2={-6} stroke={CHART_COLORS.outline} />
+                    <text
+                      x={-10}
+                      dy="0.32em"
+                      textAnchor="end"
+                      fill={CHART_COLORS.onSurfaceVariant}
+                      fontSize={11}
+                    >
+                      {yFormatter(tick)}
+                    </text>
+                  </g>
+                ))}
+                {yLabel && (
+                  <text
+                    transform={`translate(-55,${chartHeight / 2}) rotate(-90)`}
+                    textAnchor="middle"
+                    fill={CHART_COLORS.onSurfaceVariant}
+                    fontSize={12}
+                    fontWeight={500}
+                  >
+                    {yLabel}
+                  </text>
+                )}
+              </g>
+            </>
+          )}
         </g>
       </svg>
+
+      {/* Zoom hint */}
+      <div className="absolute bottom-2 right-2 text-[10px] text-on-surface-variant opacity-60 pointer-events-none">
+        Scroll to zoom • Drag to pan • Double-click to reset
+      </div>
 
       <D3Tooltip {...tooltip} />
     </div>

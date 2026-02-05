@@ -248,6 +248,12 @@ export const Dashboard: React.FC = () => {
                 <D3VisualizationSection
                   geoLevel={geoLevel}
                   selectedArea={selectedArea}
+                  onFocusGeography={(geoId, geoName) => {
+                    setSelectedAreaId(geoId);
+                    setSelectedArea(geoName);
+                    // Switch to time series mode to show the focused geography's data
+                    setVisualizationMode('timeSeries');
+                  }}
                 />
               </div>
 
