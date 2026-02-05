@@ -19,8 +19,10 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { ScoringService, ScoreResult } from './scoring.service';
 import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
 import { GeographyLevel, ScoreType } from './formula-weights';
@@ -188,16 +190,20 @@ export class ScoringController {
   @Get('all/:geography')
   @ApiOperation({ summary: 'Get all scores for a geography level (paginated)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: true, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({ name: 'score_type', required: true, description: 'homeready, investoredge, markethealth, or all' })
   @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (0-indexed)', type: Number })
   @ApiQuery({ name: 'page_size', required: false, description: 'Page size (default 1000, max 1000)', type: Number })
+  @ApiQuery({ name: 'all', required: false, description: 'Fetch all rows (server will batch internally)', type: Boolean })
+  @ApiQuery({ name: 'concurrency', required: false, description: 'Batch concurrency when all=true (default 4, max 8)', type: Number })
   async getAllScores(
     @Param('geography') geography: string,
     @Query('score_type') scoreType: string,
     @Query('date') date?: string,
     @Query('page') page?: string,
     @Query('page_size') pageSize?: string,
+    @Query('all') all?: string,
+    @Query('concurrency') concurrency?: string,
   ): Promise<{
     success: boolean;
     count: number;
@@ -209,6 +215,7 @@ export class ScoringController {
       confidence: number;
       confidence_level: string;
       date?: string;
+      score_type?: string;
     }>;
     pagination: {
       page: number;
@@ -218,10 +225,59 @@ export class ScoringController {
     };
   }> {
     const geoLevel = this.validateGeography(geography);
-    const validScoreType = this.validateScoreType(scoreType);
-    const pageNum = page ? Math.max(0, parseInt(page, 10)) : 0;
+    const requestedTypes = this.parseScoreTypes(scoreType);
+    const wantsAll = all === 'true' || all === '1';
     // Allow up to 1000 records per page (Supabase limit)
     const pageSizeNum = pageSize ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000) : 1000;
+    const pageNum = page ? Math.max(0, parseInt(page, 10)) : 0;
+    const concurrencyNum = concurrency ? Math.min(Math.max(parseInt(concurrency, 10), 1), 8) : 4;
+
+    if (wantsAll) {
+      const resultsByType = await Promise.all(
+        requestedTypes.map(async (type) => ({
+          type,
+          result: await this.scoringService.getAllScoresForGeographyAll(
+            geoLevel,
+            type,
+            date,
+            pageSizeNum,
+            concurrencyNum,
+          ),
+        })),
+      );
+
+      const data = resultsByType.flatMap(({ type, result }) =>
+        result.data.map(item => ({
+          region_id: item.location_id,
+          region_name: item.location_name,
+          value: item.score,
+          grade: item.grade,
+          confidence: item.confidence,
+          confidence_level: item.confidence_level,
+          date: date || undefined,
+          score_type: type,
+        })),
+      );
+
+      const total = resultsByType.reduce((sum, r) => sum + r.result.total, 0);
+
+      return {
+        success: true,
+        count: data.length,
+        data,
+        pagination: {
+          page: 0,
+          pageSize: pageSizeNum,
+          total,
+          hasMore: false,
+        },
+      };
+    }
+
+    if (requestedTypes.length !== 1) {
+      throw new HttpException('score_type must be a single value unless all=true', HttpStatus.BAD_REQUEST);
+    }
+    const validScoreType = requestedTypes[0];
 
     const result = await this.scoringService.getAllScoresForGeography(
       geoLevel,
@@ -250,6 +306,75 @@ export class ScoringController {
         hasMore: result.hasMore,
       },
     };
+  }
+
+  @Get('all/:geography/stream')
+  @ApiOperation({ summary: 'Stream all scores as NDJSON (one row per line)' })
+  @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'score_type', required: true, description: 'homeready, investoredge, markethealth, or all' })
+  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({ name: 'page_size', required: false, description: 'Page size (default 1000, max 1000)', type: Number })
+  async streamAllScores(
+    @Param('geography') geography: string,
+    @Query('score_type') scoreType: string,
+    @Query('date') date: string | undefined,
+    @Res() res: Response,
+    @Query('page_size') pageSize?: string,
+  ): Promise<void> {
+    const geoLevel = this.validateGeography(geography);
+    const requestedTypes = this.parseScoreTypes(scoreType);
+    const pageSizeNum = pageSize ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000) : 1000;
+
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-cache');
+
+    try {
+      for (const type of requestedTypes) {
+        for await (const page of this.scoringService.iterateScoresForGeography(
+          geoLevel,
+          type,
+          date,
+          pageSizeNum,
+        )) {
+          for (const item of page) {
+            const line = JSON.stringify({
+              region_id: item.location_id,
+              region_name: item.location_name,
+              value: item.score,
+              grade: item.grade,
+              confidence: item.confidence,
+              confidence_level: item.confidence_level,
+              date: date || undefined,
+              score_type: type,
+            });
+            res.write(`${line}\n`);
+          }
+        }
+      }
+      res.end();
+    } catch (err: any) {
+      res.status(500);
+      res.write(
+        JSON.stringify({ error: err?.message || 'Failed to stream scores' }) + '\n',
+      );
+      res.end();
+    }
+  }
+
+  private parseScoreTypes(scoreType: string): ScoreType[] {
+    if (!scoreType) {
+      throw new HttpException('score_type query parameter is required', HttpStatus.BAD_REQUEST);
+    }
+    const raw = scoreType.toLowerCase();
+    if (raw === 'all') {
+      return ['homeready', 'investoredge', 'markethealth'];
+    }
+    const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
+    const valid = parts.map(p => this.validateScoreType(p));
+    if (valid.length === 0) {
+      throw new HttpException('score_type must be homeready, investoredge, markethealth, or all', HttpStatus.BAD_REQUEST);
+    }
+    return valid;
   }
 
   // ============================================================================

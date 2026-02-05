@@ -565,6 +565,194 @@ export class ScoringService {
     };
   }
 
+  private async fetchScoresPage(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    scoreDate: string,
+    from: number,
+    to: number,
+  ): Promise<{
+    data: Array<{
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }>;
+  }> {
+    const { data, error } = await this.supabase
+      .from('propertyiq_scores')
+      .select('location_id, location_name, score, grade, confidence, confidence_level')
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', scoreDate)
+      .order('score', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch scores: ${error.message}`);
+    }
+
+    return { data: data || [] };
+  }
+
+  private async fetchAllScoresBatched(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    scoreDate: string,
+    pageSize: number,
+    concurrency: number,
+  ): Promise<{
+    data: Array<{
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }>;
+    total: number | null;
+  }> {
+    const { count: total } = await this.supabase
+      .from('propertyiq_scores')
+      .select('*', { count: 'exact', head: true })
+      .eq('geography', geography)
+      .eq('score_type', scoreType)
+      .eq('score_date', scoreDate);
+
+    if (!total || total <= pageSize || concurrency <= 1) {
+      const all: Array<{
+        location_id: string;
+        location_name: string;
+        score: number;
+        grade: string;
+        confidence: number;
+        confidence_level: string;
+      }> = [];
+      let page = 0;
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data } = await this.fetchScoresPage(geography, scoreType, scoreDate, from, to);
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        page += 1;
+      }
+      return { data: all, total: total || all.length };
+    }
+
+    const totalPages = Math.ceil(total / pageSize);
+    const pageResults: Array<Array<{
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }>> = new Array(totalPages);
+
+    let nextPage = 0;
+    const workerCount = Math.max(1, Math.min(concurrency, totalPages));
+
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const page = nextPage;
+        nextPage += 1;
+        if (page >= totalPages) break;
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data } = await this.fetchScoresPage(geography, scoreType, scoreDate, from, to);
+        pageResults[page] = data || [];
+      }
+    });
+
+    await Promise.all(workers);
+
+    return {
+      data: pageResults.flat(),
+      total,
+    };
+  }
+
+  /**
+   * Get all scores for a geography level (no pagination; batches internally).
+   * Use sparingly for large geographies like county/zip.
+   */
+  async getAllScoresForGeographyAll(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+    pageSize: number = 1000,
+    concurrency: number = 4,
+  ): Promise<{
+    data: Array<{
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+      confidence: number;
+      confidence_level: string;
+    }>;
+    total: number;
+    pageSize: number;
+  }> {
+    const targetDate = periodDate || (await this.getLatestScoreDate(geography));
+    if (!targetDate) {
+      return { data: [], total: 0, pageSize };
+    }
+
+    const { data, total } = await this.fetchAllScoresBatched(
+      geography,
+      scoreType,
+      targetDate,
+      pageSize,
+      concurrency,
+    );
+
+    return {
+      data,
+      total: total || data.length,
+      pageSize,
+    };
+  }
+
+  /**
+   * Stream pages of scores (sequential) for large exports.
+   */
+  async *iterateScoresForGeography(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+    pageSize: number = 1000,
+  ): AsyncGenerator<Array<{
+    location_id: string;
+    location_name: string;
+    score: number;
+    grade: string;
+    confidence: number;
+    confidence_level: string;
+  }>> {
+    const targetDate = periodDate || (await this.getLatestScoreDate(geography));
+    if (!targetDate) return;
+
+    let page = 0;
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data } = await this.fetchScoresPage(geography, scoreType, targetDate, from, to);
+      if (!data || data.length === 0) {
+        break;
+      }
+      yield data;
+      if (data.length < pageSize) {
+        break;
+      }
+      page += 1;
+    }
+  }
+
   /**
    * Search markets by name
    */
