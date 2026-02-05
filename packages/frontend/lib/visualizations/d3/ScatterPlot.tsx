@@ -65,12 +65,12 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [zoomTransform, setZoomTransform] = useState<d3.ZoomTransform>(d3.zoomIdentity);
 
-  // Margins
+  // Margins - increased left margin for Y-axis labels
   const margins = useMemo(() => ({
-    left: 70,
+    left: 90,
     right: 30,
     top: 20,
-    bottom: 50,
+    bottom: 60,
   }), []);
 
   const chartWidth = (width || 600) - margins.left - margins.right;
@@ -391,12 +391,12 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
                 ))}
                 {xLabel && (
                   <text
-                    x={chartWidth}
-                    y={40}
-                    textAnchor="end"
+                    x={chartWidth / 2}
+                    y={45}
+                    textAnchor="middle"
                     fill={CHART_COLORS.onSurfaceVariant}
-                    fontSize={12}
-                    fontWeight={500}
+                    fontSize={13}
+                    fontWeight={600}
                   >
                     {xLabel}
                   </text>
@@ -422,11 +422,11 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
                 ))}
                 {yLabel && (
                   <text
-                    transform={`translate(-55,${chartHeight / 2}) rotate(-90)`}
+                    transform={`translate(-70,${chartHeight / 2}) rotate(-90)`}
                     textAnchor="middle"
                     fill={CHART_COLORS.onSurfaceVariant}
-                    fontSize={12}
-                    fontWeight={500}
+                    fontSize={13}
+                    fontWeight={600}
                   >
                     {yLabel}
                   </text>

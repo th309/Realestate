@@ -1079,29 +1079,16 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   return (
     <M3Card variant="elevated" size="lg" className={`overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-medium text-on-surface">Advanced Analysis</h3>
-          {dataCount > 0 && !loading && (
-            <span className="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
-              {isHeatmapLimited
-                ? `Showing ${heatmapRegionCount} of ${totalHeatmapRegions} ${geoLevelPlural}`
-                : `Comparing all ${dataCount} ${geoLevelPlural}`}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className={`p-2 rounded-lg transition-colors ${
-            showSettings
-              ? 'bg-primary-container text-on-primary-container'
-              : 'text-on-surface-variant hover:bg-surface-container'
-          }`}
-          title="Visualization settings"
-        >
-          <Settings2 className="w-5 h-5" />
-        </button>
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="w-5 h-5 text-primary" />
+        <h3 className="text-lg font-medium text-on-surface">Advanced Analysis</h3>
+        {dataCount > 0 && !loading && (
+          <span className="text-xs text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+            {isHeatmapLimited
+              ? `Showing ${heatmapRegionCount} of ${totalHeatmapRegions} ${geoLevelPlural}`
+              : `Comparing all ${dataCount} ${geoLevelPlural}`}
+          </span>
+        )}
       </div>
 
       {/* Visualization Type Selector */}
@@ -1145,9 +1132,24 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       {/* Metric Selectors */}
       {renderMetricSelectors()}
 
-      {/* Settings Panel (collapsible) */}
+      {/* Chart Toolbar - Settings button near the graph */}
+      <div className="flex items-center justify-end gap-2 mb-2">
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            showSettings
+              ? 'bg-primary text-on-primary'
+              : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+          }`}
+        >
+          <Settings2 className="w-4 h-4" />
+          {showSettings ? 'Hide Settings' : 'Chart Settings'}
+        </button>
+      </div>
+
+      {/* Settings Panel (collapsible) - now right above the chart */}
       {showSettings && (
-        <div className="mb-4 p-4 rounded-xl bg-surface-container border border-outline-variant">
+        <div className="mb-3 p-4 rounded-xl bg-surface-container border border-outline-variant">
           <h4 className="text-sm font-medium text-on-surface mb-3">
             {currentVizInfo?.label} Settings
           </h4>
