@@ -137,8 +137,8 @@ const ALL_METRICS = Object.entries(METRICS).map(([id, config]) => ({
            'number') as 'currency' | 'percent' | 'percentAbs' | 'number',
 })).sort((a, b) => a.label.localeCompare(b.label));
 
-// Categories for bubble colors
-const CATEGORY_THRESHOLDS = {
+// Categories for bubble colors - thresholds for common metrics
+const CATEGORY_THRESHOLDS: Record<string, { max: number; label: string; color: string }[]> = {
   'market_heat': [
     { max: 40, label: 'Cold Market', color: '#3b82f6' },
     { max: 60, label: 'Balanced', color: '#a855f7' },
@@ -148,6 +148,66 @@ const CATEGORY_THRESHOLDS = {
     { max: 0, label: 'Declining', color: '#ef4444' },
     { max: 5, label: 'Stable', color: '#a855f7' },
     { max: Infinity, label: 'Growing', color: '#22c55e' },
+  ],
+  'home_value_mom': [
+    { max: -0.5, label: 'Declining', color: '#ef4444' },
+    { max: 0.5, label: 'Stable', color: '#a855f7' },
+    { max: Infinity, label: 'Growing', color: '#22c55e' },
+  ],
+  'cap_rate': [
+    { max: 4, label: 'Low Yield', color: '#3b82f6' },
+    { max: 6, label: 'Moderate', color: '#a855f7' },
+    { max: Infinity, label: 'High Yield', color: '#22c55e' },
+  ],
+  'gross_yield': [
+    { max: 5, label: 'Low Yield', color: '#3b82f6' },
+    { max: 8, label: 'Moderate', color: '#a855f7' },
+    { max: Infinity, label: 'High Yield', color: '#22c55e' },
+  ],
+  'days_on_market': [
+    { max: 30, label: 'Fast Moving', color: '#f97316' },
+    { max: 60, label: 'Moderate', color: '#a855f7' },
+    { max: Infinity, label: 'Slow Market', color: '#3b82f6' },
+  ],
+  'inventory_yoy': [
+    { max: -10, label: 'Shrinking', color: '#f97316' },
+    { max: 10, label: 'Stable', color: '#a855f7' },
+    { max: Infinity, label: 'Growing', color: '#3b82f6' },
+  ],
+  'price_cut_pct': [
+    { max: 10, label: 'Few Cuts', color: '#22c55e' },
+    { max: 20, label: 'Moderate', color: '#a855f7' },
+    { max: Infinity, label: 'Many Cuts', color: '#ef4444' },
+  ],
+  'homeready_score': [
+    { max: 40, label: 'Poor', color: '#ef4444' },
+    { max: 60, label: 'Average', color: '#a855f7' },
+    { max: Infinity, label: 'Good', color: '#22c55e' },
+  ],
+  'investoredge_score': [
+    { max: 40, label: 'Poor', color: '#ef4444' },
+    { max: 60, label: 'Average', color: '#a855f7' },
+    { max: Infinity, label: 'Good', color: '#22c55e' },
+  ],
+  'market_health_score': [
+    { max: 40, label: 'Weak', color: '#ef4444' },
+    { max: 60, label: 'Average', color: '#a855f7' },
+    { max: Infinity, label: 'Strong', color: '#22c55e' },
+  ],
+  'hotness_score': [
+    { max: 33, label: 'Cold Market', color: '#3b82f6' },
+    { max: 66, label: 'Balanced', color: '#a855f7' },
+    { max: Infinity, label: 'Hot Market', color: '#f97316' },
+  ],
+  'demand_score': [
+    { max: 33, label: 'Low Demand', color: '#3b82f6' },
+    { max: 66, label: 'Moderate', color: '#a855f7' },
+    { max: Infinity, label: 'High Demand', color: '#f97316' },
+  ],
+  'supply_score': [
+    { max: 33, label: 'Low Supply', color: '#f97316' },
+    { max: 66, label: 'Balanced', color: '#a855f7' },
+    { max: Infinity, label: 'High Supply', color: '#3b82f6' },
   ],
 };
 
@@ -329,8 +389,21 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
     if (!xData || !yData) return [];
 
-    const result: ScatterDataPoint[] = [];
     const regions = Object.keys(xData).filter(k => yData[k]);
+
+    // Calculate color value distribution for generic categorization
+    const colorValues: number[] = [];
+    if (cData && !CATEGORY_THRESHOLDS[colorMetric]) {
+      regions.forEach(region => {
+        const v = cData[region]?.value;
+        if (v != null) colorValues.push(v);
+      });
+    }
+    colorValues.sort((a, b) => a - b);
+    const p33 = colorValues[Math.floor(colorValues.length * 0.33)] ?? 33;
+    const p66 = colorValues[Math.floor(colorValues.length * 0.66)] ?? 66;
+
+    const result: ScatterDataPoint[] = [];
 
     regions.forEach(region => {
       const x = xData[region]?.value;
@@ -341,10 +414,12 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
       const displayName = xData[region]?.displayName || yData[region]?.displayName || region;
 
       // Determine category based on color metric
-      let category = 'Unknown';
+      let category = 'No Data';
       const colorValue = cData?.[region]?.value;
-      if (colorValue != null && CATEGORY_THRESHOLDS[colorMetric as keyof typeof CATEGORY_THRESHOLDS]) {
-        const thresholds = CATEGORY_THRESHOLDS[colorMetric as keyof typeof CATEGORY_THRESHOLDS];
+
+      if (colorValue != null && CATEGORY_THRESHOLDS[colorMetric]) {
+        // Use predefined thresholds for this metric
+        const thresholds = CATEGORY_THRESHOLDS[colorMetric];
         for (const t of thresholds) {
           if (colorValue <= t.max) {
             category = t.label;
@@ -352,9 +427,9 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
           }
         }
       } else if (colorValue != null) {
-        // Generic categorization
-        if (colorValue < 33) category = 'Low';
-        else if (colorValue < 66) category = 'Medium';
+        // Generic categorization using data-driven percentiles
+        if (colorValue <= p33) category = 'Low';
+        else if (colorValue <= p66) category = 'Medium';
         else category = 'High';
       }
 
