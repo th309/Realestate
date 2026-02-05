@@ -12,6 +12,7 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 // Import components
 import { MenuIcon, TableIcon } from './components';
 import { SearchWidget, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
+import { Breadcrumbs } from '@/components/navigation';
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from './hooks';
@@ -264,13 +265,16 @@ export default function MapPage() {
 
   return (
     <div className="flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif", height: 'calc(100dvh - 64px - 44px)' }}>
-      {/* M3 Top App Bar */}
       {/* Map Controls Toolbar */}
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 z-20 shadow-sm">
         <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center gap-4">
 
           {/* Top Row (Desktop) or Only Row (Mobile) */}
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
+            {/* Breadcrumbs */}
+            <Breadcrumbs items={[{ label: 'Map' }]} className="hidden md:flex text-sm" />
+            <div className="hidden md:block h-5 w-px bg-outline-variant" />
+
             {/* Sidebar Toggle */}
             <button
               className="p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-full transition-all duration-200 active:scale-95 flex-shrink-0"

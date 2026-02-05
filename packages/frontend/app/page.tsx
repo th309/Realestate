@@ -3,6 +3,7 @@ import {
   HeroSection,
   StatsSection,
   FeaturesSection,
+  DemoSection,
   PricingSection,
   CTASection,
   Footer,
@@ -37,6 +38,7 @@ export default function HomePage() {
         <HeroSection />
         <StatsSection />
         <FeaturesSection />
+        <DemoSection />
         <PricingSection />
         <CTASection />
         <Footer />

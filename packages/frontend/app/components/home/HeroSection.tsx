@@ -53,7 +53,7 @@ export function HeroSection() {
             Start Free Analysis
           </a>
           <a
-            href="/demo"
+            href="/#demo"
             className="px-6 py-3 rounded-full text-base font-semibold border border-outline text-on-surface hover:bg-surface-container transition-colors duration-200"
           >
             See How It Works

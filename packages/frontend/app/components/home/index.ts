@@ -9,3 +9,4 @@ export { Footer } from './Footer';
 export { AnimatedCounter } from './AnimatedCounter';
 export { JsonLd } from './JsonLd';
 export { FeatureCarousel } from './FeatureCarousel';
+export { DemoSection } from './DemoSection';

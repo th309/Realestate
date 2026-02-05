@@ -1,29 +1,19 @@
 'use client';
 
-// Footer navigation grouped by category for SEO
+// Footer navigation grouped by category
 const FOOTER_NAV = {
-  'For Users': [
-    { label: 'Homebuyers', href: '/homebuyers' },
-    { label: 'Renters', href: '/renters' },
-    { label: 'Investors', href: '/investors' },
-    { label: 'Agents & Brokers', href: '/agents' },
+  'Explore': [
+    { label: 'Interactive Map', href: '/map' },
+    { label: 'Market Analytics', href: '/graphs' },
+    { label: 'Report Builder', href: '/reports' },
   ],
   'Product': [
     { label: 'Features', href: '/#features' },
-    { label: 'Pricing', href: '/#pricing' },
-    { label: 'API Access', href: '/api' },
-    { label: 'Documentation', href: '/docs' },
+    { label: 'See Demo', href: '/#demo' },
+    { label: 'Pricing', href: '/pricing' },
   ],
   'Company': [
     { label: 'About', href: '/about' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Contact', href: '/contact' },
-    { label: 'Careers', href: '/careers' },
-  ],
-  'Legal': [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Data Sources', href: '/data-sources' },
   ],
 };
 

@@ -30,7 +30,7 @@ import {
   TrendingUp,
   Sparkles,
 } from 'lucide-react';
-import Link from 'next/link';
+import { Breadcrumbs } from '@/components/navigation';
 import { useBuilderState, SECTION_TEMPLATES, type BuilderSection } from './hooks/useBuilderState';
 import { SectionLibrary } from './components/SectionLibrary';
 import { Canvas } from './components/Canvas';
@@ -146,14 +146,15 @@ export const Builder: React.FC = () => {
       <div className="h-screen flex flex-col bg-surface overflow-hidden">
         {/* Top Bar */}
         <header className="flex items-center justify-between gap-4 px-4 py-3 bg-surface-container border-b border-outline-variant">
-          {/* Left: Back + Title */}
+          {/* Left: Breadcrumbs + Title */}
           <div className="flex items-center gap-4">
-            <Link
-              href="/reports"
-              className="p-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
-            >
-              <Home className="w-5 h-5" />
-            </Link>
+            <Breadcrumbs
+              items={[
+                { label: 'Reports', href: '/reports' },
+                { label: 'Builder' },
+              ]}
+              className="text-sm"
+            />
             <div className="h-6 w-px bg-outline-variant" />
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />

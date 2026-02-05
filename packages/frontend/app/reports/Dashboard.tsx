@@ -7,6 +7,7 @@ import { PreviewPanel } from './components/preview/PreviewPanel';
 import { ReportHistory } from './components/ReportHistory';
 import { useWizardState } from './hooks/useWizardState';
 import { useReportGeneration } from './hooks/useReportGeneration';
+import { Breadcrumbs } from '@/components/navigation';
 
 export const Dashboard: React.FC = () => {
   const wizardState = useWizardState();
@@ -15,6 +16,9 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-4" />
+
         {/* Page Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 text-primary mb-1">

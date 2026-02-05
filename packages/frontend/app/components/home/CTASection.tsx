@@ -14,10 +14,10 @@ export function CTASection() {
         and agents delivering insights clients trust. Free to start—no credit card required.
       </p>
       <a
-        href="/signup"
+        href="/map"
         className="inline-block px-8 py-4 rounded-full text-base font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200 elevation-2"
       >
-        Create Free Account
+        Start Exploring Free
       </a>
     </section>
   );

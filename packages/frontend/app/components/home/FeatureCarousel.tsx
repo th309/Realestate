@@ -1,282 +1,242 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Map, BarChart3, FileText, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+} from 'recharts';
 
-/**
- * Hero visual showcase - A dynamic dashboard preview with floating accent cards
- * Designed to fill the hero section's right side with engaging visuals
- */
+// Sample data for mini chart
+const MINI_CHART_DATA = [
+  { v: 30 }, { v: 35 }, { v: 32 }, { v: 40 }, { v: 38 },
+  { v: 45 }, { v: 50 }, { v: 48 }, { v: 55 }, { v: 52 },
+  { v: 58 }, { v: 62 },
+];
+
+const FEATURES = [
+  {
+    id: 'map',
+    title: 'Interactive Market Maps',
+    description: 'Explore 384 metros with color-coded market data',
+    icon: Map,
+    href: '/map',
+    preview: 'map',
+  },
+  {
+    id: 'analytics',
+    title: 'Market Analytics',
+    description: 'Track price trends and market indicators',
+    icon: BarChart3,
+    href: '/graphs',
+    preview: 'chart',
+  },
+  {
+    id: 'reports',
+    title: 'Custom Reports',
+    description: 'Build professional reports with drag-and-drop',
+    icon: FileText,
+    href: '/reports',
+    preview: 'report',
+  },
+];
+
+function MiniMapPreview() {
+  return (
+    <svg viewBox="0 0 200 120" className="w-full h-full">
+      <defs>
+        <linearGradient id="heroMapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" className="[stop-color:var(--md-primary)]" stopOpacity="0.1" />
+          <stop offset="100%" className="[stop-color:var(--md-tertiary)]" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+      <rect width="200" height="120" fill="url(#heroMapGrad)" rx="4" />
+      {/* Simplified state shapes */}
+      <g className="opacity-80">
+        <path d="M15,20 L35,18 L40,50 L35,65 L18,62 Z" className="fill-tertiary/50" />
+        <path d="M40,18 L70,15 L75,45 L40,50 Z" className="fill-primary/40" />
+        <path d="M70,15 L100,18 L105,50 L75,45 Z" className="fill-secondary/50" />
+        <path d="M100,18 L130,22 L135,55 L105,50 Z" className="fill-tertiary/40" />
+        <path d="M130,22 L160,28 L155,60 L135,55 Z" className="fill-error/40" />
+        <path d="M160,28 L185,35 L180,65 L155,60 Z" className="fill-primary/60" />
+        <path d="M35,65 L75,55 L80,90 L40,95 Z" className="fill-secondary/40" />
+        <path d="M75,55 L120,50 L130,85 L80,90 Z" className="fill-primary/50" />
+        <path d="M120,50 L155,60 L145,95 L130,85 Z" className="fill-tertiary/50" />
+      </g>
+      {/* Data point indicators */}
+      <circle cx="55" cy="40" r="4" className="fill-primary animate-pulse" />
+      <circle cx="140" cy="45" r="4" className="fill-tertiary animate-pulse" style={{ animationDelay: '0.5s' }} />
+      <circle cx="100" cy="70" r="4" className="fill-secondary animate-pulse" style={{ animationDelay: '1s' }} />
+    </svg>
+  );
+}
+
+function MiniChartPreview() {
+  return (
+    <div className="w-full h-full p-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={MINI_CHART_DATA}>
+          <defs>
+            <linearGradient id="heroChartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--md-primary))" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="hsl(var(--md-primary))" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke="hsl(var(--md-primary))"
+            strokeWidth={2}
+            fill="url(#heroChartGrad)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function MiniReportPreview() {
+  return (
+    <div className="w-full h-full p-3 flex flex-col gap-2">
+      {/* Mini section cards */}
+      {[
+        { label: 'Score Gauge', w: '70%' },
+        { label: 'Market Metrics', w: '85%' },
+        { label: 'Price Trends', w: '60%' },
+      ].map((item, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-2 p-2 bg-surface-container rounded-lg"
+          style={{ animationDelay: `${i * 0.1}s` }}
+        >
+          <div className="w-4 h-4 rounded bg-primary/20" />
+          <div className="h-2 rounded bg-on-surface/10" style={{ width: item.w }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function FeatureCarousel() {
-  const [activeMetric, setActiveMetric] = useState(0);
-  const metrics = ['Home Value', 'Rent Index', 'Cap Rate', 'Growth'];
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveMetric((prev) => (prev + 1) % metrics.length);
-    }, 3000);
+      setActiveIndex((prev) => (prev + 1) % FEATURES.length);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [metrics.length]);
+  }, []);
+
+  const activeFeature = FEATURES[activeIndex];
+
+  const goTo = (index: number) => {
+    setActiveIndex(index);
+  };
+
+  const goNext = () => {
+    setActiveIndex((prev) => (prev + 1) % FEATURES.length);
+  };
+
+  const goPrev = () => {
+    setActiveIndex((prev) => (prev - 1 + FEATURES.length) % FEATURES.length);
+  };
 
   return (
-    <div className="relative w-full max-w-xl lg:max-w-2xl">
-      {/* Decorative background glow */}
-      <div
-        className="absolute inset-0 -z-10 blur-3xl opacity-30"
-        style={{
-          background: 'radial-gradient(ellipse at center, var(--md-primary) 0%, transparent 70%)',
-        }}
-      />
+    <div className="relative w-full max-w-xl">
+      {/* Main card */}
+      <div className="bg-surface rounded-2xl shadow-xl border border-outline-variant/30 overflow-hidden">
+        {/* Preview area */}
+        <div className="h-40 bg-surface-container-low relative">
+          {activeFeature.preview === 'map' && <MiniMapPreview />}
+          {activeFeature.preview === 'chart' && <MiniChartPreview />}
+          {activeFeature.preview === 'report' && <MiniReportPreview />}
 
-      {/* Main dashboard preview */}
-      <div className="relative">
-        {/* Browser window frame */}
-        <div className="rounded-2xl overflow-hidden elevation-4 bg-surface-container border border-outline-variant/30">
-          {/* Browser chrome */}
-          <div className="h-8 bg-surface-container-highest flex items-center px-4 gap-3 border-b border-outline-variant/30">
-            <div className="flex gap-2">
-              <div className="w-3 h-3 rounded-full bg-error/70" />
-              <div className="w-3 h-3 rounded-full bg-tertiary/70" />
-              <div className="w-3 h-3 rounded-full bg-primary/70" />
-            </div>
-            <div className="flex-1 max-w-xs">
-              <div className="h-5 bg-surface-container rounded-full flex items-center px-3 gap-2">
-                <svg className="w-3 h-3 text-on-surface-variant/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-                </svg>
-                <span className="text-xs text-on-surface-variant">propertyiq.com/maps</span>
-              </div>
-            </div>
-          </div>
-
-          {/* App content - Map with sidebar */}
-          <div className="flex h-72 md:h-80 lg:h-96">
-            {/* Sidebar */}
-            <div className="w-48 md:w-56 bg-surface border-r border-outline-variant/30 p-3 flex flex-col">
-              <div className="text-xs font-semibold text-on-surface mb-3">Market Trends</div>
-
-              {/* Metric selector pills */}
-              <div className="flex gap-1 mb-4">
-                <div className="px-2 py-1 text-[10px] rounded-full bg-primary text-on-primary">Investor</div>
-                <div className="px-2 py-1 text-[10px] rounded-full bg-surface-container text-on-surface-variant">Homebuyer</div>
-              </div>
-
-              {/* Score card */}
-              <div className="bg-surface-container rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-10 h-10 rounded-full border-3 border-primary flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">87</span>
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-medium text-on-surface">InvestorEdge</div>
-                    <div className="text-[9px] text-on-surface-variant">Score</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Metric categories */}
-              {['Cash Flow', 'Appreciation', 'Demand & Risk', 'Area Profile'].map((item, i) => (
-                <div
-                  key={item}
-                  className={`flex items-center gap-2 py-2 px-2 rounded-lg mb-1 transition-colors ${
-                    i === 0 ? 'bg-primary-container/50' : 'hover:bg-surface-container'
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded flex items-center justify-center ${
-                    i === 0 ? 'bg-primary/20 text-primary' : 'bg-surface-container text-on-surface-variant'
-                  }`}>
-                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      {i === 0 && <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />}
-                      {i === 1 && <path d="M23 6l-9.5 9.5-5-5L1 18" />}
-                      {i === 2 && <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>}
-                      {i === 3 && <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></>}
-                    </svg>
-                  </div>
-                  <span className="text-[10px] text-on-surface">{item}</span>
-                  <svg className="w-3 h-3 ml-auto text-on-surface-variant" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </div>
-              ))}
-            </div>
-
-            {/* Map area */}
-            <div className="flex-1 relative bg-surface-container-low">
-              {/* Simplified US map */}
-              <svg viewBox="0 0 400 250" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                  <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" className="[stop-color:var(--md-primary)]" stopOpacity="0.1" />
-                    <stop offset="100%" className="[stop-color:var(--md-tertiary)]" stopOpacity="0.1" />
-                  </linearGradient>
-                </defs>
-
-                {/* Background */}
-                <rect width="400" height="250" fill="url(#mapGradient)" />
-
-                {/* State shapes with varying colors */}
-                <g className="opacity-90">
-                  {/* West */}
-                  <path d="M30,40 L70,35 L75,90 L65,120 L35,115 Z" className="fill-tertiary/50 stroke-surface stroke-1" />
-                  <path d="M75,35 L120,30 L130,95 L75,90 Z" className="fill-secondary/40 stroke-surface stroke-1" />
-                  <path d="M35,120 L65,120 L70,160 L40,165 Z" className="fill-primary/60 stroke-surface stroke-1" />
-                  <path d="M70,120 L130,95 L140,155 L70,160 Z" className="fill-error/40 stroke-surface stroke-1" />
-
-                  {/* Central */}
-                  <path d="M130,30 L200,25 L210,80 L130,95 Z" className="fill-primary/50 stroke-surface stroke-1" />
-                  <path d="M200,25 L270,30 L275,85 L210,80 Z" className="fill-tertiary/60 stroke-surface stroke-1" />
-                  <path d="M130,95 L210,80 L220,145 L140,155 Z" className="fill-secondary/50 stroke-surface stroke-1" />
-                  <path d="M210,80 L275,85 L280,150 L220,145 Z" className="fill-primary/40 stroke-surface stroke-1" />
-
-                  {/* East */}
-                  <path d="M275,30 L340,40 L350,100 L275,85 Z" className="fill-error/50 stroke-surface stroke-1" />
-                  <path d="M340,40 L380,50 L375,110 L350,100 Z" className="fill-secondary/60 stroke-surface stroke-1" />
-                  <path d="M275,85 L350,100 L360,165 L280,150 Z" className="fill-tertiary/40 stroke-surface stroke-1" />
-                  <path d="M350,100 L375,110 L370,170 L360,165 Z" className="fill-primary/70 stroke-surface stroke-1" />
-
-                  {/* South */}
-                  <path d="M140,155 L220,145 L230,210 L150,215 Z" className="fill-secondary/45 stroke-surface stroke-1" />
-                  <path d="M220,145 L280,150 L290,205 L230,210 Z" className="fill-error/35 stroke-surface stroke-1" />
-                  <path d="M280,150 L360,165 L355,200 L290,205 Z" className="fill-primary/55 stroke-surface stroke-1" />
-                </g>
-
-                {/* State labels with values */}
-                <g className="text-[8px] font-medium fill-on-surface">
-                  <text x="52" y="80"><tspan className="font-semibold">CA</tspan></text>
-                  <text x="48" y="92" className="text-[7px] fill-on-surface-variant">$699K</text>
-
-                  <text x="160" y="60"><tspan className="font-semibold">CO</tspan></text>
-                  <text x="156" y="72" className="text-[7px] fill-on-surface-variant">$549K</text>
-
-                  <text x="240" y="60"><tspan className="font-semibold">IL</tspan></text>
-                  <text x="232" y="72" className="text-[7px] fill-on-surface-variant">$287K</text>
-
-                  <text x="315" y="75"><tspan className="font-semibold">NY</tspan></text>
-                  <text x="311" y="87" className="text-[7px] fill-on-surface-variant">$649K</text>
-
-                  <text x="355" y="140"><tspan className="font-semibold">FL</tspan></text>
-                  <text x="351" y="152" className="text-[7px] fill-on-surface-variant">$425K</text>
-
-                  <text x="180" y="185"><tspan className="font-semibold">TX</tspan></text>
-                  <text x="173" y="197" className="text-[7px] fill-on-surface-variant">$350K</text>
-                </g>
-              </svg>
-
-              {/* Legend overlay */}
-              <div className="absolute bottom-3 left-3 bg-surface/95 rounded-lg px-3 py-2 elevation-1">
-                <div className="text-[9px] font-medium text-on-surface mb-1.5">{metrics[activeMetric]}</div>
-                <div className="flex items-center gap-1">
-                  {['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-error/70'].map((color, i) => (
-                    <div key={i} className={`w-5 h-2.5 ${color} rounded-sm`} />
-                  ))}
-                </div>
-                <div className="flex justify-between text-[7px] text-on-surface-variant mt-0.5">
-                  <span>$245K</span>
-                  <span>$700K+</span>
-                </div>
-              </div>
-
-              {/* Geo level selector */}
-              <div className="absolute top-3 right-3 flex gap-1 bg-surface/95 rounded-lg p-1 elevation-1">
-                {['State', 'Metro', 'County', 'Zip'].map((level, i) => (
-                  <div
-                    key={level}
-                    className={`px-2 py-1 text-[9px] rounded transition-colors ${
-                      i === 0 ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
-                    }`}
-                  >
-                    {level}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* Navigation arrows */}
+          <button
+            onClick={goPrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-surface/80 hover:bg-surface shadow-md transition-colors"
+            aria-label="Previous feature"
+          >
+            <ChevronLeft className="w-4 h-4 text-on-surface" />
+          </button>
+          <button
+            onClick={goNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-surface/80 hover:bg-surface shadow-md transition-colors"
+            aria-label="Next feature"
+          >
+            <ChevronRight className="w-4 h-4 text-on-surface" />
+          </button>
         </div>
 
-        {/* Floating accent cards */}
-        {/* Top-right: Quick stat */}
-        <div className="absolute -top-4 -right-4 md:-right-8 bg-surface rounded-xl p-3 elevation-3 border border-outline-variant/20 animate-float">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M23 6l-9.5 9.5-5-5L1 18" />
-                <path d="M17 6h6v6" />
-              </svg>
+        {/* Content */}
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-primary-container">
+              <activeFeature.icon className="w-5 h-5 text-on-primary-container" />
             </div>
-            <div>
-              <div className="text-lg font-bold text-primary">+12.4%</div>
-              <div className="text-[10px] text-on-surface-variant">YoY Growth</div>
-            </div>
+            <h3 className="text-lg font-semibold text-on-surface">{activeFeature.title}</h3>
           </div>
+          <p className="text-sm text-on-surface-variant mb-4">{activeFeature.description}</p>
+          <Link
+            href={activeFeature.href}
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            Try it now
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
 
-        {/* Bottom-left: Score preview */}
-        <div className="absolute -bottom-6 -left-4 md:-left-8 bg-surface rounded-xl p-3 elevation-3 border border-outline-variant/20 animate-float-delayed">
-          <div className="flex items-center gap-3">
-            <svg width="52" height="52" viewBox="0 0 52 52">
-              <circle cx="26" cy="26" r="22" fill="none" className="stroke-outline-variant/30" strokeWidth="4" />
-              <circle
-                cx="26"
-                cy="26"
-                r="22"
-                fill="none"
-                stroke="hsl(104, 70%, 45%)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 22}
-                strokeDashoffset={2 * Math.PI * 22 * 0.13}
-                transform="rotate(-90 26 26)"
-              />
-              <text x="26" y="26" textAnchor="middle" dominantBaseline="middle" className="text-sm font-bold" fill="hsl(104, 70%, 40%)">
-                87
-              </text>
-            </svg>
-            <div>
-              <div className="text-xs font-semibold text-on-surface">HomeReady</div>
-              <div className="text-[10px] text-on-surface-variant">Great for families</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right side: Mini chart */}
-        <div className="absolute top-1/3 -right-3 md:-right-6 bg-surface rounded-xl p-2.5 elevation-3 border border-outline-variant/20 animate-float-slow hidden md:block">
-          <div className="text-[9px] font-medium text-on-surface-variant mb-1">Rent Trend</div>
-          <svg viewBox="0 0 80 35" className="w-20 h-9">
-            <path
-              d="M0,30 Q15,28 25,22 T50,15 T80,5"
-              fill="none"
-              className="stroke-secondary"
-              strokeWidth="2"
-              strokeLinecap="round"
+        {/* Dots navigation */}
+        <div className="flex justify-center gap-2 pb-4">
+          {FEATURES.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goTo(index)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                index === activeIndex
+                  ? 'bg-primary w-6'
+                  : 'bg-on-surface/20 hover:bg-on-surface/40'
+              }`}
+              aria-label={`Go to feature ${index + 1}`}
             />
-            <circle cx="80" cy="5" r="3" className="fill-secondary" />
-          </svg>
+          ))}
         </div>
       </div>
 
-      {/* Add floating animation styles */}
+      {/* Floating accent cards */}
+      <div className="absolute -top-3 -right-3 bg-surface rounded-xl p-2.5 shadow-lg border border-outline-variant/20 animate-bounce-slow">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span className="text-sm font-bold text-primary">87</span>
+          </div>
+          <div>
+            <div className="text-[10px] font-medium text-on-surface">HomeReady</div>
+            <div className="text-[9px] text-on-surface-variant">Score</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute -bottom-2 -left-3 bg-surface rounded-xl p-2.5 shadow-lg border border-outline-variant/20 animate-bounce-slow" style={{ animationDelay: '0.5s' }}>
+        <div className="flex items-center gap-2">
+          <svg className="w-8 h-8 text-green-500" viewBox="0 0 32 32">
+            <path d="M4,20 L12,14 L18,18 L28,8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <div>
+            <div className="text-sm font-bold text-green-600">+12.4%</div>
+            <div className="text-[9px] text-on-surface-variant">YoY Growth</div>
+          </div>
+        </div>
+      </div>
+
       <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
-        @keyframes float-slow {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
-        }
-        .animate-float-delayed {
-          animation: float-delayed 4.5s ease-in-out infinite;
-          animation-delay: 0.5s;
-        }
-        .animate-float-slow {
-          animation: float-slow 5s ease-in-out infinite;
-          animation-delay: 1s;
+        .animate-bounce-slow {
+          animation: bounce-slow 3s ease-in-out infinite;
         }
       `}</style>
     </div>
