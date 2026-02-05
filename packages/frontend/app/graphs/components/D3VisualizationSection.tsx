@@ -116,6 +116,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   const [colorMetric, setColorMetric] = useState('market_heat');
   const [distributionMetric, setDistributionMetric] = useState('home_value');
 
+  // Multi-select for heatmap and correlation (default to first 6 metrics)
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(
+    SCATTER_METRICS.slice(0, 6).map(m => m.id)
+  );
+
   // Data state
   const [metricDataCache, setMetricDataCache] = useState<Record<string, MetricData>>({});
   const [loading, setLoading] = useState(false);
@@ -158,11 +163,11 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
         return [xMetric, yMetric]; // size and color
       case 'heatmap':
       case 'correlation':
-        return SCATTER_METRICS.slice(0, 6).map(m => m.id); // First 6 metrics
+        return selectedMetrics;
       default:
         return [];
     }
-  }, [visualizationType, xMetric, yMetric, sizeMetric, colorMetric, distributionMetric]);
+  }, [visualizationType, xMetric, yMetric, sizeMetric, colorMetric, distributionMetric, selectedMetrics]);
 
   // Fetch data for required metrics
   useEffect(() => {
@@ -330,7 +335,12 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
   // Transform data for heatmap
   const heatmapData = useMemo((): HeatmapDataPoint[] => {
-    const metricsForHeatmap = SCATTER_METRICS.slice(0, 6);
+    const metricsForHeatmap = selectedMetrics
+      .map(id => SCATTER_METRICS.find(m => m.id === id))
+      .filter((m): m is typeof SCATTER_METRICS[0] => !!m);
+
+    if (metricsForHeatmap.length === 0) return [];
+
     const regions = new Set<string>();
 
     // Find common regions
@@ -340,14 +350,14 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
     });
 
     const result: HeatmapDataPoint[] = [];
-    const regionList = Array.from(regions).slice(0, 15); // Limit regions
+    const regionList = Array.from(regions).slice(0, 20); // Limit regions
 
     regionList.forEach(region => {
       metricsForHeatmap.forEach(m => {
         const value = metricDataCache[m.id]?.[region]?.value;
         if (value != null) {
           result.push({
-            x: m.label.replace(/\s+/g, '\n').substring(0, 15),
+            x: m.label.substring(0, 12),
             y: region.substring(0, 20),
             value,
           });
@@ -356,11 +366,16 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
     });
 
     return result;
-  }, [metricDataCache]);
+  }, [metricDataCache, selectedMetrics]);
 
   // Transform data for correlation matrix
   const correlationData = useMemo((): CorrelationMetric[] => {
-    const metricsForCorr = SCATTER_METRICS.slice(0, 6);
+    const metricsForCorr = selectedMetrics
+      .map(id => SCATTER_METRICS.find(m => m.id === id))
+      .filter((m): m is typeof SCATTER_METRICS[0] => !!m);
+
+    if (metricsForCorr.length < 2) return [];
+
     const regions = new Set<string>();
 
     // Find common regions
@@ -373,10 +388,10 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
     return metricsForCorr.map(m => ({
       id: m.id,
-      label: m.label.substring(0, 15),
+      label: m.label.substring(0, 12),
       values: regionList.map(r => metricDataCache[m.id]?.[r]?.value ?? 0),
     })).filter(m => m.values.some(v => v !== 0));
-  }, [metricDataCache]);
+  }, [metricDataCache, selectedMetrics]);
 
   // Get format for metric
   const getMetricFormat = (metricId: string) => {
@@ -562,6 +577,48 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
               onChange={setYMetric}
               options={SCATTER_METRICS}
             />
+          </div>
+        );
+      case 'heatmap':
+      case 'correlation':
+        return (
+          <div className="mb-4">
+            <label className="text-xs font-medium text-on-surface-variant mb-2 block">
+              Select Metrics to Compare ({selectedMetrics.length} selected, min 2)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SCATTER_METRICS.map((m) => {
+                const isSelected = selectedMetrics.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      if (isSelected) {
+                        // Don't allow less than 2 metrics
+                        if (selectedMetrics.length > 2) {
+                          setSelectedMetrics(prev => prev.filter(id => id !== m.id));
+                        }
+                      } else {
+                        // Max 8 metrics for readability
+                        if (selectedMetrics.length < 8) {
+                          setSelectedMetrics(prev => [...prev, m.id]);
+                        }
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isSelected
+                        ? 'bg-primary text-on-primary'
+                        : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                    } ${!isSelected && selectedMetrics.length >= 8 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-on-surface-variant mt-2">
+              Click to toggle metrics. {visualizationType === 'heatmap' ? 'Shows values across regions.' : 'Shows correlation strength between metrics.'}
+            </p>
           </div>
         );
       default:
