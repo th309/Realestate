@@ -21,7 +21,7 @@ import {
   CorrelationMatrix,
 } from '@/lib/visualizations/d3';
 import { M3Card } from './M3Card';
-import { fetchSnapshotData, getMetricTitle, type GeoLevel } from '@/lib/data';
+import { fetchSnapshotData, getMetricTitle, getMetricFormat, METRICS, type GeoLevel } from '@/lib/data';
 import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 import type { ScatterDataPoint, BoxPlotDataPoint, HeatmapDataPoint, TreemapNode, CorrelationMetric } from '../hooks/useMultiMetricData';
 
@@ -66,23 +66,13 @@ const visualizationTypes = [
   },
 ];
 
-// Metrics available for visualization - organized by category
-const SCATTER_METRICS = [
-  { id: 'home_value', label: 'Median Home Value', format: 'currency' as const },
-  { id: 'listing_price', label: 'Listing Price', format: 'currency' as const },
-  { id: 'price_per_sqft', label: 'Price per Sq Ft', format: 'currency' as const },
-  { id: 'rent_index', label: 'Rent Index', format: 'currency' as const },
-  { id: 'home_value_yoy', label: 'Price Change (YoY)', format: 'percent' as const },
-  { id: 'home_value_5yr', label: 'Price Change (5Y)', format: 'percent' as const },
-  { id: 'days_on_market', label: 'Days on Market', format: 'number' as const },
-  { id: 'for_sale_inventory', label: 'Inventory', format: 'number' as const },
-  { id: 'market_heat', label: 'Market Heat Index', format: 'number' as const },
-  { id: 'cap_rate', label: 'Cap Rate', format: 'percent' as const },
-  { id: 'gross_yield', label: 'Gross Yield', format: 'percent' as const },
-  { id: 'sale_to_list', label: 'Sale-to-List Ratio', format: 'percent' as const },
-  { id: 'price_cut_pct', label: 'Price Cut %', format: 'percent' as const },
-  { id: 'homeowner_affordability', label: 'Homeowner Affordability', format: 'number' as const },
-];
+// Build metrics list dynamically from the registry
+const ALL_METRICS = Object.entries(METRICS).map(([id, config]) => ({
+  id,
+  label: config.title,
+  format: (config.format === 'currency' ? 'currency' :
+           config.format === 'percent' ? 'percent' : 'number') as 'currency' | 'percent' | 'number',
+})).sort((a, b) => a.label.localeCompare(b.label));
 
 // Categories for bubble colors
 const CATEGORY_THRESHOLDS = {
@@ -112,7 +102,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
   // Filter metrics based on what's available at the current geo level
   const availableMetrics = useMemo(() => {
-    return SCATTER_METRICS.filter(m => isMetricAvailableForGeo(m.id, geoLevel));
+    return ALL_METRICS.filter(m => isMetricAvailableForGeo(m.id, geoLevel));
   }, [geoLevel]);
 
   // Metric selections - use first available metric as defaults
@@ -375,8 +365,8 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   // Transform data for heatmap
   const heatmapData = useMemo((): HeatmapDataPoint[] => {
     const metricsForHeatmap = selectedMetrics
-      .map(id => SCATTER_METRICS.find(m => m.id === id))
-      .filter((m): m is typeof SCATTER_METRICS[0] => !!m);
+      .map(id => ALL_METRICS.find(m => m.id === id))
+      .filter((m): m is typeof ALL_METRICS[0] => !!m);
 
     if (metricsForHeatmap.length === 0) return [];
 
@@ -410,8 +400,8 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
   // Transform data for correlation matrix
   const correlationData = useMemo((): CorrelationMetric[] => {
     const metricsForCorr = selectedMetrics
-      .map(id => SCATTER_METRICS.find(m => m.id === id))
-      .filter((m): m is typeof SCATTER_METRICS[0] => !!m);
+      .map(id => ALL_METRICS.find(m => m.id === id))
+      .filter((m): m is typeof ALL_METRICS[0] => !!m);
 
     if (metricsForCorr.length < 2) return [];
 
@@ -434,7 +424,7 @@ export const D3VisualizationSection: React.FC<D3VisualizationSectionProps> = ({
 
   // Get format for metric
   const getMetricFormat = (metricId: string) => {
-    return SCATTER_METRICS.find(m => m.id === metricId)?.format ?? 'number';
+    return ALL_METRICS.find(m => m.id === metricId)?.format ?? 'number';
   };
 
   const renderVisualization = () => {
