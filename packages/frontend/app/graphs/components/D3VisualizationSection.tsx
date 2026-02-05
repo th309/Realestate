@@ -67,11 +67,14 @@ const visualizationTypes = [
 ];
 
 // Build metrics list dynamically from the registry
+// For percent metrics with asPercent: true, the fetcher already multiplied by 100,
+// so we use 'percentAbs' (just adds %) instead of 'percent' (which would multiply by 100 again)
 const ALL_METRICS = Object.entries(METRICS).map(([id, config]) => ({
   id,
   label: config.title,
   format: (config.format === 'currency' ? 'currency' :
-           config.format === 'percent' ? 'percent' : 'number') as 'currency' | 'percent' | 'number',
+           config.format === 'percent' ? (config.asPercent ? 'percentAbs' : 'percent') :
+           'number') as 'currency' | 'percent' | 'percentAbs' | 'number',
 })).sort((a, b) => a.label.localeCompare(b.label));
 
 // Categories for bubble colors
