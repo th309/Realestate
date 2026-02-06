@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
-import { useDataCardBatch, type GeoLevel } from '@/lib/data';
+import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -298,14 +298,18 @@ export function MarketDashboard({
     return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
   }, [activeView]);
 
-  // Extract all metric IDs to fetch
+  // Extract all metric IDs to fetch (filtered by supported geo level)
   const metricIds = useMemo(() => {
     const ids = new Set<string>();
     categories.forEach(cat => {
-      cat.metrics?.slice(0, 4).forEach(m => ids.add(m.id));
+      cat.metrics?.slice(0, 4).forEach(m => {
+        if (isMetricSupportedForGeo(m.id, geographyType as GeoLevel)) {
+          ids.add(m.id);
+        }
+      });
     });
     return Array.from(ids);
-  }, [categories]);
+  }, [categories, geographyType]);
 
   // Fetch metric data using the data layer hook
   const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
@@ -478,7 +482,7 @@ export function MarketDashboard({
                     categoryName={category.name}
                     subtext={category.subtext}
                     icon={category.icon}
-                    metricIds={category.metrics?.map(m => m.id) ?? []}
+                    metricIds={category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? []}
                     factorsData={factorsData}
                     factorsLoading={factorsLoading}
                     delay={catIndex * 0.15}
