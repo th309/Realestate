@@ -182,10 +182,12 @@ export class ReportsService {
         geoType,
       );
 
-      // 1b. Fetch market metrics for AI context
+      // 1b. Fetch market metrics for AI context (based on template requirements)
+      const requiredMetrics = template.config?.data_requirements?.current_metrics || [];
       const marketMetrics = await this.fetchMarketMetrics(
         dto.primary_geography.id,
         geoType,
+        requiredMetrics,
       );
 
       // 2. Scout news via Gemini (with caching)
@@ -627,128 +629,155 @@ export class ReportsService {
 
   /**
    * Fetch market metrics for a geography to populate AI context
+   * @param geographyId - The geography ID (CBSA code, FIPS, or ZIP)
+   * @param geographyType - Type of geography
+   * @param requiredMetrics - Optional list of specific metrics to fetch (from template.config.data_requirements.current_metrics)
+   *                          If empty/undefined, fetches all available metrics
    */
   private async fetchMarketMetrics(
     geographyId: string,
     geographyType: 'metro' | 'county' | 'zip',
+    requiredMetrics?: string[],
   ): Promise<MarketMetrics> {
     const client = this.supabase.getClient();
     const metrics: MarketMetrics = {};
+
+    // Helper to check if a metric should be fetched
+    const shouldFetch = (metricName: string): boolean => {
+      // If no specific requirements, fetch everything
+      if (!requiredMetrics || requiredMetrics.length === 0) return true;
+      // Check if this metric or its category is required
+      return requiredMetrics.some(req =>
+        metricName.includes(req) || req.includes(metricName) || req === '*'
+      );
+    };
 
     try {
       // Fetch based on geography type
       if (geographyType === 'metro') {
         // Get Realtor metro data (median price, days on market, inventory)
-        const { data: realtorData } = await client
-          .from('realtor_metro')
-          .select('*')
-          .eq('cbsa_code', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
+        if (shouldFetch('realtor') || shouldFetch('median_listing_price') || shouldFetch('days_on_market') || shouldFetch('inventory') || shouldFetch('hotness')) {
+          const { data: realtorData } = await client
+            .from('realtor_metro')
+            .select('*')
+            .eq('cbsa_code', geographyId)
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (realtorData) {
-          metrics.median_listing_price = realtorData.median_listing_price;
-          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
-          metrics.days_on_market = realtorData.median_days_on_market;
-          metrics.active_listing_count = realtorData.active_listing_count;
-          metrics.inventory_yoy = realtorData.active_listing_count_yy;
-          metrics.pending_ratio = realtorData.pending_ratio;
-          metrics.price_reduced_share = realtorData.price_reduced_share;
-          metrics.hotness_score = realtorData.hotness_score;
-          metrics.demand_score = realtorData.demand_score;
+          if (realtorData) {
+            metrics.median_listing_price = realtorData.median_listing_price;
+            metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
+            metrics.days_on_market = realtorData.median_days_on_market;
+            metrics.active_listing_count = realtorData.active_listing_count;
+            metrics.inventory_yoy = realtorData.active_listing_count_yy;
+            metrics.pending_ratio = realtorData.pending_ratio;
+            metrics.price_reduced_share = realtorData.price_reduced_share;
+            metrics.hotness_score = realtorData.hotness_score;
+            metrics.demand_score = realtorData.demand_score;
+          }
         }
 
         // Get Zillow ZHVI data
-        const { data: zhviData } = await client
-          .from('zillow_metro')
-          .select('value')
-          .eq('region_id', geographyId)
-          .eq('metric_name', 'zhvi')
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
+        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
+          const { data: zhviData } = await client
+            .from('zillow_metro')
+            .select('value')
+            .eq('region_id', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (zhviData) {
-          metrics.zhvi = zhviData.value;
+          if (zhviData) {
+            metrics.zhvi = zhviData.value;
+          }
         }
 
         // Get YoY ZHVI change (compare current to 12 months ago)
-        const { data: zhviHistory } = await client
-          .from('zillow_metro')
-          .select('value, period_date')
-          .eq('region_id', geographyId)
-          .eq('metric_name', 'zhvi')
-          .order('period_date', { ascending: false })
-          .limit(13);
+        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
+          const { data: zhviHistory } = await client
+            .from('zillow_metro')
+            .select('value, period_date')
+            .eq('region_id', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(13);
 
-        if (zhviHistory && zhviHistory.length >= 12) {
-          const current = zhviHistory[0]?.value;
-          const yearAgo = zhviHistory[12]?.value;
-          if (current && yearAgo) {
-            metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+          if (zhviHistory && zhviHistory.length >= 12) {
+            const current = zhviHistory[0]?.value;
+            const yearAgo = zhviHistory[12]?.value;
+            if (current && yearAgo) {
+              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+            }
           }
         }
 
         // Get ZORI (rent) data
-        const { data: zoriData } = await client
-          .from('zillow_zori')
-          .select('value')
-          .eq('region_id', geographyId)
-          .eq('geography', 'Metro')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single();
+        if (shouldFetch('zori') || shouldFetch('rent')) {
+          const { data: zoriData } = await client
+            .from('zillow_zori')
+            .select('value')
+            .eq('region_id', geographyId)
+            .eq('geography', 'Metro')
+            .order('date', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (zoriData) {
-          metrics.zori = zoriData.value;
+          if (zoriData) {
+            metrics.zori = zoriData.value;
+          }
         }
 
         // Get calculated metrics (cap rate, GRM, etc.)
-        const { data: calcMetrics } = await client
-          .from('calculated_metrics')
-          .select('*')
-          .eq('geography_id', geographyId)
-          .eq('geography_type', 'metro')
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
+        if (shouldFetch('cap_rate') || shouldFetch('gross_yield') || shouldFetch('grm') || shouldFetch('investment')) {
+          const { data: calcMetrics } = await client
+            .from('calculated_metrics')
+            .select('*')
+            .eq('geography_id', geographyId)
+            .eq('geography_type', 'metro')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (calcMetrics) {
-          metrics.cap_rate = calcMetrics.cap_rate;
-          metrics.gross_yield = calcMetrics.gross_yield;
-          metrics.grm = calcMetrics.grm;
-          metrics.overvalued_pct = calcMetrics.overvalued_pct;
-          metrics.affordability_ratio = calcMetrics.affordability_ratio;
+          if (calcMetrics) {
+            metrics.cap_rate = calcMetrics.cap_rate;
+            metrics.gross_yield = calcMetrics.gross_yield;
+            metrics.grm = calcMetrics.grm;
+            metrics.overvalued_pct = calcMetrics.overvalued_pct;
+            metrics.affordability_ratio = calcMetrics.affordability_ratio;
+          }
         }
 
         // Get Census data
-        const { data: incomeData } = await client
-          .from('census_data')
-          .select('value')
-          .eq('geography_id', geographyId)
-          .eq('geography_type', 'metro')
-          .eq('metric_name', 'median_income')
-          .order('year', { ascending: false })
-          .limit(1)
-          .single();
+        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
+          const { data: incomeData } = await client
+            .from('census_data')
+            .select('value')
+            .eq('geography_id', geographyId)
+            .eq('geography_type', 'metro')
+            .eq('metric_name', 'median_income')
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (incomeData) {
-          metrics.median_income = incomeData.value;
-        }
+          if (incomeData) {
+            metrics.median_income = incomeData.value;
+          }
 
-        const { data: popData } = await client
-          .from('census_data')
-          .select('value')
-          .eq('geography_id', geographyId)
-          .eq('geography_type', 'metro')
-          .eq('metric_name', 'population')
-          .order('year', { ascending: false })
-          .limit(1)
-          .single();
+          const { data: popData } = await client
+            .from('census_data')
+            .select('value')
+            .eq('geography_id', geographyId)
+            .eq('geography_type', 'metro')
+            .eq('metric_name', 'population')
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
 
-        if (popData) {
-          metrics.population = popData.value;
+          if (popData) {
+            metrics.population = popData.value;
+          }
         }
       } else if (geographyType === 'county') {
         // Get Realtor county data
