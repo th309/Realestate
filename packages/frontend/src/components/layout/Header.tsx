@@ -6,12 +6,13 @@ import { usePathname } from 'next/navigation';
 import {
     MenuIcon, CloseIcon, PersonIcon, SettingsIcon, CreditCardIcon,
     BookIcon, HierarchyIcon, HelpIcon, LogoutIcon, HomeIcon,
-    MapIcon, TrendingIcon, ArticleIcon, InfoIcon, MoneyIcon
+    MapIcon, TrendingIcon, ArticleIcon, InfoIcon, MoneyIcon, MarketsIcon
 } from '@/src/components/common/Icons';
 
 const NAV_LINKS = [
     { name: 'Home', href: '/', icon: HomeIcon },
     { name: 'Maps', href: '/map', icon: MapIcon },
+    { name: 'Markets', href: '/market', icon: MarketsIcon },
     { name: 'Graphs', href: '/graphs', icon: TrendingIcon },
     { name: 'Reports', href: '/reports', icon: ArticleIcon },
     { name: 'About us', href: '/about', icon: InfoIcon },

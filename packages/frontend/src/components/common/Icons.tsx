@@ -143,6 +143,12 @@ export const ScoreIcon = ({ className = "w-5 h-5" }: { className?: string }) => 
     </svg>
 );
 
+export const MarketsIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" className={className}>
+        <path d="M280-280h80v-200h-80v200Zm160 0h80v-400h-80v400Zm160 0h80v-280h-80v280ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z" />
+    </svg>
+);
+
 export const ChevronLeftIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
