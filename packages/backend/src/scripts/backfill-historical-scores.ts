@@ -79,23 +79,28 @@ function pad2(value: number): string {
   return value.toString().padStart(2, '0');
 }
 
-function formatMonthStart(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-01`;
+function parseDateUtc(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+}
+
+function formatMonthStartUtc(date: Date): string {
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-01`;
 }
 
 function generateMonthlyDates(startDate: string, endDate: string): string[] {
   const dates: string[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseDateUtc(startDate);
+  const end = parseDateUtc(endDate);
 
   // Normalize to first of month
-  start.setDate(1);
-  end.setDate(1);
+  start.setUTCDate(1);
+  end.setUTCDate(1);
 
   const current = new Date(start);
   while (current <= end) {
-    dates.push(formatMonthStart(current));
-    current.setMonth(current.getMonth() + 1);
+    dates.push(formatMonthStartUtc(current));
+    current.setUTCMonth(current.getUTCMonth() + 1);
   }
 
   return dates;
@@ -107,40 +112,40 @@ function generateMonthlyDates(startDate: string, endDate: string): string[] {
  */
 function generateQuarterlyDates(startDate: string, endDate: string): string[] {
   const dates: string[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseDateUtc(startDate);
+  const end = parseDateUtc(endDate);
 
   // Normalize to first of month
-  start.setDate(1);
-  end.setDate(1);
+  start.setUTCDate(1);
+  end.setUTCDate(1);
 
-  const startQuarterMonth = Math.floor(start.getMonth() / 3) * 3;
-  const quarterStart = new Date(start.getFullYear(), startQuarterMonth, 1);
+  const startQuarterMonth = Math.floor(start.getUTCMonth() / 3) * 3;
+  const quarterStart = new Date(Date.UTC(start.getUTCFullYear(), startQuarterMonth, 1));
   if (quarterStart < start) {
-    quarterStart.setMonth(quarterStart.getMonth() + 3);
+    quarterStart.setUTCMonth(quarterStart.getUTCMonth() + 3);
   }
 
   const current = new Date(quarterStart);
   while (current <= end) {
-    dates.push(formatMonthStart(current));
-    current.setMonth(current.getMonth() + 3);
+    dates.push(formatMonthStartUtc(current));
+    current.setUTCMonth(current.getUTCMonth() + 3);
   }
 
   return dates;
 }
 
 function normalizeToMonthStart(dateStr: string): string {
-  const date = new Date(dateStr);
-  date.setDate(1);
-  return formatMonthStart(date);
+  const date = parseDateUtc(dateStr);
+  date.setUTCDate(1);
+  return formatMonthStartUtc(date);
 }
 
 function getDefaultStartDate(endDate: string, years: number): string {
-  const end = new Date(endDate);
-  end.setDate(1);
+  const end = parseDateUtc(endDate);
+  end.setUTCDate(1);
   const start = new Date(end);
-  start.setFullYear(start.getFullYear() - years);
-  return formatMonthStart(start);
+  start.setUTCFullYear(start.getUTCFullYear() - years);
+  return formatMonthStartUtc(start);
 }
 
 /**
@@ -155,6 +160,14 @@ function formatElapsed(ms: number): string {
 }
 
 async function main() {
+  // Silence analytics warm-cache noise for long backfills unless explicitly enabled.
+  if (!process.env.QUINN_CACHE_WARM_ON_STARTUP) {
+    process.env.QUINN_CACHE_WARM_ON_STARTUP = 'false';
+  }
+  if (!process.env.ANALYTICS_TOOLS_ENABLED) {
+    process.env.ANALYTICS_TOOLS_ENABLED = 'false';
+  }
+
   const args = parseArgs();
   const normalizedEndDate = normalizeToMonthStart(args.endDate);
   const startDate = args.startDate

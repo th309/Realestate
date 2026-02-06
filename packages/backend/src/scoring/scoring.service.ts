@@ -134,19 +134,8 @@ export class ScoringService {
       }
     }
 
-    // 7. Save all scores to database
-    let calculated = 0;
-    let errors = 0;
-
-    for (const result of allResults) {
-      try {
-        await this.saveScore(result, targetDate);
-        calculated++;
-      } catch (err) {
-        errors++;
-        console.error(`Error saving score for ${result.location_id}:`, err);
-      }
-    }
+    // 7. Save all scores to database (batch + retry for reliability)
+    const { calculated, errors } = await this.saveScoresBatch(allResults, targetDate);
 
     return { calculated, errors, scoreDate: targetDate };
   }
@@ -848,11 +837,28 @@ export class ScoringService {
     const idCol = this.getIdColumn(geography);
     const nameCol = this.getNameColumn(geography);
 
-    // Fetch Realtor data
-    const { data: realtorData } = await this.supabase
-      .from(table)
-      .select(`${idCol}, ${nameCol}, hotness_score, demand_score, pending_ratio, price_reduced_share, active_listing_count_yy, price_reduced_count_yy, median_listing_price`)
-      .eq('period_date', periodDate);
+    // Fetch Realtor data (paginated to avoid Supabase 1000 row limit)
+    const pageSize = 1000;
+    const realtorData: Array<Record<string, any>> = [];
+    let page = 0;
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await this.supabase
+        .from(table)
+        .select(`${idCol}, ${nameCol}, hotness_score, demand_score, pending_ratio, price_reduced_share, active_listing_count_yy, price_reduced_count_yy, median_listing_price`)
+        .eq('period_date', periodDate)
+        .order(idCol, { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        throw new Error(`Failed to fetch realtor data: ${error.message}`);
+      }
+      if (!data || data.length === 0) break;
+      realtorData.push(...data);
+      if (data.length < pageSize) break;
+      page += 1;
+    }
 
     if (!realtorData || realtorData.length === 0) return [];
 
@@ -898,12 +904,22 @@ export class ScoringService {
     // Get the year from periodDate for census (annual data)
     const year = new Date(periodDate).getFullYear();
 
-    const { data } = await this.supabase
-      .from(table)
-      .select(`${idCol}, population_yoy, median_gross_rent, homeownership_rate`)
-      .eq('year', year);
+    const pageSize = 1000;
+    let page = 0;
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await this.supabase
+        .from(table)
+        .select(`${idCol}, population_yoy, median_gross_rent, homeownership_rate`)
+        .eq('year', year)
+        .order(idCol, { ascending: true })
+        .range(from, to);
 
-    if (data) {
+      if (error) {
+        throw new Error(`Failed to fetch census data: ${error.message}`);
+      }
+      if (!data || data.length === 0) break;
       for (const row of data) {
         const location = locationsMap.get(row[idCol]);
         if (location) {
@@ -912,6 +928,8 @@ export class ScoringService {
           location.homeownership_rate = row.homeownership_rate;
         }
       }
+      if (data.length < pageSize) break;
+      page += 1;
     }
   }
 
@@ -926,18 +944,30 @@ export class ScoringService {
     const table = geography === 'metro' ? 'economic_metro' : 'economic_county';
     const idCol = geography === 'metro' ? 'cbsa_code' : 'fips_code';
 
-    const { data } = await this.supabase
-      .from(table)
-      .select(`${idCol}, unemployment_rate_yoy`)
-      .eq('period_date', periodDate);
+    const pageSize = 1000;
+    let page = 0;
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await this.supabase
+        .from(table)
+        .select(`${idCol}, unemployment_rate_yoy`)
+        .eq('period_date', periodDate)
+        .order(idCol, { ascending: true })
+        .range(from, to);
 
-    if (data) {
+      if (error) {
+        throw new Error(`Failed to fetch economic data: ${error.message}`);
+      }
+      if (!data || data.length === 0) break;
       for (const row of data) {
         const location = locationsMap.get(row[idCol]);
         if (location) {
           location.unemployment_rate_yoy = row.unemployment_rate_yoy;
         }
       }
+      if (data.length < pageSize) break;
+      page += 1;
     }
   }
 
@@ -1231,12 +1261,20 @@ export class ScoringService {
    * Save score to database
    */
   private async saveScore(result: ScoreResult, scoreDate: string): Promise<void> {
-    // Insert/update all three score types
-    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
-      const scoreData = result.scores[scoreType];
+    const rows = this.buildScoreRows([result], scoreDate);
+    const ok = await this.upsertScoresWithRetry(rows);
+    if (!ok) {
+      throw new Error(`Failed to save score for ${result.location_id}`);
+    }
+  }
 
-      const { error } = await this.supabase.from('propertyiq_scores').upsert(
-        {
+  private buildScoreRows(results: ScoreResult[], scoreDate: string): Array<Record<string, any>> {
+    const rows: Array<Record<string, any>> = [];
+    const createdAt = new Date().toISOString();
+    for (const result of results) {
+      for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
+        const scoreData = result.scores[scoreType];
+        rows.push({
           geography: result.geography,
           location_id: result.location_id,
           location_name: result.location_name,
@@ -1247,18 +1285,58 @@ export class ScoringService {
           confidence_level: scoreData.confidence_level,
           median_price: result.median_price,
           score_date: scoreDate,
-          created_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'geography,location_id,score_type,score_date',
-        },
-      );
-
-      if (error) {
-        console.error(`Error saving score for ${result.location_id}/${scoreType}:`, error);
-        throw error;
+          created_at: createdAt,
+        });
       }
     }
+    return rows;
+  }
+
+  private async upsertScoresWithRetry(rows: Array<Record<string, any>>): Promise<boolean> {
+    const maxAttempts = 4;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const { error } = await this.supabase
+        .from('propertyiq_scores')
+        .upsert(rows, { onConflict: 'geography,location_id,score_type,score_date' });
+
+      if (!error) return true;
+
+      const delayMs = Math.min(15000, 500 * Math.pow(2, attempt - 1));
+      console.error(`Error saving score batch (attempt ${attempt}/${maxAttempts}):`, error);
+      if (attempt < maxAttempts) {
+        await this.sleep(delayMs + Math.floor(Math.random() * 250));
+      }
+    }
+    return false;
+  }
+
+  private async saveScoresBatch(
+    results: ScoreResult[],
+    scoreDate: string,
+  ): Promise<{ calculated: number; errors: number }> {
+    const batchSize = 200; // locations per batch (600 rows)
+    let calculated = 0;
+    let errors = 0;
+
+    for (let i = 0; i < results.length; i += batchSize) {
+      const batch = results.slice(i, i + batchSize);
+      const rows = this.buildScoreRows(batch, scoreDate);
+      const ok = await this.upsertScoresWithRetry(rows);
+      if (ok) {
+        calculated += batch.length;
+      } else {
+        errors += batch.length;
+      }
+
+      // Small pause to reduce socket churn during huge backfills
+      await this.sleep(50);
+    }
+
+    return { calculated, errors };
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // ============================================================================
