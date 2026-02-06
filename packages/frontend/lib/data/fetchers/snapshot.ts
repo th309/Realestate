@@ -248,7 +248,8 @@ function transformResponse(
         }
         break;
       case 'postal_code': {
-        const raw = item.postal_code || item.zcta || item.region_id;
+        // Zillow uses zip_code, Realtor uses postal_code
+        const raw = item.postal_code || item.zip_code || item.zcta || item.region_id;
         key = raw ? normalizeZipKey(String(raw)) : undefined;
         break;
       }

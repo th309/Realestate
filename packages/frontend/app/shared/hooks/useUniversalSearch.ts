@@ -85,10 +85,11 @@ export function useUniversalSearch({
                 }
             }
 
-            const shouldCheckBackend = !filterByGeoLevel || filterByGeoLevel === 'metro';
+            const shouldCheckMetros = !filterByGeoLevel || filterByGeoLevel === 'metro';
+            const shouldCheckCounties = !filterByGeoLevel || filterByGeoLevel === 'county';
 
             // Parallel fetch
-            const [mapboxRes, backendRes] = await Promise.all([
+            const [mapboxRes, metroRes, countyRes] = await Promise.all([
                 token ? fetch(
                     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` +
                     `access_token=${token}&` +
@@ -101,11 +102,19 @@ export function useUniversalSearch({
                     return { ok: false, statusText: err.message } as Response;
                 }) : Promise.resolve({ ok: false, statusText: 'No Token' } as Response),
 
-                shouldCheckBackend ? fetch(
+                shouldCheckMetros ? fetch(
                     `${API_URL}/api/geography/search?query=${encodeURIComponent(query)}&type=metro&limit=5`,
                     { signal: controller.signal }
                 ).catch(err => {
-                    console.error('[Search] Backend fetch failed:', err);
+                    console.error('[Search] Metro fetch failed:', err);
+                    return { ok: false, statusText: err.message } as Response;
+                }) : Promise.resolve({ ok: false, statusText: 'Skipped' } as Response),
+
+                shouldCheckCounties ? fetch(
+                    `${API_URL}/api/geography/search?query=${encodeURIComponent(query)}&type=county&limit=5`,
+                    { signal: controller.signal }
+                ).catch(err => {
+                    console.error('[Search] County fetch failed:', err);
                     return { ok: false, statusText: err.message } as Response;
                 }) : Promise.resolve({ ok: false, statusText: 'Skipped' } as Response)
             ]);
@@ -115,14 +124,18 @@ export function useUniversalSearch({
             if (mapboxRes && !mapboxRes.ok) {
                 console.warn(`[Search] Mapbox returned error: ${mapboxRes.statusText}`);
             }
-            if (backendRes && !backendRes.ok) {
-                console.warn(`[Search] Backend returned error: ${backendRes.statusText}`);
+            if (metroRes && !metroRes.ok) {
+                console.warn(`[Search] Metro search returned error: ${metroRes.statusText}`);
+            }
+            if (countyRes && !countyRes.ok) {
+                console.warn(`[Search] County search returned error: ${countyRes.statusText}`);
             }
 
             const mapboxData = (mapboxRes && mapboxRes.ok) ? await mapboxRes.json() : { features: [] };
-            const officialMetros = (backendRes && backendRes.ok) ? await backendRes.json() : [];
+            const officialMetros = (metroRes && metroRes.ok) ? await metroRes.json() : [];
+            const officialCounties = (countyRes && countyRes.ok) ? await countyRes.json() : [];
 
-            console.log(`[Search] Received: ${mapboxData.features?.length || 0} Mapbox features, ${officialMetros?.length || 0} backend metros`);
+            console.log(`[Search] Received: ${mapboxData.features?.length || 0} Mapbox, ${officialMetros?.length || 0} metros, ${officialCounties?.length || 0} counties`);
 
             const features: MapboxFeature[] = mapboxData.features || [];
             const results: SearchResult[] = features.flatMap((feature: MapboxFeature) => {
@@ -160,10 +173,29 @@ export function useUniversalSearch({
                     }
                 }
 
+                // For counties, try to match with backend to get proper fips_code
+                let countyId = feature.id;
+                let countyName = name;
+                if (type === 'county') {
+                    const baseName = feature.text || name.split(',')[0];
+                    const matchingCounty = officialCounties.find((c: any) =>
+                        c.name.toLowerCase().includes(baseName.toLowerCase()) &&
+                        (!stateAbbrev || c.state_code === stateAbbrev)
+                    );
+                    if (matchingCounty) {
+                        // Use fips_code for counties (this is what metric data is keyed by)
+                        countyId = matchingCounty.fips_code || matchingCounty.geography_id;
+                        countyName = matchingCounty.name;
+                    }
+                }
+
                 const primaryResult: SearchResult = {
                     // For ZIPs, use the actual postal code (feature.text) as ID, not Mapbox's internal ID
-                    id: effectiveType === 'zip' ? (feature.text || feature.id) : feature.id,
-                    name: effectiveType === 'zip' ? feature.text || name : name,
+                    // For counties, use fips_code from backend match
+                    id: effectiveType === 'zip' ? (feature.text || feature.id) :
+                        effectiveType === 'county' ? countyId : feature.id,
+                    name: effectiveType === 'zip' ? feature.text || name :
+                        effectiveType === 'county' ? countyName : name,
                     type: effectiveType,
                     subtitle: effectiveType === 'metro' ? 'Metropolitan Statistical Area' : undefined,
                     center: feature.center,
@@ -216,14 +248,14 @@ export function useUniversalSearch({
             });
 
             // Also add any official metros that didn't match a city specifically
-            const matchedIds = new Set(results.filter(r => r.type === 'metro').map(r => r.id));
+            const matchedMetroIds = new Set(results.filter(r => r.type === 'metro').map(r => r.id));
             const extraMetros: SearchResult[] = officialMetros
-                .filter((m: any) => !matchedIds.has(m.cbsa_code || m.geography_id))
+                .filter((m: any) => !matchedMetroIds.has(m.cbsa_code || m.geography_id))
                 .map((m: any) => ({
                     // Use cbsa_code for metros (this is what metric data is keyed by)
                     id: m.cbsa_code || m.geography_id,
                     name: m.name,
-                    type: 'metro',
+                    type: 'metro' as const,
                     subtitle: 'Metropolitan Statistical Area',
                     state: m.state_code,
                     center: (m.longitude && m.latitude)
@@ -231,7 +263,22 @@ export function useUniversalSearch({
                         : undefined,
                 }));
 
-            let finalResults = [...results, ...extraMetros];
+            // Also add any official counties that didn't match Mapbox results
+            const matchedCountyIds = new Set(results.filter(r => r.type === 'county').map(r => r.id));
+            const extraCounties: SearchResult[] = officialCounties
+                .filter((c: any) => !matchedCountyIds.has(c.fips_code || c.geography_id))
+                .map((c: any) => ({
+                    // Use fips_code for counties (this is what metric data is keyed by)
+                    id: c.fips_code || c.geography_id,
+                    name: c.name,
+                    type: 'county' as const,
+                    state: c.state_code,
+                    center: (c.longitude && c.latitude)
+                        ? [Number(c.longitude), Number(c.latitude)]
+                        : undefined,
+                }));
+
+            let finalResults = [...results, ...extraMetros, ...extraCounties];
 
             // Final filter pass for extraMetros if filtered
             if (filterByGeoLevel) {
