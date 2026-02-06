@@ -16,9 +16,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
-import { useMarketFactorsData } from '@/app/map/hooks/useMarketFactorsData';
+import { useDataCardBatch, type GeoLevel } from '@/lib/data';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
-import type { GeoLevel } from '@/app/map/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -60,7 +59,7 @@ function getTrendDirection(percent: number | null): 'up' | 'down' | 'stable' {
   return 'stable';
 }
 
-// Metric card with animation - uses data from useMarketFactorsData
+// Metric card with animation - uses data from useDataCardBatch
 function MetricCard({
   label,
   formattedValue,
@@ -116,7 +115,7 @@ function MetricCategorySection({
   subtext?: string;
   icon: React.ReactNode;
   metricIds: string[];
-  factorsData: Record<string, { formattedValue: string; trendPercent: number | null; trendDirection: 'up' | 'down' | 'stable' }>;
+  factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null }>;
   factorsLoading: boolean;
   delay?: number;
 }) {
@@ -149,8 +148,8 @@ function MetricCategorySection({
               key={metricId}
               label={config?.title || metricId.replace(/_/g, ' ')}
               formattedValue={factorsLoading ? '...' : (datum?.formattedValue ?? '--')}
-              trendPercent={datum?.trendPercent ?? null}
-              trendDirection={datum?.trendDirection ?? 'stable'}
+              trendPercent={datum?.percentChange ?? null}
+              trendDirection={datum?.direction ?? 'stable'}
               delay={delay + i * 0.05}
             />
           );
@@ -306,12 +305,12 @@ export function MarketDashboard({
     return Array.from(ids);
   }, [categories]);
 
-  // Fetch metric data using the existing hook
-  const { data: factorsData, loading: factorsLoading } = useMarketFactorsData(
+  // Fetch metric data using the data layer hook
+  const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
     metricIds,
     geographyType as GeoLevel,
     geographyId,
-    { months: 6, enabled: !loading && !!data }
+    { trendMonths: 6, enabled: !loading && !!data }
   );
 
   if (loading) {
