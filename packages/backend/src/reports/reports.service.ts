@@ -219,11 +219,14 @@ export class ReportsService {
       );
 
       // 1b. Fetch market metrics for AI context (based on template requirements)
+      // Include demographics if specified in template
       const requiredMetrics = template.config?.data_requirements?.current_metrics || [];
+      const demographics = template.config?.data_requirements?.demographics || [];
+      const allRequiredMetrics = [...requiredMetrics, ...demographics, 'census', 'population', 'median_income'];
       const marketMetrics = await this.fetchMarketMetrics(
         dto.primary_geography.id,
         geoType,
-        requiredMetrics,
+        allRequiredMetrics,
       );
 
       // 2. Scout news via Gemini (with caching)
@@ -744,12 +747,12 @@ export class ReportsService {
           }
         }
 
-        // Get Zillow ZHVI data
+        // Get Zillow ZHVI data (use cbsa_code, not region_id)
         if (shouldFetch('zhvi') || shouldFetch('home_value')) {
           const { data: zhviData } = await client
             .from('zillow_metro')
             .select('value')
-            .eq('region_id', geographyId)
+            .eq('cbsa_code', geographyId)
             .eq('metric_name', 'zhvi')
             .order('period_date', { ascending: false })
             .limit(1)
@@ -765,7 +768,7 @@ export class ReportsService {
           const { data: zhviHistory } = await client
             .from('zillow_metro')
             .select('value, period_date')
-            .eq('region_id', geographyId)
+            .eq('cbsa_code', geographyId)
             .eq('metric_name', 'zhvi')
             .order('period_date', { ascending: false })
             .limit(13);
@@ -779,14 +782,14 @@ export class ReportsService {
           }
         }
 
-        // Get ZORI (rent) data
+        // Get ZORI (rent) data from zillow_metro table
         if (shouldFetch('zori') || shouldFetch('rent')) {
           const { data: zoriData } = await client
-            .from('zillow_zori')
+            .from('zillow_metro')
             .select('value')
-            .eq('region_id', geographyId)
-            .eq('geography', 'Metro')
-            .order('date', { ascending: false })
+            .eq('cbsa_code', geographyId)
+            .eq('metric_name', 'zori')
+            .order('period_date', { ascending: false })
             .limit(1)
             .single();
 
@@ -811,38 +814,29 @@ export class ReportsService {
             metrics.gross_yield = calcMetrics.gross_yield;
             metrics.grm = calcMetrics.grm;
             metrics.overvalued_pct = calcMetrics.overvalued_pct;
-            metrics.affordability_ratio = calcMetrics.affordability_ratio;
+            // Use rent_price_ratio instead of affordability_ratio
+            metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
+            metrics.affordability_index = calcMetrics.affordability_percentile;
+            metrics.gross_rent_multiplier = calcMetrics.grm;
           }
         }
 
-        // Get Census data
+        // Get Census data from census_metro table
         if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
-          const { data: incomeData } = await client
-            .from('census_data')
-            .select('value')
-            .eq('geography_id', geographyId)
-            .eq('geography_type', 'metro')
-            .eq('metric_name', 'median_income')
+          const { data: censusData } = await client
+            .from('census_metro')
+            .select('total_population, median_household_income, median_age, population_yoy')
+            .eq('cbsa_code', geographyId)
             .order('year', { ascending: false })
             .limit(1)
             .single();
 
-          if (incomeData) {
-            metrics.median_income = incomeData.value;
-          }
-
-          const { data: popData } = await client
-            .from('census_data')
-            .select('value')
-            .eq('geography_id', geographyId)
-            .eq('geography_type', 'metro')
-            .eq('metric_name', 'population')
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (popData) {
-            metrics.population = popData.value;
+          if (censusData) {
+            metrics.median_income = censusData.median_household_income;
+            metrics.median_household_income = censusData.median_household_income;
+            metrics.population = censusData.total_population;
+            metrics.median_age = censusData.median_age;
+            metrics.population_growth_yoy = censusData.population_yoy;
           }
         }
       } else if (geographyType === 'county') {
