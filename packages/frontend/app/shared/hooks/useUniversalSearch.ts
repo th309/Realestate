@@ -183,7 +183,8 @@ export function useUniversalSearch({
 
                     if (matchingMetro) {
                         const metroResult: SearchResult = {
-                            id: matchingMetro.geography_id,
+                            // Use cbsa_code for metros (this is what metric data is keyed by)
+                            id: matchingMetro.cbsa_code || matchingMetro.geography_id,
                             name: matchingMetro.name,
                             type: 'metro',
                             subtitle: 'Metropolitan Statistical Area',
@@ -217,9 +218,10 @@ export function useUniversalSearch({
             // Also add any official metros that didn't match a city specifically
             const matchedIds = new Set(results.filter(r => r.type === 'metro').map(r => r.id));
             const extraMetros: SearchResult[] = officialMetros
-                .filter((m: any) => !matchedIds.has(m.geography_id))
+                .filter((m: any) => !matchedIds.has(m.cbsa_code || m.geography_id))
                 .map((m: any) => ({
-                    id: m.geography_id,
+                    // Use cbsa_code for metros (this is what metric data is keyed by)
+                    id: m.cbsa_code || m.geography_id,
                     name: m.name,
                     type: 'metro',
                     subtitle: 'Metropolitan Statistical Area',
