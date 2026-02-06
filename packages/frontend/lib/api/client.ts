@@ -44,7 +44,7 @@ export const api = {
    * Get market statistics (counts of markets, states, etc.)
    */
   getStats: async (): Promise<MarketStats> => {
-    const response = await fetch(`${API_URL}/api/stats`);
+    const response = await fetch(`${API_URL}/api/markets/stats`);
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
