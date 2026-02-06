@@ -161,7 +161,8 @@ export function useUniversalSearch({
                 }
 
                 const primaryResult: SearchResult = {
-                    id: feature.id,
+                    // For ZIPs, use the actual postal code (feature.text) as ID, not Mapbox's internal ID
+                    id: effectiveType === 'zip' ? (feature.text || feature.id) : feature.id,
                     name: effectiveType === 'zip' ? feature.text || name : name,
                     type: effectiveType,
                     subtitle: effectiveType === 'metro' ? 'Metropolitan Statistical Area' : undefined,
