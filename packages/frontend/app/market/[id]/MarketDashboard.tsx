@@ -1,30 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   TrendingUp,
-  TrendingDown,
   Home,
-  DollarSign,
-  Clock,
-  BarChart3,
   Share2,
   Download,
   RefreshCw,
-  ChevronRight,
+  ChevronLeft,
   Sparkles,
   MapPin,
-  Users,
-  Building2,
-  Wallet,
-  Shield,
-  Activity,
-  ExternalLink,
-  MessageSquare,
-  X,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
+import { useMarketFactorsData } from '@/app/map/hooks/useMarketFactorsData';
+import { getMetricCategories } from '@/app/map/config/metric-categories';
+import type { GeoLevel } from '@/app/map/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -39,7 +33,6 @@ interface MarketData {
     id: string;
     name: string;
     type: string;
-    state?: string;
   };
   scores: {
     homeready: { score: number; grade: string; components?: Record<string, number> };
@@ -51,327 +44,177 @@ interface MarketData {
     zhvi_yoy?: number;
     zori?: number;
     zori_yoy?: number;
-    median_listing_price?: number;
-    days_on_market?: number;
-    active_listing_count?: number;
-    inventory_yoy?: number;
     cap_rate?: number;
     grm?: number;
-    hotness_score?: number;
-    population?: number;
-    median_income?: number;
+    gross_yield?: number;
+    [key: string]: number | undefined;
   };
   lastUpdated: string;
 }
 
-// Animated number component
-function AnimatedValue({
-  value,
-  format = 'number',
-  prefix = '',
-  suffix = '',
-  className = ''
-}: {
-  value: number | undefined;
-  format?: 'currency' | 'percent' | 'number' | 'compact';
-  prefix?: string;
-  suffix?: string;
-  className?: string;
-}) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    if (value === undefined) return;
-
-    const duration = 1000;
-    const steps = 30;
-    const increment = value / steps;
-    let current = 0;
-
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= value) {
-        setDisplayValue(value);
-        clearInterval(timer);
-      } else {
-        setDisplayValue(current);
-      }
-    }, duration / steps);
-
-    return () => clearInterval(timer);
-  }, [value]);
-
-  const formatValue = (v: number) => {
-    switch (format) {
-      case 'currency':
-        return `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-      case 'percent':
-        return `${v.toFixed(1)}%`;
-      case 'compact':
-        if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
-        if (v >= 1000) return `${(v / 1000).toFixed(0)}K`;
-        return v.toFixed(0);
-      default:
-        return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
-    }
-  };
-
-  if (value === undefined) return <span className={className}>—</span>;
-
-  return (
-    <span className={className}>
-      {prefix}{formatValue(displayValue)}{suffix}
-    </span>
-  );
+// Trend direction helper
+function getTrendDirection(percent: number | null): 'up' | 'down' | 'stable' {
+  if (percent == null) return 'stable';
+  if (percent > 0.5) return 'up';
+  if (percent < -0.5) return 'down';
+  return 'stable';
 }
 
-// Score ring component with animation
-function ScoreRing({
-  score,
-  size = 120,
-  label,
-  sublabel,
-  color = 'primary'
-}: {
-  score: number;
-  size?: number;
-  label: string;
-  sublabel?: string;
-  color?: 'primary' | 'tertiary' | 'secondary';
-}) {
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (score / 100) * circumference;
-
-  const colorClasses = {
-    primary: 'stroke-primary',
-    tertiary: 'stroke-tertiary',
-    secondary: 'stroke-secondary',
-  };
-
-  const bgColorClasses = {
-    primary: 'text-primary',
-    tertiary: 'text-tertiary',
-    secondary: 'text-secondary',
-  };
-
-  return (
-    <div className="relative flex flex-col items-center">
-      <svg width={size} height={size} className="-rotate-90">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          className="stroke-surface-container-highest"
-        />
-        {/* Animated score circle */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          className={colorClasses[color]}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.5, ease: 'easeOut' }}
-          style={{
-            strokeDasharray: circumference,
-          }}
-        />
-      </svg>
-      {/* Score value in center */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.span
-          className={`text-3xl font-bold ${bgColorClasses[color]}`}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          {score}
-        </motion.span>
-        <span className="text-xs text-on-surface-variant mt-1">/100</span>
-      </div>
-      {/* Labels below */}
-      <div className="mt-3 text-center">
-        <p className="text-sm font-medium text-on-surface">{label}</p>
-        {sublabel && <p className="text-xs text-on-surface-variant">{sublabel}</p>}
-      </div>
-    </div>
-  );
-}
-
-// Metric card with trend indicator
+// Metric card with animation - uses data from useMarketFactorsData
 function MetricCard({
   label,
-  value,
-  change,
-  format = 'number',
-  icon: Icon,
+  formattedValue,
+  trendPercent,
+  trendDirection,
   delay = 0,
 }: {
   label: string;
-  value: number | undefined;
-  change?: number;
-  format?: 'currency' | 'percent' | 'number' | 'compact';
-  icon: React.ElementType;
+  formattedValue: string;
+  trendPercent: number | null;
+  trendDirection: 'up' | 'down' | 'stable';
   delay?: number;
 }) {
-  const isPositive = change !== undefined && change > 0;
-  const isNegative = change !== undefined && change < 0;
-
   return (
     <motion.div
-      className="relative overflow-hidden rounded-2xl bg-surface-container p-4 group hover:bg-surface-container-high transition-colors"
+      className="bg-surface-container rounded-xl p-4 border border-outline-variant/30 hover:shadow-md hover:border-outline-variant/50 transition-all"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5 }}
+      transition={{ delay, duration: 0.4 }}
     >
-      {/* Subtle gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <Icon className="w-4 h-4 text-on-surface-variant" />
-          {change !== undefined && (
-            <div className={`flex items-center gap-0.5 text-xs font-medium ${
-              isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-on-surface-variant'
-            }`}>
-              {isPositive ? <TrendingUp className="w-3 h-3" /> : isNegative ? <TrendingDown className="w-3 h-3" /> : null}
-              {change > 0 ? '+' : ''}{change.toFixed(1)}%
-            </div>
-          )}
-        </div>
-        <AnimatedValue
-          value={value}
-          format={format}
-          className="text-2xl font-semibold text-on-surface block"
-        />
-        <p className="text-xs text-on-surface-variant mt-1">{label}</p>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wide truncate">
+          {label}
+        </span>
+        {trendPercent != null && (
+          <div className={`flex items-center gap-0.5 text-xs font-medium ${
+            trendDirection === 'up' ? 'text-green-600' :
+            trendDirection === 'down' ? 'text-red-600' :
+            'text-on-surface-variant'
+          }`}>
+            {trendDirection === 'up' && <ArrowUpRight className="w-3.5 h-3.5" />}
+            {trendDirection === 'down' && <ArrowDownRight className="w-3.5 h-3.5" />}
+            {trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%
+          </div>
+        )}
       </div>
+      <div className="text-xl font-bold text-on-surface">{formattedValue}</div>
     </motion.div>
   );
 }
 
-// Market pulse animation - the "heartbeat" of the market
-function MarketPulse({ health }: { health: number }) {
-  const pulseColor = health >= 70 ? 'bg-green-500' : health >= 40 ? 'bg-amber-500' : 'bg-red-500';
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="relative">
-        <div className={`w-3 h-3 rounded-full ${pulseColor}`} />
-        <motion.div
-          className={`absolute inset-0 rounded-full ${pulseColor}`}
-          animate={{ scale: [1, 1.8, 1], opacity: [0.8, 0, 0.8] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
-      <span className="text-sm text-on-surface-variant">Live</span>
-    </div>
-  );
-}
-
-// AI Insight card with typing animation
-function AIInsightCard({
-  insight,
-  isLoading
+// Category section with metrics
+function MetricCategorySection({
+  categoryName,
+  subtext,
+  icon,
+  metricIds,
+  factorsData,
+  factorsLoading,
+  delay = 0,
 }: {
-  insight?: string;
-  isLoading: boolean;
+  categoryName: string;
+  subtext?: string;
+  icon: React.ReactNode;
+  metricIds: string[];
+  factorsData: Record<string, { formattedValue: string; trendPercent: number | null; trendDirection: 'up' | 'down' | 'stable' }>;
+  factorsLoading: boolean;
+  delay?: number;
 }) {
+  // Get metric names from config
+  const { getMetricConfig } = require('@/lib/data');
+
   return (
     <motion.div
-      className="rounded-2xl bg-gradient-to-br from-primary/10 via-surface-container to-tertiary/10 p-6 border border-outline-variant/50"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.8 }}
+      className="space-y-3"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4 }}
     >
-      <div className="flex items-center gap-2 mb-4">
-        <div className="p-2 rounded-xl bg-primary/20">
-          <Sparkles className="w-4 h-4 text-primary" />
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+          {icon}
         </div>
-        <h3 className="font-semibold text-on-surface">AI Market Analysis</h3>
+        <div>
+          <h4 className="text-sm font-semibold text-on-surface">{categoryName}</h4>
+          {subtext && <p className="text-xs text-on-surface-variant">{subtext}</p>}
+        </div>
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        {metricIds.slice(0, 4).map((metricId, i) => {
+          const config = getMetricConfig(metricId);
+          const datum = factorsData[metricId];
 
-      {isLoading ? (
-        <div className="space-y-2">
-          <div className="h-4 bg-surface-container-high rounded animate-pulse w-full" />
-          <div className="h-4 bg-surface-container-high rounded animate-pulse w-5/6" />
-          <div className="h-4 bg-surface-container-high rounded animate-pulse w-4/6" />
-        </div>
-      ) : insight ? (
-        <p className="text-on-surface-variant leading-relaxed">{insight}</p>
-      ) : (
-        <p className="text-on-surface-variant italic">Analysis not available</p>
-      )}
-
-      <button className="mt-4 text-sm text-primary hover:underline flex items-center gap-1">
-        Ask a question <MessageSquare className="w-3 h-3" />
-      </button>
+          return (
+            <MetricCard
+              key={metricId}
+              label={config?.title || metricId.replace(/_/g, ' ')}
+              formattedValue={factorsLoading ? '...' : (datum?.formattedValue ?? '--')}
+              trendPercent={datum?.trendPercent ?? null}
+              trendDirection={datum?.trendDirection ?? 'stable'}
+              delay={delay + i * 0.05}
+            />
+          );
+        })}
+      </div>
     </motion.div>
   );
 }
 
-// Score component breakdown
-function ScoreBreakdown({
-  components,
-  type,
-}: {
-  components?: Record<string, number>;
-  type: 'investor' | 'homebuyer';
-}) {
-  const labels = type === 'investor'
-    ? { cash_flow: 'Cash Flow', appreciation: 'Appreciation', risk: 'Risk', liquidity: 'Liquidity' }
-    : { affordability: 'Affordability', stability: 'Stability', value: 'Value', competition: 'Competition' };
-
-  const icons = type === 'investor'
-    ? { cash_flow: Wallet, appreciation: TrendingUp, risk: Shield, liquidity: Activity }
-    : { affordability: DollarSign, stability: Shield, value: Home, competition: Users };
-
-  if (!components) return null;
+// AI Insight card
+function AIInsightCard({ marketName, score, view }: { marketName: string; score: number; view: string }) {
+  const getInsight = () => {
+    const persona = view === 'investor' ? 'investment' : 'home buying';
+    if (score >= 70) {
+      return `${marketName} shows strong ${persona} potential. Market fundamentals are solid with favorable conditions for entry.`;
+    } else if (score >= 40) {
+      return `${marketName} presents moderate opportunities. Careful analysis of specific neighborhoods recommended before committing.`;
+    } else {
+      return `${marketName} currently faces headwinds for ${persona}. Consider nearby markets or wait for better timing.`;
+    }
+  };
 
   return (
-    <div className="grid grid-cols-2 gap-3 mt-4">
-      {Object.entries(labels).map(([key, label], index) => {
-        const value = components[key];
-        const Icon = icons[key as keyof typeof icons];
-        if (value === undefined) return null;
+    <motion.div
+      className="bg-gradient-to-br from-primary/5 via-surface-container to-tertiary/5 rounded-2xl p-6 border border-primary/20"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.6, duration: 0.5 }}
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2.5 rounded-xl bg-primary/15">
+          <Sparkles className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-on-surface">AI Market Analysis</h3>
+          <p className="text-xs text-on-surface-variant">Powered by PropertyIQ</p>
+        </div>
+      </div>
+      <p className="text-on-surface-variant leading-relaxed">{getInsight()}</p>
+    </motion.div>
+  );
+}
 
-        return (
-          <motion.div
-            key={key}
-            className="flex items-center gap-2 p-3 rounded-xl bg-surface-container"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 + index * 0.1 }}
-          >
-            <Icon className="w-4 h-4 text-on-surface-variant flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-on-surface-variant truncate">{label}</span>
-                <span className="text-sm font-medium text-on-surface">{value}</span>
-              </div>
-              <div className="h-1.5 bg-surface-container-highest rounded-full mt-1 overflow-hidden">
-                <motion.div
-                  className={`h-full rounded-full ${
-                    value >= 70 ? 'bg-green-500' : value >= 40 ? 'bg-amber-500' : 'bg-red-500'
-                  }`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${value}%` }}
-                  transition={{ delay: 0.5 + index * 0.1, duration: 0.8 }}
-                />
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
+// Small score badge
+function ScoreBadge({ label, score }: { label: string; score: number }) {
+  return (
+    <motion.div
+      className="flex items-center gap-4 bg-surface-container rounded-xl p-4 border border-outline-variant/30"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+    >
+      <ScoreDisplay
+        value={score}
+        size={60}
+        strokeWidth={5}
+        showGrade={true}
+        showLabel={false}
+      />
+      <div className="flex-1">
+        <div className="text-sm font-medium text-on-surface">{label}</div>
+        <div className="text-xs text-on-surface-variant">{getScoreLabel(score)}</div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -384,25 +227,19 @@ export function MarketDashboard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'investor' | 'homebuyer'>(userView);
-  const [aiInsight, setAiInsight] = useState<string | undefined>();
-  const [aiLoading, setAiLoading] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Fetch market data
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Fetch scores and investment metrics in parallel
       const [scoresRes, metricsRes] = await Promise.all([
         fetch(`${API_URL}/api/scores/${geographyType}/${geographyId}`),
         fetch(`${API_URL}/api/metrics/investment/${geographyType}/${geographyId}`),
       ]);
 
-      if (!scoresRes.ok) throw new Error('Failed to fetch scores');
+      if (!scoresRes.ok) throw new Error('Failed to fetch market data');
       const scoresData = await scoresRes.json();
 
-      // Get investment metrics (optional - may not exist for all geographies)
       let investmentMetrics: Record<string, number> = {};
       if (metricsRes.ok) {
         const metricsData = await metricsRes.json();
@@ -411,9 +248,7 @@ export function MarketDashboard({
         }
       }
 
-      // Construct market data from response
-      // The scoring API returns location_name, location_id, geography, median_price, scores
-      const marketData: MarketData = {
+      setData({
         geography: {
           id: scoresData.location_id,
           name: scoresData.location_name || `${geographyType} ${geographyId}`,
@@ -421,17 +256,17 @@ export function MarketDashboard({
         },
         scores: {
           homeready: {
-            score: scoresData.scores.homeready.score,
+            score: Math.round(scoresData.scores.homeready.score),
             grade: scoresData.scores.homeready.grade,
             components: scoresData.scores.homeready.components,
           },
           investoredge: {
-            score: scoresData.scores.investoredge.score,
+            score: Math.round(scoresData.scores.investoredge.score),
             grade: scoresData.scores.investoredge.grade,
             components: scoresData.scores.investoredge.components,
           },
           markethealth: {
-            score: scoresData.scores.markethealth.score,
+            score: Math.round(scoresData.scores.markethealth.score),
             grade: scoresData.scores.markethealth.grade,
           },
         },
@@ -439,17 +274,14 @@ export function MarketDashboard({
           zhvi: scoresData.median_price,
           cap_rate: investmentMetrics.cap_rate,
           grm: investmentMetrics.grm,
-          // Additional metrics from investment data
+          gross_yield: investmentMetrics.gross_yield,
           ...investmentMetrics,
         },
         lastUpdated: scoresData.score_date || new Date().toISOString(),
-      };
-
-      setData(marketData);
-      setLastRefresh(new Date());
+      });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load market data');
+      setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -459,57 +291,38 @@ export function MarketDashboard({
     fetchData();
   }, [fetchData]);
 
-  // Generate AI insight on demand
-  const generateInsight = async () => {
-    if (!data) return;
+  // Get metric categories for the current view (must be called before early returns)
+  const categories = useMemo(() => {
+    const viewMode = activeView === 'investor' ? 'investor' : 'homebuyer';
+    return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
+  }, [activeView]);
 
-    setAiLoading(true);
-    try {
-      // This would call your Claude/AI endpoint
-      // For now, simulate with a delay
-      await new Promise(r => setTimeout(r, 2000));
+  // Extract all metric IDs to fetch
+  const metricIds = useMemo(() => {
+    const ids = new Set<string>();
+    categories.forEach(cat => {
+      cat.metrics?.slice(0, 4).forEach(m => ids.add(m.id));
+    });
+    return Array.from(ids);
+  }, [categories]);
 
-      const score = activeView === 'investor'
-        ? data.scores.investoredge.score
-        : data.scores.homeready.score;
-
-      // Simulated insight based on score
-      const insights = {
-        high: `${data.geography.name} shows strong ${activeView === 'investor' ? 'investment' : 'buying'} potential with a score of ${score}/100. The market fundamentals are solid with ${data.metrics.zhvi_yoy && data.metrics.zhvi_yoy > 0 ? 'positive' : 'stable'} price trends and healthy inventory levels.`,
-        medium: `${data.geography.name} presents moderate opportunities for ${activeView === 'investor' ? 'investors' : 'homebuyers'}. With a score of ${score}/100, careful analysis of specific neighborhoods and property types is recommended.`,
-        low: `${data.geography.name} currently shows challenging conditions for ${activeView === 'investor' ? 'investment' : 'home purchases'}. Consider exploring nearby markets or waiting for better entry points.`,
-      };
-
-      setAiInsight(score >= 70 ? insights.high : score >= 40 ? insights.medium : insights.low);
-    } catch {
-      setAiInsight('Unable to generate analysis at this time.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (data && !aiInsight) {
-      generateInsight();
-    }
-  }, [data, activeView]);
+  // Fetch metric data using the existing hook
+  const { data: factorsData, loading: factorsLoading } = useMarketFactorsData(
+    metricIds,
+    geographyType as GeoLevel,
+    geographyId,
+    { months: 6, enabled: !loading && !!data }
+  );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <motion.div
-          className="flex flex-col items-center gap-4"
+          className="text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-surface-container-high" />
-            <motion.div
-              className="absolute inset-0 w-16 h-16 rounded-full border-4 border-primary border-t-transparent"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            />
-          </div>
+          <div className="w-12 h-12 border-4 border-surface-container-high border-t-primary rounded-full animate-spin mx-auto mb-4" />
           <p className="text-on-surface-variant">Loading market data...</p>
         </motion.div>
       </div>
@@ -520,16 +333,14 @@ export function MarketDashboard({
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center max-w-md px-6">
-          <div className="w-16 h-16 mx-auto bg-error/10 rounded-full flex items-center justify-center mb-4">
-            <X className="w-8 h-8 text-error" />
+          <div className="w-16 h-16 mx-auto bg-error/10 rounded-2xl flex items-center justify-center mb-4">
+            <span className="text-3xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-semibold text-on-surface mb-2">
-            Unable to Load Market Data
-          </h2>
-          <p className="text-on-surface-variant mb-4">{error}</p>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">Unable to Load Market Data</h2>
+          <p className="text-on-surface-variant mb-6">{error}</p>
           <button
             onClick={fetchData}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -539,87 +350,45 @@ export function MarketDashboard({
     );
   }
 
-  const primaryScore = activeView === 'investor'
-    ? data.scores.investoredge
-    : data.scores.homeready;
-  const primaryScoreComponents = activeView === 'investor'
-    ? data.scores.investoredge.components
-    : data.scores.homeready.components;
+  const primaryScore = activeView === 'investor' ? data.scores.investoredge : data.scores.homeready;
 
   return (
     <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-surface/80 backdrop-blur-lg border-b border-outline-variant">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3">
+      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Left: Back & Location */}
             <div className="flex items-center gap-4">
               <Link
                 href="/map"
-                className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant"
+                className="p-2 -ml-2 rounded-xl hover:bg-surface-container transition-colors"
               >
-                <ChevronRight className="w-5 h-5 rotate-180" />
+                <ChevronLeft className="w-5 h-5 text-on-surface-variant" />
               </Link>
               <div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
-                  <h1 className="text-lg font-semibold text-on-surface">
-                    {data.geography.name}
-                  </h1>
+                  <h1 className="text-xl font-semibold text-on-surface">{data.geography.name}</h1>
                 </div>
-                <p className="text-xs text-on-surface-variant">
-                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {lastRefresh.toLocaleTimeString()}
+                <p className="text-sm text-on-surface-variant">
+                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {new Date(data.lastUpdated).toLocaleDateString()}
                 </p>
               </div>
             </div>
 
-            {/* Center: View Toggle */}
-            <div className="hidden md:flex items-center bg-surface-container rounded-full p-1">
-              <button
-                onClick={() => setActiveView('homebuyer')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  activeView === 'homebuyer'
-                    ? 'bg-primary text-on-primary'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <Home className="w-4 h-4 inline-block mr-1.5" />
-                Homebuyer
-              </button>
-              <button
-                onClick={() => setActiveView('investor')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  activeView === 'investor'
-                    ? 'bg-tertiary text-on-tertiary'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <TrendingUp className="w-4 h-4 inline-block mr-1.5" />
-                Investor
-              </button>
-            </div>
-
-            {/* Right: Actions */}
             <div className="flex items-center gap-2">
-              <MarketPulse health={data.scores.markethealth.score} />
               <button
                 onClick={fetchData}
-                className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant"
-                title="Refresh data"
+                className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
+                title="Refresh"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-5 h-5 text-on-surface-variant" />
               </button>
-              <button
-                className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant"
-                title="Share"
-              >
-                <Share2 className="w-5 h-5" />
+              <button className="p-2.5 rounded-xl hover:bg-surface-container transition-colors" title="Share">
+                <Share2 className="w-5 h-5 text-on-surface-variant" />
               </button>
-              <button
-                className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant"
-                title="Download"
-              >
-                <Download className="w-5 h-5" />
+              <button className="p-2.5 rounded-xl hover:bg-surface-container transition-colors" title="Download">
+                <Download className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
           </div>
@@ -627,184 +396,133 @@ export function MarketDashboard({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Score & Breakdown */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Primary Score Card */}
-            <motion.div
-              className="rounded-3xl bg-surface-container p-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        {/* View Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex items-center bg-surface-container rounded-full p-1 border border-outline-variant/50">
+            <button
+              onClick={() => setActiveView('homebuyer')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                activeView === 'homebuyer'
+                  ? 'bg-primary text-on-primary shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+              }`}
             >
-              <div className="flex justify-center mb-4">
-                <ScoreRing
-                  score={primaryScore.score}
-                  size={140}
-                  label={activeView === 'investor' ? 'InvestorEdge' : 'HomeReady'}
-                  sublabel={`Grade: ${primaryScore.grade}`}
-                  color={activeView === 'investor' ? 'tertiary' : 'primary'}
+              <Home className="w-4 h-4" />
+              Homebuyer
+            </button>
+            <button
+              onClick={() => setActiveView('investor')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
+                activeView === 'investor'
+                  ? 'bg-tertiary text-on-tertiary shadow-md'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Investor
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column - Score */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Main Score Card */}
+            <motion.div
+              className="bg-surface-container rounded-3xl p-8 border border-outline-variant/30 text-center"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <motion.div
+                key={activeView}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                className="flex justify-center mb-4"
+              >
+                <ScoreDisplay
+                  value={primaryScore.score}
+                  size={160}
+                  strokeWidth={10}
+                  showGrade={true}
+                  showLabel={true}
                 />
-              </div>
-              <ScoreBreakdown components={primaryScoreComponents} type={activeView} />
+              </motion.div>
+
+              <p className="text-on-surface-variant">
+                {activeView === 'investor' ? 'InvestorEdge' : 'HomeReady'} Score
+              </p>
             </motion.div>
 
-            {/* Secondary Score */}
-            <motion.div
-              className="rounded-2xl bg-surface-container p-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-secondary/10">
-                    <Activity className="w-4 h-4 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-on-surface">Market Health</p>
-                    <p className="text-xs text-on-surface-variant">Overall conditions</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-on-surface">{data.scores.markethealth.score}</p>
-                  <p className="text-xs text-on-surface-variant">{data.scores.markethealth.grade}</p>
-                </div>
-              </div>
-            </motion.div>
+            {/* Market Health Badge */}
+            <ScoreBadge
+              label="Market Health"
+              score={data.scores.markethealth.score}
+            />
           </div>
 
-          {/* Right Column: Metrics & Insights */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Key Metrics Grid */}
+          {/* Right Column - Details */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Market Metrics by Category */}
             <div>
-              <h2 className="text-sm font-medium text-on-surface-variant mb-3 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Key Metrics
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <MetricCard
-                  label="Home Value"
-                  value={data.metrics.zhvi}
-                  change={data.metrics.zhvi_yoy}
-                  format="currency"
-                  icon={Home}
-                  delay={0.1}
-                />
-                <MetricCard
-                  label="Monthly Rent"
-                  value={data.metrics.zori}
-                  change={data.metrics.zori_yoy}
-                  format="currency"
-                  icon={Building2}
-                  delay={0.2}
-                />
-                <MetricCard
-                  label="Days on Market"
-                  value={data.metrics.days_on_market}
-                  icon={Clock}
-                  delay={0.3}
-                />
-                <MetricCard
-                  label="Active Listings"
-                  value={data.metrics.active_listing_count}
-                  change={data.metrics.inventory_yoy}
-                  format="compact"
-                  icon={BarChart3}
-                  delay={0.4}
-                />
-              </div>
-            </div>
-
-            {/* Investment Metrics (show for investors) */}
-            {activeView === 'investor' && (
-              <div>
-                <h2 className="text-sm font-medium text-on-surface-variant mb-3 flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Investment Metrics
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <MetricCard
-                    label="Cap Rate"
-                    value={data.metrics.cap_rate}
-                    format="percent"
-                    icon={TrendingUp}
-                    delay={0.5}
+              <h3 className="text-sm font-medium text-on-surface-variant mb-4 uppercase tracking-wide">
+                Market Metrics
+              </h3>
+              <div className="space-y-6">
+                {categories.slice(0, 3).map((category, catIndex) => (
+                  <MetricCategorySection
+                    key={category.id}
+                    categoryName={category.name}
+                    subtext={category.subtext}
+                    icon={category.icon}
+                    metricIds={category.metrics?.map(m => m.id) ?? []}
+                    factorsData={factorsData}
+                    factorsLoading={factorsLoading}
+                    delay={catIndex * 0.15}
                   />
-                  <MetricCard
-                    label="Gross Rent Multiplier"
-                    value={data.metrics.grm}
-                    icon={DollarSign}
-                    delay={0.6}
-                  />
-                  <MetricCard
-                    label="Market Heat"
-                    value={data.metrics.hotness_score}
-                    icon={Activity}
-                    delay={0.7}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Demographics */}
-            <div>
-              <h2 className="text-sm font-medium text-on-surface-variant mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Demographics
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                <MetricCard
-                  label="Population"
-                  value={data.metrics.population}
-                  format="compact"
-                  icon={Users}
-                  delay={0.8}
-                />
-                <MetricCard
-                  label="Median Income"
-                  value={data.metrics.median_income}
-                  format="currency"
-                  icon={DollarSign}
-                  delay={0.9}
-                />
+                ))}
               </div>
             </div>
 
             {/* AI Insight */}
-            <AIInsightCard insight={aiInsight} isLoading={aiLoading} />
+            <AIInsightCard
+              marketName={data.geography.name}
+              score={primaryScore.score}
+              view={activeView}
+            />
 
             {/* Quick Actions */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 pt-2">
               <Link
                 href={`/reports?geography=${geographyId}&type=${geographyType}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-medium rounded-full hover:bg-primary/90 transition-colors shadow-md"
               >
                 Generate Full Report
-                <ExternalLink className="w-4 h-4" />
               </Link>
               <Link
                 href={`/graphs?geo=${geographyId}&level=${geographyType}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-surface-container text-on-surface rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
-                View Trends
                 <TrendingUp className="w-4 h-4" />
+                View Trends
               </Link>
               <Link
                 href={`/map?focus=${geographyId}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-surface-container text-on-surface rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
-                Explore Map
                 <MapPin className="w-4 h-4" />
+                Explore Map
               </Link>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Mobile View Toggle */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:hidden">
-        <div className="flex items-center bg-surface-container-high rounded-full p-1 shadow-lg border border-outline-variant">
+      {/* Mobile Bottom Toggle */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden z-20">
+        <div className="flex items-center bg-surface-container-high rounded-full p-1 shadow-xl border border-outline-variant">
           <button
             onClick={() => setActiveView('homebuyer')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -813,7 +531,7 @@ export function MarketDashboard({
                 : 'text-on-surface-variant'
             }`}
           >
-            Homebuyer
+            Buyer
           </button>
           <button
             onClick={() => setActiveView('investor')}
