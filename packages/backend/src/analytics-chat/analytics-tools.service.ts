@@ -19,6 +19,7 @@ export interface ToolResult {
 export class AnalyticsToolsService {
   private readonly logger = new Logger(AnalyticsToolsService.name);
   private readonly analyticsBaseUrl: string;
+  private readonly enabled: boolean;
   /** Cached tool definitions to avoid rebuilding on every request */
   private toolDefinitionsCache: any[] | null = null;
 
@@ -26,9 +27,15 @@ export class AnalyticsToolsService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
   ) {
+    this.enabled =
+      this.configService.get<string>('ANALYTICS_TOOLS_ENABLED', 'true') === 'true';
     this.analyticsBaseUrl =
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
+    if (!this.enabled) {
+      this.logger.log('[Analytics Tools] Disabled via ANALYTICS_TOOLS_ENABLED=false');
+      return;
+    }
     this.logger.log(`[Analytics Tools] Service URL: ${this.analyticsBaseUrl}`);
 
     // Test connectivity on startup
@@ -69,6 +76,9 @@ export class AnalyticsToolsService {
     toolName: string,
     args: Record<string, any>,
   ): Promise<ToolResult> {
+    if (!this.enabled) {
+      return { success: false, data: null, error: 'Analytics tools disabled' };
+    }
     const startTime = Date.now();
     this.logger.log(`[Tool ${toolName}] === EXECUTING ===`);
     this.logger.log(`[Tool ${toolName}] Analytics base URL: ${this.analyticsBaseUrl}`);

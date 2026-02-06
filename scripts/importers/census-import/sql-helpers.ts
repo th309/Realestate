@@ -77,7 +77,7 @@ export async function batchUpsertSQL(
       ON CONFLICT (${conflictClause}) ${updateClause}
     `;
 
-    const { error } = await supabase.rpc('exec_sql', { query: sql });
+    const { error } = await supabase.rpc('exec_sql', { sql });
 
     if (error) {
       return { inserted: 0, error: error.message };

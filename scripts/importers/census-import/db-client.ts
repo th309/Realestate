@@ -6,8 +6,11 @@ import { join } from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 
-// Load environment variables
-config({ path: join(__dirname, '../../../web/.env.local') });
+// Load environment variables (root first, then web app overrides if present)
+const rootEnvPath = join(__dirname, '../../../.env.local');
+const webEnvPath = join(__dirname, '../../../web/.env.local');
+config({ path: rootEnvPath });
+config({ path: webEnvPath });
 
 let supabaseInstance: SupabaseClient | null = null;
 
