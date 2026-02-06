@@ -88,8 +88,10 @@ export function MarketLanding() {
       type: result.type as 'metro' | 'county' | 'zip',
     });
 
-    // Navigate to market detail page
-    router.push(`/market/${result.id}?type=${result.type}&view=investor`);
+    // Navigate to market detail page (include state for ZIP-level filtering)
+    const params = new URLSearchParams({ type: result.type, view: 'investor' });
+    if (result.state) params.set('state', result.state);
+    router.push(`/market/${result.id}?${params.toString()}`);
     clearSearch();
   };
 

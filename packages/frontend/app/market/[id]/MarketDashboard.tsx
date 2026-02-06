@@ -25,6 +25,7 @@ interface MarketDashboardProps {
   geographyId: string;
   geographyType: 'metro' | 'county' | 'zip';
   userView: 'investor' | 'homebuyer';
+  stateFilter?: string;
 }
 
 interface MarketData {
@@ -221,6 +222,7 @@ export function MarketDashboard({
   geographyId,
   geographyType,
   userView,
+  stateFilter,
 }: MarketDashboardProps) {
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -310,7 +312,7 @@ export function MarketDashboard({
     metricIds,
     geographyType as GeoLevel,
     geographyId,
-    { trendMonths: 6, enabled: !loading && !!data }
+    { trendMonths: 6, enabled: !loading && !!data, stateFilter }
   );
 
   if (loading) {
