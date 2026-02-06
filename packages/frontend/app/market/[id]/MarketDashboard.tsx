@@ -298,6 +298,21 @@ export function MarketDashboard({
     return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
   }, [activeView]);
 
+  // Derive state filter: use URL param if available, otherwise extract from geography name
+  const effectiveStateFilter = useMemo(() => {
+    if (stateFilter) return stateFilter;
+    if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
+    // Extract state from location name (e.g., "21701, Frederick, MD" -> "MD")
+    const name = data?.geography?.name;
+    if (!name) return undefined;
+    const parts = name.split(',');
+    if (parts.length >= 2) {
+      const lastPart = parts[parts.length - 1].trim().toUpperCase();
+      if (lastPart.length === 2) return lastPart;
+    }
+    return undefined;
+  }, [stateFilter, geographyType, data?.geography?.name]);
+
   // Extract all metric IDs to fetch (keep stable for hooks - filter at display time)
   const metricIds = useMemo(() => {
     const ids = new Set<string>();
@@ -312,7 +327,7 @@ export function MarketDashboard({
     metricIds,
     geographyType as GeoLevel,
     geographyId,
-    { trendMonths: 6, enabled: !loading && !!data, stateFilter }
+    { trendMonths: 6, enabled: !loading && !!data, stateFilter: effectiveStateFilter }
   );
 
   if (loading) {
