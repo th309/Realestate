@@ -32,7 +32,13 @@ export async function fetchSnapshotData(
 ): Promise<SnapshotData> {
   const config = getMetricConfig(metricId);
   if (!config) {
-    console.warn(`Unknown metric: ${metricId}`);
+    console.warn(`[Snapshot] Unknown metric: ${metricId}`);
+    return {};
+  }
+
+  // Check if metric supports this geography level
+  if (config.supportedGeos && !config.supportedGeos.includes(geoLevel)) {
+    console.warn(`[Snapshot] Metric ${metricId} not supported for ${geoLevel} (supported: ${config.supportedGeos.join(', ')})`);
     return {};
   }
 
@@ -62,9 +68,10 @@ export async function fetchSnapshotData(
   }
 
   try {
-    const response = await fetch(`${API_URL}${url}`);
+    const fullUrl = `${API_URL}${url}`;
+    const response = await fetch(fullUrl);
     if (!response.ok) {
-      console.error(`API error for ${metricId}: ${response.status}`);
+      console.error(`[Snapshot] API error for ${metricId} at ${geoLevel}: ${response.status} - ${fullUrl}`);
       return {};
     }
 
@@ -75,9 +82,16 @@ export async function fetchSnapshotData(
       ? { success: true, count: rawData.length, data: rawData }
       : rawData;
 
-    return transformResponse(normalizedData, geoLevel, config);
+    const result = transformResponse(normalizedData, geoLevel, config);
+
+    // Log if no data returned
+    if (Object.keys(result).length === 0 && normalizedData.count > 0) {
+      console.warn(`[Snapshot] ${metricId}: API returned ${normalizedData.count} rows but 0 matched after transform`);
+    }
+
+    return result;
   } catch (error) {
-    console.error(`Failed to fetch ${metricId}:`, error);
+    console.error(`[Snapshot] Failed to fetch ${metricId}:`, error);
     return {};
   }
 }
