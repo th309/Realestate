@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Loader2, TrendingUp, TrendingDown, Info, Clock } from 'lucide-react';
-import { api } from '@/lib/api/client';
-import type { GeoLevel, ScoreResponse } from '@/lib/data';
+import { fetchScore, type GeoLevel, type ScoreResponse } from '@/lib/data';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { ScoreHistoryChart } from '@/app/components/scoring/ScoreHistoryChart';
 import { M3Card, M3CardHeader } from './M3Card';
@@ -124,9 +123,9 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
       try {
         setLoading(true);
         setError(null);
-        const response = await api.getScore(geoLevel, selectedAreaId);
+        const response = await fetchScore(geoLevel, selectedAreaId);
         if (isMounted) {
-          setScores(response as ScoreResponse | null);
+          setScores(response);
           setLoading(false);
         }
       } catch (err) {

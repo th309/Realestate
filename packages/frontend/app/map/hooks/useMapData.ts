@@ -8,9 +8,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { api, MarketStats } from '@/lib/api/client';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, MapData } from '../types';
-import { fetchSnapshotData, toHomeValues, getMetricConfig, isMetricSupportedForGeo } from '@/lib/data';
+import {
+  fetchSnapshotData,
+  fetchMarketStats,
+  toHomeValues,
+  getMetricConfig,
+  isMetricSupportedForGeo,
+  type MarketStats,
+} from '@/lib/data';
 
 interface UseMapDataReturn {
   mapData: MapData;
@@ -73,7 +79,7 @@ export function useMapData(): UseMapDataReturn {
 
   // Load stats on mount
   useEffect(() => {
-    api.getStats().then(setStats).catch(console.error);
+    fetchMarketStats().then(setStats).catch(console.error);
   }, []);
 
   return {

@@ -126,6 +126,10 @@ export {
   fetchScore,
   fetchBatchScores,
   fetchScoreExpanded,
+
+  // Markets
+  fetchMarketStats,
+  type MarketStats,
 } from './fetchers';
 
 // ============================================================================

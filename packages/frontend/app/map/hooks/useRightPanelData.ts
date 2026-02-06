@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api/client';
+import { fetchScore, type ScoreResponse } from '@/lib/data';
 import type { GeoLevel, ViewMode, SelectedGeography } from '../types';
 import type { TrendDirection } from '../components/sidebar-components/TrendArrow';
 
@@ -177,13 +177,15 @@ export function useRightPanelData(
     setError(null);
 
     try {
-      // Fetch score from scoring API
+      // Fetch score from scoring API using the data layer
       const scoringType = mapGeoLevelToScoringType(geoLevel);
-      const scoreResponse = await api.getScore(scoringType, geography.id);
+      const scoreResponse = await fetchScore(scoringType, geography.id);
 
       // Get the appropriate score based on view mode
       const score = scoreResponse
-        ? (viewMode === 'homebuyer' ? scoreResponse.homereadyScore : scoreResponse.investoredgeScore)
+        ? (viewMode === 'homebuyer'
+            ? scoreResponse.scores?.homeready?.score
+            : scoreResponse.scores?.investoredge?.score)
         : undefined;
 
       // Calculate confidence based on data completeness

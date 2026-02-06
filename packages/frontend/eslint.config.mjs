@@ -13,6 +13,17 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Enforce data layer usage
+  {
+    rules: {
+      "no-restricted-imports": ["error", {
+        "patterns": [{
+          "group": ["**/lib/api/client*"],
+          "message": "Use @/lib/data instead. lib/api/client is deprecated."
+        }]
+      }]
+    }
+  }
 ]);
 
 export default eslintConfig;

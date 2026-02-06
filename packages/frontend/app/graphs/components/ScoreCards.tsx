@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { api } from '@/lib/api/client';
-import { type GeoLevel, type ScoreResponse, getMetricConfig } from '@/lib/data';
+import { fetchScore, type GeoLevel, type ScoreResponse, getMetricConfig } from '@/lib/data';
 import { M3Card } from './M3Card';
 import { Loader2, TrendingUp, TrendingDown, Minus, Settings } from 'lucide-react';
 import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
@@ -320,10 +319,9 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
     async function fetchScores() {
       try {
         setLoading(true);
-        const response = await api.getScore(geoLevel, selectedArea);
+        const response = await fetchScore(geoLevel, selectedArea);
         if (isMounted) {
-          // api.getScore spreads the full API response which includes the scores object
-          setScores(response as ScoreResponse | null);
+          setScores(response);
           setLoading(false);
         }
       } catch (err) {

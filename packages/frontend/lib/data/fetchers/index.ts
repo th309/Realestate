@@ -34,3 +34,6 @@ export {
   fetchBatchScores,
   fetchScoreExpanded,
 } from './scores';
+
+// Market data (stats, lists)
+export { fetchMarketStats, type MarketStats } from './markets';
