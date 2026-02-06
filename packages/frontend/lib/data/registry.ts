@@ -165,10 +165,11 @@ export const METRICS: Record<string, MetricConfig> = {
     id: 'rent_for_houses',
     title: 'Renter Demand Index',
     format: 'index',
-    dataSource: 'zillow',
-    apiEndpoint: '/api/zillow/demand/{geo}',
+    dataSource: 'calculated',
+    apiEndpoint: '/api/metrics/renter-demand/{geo}',
     keyField: 'auto',
-    supportedGeos: ['metro', 'zip'],
+    valueField: 'renter_demand_index',
+    supportedGeos: ['metro', 'county', 'zip'],
   },
 
   // ============================================================================

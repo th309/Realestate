@@ -290,6 +290,69 @@ export class MetricsController {
   }
 
   // ============================================================================
+  // RENTER DEMAND INDEX (calculated stand-in for Zillow ZORDI)
+  // ============================================================================
+
+  @Get('renter-demand/metros')
+  async getMetroRenterDemand() {
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'renter_demand_index',
+        'metro',
+      );
+    return {
+      success: preCalculated.success,
+      count: preCalculated.data.length,
+      geography: 'Metro',
+      metric: 'renter_demand_index',
+      source: 'calculated_metrics',
+      data: preCalculated.data,
+    };
+  }
+
+  @Get('renter-demand/counties')
+  async getCountyRenterDemand() {
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'renter_demand_index',
+        'county',
+      );
+    return {
+      success: preCalculated.success,
+      count: preCalculated.data.length,
+      geography: 'County',
+      metric: 'renter_demand_index',
+      source: 'calculated_metrics',
+      data: preCalculated.data,
+    };
+  }
+
+  @Get('renter-demand/zips')
+  async getZipRenterDemand(@Query('state') state?: string) {
+    const preCalculated =
+      await this.calculatedMetricsService.getInvestmentMetricsForMap(
+        'renter_demand_index',
+        'zip',
+      );
+    // Filter by state if provided
+    let data = preCalculated.data;
+    if (state && preCalculated.data.length > 0) {
+      const stateCode = normalizeStateToCode(state).toUpperCase();
+      data = preCalculated.data.filter(
+        (d: any) => d.state_code?.toUpperCase() === stateCode,
+      );
+    }
+    return {
+      success: preCalculated.success,
+      count: data.length,
+      geography: 'Zip',
+      metric: 'renter_demand_index',
+      source: 'calculated_metrics',
+      data,
+    };
+  }
+
+  // ============================================================================
   // INVESTMENT METRICS ENDPOINTS (from pre-calculated data)
   // ============================================================================
 

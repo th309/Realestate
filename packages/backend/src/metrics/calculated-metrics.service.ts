@@ -1408,7 +1408,8 @@ export class CalculatedMetricsService {
       | 'gross_yield'
       | 'rent_to_price_ratio'
       | 'grm'
-      | 'overvalued_pct',
+      | 'overvalued_pct'
+      | 'renter_demand_index',
     geographyType: 'metro' | 'county' | 'zip' | 'state' | 'national' = 'metro',
   ): Promise<{ data: any[]; success: boolean; source: string }> {
     // Get latest period_date for this metric
