@@ -27,6 +27,38 @@ export interface ReportTemplate {
   config: any;
 }
 
+/** Market metrics for AI context */
+export interface MarketMetrics {
+  // Price metrics
+  zhvi?: number;
+  zhvi_yoy?: number;
+  median_listing_price?: number;
+  median_listing_price_yoy?: number;
+  // Rent metrics
+  zori?: number;
+  zori_yoy?: number;
+  // Market activity
+  hotness_score?: number;
+  demand_score?: number;
+  days_on_market?: number;
+  days_pending?: number;
+  active_listing_count?: number;
+  inventory_yoy?: number;
+  pending_ratio?: number;
+  price_reduced_share?: number;
+  // Calculated metrics
+  cap_rate?: number;
+  gross_yield?: number;
+  grm?: number;
+  overvalued_pct?: number;
+  affordability_ratio?: number;
+  // Census data
+  median_income?: number;
+  population?: number;
+  population_yoy?: number;
+  unemployment_rate?: number;
+}
+
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
@@ -150,6 +182,12 @@ export class ReportsService {
         geoType,
       );
 
+      // 1b. Fetch market metrics for AI context
+      const marketMetrics = await this.fetchMarketMetrics(
+        dto.primary_geography.id,
+        geoType,
+      );
+
       // 2. Scout news via Gemini (with caching)
       const newsResult = await this.geminiNewsService.getOrScoutNews(
         dto.primary_geography.id,
@@ -170,7 +208,24 @@ export class ReportsService {
 
       // 3. Assemble report data
       const populatedData = {
-        current: {},
+        current: {
+          zhvi: marketMetrics.zhvi,
+          zhvi_yoy: marketMetrics.zhvi_yoy,
+          median_listing_price: marketMetrics.median_listing_price,
+          median_listing_price_yoy: marketMetrics.median_listing_price_yoy,
+          zori: marketMetrics.zori,
+          days_on_market: marketMetrics.days_on_market,
+          active_listing_count: marketMetrics.active_listing_count,
+          inventory_yoy: marketMetrics.inventory_yoy,
+          hotness_score: marketMetrics.hotness_score,
+          demand_score: marketMetrics.demand_score,
+          cap_rate: marketMetrics.cap_rate,
+          gross_yield: marketMetrics.gross_yield,
+          grm: marketMetrics.grm,
+          overvalued_pct: marketMetrics.overvalued_pct,
+          median_income: marketMetrics.median_income,
+          population: marketMetrics.population,
+        },
         historical: {},
         benchmarks: {},
         scores: {
@@ -224,10 +279,53 @@ export class ReportsService {
         aiNarratives = await this.claudeService.generateNarratives(
           template.config.ai_config.narrative_sections,
           {
+            // Basic info
             geography_name: dto.primary_geography.name,
             geography_type: dto.primary_geography.type,
             user_type: dto.user_type,
+
+            // Scores (formatted for display)
+            homeready_score: scores ? Math.round(scores.scores.homeready.score) : 'N/A',
+            investoredge_score: scores ? Math.round(scores.scores.investoredge.score) : 'N/A',
+            markethealth_score: scores ? Math.round(scores.scores.markethealth.score) : 'N/A',
+            homeready_grade: scores?.scores.homeready.grade || 'N/A',
+            investoredge_grade: scores?.scores.investoredge.grade || 'N/A',
+
+            // Price metrics
+            zhvi: this.formatCurrency(marketMetrics.zhvi),
+            zhvi_yoy: this.formatPercent(marketMetrics.zhvi_yoy),
+            median_listing_price: this.formatCurrency(marketMetrics.median_listing_price),
+            median_price_yoy: this.formatPercent(marketMetrics.median_listing_price_yoy),
+
+            // Rent metrics
+            zori: this.formatCurrency(marketMetrics.zori),
+            median_rent: this.formatCurrency(marketMetrics.zori),
+
+            // Market activity
+            market_heat_index: this.formatNumber(marketMetrics.hotness_score),
+            hotness_score: this.formatNumber(marketMetrics.hotness_score),
+            demand_score: this.formatNumber(marketMetrics.demand_score),
+            days_on_market: this.formatNumber(marketMetrics.days_on_market),
+            days_pending: this.formatNumber(marketMetrics.days_on_market), // Alias
+            active_listings: this.formatNumber(marketMetrics.active_listing_count),
+            inventory_yoy: this.formatPercent(marketMetrics.inventory_yoy),
+            pending_ratio: marketMetrics.pending_ratio ? `${(marketMetrics.pending_ratio * 100).toFixed(1)}%` : 'N/A',
+            price_reduced_share: marketMetrics.price_reduced_share ? `${(marketMetrics.price_reduced_share * 100).toFixed(1)}%` : 'N/A',
+
+            // Investment metrics
+            cap_rate: marketMetrics.cap_rate ? `${marketMetrics.cap_rate.toFixed(2)}%` : 'N/A',
+            gross_yield: marketMetrics.gross_yield ? `${marketMetrics.gross_yield.toFixed(2)}%` : 'N/A',
+            grm: marketMetrics.grm ? marketMetrics.grm.toFixed(1) : 'N/A',
+            overvalued_pct: this.formatPercent(marketMetrics.overvalued_pct),
+
+            // Economic data
+            median_income: this.formatCurrency(marketMetrics.median_income),
+            population: marketMetrics.population ? marketMetrics.population.toLocaleString() : 'N/A',
+            affordability_ratio: marketMetrics.affordability_ratio ? marketMetrics.affordability_ratio.toFixed(1) : 'N/A',
+
+            // Full objects for complex analysis
             scores,
+            market_metrics: marketMetrics,
             news_context: newsContext,
             market_signal_summary: signalSummary
               ? `Overall market signal: ${signalSummary.overall.toUpperCase()} (${signalSummary.bullish_count} bullish, ${signalSummary.bearish_count} bearish signals)`
@@ -525,5 +623,230 @@ export class ReportsService {
     const shortGeoName =
       geographyName.length > 30 ? geographyName.split(',')[0] : geographyName;
     return `${shortGeoName} - ${templateName}`;
+  }
+
+  /**
+   * Fetch market metrics for a geography to populate AI context
+   */
+  private async fetchMarketMetrics(
+    geographyId: string,
+    geographyType: 'metro' | 'county' | 'zip',
+  ): Promise<MarketMetrics> {
+    const client = this.supabase.getClient();
+    const metrics: MarketMetrics = {};
+
+    try {
+      // Fetch based on geography type
+      if (geographyType === 'metro') {
+        // Get Realtor metro data (median price, days on market, inventory)
+        const { data: realtorData } = await client
+          .from('realtor_metro')
+          .select('*')
+          .eq('cbsa_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (realtorData) {
+          metrics.median_listing_price = realtorData.median_listing_price;
+          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
+          metrics.days_on_market = realtorData.median_days_on_market;
+          metrics.active_listing_count = realtorData.active_listing_count;
+          metrics.inventory_yoy = realtorData.active_listing_count_yy;
+          metrics.pending_ratio = realtorData.pending_ratio;
+          metrics.price_reduced_share = realtorData.price_reduced_share;
+          metrics.hotness_score = realtorData.hotness_score;
+          metrics.demand_score = realtorData.demand_score;
+        }
+
+        // Get Zillow ZHVI data
+        const { data: zhviData } = await client
+          .from('zillow_metro')
+          .select('value')
+          .eq('region_id', geographyId)
+          .eq('metric_name', 'zhvi')
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (zhviData) {
+          metrics.zhvi = zhviData.value;
+        }
+
+        // Get YoY ZHVI change (compare current to 12 months ago)
+        const { data: zhviHistory } = await client
+          .from('zillow_metro')
+          .select('value, period_date')
+          .eq('region_id', geographyId)
+          .eq('metric_name', 'zhvi')
+          .order('period_date', { ascending: false })
+          .limit(13);
+
+        if (zhviHistory && zhviHistory.length >= 12) {
+          const current = zhviHistory[0]?.value;
+          const yearAgo = zhviHistory[12]?.value;
+          if (current && yearAgo) {
+            metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+          }
+        }
+
+        // Get ZORI (rent) data
+        const { data: zoriData } = await client
+          .from('zillow_zori')
+          .select('value')
+          .eq('region_id', geographyId)
+          .eq('geography', 'Metro')
+          .order('date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (zoriData) {
+          metrics.zori = zoriData.value;
+        }
+
+        // Get calculated metrics (cap rate, GRM, etc.)
+        const { data: calcMetrics } = await client
+          .from('calculated_metrics')
+          .select('*')
+          .eq('geography_id', geographyId)
+          .eq('geography_type', 'metro')
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (calcMetrics) {
+          metrics.cap_rate = calcMetrics.cap_rate;
+          metrics.gross_yield = calcMetrics.gross_yield;
+          metrics.grm = calcMetrics.grm;
+          metrics.overvalued_pct = calcMetrics.overvalued_pct;
+          metrics.affordability_ratio = calcMetrics.affordability_ratio;
+        }
+
+        // Get Census data
+        const { data: incomeData } = await client
+          .from('census_data')
+          .select('value')
+          .eq('geography_id', geographyId)
+          .eq('geography_type', 'metro')
+          .eq('metric_name', 'median_income')
+          .order('year', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (incomeData) {
+          metrics.median_income = incomeData.value;
+        }
+
+        const { data: popData } = await client
+          .from('census_data')
+          .select('value')
+          .eq('geography_id', geographyId)
+          .eq('geography_type', 'metro')
+          .eq('metric_name', 'population')
+          .order('year', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (popData) {
+          metrics.population = popData.value;
+        }
+      } else if (geographyType === 'county') {
+        // Get Realtor county data
+        const { data: realtorData } = await client
+          .from('realtor_county')
+          .select('*')
+          .eq('county_fips', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (realtorData) {
+          metrics.median_listing_price = realtorData.median_listing_price;
+          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
+          metrics.days_on_market = realtorData.median_days_on_market;
+          metrics.active_listing_count = realtorData.active_listing_count;
+          metrics.inventory_yoy = realtorData.active_listing_count_yy;
+        }
+
+        // Get calculated metrics
+        const { data: calcMetrics } = await client
+          .from('calculated_metrics')
+          .select('*')
+          .eq('geography_id', geographyId)
+          .eq('geography_type', 'county')
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (calcMetrics) {
+          metrics.cap_rate = calcMetrics.cap_rate;
+          metrics.gross_yield = calcMetrics.gross_yield;
+          metrics.affordability_ratio = calcMetrics.affordability_ratio;
+        }
+      } else if (geographyType === 'zip') {
+        // Get Realtor zip data
+        const { data: realtorData } = await client
+          .from('realtor_zip')
+          .select('*')
+          .eq('postal_code', geographyId)
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (realtorData) {
+          metrics.median_listing_price = realtorData.median_listing_price;
+          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
+          metrics.days_on_market = realtorData.median_days_on_market;
+          metrics.active_listing_count = realtorData.active_listing_count;
+        }
+
+        // Get calculated metrics
+        const { data: calcMetrics } = await client
+          .from('calculated_metrics')
+          .select('*')
+          .eq('geography_id', geographyId)
+          .eq('geography_type', 'zip')
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (calcMetrics) {
+          metrics.cap_rate = calcMetrics.cap_rate;
+          metrics.gross_yield = calcMetrics.gross_yield;
+        }
+      }
+
+      this.logger.log(`Fetched market metrics for ${geographyType} ${geographyId}: ${Object.keys(metrics).length} fields`);
+    } catch (error) {
+      this.logger.error(`Failed to fetch market metrics for ${geographyId}:`, error);
+    }
+
+    return metrics;
+  }
+
+  /**
+   * Format number for display
+   */
+  private formatNumber(value: number | undefined, decimals = 0): string {
+    if (value === undefined || value === null) return 'N/A';
+    if (decimals === 0) return Math.round(value).toLocaleString();
+    return value.toFixed(decimals);
+  }
+
+  /**
+   * Format currency for display
+   */
+  private formatCurrency(value: number | undefined): string {
+    if (value === undefined || value === null) return 'N/A';
+    return '$' + Math.round(value).toLocaleString();
+  }
+
+  /**
+   * Format percentage for display
+   */
+  private formatPercent(value: number | undefined, decimals = 1): string {
+    if (value === undefined || value === null) return 'N/A';
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(decimals)}%`;
   }
 }
