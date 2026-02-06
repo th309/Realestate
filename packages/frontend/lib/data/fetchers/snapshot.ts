@@ -69,6 +69,7 @@ export async function fetchSnapshotData(
 
   try {
     const fullUrl = `${API_URL}${url}`;
+    console.log(`[Snapshot] Fetching ${metricId} at ${geoLevel}: ${fullUrl}`);
     const response = await fetch(fullUrl);
     if (!response.ok) {
       console.error(`[Snapshot] API error for ${metricId} at ${geoLevel}: ${response.status} - ${fullUrl}`);
@@ -87,6 +88,12 @@ export async function fetchSnapshotData(
     // Log if no data returned
     if (Object.keys(result).length === 0 && normalizedData.count > 0) {
       console.warn(`[Snapshot] ${metricId}: API returned ${normalizedData.count} rows but 0 matched after transform`);
+    }
+
+    // Debug: log sample keys for ZIP level
+    if (geoLevel === 'zip' && Object.keys(result).length > 0) {
+      const sampleKeys = Object.keys(result).slice(0, 5);
+      console.log(`[Snapshot] ${metricId} at ${geoLevel}: ${Object.keys(result).length} entries, sample keys: ${sampleKeys.join(', ')}`);
     }
 
     return result;

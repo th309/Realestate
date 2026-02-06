@@ -300,16 +300,26 @@ export function MarketDashboard({
 
   // Derive state filter: use URL param if available, otherwise extract from geography name
   const effectiveStateFilter = useMemo(() => {
-    if (stateFilter) return stateFilter;
+    if (stateFilter) {
+      console.log(`[MarketDashboard] Using URL stateFilter: ${stateFilter}`);
+      return stateFilter;
+    }
     if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
     // Extract state from location name (e.g., "21701, Frederick, MD" -> "MD")
     const name = data?.geography?.name;
-    if (!name) return undefined;
+    if (!name) {
+      console.log(`[MarketDashboard] No geography name yet, stateFilter undefined`);
+      return undefined;
+    }
     const parts = name.split(',');
     if (parts.length >= 2) {
       const lastPart = parts[parts.length - 1].trim().toUpperCase();
-      if (lastPart.length === 2) return lastPart;
+      if (lastPart.length === 2) {
+        console.log(`[MarketDashboard] Extracted state from name "${name}": ${lastPart}`);
+        return lastPart;
+      }
     }
+    console.log(`[MarketDashboard] Could not extract state from name: "${name}"`);
     return undefined;
   }, [stateFilter, geographyType, data?.geography?.name]);
 

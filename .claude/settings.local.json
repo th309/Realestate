@@ -159,7 +159,24 @@
       "Bash(railway add:*)",
       "Bash(railway domain:*)",
       "Bash(railway deployment --help:*)",
-      "Bash(npx next build:*)"
+      "Bash(npx next build:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_select_option",
+      "mcp__plugin_playwright_playwright__browser_type",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Bash(if [ -d \"D:/Projects/rei-platform/packages/frontend/app/$route\" ])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(npm run dev:*)",
+      "Bash(more:*)",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_console_messages"
     ]
   }
 }
