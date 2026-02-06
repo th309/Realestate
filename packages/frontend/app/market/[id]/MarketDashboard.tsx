@@ -298,18 +298,14 @@ export function MarketDashboard({
     return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
   }, [activeView]);
 
-  // Extract all metric IDs to fetch (filtered by supported geo level)
+  // Extract all metric IDs to fetch (keep stable for hooks - filter at display time)
   const metricIds = useMemo(() => {
     const ids = new Set<string>();
     categories.forEach(cat => {
-      cat.metrics?.slice(0, 4).forEach(m => {
-        if (isMetricSupportedForGeo(m.id, geographyType as GeoLevel)) {
-          ids.add(m.id);
-        }
-      });
+      cat.metrics?.slice(0, 4).forEach(m => ids.add(m.id));
     });
     return Array.from(ids);
-  }, [categories, geographyType]);
+  }, [categories]);
 
   // Fetch metric data using the data layer hook
   const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
