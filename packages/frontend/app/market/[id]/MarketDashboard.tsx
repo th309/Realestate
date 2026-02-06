@@ -323,14 +323,19 @@ export function MarketDashboard({
     return undefined;
   }, [stateFilter, geographyType, data?.geography?.name]);
 
-  // Extract all metric IDs to fetch (keep stable for hooks - filter at display time)
+  // Extract all metric IDs to fetch - must match display logic (geo filter then slice)
   const metricIds = useMemo(() => {
     const ids = new Set<string>();
-    categories.forEach(cat => {
-      cat.metrics?.slice(0, 4).forEach(m => ids.add(m.id));
+    // Only fetch for the categories we display (first 3)
+    categories.slice(0, 3).forEach(cat => {
+      // Filter by geo support first, then take first 4 - matches MetricCategorySection display
+      const supportedMetrics = cat.metrics?.filter(m =>
+        isMetricSupportedForGeo(m.id, geographyType as GeoLevel)
+      ) ?? [];
+      supportedMetrics.slice(0, 4).forEach(m => ids.add(m.id));
     });
     return Array.from(ids);
-  }, [categories]);
+  }, [categories, geographyType]);
 
   // Fetch metric data using the data layer hook
   const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
