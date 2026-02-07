@@ -12,11 +12,6 @@ const nextConfig = {
     ],
   },
   transpilePackages: ['recharts'],
-  // Experimental: Try to fix global-error prerendering issue
-  experimental: {
-    // Disable static generation for error pages to avoid context issues
-    missingSuspenseWithCSRBailout: false,
-  },
 };
 
 export default nextConfig;
