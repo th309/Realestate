@@ -12,3 +12,4 @@ export * from './RedfinImportSection';
 export * from './ZillowAnalysisSection';
 export * from './ZillowFetcherSection';
 export * from './ResultDisplay';
+export * from './AnalyticsAssistantSection';
