@@ -45,3 +45,9 @@ export {
   type UseScoreDataOptions,
   type UseScoreDataResult,
 } from './useScoreData';
+
+// Metric access (entitlements gating)
+export {
+  useMetricAccess,
+  type MetricAccessResult,
+} from './useMetricAccess';

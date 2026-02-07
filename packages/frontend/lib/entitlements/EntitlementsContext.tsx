@@ -9,6 +9,7 @@ import type {
   AccessInfo
 } from './types';
 import { fetchEntitlements, trackPaywallEvent } from './api';
+import { getAllMetricIds } from '@/lib/data';
 
 const defaultState: EntitlementsState = {
   tier: 'free',
@@ -20,14 +21,18 @@ const defaultState: EntitlementsState = {
 
 const EntitlementsContext = createContext<EntitlementsContextValue | null>(null);
 
-// Resources to pre-fetch on mount
-const DEFAULT_RESOURCES = [
-  'feature:analytics_assistant',
-  'feature:export_csv',
-  'feature:reports',
-  'geo:zip',
-  'geo:county',
-];
+// Geography levels and features to check
+const GEO_LEVELS = ['national', 'state', 'metro', 'county', 'city', 'zip', 'tract'];
+const FEATURES = ['analytics_assistant', 'export_csv', 'reports', 'ai_insights', 'scores'];
+
+/** Build full resource list from metric registry + geo levels + features */
+function buildResourceList(): string[] {
+  return [
+    ...getAllMetricIds().map(id => `metric:${id}`),
+    ...GEO_LEVELS.map(g => `geo:${g}`),
+    ...FEATURES.map(f => `feature:${f}`),
+  ];
+}
 
 interface EntitlementsProviderProps {
   children: React.ReactNode;
@@ -36,10 +41,16 @@ interface EntitlementsProviderProps {
 
 export function EntitlementsProvider({
   children,
-  initialResources = DEFAULT_RESOURCES
+  initialResources,
 }: EntitlementsProviderProps) {
   const [state, setState] = useState<EntitlementsState>(defaultState);
   const [simulatedTier, setSimulatedTier] = useState<UserTier | null>(null);
+
+  // Auto-generate resource list from registry if not provided
+  const resources = useMemo(
+    () => initialResources ?? buildResourceList(),
+    [initialResources]
+  );
 
   // Check URL for tier override (dev mode)
   useEffect(() => {
@@ -55,16 +66,17 @@ export function EntitlementsProvider({
   const refresh = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchEntitlements(initialResources, simulatedTier);
+      const data = await fetchEntitlements(resources, simulatedTier);
       setState(data);
     } catch (error) {
+      // Fail open: default to free tier on API failure
       setState(prev => ({
         ...prev,
         loading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: null,
       }));
     }
-  }, [initialResources, simulatedTier]);
+  }, [resources, simulatedTier]);
 
   useEffect(() => {
     refresh();
@@ -93,6 +105,18 @@ export function EntitlementsProvider({
     return accessInfo?.tierRequired ?? null;
   }, [state.access]);
 
+  const isMetricGated = useCallback((metricId: string): boolean => {
+    const access = getAccess('metric', metricId);
+    return access.level === 'none';
+  }, [getAccess]);
+
+  // TTL: re-fetch entitlements every 30 minutes
+  useEffect(() => {
+    const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+    const interval = setInterval(() => { refresh(); }, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [refresh]);
+
   const trackPaywallView = useCallback((type: ResourceType, id: string, pagePath?: string) => {
     trackPaywallEvent(type, id, 'view', pagePath || window.location.pathname);
   }, []);
@@ -111,6 +135,7 @@ export function EntitlementsProvider({
     getAccess,
     getPreviewLimit,
     getTierRequired,
+    isMetricGated,
     trackPaywallView,
     trackUpgradeClick,
     trackDismiss,
@@ -123,6 +148,7 @@ export function EntitlementsProvider({
     getAccess,
     getPreviewLimit,
     getTierRequired,
+    isMetricGated,
     trackPaywallView,
     trackUpgradeClick,
     trackDismiss,

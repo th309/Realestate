@@ -32,6 +32,7 @@ export interface EntitlementsContextValue extends EntitlementsState {
   getAccess: (type: ResourceType, id: string) => AccessInfo;
   getPreviewLimit: (type: ResourceType, id: string) => number | null;
   getTierRequired: (type: ResourceType, id: string) => UserTier | null;
+  isMetricGated: (metricId: string) => boolean;
 
   // Event tracking
   trackPaywallView: (type: ResourceType, id: string, pagePath?: string) => void;
