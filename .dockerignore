@@ -56,14 +56,8 @@ docs
 *.xlsx
 *.xml
 
-# Other services (not needed by backend or frontend)
-# Exclude everything except package.json (needed for npm workspaces)
-packages/propertyiq-analytics/src
-packages/propertyiq-analytics/Dockerfile
-packages/propertyiq-analytics/*.py
-packages/propertyiq-analytics/*.txt
-packages/propertyiq-analytics/*.md
-packages/quinn-widget/src
-packages/quinn-widget/examples
-packages/quinn-widget/*.md
-packages/quinn-widget/*.js
+# Other services - exclude all except package.json (needed for npm workspaces)
+packages/propertyiq-analytics/**
+!packages/propertyiq-analytics/package.json
+packages/quinn-widget/**
+!packages/quinn-widget/package.json
