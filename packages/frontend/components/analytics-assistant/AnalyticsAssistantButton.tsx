@@ -7,9 +7,11 @@
  */
 
 import React, { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Lock } from 'lucide-react';
 import { AnalyticsAssistantModal } from './AnalyticsAssistantModal';
 import { AnalyticsAssistantProps } from './types';
+import { useEntitlements } from '@/lib/entitlements';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 interface ButtonProps extends AnalyticsAssistantProps {
   /** Button variant */
@@ -33,6 +35,9 @@ export function AnalyticsAssistantButton({
   ...modalProps
 }: ButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const { canAccess } = useEntitlements();
+  const canUseAssistant = canAccess('feature', 'analytics_assistant');
 
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm gap-1.5',
@@ -56,26 +61,49 @@ export function AnalyticsAssistantButton({
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => canUseAssistant ? setIsOpen(true) : setShowPaywall(true)}
         className={`
           inline-flex items-center justify-center rounded-full font-medium
           transition-colors
           ${sizeClasses[size]}
           ${variantClasses[variant]}
           ${iconOnly ? '!px-2.5 !py-2.5' : ''}
+          ${!canUseAssistant ? 'opacity-70' : ''}
           ${className}
         `}
         aria-label={iconOnly ? label : undefined}
       >
-        <Sparkles className={iconSizes[size]} />
+        {canUseAssistant ? (
+          <Sparkles className={iconSizes[size]} />
+        ) : (
+          <Lock className={iconSizes[size]} />
+        )}
         {!iconOnly && <span>{label}</span>}
       </button>
 
-      <AnalyticsAssistantModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        {...modalProps}
-      />
+      {canUseAssistant && (
+        <AnalyticsAssistantModal
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          {...modalProps}
+        />
+      )}
+
+      {showPaywall && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+          onClick={() => setShowPaywall(false)}
+        >
+          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <PaywallCard
+              type="feature"
+              id="analytics_assistant"
+              title="Unlock AI Analytics"
+              description="Ask natural language questions about any market. Get instant data-driven answers with charts, comparisons, and rankings."
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

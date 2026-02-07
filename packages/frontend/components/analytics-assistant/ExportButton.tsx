@@ -7,7 +7,9 @@
  */
 
 import React, { useState } from 'react';
-import { Download, FileSpreadsheet, FileJson, ChevronDown, Loader2 } from 'lucide-react';
+import { Download, FileSpreadsheet, FileJson, ChevronDown, Loader2, Lock } from 'lucide-react';
+import { useEntitlements } from '@/lib/entitlements';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 interface ExportButtonProps {
   data: Record<string, unknown>[];
@@ -28,6 +30,9 @@ export function ExportButton({
 }: ExportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const { canAccess } = useEntitlements();
+  const canExport = canAccess('feature', 'export_csv');
 
   const sizeClasses = {
     sm: 'px-2 py-1 text-xs',
@@ -123,20 +128,22 @@ export function ExportButton({
   return (
     <div className="relative inline-block">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => canExport ? setIsOpen(!isOpen) : setShowPaywall(true)}
         disabled={disabled || isExporting || data.length === 0}
-        className={`flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]}`}
+        className={`flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${sizeClasses[size]} ${variantClasses[variant]} ${!canExport ? 'opacity-70' : ''}`}
       >
         {isExporting ? (
           <Loader2 className="w-4 h-4 animate-spin" />
+        ) : !canExport ? (
+          <Lock className="w-4 h-4" />
         ) : (
           <Download className="w-4 h-4" />
         )}
         Export
-        <ChevronDown className="w-3 h-3" />
+        {canExport && <ChevronDown className="w-3 h-3" />}
       </button>
 
-      {isOpen && (
+      {isOpen && canExport && (
         <>
           {/* Backdrop */}
           <div
@@ -162,6 +169,23 @@ export function ExportButton({
             </button>
           </div>
         </>
+      )}
+
+      {/* Paywall modal */}
+      {showPaywall && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+          onClick={() => setShowPaywall(false)}
+        >
+          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <PaywallCard
+              type="feature"
+              id="export_csv"
+              title="Unlock Data Export"
+              description="Export market data to CSV and JSON for your own analysis, presentations, and reports."
+            />
+          </div>
+        </div>
       )}
     </div>
   );

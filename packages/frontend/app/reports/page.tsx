@@ -2,6 +2,8 @@
 
 import React, { Suspense } from 'react';
 import { Dashboard } from './Dashboard';
+import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 function LoadingFallback() {
   return (
@@ -17,7 +19,22 @@ function LoadingFallback() {
 export default function ReportsPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Dashboard />
+      <EntitlementGate
+        type="feature"
+        id="reports"
+        fallback={
+          <div className="flex items-center justify-center min-h-screen bg-surface">
+            <PaywallCard
+              type="feature"
+              id="reports"
+              title="Unlock Market Reports"
+              description="Generate AI-powered market analysis reports with deep data insights, custom comparisons, and exportable formats."
+            />
+          </div>
+        }
+      >
+        <Dashboard />
+      </EntitlementGate>
     </Suspense>
   );
 }
