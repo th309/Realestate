@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { UserFeaturesService } from './user-features.service';
 
-@Controller('features')
+@Controller('api/features')
 export class UserFeaturesController {
   private readonly logger = new Logger(UserFeaturesController.name);
 

@@ -23,7 +23,7 @@ import {
   GrandfatherPolicy,
 } from './grandfathering.service';
 
-@Controller('admin/grandfathering')
+@Controller('api/admin/grandfathering')
 export class GrandfatheringController {
   private readonly logger = new Logger(GrandfatheringController.name);
 

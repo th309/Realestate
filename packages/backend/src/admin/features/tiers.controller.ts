@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { TiersService, CreateTierDto, UpdateTierDto } from './tiers.service';
 
-@Controller('admin/tiers')
+@Controller('api/admin/tiers')
 export class TiersController {
   private readonly logger = new Logger(TiersController.name);
 
