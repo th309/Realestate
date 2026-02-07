@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Lock } from 'lucide-react';
 import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 import type { GeoLevel } from '@/lib/data';
 
 // Available metrics for selection
@@ -11,6 +12,7 @@ interface AvailableMetric {
   name: string;
   category: string;
   disabled?: boolean;
+  locked?: boolean;
 }
 
 // Map metric IDs to UI categories (must match metric-categories.tsx)
@@ -72,6 +74,8 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
   // Use data binding layer to get available metrics
   const { options: metricOptions, loading } = useAllMetricOptions(geoLevel);
   
+  const [paywallMetric, setPaywallMetric] = useState<AvailableMetric | null>(null);
+
   // Transform metric options to AvailableMetric format with UI categories
   const availableMetrics = useMemo((): AvailableMetric[] => {
     return metricOptions.map(opt => ({
@@ -79,6 +83,7 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
       name: opt.label,
       category: getMetricCategory(opt.value),
       disabled: opt.disabled,
+      locked: opt.locked,
     }));
   }, [metricOptions]);
 
@@ -104,16 +109,18 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
 
   const toggleMetric = (metricId: string) => {
     const metric = availableMetrics.find(m => m.id === metricId);
+    if (metric?.locked) {
+      setPaywallMetric(metric);
+      return;
+    }
     setSelected(prev => {
       if (prev.includes(metricId)) {
-        // Always allow deselecting (even if metric is unavailable/greyed out)
         return prev.filter(id => id !== metricId);
       }
-      if (metric?.disabled) return prev; // Don't allow selecting unavailable metrics
+      if (metric?.disabled) return prev;
       if (prev.length < maxSelections) {
         return [...prev, metricId];
       }
-      // At max: replace oldest selection with the new one (no need to deselect first)
       return [...prev.slice(1), metricId];
     });
   };
@@ -156,26 +163,28 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
               <div className="flex flex-wrap gap-2">
                 {metrics.map(m => {
                   const isSelected = selected.includes(m.id);
-                  // Only grey out when metric is unavailable; at max, unselected metrics are still clickable (swap-in)
                   const isDisabled = m.disabled && !isSelected;
                   return (
                     <button
                       key={m.id}
                       onClick={() => toggleMetric(m.id)}
-                      disabled={isDisabled}
+                      disabled={isDisabled && !m.locked}
                       className={`
-                        px-4 py-2 rounded-full text-sm font-medium transition-all
+                        px-4 py-2 rounded-full text-sm font-medium transition-all inline-flex items-center gap-1.5
                         ${isSelected
                           ? 'bg-primary text-white shadow-md'
-                          : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border border-outline-variant'
+                          : m.locked
+                            ? 'bg-surface-container text-on-surface-variant/60 border border-outline-variant cursor-pointer hover:bg-surface-container-high'
+                            : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high border border-outline-variant'
                         }
-                        ${isDisabled
+                        ${isDisabled && !m.locked
                           ? 'opacity-50 cursor-not-allowed'
                           : 'cursor-pointer'
                         }
                       `}
                     >
                       {m.name}
+                      {m.locked && <Lock className="w-3.5 h-3.5" />}
                     </button>
                   );
                 })}
@@ -184,6 +193,22 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
           );
         })}
       </div>
+
+      {/* Paywall modal for locked metrics */}
+      {paywallMetric && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+          onClick={() => setPaywallMetric(null)}
+        >
+          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <PaywallCard
+              type="metric"
+              id={paywallMetric.id}
+              title={`Unlock ${paywallMetric.name}`}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -28,6 +28,7 @@ import {
     isMetricSupportedForGeo,
     type GeoLevel,
 } from '@/lib/data';
+import { useEntitlements } from '@/lib/entitlements';
 import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
 import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 
@@ -37,6 +38,8 @@ export interface MetricOption {
     category?: string;
     isPremium?: boolean;
     disabled?: boolean;
+    /** Whether this metric is locked by entitlements (user lacks access) */
+    locked?: boolean;
 }
 
 export interface MetricOptionsConfig {
@@ -100,21 +103,12 @@ const CATEGORY_METRICS: Record<string, string[]> = {
     ],
 };
 
-// Premium metrics (should eventually come from backend)
-const PREMIUM_METRICS = new Set([
-    'years_to_save', 'homeowner_affordability', 'home_value_5yr',
-    'sale_to_list', 'home_value_mom', 'inventory_surplus',
-    'cap_rate', 'renter_affordability', 'overvalued_pct',
-    'population_growth', 'income_growth', 'median_age', 'homeownership_rate',
-    'job_growth', 'gdp_growth', 'cost_of_living',
-    'new_construction_ppsf',
-]);
-
 /**
  * Get metric options for dropdowns/selectors
  */
 export function useMetricOptions(config: MetricOptionsConfig = {}): MetricOptionsResult {
     const { category, geoLevel, premiumFilter = 'all', metricIds } = config;
+    const { isMetricGated } = useEntitlements();
 
     const options = useMemo(() => {
         let ids: string[];
@@ -156,23 +150,24 @@ export function useMetricOptions(config: MetricOptionsConfig = {}): MetricOption
                 }
             }
 
-            // Check premium filter
-            const isPremium = PREMIUM_METRICS.has(id);
-            if (premiumFilter === 'premium' && !isPremium) continue;
-            if (premiumFilter === 'free' && isPremium) continue;
+            // Check premium filter using entitlements
+            const locked = isMetricGated(id);
+            if (premiumFilter === 'premium' && !locked) continue;
+            if (premiumFilter === 'free' && locked) continue;
 
             result.push({
                 label: metricConfig.title,
                 value: id,
                 category: category,
-                isPremium,
+                isPremium: locked,
                 disabled: false,
+                locked,
             });
         }
 
         // Sort alphabetically by label
         return result.sort((a, b) => a.label.localeCompare(b.label));
-    }, [category, geoLevel, premiumFilter, metricIds]);
+    }, [category, geoLevel, premiumFilter, metricIds, isMetricGated]);
 
     return {
         options,
@@ -197,6 +192,7 @@ export function useMetricCategories(): { label: string; value: string }[] {
 export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
     // Master ordered list matching map page sidebar (metric-categories.tsx)
     const ORDERED_IDS = useMemo(() => getAllOrderedMetricIds(), []);
+    const { isMetricGated } = useEntitlements();
 
     const options = useMemo(() => {
         const result: MetricOption[] = [];
@@ -222,22 +218,26 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
 
             if (!isAvailable) {
                 // Add as disabled instead of skipping
+                const locked = isMetricGated(id);
                 result.push({
                     label: metricConfig.title,
                     value: id,
-                    isPremium: PREMIUM_METRICS.has(id),
+                    isPremium: locked,
                     disabled: true,
+                    locked,
                 });
                 seen.add(id);
                 continue;
             }
 
             seen.add(id);
+            const locked = isMetricGated(id);
             result.push({
                 label: metricConfig.title,
                 value: id,
-                isPremium: PREMIUM_METRICS.has(id),
+                isPremium: locked,
                 disabled: false,
+                locked,
             });
         }
 
@@ -260,16 +260,18 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
                 }
             }
 
+            const locked = isMetricGated(id);
             result.push({
                 label: metricConfig.title,
                 value: id,
-                isPremium: PREMIUM_METRICS.has(id),
+                isPremium: locked,
                 disabled,
+                locked,
             });
         }
 
         return result;
-    }, [geoLevel]);
+    }, [geoLevel, isMetricGated]);
 
     return {
         options,

@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PremiumIcon, InfoSmallIcon } from '../Icons';
+import { PremiumIcon, InfoSmallIcon, LockIcon } from '../Icons';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from '../../types';
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
 import { PropertyTypeSelector } from './PropertyTypeSelector';
 import { getMetricDefinition } from '../../data/metricDefinitions';
 import { getMetricDataDate, formatDataDateForDisplay } from '../../config';
+import { useEntitlements } from '@/lib/entitlements';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 interface MetricItemProps {
   metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean };
@@ -34,7 +36,10 @@ export function MetricItem({
   onRentIndexTypeChange,
   onRenterDemandTypeChange,
 }: MetricItemProps) {
+  const { isMetricGated } = useEntitlements();
+  const isLocked = isMetricGated(metric.id);
   const [showInfo, setShowInfo] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
   const infoRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLSpanElement>(null);
@@ -70,8 +75,13 @@ export function MetricItem({
   return (
     <div className="relative">
       <button
-        onClick={onSelect}
-        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${isSelected ? 'bg-primary-container text-on-primary-container font-medium' : 'text-on-surface-variant hover:bg-surface-container'
+        onClick={isLocked ? () => setShowPaywall(true) : onSelect}
+        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${
+          isLocked
+            ? 'text-on-surface-variant/60 hover:bg-surface-container cursor-pointer'
+            : isSelected
+              ? 'bg-primary-container text-on-primary-container font-medium'
+              : 'text-on-surface-variant hover:bg-surface-container'
           }`}
       >
         <span className="flex items-center gap-1.5 min-w-0">
@@ -79,7 +89,11 @@ export function MetricItem({
           {metric.isNew && <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>}
         </span>
         <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-          {metric.isPremium && <PremiumIcon />}
+          {isLocked ? (
+            <LockIcon className="w-3.5 h-3.5 text-on-surface-variant/60" />
+          ) : (
+            metric.isPremium && <PremiumIcon />
+          )}
           <span
             ref={buttonRef}
             onClick={handleInfoClick}
@@ -153,6 +167,23 @@ export function MetricItem({
           colorScheme="green"
           onChange={onRenterDemandTypeChange}
         />
+      )}
+
+      {/* Paywall modal for locked metrics */}
+      {showPaywall && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+          onClick={() => setShowPaywall(false)}
+        >
+          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <PaywallCard
+              type="metric"
+              id={metric.id}
+              title={`Unlock ${metric.name}`}
+            />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
