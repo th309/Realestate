@@ -29,6 +29,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
+COPY packages/propertyiq-analytics/package.json ./packages/propertyiq-analytics/
 COPY packages/quinn-widget/package.json ./packages/quinn-widget/
 
 RUN npm ci
