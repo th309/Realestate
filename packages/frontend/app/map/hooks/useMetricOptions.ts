@@ -36,7 +36,6 @@ export interface MetricOption {
     label: string;
     value: string;
     category?: string;
-    isPremium?: boolean;
     disabled?: boolean;
     /** Whether this metric is locked by entitlements (user lacks access) */
     locked?: boolean;
@@ -159,7 +158,7 @@ export function useMetricOptions(config: MetricOptionsConfig = {}): MetricOption
                 label: metricConfig.title,
                 value: id,
                 category: category,
-                isPremium: locked,
+
                 disabled: false,
                 locked,
             });
@@ -222,7 +221,7 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
                 result.push({
                     label: metricConfig.title,
                     value: id,
-                    isPremium: locked,
+    
                     disabled: true,
                     locked,
                 });
@@ -235,7 +234,7 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
             result.push({
                 label: metricConfig.title,
                 value: id,
-                isPremium: locked,
+
                 disabled: false,
                 locked,
             });
@@ -264,7 +263,7 @@ export function useAllMetricOptions(geoLevel?: GeoLevel): MetricOptionsResult {
             result.push({
                 label: metricConfig.title,
                 value: id,
-                isPremium: locked,
+
                 disabled,
                 locked,
             });

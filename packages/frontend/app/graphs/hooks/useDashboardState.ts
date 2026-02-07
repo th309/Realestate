@@ -73,7 +73,6 @@ export function useDashboardState() {
       id: opt.value,
       name: opt.label,
       category: 'general',
-      isPremium: opt.isPremium,
       disabled: opt.disabled,
     })), [metricOptionsList]);
 

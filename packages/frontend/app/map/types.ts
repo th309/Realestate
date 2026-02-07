@@ -44,7 +44,6 @@ export interface NavItem {
 export interface Metric {
   id: string;
   name: string;
-  isPremium?: boolean;
   isNew?: boolean;
   dataSource?: DataSource;
 }

@@ -62,15 +62,14 @@ const ConstructionIcon = () => (
 
 /**
  * Create a metric entry from the central config.
- * Only specify isPremium/isNew here - name and dataSource come from METRICS.
+ * Premium/locked status is determined by the entitlements system at runtime.
  */
-function metric(id: string, flags?: { isPremium?: boolean; isNew?: boolean }): Metric {
+function metric(id: string, flags?: { isNew?: boolean }): Metric {
   const config = getMetricConfig(id);
   return {
     id,
     name: config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     dataSource: config?.dataSource,
-    isPremium: flags?.isPremium,
     isNew: flags?.isNew,
   };
 }
@@ -89,9 +88,9 @@ const HOMEBUYER_AFFORDABILITY: MetricCategory = {
     metric('income_to_buy', { isNew: true }),
     metric('affordable_home_price', { isNew: true }),
     metric('price_per_sqft', { isNew: true }),
-    metric('years_to_save', { isPremium: true, isNew: true }),
+    metric('years_to_save', { isNew: true }),
     metric('home_value_yoy'),
-    metric('home_value_5yr', { isPremium: true }),
+    metric('home_value_5yr'),
   ],
 };
 
@@ -107,7 +106,7 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
     metric('pending_ratio'),
     metric('new_listings_yoy', { isNew: true }),
     metric('hotness_score', { isNew: true }),
-    metric('sale_to_list', { isPremium: true }),
+    metric('sale_to_list'),
   ],
 };
 
@@ -118,11 +117,11 @@ const HOMEBUYER_PRICING: MetricCategory = {
   icon: <ShowChartIcon />,
   metrics: [
     metric('home_value_yoy'),
-    metric('home_value_mom', { isPremium: true }),
+    metric('home_value_mom'),
     metric('price_cut_pct'),
     metric('price_increase_pct', { isNew: true }),
     metric('new_listings'),
-    metric('inventory_surplus', { isPremium: true }),
+    metric('inventory_surplus'),
   ],
 };
 
@@ -136,7 +135,7 @@ const INVESTOR_CASHFLOW: MetricCategory = {
   subtext: 'Will this make money monthly?',
   icon: <WalletIcon />,
   metrics: [
-    metric('cap_rate', { isPremium: true }),
+    metric('cap_rate'),
     metric('rent_index'),
     metric('rent_for_houses'),
     metric('listing_price', { isNew: true }),
@@ -151,9 +150,9 @@ const INVESTOR_APPRECIATION: MetricCategory = {
   icon: <GrowthIcon />,
   metrics: [
     metric('home_value_yoy'),
-    metric('home_value_5yr', { isPremium: true }),
+    metric('home_value_5yr'),
     metric('home_value'),
-    metric('overvalued_pct', { isPremium: true }),
+    metric('overvalued_pct'),
   ],
 };
 
@@ -190,11 +189,11 @@ const AREA_PROFILE: MetricCategory = {
   icon: <PeopleIcon />,
   metrics: [
     metric('population'),
-    metric('population_growth', { isPremium: true }),
+    metric('population_growth'),
     metric('median_income'),
-    metric('income_growth', { isPremium: true }),
-    metric('median_age', { isPremium: true }),
-    metric('homeownership_rate', { isPremium: true }),
+    metric('income_growth'),
+    metric('median_age'),
+    metric('homeownership_rate'),
   ],
 };
 
@@ -205,9 +204,9 @@ const LOCAL_ECONOMY: MetricCategory = {
   icon: <EconomicIcon />,
   metrics: [
     metric('unemployment_rate'),
-    metric('job_growth', { isPremium: true }),
-    metric('gdp_growth', { isPremium: true }),
-    metric('cost_of_living', { isPremium: true }),
+    metric('job_growth'),
+    metric('gdp_growth'),
+    metric('cost_of_living'),
   ],
 };
 
@@ -222,12 +221,12 @@ const NEW_CONSTRUCTION: MetricCategory = {
     metric('mf_permits', { isNew: true }),
     metric('total_permits', { isNew: true }),
     metric('permits_yoy', { isNew: true }),
-    metric('sf_mf_ratio', { isPremium: true, isNew: true }),
-    metric('permit_value_per_unit', { isPremium: true, isNew: true }),
+    metric('sf_mf_ratio', { isNew: true }),
+    metric('permit_value_per_unit', { isNew: true }),
     // New Construction Sales (Zillow - metro only)
     metric('new_construction_sales'),
     metric('new_construction_price'),
-    metric('new_construction_ppsf', { isPremium: true }),
+    metric('new_construction_ppsf'),
   ],
 };
 
@@ -242,9 +241,9 @@ export const SCORES_CATEGORY: MetricCategory = {
   icon: <AnalyticsIcon />,
   isNew: true,
   metrics: [
-    metric('homeready_score', { isPremium: true, isNew: true }),
-    metric('investoredge_score', { isPremium: true, isNew: true }),
-    metric('market_health_score', { isPremium: true }),
+    metric('homeready_score', { isNew: true }),
+    metric('investoredge_score', { isNew: true }),
+    metric('market_health_score'),
   ],
 };
 

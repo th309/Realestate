@@ -57,7 +57,7 @@ export function MetricCategoryItem({
     onSelectMetric(metricId);
   };
 
-  const renderMetric = (metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean }) => (
+  const renderMetric = (metric: { id: string; name: string; isNew?: boolean }) => (
     <MetricItem
       key={metric.id}
       metric={metric}

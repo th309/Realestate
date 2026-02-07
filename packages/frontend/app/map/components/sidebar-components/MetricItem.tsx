@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PremiumIcon, InfoSmallIcon, LockIcon } from '../Icons';
+import { InfoSmallIcon, LockIcon } from '../Icons';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from '../../types';
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
 import { PropertyTypeSelector } from './PropertyTypeSelector';
@@ -12,7 +12,7 @@ import { useEntitlements } from '@/lib/entitlements';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 interface MetricItemProps {
-  metric: { id: string; name: string; isPremium?: boolean; isNew?: boolean };
+  metric: { id: string; name: string; isNew?: boolean };
   isSelected: boolean;
   geoLevel: GeoLevel;
   forecastHorizon: ForecastHorizon;
@@ -89,10 +89,8 @@ export function MetricItem({
           {metric.isNew && <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>}
         </span>
         <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-          {isLocked ? (
+          {isLocked && (
             <LockIcon className="w-3.5 h-3.5 text-on-surface-variant/60" />
-          ) : (
-            metric.isPremium && <PremiumIcon />
           )}
           <span
             ref={buttonRef}

@@ -6,7 +6,6 @@ import { ChevronDown } from 'lucide-react';
 interface SelectOption {
   label: string;
   value: string;
-  isPremium?: boolean;
 }
 
 interface M3SelectProps {
@@ -48,7 +47,7 @@ export const M3Select: React.FC<M3SelectProps> = ({
         >
           {normalizedOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}{opt.isPremium ? ' (Pro)' : ''}
+              {opt.label}
             </option>
           ))}
         </select>

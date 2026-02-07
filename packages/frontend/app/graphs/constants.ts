@@ -1,6 +1,6 @@
 import { MetricOption, MetricCategory, Milestone } from './types';
 import { getMetricTitle, METRICS } from '@/lib/data';
-import { getMetricCategories, getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
+import { getAllOrderedMetricIds } from '@/app/map/config/metric-categories';
 
 // Mock data for chart display (placeholder)
 export const MOCK_INVENTORY_DATA = [
@@ -37,30 +37,7 @@ export const STATES = [
 // We rely on getAllOrderedMetricIds from metric-categories.tsx
 const ORDERED_IDS = getAllOrderedMetricIds();
 
-// 2. Identify Pro Metrics dynamically from the categories config
-function getProMetrics(): Set<string> {
-  const proIds = new Set<string>();
-
-  // Helper to traverse categories
-  const traverse = (categories: MetricCategory[]) => {
-    categories.forEach(cat => {
-      cat.metrics?.forEach(m => {
-        if (m.isPremium) proIds.add(m.id);
-      });
-    });
-  }
-
-  // Check Homebuyer categories
-  traverse(getMetricCategories('homebuyer'));
-  // Check Investor categories (in case there are unique ones)
-  traverse(getMetricCategories('investor'));
-
-  return proIds;
-}
-
-const PRO_IDS = getProMetrics();
-
-// 3. Construct the comprehensive list
+// 2. Construct the comprehensive list
 const buildMetricList = (): MetricOption[] => {
   const seenIds = new Set<string>();
   const options: MetricOption[] = [];
@@ -73,13 +50,11 @@ const buildMetricList = (): MetricOption[] => {
     seenIds.add(id);
 
     const title = getMetricTitle(id);
-    const isPremium = PRO_IDS.has(id);
 
     options.push({
       id,
       name: title,
-      category: 'general', // Simplified category for this flat list
-      isPremium
+      category: 'general',
     });
   };
 
