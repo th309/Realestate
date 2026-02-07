@@ -22,6 +22,7 @@ import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
 import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
 import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-persistence.module';
 import { FeaturesModule } from './admin/features/features.module';
+import { EntitlementsModule } from './entitlements/entitlements.module';
 import { RedisModule } from './redis/redis.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
@@ -51,6 +52,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     AnalyticsChatModule,
     AnalyticsPersistenceModule,
     FeaturesModule,
+    EntitlementsModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
