@@ -51,7 +51,7 @@ export function PaywallCard({
           {title || 'Upgrade to Unlock'}
         </h3>
         <p className="text-sm text-on-surface-variant mt-1">
-          {description || `This feature requires a ${TIER_LABELS[tierRequired]} subscription`}
+          {description || 'Get the data edge. Access 60+ metrics, ZIP-level detail, and full market history \u2014 analytics typically reserved for institutional investors.'}
         </p>
       </div>
 

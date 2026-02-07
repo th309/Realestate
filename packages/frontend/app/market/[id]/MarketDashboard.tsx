@@ -20,7 +20,7 @@ import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDispl
 import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { useEntitlements } from '@/lib/entitlements';
-import { EntitlementGate, PaywallOverlay } from '@/components/entitlements';
+import { EntitlementGate, InsightsPaywall } from '@/components/entitlements';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -565,15 +565,7 @@ export function MarketDashboard({
             <EntitlementGate
               type="feature"
               id="ai_insights"
-              fallback={
-                <PaywallOverlay type="feature" id="ai_insights" title="Unlock AI Market Analysis">
-                  <AIInsightCard
-                    marketName={data.geography.name}
-                    score={primaryScore.score}
-                    view={activeView}
-                  />
-                </PaywallOverlay>
-              }
+              fallback={<InsightsPaywall compact />}
             >
               <AIInsightCard
                 marketName={data.geography.name}

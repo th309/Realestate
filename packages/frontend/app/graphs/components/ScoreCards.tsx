@@ -7,6 +7,8 @@ import { Loader2, TrendingUp, TrendingDown, Minus, Settings } from 'lucide-react
 import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { MetricSelector } from '@/app/map/components/MetricSelector';
+import { useEntitlements } from '@/lib/entitlements';
+import { ScorePaywall } from '@/components/entitlements';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -283,6 +285,8 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   selectedArea,
   isAdmin = false,
 }) => {
+  const { canAccess } = useEntitlements();
+  const canViewScores = canAccess('feature', 'scores');
   const [scores, setScores] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
@@ -365,6 +369,14 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'MEDIUM';
 
   const scoresUnavailable = geoLevel === 'state' || geoLevel === 'national';
+
+  if (!canViewScores) {
+    return (
+      <div className="flex flex-col gap-3">
+        <ScorePaywall />
+      </div>
+    );
+  }
 
   if (scoresUnavailable) {
     return (

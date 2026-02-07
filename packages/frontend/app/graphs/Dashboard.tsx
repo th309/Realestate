@@ -14,6 +14,7 @@ import { ChartSection } from './components/ChartSection';
 import { ScoreCards } from './components/ScoreCards';
 import { D3VisualizationSection } from './components/D3VisualizationSection';
 import { ScoreVisualization } from './components/ScoreVisualization';
+import { EntitlementGate, InsightsPaywall } from '@/components/entitlements';
 
 type VisualizationMode = 'timeSeries' | 'advanced';
 
@@ -231,11 +232,17 @@ export const Dashboard: React.FC = () => {
               {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
               <div className="xl:col-span-1 flex flex-col gap-4">
                 <ScoreCards geoLevel={geoLevel} selectedArea={selectedAreaId} isAdmin={true} />
-                <InsightsPanel
-                  aiInsight={aiInsight}
-                  isInsightLoading={isInsightLoading}
-                  onFetchInsights={handleFetchInsights}
-                />
+                <EntitlementGate
+                  type="feature"
+                  id="ai_insights"
+                  fallback={<InsightsPaywall compact />}
+                >
+                  <InsightsPanel
+                    aiInsight={aiInsight}
+                    isInsightLoading={isInsightLoading}
+                    onFetchInsights={handleFetchInsights}
+                  />
+                </EntitlementGate>
               </div>
             </div>
           )}
@@ -260,11 +267,17 @@ export const Dashboard: React.FC = () => {
               {/* Right Column: Score Cards + Insights Panel - Takes 1 column on xl */}
               <div className="xl:col-span-1 flex flex-col gap-4">
                 <ScoreCards geoLevel={geoLevel} selectedArea={selectedAreaId} isAdmin={true} />
-                <InsightsPanel
-                  aiInsight={aiInsight}
-                  isInsightLoading={isInsightLoading}
-                  onFetchInsights={handleFetchInsights}
-                />
+                <EntitlementGate
+                  type="feature"
+                  id="ai_insights"
+                  fallback={<InsightsPaywall compact />}
+                >
+                  <InsightsPanel
+                    aiInsight={aiInsight}
+                    isInsightLoading={isInsightLoading}
+                    onFetchInsights={handleFetchInsights}
+                  />
+                </EntitlementGate>
               </div>
             </div>
           )}
