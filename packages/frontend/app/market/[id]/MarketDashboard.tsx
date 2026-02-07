@@ -13,11 +13,14 @@ import {
   MapPin,
   ArrowUpRight,
   ArrowDownRight,
+  Lock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
 import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
+import { useEntitlements } from '@/lib/entitlements';
+import { EntitlementGate, PaywallOverlay } from '@/components/entitlements';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -218,6 +221,9 @@ function ScoreBadge({ label, score }: { label: string; score: number }) {
   );
 }
 
+// Premium geography levels that require entitlements
+const PREMIUM_GEO_LEVELS = ['county', 'zip', 'tract'];
+
 export function MarketDashboard({
   geographyId,
   geographyType,
@@ -228,6 +234,11 @@ export function MarketDashboard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'investor' | 'homebuyer'>(userView);
+
+  // Check entitlements for geography level
+  const { getAccess, trackPaywallView } = useEntitlements();
+  const geoAccess = getAccess('geo', geographyType);
+  const hasGeoAccess = geoAccess.level === 'full' || geoAccess.level === 'preview' || !PREMIUM_GEO_LEVELS.includes(geographyType);
 
   const fetchData = useCallback(async () => {
     try {
@@ -381,6 +392,39 @@ export function MarketDashboard({
     );
   }
 
+  // Check geography access after loading data
+  if (!hasGeoAccess) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">
+            {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} Level Data
+          </h2>
+          <p className="text-on-surface-variant mb-6">
+            Access detailed {geographyType}-level market data with a Pro subscription. Get granular insights to make more informed decisions.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
+            >
+              Upgrade to Pro
+            </Link>
+            <Link
+              href="/map"
+              className="text-sm text-primary hover:underline"
+            >
+              ← Back to Map
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const primaryScore = activeView === 'investor' ? data.scores.investoredge : data.scores.homeready;
 
   return (
@@ -517,12 +561,26 @@ export function MarketDashboard({
               </div>
             </div>
 
-            {/* AI Insight */}
-            <AIInsightCard
-              marketName={data.geography.name}
-              score={primaryScore.score}
-              view={activeView}
-            />
+            {/* AI Insight - Premium Feature */}
+            <EntitlementGate
+              type="feature"
+              id="ai_insights"
+              fallback={
+                <PaywallOverlay type="feature" id="ai_insights" title="Unlock AI Market Analysis">
+                  <AIInsightCard
+                    marketName={data.geography.name}
+                    score={primaryScore.score}
+                    view={activeView}
+                  />
+                </PaywallOverlay>
+              }
+            >
+              <AIInsightCard
+                marketName={data.geography.name}
+                score={primaryScore.score}
+                view={activeView}
+              />
+            </EntitlementGate>
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 pt-2">
