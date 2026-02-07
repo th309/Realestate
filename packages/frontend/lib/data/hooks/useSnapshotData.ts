@@ -14,6 +14,8 @@ import type { GeoLevel, SnapshotData, SnapshotEntry } from '../types';
 import { fetchSnapshotData } from '../fetchers';
 import { getMetricConfig, getMetricFormat } from '../registry-helpers';
 import { formatMetricValue } from '../format';
+import { useMetricAccess } from './useMetricAccess';
+import type { UserTier } from '@/lib/entitlements';
 
 export interface UseSnapshotDataOptions {
   /** State filter for county/zip/city data */
@@ -39,6 +41,14 @@ export interface UseSnapshotDataResult {
   error: Error | null;
   /** Refetch function */
   refetch: () => void;
+  /** Whether metric is gated by entitlements */
+  gated: boolean;
+  /** Tier required to unlock */
+  tierRequired?: UserTier;
+  /** Whether in preview mode */
+  preview?: boolean;
+  /** Preview limit */
+  previewLimit?: number | null;
 }
 
 /**
@@ -64,6 +74,23 @@ export function useSnapshotData(
   options: UseSnapshotDataOptions = {}
 ): UseSnapshotDataResult {
   const { stateFilter, enabled = true } = options;
+  const access = useMetricAccess(metricId);
+
+  // If metric is gated, return early without fetching
+  if (access.gated) {
+    return {
+      allData: {},
+      entry: null,
+      value: null,
+      formattedValue: '--',
+      date: undefined,
+      isLoading: false,
+      error: null,
+      refetch: () => {},
+      gated: true,
+      tierRequired: access.tierRequired ?? undefined,
+    };
+  }
 
   const queryKey = ['snapshot', metricId, geoLevel, stateFilter].filter(Boolean);
 
@@ -112,6 +139,9 @@ export function useSnapshotData(
     isLoading,
     error: error as Error | null,
     refetch,
+    gated: false,
+    preview: access.preview,
+    previewLimit: access.previewLimit,
   };
 }
 

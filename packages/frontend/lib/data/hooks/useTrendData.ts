@@ -8,6 +8,8 @@
 import { useQuery, useQueries } from '@tanstack/react-query';
 import type { GeoLevel, TrendResult, TrendDirection } from '../types';
 import { fetchTrendData, fetchTrendDataBatch } from '../fetchers';
+import { useMetricAccess } from './useMetricAccess';
+import type { UserTier } from '@/lib/entitlements';
 
 export interface UseTrendDataOptions {
   /** Number of months for trend calculation (default: 12) */
@@ -35,6 +37,10 @@ export interface UseTrendDataResult {
   isLoading: boolean;
   /** Error state */
   error: Error | null;
+  /** Whether metric is gated by entitlements */
+  gated: boolean;
+  /** Tier required to unlock */
+  tierRequired?: UserTier;
 }
 
 /**
@@ -60,6 +66,24 @@ export function useTrendData(
   options: UseTrendDataOptions = {}
 ): UseTrendDataResult {
   const { months = 12, enabled = true } = options;
+  const access = useMetricAccess(metricId);
+
+  // If metric is gated, return early without fetching
+  if (access.gated) {
+    return {
+      trend: null,
+      currentValue: null,
+      previousValue: null,
+      percentChange: null,
+      direction: null,
+      sparklineData: [],
+      label: null,
+      isLoading: false,
+      error: null,
+      gated: true,
+      tierRequired: access.tierRequired ?? undefined,
+    };
+  }
 
   const queryKey = ['trend', metricId, geoLevel, regionId, months];
 
@@ -85,6 +109,7 @@ export function useTrendData(
     label: trend?.label ?? null,
     isLoading,
     error: error as Error | null,
+    gated: false,
   };
 }
 

@@ -9,6 +9,8 @@
 import type { GeoLevel, TrendResult, TrendDirection } from '../types';
 import { useSnapshotData, type UseSnapshotDataOptions } from './useSnapshotData';
 import { useTrendData } from './useTrendData';
+import { useMetricAccess } from './useMetricAccess';
+import type { UserTier } from '@/lib/entitlements';
 
 export interface UseDataCardOptions extends UseSnapshotDataOptions {
   /** Number of months for trend calculation */
@@ -40,6 +42,14 @@ export interface UseDataCardResult {
   isTrendLoading: boolean;
   /** Combined error */
   error: Error | null;
+  /** Whether metric is gated by entitlements */
+  gated: boolean;
+  /** Tier required to unlock */
+  tierRequired?: UserTier;
+  /** Whether in preview mode */
+  preview?: boolean;
+  /** Preview limit */
+  previewLimit?: number | null;
 }
 
 /**
@@ -71,6 +81,8 @@ export function useDataCard(
     stateFilter,
     enabled = true,
   } = options;
+
+  const access = useMetricAccess(metricId);
 
   // Fetch current snapshot value
   const snapshot = useSnapshotData(metricId, geoLevel, regionId, {
@@ -104,6 +116,10 @@ export function useDataCard(
     isSnapshotLoading,
     isTrendLoading,
     error,
+    gated: access.gated,
+    tierRequired: access.tierRequired ?? undefined,
+    preview: access.preview,
+    previewLimit: access.previewLimit,
   };
 }
 

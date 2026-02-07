@@ -8,6 +8,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { GeoLevel, TimeSeriesPoint, TimeSeriesResult } from '../types';
 import { fetchTimeSeriesData } from '../fetchers';
+import { useMetricAccess } from './useMetricAccess';
+import type { UserTier } from '@/lib/entitlements';
 
 export interface UseTimeSeriesDataOptions {
   /** Start date for the range (ISO format) */
@@ -39,6 +41,14 @@ export interface UseTimeSeriesDataResult {
   error: Error | null;
   /** Refetch function */
   refetch: () => void;
+  /** Whether metric is gated by entitlements */
+  gated: boolean;
+  /** Tier required to unlock */
+  tierRequired?: UserTier;
+  /** Whether in preview mode */
+  preview?: boolean;
+  /** Preview limit (months of history for time series) */
+  previewLimit?: number | null;
 }
 
 /**
@@ -65,6 +75,23 @@ export function useTimeSeriesData(
   options: UseTimeSeriesDataOptions = {}
 ): UseTimeSeriesDataResult {
   const { startDate, endDate, limit, historyMonths, enabled = true } = options;
+  const access = useMetricAccess(metricId);
+
+  // If metric is gated, return early without fetching
+  if (access.gated) {
+    return {
+      data: [],
+      current: null,
+      prior: null,
+      trendChange: undefined,
+      result: null,
+      isLoading: false,
+      error: null,
+      refetch: () => {},
+      gated: true,
+      tierRequired: access.tierRequired ?? undefined,
+    };
+  }
 
   const queryKey = [
     'timeseries',
@@ -116,6 +143,9 @@ export function useTimeSeriesData(
     isLoading,
     error: error as Error | null,
     refetch,
+    gated: false,
+    preview: access.preview,
+    previewLimit: access.previewLimit,
   };
 }
 
