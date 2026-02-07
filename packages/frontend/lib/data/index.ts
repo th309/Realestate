@@ -166,4 +166,8 @@ export {
   useSingleScore,
   type UseScoreDataOptions,
   type UseScoreDataResult,
+
+  // Metric access (entitlements gating)
+  useMetricAccess,
+  type MetricAccessResult,
 } from './hooks';

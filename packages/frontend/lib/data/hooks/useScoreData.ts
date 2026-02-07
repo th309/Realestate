@@ -8,6 +8,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { GeoLevel, ScoreResponse, SingleScoreResult, ScoreType } from '../types';
 import { fetchScore, fetchScoreExpanded } from '../fetchers';
+import { useEntitlements } from '@/lib/entitlements';
+import type { UserTier } from '@/lib/entitlements';
 
 export interface UseScoreDataOptions {
   /** Skip the query */
@@ -31,6 +33,10 @@ export interface UseScoreDataResult {
   error: Error | null;
   /** Refetch function */
   refetch: () => void;
+  /** Whether scores are gated by entitlements */
+  gated: boolean;
+  /** Tier required to unlock */
+  tierRequired?: UserTier;
 }
 
 /**
@@ -52,6 +58,23 @@ export function useScoreData(
   options: UseScoreDataOptions = {}
 ): UseScoreDataResult {
   const { enabled = true, expanded = false, historyMonths = 0 } = options;
+  const { getAccess } = useEntitlements();
+  const scoresAccess = getAccess('feature', 'scores');
+
+  // If scores feature is gated, return early without fetching
+  if (scoresAccess.level === 'none') {
+    return {
+      data: null,
+      homeready: null,
+      investoredge: null,
+      markethealth: null,
+      isLoading: false,
+      error: null,
+      refetch: () => {},
+      gated: true,
+      tierRequired: scoresAccess.tierRequired ?? undefined,
+    };
+  }
 
   const queryKey = ['scores', geoLevel, regionId, expanded, historyMonths].filter(
     (v) => v !== null && v !== undefined
@@ -86,6 +109,7 @@ export function useScoreData(
     isLoading,
     error: error as Error | null,
     refetch,
+    gated: false,
   };
 }
 
