@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useEntitlements, ResourceType } from '@/lib/entitlements';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface PaywallOverlayProps {
@@ -23,6 +24,14 @@ export function PaywallOverlay({
   const { getAccess, trackPaywallView, trackUpgradeClick } = useEntitlements();
   const access = getAccess(type, id);
   const isBlocked = access.level === 'none';
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session);
+    });
+  }, []);
 
   useEffect(() => {
     if (isBlocked) {
@@ -67,7 +76,7 @@ export function PaywallOverlay({
               hover:bg-primary/90 transition-colors
             "
           >
-            View Plans
+            {isAuthenticated ? 'View Plans' : 'Sign Up Free'}
           </Link>
         </div>
       </div>

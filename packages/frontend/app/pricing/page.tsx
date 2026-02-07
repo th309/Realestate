@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { CreditCard, Check, Sparkles, Clock } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
@@ -64,7 +66,15 @@ const PLAN_TO_TIER: Record<string, string> = {
 };
 
 export default function PricingPage() {
-  const { tier, trial, loading } = useEntitlements();
+  const { tier, trial, loading, refresh } = useEntitlements();
+  const searchParams = useSearchParams();
+
+  // Refresh entitlements when returning from Stripe checkout
+  useEffect(() => {
+    if (searchParams.get('success')) {
+      refresh();
+    }
+  }, [searchParams, refresh]);
 
   // Determine effective tier (considering trial)
   const effectiveTier = trial?.active ? trial.tier : tier;

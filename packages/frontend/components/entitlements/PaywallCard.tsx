@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useEntitlements, ResourceType, UserTier } from '@/lib/entitlements';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface PaywallCardProps {
@@ -29,6 +30,14 @@ export function PaywallCard({
 }: PaywallCardProps) {
   const { getTierRequired, trackUpgradeClick } = useEntitlements();
   const tierRequired = getTierRequired(type, id) || 'pro';
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // default true to avoid flash
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session);
+    });
+  }, []);
 
   const handleUpgradeClick = () => {
     trackUpgradeClick(type, id);
@@ -65,7 +74,7 @@ export function PaywallCard({
           hover:bg-primary/90 transition-colors
         "
       >
-        View Plans
+        {isAuthenticated ? 'View Plans' : 'Sign Up Free'}
       </Link>
     </div>
   );

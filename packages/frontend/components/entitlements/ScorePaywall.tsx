@@ -7,9 +7,10 @@
  * about excess returns and market prediction accuracy.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrendingUp, Target, BarChart3, ArrowRight } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface ScorePaywallProps {
@@ -38,6 +39,14 @@ const STATS = [
 
 export function ScorePaywall({ className = '', compact = false }: ScorePaywallProps) {
   const { trackUpgradeClick } = useEntitlements();
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session);
+    });
+  }, []);
 
   const handleClick = () => {
     trackUpgradeClick('feature', 'scores');
@@ -132,7 +141,7 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
           onClick={handleClick}
           className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors shadow-md"
         >
-          Unlock Predictive Scores
+          {isAuthenticated ? 'Unlock Predictive Scores' : 'Sign Up Free'}
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>

@@ -20,6 +20,7 @@ import { useScoreData } from './hooks/useScoreData';
 
 // Import config
 import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
+import { useEntitlements } from '@/lib/entitlements';
 
 const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
 
@@ -130,6 +131,15 @@ export default function MapPage() {
       isLoading: false,
     };
   }, [scoreResponse, scoresLoading]);
+
+  const { isMetricGated } = useEntitlements();
+
+  // Fallback to home_value if selected metric becomes gated (e.g., subscription expired)
+  useEffect(() => {
+    if (isMetricGated(selectedMetric)) {
+      setSelectedMetric('home_value');
+    }
+  }, [selectedMetric, isMetricGated]);
 
   // Auto-switch geo level when metric doesn't support current level
   // Uses central config as single source of truth for metric/geo compatibility

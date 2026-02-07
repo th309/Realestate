@@ -7,9 +7,10 @@
  * that produces more nuanced market assessments.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sparkles, Newspaper, Brain, LineChart, ArrowRight } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface InsightsPaywallProps {
@@ -38,6 +39,14 @@ const VALUE_POINTS = [
 
 export function InsightsPaywall({ className = '', compact = false }: InsightsPaywallProps) {
   const { trackUpgradeClick } = useEntitlements();
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session);
+    });
+  }, []);
 
   const handleClick = () => {
     trackUpgradeClick('feature', 'ai_insights');
@@ -119,7 +128,7 @@ export function InsightsPaywall({ className = '', compact = false }: InsightsPay
           onClick={handleClick}
           className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors shadow-md"
         >
-          Unlock AI Market Intelligence
+          {isAuthenticated ? 'Unlock AI Market Intelligence' : 'Sign Up Free'}
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
