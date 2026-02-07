@@ -46,4 +46,4 @@ RUN cp -r packages/frontend/.next/static packages/frontend/.next/standalone/pack
 # 5. Start Next.js standalone server
 # Railway injects PORT dynamically; Next.js standalone respects it via hostname/port env
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "packages/frontend/.next/standalone/server.js"]
+CMD ["node", "packages/frontend/.next/standalone/packages/frontend/server.js"]
