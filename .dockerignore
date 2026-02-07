@@ -56,8 +56,5 @@ docs
 *.xlsx
 *.xml
 
-# Other services - exclude all except package.json (needed for npm workspaces)
-packages/propertyiq-analytics/**
-!packages/propertyiq-analytics/package.json
-packages/quinn-widget/**
-!packages/quinn-widget/package.json
+# Note: propertyiq-analytics and quinn-widget are included because npm workspaces
+# needs all package.json files. The extra files add minimal overhead.
