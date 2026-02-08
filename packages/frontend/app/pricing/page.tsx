@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard, Check, Sparkles, Clock } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
@@ -66,6 +66,14 @@ const PLAN_TO_TIER: Record<string, string> = {
 };
 
 export default function PricingPage() {
+  return (
+    <Suspense>
+      <PricingContent />
+    </Suspense>
+  );
+}
+
+function PricingContent() {
   const { tier, trial, loading, refresh } = useEntitlements();
   const searchParams = useSearchParams();
 
