@@ -21,17 +21,21 @@ export function PaywallOverlay({
   title,
   className = '',
 }: PaywallOverlayProps) {
-  const { getAccess, trackPaywallView, trackUpgradeClick } = useEntitlements();
+  const { getAccess, trackPaywallView, trackUpgradeClick, simulatedAuth } = useEntitlements();
   const access = getAccess(type, id);
   const isBlocked = access.level === 'none';
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   useEffect(() => {
+    if (simulatedAuth !== null) {
+      setIsAuthenticated(simulatedAuth);
+      return;
+    }
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getSession().then(({ data }) => {
       setIsAuthenticated(!!data.session);
     });
-  }, []);
+  }, [simulatedAuth]);
 
   useEffect(() => {
     if (isBlocked) {

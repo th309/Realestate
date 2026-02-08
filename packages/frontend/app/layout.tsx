@@ -1,8 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import dynamic from "next/dynamic";
 import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
+
+const DevToolbar = dynamic(
+  () => import('@/components/dev/DevToolbar').then(m => ({ default: m.DevToolbar })),
+  { ssr: false }
+);
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
@@ -117,11 +123,12 @@ export default function RootLayout({
           <main className="flex-1 min-h-0">
             {children}
           </main>
-          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4">
+          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4 pb-12">
             <p className="text-center text-xs text-on-surface-variant">
               Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
             </p>
           </footer>
+          <DevToolbar />
           {/* <QuinnFloatingButton /> */} {/* PAUSED: Quinn development on hold */}
         </Providers>
       </body>

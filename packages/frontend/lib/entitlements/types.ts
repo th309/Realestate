@@ -39,9 +39,12 @@ export interface EntitlementsContextValue extends EntitlementsState {
   trackUpgradeClick: (type: ResourceType, id: string, pagePath?: string) => void;
   trackDismiss: (type: ResourceType, id: string) => void;
 
-  // Tier simulation (dev mode)
+  // Simulation (dev mode)
   simulatedTier: UserTier | null;
   setSimulatedTier: (tier: UserTier | null) => void;
+  simulatedAuth: boolean | null;
+  setSimulatedAuth: (auth: boolean | null) => void;
+  resetSimulation: () => void;
 
   // Refresh
   refresh: () => Promise<void>;

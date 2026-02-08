@@ -45,6 +45,7 @@ export function EntitlementsProvider({
 }: EntitlementsProviderProps) {
   const [state, setState] = useState<EntitlementsState>(defaultState);
   const [simulatedTier, setSimulatedTier] = useState<UserTier | null>(null);
+  const [simulatedAuth, setSimulatedAuth] = useState<boolean | null>(null);
 
   // Auto-generate resource list from registry if not provided
   const resources = useMemo(
@@ -129,6 +130,12 @@ export function EntitlementsProvider({
     trackPaywallEvent(type, id, 'dismiss', window.location.pathname);
   }, []);
 
+  const resetSimulation = useCallback(() => {
+    setSimulatedTier(null);
+    setSimulatedAuth(null);
+    refresh();
+  }, [refresh]);
+
   const value = useMemo<EntitlementsContextValue>(() => ({
     ...state,
     canAccess,
@@ -141,6 +148,9 @@ export function EntitlementsProvider({
     trackDismiss,
     simulatedTier,
     setSimulatedTier,
+    simulatedAuth,
+    setSimulatedAuth,
+    resetSimulation,
     refresh,
   }), [
     state,
@@ -153,6 +163,8 @@ export function EntitlementsProvider({
     trackUpgradeClick,
     trackDismiss,
     simulatedTier,
+    simulatedAuth,
+    resetSimulation,
     refresh,
   ]);
 

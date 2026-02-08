@@ -38,15 +38,19 @@ const VALUE_POINTS = [
 ];
 
 export function InsightsPaywall({ className = '', compact = false }: InsightsPaywallProps) {
-  const { trackUpgradeClick } = useEntitlements();
+  const { trackUpgradeClick, simulatedAuth } = useEntitlements();
   const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   useEffect(() => {
+    if (simulatedAuth !== null) {
+      setIsAuthenticated(simulatedAuth);
+      return;
+    }
     const supabase = createSupabaseBrowserClient();
     supabase.auth.getSession().then(({ data }) => {
       setIsAuthenticated(!!data.session);
     });
-  }, []);
+  }, [simulatedAuth]);
 
   const handleClick = () => {
     trackUpgradeClick('feature', 'ai_insights');
