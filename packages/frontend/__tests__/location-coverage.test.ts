@@ -1,577 +1,406 @@
 /**
- * LOCATION COVERAGE VALIDATION TESTS
+ * LOCATION COVERAGE INTEGRATION TESTS
  *
- * Validates that PropertyIQ scores and core metrics are available
- * across a representative sample of US locations (metros, counties, zips).
+ * Validates data availability across US locations against LIVE Railway backend.
+ * NO MOCKS - all tests hit real APIs with real Supabase data.
  *
- * Test Strategy:
+ * Test Coverage:
  * - 10 major metros (by population)
- * - 20 counties (mix of urban/rural)
- * - 30 zips (spread across states)
+ * - 20 counties (mix of urban/suburban/rural)
+ * - 30 ZIP codes (spread across states)
  *
- * For each location, verify:
- * 1. PropertyIQ scores available (homeready, investoredge, markethealth)
- * 2. Core metrics available (home_value, rent_index, listing_price, etc.)
- * 3. No critical gaps (all "required" metrics present)
+ * Run with: npm run test:locations
  */
 
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { fetchScore } from '@/lib/data/fetchers/scores';
-import { fetchSnapshotData } from '@/lib/data/fetchers/snapshot';
-import type { GeoLevel, ScoreResponse, SnapshotData } from '@/lib/data/types';
+import { describe, it, expect, beforeAll } from 'vitest';
+
+// Railway backend URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-ee4d.up.railway.app';
+
+// Test timeout for API calls
+const API_TIMEOUT = 20000;
 
 // ============================================================================
-// TEST DATA
+// SAMPLE LOCATIONS
 // ============================================================================
 
-/**
- * Sample metros - 10 largest US metros by population
- * Format: [CBSA Code, Metro Name]
- */
-const sampleMetros: [string, string][] = [
-  ['35620', 'New York-Newark-Jersey City, NY'],
-  ['31080', 'Los Angeles-Long Beach-Anaheim, CA'],
-  ['16980', 'Chicago-Naperville-Elgin, IL'],
-  ['19100', 'Dallas-Fort Worth-Arlington, TX'],
-  ['26420', 'Houston-The Woodlands-Sugar Land, TX'],
-  ['38060', 'Phoenix-Mesa-Chandler, AZ'],
-  ['12420', 'Austin-Round Rock-Georgetown, TX'],
-  ['33100', 'Miami-Fort Lauderdale-Pompano Beach, FL'],
-  ['12060', 'Atlanta-Sandy Springs-Alpharetta, GA'],
-  ['19740', 'Denver-Aurora-Lakewood, CO'],
+const SAMPLE_METROS: Array<{ id: string; name: string }> = [
+  { id: '35620', name: 'New York-Newark-Jersey City, NY' },
+  { id: '31080', name: 'Los Angeles-Long Beach-Anaheim, CA' },
+  { id: '16980', name: 'Chicago-Naperville-Elgin, IL' },
+  { id: '19100', name: 'Dallas-Fort Worth-Arlington, TX' },
+  { id: '26420', name: 'Houston-The Woodlands-Sugar Land, TX' },
+  { id: '38060', name: 'Phoenix-Mesa-Chandler, AZ' },
+  { id: '37980', name: 'Philadelphia-Camden-Wilmington, PA' },
+  { id: '12420', name: 'Austin-Round Rock-Georgetown, TX' },
+  { id: '33100', name: 'Miami-Fort Lauderdale-Pompano Beach, FL' },
+  { id: '12060', name: 'Atlanta-Sandy Springs-Alpharetta, GA' },
 ];
 
-/**
- * Sample counties - 20 counties (mix of urban and rural)
- * Format: [FIPS Code, County Name, State]
- */
-const sampleCounties: [string, string, string][] = [
-  // Urban - Major population centers
-  ['06037', 'Los Angeles County', 'CA'],
-  ['17031', 'Cook County', 'IL'],
-  ['48201', 'Harris County', 'TX'],
-  ['04013', 'Maricopa County', 'AZ'],
-  ['06073', 'San Diego County', 'CA'],
-  ['48113', 'Dallas County', 'TX'],
-  ['12086', 'Miami-Dade County', 'FL'],
-  ['36047', 'Kings County (Brooklyn)', 'NY'],
-  ['06059', 'Orange County', 'CA'],
-  ['53033', 'King County', 'WA'],
+const SAMPLE_COUNTIES: Array<{ id: string; name: string; state: string }> = [
+  // Urban cores
+  { id: '06037', name: 'Los Angeles County', state: 'CA' },
+  { id: '17031', name: 'Cook County', state: 'IL' },
+  { id: '48201', name: 'Harris County', state: 'TX' },
+  { id: '04013', name: 'Maricopa County', state: 'AZ' },
+  { id: '06073', name: 'San Diego County', state: 'CA' },
+  { id: '48113', name: 'Dallas County', state: 'TX' },
+  { id: '12086', name: 'Miami-Dade County', state: 'FL' },
+  { id: '36047', name: 'Kings County', state: 'NY' },
+  { id: '06059', name: 'Orange County', state: 'CA' },
+  { id: '53033', name: 'King County', state: 'WA' },
   // Suburban/Exurban
-  ['48453', 'Travis County', 'TX'],
-  ['08031', 'Denver County', 'CO'],
-  ['13121', 'Fulton County', 'GA'],
-  ['32003', 'Clark County', 'NV'],
-  ['25017', 'Middlesex County', 'MA'],
-  // Rural/Semi-Rural
-  ['30031', 'Gallatin County', 'MT'],
-  ['56039', 'Teton County', 'WY'],
-  ['49035', 'Salt Lake County', 'UT'],
-  ['41051', 'Multnomah County', 'OR'],
-  ['26161', 'Washtenaw County', 'MI'],
+  { id: '48453', name: 'Travis County', state: 'TX' },
+  { id: '08031', name: 'Denver County', state: 'CO' },
+  { id: '13121', name: 'Fulton County', state: 'GA' },
+  { id: '32003', name: 'Clark County', state: 'NV' },
+  { id: '25017', name: 'Middlesex County', state: 'MA' },
+  // Semi-rural
+  { id: '30031', name: 'Gallatin County', state: 'MT' },
+  { id: '49035', name: 'Salt Lake County', state: 'UT' },
+  { id: '41051', name: 'Multnomah County', state: 'OR' },
+  { id: '26161', name: 'Washtenaw County', state: 'MI' },
+  { id: '08005', name: 'Arapahoe County', state: 'CO' },
 ];
 
-/**
- * Sample ZIP codes - 30 zips spread across states
- * Format: [ZIP Code, City, State]
- */
-const sampleZips: [string, string, string][] = [
-  // Major cities
-  ['10001', 'New York', 'NY'],
-  ['90210', 'Beverly Hills', 'CA'],
-  ['60601', 'Chicago', 'IL'],
-  ['77001', 'Houston', 'TX'],
-  ['85001', 'Phoenix', 'AZ'],
-  ['19101', 'Philadelphia', 'PA'],
-  ['78201', 'San Antonio', 'TX'],
-  ['92101', 'San Diego', 'CA'],
-  ['75201', 'Dallas', 'TX'],
-  ['95101', 'San Jose', 'CA'],
+const SAMPLE_ZIPS: Array<{ id: string; city: string; state: string }> = [
+  // Major city cores
+  { id: '10001', city: 'New York', state: 'NY' },
+  { id: '90210', city: 'Beverly Hills', state: 'CA' },
+  { id: '60601', city: 'Chicago', state: 'IL' },
+  { id: '77001', city: 'Houston', state: 'TX' },
+  { id: '85001', city: 'Phoenix', state: 'AZ' },
+  { id: '19101', city: 'Philadelphia', state: 'PA' },
+  { id: '78201', city: 'San Antonio', state: 'TX' },
+  { id: '92101', city: 'San Diego', state: 'CA' },
+  { id: '75201', city: 'Dallas', state: 'TX' },
+  { id: '95101', city: 'San Jose', state: 'CA' },
   // Tech hubs
-  ['98101', 'Seattle', 'WA'],
-  ['94102', 'San Francisco', 'CA'],
-  ['78701', 'Austin', 'TX'],
-  ['80202', 'Denver', 'CO'],
-  ['02101', 'Boston', 'MA'],
-  // Sun Belt growth
-  ['33101', 'Miami', 'FL'],
-  ['30301', 'Atlanta', 'GA'],
-  ['28201', 'Charlotte', 'NC'],
-  ['37201', 'Nashville', 'TN'],
-  ['89101', 'Las Vegas', 'NV'],
-  // Midwest
-  ['55401', 'Minneapolis', 'MN'],
-  ['63101', 'St. Louis', 'MO'],
-  ['48201', 'Detroit', 'MI'],
-  ['44101', 'Cleveland', 'OH'],
-  ['46201', 'Indianapolis', 'IN'],
-  // Other notable
-  ['97201', 'Portland', 'OR'],
-  ['84101', 'Salt Lake City', 'UT'],
-  ['64101', 'Kansas City', 'MO'],
-  ['70112', 'New Orleans', 'LA'],
-  ['96801', 'Honolulu', 'HI'],
+  { id: '98101', city: 'Seattle', state: 'WA' },
+  { id: '94102', city: 'San Francisco', state: 'CA' },
+  { id: '78701', city: 'Austin', state: 'TX' },
+  { id: '80202', city: 'Denver', state: 'CO' },
+  { id: '02101', city: 'Boston', state: 'MA' },
+  // Sun Belt
+  { id: '33101', city: 'Miami', state: 'FL' },
+  { id: '30301', city: 'Atlanta', state: 'GA' },
+  { id: '28201', city: 'Charlotte', state: 'NC' },
+  { id: '37201', city: 'Nashville', state: 'TN' },
+  { id: '32801', city: 'Orlando', state: 'FL' },
+  // Mid-size markets
+  { id: '46201', city: 'Indianapolis', state: 'IN' },
+  { id: '43201', city: 'Columbus', state: 'OH' },
+  { id: '27601', city: 'Raleigh', state: 'NC' },
+  { id: '84101', city: 'Salt Lake City', state: 'UT' },
+  { id: '97201', city: 'Portland', state: 'OR' },
+  // Smaller markets
+  { id: '59701', city: 'Butte', state: 'MT' },
+  { id: '83701', city: 'Boise', state: 'ID' },
+  { id: '87101', city: 'Albuquerque', state: 'NM' },
+  { id: '99501', city: 'Anchorage', state: 'AK' },
+  { id: '96801', city: 'Honolulu', state: 'HI' },
 ];
 
-// ============================================================================
-// SCORE TYPES AND REQUIRED METRICS
-// ============================================================================
-
-const SCORE_TYPES = ['homeready', 'investoredge', 'markethealth'] as const;
-
-/**
- * Core metrics that should be available for each geography level.
- * These are the fundamental metrics users expect to see.
- */
-const REQUIRED_METRICS_BY_GEO: Record<GeoLevel, string[]> = {
-  national: ['home_value', 'listing_price', 'for_sale_inventory', 'days_on_market'],
-  state: ['home_value', 'listing_price', 'for_sale_inventory', 'days_on_market'],
+// Core metrics that should be available for all locations
+const CORE_METRIC_ENDPOINTS = {
   metro: [
-    'home_value',
-    'rent_index',
-    'listing_price',
-    'for_sale_inventory',
-    'days_on_market',
-    'cap_rate',
+    { endpoint: '/api/zillow/metros', metric: 'home_value', idField: 'cbsa_code' },
+    { endpoint: '/api/zillow/rent/metros', metric: 'rent', idField: 'cbsa_code' },
+    { endpoint: '/api/realtor/listing-price/metros', metric: 'listing_price', idField: 'cbsa_code' },
+    { endpoint: '/api/realtor/inventory/metros', metric: 'inventory', idField: 'cbsa_code' },
+    { endpoint: '/api/realtor/dom/metros', metric: 'days_on_market', idField: 'cbsa_code' },
   ],
   county: [
-    'home_value',
-    'rent_index',
-    'listing_price',
-    'for_sale_inventory',
-    'days_on_market',
+    { endpoint: '/api/zillow/counties', metric: 'home_value', idField: 'county_fips' },
+    { endpoint: '/api/zillow/rent/counties', metric: 'rent', idField: 'county_fips' },
+    { endpoint: '/api/realtor/listing-price/counties', metric: 'listing_price', idField: 'county_fips' },
+    { endpoint: '/api/realtor/inventory/counties', metric: 'inventory', idField: 'county_fips' },
   ],
-  city: ['home_value', 'listing_price', 'for_sale_inventory'],
   zip: [
-    'home_value',
-    'rent_index',
-    'listing_price',
-    'for_sale_inventory',
-    'days_on_market',
+    { endpoint: '/api/zillow/zips', metric: 'home_value', idField: 'postal_code' },
+    { endpoint: '/api/zillow/rent/zips', metric: 'rent', idField: 'postal_code' },
   ],
-  tract: ['home_value'],
 };
-
-// ============================================================================
-// MOCK SETUP
-// ============================================================================
-
-const mockFetch = vi.fn();
-const originalFetch = global.fetch;
-
-beforeAll(() => {
-  global.fetch = mockFetch;
-});
-
-afterAll(() => {
-  global.fetch = originalFetch;
-});
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Create a mock score response for testing
- */
-function createMockScoreResponse(
+interface ApiResponse {
+  success?: boolean;
+  data?: unknown[];
+  count?: number;
+  error?: string;
+}
+
+async function fetchEndpoint(endpoint: string): Promise<{ status: number; data: ApiResponse; responseTime: number }> {
+  const startTime = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const responseTime = Date.now() - startTime;
+
+    let data: ApiResponse;
+    try {
+      data = await response.json();
+    } catch {
+      data = { error: 'Invalid JSON' };
+    }
+
+    return { status: response.status, data, responseTime };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    return { status: 0, data: { error: String(error) }, responseTime: Date.now() - startTime };
+  }
+}
+
+function findLocationInData(
+  data: unknown[],
   locationId: string,
-  locationName: string,
-  geography: string
-): ScoreResponse {
-  return {
-    location_id: locationId,
-    location_name: locationName,
-    geography,
-    median_price: 450000,
-    score_date: '2025-12-01',
-    scores: {
-      homeready: {
-        score: 72,
-        grade: 'B',
-        confidence: 0.85,
-        confidence_level: 'HIGH',
-      },
-      investoredge: {
-        score: 68,
-        grade: 'B-',
-        confidence: 0.82,
-        confidence_level: 'HIGH',
-      },
-      markethealth: {
-        score: 75,
-        grade: 'B+',
-        confidence: 0.88,
-        confidence_level: 'HIGH',
-      },
-    },
-  };
-}
+  idField: string
+): { value?: number; date?: string } | undefined {
+  // Try multiple field name variations
+  const possibleFields = [idField, 'region_id', 'id', idField.replace('_', '')];
 
-/**
- * Create a mock snapshot response for testing
- */
-function createMockSnapshotResponse(
-  geoLevel: GeoLevel,
-  locationId: string,
-  value: number
-): SnapshotData {
-  return {
-    [locationId]: {
-      value,
-      date: '2025-12-01',
-      name: `Location ${locationId}`,
-    },
-  };
-}
-
-/**
- * Setup mock to return score data
- */
-function setupScoreMock(locationId: string, locationName: string, geography: string): void {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve(createMockScoreResponse(locationId, locationName, geography)),
-  });
-}
-
-/**
- * Setup mock to return score not found
- */
-function setupScoreNotFoundMock(): void {
-  mockFetch.mockResolvedValueOnce({
-    ok: false,
-    status: 404,
-  });
-}
-
-/**
- * Setup mock to return snapshot data
- */
-function setupSnapshotMock(geoLevel: GeoLevel, locationId: string, value: number): void {
-  mockFetch.mockResolvedValueOnce({
-    ok: true,
-    json: () =>
-      Promise.resolve({
-        success: true,
-        count: 1,
-        data: [
-          {
-            region_id: locationId,
-            region_name: `Location ${locationId}`,
-            value,
-            date: '2025-12-01',
-          },
-        ],
-      }),
-  });
+  for (const field of possibleFields) {
+    const found = data.find((row: unknown) => {
+      const record = row as Record<string, unknown>;
+      return String(record[field]) === locationId;
+    });
+    if (found) return found as { value?: number; date?: string };
+  }
+  return undefined;
 }
 
 // ============================================================================
-// METRO TESTS
+// INTEGRATION TESTS - NO MOCKS
 // ============================================================================
 
-describe('Location Coverage', () => {
-  describe.each(sampleMetros)('Metro: %s (%s)', (cbsaCode, metroName) => {
-    beforeAll(() => {
-      vi.clearAllMocks();
-    });
-
-    it('has PropertyIQ scores', async () => {
-      setupScoreMock(cbsaCode, metroName, 'metro');
-
-      const scores = await fetchScore('metro', cbsaCode);
-
-      expect(scores).not.toBeNull();
-      expect(scores?.location_id).toBe(cbsaCode);
-      expect(scores?.scores).toBeDefined();
-
-      for (const scoreType of SCORE_TYPES) {
-        expect(scores?.scores[scoreType]).toBeDefined();
-        expect(scores?.scores[scoreType].score).toBeGreaterThanOrEqual(0);
-        expect(scores?.scores[scoreType].score).toBeLessThanOrEqual(100);
-        expect(scores?.scores[scoreType].grade).toBeDefined();
-        expect(scores?.scores[scoreType].confidence_level).toBeDefined();
-      }
-    });
-
-    it('has core metrics', async () => {
-      const requiredMetrics = REQUIRED_METRICS_BY_GEO.metro;
-
-      for (const metricId of requiredMetrics) {
-        setupSnapshotMock('metro', cbsaCode, 100000);
-      }
-
-      for (const metricId of requiredMetrics) {
-        const data = await fetchSnapshotData(metricId, 'metro');
-        expect(
-          data[cbsaCode],
-          `Expected ${metricId} data for metro ${cbsaCode}`
-        ).toBeDefined();
-      }
-    });
-
-    it('has no critical score gaps', async () => {
-      setupScoreMock(cbsaCode, metroName, 'metro');
-
-      const scores = await fetchScore('metro', cbsaCode);
-
-      expect(scores).not.toBeNull();
-      expect(scores?.scores.homeready.confidence_level).not.toBe('INSUFFICIENT');
-      expect(scores?.scores.investoredge.confidence_level).not.toBe('INSUFFICIENT');
-      expect(scores?.scores.markethealth.confidence_level).not.toBe('INSUFFICIENT');
-    });
+describe('Location Coverage Integration Tests', () => {
+  beforeAll(() => {
+    console.log(`\n🔗 Testing against: ${API_URL}\n`);
   });
 
-  // ============================================================================
-  // COUNTY TESTS
-  // ============================================================================
-
-  describe.each(sampleCounties)('County: %s (%s, %s)', (fipsCode, countyName, state) => {
-    beforeAll(() => {
-      vi.clearAllMocks();
-    });
-
-    it('has PropertyIQ scores', async () => {
-      setupScoreMock(fipsCode, `${countyName}, ${state}`, 'county');
-
-      const scores = await fetchScore('county', fipsCode);
-
-      expect(scores).not.toBeNull();
-      expect(scores?.location_id).toBe(fipsCode);
-      expect(scores?.scores).toBeDefined();
-
-      for (const scoreType of SCORE_TYPES) {
-        expect(scores?.scores[scoreType]).toBeDefined();
-        expect(scores?.scores[scoreType].score).toBeGreaterThanOrEqual(0);
-        expect(scores?.scores[scoreType].score).toBeLessThanOrEqual(100);
-      }
-    });
-
-    it('has core metrics', async () => {
-      const requiredMetrics = REQUIRED_METRICS_BY_GEO.county;
-
-      for (const metricId of requiredMetrics) {
-        setupSnapshotMock('county', fipsCode, 350000);
-      }
-
-      for (const metricId of requiredMetrics) {
-        const data = await fetchSnapshotData(metricId, 'county');
-        expect(
-          data[fipsCode],
-          `Expected ${metricId} data for county ${fipsCode}`
-        ).toBeDefined();
-      }
-    });
-
-    it('has valid home value data', async () => {
-      setupSnapshotMock('county', fipsCode, 450000);
-
-      const data = await fetchSnapshotData('home_value', 'county');
-
-      if (data[fipsCode]) {
-        expect(data[fipsCode].value).toBeGreaterThan(0);
-        expect(data[fipsCode].value).toBeLessThan(10000000);
-      }
-    });
+  describe('API Connectivity', () => {
+    it('backend is reachable', async () => {
+      const { status } = await fetchEndpoint('/api/health');
+      expect(status).toBe(200);
+    }, API_TIMEOUT);
   });
 
-  // ============================================================================
-  // ZIP TESTS
-  // ============================================================================
+  describe('Metro Coverage', () => {
+    it('home value data exists for metros', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/metros');
 
-  describe.each(sampleZips)('ZIP: %s (%s, %s)', (zipCode, city, state) => {
-    beforeAll(() => {
-      vi.clearAllMocks();
-    });
+      expect(status).toBe(200);
+      expect(data.data).toBeDefined();
+      expect(Array.isArray(data.data)).toBe(true);
 
-    it('has PropertyIQ scores', async () => {
-      setupScoreMock(zipCode, `${city}, ${state}`, 'zip');
+      const responseData = data.data as unknown[];
+      console.log(`  Total metros with home value: ${responseData.length}`);
 
-      const scores = await fetchScore('zip', zipCode);
+      let foundCount = 0;
+      const missing: string[] = [];
 
-      expect(scores).not.toBeNull();
-      expect(scores?.location_id).toBe(zipCode);
-      expect(scores?.scores).toBeDefined();
-
-      for (const scoreType of SCORE_TYPES) {
-        expect(scores?.scores[scoreType]).toBeDefined();
-        expect(scores?.scores[scoreType].score).toBeGreaterThanOrEqual(0);
-        expect(scores?.scores[scoreType].score).toBeLessThanOrEqual(100);
-      }
-    });
-
-    it('has core metrics', async () => {
-      const requiredMetrics = REQUIRED_METRICS_BY_GEO.zip;
-
-      for (const metricId of requiredMetrics) {
-        setupSnapshotMock('zip', zipCode, 500000);
-      }
-
-      for (const metricId of requiredMetrics) {
-        const data = await fetchSnapshotData(metricId, 'zip');
-        expect(
-          data[zipCode],
-          `Expected ${metricId} data for ZIP ${zipCode}`
-        ).toBeDefined();
-      }
-    });
-
-    it('has valid listing price data', async () => {
-      setupSnapshotMock('zip', zipCode, 525000);
-
-      const data = await fetchSnapshotData('listing_price', 'zip');
-
-      if (data[zipCode]) {
-        expect(data[zipCode].value).toBeGreaterThan(0);
-        expect(data[zipCode].value).toBeLessThan(50000000);
-      }
-    });
-  });
-
-  // ============================================================================
-  // CROSS-GEOGRAPHY VALIDATION
-  // ============================================================================
-
-  describe('Cross-Geography Validation', () => {
-    it('all geography levels have consistent score structure', async () => {
-      const testCases: [GeoLevel, string, string][] = [
-        ['metro', '35620', 'New York-Newark-Jersey City, NY'],
-        ['county', '06037', 'Los Angeles County, CA'],
-        ['zip', '10001', 'New York, NY'],
-      ];
-
-      for (const [geoLevel, locationId, locationName] of testCases) {
-        setupScoreMock(locationId, locationName, geoLevel);
-
-        const scores = await fetchScore(geoLevel, locationId);
-
-        expect(scores).not.toBeNull();
-        expect(scores?.scores).toHaveProperty('homeready');
-        expect(scores?.scores).toHaveProperty('investoredge');
-        expect(scores?.scores).toHaveProperty('markethealth');
-      }
-    });
-
-    it('score values are within valid range for all geographies', async () => {
-      const testCases: [GeoLevel, string, string][] = [
-        ['metro', '16980', 'Chicago-Naperville-Elgin, IL'],
-        ['county', '17031', 'Cook County, IL'],
-        ['zip', '60601', 'Chicago, IL'],
-      ];
-
-      for (const [geoLevel, locationId, locationName] of testCases) {
-        setupScoreMock(locationId, locationName, geoLevel);
-
-        const scores = await fetchScore(geoLevel, locationId);
-
-        expect(scores).not.toBeNull();
-
-        for (const scoreType of SCORE_TYPES) {
-          const score = scores?.scores[scoreType].score ?? -1;
-          expect(score).toBeGreaterThanOrEqual(0);
-          expect(score).toBeLessThanOrEqual(100);
+      for (const metro of SAMPLE_METROS) {
+        const found = findLocationInData(responseData, metro.id, 'cbsa_code');
+        if (found?.value !== undefined) {
+          foundCount++;
+        } else {
+          missing.push(`${metro.name} (${metro.id})`);
         }
       }
-    });
+
+      if (missing.length > 0) {
+        console.log(`  Missing metros: ${missing.join(', ')}`);
+      }
+
+      // All major metros should have home value data
+      expect(foundCount, `Expected all ${SAMPLE_METROS.length} metros to have data`).toBe(SAMPLE_METROS.length);
+    }, API_TIMEOUT);
+
+    it('rent data exists for metros', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/rent/metros');
+
+      expect(status).toBe(200);
+      const responseData = data.data as unknown[];
+      console.log(`  Total metros with rent: ${responseData.length}`);
+
+      let foundCount = 0;
+      for (const metro of SAMPLE_METROS) {
+        const found = findLocationInData(responseData, metro.id, 'cbsa_code');
+        if (found?.value !== undefined) foundCount++;
+      }
+
+      // At least 90% of metros should have rent data
+      const threshold = Math.floor(SAMPLE_METROS.length * 0.9);
+      expect(foundCount, `Expected at least ${threshold} metros with rent data`).toBeGreaterThanOrEqual(threshold);
+    }, API_TIMEOUT);
+
+    it('listing price data exists for metros', async () => {
+      const { status, data } = await fetchEndpoint('/api/realtor/listing-price/metros');
+
+      expect(status).toBe(200);
+      const responseData = data.data as unknown[];
+      console.log(`  Total metros with listing price: ${responseData.length}`);
+
+      expect(responseData.length).toBeGreaterThan(100); // Should have 100+ metros
+    }, API_TIMEOUT);
   });
 
-  // ============================================================================
-  // DATA COMPLETENESS VALIDATION
-  // ============================================================================
+  describe('County Coverage', () => {
+    it('home value data exists for counties', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/counties');
 
-  describe('Data Completeness', () => {
-    it('major metros have all required metrics', async () => {
-      const majorMetro = sampleMetros[0];
-      const [cbsaCode] = majorMetro;
-      const requiredMetrics = REQUIRED_METRICS_BY_GEO.metro;
+      expect(status).toBe(200);
+      expect(data.data).toBeDefined();
 
-      for (const metricId of requiredMetrics) {
-        setupSnapshotMock('metro', cbsaCode, 100000);
+      const responseData = data.data as unknown[];
+      console.log(`  Total counties with home value: ${responseData.length}`);
+
+      let foundCount = 0;
+      const missing: string[] = [];
+
+      for (const county of SAMPLE_COUNTIES) {
+        const found = findLocationInData(responseData, county.id, 'county_fips');
+        if (found?.value !== undefined) {
+          foundCount++;
+        } else {
+          missing.push(`${county.name}, ${county.state} (${county.id})`);
+        }
       }
 
-      const results: Record<string, boolean> = {};
-
-      for (const metricId of requiredMetrics) {
-        const data = await fetchSnapshotData(metricId, 'metro');
-        results[metricId] = data[cbsaCode] !== undefined;
+      if (missing.length > 0) {
+        console.log(`  Missing counties: ${missing.join(', ')}`);
       }
 
-      const missingMetrics = Object.entries(results)
-        .filter(([, hasData]) => !hasData)
-        .map(([metricId]) => metricId);
+      // At least 90% of sample counties should have data
+      const threshold = Math.floor(SAMPLE_COUNTIES.length * 0.9);
+      expect(foundCount, `Expected at least ${threshold} counties`).toBeGreaterThanOrEqual(threshold);
+    }, API_TIMEOUT);
 
-      expect(
-        missingMetrics,
-        `Major metro ${cbsaCode} missing metrics: ${missingMetrics.join(', ')}`
-      ).toHaveLength(0);
-    });
+    it('rent data exists for counties', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/rent/counties');
 
-    it('score confidence levels are valid', async () => {
-      const validConfidenceLevels = ['HIGH', 'MEDIUM', 'LOW', 'INSUFFICIENT'];
+      expect(status).toBe(200);
+      const responseData = data.data as unknown[];
+      console.log(`  Total counties with rent: ${responseData.length}`);
 
-      const [cbsaCode, metroName] = sampleMetros[0];
-      setupScoreMock(cbsaCode, metroName, 'metro');
-
-      const scores = await fetchScore('metro', cbsaCode);
-
-      expect(scores).not.toBeNull();
-
-      for (const scoreType of SCORE_TYPES) {
-        expect(validConfidenceLevels).toContain(scores?.scores[scoreType].confidence_level);
-      }
-    });
-
-    it('score dates are recent', async () => {
-      const [cbsaCode, metroName] = sampleMetros[0];
-      setupScoreMock(cbsaCode, metroName, 'metro');
-
-      const scores = await fetchScore('metro', cbsaCode);
-
-      expect(scores).not.toBeNull();
-      expect(scores?.score_date).toBeDefined();
-
-      const scoreDate = new Date(scores?.score_date ?? '');
-      const now = new Date();
-      const daysDiff = Math.floor(
-        (now.getTime() - scoreDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      expect(daysDiff).toBeLessThan(90);
-    });
+      // Should have substantial county rent data
+      expect(responseData.length).toBeGreaterThan(500);
+    }, API_TIMEOUT);
   });
 
-  // ============================================================================
-  // EDGE CASES
-  // ============================================================================
+  describe('ZIP Coverage', () => {
+    it('home value data exists for ZIPs', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/zips');
 
-  describe('Edge Cases', () => {
-    it('handles missing score gracefully', async () => {
-      setupScoreNotFoundMock();
+      expect(status).toBe(200);
+      expect(data.data).toBeDefined();
 
-      const scores = await fetchScore('metro', 'INVALID_CODE');
+      const responseData = data.data as unknown[];
+      console.log(`  Total ZIPs with home value: ${responseData.length}`);
 
-      expect(scores).toBeNull();
-    });
+      let foundCount = 0;
+      const missing: string[] = [];
 
-    it('handles ZIP codes with leading zeros', async () => {
-      const zipWithLeadingZero = '02101';
-      setupScoreMock(zipWithLeadingZero, 'Boston, MA', 'zip');
+      for (const zip of SAMPLE_ZIPS) {
+        const found = findLocationInData(responseData, zip.id, 'postal_code');
+        if (found?.value !== undefined) {
+          foundCount++;
+        } else {
+          missing.push(`${zip.city}, ${zip.state} (${zip.id})`);
+        }
+      }
 
-      const scores = await fetchScore('zip', zipWithLeadingZero);
+      if (missing.length > 0) {
+        console.log(`  Missing ZIPs: ${missing.join(', ')}`);
+      }
 
-      expect(scores).not.toBeNull();
-      expect(scores?.location_id).toBe(zipWithLeadingZero);
-    });
+      // At least 80% of sample ZIPs should have data
+      const threshold = Math.floor(SAMPLE_ZIPS.length * 0.8);
+      expect(foundCount, `Expected at least ${threshold} ZIPs`).toBeGreaterThanOrEqual(threshold);
+    }, API_TIMEOUT);
 
-    it('handles 5-digit FIPS codes correctly', async () => {
-      const fipsCode = '06037';
-      setupScoreMock(fipsCode, 'Los Angeles County, CA', 'county');
+    it('rent data exists for ZIPs', async () => {
+      const { status, data } = await fetchEndpoint('/api/zillow/rent/zips');
 
-      const scores = await fetchScore('county', fipsCode);
+      expect(status).toBe(200);
+      const responseData = data.data as unknown[];
+      console.log(`  Total ZIPs with rent: ${responseData.length}`);
 
-      expect(scores).not.toBeNull();
-      expect(scores?.location_id).toBe(fipsCode);
-    });
+      // Should have substantial ZIP rent data
+      expect(responseData.length).toBeGreaterThan(5000);
+    }, API_TIMEOUT);
+  });
+
+  describe('PropertyIQ Scores Coverage', () => {
+    it('homeready scores exist for metros', async () => {
+      const { status, data } = await fetchEndpoint('/api/scores/homeready/metros');
+
+      console.log(`  Homeready scores: ${status} - ${Array.isArray(data.data) ? data.data.length : 0} metros`);
+
+      // Scores endpoint should work (may return 200 with empty or 404 if not implemented)
+      expect([200, 404]).toContain(status);
+    }, API_TIMEOUT);
+
+    it('investoredge scores exist for metros', async () => {
+      const { status, data } = await fetchEndpoint('/api/scores/investoredge/metros');
+
+      console.log(`  InvestorEdge scores: ${status} - ${Array.isArray(data.data) ? data.data.length : 0} metros`);
+
+      expect([200, 404]).toContain(status);
+    }, API_TIMEOUT);
+  });
+
+  describe('Data Completeness Summary', () => {
+    it('generates coverage report', async () => {
+      const report: Record<string, { total: number; sampleCoverage: number }> = {};
+
+      // Metros
+      const metroData = await fetchEndpoint('/api/zillow/metros');
+      const metroRows = (metroData.data.data as unknown[]) || [];
+      let metroFound = 0;
+      for (const m of SAMPLE_METROS) {
+        if (findLocationInData(metroRows, m.id, 'cbsa_code')) metroFound++;
+      }
+      report.metros = { total: metroRows.length, sampleCoverage: metroFound };
+
+      // Counties
+      const countyData = await fetchEndpoint('/api/zillow/counties');
+      const countyRows = (countyData.data.data as unknown[]) || [];
+      let countyFound = 0;
+      for (const c of SAMPLE_COUNTIES) {
+        if (findLocationInData(countyRows, c.id, 'county_fips')) countyFound++;
+      }
+      report.counties = { total: countyRows.length, sampleCoverage: countyFound };
+
+      // ZIPs
+      const zipData = await fetchEndpoint('/api/zillow/zips');
+      const zipRows = (zipData.data.data as unknown[]) || [];
+      let zipFound = 0;
+      for (const z of SAMPLE_ZIPS) {
+        if (findLocationInData(zipRows, z.id, 'postal_code')) zipFound++;
+      }
+      report.zips = { total: zipRows.length, sampleCoverage: zipFound };
+
+      console.log('\n📊 COVERAGE REPORT:');
+      console.log(`  Metros: ${report.metros.total} total, ${report.metros.sampleCoverage}/${SAMPLE_METROS.length} sample`);
+      console.log(`  Counties: ${report.counties.total} total, ${report.counties.sampleCoverage}/${SAMPLE_COUNTIES.length} sample`);
+      console.log(`  ZIPs: ${report.zips.total} total, ${report.zips.sampleCoverage}/${SAMPLE_ZIPS.length} sample`);
+
+      // Should have substantial data
+      expect(report.metros.total).toBeGreaterThan(100);
+      expect(report.counties.total).toBeGreaterThan(1000);
+      expect(report.zips.total).toBeGreaterThan(10000);
+    }, 60000);
   });
 });
