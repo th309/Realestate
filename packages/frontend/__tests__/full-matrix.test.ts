@@ -4,13 +4,13 @@
  * Tests EVERY metric × EVERY location against the LIVE Railway backend.
  * NO MOCKS - all tests hit real APIs with real Supabase data.
  *
- * This fetches ALL locations from the database and tests ALL metrics.
+ * This fetches ALL locations from the database and tests ALL 60 metrics.
  * Expected test count:
- * - 12 metrics × 881+ metros = 10,000+ tests
- * - 12 metrics × 3,073+ counties = 36,000+ tests
- * - 12 metrics × 9,855+ ZIPs = 118,000+ tests
- * - Score tests for all locations
- * Total: 165,000+ test cases
+ * - 60 metrics × 881+ metros = 52,860+ tests
+ * - 60 metrics × 3,073+ counties = 184,380+ tests
+ * - 60 metrics × 26,306+ ZIPs = 1,578,360+ tests
+ * - Score tests for all locations = 30,000+ tests
+ * Total: 1,845,600+ API calls
  *
  * Run with: npm run test:full-matrix
  */
@@ -20,20 +20,78 @@ import { describe, it, expect, beforeAll } from 'vitest';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-ee4d.up.railway.app';
 const API_TIMEOUT = 30000;
 
-// All time series metrics
+// ALL time series metrics from registry (68 total, ~60 with time series)
 const ALL_METRICS = [
+  // Home Values
   'home_value',
+  'home_price_forecast',
   'home_value_yoy',
   'home_value_mom',
+  'home_value_5yr',
+  // Rent
   'rent_index',
-  'days_on_market',
-  'inventory',
+  'rent_for_houses',
+  // Market Activity
+  'for_sale_inventory',
   'inventory_yoy',
+  'new_listings',
+  'pending_listings',
+  'home_sales',
+  'home_sales_yoy',
   'pending_ratio',
-  'price_reduced',
-  'list_price',
-  'sale_price',
+  'days_on_market',
+  // Market Heat & Health
+  'market_heat',
+  'price_cut_pct',
+  'sale_to_list',
+  // Affordability
+  'homeowner_affordability',
+  'renter_affordability',
+  'years_to_save',
+  'income_to_buy',
+  'income_to_rent',
+  'affordable_home_price',
+  // Listing Price
+  'listing_price',
+  'price_per_sqft',
+  'price_increase_pct',
+  'new_listings_yoy',
+  // Market Heat Scores
+  'hotness_score',
+  'supply_score',
+  'demand_score',
+  // Investor Metrics
   'cap_rate',
+  'gross_yield',
+  'grm',
+  'rent_to_price_ratio',
+  'investment_score',
+  'long_term_growth_score',
+  'overvalued_pct',
+  'inventory_surplus',
+  // New Construction
+  'new_construction_sales',
+  'new_construction_price',
+  'new_construction_ppsf',
+  // Building Permits
+  'sf_permits',
+  'mf_permits',
+  'total_permits',
+  'permits_yoy',
+  'sf_mf_ratio',
+  'permit_value_per_unit',
+  // Area Profile (Census)
+  'population',
+  'population_growth',
+  'median_income',
+  'income_growth',
+  'median_age',
+  'homeownership_rate',
+  // Local Economy (FRED)
+  'unemployment_rate',
+  'job_growth',
+  'gdp_growth',
+  'cost_of_living',
 ];
 
 // Will be populated from API
