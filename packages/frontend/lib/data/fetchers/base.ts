@@ -14,7 +14,9 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001
  */
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    credentials: 'include',
+  });
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
   }
@@ -38,7 +40,9 @@ export async function fetchAPIWithParams<T>(
     });
   }
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), {
+    credentials: 'include',
+  });
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
   }

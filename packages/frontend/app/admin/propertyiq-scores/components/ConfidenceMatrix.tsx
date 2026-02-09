@@ -132,7 +132,9 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
       setError(null);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/summary`);
+      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/summary`, {
+        credentials: 'include',
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch confidence summary');
       }

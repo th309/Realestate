@@ -13,8 +13,15 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
 
-    # CORS
-    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
+    # CORS - Read from ALLOWED_ORIGINS env var
+    # Production domains + localhost for development
+    allowed_origins: str = (
+        "http://localhost:3000,"
+        "http://localhost:3001,"
+        "https://propertyiq.app,"
+        "https://app.propertyiq.app,"
+        "https://api.propertyiq.app"
+    )
 
     @property
     def allowed_origins_list(self) -> list[str]:

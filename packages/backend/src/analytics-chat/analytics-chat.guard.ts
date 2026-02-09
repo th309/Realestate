@@ -12,102 +12,152 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '../supabase/supabase.service';
+
+interface JwtValidationResult {
+  valid: boolean;
+  userId?: string;
+  error?: string;
+}
 
 /**
- * Simple API key or session-based authentication guard.
+ * JWT-based authentication guard using Supabase Auth.
  * Validates that requests have valid authentication before accessing chat endpoints.
  *
  * Authentication methods (checked in order):
- * 1. Bearer token in Authorization header
- * 2. x-api-key header
- * 3. Session cookie with user ID
- * 4. x-user-id header (for authenticated frontend requests)
+ * 1. Bearer token in Authorization header (validated via Supabase)
+ * 2. x-api-key header (for service-to-service calls)
  */
 @Injectable()
 export class ChatAuthGuard implements CanActivate {
   private readonly logger = new Logger(ChatAuthGuard.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const isAuthenticated = this.validateRequest(request);
+    const result = await this.validateRequest(request);
 
-    if (!isAuthenticated) {
+    if (!result.valid) {
       this.logger.warn(
-        `[ChatAuth] Unauthorized access attempt from ${request.ip || 'unknown'}`,
+        `[ChatAuth] Unauthorized access attempt from ${request.ip || 'unknown'}: ${result.error || 'Unknown error'}`,
       );
-      throw new UnauthorizedException('Authentication required for chat access');
+      throw new UnauthorizedException(
+        result.error || 'Authentication required for chat access',
+      );
     }
 
     return true;
   }
 
-  private validateRequest(request: any): boolean {
-    // 1. Check Bearer token
+  private async validateRequest(
+    request: any,
+  ): Promise<{ valid: boolean; error?: string }> {
+    // 1. Check Bearer token (JWT from Supabase Auth)
     const authHeader = request.headers?.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      if (this.validateToken(token)) {
-        request.userId = this.extractUserIdFromToken(token);
-        return true;
+      const jwtResult = await this.validateSupabaseJwt(token);
+
+      if (jwtResult.valid && jwtResult.userId) {
+        request.userId = jwtResult.userId;
+        return { valid: true };
+      }
+
+      return { valid: false, error: jwtResult.error || 'Invalid token' };
+    }
+
+    // 2. Check API key header (for service-to-service calls)
+    const apiKey = request.headers?.['x-api-key'];
+    if (apiKey) {
+      if (this.validateApiKey(apiKey)) {
+        request.userId = 'api-user';
+        return { valid: true };
+      }
+      return { valid: false, error: 'Invalid API key' };
+    }
+
+    // 3. Development bypass - requires explicit ALLOW_DEV_AUTH=true flag
+    const isDevelopment =
+      this.configService.get<string>('NODE_ENV') === 'development';
+    const allowDevAuth =
+      this.configService.get<string>('ALLOW_DEV_AUTH') === 'true';
+
+    if (isDevelopment && allowDevAuth) {
+      // Check for x-user-id header in dev mode with explicit flag
+      const devUserId = request.headers?.['x-user-id'];
+      if (devUserId && this.isValidUserId(devUserId)) {
+        this.logger.warn(
+          '[ChatAuth] Using development auth bypass with x-user-id header',
+        );
+        request.userId = devUserId;
+        return { valid: true };
       }
     }
 
-    // 2. Check API key header
-    const apiKey = request.headers?.['x-api-key'];
-    if (apiKey && this.validateApiKey(apiKey)) {
-      request.userId = 'api-user';
-      return true;
-    }
-
-    // 3. Check user ID header (trusted frontend with session)
-    const userId = request.headers?.['x-user-id'];
-    if (userId && this.isValidUserId(userId)) {
-      request.userId = userId;
-      return true;
-    }
-
-    // 4. Check session cookie
-    const sessionUserId = request.cookies?.userId || request.session?.userId;
-    if (sessionUserId && this.isValidUserId(sessionUserId)) {
-      request.userId = sessionUserId;
-      return true;
-    }
-
-    // 5. In development mode, allow unauthenticated access with warning
-    if (this.configService.get<string>('NODE_ENV') === 'development') {
-      this.logger.warn('[ChatAuth] Allowing unauthenticated access in development mode');
-      request.userId = 'dev-user';
-      return true;
-    }
-
-    return false;
+    return { valid: false, error: 'No valid authentication provided' };
   }
 
-  private validateToken(token: string): boolean {
-    // TODO: Implement proper JWT validation with Supabase
-    // For now, just check if token exists and has reasonable format
-    return token.length > 20;
+  private async validateSupabaseJwt(token: string): Promise<JwtValidationResult> {
+    try {
+      const supabase = this.supabaseService.getClient();
+
+      // Use getUser() to validate the JWT - this makes a request to Supabase Auth
+      // and validates the token signature, expiration, and that the session is still valid
+      const { data, error } = await supabase.auth.getUser(token);
+
+      if (error) {
+        this.logger.debug(`[ChatAuth] JWT validation failed: ${error.message}`);
+        return {
+          valid: false,
+          error: this.mapAuthError(error.message),
+        };
+      }
+
+      if (!data.user) {
+        return { valid: false, error: 'No user found for token' };
+      }
+
+      // Extract user ID from the validated user object
+      const userId = data.user.id;
+
+      this.logger.debug(`[ChatAuth] JWT validated for user: ${userId}`);
+      return { valid: true, userId };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`[ChatAuth] JWT validation error: ${message}`);
+      return { valid: false, error: 'Token validation failed' };
+    }
   }
 
-  private extractUserIdFromToken(token: string): string {
-    // TODO: Decode JWT and extract user ID
-    // For now, return a hash of the token
-    return `user-${token.substring(0, 8)}`;
+  private mapAuthError(errorMessage: string): string {
+    const lowerMessage = errorMessage.toLowerCase();
+
+    if (lowerMessage.includes('expired')) {
+      return 'Token has expired';
+    }
+    if (lowerMessage.includes('invalid')) {
+      return 'Invalid token';
+    }
+    if (lowerMessage.includes('malformed')) {
+      return 'Malformed token';
+    }
+
+    return 'Authentication failed';
   }
 
   private validateApiKey(apiKey: string): boolean {
     const validApiKey = this.configService.get<string>('CHAT_API_KEY');
     if (!validApiKey) {
-      // If no API key configured, don't accept API key auth
       return false;
     }
     return apiKey === validApiKey;
   }
 
   private isValidUserId(userId: string): boolean {
-    // Basic validation: non-empty string, reasonable length
     return typeof userId === 'string' && userId.length > 0 && userId.length < 256;
   }
 }

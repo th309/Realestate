@@ -42,8 +42,8 @@ export default function AdminFeedbackPage() {
     
     try {
       const [feedbackRes, testersRes] = await Promise.all([
-        fetch('/api/admin/feedback'),
-        fetch('/api/admin/testers'),
+        fetch('/api/admin/feedback', { credentials: 'include' }),
+        fetch('/api/admin/testers', { credentials: 'include' }),
       ]);
 
       if (!feedbackRes.ok || !testersRes.ok) {
@@ -80,6 +80,7 @@ export default function AdminFeedbackPage() {
       const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
 

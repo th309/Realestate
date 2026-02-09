@@ -62,7 +62,9 @@ export function ConfidenceTrendChart({
         months: months.toString(),
       });
 
-      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`);
+      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`, {
+        credentials: 'include',
+      });
       if (!res.ok) {
         throw new Error('Failed to fetch trend data');
       }
@@ -405,7 +407,9 @@ export function MultiSeriesTrendChart({
               months: months.toString(),
             });
 
-            const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`);
+            const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/trend?${params}`, {
+              credentials: 'include',
+            });
             if (res.ok) {
               const result = await res.json();
               if (result.success) {

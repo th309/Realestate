@@ -11,9 +11,11 @@ async function bootstrap() {
   const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3000',
     process.env.NEXT_PUBLIC_APP_URL,
+    process.env.ANALYTICS_SERVICE_URL,
     'https://propertyiq.app',
     'https://www.propertyiq.app',
     'https://app.propertyiq.app',
+    'https://api.propertyiq.app',
   ].filter(Boolean) as string[];
 
   app.enableCors({

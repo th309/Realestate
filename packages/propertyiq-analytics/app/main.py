@@ -1,6 +1,7 @@
-# PropertyIQ Analytics Service - v1.0.2
-# Build trigger: 2026-01-27-rebuild
+# PropertyIQ Analytics Service - v1.0.3
+# Build trigger: 2026-02-08-auth
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
 from app.api.routes import health, scoring, backtest, workflow, cache, adhoc, advanced, database, news, geography
@@ -24,6 +26,58 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("hpack").setLevel(logging.WARNING)
+
+# Paths that don't require authentication (health checks, root info)
+PUBLIC_PATHS = {"/", "/health", "/api/v1/health", "/docs", "/openapi.json", "/redoc"}
+
+
+class ServiceAuthMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to validate service-to-service authentication.
+    Expects Authorization: Bearer <secret> header on protected endpoints.
+    """
+
+    def __init__(self, app, expected_secret: str | None):
+        super().__init__(app)
+        self.expected_secret = expected_secret
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        # Allow public paths without auth (health checks, docs)
+        if path in PUBLIC_PATHS:
+            return await call_next(request)
+
+        # If no secret is configured, skip auth (development mode)
+        if not self.expected_secret:
+            return await call_next(request)
+
+        # Validate Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            logger.warning(f"Missing Authorization header for {request.method} {path}")
+            return JSONResponse(
+                status_code=401,
+                content={"error": "unauthorized", "message": "Missing Authorization header"},
+            )
+
+        # Expect "Bearer <token>" format
+        if not auth_header.startswith("Bearer "):
+            logger.warning(f"Invalid Authorization format for {request.method} {path}")
+            return JSONResponse(
+                status_code=401,
+                content={"error": "unauthorized", "message": "Invalid Authorization format"},
+            )
+
+        token = auth_header[7:]  # Remove "Bearer " prefix
+        if token != self.expected_secret:
+            logger.warning(f"Invalid service secret for {request.method} {path}")
+            return JSONResponse(
+                status_code=401,
+                content={"error": "unauthorized", "message": "Invalid service secret"},
+            )
+
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -158,6 +212,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configure service-to-service authentication
+analytics_service_secret = os.environ.get("ANALYTICS_SERVICE_SECRET")
+if analytics_service_secret:
+    logger.info("Service authentication enabled (ANALYTICS_SERVICE_SECRET configured)")
+else:
+    logger.warning("ANALYTICS_SERVICE_SECRET not set - endpoints are unprotected")
+app.add_middleware(ServiceAuthMiddleware, expected_secret=analytics_service_secret)
 
 
 # Request logging middleware

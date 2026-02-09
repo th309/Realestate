@@ -19,6 +19,7 @@ export interface ToolResult {
 export class AnalyticsToolsService {
   private readonly logger = new Logger(AnalyticsToolsService.name);
   private readonly analyticsBaseUrl: string;
+  private readonly analyticsServiceSecret: string | undefined;
   private readonly enabled: boolean;
   /** Cached tool definitions to avoid rebuilding on every request */
   private toolDefinitionsCache: any[] | null = null;
@@ -32,14 +33,35 @@ export class AnalyticsToolsService {
     this.analyticsBaseUrl =
       this.configService.get<string>('ANALYTICS_SERVICE_URL') ||
       'http://localhost:8000';
+    this.analyticsServiceSecret = this.configService.get<string>(
+      'ANALYTICS_SERVICE_SECRET',
+    );
     if (!this.enabled) {
       this.logger.log('[Analytics Tools] Disabled via ANALYTICS_TOOLS_ENABLED=false');
       return;
     }
     this.logger.log(`[Analytics Tools] Service URL: ${this.analyticsBaseUrl}`);
+    if (!this.analyticsServiceSecret) {
+      this.logger.warn(
+        '[Analytics Tools] ANALYTICS_SERVICE_SECRET not set - requests will not be authenticated',
+      );
+    }
 
     // Test connectivity on startup
     this.testConnectivity();
+  }
+
+  /**
+   * Build headers for analytics service requests
+   */
+  private getRequestHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.analyticsServiceSecret) {
+      headers['Authorization'] = `Bearer ${this.analyticsServiceSecret}`;
+    }
+    return headers;
   }
 
   /**
@@ -120,7 +142,7 @@ export class AnalyticsToolsService {
       try {
         response = await fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: this.getRequestHeaders(),
           body: method === 'POST' ? JSON.stringify(args) : undefined,
           signal: controller.signal,
         });
