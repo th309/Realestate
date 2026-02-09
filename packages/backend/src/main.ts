@@ -16,6 +16,7 @@ async function bootstrap() {
     'https://www.propertyiq.app',
     'https://app.propertyiq.app',
     'https://api.propertyiq.app',
+    'https://propertyiq.up.railway.app',
   ].filter(Boolean) as string[];
 
   app.enableCors({

@@ -22,7 +22,8 @@
     "test:data-matrix": "vitest run __tests__/data-cards.test.ts --reporter=verbose",
     "test:graph-matrix": "vitest run __tests__/graph-matrix.test.ts --reporter=verbose",
     "test:locations": "vitest run __tests__/location-coverage.test.ts --reporter=verbose",
-    "test:all-matrix": "vitest run __tests__/*.test.ts --reporter=verbose"
+    "test:all-matrix": "vitest run __tests__/*.test.ts --reporter=verbose",
+    "test:full-matrix": "vitest run __tests__/full-matrix.test.ts --reporter=verbose --testTimeout=14400000"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
