@@ -107,8 +107,16 @@ export class AnalyticsChatService {
   private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
   private readonly MODEL_POWERFUL = 'claude-3-opus-20240229';
 
-  // In-memory conversation store (for MVP - consider Redis/DB for production)
+  // In-memory conversation store with TTL-based cleanup
   private conversations: Map<string, ConversationState> = new Map();
+
+  // Conversation TTL: 30 minutes of inactivity
+  private readonly CONVERSATION_TTL_MS = 30 * 60 * 1000;
+  // Cleanup interval: run every 5 minutes
+  private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+  // Max conversations to prevent memory exhaustion
+  private readonly MAX_CONVERSATIONS = 1000;
+  private cleanupIntervalId: NodeJS.Timeout | null = null;
 
   // Compact text digest of warm cache data — injected into LLM prompt for direct answers
   private dataDigest: string = '';
@@ -164,18 +172,9 @@ export class AnalyticsChatService {
       }
     }
 
-    // Initialize Anthropic Client
-    if (anthropicKey) {
-      if (anthropicKey.includes(' ') || anthropicKey.length < 10) {
-        this.logger.error(`[Quinn Init] Invalid Anthropic API Key detected in .env: "${anthropicKey}".`);
-      } else {
-        try {
-          this.anthropicClient = new Anthropic({ apiKey: anthropicKey });
-          this.logger.log('[Quinn Init] Anthropic client initialized');
-        } catch (e) {
-          this.logger.error(`[Quinn Init] Failed to initialize Anthropic client: ${e.message}`);
-        }
-      }
+    // Validate Anthropic API Key format (duplicate initialization removed)
+    if (anthropicKey && (anthropicKey.includes(' ') || anthropicKey.length < 10)) {
+      this.logger.error('[Quinn Init] Invalid Anthropic API Key format detected - check .env configuration');
     }
 
     if (!this.openaiClient && !this.anthropicClient) {
@@ -188,6 +187,65 @@ export class AnalyticsChatService {
       if (warmOnStartup) {
         this.warmCache().catch((err) => this.logger.error(`[Quinn Cache] Warm-up error: ${err.message}`));
       }
+    }
+
+    // Start conversation cleanup interval
+    this.startConversationCleanup();
+  }
+
+  /**
+   * Start periodic cleanup of stale conversations
+   */
+  private startConversationCleanup(): void {
+    this.cleanupIntervalId = setInterval(() => {
+      this.cleanupStaleConversations();
+    }, this.CLEANUP_INTERVAL_MS);
+
+    // Cleanup on process termination
+    process.on('beforeExit', () => this.stopConversationCleanup());
+
+    this.logger.log(`[Quinn Cleanup] Started conversation cleanup (TTL: ${this.CONVERSATION_TTL_MS / 1000}s, Interval: ${this.CLEANUP_INTERVAL_MS / 1000}s)`);
+  }
+
+  /**
+   * Stop the cleanup interval
+   */
+  private stopConversationCleanup(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = null;
+    }
+  }
+
+  /**
+   * Remove conversations that have been inactive beyond TTL
+   */
+  private cleanupStaleConversations(): void {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [id, conversation] of this.conversations.entries()) {
+      const lastActivity = new Date(conversation.lastMessageAt).getTime();
+      if (now - lastActivity > this.CONVERSATION_TTL_MS) {
+        this.conversations.delete(id);
+        cleaned++;
+      }
+    }
+
+    // If still over max, remove oldest conversations
+    if (this.conversations.size > this.MAX_CONVERSATIONS) {
+      const sorted = Array.from(this.conversations.entries())
+        .sort((a, b) => new Date(a[1].lastMessageAt).getTime() - new Date(b[1].lastMessageAt).getTime());
+
+      const toRemove = sorted.slice(0, this.conversations.size - this.MAX_CONVERSATIONS);
+      for (const [id] of toRemove) {
+        this.conversations.delete(id);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.logger.log(`[Quinn Cleanup] Removed ${cleaned} stale conversations. Active: ${this.conversations.size}`);
     }
   }
 

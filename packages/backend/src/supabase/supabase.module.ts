@@ -41,12 +41,12 @@ const customFetch = (url: string | URL | Request, init?: RequestInit) => {
           configService.get<string>('SUPABASE_SERVICE_KEY') ||
           configService.get<string>('SUPABASE_SERVICE_ROLE_KEY');
 
-        console.log('=== Supabase Configuration ===');
-        console.log('SUPABASE_URL:', supabaseUrl);
-        console.log(
-          'SUPABASE_SERVICE_KEY:',
-          supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'NOT SET',
-        );
+        // Log configuration status without exposing sensitive data
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('=== Supabase Configuration ===');
+          console.log('SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
+          console.log('SUPABASE_SERVICE_KEY:', supabaseKey ? 'SET' : 'NOT SET');
+        }
 
         if (!supabaseUrl || !supabaseKey) {
           throw new Error('Missing Supabase configuration');

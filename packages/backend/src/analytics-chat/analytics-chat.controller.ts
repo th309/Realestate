@@ -17,10 +17,17 @@ import {
   Res,
   Sse,
   MessageEvent,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { Observable } from 'rxjs';
 import { AnalyticsChatService } from './analytics-chat.service';
+import {
+  ChatAuthGuard,
+  ConversationOwnershipGuard,
+  ChatRateLimitGuard,
+} from './analytics-chat.guard';
 
 interface ChatRequest {
   message: string;
@@ -47,6 +54,9 @@ export class AnalyticsChatController {
 
   constructor(private readonly chatService: AnalyticsChatService) {}
 
+  // Note: Health check is public (no guards)
+  // All other endpoints require authentication, rate limiting, and ownership validation
+
   /**
    * Health check for the chat service
    * GET /api/analytics/chat/health
@@ -64,6 +74,7 @@ export class AnalyticsChatController {
    * POST /api/analytics/chat/:conversationId/stream
    */
   @Post(':conversationId/stream')
+  @UseGuards(ChatAuthGuard, ChatRateLimitGuard, ConversationOwnershipGuard)
   async sendMessageStream(
     @Param('conversationId') conversationId: string,
     @Body() body: ChatRequest,
@@ -113,6 +124,7 @@ export class AnalyticsChatController {
    * POST /api/analytics/chat/:conversationId
    */
   @Post(':conversationId')
+  @UseGuards(ChatAuthGuard, ChatRateLimitGuard, ConversationOwnershipGuard)
   async sendMessage(
     @Param('conversationId') conversationId: string,
     @Body() body: ChatRequest,
@@ -183,6 +195,7 @@ export class AnalyticsChatController {
    * GET /api/analytics/chat/:conversationId
    */
   @Get(':conversationId')
+  @UseGuards(ChatAuthGuard, ConversationOwnershipGuard)
   async getConversation(@Param('conversationId') conversationId: string) {
     this.logger.log(`GET /analytics/chat/${conversationId}`);
 
@@ -213,6 +226,7 @@ export class AnalyticsChatController {
    * DELETE /api/analytics/chat/:conversationId
    */
   @Delete(':conversationId')
+  @UseGuards(ChatAuthGuard, ConversationOwnershipGuard)
   async clearConversation(@Param('conversationId') conversationId: string) {
     this.logger.log(`DELETE /analytics/chat/${conversationId}`);
 
@@ -228,8 +242,10 @@ export class AnalyticsChatController {
   /**
    * List active conversations (admin/debug endpoint)
    * GET /api/analytics/chat
+   * Note: This should be restricted to admin users in production
    */
   @Get()
+  @UseGuards(ChatAuthGuard)
   async listConversations() {
     const conversations = this.chatService.listConversations();
 
@@ -253,6 +269,7 @@ export class AnalyticsChatController {
    * POST /api/analytics/chat/:conversationId/explain
    */
   @Post(':conversationId/explain')
+  @UseGuards(ChatAuthGuard, ChatRateLimitGuard, ConversationOwnershipGuard)
   async explainResult(
     @Param('conversationId') conversationId: string,
     @Body() body: { resultContext: string; userQuery: string },

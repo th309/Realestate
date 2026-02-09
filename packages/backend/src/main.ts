@@ -7,9 +7,33 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for all origins
+  // Enable CORS with whitelisted origins
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    process.env.NEXT_PUBLIC_APP_URL,
+    'https://propertyiq.app',
+    'https://www.propertyiq.app',
+    'https://app.propertyiq.app',
+  ].filter(Boolean) as string[];
+
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      // Check if origin is in whitelist or is localhost for development
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('https://localhost:')
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -31,5 +55,3 @@ async function bootstrap() {
   console.log(`📅 Build: ${new Date().toISOString()}`);
 }
 bootstrap();
-// rebuild
-// cache-bust 1738795000

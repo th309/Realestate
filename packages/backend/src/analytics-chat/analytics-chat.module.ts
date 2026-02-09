@@ -6,15 +6,27 @@
  */
 
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AnalyticsChatController } from './analytics-chat.controller';
 import { AnalyticsChatService } from './analytics-chat.service';
 import { AnalyticsToolsService } from './analytics-tools.service';
 import { SupabaseModule } from '../supabase/supabase.module';
+import {
+  ChatAuthGuard,
+  ConversationOwnershipGuard,
+  ChatRateLimitGuard,
+} from './analytics-chat.guard';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, ConfigModule],
   controllers: [AnalyticsChatController],
-  providers: [AnalyticsChatService, AnalyticsToolsService],
+  providers: [
+    AnalyticsChatService,
+    AnalyticsToolsService,
+    ChatAuthGuard,
+    ConversationOwnershipGuard,
+    ChatRateLimitGuard,
+  ],
   exports: [AnalyticsChatService],
 })
 export class AnalyticsChatModule {}
