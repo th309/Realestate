@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
         console.log(`🚀 Starting Realtor import via Backend API: ${datasetId || 'ALL'}`)
 
-        const response = await fetch(`${BACKEND_URL}/data-ingestion/realtor`, {
+        const response = await fetch(`${BACKEND_URL}/api/data-ingestion/realtor`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

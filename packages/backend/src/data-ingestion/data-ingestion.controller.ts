@@ -6,7 +6,7 @@ import { RedfinService } from './sources/redfin.service';
 import { RealtorService } from './sources/realtor.service';
 import { CensusGeoLevel } from './types';
 
-@Controller('data-ingestion')
+@Controller('api/data-ingestion')
 export class DataIngestionController {
     constructor(
         private readonly censusService: CensusService,

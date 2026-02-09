@@ -12,7 +12,7 @@ export async function GET(request: Request) {
 
     console.log('🚀 Starting FRED import via Backend API')
 
-    const response = await fetch(`${BACKEND_URL}/data-ingestion/fred?api_key=${apiKey || ''}`, {
+    const response = await fetch(`${BACKEND_URL}/api/data-ingestion/fred?api_key=${apiKey || ''}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

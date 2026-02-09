@@ -285,6 +285,17 @@ export function useUniversalSearch({
                 finalResults = finalResults.filter((r: SearchResult) => r.type === filterByGeoLevel);
             }
 
+            // Deduplicate by ID to prevent React key warnings
+            // Multiple cities (e.g., Dallas + Fort Worth) can match the same metro
+            const seenIds = new Set<string>();
+            finalResults = finalResults.filter((r: SearchResult) => {
+                if (seenIds.has(r.id)) {
+                    return false;
+                }
+                seenIds.add(r.id);
+                return true;
+            });
+
             setSearchResults(finalResults.slice(0, 10));
         } catch (err) {
             console.error('Search error:', err);

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     const limitRows = limit ? parseInt(limit) : (isTest ? 5 : undefined)
 
-    const response = await fetch(`${BACKEND_URL}/data-ingestion/zillow`, {
+    const response = await fetch(`${BACKEND_URL}/api/data-ingestion/zillow`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
