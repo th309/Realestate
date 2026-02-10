@@ -49,17 +49,16 @@ export class ZillowController {
     @Query('state') state?: string,
     @Query('county') county?: string,
     @Query('date') date?: string,
-    @Query('limit') limit?: string,
   ) {
-    // If no state provided, return all ZIPs with pagination
+    // State selection is required for ZIP data
     if (!state) {
-      const data = await this.zillowService.getAllZipHomeValues(date, limit ? parseInt(limit, 10) : 100);
       return {
         success: true,
-        count: data.length,
+        count: 0,
         geography: 'ZIP',
-        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
-        data,
+        stateRequired: true,
+        message: 'Select a state to view ZIP code data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipHomeValues(state, county, date);
@@ -192,18 +191,17 @@ export class ZillowController {
     @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
-    @Query('limit') limit?: string,
   ) {
-    // If no state provided, return all ZIPs with pagination
+    // State selection is required for ZIP data
     if (!state) {
-      const data = await this.zillowService.getAllZipRent(date, propertyType, limit ? parseInt(limit, 10) : 100);
       return {
         success: true,
-        count: data.length,
+        count: 0,
         geography: 'ZIP',
         propertyType,
-        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
-        data,
+        stateRequired: true,
+        message: 'Select a state to view ZIP code rent data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipRent(state, propertyType, date);
@@ -243,18 +241,17 @@ export class ZillowController {
     @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
-    @Query('limit') limit?: string,
   ) {
-    // If no state provided, return all ZIPs with pagination
+    // State selection is required for ZIP data
     if (!state) {
-      const data = await this.zillowService.getAllZipRenterDemand(date, propertyType, limit ? parseInt(limit, 10) : 100);
       return {
         success: true,
-        count: data.length,
+        count: 0,
         geography: 'ZIP',
         propertyType,
-        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
-        data,
+        stateRequired: true,
+        message: 'Select a state to view ZIP code demand data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipRenterDemand(
