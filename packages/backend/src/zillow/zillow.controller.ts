@@ -46,14 +46,20 @@ export class ZillowController {
 
   @Get('zips')
   async getZipHomeValues(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('county') county?: string,
     @Query('date') date?: string,
+    @Query('limit') limit?: string,
   ) {
+    // If no state provided, return all ZIPs with pagination
     if (!state) {
+      const data = await this.zillowService.getAllZipHomeValues(date, limit ? parseInt(limit, 10) : 100);
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: data.length,
+        geography: 'ZIP',
+        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
+        data,
       };
     }
     const data = await this.zillowService.getZipHomeValues(state, county, date);
@@ -183,14 +189,21 @@ export class ZillowController {
 
   @Get('rent/zips')
   async getZipRent(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
+    @Query('limit') limit?: string,
   ) {
+    // If no state provided, return all ZIPs with pagination
     if (!state) {
+      const data = await this.zillowService.getAllZipRent(date, propertyType, limit ? parseInt(limit, 10) : 100);
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: data.length,
+        geography: 'ZIP',
+        propertyType,
+        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
+        data,
       };
     }
     const data = await this.zillowService.getZipRent(state, propertyType, date);
@@ -227,14 +240,21 @@ export class ZillowController {
 
   @Get('demand/zips')
   async getZipRenterDemand(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
+    @Query('limit') limit?: string,
   ) {
+    // If no state provided, return all ZIPs with pagination
     if (!state) {
+      const data = await this.zillowService.getAllZipRenterDemand(date, propertyType, limit ? parseInt(limit, 10) : 100);
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: data.length,
+        geography: 'ZIP',
+        propertyType,
+        message: 'Showing all ZIPs. Use ?state=XX to filter by state.',
+        data,
       };
     }
     const data = await this.zillowService.getZipRenterDemand(

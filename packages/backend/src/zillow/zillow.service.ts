@@ -364,6 +364,48 @@ export class ZillowService {
     return results.sort((a, b) => b.value - a.value);
   }
 
+  /**
+   * Get all ZIP home values without state filter (with limit for performance)
+   */
+  async getAllZipHomeValues(
+    date?: string,
+    limit: number = 100,
+  ): Promise<HomeValueData[]> {
+    // Use cached latest date if not provided
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'zip', 'zhvi'));
+
+    // Query all ZIPs with a limit, ordered by value descending
+    const { data: zipData, error } = await this.supabase
+      .from('zillow_zip')
+      .select(
+        'region_id, region_name, state_code, county_fips, value, period_date',
+      )
+      .eq('metric_name', 'zhvi')
+      .eq('period_date', targetDate)
+      .order('value', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Error fetching ZIP home values: ${error.message}`);
+    }
+
+    if (!zipData || zipData.length === 0) return [];
+
+    // Map results
+    return zipData.map((record) => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      zip_code: record.region_name,
+      state_abbrev: record.state_code,
+      state_name: null,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: 'sfrcondo',
+      geography: 'ZIP',
+    }));
+  }
+
   async getCityHomeValues(stateFilter?: string): Promise<HomeValueData[]> {
     stateFilter = stateFilter ? normalizeStateToCode(stateFilter) : undefined;
     if (!stateFilter) {
@@ -786,39 +828,61 @@ export class ZillowService {
       date ||
       (await getLatestDate(this.supabase, 'county', metricName));
 
-    const countyMap = await buildCountyMappings(this.supabase, stateFilter);
-    const fipsCodes = [...countyMap.keys()];
-    if (fipsCodes.length === 0) return [];
+    // Query zillow_county table directly (same pattern as getCountyHomeValues)
+    // The previous approach incorrectly used FIPS codes as region_ids
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let page = 0;
 
-    const results: HomeValueData[] = [];
-    const chunkSize = 500;
+    while (true) {
+      let query = this.supabase
+        .from('zillow_county')
+        .select(
+          'region_id, region_name, state_code, fips_code, value, period_date',
+        )
+        .eq('metric_name', metricName);
 
-    for (let i = 0; i < fipsCodes.length; i += chunkSize) {
-      const chunk = fipsCodes.slice(i, i + chunkSize);
-      // Pass propertyType directly - queryZori handles mapping to metric name
-      const zillow = await queryZori(
-        this.supabase,
-        'County',
-        targetDate,
-        propertyType,
-        chunk,
+      if (targetDate) {
+        query = query.eq('period_date', targetDate);
+      }
+
+      if (stateFilter) {
+        query = query.eq('state_code', stateFilter.toUpperCase());
+      }
+
+      const { data: pageData, error } = await query.range(
+        page * pageSize,
+        (page + 1) * pageSize - 1,
       );
 
-      zillow.forEach((z) => {
-        const county = countyMap.get(z.region_id);
-        results.push({
-          region_id: z.region_id,
-          region_name: county?.name || 'Unknown',
-          county_fips: z.region_id,
-          state_abbrev: county?.state_abbrev || null,
-          state_name: county?.state_name || null,
-          value: z.value,
-          date: z.date,
-          property_type: z.property_type,
-          geography: 'County',
-        });
-      });
+      if (error) {
+        throw new Error(`Error fetching county rent data: ${error.message}`);
+      }
+
+      if (!pageData || pageData.length === 0) break;
+
+      allData.push(...pageData);
+
+      if (pageData.length < pageSize) break; // Last page
+      page++;
     }
+
+    if (allData.length === 0) return [];
+
+    // Map results (already filtered by date, no dedup needed)
+    const results: HomeValueData[] = allData
+      .filter((record) => record.fips_code) // Skip records without fips_code
+      .map((record) => ({
+        region_id: String(record.region_id),
+        region_name: record.region_name,
+        county_fips: record.fips_code,
+        state_abbrev: record.state_code,
+        state_name: null,
+        value: Number(record.value),
+        date: record.period_date,
+        property_type: propertyType === 'all' ? 'sfrcondomfr' : propertyType,
+        geography: 'County',
+      }));
 
     return results.sort((a, b) => b.value - a.value);
   }
@@ -868,6 +932,49 @@ export class ZillowService {
         };
       })
       .sort((a, b) => b.value - a.value);
+  }
+
+  /**
+   * Get all ZIP rent data without state filter (with limit for performance)
+   */
+  async getAllZipRent(
+    date?: string,
+    propertyType: string = 'all',
+    limit: number = 100,
+  ): Promise<HomeValueData[]> {
+    const metricName = mapRentPropertyType(propertyType);
+    const targetDate =
+      date || (await getLatestDate(this.supabase, 'zip', metricName));
+
+    // Query all ZIPs with a limit, ordered by value descending
+    const { data: zipData, error } = await this.supabase
+      .from('zillow_zip')
+      .select(
+        'region_id, region_name, state_code, value, period_date',
+      )
+      .eq('metric_name', metricName)
+      .eq('period_date', targetDate)
+      .order('value', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Error fetching ZIP rent data: ${error.message}`);
+    }
+
+    if (!zipData || zipData.length === 0) return [];
+
+    // Map results
+    return zipData.map((record) => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      zip_code: record.region_name,
+      state_abbrev: record.state_code,
+      state_name: null,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: propertyType,
+      geography: 'ZIP',
+    }));
   }
 
   // ============================================================================
@@ -972,6 +1079,50 @@ export class ZillowService {
         };
       })
       .sort((a, b) => b.value - a.value);
+  }
+
+  /**
+   * Get all ZIP renter demand data without state filter (with limit for performance)
+   */
+  async getAllZipRenterDemand(
+    date?: string,
+    propertyType: string = 'all',
+    limit: number = 100,
+  ): Promise<HomeValueData[]> {
+    // Map propertyType to metric name
+    const metricName = propertyType === 'sfr' ? 'zordi_sfr' : propertyType === 'mfr' ? 'zordi_mfr' : 'zordi';
+    const targetDate =
+      date || (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'));
+
+    // Query all ZIPs with a limit, ordered by value descending
+    const { data: zipData, error } = await this.supabase
+      .from('zillow_zip')
+      .select(
+        'region_id, region_name, state_code, value, period_date',
+      )
+      .eq('metric_name', metricName)
+      .eq('period_date', targetDate)
+      .order('value', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Error fetching ZIP renter demand data: ${error.message}`);
+    }
+
+    if (!zipData || zipData.length === 0) return [];
+
+    // Map results
+    return zipData.map((record) => ({
+      region_id: String(record.region_id),
+      region_name: record.region_name,
+      zip_code: record.region_name,
+      state_abbrev: record.state_code,
+      state_name: null,
+      value: Number(record.value),
+      date: record.period_date,
+      property_type: propertyType,
+      geography: 'ZIP',
+    }));
   }
 
   // ============================================================================

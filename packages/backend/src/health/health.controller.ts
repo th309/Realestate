@@ -2,6 +2,7 @@
  * Health Controller
  *
  * Exposes API endpoints for monitoring data health:
+ * - GET /api/health - Simple healthcheck for Railway
  * - GET /api/health/data-cards - Check all 54 data card metrics
  * - GET /api/health/data-sources - Check data source availability
  * - GET /api/health/pipeline-runs - Get recent pipeline runs
@@ -11,8 +12,10 @@
  * - POST /api/pipelines/:name/trigger - Trigger a pipeline manually
  */
 
-import { Controller, Get, Post, Param, Query, Body, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
@@ -22,11 +25,36 @@ import { DataAlertsService } from './data-alerts.service';
 @Controller('api/health')
 export class HealthController {
   constructor(
+    @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly dataCardsHealth: DataCardsHealthService,
     private readonly dataSourcesHealth: DataSourcesHealthService,
     private readonly pipelineRuns: PipelineRunsService,
     private readonly dataAlerts: DataAlertsService,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Simple healthcheck for Railway' })
+  @ApiResponse({ status: 200, description: 'Service is healthy' })
+  async healthCheck() {
+    const response: {
+      status: string;
+      timestamp: string;
+      database?: string;
+    } = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    };
+
+    // Quick database connectivity check
+    try {
+      const { error } = await this.supabase.from('markets').select('id').limit(1);
+      response.database = error ? 'error' : 'connected';
+    } catch {
+      response.database = 'error';
+    }
+
+    return response;
+  }
 
   @Get('data-cards')
   @ApiOperation({ summary: 'Check health of all data card metrics' })

@@ -1,7 +1,17 @@
 # Validation Summary Report
 
-**Date:** 2026-02-09
+**Date:** 2026-02-09 (Updated)
 **Status:** BLOCKING ISSUES FOUND
+
+---
+
+## Infrastructure URLs (Railway)
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://propertyiq.up.railway.app |
+| Backend | https://backend-production-ee4d.up.railway.app |
+| Analytics (Python) | https://analytics-production-af35.up.railway.app |
 
 ---
 
@@ -9,21 +19,19 @@
 
 | Validation Area | Status | Pass Rate |
 |-----------------|--------|-----------|
-| Agent 1: Frontend ↔ Backend | PARTIAL PASS | Backend OK, Frontend NOT DEPLOYED |
-| Agent 2: Backend ↔ Supabase | PASSED | 100% |
-| Agent 3: Backend ↔ Analytics | PASSED | 100% |
-| Graph Matrix Tests | 97% | 68/70 |
-| Location Coverage Tests | 36% | 4/11 |
+| Agent 1: Frontend ↔ Backend | ✅ PASSED | Frontend LIVE on Railway |
+| Agent 2: Backend ↔ Supabase | ✅ PASSED | 100% |
+| Agent 3: Backend ↔ Analytics | ✅ PASSED | 100% |
+| Graph Matrix Tests | ✅ 97% | 68/70 |
+| Location Coverage Tests | ⚠️ 36% | 4/11 |
 
 ---
 
 ## BLOCKING Issues (Must Fix Before Launch)
 
-### 1. Frontend Not Deployed (CRITICAL)
-- **Source:** Agent 1
-- **Impact:** Cannot validate end-to-end user experience
-- **Details:** `propertyiq.vercel.app` returns 404 DEPLOYMENT_NOT_FOUND
-- **Action:** Redeploy frontend to Vercel, verify env vars set
+### ~~1. Frontend Not Deployed~~ ✅ RESOLVED
+- **Status:** Frontend is LIVE at `propertyiq.up.railway.app`
+- **Note:** Previous validation used wrong URL (Vercel instead of Railway)
 
 ### 2. ZIP Endpoints Not Returning Data
 - **Source:** Location Coverage Tests
@@ -68,10 +76,8 @@
   - Building Permits: 101 days old
 - **Action:** Run data refresh pipelines before launch
 
-### 8. Missing Vercel Preview URL in CORS
-- **Source:** Agent 1
-- **Impact:** Preview deployments will have CORS errors
-- **Action:** Add `*.vercel.app` to CORS whitelist
+### 8. ~~Missing Vercel Preview URL in CORS~~ N/A
+- **Status:** Using Railway, not Vercel - check Railway preview URLs if needed
 
 ---
 
@@ -120,15 +126,14 @@
 
 ---
 
-## Recommended Fix Order
+## Recommended Fix Order (Updated)
 
-1. **Deploy Frontend** - Unblocks full validation
-2. **Fix `/api/health` endpoint** - Standard monitoring
+1. ~~**Deploy Frontend**~~ ✅ Already live on Railway
+2. **Fix `/api/health` endpoint** - Standard monitoring (Railway healthcheck expects it)
 3. **Fix ZIP endpoints** - Either require state or make optional
-4. **Fix scores distribution endpoint** - Debug 400 error
+4. **Fix scores distribution endpoint** - Debug 404 error
 5. **Implement Census/Economic endpoints** - Or update tests
 6. **Run data pipelines** - Refresh stale data
-7. **Update CORS for Vercel previews** - Dev experience
 
 ---
 

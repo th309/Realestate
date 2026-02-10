@@ -177,14 +177,82 @@ export class ScoringController {
   }
 
   // ============================================================================
+  // Distribution Endpoints (must come before generic routes)
+  // ============================================================================
+
+  /**
+   * Get score distribution for a geography level
+   *
+   * GET /api/scores/distribution?geography=metro&score_type=homeready
+   *
+   * Returns histogram buckets (0-10, 10-20, ..., 90-100) with counts and percentages,
+   * plus statistics (mean, median, std_dev) and grade distribution.
+   */
+  @Get('distribution')
+  @ApiOperation({ summary: 'Get score distribution for a geography level' })
+  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
+  @ApiQuery({ name: 'score_type', required: false, description: 'homeready, investoredge, or markethealth. If omitted, returns all score types.' })
+  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  async getScoreDistribution(
+    @Query('geography') geography: string,
+    @Query('score_type') scoreType?: string,
+    @Query('date') date?: string,
+  ): Promise<{
+    geography: string;
+    score_type?: string;
+    score_date: string;
+    total_count?: number;
+    distribution?: Array<{
+      bucket: string;
+      min: number;
+      max: number;
+      count: number;
+      percentage: number;
+    }>;
+    statistics?: {
+      mean: number;
+      median: number;
+      std_dev: number;
+      min: number;
+      max: number;
+    };
+    grade_distribution?: Array<{
+      grade: string;
+      count: number;
+      percentage: number;
+    }>;
+    distributions?: Record<string, any>;
+  }> {
+    if (!geography) {
+      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const geoLevel = this.validateGeography(geography);
+
+    // If no score_type provided, return all distributions
+    if (!scoreType) {
+      const result = await this.scoringService.getAllScoreDistributions(geoLevel, date);
+      return {
+        geography: result.geography,
+        score_date: result.score_date,
+        distributions: result.distributions,
+      };
+    }
+
+    // Otherwise return specific score type distribution
+    const validScoreType = this.validateScoreType(scoreType);
+    return this.scoringService.getScoreDistribution(geoLevel, validScoreType, date);
+  }
+
+  // ============================================================================
   // Map Display Endpoints (must come before generic routes)
   // ============================================================================
 
   /**
    * Get all scores for a geography level (for map display)
-   * 
+   *
    * GET /api/scores/all/:geography?score_type=homeready&page=0&page_size=1000
-   * 
+   *
    * NOTE: This route must come BEFORE @Get(':geography/:locationId') to avoid route conflicts
    */
   @Get('all/:geography')
