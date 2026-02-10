@@ -1,0 +1,533 @@
+{
+  "runDate": "2026-02-10T03:50:24.727Z",
+  "totalStates": 50,
+  "totalZips": 26284,
+  "totalChecks": 1209064,
+  "duration": 12736268,
+  "metrics": {
+    "listing_price": {
+      "pass": 24180,
+      "empty": 2104,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 91.99513011718156
+    },
+    "income_to_buy": {
+      "pass": 0,
+      "empty": 20786,
+      "fail": 5498,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "affordable_home_price": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "price_per_sqft": {
+      "pass": 24363,
+      "empty": 1921,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 92.69137117638107
+    },
+    "years_to_save": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "home_value_yoy": {
+      "pass": 0,
+      "empty": 21961,
+      "fail": 4323,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "home_value_5yr": {
+      "pass": 0,
+      "empty": 22840,
+      "fail": 3444,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "days_on_market": {
+      "pass": 24762,
+      "empty": 1522,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 94.20940496119312
+    },
+    "for_sale_inventory": {
+      "pass": 24180,
+      "empty": 2104,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 91.99513011718156
+    },
+    "inventory_yoy": {
+      "pass": 0,
+      "empty": 23451,
+      "fail": 2833,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "pending_ratio": {
+      "pass": 0,
+      "empty": 23908,
+      "fail": 2376,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "new_listings_yoy": {
+      "pass": 0,
+      "empty": 24210,
+      "fail": 2074,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "hotness_score": {
+      "pass": 24315,
+      "empty": 1969,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 92.50875057068939
+    },
+    "sale_to_list": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "home_value_mom": {
+      "pass": 0,
+      "empty": 24519,
+      "fail": 1765,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "price_cut_pct": {
+      "pass": 24200,
+      "empty": 2084,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 92.07122203621975
+    },
+    "price_increase_pct": {
+      "pass": 0,
+      "empty": 24734,
+      "fail": 1550,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "new_listings": {
+      "pass": 24457,
+      "empty": 1827,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 93.0490031958606
+    },
+    "inventory_surplus": {
+      "pass": 0,
+      "empty": 24871,
+      "fail": 1413,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "cap_rate": {
+      "pass": 0,
+      "empty": 25036,
+      "fail": 1248,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "rent_index": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "rent_for_houses": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "home_value": {
+      "pass": 26284,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 100
+    },
+    "overvalued_pct": {
+      "pass": 0,
+      "empty": 25106,
+      "fail": 1178,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "population": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "population_growth": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "median_income": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "income_growth": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "median_age": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "homeownership_rate": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "unemployment_rate": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "job_growth": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "gdp_growth": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "cost_of_living": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "sf_permits": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "mf_permits": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "total_permits": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "permits_yoy": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "sf_mf_ratio": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "permit_value_per_unit": {
+      "pass": 0,
+      "empty": 26284,
+      "fail": 0,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "new_construction_sales": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "new_construction_price": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "new_construction_ppsf": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 0,
+      "n/a": 26284,
+      "passRate": 0
+    },
+    "homeready_score": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 26284,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "investoredge_score": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 26284,
+      "n/a": 0,
+      "passRate": 0
+    },
+    "market_health_score": {
+      "pass": 0,
+      "empty": 0,
+      "fail": 26284,
+      "n/a": 0,
+      "passRate": 0
+    }
+  },
+  "statesSummary": {
+    "AK": {
+      "zips": 50,
+      "passRate": 20.31578947368421
+    },
+    "AL": {
+      "zips": 510,
+      "passRate": 20.691434468524253
+    },
+    "AR": {
+      "zips": 305,
+      "passRate": 20.629853321829163
+    },
+    "AZ": {
+      "zips": 300,
+      "passRate": 20.86842105263158
+    },
+    "CA": {
+      "zips": 1543,
+      "passRate": 20.70641607258587
+    },
+    "CO": {
+      "zips": 416,
+      "passRate": 20.698380566801617
+    },
+    "CT": {
+      "zips": 258,
+      "passRate": 10.495716034271727
+    },
+    "DE": {
+      "zips": 59,
+      "passRate": 20.740410347903655
+    },
+    "FL": {
+      "zips": 924,
+      "passRate": 20.952950558213715
+    },
+    "GA": {
+      "zips": 665,
+      "passRate": 20.609418282548475
+    },
+    "HI": {
+      "zips": 78,
+      "passRate": 20.58029689608637
+    },
+    "IA": {
+      "zips": 825,
+      "passRate": 18.931419457735245
+    },
+    "ID": {
+      "zips": 203,
+      "passRate": 20.689655172413794
+    },
+    "IL": {
+      "zips": 1084,
+      "passRate": 20.03301611963488
+    },
+    "IN": {
+      "zips": 698,
+      "passRate": 19.865027899261047
+    },
+    "KS": {
+      "zips": 515,
+      "passRate": 19.085334695963212
+    },
+    "KY": {
+      "zips": 605,
+      "passRate": 19.10395824271422
+    },
+    "LA": {
+      "zips": 345,
+      "passRate": 20.892448512585812
+    },
+    "MA": {
+      "zips": 484,
+      "passRate": 20.786211396259244
+    },
+    "MD": {
+      "zips": 423,
+      "passRate": 20.3558541744432
+    },
+    "ME": {
+      "zips": 311,
+      "passRate": 20.993399898459977
+    },
+    "MI": {
+      "zips": 892,
+      "passRate": 20.804814727401464
+    },
+    "MN": {
+      "zips": 718,
+      "passRate": 20.25729365195719
+    },
+    "MO": {
+      "zips": 764,
+      "passRate": 19.581840727473132
+    },
+    "MS": {
+      "zips": 344,
+      "passRate": 19.820991432068542
+    },
+    "MT": {
+      "zips": 232,
+      "passRate": 19.702813067150636
+    },
+    "NC": {
+      "zips": 719,
+      "passRate": 13.011492570090038
+    },
+    "ND": {
+      "zips": 113,
+      "passRate": 18.933395435491384
+    },
+    "NE": {
+      "zips": 464,
+      "passRate": 18.11479128856624
+    },
+    "NH": {
+      "zips": 231,
+      "passRate": 20.73365231259968
+    },
+    "NJ": {
+      "zips": 547,
+      "passRate": 20.884249013759263
+    },
+    "NM": {
+      "zips": 154,
+      "passRate": 9.911141490088857
+    },
+    "NV": {
+      "zips": 133,
+      "passRate": 20.63711911357341
+    },
+    "NY": {
+      "zips": 1561,
+      "passRate": 20.438989851309888
+    },
+    "OH": {
+      "zips": 1024,
+      "passRate": 20.243112664473685
+    },
+    "OK": {
+      "zips": 499,
+      "passRate": 20.351228773336146
+    },
+    "OR": {
+      "zips": 339,
+      "passRate": 20.943952802359885
+    },
+    "PA": {
+      "zips": 1364,
+      "passRate": 19.756135206050317
+    },
+    "RI": {
+      "zips": 69,
+      "passRate": 20.785659801678108
+    },
+    "SC": {
+      "zips": 359,
+      "passRate": 20.642134584371792
+    },
+    "SD": {
+      "zips": 146,
+      "passRate": 18.529199711607784
+    },
+    "TN": {
+      "zips": 588,
+      "passRate": 20.895989974937343
+    },
+    "TX": {
+      "zips": 1513,
+      "passRate": 20.699551257522526
+    },
+    "UT": {
+      "zips": 186,
+      "passRate": 15.577249575551782
+    },
+    "VA": {
+      "zips": 757,
+      "passRate": 20.371271640130708
+    },
+    "VT": {
+      "zips": 229,
+      "passRate": 20.16777752240864
+    },
+    "WA": {
+      "zips": 485,
+      "passRate": 20.900705371676615
+    },
+    "WI": {
+      "zips": 679,
+      "passRate": 20.727075420510037
+    },
+    "WV": {
+      "zips": 479,
+      "passRate": 9.290187891440501
+    },
+    "WY": {
+      "zips": 95,
+      "passRate": 19.30747922437673
+    }
+  }
+}
