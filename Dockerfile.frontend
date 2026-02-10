@@ -34,7 +34,16 @@ COPY packages/quinn-widget/package.json ./packages/quinn-widget/
 RUN npm ci
 
 # 3. Copy source and build frontend
-# NEXT_PUBLIC_* env vars must be provided at build time via Railway service settings
+# Railway passes env vars as build args - declare them here
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Convert ARGs to ENVs so Next.js can see them during build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 COPY . .
 
 RUN npm run build:frontend
