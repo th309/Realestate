@@ -86,7 +86,6 @@ export function MetricItem({
       >
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="truncate">{metric.name}</span>
-          {metric.isNew && <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>}
         </span>
         <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
           {isLocked && (

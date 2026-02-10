@@ -15,12 +15,18 @@ export async function fetchEntitlements(
   if (tierOverride) {
     params.set('tier', tierOverride);
   }
+  // Cache bust to ensure fresh data
+  params.set('_t', Date.now().toString());
 
-  const response = await fetch(`${API_URL}/api/entitlements/check?${params}`, {
+  const url = `${API_URL}/api/entitlements/check?${params}`;
+  console.log('[Entitlements] Fetching:', url.substring(0, 100) + '..., tier=' + tierOverride);
+
+  const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
+    cache: 'no-store',
   });
 
   if (!response.ok) {
@@ -28,6 +34,7 @@ export async function fetchEntitlements(
   }
 
   const data = await response.json();
+  console.log('[Entitlements] Response tier:', data.tier, 'access count:', Object.keys(data.access).length);
 
   return {
     tier: data.tier,

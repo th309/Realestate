@@ -14,13 +14,21 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001
  */
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  const response = await fetch(url, {
-    credentials: 'include',
-  });
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    // Provide more context for debugging
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.warn(`[fetchAPI] Network error for ${endpoint} - backend may be unreachable`);
+    }
+    throw error;
   }
-  return response.json();
 }
 
 /**

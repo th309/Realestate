@@ -44,8 +44,14 @@ export function EntitlementsProvider({
   initialResources,
 }: EntitlementsProviderProps) {
   const [state, setState] = useState<EntitlementsState>(defaultState);
-  const [simulatedTier, setSimulatedTier] = useState<UserTier | null>(null);
+  const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(null);
   const [simulatedAuth, setSimulatedAuth] = useState<boolean | null>(null);
+
+  // Wrap setSimulatedTier to add logging
+  const setSimulatedTier = useCallback((tier: UserTier | null) => {
+    console.log('[Entitlements] setSimulatedTier called with:', tier);
+    setSimulatedTierRaw(tier);
+  }, []);
 
   // Auto-generate resource list from registry if not provided
   const resources = useMemo(
@@ -65,12 +71,15 @@ export function EntitlementsProvider({
   }, []);
 
   const refresh = useCallback(async () => {
+    console.log('[Entitlements] refresh() called, simulatedTier=', simulatedTier);
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const data = await fetchEntitlements(resources, simulatedTier);
+      console.log('[Entitlements] setState with tier=', data.tier);
       setState(data);
     } catch (error) {
       // Fail open: default to free tier on API failure
+      console.error('[Entitlements] fetch error:', error);
       setState(prev => ({
         ...prev,
         loading: false,
@@ -80,6 +89,7 @@ export function EntitlementsProvider({
   }, [resources, simulatedTier]);
 
   useEffect(() => {
+    console.log('[Entitlements] useEffect triggered, refresh changed');
     refresh();
   }, [refresh]);
 

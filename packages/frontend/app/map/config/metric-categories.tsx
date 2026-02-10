@@ -84,11 +84,11 @@ const HOMEBUYER_AFFORDABILITY: MetricCategory = {
   subtext: 'Can I afford to live here?',
   icon: <AttachMoneyIcon />,
   metrics: [
-    metric('listing_price', { isNew: true }),
-    metric('income_to_buy', { isNew: true }),
-    metric('affordable_home_price', { isNew: true }),
-    metric('price_per_sqft', { isNew: true }),
-    metric('years_to_save', { isNew: true }),
+    metric('listing_price'),
+    metric('income_to_buy'),
+    metric('affordable_home_price'),
+    metric('price_per_sqft'),
+    metric('years_to_save'),
     metric('home_value_yoy'),
     metric('home_value_5yr'),
   ],
@@ -104,8 +104,8 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
     metric('for_sale_inventory'),
     metric('inventory_yoy'),
     metric('pending_ratio'),
-    metric('new_listings_yoy', { isNew: true }),
-    metric('hotness_score', { isNew: true }),
+    metric('new_listings_yoy'),
+    metric('hotness_score'),
     metric('sale_to_list'),
   ],
 };
@@ -119,7 +119,7 @@ const HOMEBUYER_PRICING: MetricCategory = {
     metric('home_value_yoy'),
     metric('home_value_mom'),
     metric('price_cut_pct'),
-    metric('price_increase_pct', { isNew: true }),
+    metric('price_increase_pct'),
     metric('new_listings'),
     metric('inventory_surplus'),
   ],
@@ -138,8 +138,8 @@ const INVESTOR_CASHFLOW: MetricCategory = {
     metric('cap_rate'),
     metric('rent_index'),
     metric('rent_for_houses'),
-    metric('listing_price', { isNew: true }),
-    metric('price_per_sqft', { isNew: true }),
+    metric('listing_price'),
+    metric('price_per_sqft'),
   ],
 };
 
@@ -166,8 +166,8 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
     metric('for_sale_inventory'),
     metric('inventory_yoy'),
     metric('pending_ratio'),
-    metric('new_listings_yoy', { isNew: true }),
-    metric('hotness_score', { isNew: true }),
+    metric('new_listings_yoy'),
+    metric('hotness_score'),
   ],
 };
 
@@ -217,12 +217,12 @@ const NEW_CONSTRUCTION: MetricCategory = {
   icon: <ConstructionIcon />,
   metrics: [
     // Building Permits (Census BPS - state/county)
-    metric('sf_permits', { isNew: true }),
-    metric('mf_permits', { isNew: true }),
-    metric('total_permits', { isNew: true }),
-    metric('permits_yoy', { isNew: true }),
-    metric('sf_mf_ratio', { isNew: true }),
-    metric('permit_value_per_unit', { isNew: true }),
+    metric('sf_permits'),
+    metric('mf_permits'),
+    metric('total_permits'),
+    metric('permits_yoy'),
+    metric('sf_mf_ratio'),
+    metric('permit_value_per_unit'),
     // New Construction Sales (Zillow - metro only)
     metric('new_construction_sales'),
     metric('new_construction_price'),
@@ -239,10 +239,9 @@ export const SCORES_CATEGORY: MetricCategory = {
   name: 'PropertyIQ Scores',
   subtext: 'AI-powered market analysis',
   icon: <AnalyticsIcon />,
-  isNew: true,
   metrics: [
-    metric('homeready_score', { isNew: true }),
-    metric('investoredge_score', { isNew: true }),
+    metric('homeready_score'),
+    metric('investoredge_score'),
     metric('market_health_score'),
   ],
 };
