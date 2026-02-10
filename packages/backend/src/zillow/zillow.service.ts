@@ -371,39 +371,52 @@ export class ZillowService {
     date?: string,
     limit: number = 100,
   ): Promise<HomeValueData[]> {
-    // Use cached latest date if not provided
-    const targetDate =
-      date || (await getLatestDate(this.supabase, 'zip', 'zhvi'));
+    try {
+      // Use cached latest date if not provided
+      const targetDate =
+        date || (await getLatestDate(this.supabase, 'zip', 'zhvi'));
 
-    // Query all ZIPs with a limit, ordered by value descending
-    const { data: zipData, error } = await this.supabase
-      .from('zillow_zip')
-      .select(
-        'region_id, region_name, state_code, county_fips, value, period_date',
-      )
-      .eq('metric_name', 'zhvi')
-      .eq('period_date', targetDate)
-      .order('value', { ascending: false })
-      .limit(limit);
+      console.log(`getAllZipHomeValues: targetDate=${targetDate}, limit=${limit}`);
 
-    if (error) {
-      throw new Error(`Error fetching ZIP home values: ${error.message}`);
+      // Query all ZIPs with a limit, ordered by value descending
+      const { data: zipData, error } = await this.supabase
+        .from('zillow_zip')
+        .select(
+          'region_id, region_name, state_code, county_fips, value, period_date',
+        )
+        .eq('metric_name', 'zhvi')
+        .eq('period_date', targetDate)
+        .order('value', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`getAllZipHomeValues error: ${error.message}`);
+        return []; // Return empty instead of throwing
+      }
+
+      if (!zipData || zipData.length === 0) {
+        console.log(`getAllZipHomeValues: no data found for date ${targetDate}`);
+        return [];
+      }
+
+      console.log(`getAllZipHomeValues: found ${zipData.length} records`);
+
+      // Map results
+      return zipData.map((record) => ({
+        region_id: String(record.region_id),
+        region_name: record.region_name,
+        zip_code: record.region_name,
+        state_abbrev: record.state_code,
+        state_name: null,
+        value: Number(record.value),
+        date: record.period_date,
+        property_type: 'sfrcondo',
+        geography: 'ZIP',
+      }));
+    } catch (err) {
+      console.error(`getAllZipHomeValues unexpected error:`, err);
+      return []; // Return empty on error
     }
-
-    if (!zipData || zipData.length === 0) return [];
-
-    // Map results
-    return zipData.map((record) => ({
-      region_id: String(record.region_id),
-      region_name: record.region_name,
-      zip_code: record.region_name,
-      state_abbrev: record.state_code,
-      state_name: null,
-      value: Number(record.value),
-      date: record.period_date,
-      property_type: 'sfrcondo',
-      geography: 'ZIP',
-    }));
   }
 
   async getCityHomeValues(stateFilter?: string): Promise<HomeValueData[]> {
@@ -942,39 +955,47 @@ export class ZillowService {
     propertyType: string = 'all',
     limit: number = 100,
   ): Promise<HomeValueData[]> {
-    const metricName = mapRentPropertyType(propertyType);
-    const targetDate =
-      date || (await getLatestDate(this.supabase, 'zip', metricName));
+    try {
+      const metricName = mapRentPropertyType(propertyType);
+      const targetDate =
+        date || (await getLatestDate(this.supabase, 'zip', metricName));
 
-    // Query all ZIPs with a limit, ordered by value descending
-    const { data: zipData, error } = await this.supabase
-      .from('zillow_zip')
-      .select(
-        'region_id, region_name, state_code, value, period_date',
-      )
-      .eq('metric_name', metricName)
-      .eq('period_date', targetDate)
-      .order('value', { ascending: false })
-      .limit(limit);
+      console.log(`getAllZipRent: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`);
 
-    if (error) {
-      throw new Error(`Error fetching ZIP rent data: ${error.message}`);
+      // Query all ZIPs with a limit, ordered by value descending
+      const { data: zipData, error } = await this.supabase
+        .from('zillow_zip')
+        .select(
+          'region_id, region_name, state_code, value, period_date',
+        )
+        .eq('metric_name', metricName)
+        .eq('period_date', targetDate)
+        .order('value', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`getAllZipRent error: ${error.message}`);
+        return [];
+      }
+
+      if (!zipData || zipData.length === 0) return [];
+
+      // Map results
+      return zipData.map((record) => ({
+        region_id: String(record.region_id),
+        region_name: record.region_name,
+        zip_code: record.region_name,
+        state_abbrev: record.state_code,
+        state_name: null,
+        value: Number(record.value),
+        date: record.period_date,
+        property_type: propertyType,
+        geography: 'ZIP',
+      }));
+    } catch (err) {
+      console.error(`getAllZipRent unexpected error:`, err);
+      return [];
     }
-
-    if (!zipData || zipData.length === 0) return [];
-
-    // Map results
-    return zipData.map((record) => ({
-      region_id: String(record.region_id),
-      region_name: record.region_name,
-      zip_code: record.region_name,
-      state_abbrev: record.state_code,
-      state_name: null,
-      value: Number(record.value),
-      date: record.period_date,
-      property_type: propertyType,
-      geography: 'ZIP',
-    }));
   }
 
   // ============================================================================
@@ -1089,40 +1110,48 @@ export class ZillowService {
     propertyType: string = 'all',
     limit: number = 100,
   ): Promise<HomeValueData[]> {
-    // Map propertyType to metric name
-    const metricName = propertyType === 'sfr' ? 'zordi_sfr' : propertyType === 'mfr' ? 'zordi_mfr' : 'zordi';
-    const targetDate =
-      date || (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'));
+    try {
+      // Map propertyType to metric name
+      const metricName = propertyType === 'sfr' ? 'zordi_sfr' : propertyType === 'mfr' ? 'zordi_mfr' : 'zordi';
+      const targetDate =
+        date || (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'));
 
-    // Query all ZIPs with a limit, ordered by value descending
-    const { data: zipData, error } = await this.supabase
-      .from('zillow_zip')
-      .select(
-        'region_id, region_name, state_code, value, period_date',
-      )
-      .eq('metric_name', metricName)
-      .eq('period_date', targetDate)
-      .order('value', { ascending: false })
-      .limit(limit);
+      console.log(`getAllZipRenterDemand: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`);
 
-    if (error) {
-      throw new Error(`Error fetching ZIP renter demand data: ${error.message}`);
+      // Query all ZIPs with a limit, ordered by value descending
+      const { data: zipData, error } = await this.supabase
+        .from('zillow_zip')
+        .select(
+          'region_id, region_name, state_code, value, period_date',
+        )
+        .eq('metric_name', metricName)
+        .eq('period_date', targetDate)
+        .order('value', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error(`getAllZipRenterDemand error: ${error.message}`);
+        return [];
+      }
+
+      if (!zipData || zipData.length === 0) return [];
+
+      // Map results
+      return zipData.map((record) => ({
+        region_id: String(record.region_id),
+        region_name: record.region_name,
+        zip_code: record.region_name,
+        state_abbrev: record.state_code,
+        state_name: null,
+        value: Number(record.value),
+        date: record.period_date,
+        property_type: propertyType,
+        geography: 'ZIP',
+      }));
+    } catch (err) {
+      console.error(`getAllZipRenterDemand unexpected error:`, err);
+      return [];
     }
-
-    if (!zipData || zipData.length === 0) return [];
-
-    // Map results
-    return zipData.map((record) => ({
-      region_id: String(record.region_id),
-      region_name: record.region_name,
-      zip_code: record.region_name,
-      state_abbrev: record.state_code,
-      state_name: null,
-      value: Number(record.value),
-      date: record.period_date,
-      property_type: propertyType,
-      geography: 'ZIP',
-    }));
   }
 
   // ============================================================================
