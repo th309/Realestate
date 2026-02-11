@@ -102,6 +102,10 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
+  // Comparison data key: areaId when from search (metro/county/city/zip), else area (state name)
+  // Defined early so it can be used in getYAxisDomain
+  const comparisonDataKey = comparison.areaId ?? comparison.area;
+
   // Calculate Y-axis domain based on data to avoid wasted space
   const getYAxisDomain = (): [number | 'auto', number | 'auto'] => {
     if (!chartData || chartData.length === 0) return ['auto', 'auto'];
@@ -223,8 +227,6 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   const baselineKey = `baseline_${baseline.area.replace(/\s+/g, '_')}`;
   // Display name for legend
   const baselineDisplayName = `Baseline: ${baseline.area}`;
-  // Comparison data key: areaId when from search (metro/county/city/zip), else area (state name)
-  const comparisonDataKey = comparison.areaId ?? comparison.area;
 
   // Render milestone reference lines
   const renderMilestones = () => {
