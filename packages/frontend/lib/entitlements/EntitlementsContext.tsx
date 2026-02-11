@@ -117,9 +117,13 @@ export function EntitlementsProvider({
   }, [state.access]);
 
   const isMetricGated = useCallback((metricId: string): boolean => {
+    // While loading, assume unlocked to prevent showing stale lock states during tier transitions
+    if (state.loading) {
+      return false;
+    }
     const access = getAccess('metric', metricId);
     return access.level === 'none';
-  }, [getAccess]);
+  }, [state.loading, getAccess]);
 
   // TTL: re-fetch entitlements every 30 minutes
   useEffect(() => {

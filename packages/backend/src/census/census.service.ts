@@ -54,13 +54,22 @@ function toStateFips(state: string): string {
  * Unlike `Number(x) || 0`, this preserves the distinction between:
  * - 0 (actual zero value, e.g., 0% growth)
  * - null (no data available)
+ *
+ * Filters out Census placeholder values like -666666666 (data not available)
  */
 function toMetricValue(value: unknown): number | null {
   if (value === null || value === undefined || value === '') {
     return null;
   }
   const num = Number(value);
-  return isNaN(num) ? null : num;
+  if (isNaN(num)) {
+    return null;
+  }
+  // Census uses -666666666 as placeholder for "data not available"
+  if (num === -666666666) {
+    return null;
+  }
+  return num;
 }
 
 @Injectable()
