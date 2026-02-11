@@ -3,7 +3,7 @@
 import React from 'react';
 import { SectionProps } from '../types';
 import { formatMetricValue } from '@/lib/data';
-import { Sliders } from 'lucide-react';
+import { AlertTriangle, Sliders } from 'lucide-react';
 
 export function ProFormaSensitivity({ section, report }: SectionProps) {
   const proforma = report.populated_data?.pro_forma;
@@ -12,8 +12,14 @@ export function ProFormaSensitivity({ section, report }: SectionProps) {
   if (!sensitivity) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">Sensitivity Analysis</h3>
-        <p className="text-on-surface-variant text-center py-4">Sensitivity data not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
+          <Sliders className="w-5 h-5 text-primary" />
+          Sensitivity Analysis
+        </h3>
+        <div className="flex flex-col items-center justify-center py-8 text-on-surface-variant">
+          <AlertTriangle className="w-8 h-8 mb-2 text-outline" />
+          <p>Sensitivity data not available</p>
+        </div>
       </div>
     );
   }
@@ -36,7 +42,7 @@ export function ProFormaSensitivity({ section, report }: SectionProps) {
                   {scenario.rent_change_pct > 0 ? '+' : ''}{scenario.rent_change_pct}% rent
                 </span>
                 <span className={`font-medium ${scenario.cash_flow >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {formatMetricValue('price', scenario.cash_flow)}/mo
+                  {formatMetricValue(scenario.cash_flow, 'currency')}/mo
                 </span>
               </div>
             ))}
@@ -51,7 +57,7 @@ export function ProFormaSensitivity({ section, report }: SectionProps) {
               <div key={scenario.rate} className="flex justify-between items-center p-2 bg-surface rounded-lg">
                 <span className="text-on-surface">{scenario.rate}% rate</span>
                 <span className={`font-medium ${scenario.cash_flow >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {formatMetricValue('price', scenario.cash_flow)}/mo
+                  {formatMetricValue(scenario.cash_flow, 'currency')}/mo
                 </span>
               </div>
             ))}

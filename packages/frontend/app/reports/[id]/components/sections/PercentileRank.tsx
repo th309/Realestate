@@ -2,17 +2,33 @@
 
 import React from 'react';
 import { SectionProps } from '../types';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, AlertTriangle } from 'lucide-react';
 
-export function PercentileRank({ section, report }: SectionProps) {
-  const metric = section.config?.metric || 'homeready_score';
+export function PercentileRank({ section, report }: SectionProps): React.ReactElement {
   const label = section.config?.label || 'Score';
 
-  // Get percentile from scores
-  const percentile = report.populated_data?.scores?.homeready?.percentile ||
-                     report.populated_data?.scores?.investoredge?.percentile || 50;
+  // Get percentile from scores - try both possible score types
+  const homereadyPercentile = report.populated_data?.scores?.homeready?.percentile;
+  const investoredgePercentile = report.populated_data?.scores?.investoredge?.percentile;
+  const percentile = homereadyPercentile ?? investoredgePercentile ?? null;
 
-  const getPercentileLabel = (p: number) => {
+  // Check if data is available
+  if (percentile === null) {
+    return (
+      <div className="bg-surface-container rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          {label} Ranking
+        </h3>
+        <div className="flex items-center justify-center gap-2 text-on-surface-variant py-8">
+          <AlertTriangle className="w-5 h-5" />
+          <span>Percentile ranking data not available</span>
+        </div>
+      </div>
+    );
+  }
+
+  const getPercentileLabel = (p: number): { text: string; color: string } => {
     if (p >= 90) return { text: 'Top 10%', color: 'text-green-600' };
     if (p >= 75) return { text: 'Top 25%', color: 'text-green-500' };
     if (p >= 50) return { text: 'Above Average', color: 'text-blue-600' };

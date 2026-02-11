@@ -1,10 +1,28 @@
 'use client';
 
-import React from 'react';
-import { SectionProps } from '../types';
+import { AlertTriangle } from 'lucide-react';
 
-export function ScoreBreakdown({ section, report }: SectionProps) {
-  const scoreType = section.config?.score_type || report.user_type === 'investor' ? 'investoredge' : 'homeready';
+import type { SectionProps } from '../types';
+
+interface ScoreComponent {
+  name: string;
+  score: number;
+}
+
+function getBarColor(score: number): string {
+  if (score >= 70) return 'bg-green-500';
+  if (score >= 50) return 'bg-yellow-500';
+  return 'bg-red-500';
+}
+
+function formatComponentName(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c: string) => c.toUpperCase());
+}
+
+export function ScoreBreakdown({ section, report }: SectionProps): React.ReactElement {
+  const scoreType = section.config?.score_type || (report.user_type === 'investor' ? 'investoredge' : 'homeready');
   const details = scoreType === 'investoredge'
     ? report.scores_snapshot?.investoredge_details
     : report.scores_snapshot?.homeready_details;
@@ -12,21 +30,19 @@ export function ScoreBreakdown({ section, report }: SectionProps) {
   if (!details) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <p className="text-on-surface-variant text-center">Score breakdown not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4">Score Breakdown</h3>
+        <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+          <AlertTriangle className="w-5 h-5" />
+          <p>Score breakdown not available for this location</p>
+        </div>
       </div>
     );
   }
 
-  const components = Object.entries(details).map(([key, value]) => ({
-    name: key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+  const components: ScoreComponent[] = Object.entries(details).map(([key, value]) => ({
+    name: formatComponentName(key),
     score: value as number,
   }));
-
-  const getBarColor = (score: number) => {
-    if (score >= 70) return 'bg-green-500';
-    if (score >= 50) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
 
   return (
     <div className="bg-surface-container rounded-2xl p-6">

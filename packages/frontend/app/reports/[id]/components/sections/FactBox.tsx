@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { SectionProps } from '../types';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, AlertTriangle } from 'lucide-react';
 
-export function FactBox({ section, report }: SectionProps) {
+export function FactBox({ section, report }: SectionProps): React.ReactElement | null {
   const facts = section.config?.facts || [];
   const title = section.config?.title || 'Key Facts';
 
@@ -12,7 +12,21 @@ export function FactBox({ section, report }: SectionProps) {
   const aiFacts = report.ai_narrative?.key_facts;
   const displayFacts = facts.length > 0 ? facts : (Array.isArray(aiFacts) ? aiFacts : []);
 
-  if (displayFacts.length === 0) return null;
+  // Check if data is available
+  if (displayFacts.length === 0) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Lightbulb className="w-5 h-5 text-amber-600" />
+          <h3 className="font-semibold text-amber-900">{title}</h3>
+        </div>
+        <div className="flex items-center justify-center gap-2 text-amber-700 py-4">
+          <AlertTriangle className="w-5 h-5" />
+          <span>No key facts available</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">

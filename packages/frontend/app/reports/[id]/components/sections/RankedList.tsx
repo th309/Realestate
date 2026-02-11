@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { SectionProps } from '../types';
-import { formatMetricValue } from '@/lib/data';
-import { Medal, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { Medal, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
 
 export function RankedList({ section, report }: SectionProps) {
   const title = section.config?.title || 'Rankings';
@@ -59,7 +59,7 @@ export function RankedList({ section, report }: SectionProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-on-surface">
-                {formatMetricValue(metric, item.value)}
+                {metric ? formatMetricValue(item.value, getMetricFormat(metric)) : String(item.value)}
               </span>
               {showTrend && <TrendIcon trend={item.trend} />}
             </div>
@@ -68,7 +68,10 @@ export function RankedList({ section, report }: SectionProps) {
       </div>
 
       {displayItems.length === 0 && (
-        <p className="text-on-surface-variant text-center py-4">No ranking data available</p>
+        <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+          <AlertTriangle className="w-5 h-5" />
+          <span>No ranking data available</span>
+        </div>
       )}
     </div>
   );

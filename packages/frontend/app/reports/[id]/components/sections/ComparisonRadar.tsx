@@ -3,6 +3,7 @@
 import React from 'react';
 import { SectionProps } from '../types';
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Legend } from 'recharts';
+import { AlertTriangle } from 'lucide-react';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a'];
 
@@ -14,7 +15,11 @@ export function ComparisonRadar({ section, report }: SectionProps) {
   if (!details) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <p className="text-on-surface-variant text-center">Score data not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4">Score Comparison</h3>
+        <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+          <AlertTriangle className="w-5 h-5" />
+          <span>Score data not available</span>
+        </div>
       </div>
     );
   }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SectionProps } from '../types';
-import { TrendingUp, Percent, PiggyBank } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Percent, PiggyBank } from 'lucide-react';
 
 export function ProFormaReturns({ section, report }: SectionProps) {
   const proforma = report.populated_data?.pro_forma;
@@ -11,8 +11,14 @@ export function ProFormaReturns({ section, report }: SectionProps) {
   if (!returns) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">Investment Returns</h3>
-        <p className="text-on-surface-variant text-center py-4">Returns data not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-primary" />
+          Investment Returns
+        </h3>
+        <div className="flex flex-col items-center justify-center py-8 text-on-surface-variant">
+          <AlertTriangle className="w-8 h-8 mb-2 text-outline" />
+          <p>Returns data not available</p>
+        </div>
       </div>
     );
   }

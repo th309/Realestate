@@ -3,7 +3,7 @@
 import React from 'react';
 import { SectionProps } from '../types';
 import { formatMetricValue } from '@/lib/data';
-import { DollarSign, Plus, Minus, Equal } from 'lucide-react';
+import { AlertTriangle, DollarSign, Plus, Minus, Equal } from 'lucide-react';
 
 export function ProFormaCashFlow({ section, report }: SectionProps) {
   const proforma = report.populated_data?.pro_forma;
@@ -12,8 +12,14 @@ export function ProFormaCashFlow({ section, report }: SectionProps) {
   if (!cashFlow) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">Monthly Cash Flow</h3>
-        <p className="text-on-surface-variant text-center py-4">Cash flow data not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" />
+          Monthly Cash Flow
+        </h3>
+        <div className="flex flex-col items-center justify-center py-8 text-on-surface-variant">
+          <AlertTriangle className="w-8 h-8 mb-2 text-outline" />
+          <p>Cash flow data not available</p>
+        </div>
       </div>
     );
   }
@@ -36,7 +42,7 @@ export function ProFormaCashFlow({ section, report }: SectionProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-green-600">Gross Rent</span>
-            <span className="font-medium text-green-700">{formatMetricValue('price', cashFlow.gross_rent)}</span>
+            <span className="font-medium text-green-700">{formatMetricValue(cashFlow.gross_rent, 'currency')}</span>
           </div>
         </div>
 
@@ -49,27 +55,27 @@ export function ProFormaCashFlow({ section, report }: SectionProps) {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-red-600">Vacancy</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.vacancy)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.vacancy, 'currency')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Management</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.management)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.management, 'currency')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Maintenance</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.maintenance)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.maintenance, 'currency')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Mortgage P&I</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.mortgage_pi)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.mortgage_pi, 'currency')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Property Tax</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.property_tax)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.property_tax, 'currency')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Insurance</span>
-              <span className="text-red-700">-{formatMetricValue('price', cashFlow.insurance)}</span>
+              <span className="text-red-700">-{formatMetricValue(cashFlow.insurance, 'currency')}</span>
             </div>
           </div>
         </div>
@@ -82,7 +88,7 @@ export function ProFormaCashFlow({ section, report }: SectionProps) {
               <span className={`font-semibold ${isPositive ? 'text-green-700' : 'text-red-700'}`}>Net Cash Flow</span>
             </div>
             <span className={`text-xl font-bold ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
-              {isPositive ? '+' : ''}{formatMetricValue('price', cashFlow.net_cash_flow)}
+              {isPositive ? '+' : ''}{formatMetricValue(cashFlow.net_cash_flow, 'currency')}
             </span>
           </div>
         </div>

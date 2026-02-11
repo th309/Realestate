@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { SectionProps } from '../types';
-import { formatMetricValue } from '@/lib/data';
-import { ArrowRight, ArrowLeft, Users } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Users, AlertTriangle } from 'lucide-react';
 
 export function MigrationSankey({ section, report }: SectionProps) {
   const migration = report.populated_data?.migration;
@@ -11,8 +10,14 @@ export function MigrationSankey({ section, report }: SectionProps) {
   if (!migration) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">Migration Patterns</h3>
-        <p className="text-on-surface-variant text-center py-4">Migration data not available</p>
+        <h3 className="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          Migration Patterns
+        </h3>
+        <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+          <AlertTriangle className="w-5 h-5" />
+          <span>Migration data not available</span>
+        </div>
       </div>
     );
   }
