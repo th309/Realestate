@@ -77,22 +77,6 @@ export function useTimeSeriesData(
   const { startDate, endDate, limit, historyMonths, enabled = true } = options;
   const access = useMetricAccess(metricId);
 
-  // If metric is gated, return early without fetching
-  if (access.gated) {
-    return {
-      data: [],
-      current: null,
-      prior: null,
-      trendChange: undefined,
-      result: null,
-      isLoading: false,
-      error: null,
-      refetch: () => {},
-      gated: true,
-      tierRequired: access.tierRequired ?? undefined,
-    };
-  }
-
   const queryKey = [
     'timeseries',
     metricId,
@@ -104,6 +88,8 @@ export function useTimeSeriesData(
     historyMonths,
   ].filter((v) => v !== undefined);
 
+  // IMPORTANT: Always call useQuery to maintain hook order consistency.
+  // Use enabled: false to skip fetching when metric is gated.
   const {
     data: result,
     isLoading,
@@ -118,10 +104,26 @@ export function useTimeSeriesData(
         limit,
         historyMonths,
       }),
-    enabled: enabled && !!metricId && !!geoLevel && !!regionId,
+    enabled: enabled && !!metricId && !!geoLevel && !!regionId && !access.gated,
     staleTime: 2 * 60 * 60 * 1000, // 2 hours
     gcTime: 4 * 60 * 60 * 1000,
   });
+
+  // If metric is gated, return gated result (after hooks have been called)
+  if (access.gated) {
+    return {
+      data: [],
+      current: null,
+      prior: null,
+      trendChange: undefined,
+      result: null,
+      isLoading: false,
+      error: null,
+      refetch: () => {},
+      gated: true,
+      tierRequired: access.tierRequired ?? undefined,
+    };
+  }
 
   // Extract computed values
   const data = result?.data ?? [];
