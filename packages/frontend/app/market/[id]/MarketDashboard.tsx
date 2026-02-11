@@ -163,18 +163,105 @@ function MetricCategorySection({
   );
 }
 
-// AI Insight card
-function AIInsightCard({ marketName, score, view }: { marketName: string; score: number; view: string }) {
-  const getInsight = () => {
-    const persona = view === 'investor' ? 'investment' : 'home buying';
-    if (score >= 70) {
-      return `${marketName} shows strong ${persona} potential. Market fundamentals are solid with favorable conditions for entry.`;
-    } else if (score >= 40) {
-      return `${marketName} presents moderate opportunities. Careful analysis of specific neighborhoods recommended before committing.`;
-    } else {
-      return `${marketName} currently faces headwinds for ${persona}. Consider nearby markets or wait for better timing.`;
-    }
+// AI Insight card - generates specific, data-driven market analysis
+interface AIInsightCardProps {
+  marketName: string;
+  score: number;
+  view: string;
+  metrics: Record<string, { value: number | null; formattedValue: string; percentChange: number | null }>;
+  scores: {
+    homeready: { score: number; grade: string };
+    investoredge: { score: number; grade: string };
+    markethealth: { score: number; grade: string };
   };
+  lastUpdated: string;
+}
+
+function AIInsightCard({ marketName, score, view, metrics, scores, lastUpdated }: AIInsightCardProps) {
+  const generateInsight = () => {
+    const insights: string[] = [];
+    const isInvestor = view === 'investor';
+
+    // Get key metrics with fallbacks
+    const homeValue = metrics.home_value;
+    const homeValueYoy = metrics.home_value_yoy;
+    const daysOnMarket = metrics.days_on_market;
+    const inventory = metrics.for_sale_inventory;
+    const inventoryYoy = metrics.inventory_yoy;
+    const rentIndex = metrics.rent_index;
+    const capRate = metrics.cap_rate;
+    const priceCut = metrics.price_cut_pct;
+
+    // Opening statement with score context
+    const scoreLabel = score >= 75 ? 'excellent' : score >= 60 ? 'strong' : score >= 45 ? 'moderate' : 'challenging';
+    insights.push(`${marketName} currently shows ${scoreLabel} conditions for ${isInvestor ? 'investors' : 'homebuyers'} with a score of ${score}.`);
+
+    // Home value trends - use percentChange from the metric or from home_value_yoy
+    const homeValueTrend = homeValue?.percentChange ?? homeValueYoy?.value;
+    if (homeValue?.formattedValue && homeValueTrend != null) {
+      const trend = homeValueTrend;
+      const trendDesc = trend > 5 ? 'rapidly appreciating' : trend > 2 ? 'steadily growing' : trend > 0 ? 'slightly up' : trend > -2 ? 'stabilizing' : 'declining';
+      insights.push(`Home values are ${trendDesc} at ${homeValue.formattedValue} (${trend >= 0 ? '+' : ''}${trend.toFixed(1)}% YoY).`);
+    }
+
+    // Market activity (days on market & inventory)
+    if (daysOnMarket?.value != null) {
+      const dom = daysOnMarket.value;
+      const inv = inventory?.value;
+      const invTrend = inventory?.percentChange ?? inventoryYoy?.value;
+
+      let marketTempo = '';
+      if (dom < 20) {
+        marketTempo = 'extremely competitive';
+      } else if (dom < 35) {
+        marketTempo = 'moving quickly';
+      } else if (dom < 60) {
+        marketTempo = 'balanced with reasonable time to decide';
+      } else {
+        marketTempo = 'slower-paced, giving buyers negotiating leverage';
+      }
+
+      let invContext = '';
+      if (invTrend != null) {
+        invContext = invTrend > 10 ? ' Inventory is up, improving buyer options.' :
+                     invTrend < -10 ? ' Inventory is tightening.' : '';
+      }
+
+      insights.push(`The market is ${marketTempo} with homes averaging ${Math.round(dom)} days on market.${invContext}`);
+    }
+
+    // Price cuts indicator
+    if (priceCut?.value != null && priceCut.value > 0) {
+      const pct = priceCut.value;
+      if (pct > 25) {
+        insights.push(`${pct.toFixed(0)}% of listings have price cuts, indicating buyer negotiating power.`);
+      } else if (pct > 15) {
+        insights.push(`Price reductions on ${pct.toFixed(0)}% of listings suggest some flexibility.`);
+      }
+    }
+
+    // Investor-specific insights
+    if (isInvestor) {
+      if (capRate?.value != null && rentIndex?.formattedValue) {
+        const cap = capRate.value;
+        const capDesc = cap >= 7 ? 'strong cash flow potential' : cap >= 5 ? 'moderate yields' : 'appreciation-focused';
+        insights.push(`Cap rates around ${cap.toFixed(1)}% indicate ${capDesc} with rents at ${rentIndex.formattedValue}/month.`);
+      } else if (rentIndex?.formattedValue) {
+        insights.push(`Current rents averaging ${rentIndex.formattedValue}/month.`);
+      }
+    }
+
+    // Format the update date
+    const updateDate = new Date(lastUpdated);
+    const formattedDate = updateDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    return {
+      text: insights.join(' '),
+      asOf: formattedDate,
+    };
+  };
+
+  const insight = generateInsight();
 
   return (
     <motion.div
@@ -183,16 +270,19 @@ function AIInsightCard({ marketName, score, view }: { marketName: string; score:
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.6, duration: 0.5 }}
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2.5 rounded-xl bg-primary/15">
-          <Sparkles className="w-5 h-5 text-primary" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/15">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-on-surface">AI Market Analysis</h3>
+            <p className="text-xs text-on-surface-variant">Powered by PropertyIQ</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-semibold text-on-surface">AI Market Analysis</h3>
-          <p className="text-xs text-on-surface-variant">Powered by PropertyIQ</p>
-        </div>
+        <span className="text-xs text-on-surface-variant/70">Data as of {insight.asOf}</span>
       </div>
-      <p className="text-on-surface-variant leading-relaxed">{getInsight()}</p>
+      <p className="text-on-surface-variant leading-relaxed">{insight.text}</p>
     </motion.div>
   );
 }
@@ -334,19 +424,21 @@ export function MarketDashboard({
     return undefined;
   }, [stateFilter, geographyType, data?.geography?.name]);
 
-  // Extract all metric IDs to fetch - must match display logic (geo filter then slice)
-  const metricIds = useMemo(() => {
-    const ids = new Set<string>();
-    // Only fetch for the categories we display (first 3)
-    categories.slice(0, 3).forEach(cat => {
-      // Filter by geo support first, then take first 4 - matches MetricCategorySection display
-      const supportedMetrics = cat.metrics?.filter(m =>
-        isMetricSupportedForGeo(m.id, geographyType as GeoLevel)
-      ) ?? [];
-      supportedMetrics.slice(0, 4).forEach(m => ids.add(m.id));
-    });
-    return Array.from(ids);
-  }, [categories, geographyType]);
+  // Fixed set of all metrics - MUST be stable to avoid hook order issues
+  // This list never changes length - includes all metrics from both views
+  // Unsupported metrics will just return null values
+  const metricIds = useMemo(() => [
+    // Core metrics for AI insights
+    'home_value', 'home_value_yoy', 'days_on_market', 'for_sale_inventory',
+    'inventory_yoy', 'rent_index', 'cap_rate', 'price_cut_pct',
+    // Homebuyer view metrics
+    'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
+    'new_listings_yoy', 'hotness_score', 'pending_ratio', 'sale_to_list',
+    // Investor view metrics
+    'gross_yield', 'rent_for_houses', 'grm',
+    // Shared metrics
+    'median_income', 'population', 'population_growth',
+  ], []);
 
   // Fetch metric data using the data layer hook
   const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
@@ -571,6 +663,18 @@ export function MarketDashboard({
                 marketName={data.geography.name}
                 score={primaryScore.score}
                 view={activeView}
+                metrics={Object.fromEntries(
+                  Object.entries(factorsData).map(([key, card]) => [
+                    key,
+                    {
+                      value: card.value,
+                      formattedValue: card.formattedValue,
+                      percentChange: card.percentChange,
+                    }
+                  ])
+                )}
+                scores={data.scores}
+                lastUpdated={data.lastUpdated}
               />
             </EntitlementGate>
 
@@ -583,7 +687,7 @@ export function MarketDashboard({
                 Generate Full Report
               </Link>
               <Link
-                href={`/graphs?geo=${geographyId}&level=${geographyType}`}
+                href={`/graphs?geo=${geographyId}&level=${geographyType}&name=${encodeURIComponent(data.geography.name)}&metric=listing_price`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
                 <TrendingUp className="w-4 h-4" />
