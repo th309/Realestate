@@ -6,6 +6,9 @@ import { ConversationPanel } from './ConversationPanel';
 import { HeroScoreSection } from './sections/HeroScoreSection';
 import { NewsSection } from './sections/NewsSection';
 import { NarrativeSection } from './sections/NarrativeSection';
+import { BrandingProvider } from './components/BrandingProvider';
+import { PageRenderer, SectionRenderer } from './components/SectionRenderer';
+import { ReportWithTemplate } from './components/types';
 import { ReportInstance, UserType } from '../types';
 import { ArrowLeft, Download, Share2, MessageSquare, Loader2, FileText, TrendingUp, Newspaper } from 'lucide-react';
 import Link from 'next/link';
@@ -18,7 +21,7 @@ interface ReportViewerProps {
 }
 
 // Fetch report from backend API
-async function fetchReport(reportId: string): Promise<ReportInstance | null> {
+async function fetchReport(reportId: string): Promise<ReportWithTemplate | null> {
   // TODO: Replace with actual user ID from auth context
   const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
@@ -48,7 +51,7 @@ const GENERATION_STEPS = [
 ];
 
 export function ReportViewer({ reportId }: ReportViewerProps) {
-  const [report, setReport] = useState<ReportInstance | null>(null);
+  const [report, setReport] = useState<ReportWithTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConversation, setShowConversation] = useState(false);
@@ -295,44 +298,63 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
         {/* Report Content */}
         <main className={`flex-1 ${showConversation ? 'lg:pr-96' : ''}`}>
           <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 space-y-8">
-            {/* Cover Section */}
-            <ReportCover report={report} />
+            {/* Dynamic Content from Template */}
+            {report.template?.config?.pages ? (
+              <BrandingProvider>
+                {report.template.config.pages.map((page, pageIndex) => (
+                  <div key={page.id || pageIndex} className="mb-8">
+                    {page.name && page.name !== 'Cover' && (
+                      <h2 className="text-xl font-semibold text-on-surface mb-4 pb-2 border-b border-outline-variant">
+                        {page.name}
+                      </h2>
+                    )}
+                    <PageRenderer page={page} report={report} />
+                  </div>
+                ))}
+              </BrandingProvider>
+            ) : (
+              /* Fallback to existing hardcoded sections if no template config */
+              <>
+                {/* Cover Section */}
+                <ReportCover report={report} />
 
-            {/* Hero Score Section */}
-            <HeroScoreSection
-              score={heroScore || 0}
-              scoreType={heroScoreType}
-              userType={userType}
-              details={
-                userType === 'investor'
-                  ? report.scores_snapshot?.investoredge_details
-                  : report.scores_snapshot?.homeready_details
-              }
-              narrative={report.ai_narrative?.market_summary}
-            />
+                {/* Hero Score Section */}
+                <HeroScoreSection
+                  score={heroScore || 0}
+                  scoreType={heroScoreType}
+                  userType={userType}
+                  details={
+                    userType === 'investor'
+                      ? report.scores_snapshot?.investoredge_details
+                      : report.scores_snapshot?.homeready_details
+                  }
+                  narrative={report.ai_narrative?.market_summary}
+                />
 
-            {/* AI Narrative Sections */}
-            {report.ai_narrative?.trend_observations && (
-              <NarrativeSection
-                title="Key Trends"
-                content={report.ai_narrative.trend_observations}
-              />
-            )}
+                {/* AI Narrative Sections */}
+                {report.ai_narrative?.trend_observations && (
+                  <NarrativeSection
+                    title="Key Trends"
+                    content={report.ai_narrative.trend_observations}
+                  />
+                )}
 
-            {report.ai_narrative?.affordability_analysis && (
-              <NarrativeSection
-                title="Affordability Analysis"
-                content={report.ai_narrative.affordability_analysis}
-              />
-            )}
+                {report.ai_narrative?.affordability_analysis && (
+                  <NarrativeSection
+                    title="Affordability Analysis"
+                    content={report.ai_narrative.affordability_analysis}
+                  />
+                )}
 
-            {/* Market News Section */}
-            {report.populated_data?.realtime?.news && (
-              <NewsSection
-                news={report.populated_data.realtime.news}
-                sentiment={report.populated_data.realtime.sentiment}
-                fetchedAt={report.populated_data.realtime.fetched_at}
-              />
+                {/* Market News Section */}
+                {report.populated_data?.realtime?.news && (
+                  <NewsSection
+                    news={report.populated_data.realtime.news}
+                    sentiment={report.populated_data.realtime.sentiment}
+                    fetchedAt={report.populated_data.realtime.fetched_at}
+                  />
+                )}
+              </>
             )}
 
             {/* Footer */}
