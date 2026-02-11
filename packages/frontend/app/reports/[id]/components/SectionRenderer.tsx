@@ -12,6 +12,47 @@ import { HeroScoreSection } from '../sections/HeroScoreSection';
 import { NarrativeSection } from '../sections/NarrativeSection';
 import { NewsSection } from '../sections/NewsSection';
 
+// Import new section components
+import { MetricGrid } from './sections/MetricGrid';
+import { MetricDetail } from './sections/MetricDetail';
+import { MetricHighlight } from './sections/MetricHighlight';
+import { MetricComparison } from './sections/MetricComparison';
+import { TextBlock } from './sections/TextBlock';
+import { StatusBadge } from './sections/StatusBadge';
+import { FactBox } from './sections/FactBox';
+import { ChartSingle } from './sections/ChartSingle';
+import { ChartGrid } from './sections/ChartGrid';
+import { ComparisonChartGrid } from './sections/ComparisonChartGrid';
+import { ScoreGaugeSingle } from './sections/ScoreGaugeSingle';
+import { ScoreBreakdown } from './sections/ScoreBreakdown';
+import { MarketVerdictBar } from './sections/MarketVerdictBar';
+import { InvestmentVerdict } from './sections/InvestmentVerdict';
+import { ComparisonHeader } from './sections/ComparisonHeader';
+import { ComparisonTable } from './sections/ComparisonTable';
+import { ComparisonRadar } from './sections/ComparisonRadar';
+import { WinnerBadges } from './sections/WinnerBadges';
+import { ProsConsTable } from './sections/ProsConsTable';
+import { StrengthsRisks } from './sections/StrengthsRisks';
+import { AffordabilityGapVisual } from './sections/AffordabilityGapVisual';
+import { SavingsCalculator } from './sections/SavingsCalculator';
+import { PersonalAffordability } from './sections/PersonalAffordability';
+import { BudgetBreakdown } from './sections/BudgetBreakdown';
+import { SavingsTimeline } from './sections/SavingsTimeline';
+import { AlternativeAreas } from './sections/AlternativeAreas';
+import { MigrationSankey } from './sections/MigrationSankey';
+import { RankedList } from './sections/RankedList';
+import { CycleIndicator } from './sections/CycleIndicator';
+import { CycleDiagram } from './sections/CycleDiagram';
+import { IndicatorDashboard } from './sections/IndicatorDashboard';
+import { PercentileRank } from './sections/PercentileRank';
+import { ProFormaAssumptions } from './sections/ProFormaAssumptions';
+import { ProFormaCashFlow } from './sections/ProFormaCashFlow';
+import { ProFormaReturns } from './sections/ProFormaReturns';
+import { ProFormaSensitivity } from './sections/ProFormaSensitivity';
+import { ScenarioCard } from './sections/ScenarioCard';
+import { ScenarioChart } from './sections/ScenarioChart';
+import { ForecastDisplay } from './sections/ForecastDisplay';
+
 // Wrapper components to adapt existing sections to SectionProps interface
 function ScoreGaugeDualWrapper({ section, report }: SectionProps) {
   const userType = report.user_type;
@@ -96,11 +137,66 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType<SectionProps>> = {
   report_title: ReportTitleSection,
   report_metadata: ReportMetadataSection,
   score_gauge_dual: ScoreGaugeDualWrapper,
-  score_gauge_single: ScoreGaugeDualWrapper, // Reuse for now
   ai_narrative: AiNarrativeWrapper,
-
-  // Will map to NewsSection when template uses it
   market_news: MarketNewsWrapper,
+
+  // Metric sections
+  metric_grid: MetricGrid,
+  metric_detail: MetricDetail,
+  metric_highlight: MetricHighlight,
+  metric_comparison: MetricComparison,
+  text_block: TextBlock,
+  status_badge: StatusBadge,
+  fact_box: FactBox,
+
+  // Chart sections
+  chart_single: ChartSingle,
+  chart_grid: ChartGrid,
+  comparison_chart_grid: ComparisonChartGrid,
+
+  // Score sections
+  score_gauge_single: ScoreGaugeSingle,
+  score_breakdown: ScoreBreakdown,
+  market_verdict_bar: MarketVerdictBar,
+  investment_verdict: InvestmentVerdict,
+
+  // Comparison sections
+  comparison_header: ComparisonHeader,
+  comparison_table: ComparisonTable,
+  comparison_radar: ComparisonRadar,
+  winner_badges: WinnerBadges,
+  pros_cons_table: ProsConsTable,
+  strengths_risks: StrengthsRisks,
+
+  // Affordability sections
+  affordability_gap_visual: AffordabilityGapVisual,
+  savings_calculator: SavingsCalculator,
+  personal_affordability: PersonalAffordability,
+  budget_breakdown: BudgetBreakdown,
+  savings_timeline: SavingsTimeline,
+  alternative_areas: AlternativeAreas,
+
+  // Migration sections
+  migration_sankey: MigrationSankey,
+  ranked_list: RankedList,
+
+  // Cycle/Indicator sections
+  cycle_indicator: CycleIndicator,
+  cycle_diagram: CycleDiagram,
+  indicator_dashboard: IndicatorDashboard,
+  percentile_rank: PercentileRank,
+  percentile_bands: PercentileRank, // Alias
+
+  // Pro Forma sections
+  pro_forma_assumptions: ProFormaAssumptions,
+  pro_forma_cash_flow: ProFormaCashFlow,
+  pro_forma_returns: ProFormaReturns,
+  pro_forma_sensitivity: ProFormaSensitivity,
+
+  // Scenario/Forecast sections
+  scenario_card: ScenarioCard,
+  scenario_chart: ScenarioChart,
+  forecast_display: ForecastDisplay,
 };
 
 interface SectionRendererProps {
