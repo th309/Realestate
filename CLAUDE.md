@@ -79,3 +79,27 @@ if (isMetricSupportedForGeo('home_value', 'zip')) {
   // Safe to fetch
 }
 ```
+
+### Formatting Values - CRITICAL
+```typescript
+import { formatMetricValue, getMetricFormat } from '@/lib/data';
+
+// CORRECT: formatMetricValue(value, format)
+formatMetricValue(499000, 'currency');  // "$499K"
+formatMetricValue(value, getMetricFormat(metricId));  // Use metric's format
+
+// WRONG: formatMetricValue(metricId, value) - will show "$metricId" literally
+```
+
+### Report Section Components
+```typescript
+import { getMetricWithAliases } from '../utils/metricHelpers';
+
+// Use for report data access - handles aliases (zhvi → median_listing_price)
+const price = getMetricWithAliases(report, 'zhvi');
+
+// Always check data availability - never use hardcoded fallbacks
+if (!price) {
+  return <DataUnavailable />;  // Show UI, don't use || 400000
+}
+```
