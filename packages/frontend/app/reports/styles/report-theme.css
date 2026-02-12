@@ -1,0 +1,519 @@
+/**
+ * PropertyIQ Reports - Editorial Theme
+ *
+ * A sophisticated, magazine-inspired design system
+ * with warm neutrals, refined typography, and elegant spacing.
+ */
+
+/* ========================================
+   Custom Properties - Report Theme
+   ======================================== */
+
+:root {
+  /* Primary Palette - Warm & Professional */
+  --report-cream: #FAF9F7;
+  --report-cream-dark: #F5F3F0;
+  --report-navy: #1B2E4A;
+  --report-navy-light: #2A4365;
+  --report-stone: #6B6560;
+  --report-stone-light: #8A847E;
+  --report-gold: #C4A35A;
+  --report-gold-muted: #D4BC7D;
+  --report-sage: #E8EDE5;
+  --report-sage-dark: #D4DDD0;
+
+  /* Semantic Colors */
+  --report-success: #3D7A5F;
+  --report-success-bg: #E8F0EC;
+  --report-warning: #C4883A;
+  --report-warning-bg: #FDF6ED;
+  --report-error: #B44D4D;
+  --report-error-bg: #FAEDED;
+
+  /* Typography Scale */
+  --report-font-display: var(--font-source-serif), 'Georgia', serif;
+  --report-font-body: var(--font-dm-sans), 'Helvetica Neue', sans-serif;
+  --report-font-mono: var(--font-roboto-mono), 'Consolas', monospace;
+
+  /* Spacing Scale */
+  --report-space-xs: 0.25rem;
+  --report-space-sm: 0.5rem;
+  --report-space-md: 1rem;
+  --report-space-lg: 1.5rem;
+  --report-space-xl: 2rem;
+  --report-space-2xl: 3rem;
+  --report-space-3xl: 4rem;
+
+  /* Border Radius */
+  --report-radius-sm: 0.375rem;
+  --report-radius-md: 0.75rem;
+  --report-radius-lg: 1rem;
+  --report-radius-xl: 1.5rem;
+
+  /* Shadows */
+  --report-shadow-sm: 0 1px 3px rgba(27, 46, 74, 0.04), 0 1px 2px rgba(27, 46, 74, 0.02);
+  --report-shadow-md: 0 4px 12px rgba(27, 46, 74, 0.06), 0 2px 4px rgba(27, 46, 74, 0.03);
+  --report-shadow-lg: 0 12px 32px rgba(27, 46, 74, 0.08), 0 4px 8px rgba(27, 46, 74, 0.04);
+  --report-shadow-xl: 0 20px 48px rgba(27, 46, 74, 0.1), 0 8px 16px rgba(27, 46, 74, 0.05);
+
+  /* Transitions */
+  --report-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --report-transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --report-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   Base Report Styles
+   ======================================== */
+
+.report-page {
+  font-family: var(--report-font-body);
+  background-color: var(--report-cream);
+  color: var(--report-navy);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   Typography Classes
+   ======================================== */
+
+.report-heading-display {
+  font-family: var(--report-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--report-navy);
+}
+
+.report-heading-lg {
+  font-family: var(--report-font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--report-navy);
+}
+
+.report-heading-md {
+  font-family: var(--report-font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--report-navy);
+}
+
+.report-heading-sm {
+  font-family: var(--report-font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--report-navy);
+}
+
+.report-label {
+  font-family: var(--report-font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--report-stone);
+}
+
+.report-body {
+  font-family: var(--report-font-body);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--report-stone);
+}
+
+.report-body-sm {
+  font-family: var(--report-font-body);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--report-stone-light);
+}
+
+/* ========================================
+   Card Styles
+   ======================================== */
+
+.report-card {
+  background: white;
+  border: 1px solid rgba(27, 46, 74, 0.06);
+  border-radius: var(--report-radius-lg);
+  box-shadow: var(--report-shadow-sm);
+  transition: all var(--report-transition-base);
+}
+
+.report-card:hover {
+  box-shadow: var(--report-shadow-md);
+  border-color: rgba(27, 46, 74, 0.1);
+}
+
+.report-card-elevated {
+  background: white;
+  border: none;
+  border-radius: var(--report-radius-lg);
+  box-shadow: var(--report-shadow-md);
+  transition: all var(--report-transition-base);
+}
+
+.report-card-elevated:hover {
+  box-shadow: var(--report-shadow-lg);
+  transform: translateY(-2px);
+}
+
+.report-card-subtle {
+  background: var(--report-cream-dark);
+  border: 1px solid rgba(27, 46, 74, 0.04);
+  border-radius: var(--report-radius-md);
+}
+
+/* ========================================
+   Button Styles
+   ======================================== */
+
+.report-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--report-navy);
+  color: white;
+  font-family: var(--report-font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--report-radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all var(--report-transition-fast);
+}
+
+.report-btn-primary:hover {
+  background: var(--report-navy-light);
+  transform: translateY(-1px);
+  box-shadow: var(--report-shadow-md);
+}
+
+.report-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: var(--report-navy);
+  font-family: var(--report-font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--report-radius-md);
+  border: 1px solid rgba(27, 46, 74, 0.2);
+  cursor: pointer;
+  transition: all var(--report-transition-fast);
+}
+
+.report-btn-secondary:hover {
+  background: var(--report-cream-dark);
+  border-color: rgba(27, 46, 74, 0.3);
+}
+
+.report-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--report-stone);
+  font-family: var(--report-font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--report-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all var(--report-transition-fast);
+}
+
+.report-btn-ghost:hover {
+  background: var(--report-cream-dark);
+  color: var(--report-navy);
+}
+
+/* ========================================
+   Score Display
+   ======================================== */
+
+.report-score-ring {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-score-ring svg {
+  transform: rotate(-90deg);
+}
+
+.report-score-ring-bg {
+  stroke: var(--report-cream-dark);
+  fill: none;
+}
+
+.report-score-ring-progress {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--report-transition-slow);
+}
+
+.report-score-excellent { stroke: var(--report-success); }
+.report-score-good { stroke: var(--report-gold); }
+.report-score-moderate { stroke: var(--report-warning); }
+.report-score-poor { stroke: var(--report-error); }
+
+/* ========================================
+   Status Badges
+   ======================================== */
+
+.report-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  font-family: var(--report-font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+
+.report-badge-ready {
+  background: var(--report-success-bg);
+  color: var(--report-success);
+}
+
+.report-badge-generating {
+  background: rgba(196, 163, 90, 0.15);
+  color: var(--report-gold);
+}
+
+.report-badge-pending {
+  background: var(--report-cream-dark);
+  color: var(--report-stone);
+}
+
+.report-badge-failed {
+  background: var(--report-error-bg);
+  color: var(--report-error);
+}
+
+/* ========================================
+   Dividers & Borders
+   ======================================== */
+
+.report-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(27, 46, 74, 0.1) 20%,
+    rgba(27, 46, 74, 0.1) 80%,
+    transparent
+  );
+  border: none;
+  margin: var(--report-space-xl) 0;
+}
+
+.report-divider-solid {
+  height: 1px;
+  background: rgba(27, 46, 74, 0.08);
+  border: none;
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+@keyframes report-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes report-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes report-pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.report-animate-in {
+  animation: report-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.report-animate-in-delay-1 { animation-delay: 0.1s; opacity: 0; }
+.report-animate-in-delay-2 { animation-delay: 0.2s; opacity: 0; }
+.report-animate-in-delay-3 { animation-delay: 0.3s; opacity: 0; }
+.report-animate-in-delay-4 { animation-delay: 0.4s; opacity: 0; }
+.report-animate-in-delay-5 { animation-delay: 0.5s; opacity: 0; }
+
+/* ========================================
+   Section Styles
+   ======================================== */
+
+.report-section {
+  background: white;
+  border-radius: var(--report-radius-xl);
+  padding: var(--report-space-xl);
+  box-shadow: var(--report-shadow-sm);
+  border: 1px solid rgba(27, 46, 74, 0.04);
+}
+
+.report-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--report-space-sm);
+  margin-bottom: var(--report-space-lg);
+  padding-bottom: var(--report-space-md);
+  border-bottom: 1px solid rgba(27, 46, 74, 0.06);
+}
+
+.report-section-icon {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--report-cream);
+  border-radius: var(--report-radius-sm);
+  color: var(--report-navy);
+}
+
+/* ========================================
+   Metric Cards
+   ======================================== */
+
+.report-metric-card {
+  padding: var(--report-space-lg);
+  background: var(--report-cream);
+  border-radius: var(--report-radius-md);
+  border: 1px solid rgba(27, 46, 74, 0.04);
+}
+
+.report-metric-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--report-stone-light);
+  margin-bottom: var(--report-space-xs);
+}
+
+.report-metric-value {
+  font-family: var(--report-font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--report-navy);
+  letter-spacing: -0.02em;
+}
+
+.report-metric-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: var(--report-space-xs);
+}
+
+.report-metric-change-positive {
+  color: var(--report-success);
+}
+
+.report-metric-change-negative {
+  color: var(--report-error);
+}
+
+/* ========================================
+   Loading States
+   ======================================== */
+
+.report-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--report-cream-dark) 25%,
+    var(--report-cream) 50%,
+    var(--report-cream-dark) 75%
+  );
+  background-size: 200% 100%;
+  animation: report-skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: var(--report-radius-sm);
+}
+
+@keyframes report-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ========================================
+   Focus States (Accessibility)
+   ======================================== */
+
+.report-focus-ring:focus-visible {
+  outline: 2px solid var(--report-navy);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+  .report-page {
+    background: white;
+  }
+
+  .report-card,
+  .report-card-elevated,
+  .report-section {
+    box-shadow: none;
+    border: 1px solid #e5e5e5;
+  }
+
+  .report-no-print {
+    display: none !important;
+  }
+}
