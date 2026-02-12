@@ -229,3 +229,189 @@ export function getMetricTrend(
 
   return undefined;
 }
+
+/**
+ * Result type for metric with geo fallback
+ */
+export interface MetricWithGeoFallback {
+  value: number | null;
+  /** The geography level the data came from (e.g., 'county' if zip wasn't available) */
+  sourceGeo: GeoLevel | null;
+  /** Human-readable label for the source (e.g., "County average") */
+  sourceLabel: string | null;
+  /** Whether this is from a fallback geography (not the report's primary geo) */
+  isFallback: boolean;
+}
+
+/**
+ * Geography level display names
+ */
+const GEO_LABELS: Record<GeoLevel, string> = {
+  zip: 'ZIP code',
+  city: 'City',
+  county: 'County',
+  metro: 'Metro area',
+  state: 'State',
+  national: 'National',
+  tract: 'Census tract',
+};
+
+/**
+ * Get a metric value with automatic fallback to higher geography levels.
+ *
+ * If data isn't available at the report's geography (e.g., ZIP), tries
+ * progressively higher levels (county → metro → state → national).
+ *
+ * Returns both the value and information about where it came from,
+ * so the UI can indicate when using fallback data.
+ *
+ * @example
+ * ```tsx
+ * const { value, isFallback, sourceLabel } = getMetricWithGeoFallback(report, 'median_income');
+ *
+ * return (
+ *   <MetricCard value={value}>
+ *     {isFallback && <span className="text-xs">({sourceLabel})</span>}
+ *   </MetricCard>
+ * );
+ * ```
+ */
+export function getMetricWithGeoFallback(
+  report: ReportWithTemplate,
+  metricId: string,
+  aliases: string[] = []
+): MetricWithGeoFallback {
+  const reportGeo = report.primary_geography_type as GeoLevel;
+  const idsToTry = [metricId, ...aliases, ...(METRIC_ALIASES[metricId] || [])];
+
+  // First try current geography data
+  for (const id of idsToTry) {
+    const currentValue = report.populated_data?.current?.[id];
+    if (currentValue !== undefined && currentValue !== null) {
+      return {
+        value: Number(currentValue),
+        sourceGeo: reportGeo,
+        sourceLabel: null,
+        isFallback: false,
+      };
+    }
+  }
+
+  // Try county benchmark
+  for (const id of idsToTry) {
+    const countyValue = (report.populated_data?.benchmarks as any)?.county?.[id];
+    if (countyValue !== undefined && countyValue !== null) {
+      return {
+        value: Number(countyValue),
+        sourceGeo: 'county',
+        sourceLabel: `${GEO_LABELS['county']} average`,
+        isFallback: true,
+      };
+    }
+  }
+
+  // Try metro benchmark (similar_metros)
+  const similarMetros = report.populated_data?.benchmarks?.similar_metros;
+  if (similarMetros) {
+    for (const id of idsToTry) {
+      for (const metroData of Object.values(similarMetros)) {
+        if (metroData?.[id] !== undefined && metroData?.[id] !== null) {
+          return {
+            value: Number(metroData[id]),
+            sourceGeo: 'metro',
+            sourceLabel: `${GEO_LABELS['metro']} average`,
+            isFallback: true,
+          };
+        }
+      }
+    }
+  }
+
+  // Try state benchmark
+  for (const id of idsToTry) {
+    const stateValue = report.populated_data?.benchmarks?.state?.[id];
+    if (stateValue !== undefined && stateValue !== null) {
+      return {
+        value: Number(stateValue),
+        sourceGeo: 'state',
+        sourceLabel: `${GEO_LABELS['state']} average`,
+        isFallback: true,
+      };
+    }
+  }
+
+  // Try national benchmark
+  for (const id of idsToTry) {
+    const nationalValue = report.populated_data?.benchmarks?.national?.[id];
+    if (nationalValue !== undefined && nationalValue !== null) {
+      return {
+        value: Number(nationalValue),
+        sourceGeo: 'national',
+        sourceLabel: `${GEO_LABELS['national']} average`,
+        isFallback: true,
+      };
+    }
+  }
+
+  // Try historical data - get the most recent value
+  const historical = report.populated_data?.historical;
+  if (historical) {
+    for (const id of idsToTry) {
+      const histData = historical[id];
+      if (histData && histData.data && histData.data.length > 0) {
+        const latestValue = histData.data[histData.data.length - 1].value;
+        return {
+          value: latestValue,
+          sourceGeo: reportGeo,
+          sourceLabel: 'Historical',
+          isFallback: true,
+        };
+      }
+    }
+  }
+
+  return {
+    value: null,
+    sourceGeo: null,
+    sourceLabel: null,
+    isFallback: false,
+  };
+}
+
+/**
+ * Get score context data for the homeready or investoredge score
+ */
+export interface ScoreContext {
+  comparison: string;
+  dollarImpact: string;
+  interpretation: string;
+  percentileText: string;
+}
+
+export function getScoreContext(
+  report: ReportWithTemplate,
+  scoreType: 'homeready' | 'investoredge'
+): ScoreContext | null {
+  if (!report.populated_data?.scores) return null;
+
+  const scoreData = report.populated_data.scores[scoreType] as {
+    score?: number;
+    context?: {
+      comparison?: string;
+      dollar_impact?: string;
+      interpretation?: string;
+      percentile_text?: string;
+    };
+  } | undefined;
+
+  if (!scoreData || !scoreData.context) return null;
+
+  const ctx = scoreData.context;
+
+  return {
+    comparison: ctx.comparison || '',
+    dollarImpact: ctx.dollar_impact || '',
+    interpretation: ctx.interpretation || '',
+    percentileText: ctx.percentile_text || '',
+  };
+}
