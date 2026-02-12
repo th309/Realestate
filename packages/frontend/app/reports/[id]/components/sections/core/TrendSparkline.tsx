@@ -57,7 +57,7 @@ export function TrendSparkline({
     );
   }
 
-  // Calculate color based on trend direction
+  // Helper functions
   const getTrendColor = (trendDir: TrendDirection): string => {
     switch (trendDir) {
       case 'up':
@@ -70,33 +70,6 @@ export function TrendSparkline({
     }
   };
 
-  const trendColor = getTrendColor(trend);
-
-  // Calculate path coordinates
-  const padding = 2;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-
-  const minValue = Math.min(...data);
-  const maxValue = Math.max(...data);
-  const valueRange = maxValue - minValue || 1; // Avoid division by zero
-
-  // Generate SVG path points
-  const points = data.map((value, index) => {
-    const x = padding + (index / (data.length - 1 || 1)) * chartWidth;
-    const y = padding + chartHeight - ((value - minValue) / valueRange) * chartHeight;
-    return { x, y };
-  });
-
-  // Create SVG path string
-  const pathD = points.reduce((path, point, index) => {
-    if (index === 0) {
-      return `M ${point.x} ${point.y}`;
-    }
-    return `${path} L ${point.x} ${point.y}`;
-  }, '');
-
-  // Arrow indicators
   const getArrowIndicator = (trendDir: TrendDirection): string => {
     switch (trendDir) {
       case 'up':
@@ -109,11 +82,75 @@ export function TrendSparkline({
     }
   };
 
-  // Format the percentage
   const formatPercentage = (pct: number): string => {
     const prefix = pct > 0 ? '+' : '';
     return `${prefix}${pct.toFixed(1)}%`;
   };
+
+  const trendColor = getTrendColor(trend);
+
+  // Calculate dimensions
+  const padding = 2;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  // Handle single data point - render centered dot
+  if (data.length === 1) {
+    const centerX = padding + chartWidth / 2;
+    const centerY = padding + chartHeight / 2;
+
+    return (
+      <div
+        className={`inline-flex items-center gap-2 ${className}`}
+        role="img"
+        aria-label={`Trend sparkline showing ${trend} trend with ${formatPercentage(changePct)} change`}
+      >
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ overflow: 'visible' }}
+        >
+          <circle cx={centerX} cy={centerY} r={2.5} fill={trendColor} />
+        </svg>
+
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.125rem',
+            fontSize: '0.75rem',
+            fontWeight: 500,
+            color: trendColor,
+            fontFamily: 'var(--report-font-body)',
+          }}
+        >
+          <span aria-hidden="true">{getArrowIndicator(trend)}</span>
+          <span>{formatPercentage(changePct)}</span>
+        </span>
+      </div>
+    );
+  }
+
+  // Calculate value range for scaling
+  const minValue = Math.min(...data);
+  const maxValue = Math.max(...data);
+  const valueRange = maxValue - minValue || 1; // Avoid division by zero
+
+  // Generate SVG path points
+  const points = data.map((value, index) => {
+    const x = padding + (index / (data.length - 1)) * chartWidth;
+    const y = padding + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+    return { x, y };
+  });
+
+  // Create SVG path string
+  const pathD = points.reduce((path, point, index) => {
+    if (index === 0) {
+      return `M ${point.x} ${point.y}`;
+    }
+    return `${path} L ${point.x} ${point.y}`;
+  }, '');
 
   return (
     <div

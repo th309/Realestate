@@ -5,7 +5,7 @@ export { ExecutiveSummary } from './ExecutiveSummary';
 export type { ExecutiveSummaryProps } from './ExecutiveSummary';
 
 export { MarketConditions } from './MarketConditions';
-export type { default as MarketConditionsDefault } from './MarketConditions';
+export type { MarketConditionsProps } from './MarketConditions';
 
 export { NextSteps } from './NextSteps';
 export type { NextStepsProps } from './NextSteps';

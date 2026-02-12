@@ -11,7 +11,7 @@ export interface ScoreDeepDiveProps {
 }
 
 interface ScoreComponentConfig {
-  key: keyof NonNullable<ReportInstance['scores_snapshot']>['homeready_details'];
+  key: 'affordability' | 'stability' | 'value' | 'competition';
   label: string;
   icon: React.ElementType;
   description: string;

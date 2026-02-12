@@ -298,10 +298,9 @@ export function NextSteps({
           }}
         >
           <div className="flex items-start gap-3">
-            <AlertTriangle
-              className="w-5 h-5 mt-0.5 flex-shrink-0"
-              style={{ color: 'var(--report-gold)' }}
-            />
+            <div style={{ color: 'var(--report-gold)' }}>
+              <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+            </div>
             <div>
               <p
                 className="font-semibold text-sm mb-1"
@@ -403,10 +402,9 @@ export function NextSteps({
                     className="flex-shrink-0 w-10 h-10 rounded-[var(--report-radius-sm)] flex items-center justify-center"
                     style={{ backgroundColor: 'var(--report-cream)' }}
                   >
-                    <Icon
-                      className="w-5 h-5"
-                      style={{ color: 'var(--report-navy-light)' }}
-                    />
+                    <div style={{ color: 'var(--report-navy-light)' }}>
+                      <Icon className="w-5 h-5" />
+                    </div>
                   </div>
                 </div>
               </div>
