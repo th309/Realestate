@@ -3,6 +3,38 @@
  *
  * Maps report types to their section components.
  * Each template defines the sections that should be rendered and their order.
+ *
+ * ## Error Handling
+ *
+ * When rendering sections, wrap each section component in a `SectionErrorBoundary`
+ * to prevent individual section failures from crashing the entire report.
+ *
+ * @example
+ * ```tsx
+ * import { SectionErrorBoundary } from '../SectionErrorBoundary';
+ * import { getTemplate } from './templates';
+ *
+ * function ReportRenderer({ report }: { report: ReportInstance }) {
+ *   const template = getTemplate(report.template_type);
+ *   if (!template) return <NotFound />;
+ *
+ *   return (
+ *     <div className="report-container">
+ *       {template.sections.map(({ component: Section, id }) => (
+ *         <SectionErrorBoundary key={id} sectionId={id}>
+ *           <Section report={report} />
+ *         </SectionErrorBoundary>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ *
+ * The error boundary will:
+ * - Catch JavaScript errors in section components
+ * - Display a graceful fallback UI instead of crashing
+ * - Log the error for debugging
+ * - Allow the rest of the report to continue rendering
  */
 
 import type { ComponentType } from 'react';

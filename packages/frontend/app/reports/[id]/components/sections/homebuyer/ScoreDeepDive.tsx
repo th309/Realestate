@@ -121,7 +121,13 @@ function ScoreRing({ score }: { score: number }) {
 
   return (
     <div className="report-score-ring" style={{ width: 140, height: 140 }}>
-      <svg width="140" height="140" viewBox="0 0 140 140">
+      <svg
+        width="140"
+        height="140"
+        viewBox="0 0 140 140"
+        role="img"
+        aria-label={`Score: ${score} out of 100`}
+      >
         <circle
           className="report-score-ring-bg"
           cx="70"

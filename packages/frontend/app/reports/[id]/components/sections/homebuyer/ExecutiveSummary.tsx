@@ -137,7 +137,13 @@ export function ExecutiveSummary({
             {/* Score Ring */}
             <div className="flex-shrink-0">
               <div className="report-score-ring" style={{ width: 160, height: 160 }}>
-                <svg width="160" height="160" viewBox="0 0 160 160">
+                <svg
+                  width="160"
+                  height="160"
+                  viewBox="0 0 160 160"
+                  role="img"
+                  aria-label={`HomeReady Score: ${score} out of 100`}
+                >
                   {/* Background ring */}
                   <circle
                     cx="80"

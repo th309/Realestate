@@ -4,8 +4,18 @@ import React from 'react';
 import { DollarSign, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 
 import { SectionCard, MetricDisplay, AIAnalysisBlock } from '../core';
-import type { MetricTrend, TrendDirection } from '../core';
-import { getMetricWithAliases } from '../../utils/metricHelpers';
+import {
+  getMetricValueWithAliases,
+  getMetricTrend,
+} from '../../utils/metricHelpers';
+import type { MetricTrend } from '../../utils/metricHelpers';
+import {
+  CAP_RATE,
+  GROSS_RENT_MULTIPLIER,
+  GROSS_YIELD,
+  CASH_ON_CASH,
+  NORMALIZED_SCORE,
+} from '../../utils/thresholds';
 import type { ReportInstance } from '../../../../types';
 
 /**
@@ -81,59 +91,12 @@ const CASH_FLOW_METRICS: CashFlowMetricConfig[] = [
 ];
 
 /**
- * Get a metric value trying the primary ID and aliases
- */
-function getMetricValueWithAliases(
-  report: ReportInstance,
-  metricConfig: CashFlowMetricConfig
-): number | null {
-  // Try primary ID first
-  const primaryValue = getMetricWithAliases(report, metricConfig.id);
-  if (primaryValue !== null) return primaryValue;
-
-  // Try aliases
-  for (const alias of metricConfig.aliases) {
-    const aliasValue = getMetricWithAliases(report, alias);
-    if (aliasValue !== null) return aliasValue;
-  }
-
-  return null;
-}
-
-/**
- * Get historical trend data for a metric
- */
-function getMetricTrend(
-  report: ReportInstance,
-  metricConfig: CashFlowMetricConfig
-): MetricTrend | undefined {
-  const historical = report.populated_data?.historical;
-  if (!historical) return undefined;
-
-  // Try primary ID and aliases
-  const idsToTry = [metricConfig.id, ...metricConfig.aliases];
-
-  for (const id of idsToTry) {
-    const histData = historical[id];
-    if (histData && histData.data && histData.data.length >= 2) {
-      return {
-        direction: histData.trend as TrendDirection,
-        changePct: histData.change_pct,
-        sparklineData: histData.data.map((d) => d.value),
-      };
-    }
-  }
-
-  return undefined;
-}
-
-/**
  * Evaluate the quality of a cap rate
  */
 function evaluateCapRate(capRate: number | null): 'good' | 'moderate' | 'poor' | null {
   if (capRate === null) return null;
-  if (capRate >= 7) return 'good';
-  if (capRate >= 5) return 'moderate';
+  if (capRate >= CAP_RATE.GOOD) return 'good';
+  if (capRate >= CAP_RATE.MODERATE) return 'moderate';
   return 'poor';
 }
 
@@ -142,8 +105,8 @@ function evaluateCapRate(capRate: number | null): 'good' | 'moderate' | 'poor' |
  */
 function evaluateGRM(grm: number | null): 'good' | 'moderate' | 'poor' | null {
   if (grm === null) return null;
-  if (grm <= 10) return 'good';
-  if (grm <= 15) return 'moderate';
+  if (grm <= GROSS_RENT_MULTIPLIER.EXCELLENT) return 'good';
+  if (grm <= GROSS_RENT_MULTIPLIER.GOOD) return 'moderate';
   return 'poor';
 }
 
@@ -164,25 +127,25 @@ function calculateCashFlowAssessment(
   // Cap rate evaluation
   if (capRate !== null) {
     factors++;
-    if (capRate >= 7) score += 2;
-    else if (capRate >= 5) score += 1;
-    else if (capRate < 4) score -= 1;
+    if (capRate >= CAP_RATE.GOOD) score += 2;
+    else if (capRate >= CAP_RATE.MODERATE) score += 1;
+    else if (capRate < CAP_RATE.WEAK) score -= 1;
   }
 
   // GRM evaluation (lower is better)
   if (grm !== null) {
     factors++;
-    if (grm <= 10) score += 2;
-    else if (grm <= 15) score += 1;
-    else if (grm > 20) score -= 1;
+    if (grm <= GROSS_RENT_MULTIPLIER.EXCELLENT) score += 2;
+    else if (grm <= GROSS_RENT_MULTIPLIER.GOOD) score += 1;
+    else if (grm > GROSS_RENT_MULTIPLIER.POOR) score -= 1;
   }
 
   // Gross yield evaluation
   if (grossYield !== null) {
     factors++;
-    if (grossYield >= 8) score += 2;
-    else if (grossYield >= 6) score += 1;
-    else if (grossYield < 4) score -= 1;
+    if (grossYield >= GROSS_YIELD.EXCELLENT) score += 2;
+    else if (grossYield >= GROSS_YIELD.GOOD) score += 1;
+    else if (grossYield < GROSS_YIELD.WEAK) score -= 1;
   }
 
   if (factors === 0) {
@@ -194,22 +157,22 @@ function calculateCashFlowAssessment(
 
   const normalizedScore = score / factors;
 
-  if (normalizedScore >= 1.5) {
+  if (normalizedScore >= NORMALIZED_SCORE.STRONG) {
     return {
       rating: 'strong',
       summary: 'This market shows strong cash flow potential with attractive yield metrics.',
     };
-  } else if (normalizedScore >= 0.5) {
+  }
+  if (normalizedScore >= NORMALIZED_SCORE.MODERATE - NORMALIZED_SCORE.SLIGHT) {
     return {
       rating: 'moderate',
       summary: 'Cash flow metrics are moderate. Returns may depend on both income and appreciation.',
     };
-  } else {
-    return {
-      rating: 'weak',
-      summary: 'Cash flow metrics suggest lower yields. Investment thesis may rely more on appreciation.',
-    };
   }
+  return {
+    rating: 'weak',
+    summary: 'Cash flow metrics suggest lower yields. Investment thesis may rely more on appreciation.',
+  };
 }
 
 /**
@@ -224,11 +187,27 @@ function calculateCashFlowAssessment(
  * - AI analysis focused on cash flow implications
  */
 export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.ReactElement {
-  // Extract metric values
-  const capRate = getMetricValueWithAliases(report, CASH_FLOW_METRICS[0]);
-  const grossYield = getMetricValueWithAliases(report, CASH_FLOW_METRICS[1]);
-  const grm = getMetricValueWithAliases(report, CASH_FLOW_METRICS[2]);
-  const expectedRent = getMetricValueWithAliases(report, CASH_FLOW_METRICS[3]);
+  // Extract metric values using shared helpers
+  const capRate = getMetricValueWithAliases(
+    report,
+    CASH_FLOW_METRICS[0].id,
+    CASH_FLOW_METRICS[0].aliases
+  );
+  const grossYield = getMetricValueWithAliases(
+    report,
+    CASH_FLOW_METRICS[1].id,
+    CASH_FLOW_METRICS[1].aliases
+  );
+  const grm = getMetricValueWithAliases(
+    report,
+    CASH_FLOW_METRICS[2].id,
+    CASH_FLOW_METRICS[2].aliases
+  );
+  const expectedRent = getMetricValueWithAliases(
+    report,
+    CASH_FLOW_METRICS[3].id,
+    CASH_FLOW_METRICS[3].aliases
+  );
 
   // Check if we have any data
   const hasAnyData =
@@ -381,7 +360,7 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
           metricId="cap_rate"
           value={capRate}
           label="Cap Rate"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[0])}
+          trend={getMetricTrend(report, CASH_FLOW_METRICS[0].id, CASH_FLOW_METRICS[0].aliases)}
         />
 
         {/* Gross Yield */}
@@ -389,7 +368,7 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
           metricId="gross_yield"
           value={grossYield}
           label="Gross Yield"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[1])}
+          trend={getMetricTrend(report, CASH_FLOW_METRICS[1].id, CASH_FLOW_METRICS[1].aliases)}
         />
 
         {/* GRM */}
@@ -397,7 +376,7 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
           metricId="grm"
           value={grm}
           label="Gross Rent Multiplier"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[2])}
+          trend={getMetricTrend(report, CASH_FLOW_METRICS[2].id, CASH_FLOW_METRICS[2].aliases)}
         />
 
         {/* Expected Rent */}
@@ -405,7 +384,7 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
           metricId="rent_index"
           value={expectedRent}
           label="Expected Rent"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[3])}
+          trend={getMetricTrend(report, CASH_FLOW_METRICS[3].id, CASH_FLOW_METRICS[3].aliases)}
         />
       </div>
 
@@ -474,9 +453,9 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
                   className="report-heading-sm"
                   style={{
                     color:
-                      proForma.returns.cash_on_cash >= 8
+                      proForma.returns.cash_on_cash >= CASH_ON_CASH.EXCELLENT
                         ? 'var(--report-success)'
-                        : proForma.returns.cash_on_cash >= 5
+                        : proForma.returns.cash_on_cash >= CASH_ON_CASH.GOOD
                         ? 'var(--report-gold)'
                         : 'var(--report-warning)',
                     margin: 0,
@@ -542,7 +521,7 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
             }}
           >
             {CASH_FLOW_METRICS.map((metric) => {
-              const value = getMetricValueWithAliases(report, metric);
+              const value = getMetricValueWithAliases(report, metric.id, metric.aliases);
               if (value === null) return null;
 
               // Determine quality for this metric

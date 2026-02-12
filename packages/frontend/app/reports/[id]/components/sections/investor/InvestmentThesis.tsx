@@ -4,8 +4,10 @@ import React from 'react';
 import { TrendingUp, DollarSign, Percent, BarChart3 } from 'lucide-react';
 
 import { SectionCard, MetricDisplay, AIAnalysisBlock } from '../core';
-import type { MetricTrend } from '../core';
-import { getMetricWithAliases } from '../../utils/metricHelpers';
+import {
+  getMetricValueWithAliases,
+  getMetricTrend,
+} from '../../utils/metricHelpers';
 import type { ReportInstance } from '../../../../types';
 
 export interface InvestmentThesisProps {
@@ -26,57 +28,23 @@ interface MetricConfig {
 const METRICS: MetricConfig[] = [
   {
     id: 'cap_rate',
-    aliases: [],
+    aliases: ['capitalization_rate'],
     label: 'Cap Rate',
     icon: Percent,
   },
   {
     id: 'gross_yield',
-    aliases: ['rent_to_price_ratio'],
+    aliases: ['rent_to_price_ratio', 'rental_yield'],
     label: 'Gross Yield',
     icon: DollarSign,
   },
   {
     id: 'appreciation_rate',
-    aliases: ['zhvi_yoy', 'home_value_yoy'],
+    aliases: ['zhvi_yoy', 'home_value_yoy', 'price_growth_yoy'],
     label: 'Appreciation Rate',
     icon: BarChart3,
   },
 ];
-
-/**
- * Extended metric aliases for investment-specific lookups
- */
-const INVESTMENT_METRIC_ALIASES: Record<string, string[]> = {
-  cap_rate: ['cap_rate', 'capitalization_rate'],
-  gross_yield: ['gross_yield', 'rent_to_price_ratio', 'rental_yield'],
-  appreciation_rate: ['appreciation_rate', 'zhvi_yoy', 'home_value_yoy', 'price_growth_yoy'],
-};
-
-/**
- * Get a metric value with investment-specific alias fallbacks
- */
-function getInvestmentMetric(
-  report: ReportInstance,
-  metricId: string
-): number | null {
-  // Try primary metric ID via standard helper
-  const primaryValue = getMetricWithAliases(report, metricId);
-  if (primaryValue !== null) {
-    return primaryValue;
-  }
-
-  // Try investment-specific aliases
-  const aliases = INVESTMENT_METRIC_ALIASES[metricId] || [];
-  for (const alias of aliases) {
-    const value = report.populated_data?.current?.[alias];
-    if (value !== undefined && value !== null) {
-      return Number(value);
-    }
-  }
-
-  return null;
-}
 
 /**
  * Get score color class based on score value
@@ -108,27 +76,6 @@ function getScoreLabel(score: number): string {
 }
 
 /**
- * Calculate trend data from historical time series
- */
-function calculateTrend(
-  historicalData?: {
-    data: Array<{ date: string; value: number }>;
-    trend: 'up' | 'down' | 'stable';
-    change_pct: number;
-  }
-): MetricTrend | undefined {
-  if (!historicalData || !historicalData.data || historicalData.data.length < 2) {
-    return undefined;
-  }
-
-  return {
-    direction: historicalData.trend,
-    changePct: historicalData.change_pct,
-    sparklineData: historicalData.data.map((point) => point.value),
-  };
-}
-
-/**
  * InvestmentThesis - The opening section of the InvestorEdge report
  *
  * Displays the InvestorEdge Score prominently along with key investment metrics
@@ -151,21 +98,10 @@ export function InvestmentThesis({
   const scoreContext = (scoreData as { context?: string } | undefined)?.context;
   const investmentAnalysis = report.ai_narrative?.investment_analysis;
 
-  // Gather metrics with their values and trends
+  // Gather metrics with their values and trends using shared helpers
   const metricsWithData = METRICS.map((metric) => {
-    const value = getInvestmentMetric(report, metric.id);
-
-    // Try multiple keys for historical data
-    let historicalData = report.populated_data?.historical?.[metric.id];
-    if (!historicalData) {
-      const aliases = INVESTMENT_METRIC_ALIASES[metric.id] || [];
-      for (const alias of aliases) {
-        historicalData = report.populated_data?.historical?.[alias];
-        if (historicalData) break;
-      }
-    }
-
-    const trend = calculateTrend(historicalData);
+    const value = getMetricValueWithAliases(report, metric.id, metric.aliases);
+    const trend = getMetricTrend(report, metric.id, metric.aliases);
 
     return {
       ...metric,
@@ -200,7 +136,13 @@ export function InvestmentThesis({
             {/* Score Ring */}
             <div className="flex-shrink-0">
               <div className="report-score-ring" style={{ width: 160, height: 160 }}>
-                <svg width="160" height="160" viewBox="0 0 160 160">
+                <svg
+                  width="160"
+                  height="160"
+                  viewBox="0 0 160 160"
+                  role="img"
+                  aria-label={`InvestorEdge Score: ${score} out of 100`}
+                >
                   {/* Background ring */}
                   <circle
                     cx="80"

@@ -110,6 +110,8 @@ export function TrendSparkline({
           height={height}
           viewBox={`0 0 ${width} ${height}`}
           style={{ overflow: 'visible' }}
+          role="img"
+          aria-label={`Price trend: ${trend} ${formatPercentage(changePct)}`}
         >
           <circle cx={centerX} cy={centerY} r={2.5} fill={trendColor} />
         </svg>
@@ -165,6 +167,8 @@ export function TrendSparkline({
         style={{
           overflow: 'visible',
         }}
+        role="img"
+        aria-label={`Price trend: ${trend} ${formatPercentage(changePct)}`}
       >
         {/* Sparkline path */}
         <path

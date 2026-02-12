@@ -1283,10 +1283,7 @@ export class ReportsService {
       return `Bottom 25% of ${this.getGeoLabel(geoData.geography_type)}s`;
     }
 
-    // Estimate percentile from score (scores are normalized 0-100 across all markets)
-    // Since scores are z-score normalized, score roughly maps to percentile position
-    const estimatedPercentile = 100 - score; // Higher score = lower (better) percentile
-
+    // Scores are normalized 0-100 across all markets, so score roughly maps to percentile
     const geoLabel = this.getGeoLabel(geoData?.geography_type);
 
     if (score >= 90) {

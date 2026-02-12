@@ -6,12 +6,18 @@ import { TrendingUp, TrendingDown, Scale, AlertTriangle } from 'lucide-react';
 import { SectionCard, MetricDisplay, TrendSparkline, AIAnalysisBlock } from '../core';
 import type { MetricTrend, TrendDirection } from '../core';
 import { getMetricWithAliases } from '../../utils/metricHelpers';
+import {
+  DAYS_ON_MARKET,
+  HOTNESS_SCORE,
+  PRICE_CUT_PCT,
+  NORMALIZED_SCORE,
+} from '../../utils/thresholds';
 import type { ReportInstance } from '../../../../types';
 
 /**
  * Props for MarketConditions section
  */
-interface MarketConditionsProps {
+export interface MarketConditionsProps {
   report: ReportInstance;
 }
 
@@ -127,28 +133,28 @@ function calculateMarketType(
   // Days on market: higher favors buyers
   if (daysOnMarket !== null) {
     factorsCount++;
-    if (daysOnMarket >= 60) buyerScore += 2;
-    else if (daysOnMarket >= 40) buyerScore += 1;
-    else if (daysOnMarket <= 20) buyerScore -= 2;
-    else if (daysOnMarket <= 30) buyerScore -= 1;
+    if (daysOnMarket >= DAYS_ON_MARKET.BUYERS_MARKET) buyerScore += 2;
+    else if (daysOnMarket >= DAYS_ON_MARKET.NEUTRAL) buyerScore += 1;
+    else if (daysOnMarket <= DAYS_ON_MARKET.SELLERS_MARKET) buyerScore -= 2;
+    else if (daysOnMarket <= DAYS_ON_MARKET.SLIGHT_SELLERS) buyerScore -= 1;
   }
 
   // Hotness score: lower favors buyers
   if (hotnessScore !== null) {
     factorsCount++;
-    if (hotnessScore <= 30) buyerScore += 2;
-    else if (hotnessScore <= 50) buyerScore += 1;
-    else if (hotnessScore >= 80) buyerScore -= 2;
-    else if (hotnessScore >= 65) buyerScore -= 1;
+    if (hotnessScore <= HOTNESS_SCORE.COOL) buyerScore += 2;
+    else if (hotnessScore <= HOTNESS_SCORE.NEUTRAL) buyerScore += 1;
+    else if (hotnessScore >= HOTNESS_SCORE.VERY_HOT) buyerScore -= 2;
+    else if (hotnessScore >= HOTNESS_SCORE.WARM) buyerScore -= 1;
   }
 
   // Price cut percentage: higher favors buyers
   if (priceCutPct !== null) {
     factorsCount++;
-    if (priceCutPct >= 30) buyerScore += 2;
-    else if (priceCutPct >= 20) buyerScore += 1;
-    else if (priceCutPct <= 5) buyerScore -= 2;
-    else if (priceCutPct <= 10) buyerScore -= 1;
+    if (priceCutPct >= PRICE_CUT_PCT.STRONG_BUYER_LEVERAGE) buyerScore += 2;
+    else if (priceCutPct >= PRICE_CUT_PCT.MODERATE_BUYER_LEVERAGE) buyerScore += 1;
+    else if (priceCutPct <= PRICE_CUT_PCT.VERY_COMPETITIVE) buyerScore -= 2;
+    else if (priceCutPct <= PRICE_CUT_PCT.LIMITED_LEVERAGE) buyerScore -= 1;
   }
 
   // Inventory: higher relative to historical favors buyers
@@ -168,22 +174,22 @@ function calculateMarketType(
   let type: 'buyer' | 'seller' | 'balanced';
   let strength: 'strong' | 'moderate' | 'slight';
 
-  if (normalizedScore >= 1.5) {
+  if (normalizedScore >= NORMALIZED_SCORE.STRONG) {
     type = 'buyer';
     strength = 'strong';
-  } else if (normalizedScore >= 0.75) {
+  } else if (normalizedScore >= NORMALIZED_SCORE.MODERATE) {
     type = 'buyer';
     strength = 'moderate';
-  } else if (normalizedScore >= 0.25) {
+  } else if (normalizedScore >= NORMALIZED_SCORE.SLIGHT) {
     type = 'buyer';
     strength = 'slight';
-  } else if (normalizedScore <= -1.5) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.STRONG) {
     type = 'seller';
     strength = 'strong';
-  } else if (normalizedScore <= -0.75) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.MODERATE) {
     type = 'seller';
     strength = 'moderate';
-  } else if (normalizedScore <= -0.25) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.SLIGHT) {
     type = 'seller';
     strength = 'slight';
   } else {

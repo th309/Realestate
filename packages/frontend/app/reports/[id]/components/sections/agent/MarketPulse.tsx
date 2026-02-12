@@ -1,11 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Activity, TrendingUp, TrendingDown, Scale, AlertTriangle } from 'lucide-react';
 
 import { SectionCard, MetricDisplay, AIAnalysisBlock } from '../core';
-import type { MetricTrend, TrendDirection } from '../core';
-import { getMetricWithAliases } from '../../utils/metricHelpers';
+import {
+  getMetricValueWithAliases,
+  getMetricTrend,
+} from '../../utils/metricHelpers';
+import {
+  DAYS_ON_MARKET,
+  HOTNESS_SCORE,
+  SALE_TO_LIST_RATIO,
+  NORMALIZED_SCORE,
+} from '../../utils/thresholds';
 import type { ReportInstance } from '../../../../types';
 
 /**
@@ -54,53 +62,6 @@ const PULSE_METRICS: MetricConfig[] = [
 ];
 
 /**
- * Get a metric value trying the primary ID and aliases
- */
-function getMetricValueWithAliases(
-  report: ReportInstance,
-  metricConfig: MetricConfig
-): number | null {
-  // Try primary ID first
-  const primaryValue = getMetricWithAliases(report, metricConfig.id);
-  if (primaryValue !== null) return primaryValue;
-
-  // Try aliases
-  for (const alias of metricConfig.aliases) {
-    const aliasValue = getMetricWithAliases(report, alias);
-    if (aliasValue !== null) return aliasValue;
-  }
-
-  return null;
-}
-
-/**
- * Get historical trend data for a metric
- */
-function getMetricTrend(
-  report: ReportInstance,
-  metricConfig: MetricConfig
-): MetricTrend | undefined {
-  const historical = report.populated_data?.historical;
-  if (!historical) return undefined;
-
-  // Try primary ID and aliases
-  const idsToTry = [metricConfig.id, ...metricConfig.aliases];
-
-  for (const id of idsToTry) {
-    const histData = historical[id];
-    if (histData && histData.data && histData.data.length >= 2) {
-      return {
-        direction: histData.trend as TrendDirection,
-        changePct: histData.change_pct,
-        sparklineData: histData.data.map((d) => d.value),
-      };
-    }
-  }
-
-  return undefined;
-}
-
-/**
  * Calculate market type (buyer vs seller) based on key metrics
  */
 function calculateMarketType(
@@ -118,19 +79,19 @@ function calculateMarketType(
   // Days on market: higher favors buyers
   if (daysOnMarket !== null) {
     factorsCount++;
-    if (daysOnMarket >= 60) buyerScore += 2;
-    else if (daysOnMarket >= 40) buyerScore += 1;
-    else if (daysOnMarket <= 20) buyerScore -= 2;
-    else if (daysOnMarket <= 30) buyerScore -= 1;
+    if (daysOnMarket >= DAYS_ON_MARKET.BUYERS_MARKET) buyerScore += 2;
+    else if (daysOnMarket >= DAYS_ON_MARKET.NEUTRAL) buyerScore += 1;
+    else if (daysOnMarket <= DAYS_ON_MARKET.SELLERS_MARKET) buyerScore -= 2;
+    else if (daysOnMarket <= DAYS_ON_MARKET.SLIGHT_SELLERS) buyerScore -= 1;
   }
 
   // Hotness score: lower favors buyers
   if (hotnessScore !== null) {
     factorsCount++;
-    if (hotnessScore <= 30) buyerScore += 2;
-    else if (hotnessScore <= 50) buyerScore += 1;
-    else if (hotnessScore >= 80) buyerScore -= 2;
-    else if (hotnessScore >= 65) buyerScore -= 1;
+    if (hotnessScore <= HOTNESS_SCORE.COOL) buyerScore += 2;
+    else if (hotnessScore <= HOTNESS_SCORE.NEUTRAL) buyerScore += 1;
+    else if (hotnessScore >= HOTNESS_SCORE.VERY_HOT) buyerScore -= 2;
+    else if (hotnessScore >= HOTNESS_SCORE.WARM) buyerScore -= 1;
   }
 
   // Sale-to-list ratio: lower favors buyers (more negotiation room)
@@ -138,10 +99,10 @@ function calculateMarketType(
     factorsCount++;
     // Assuming ratio is expressed as decimal (0.98 = 98%)
     const ratioPercent = saleToListRatio > 2 ? saleToListRatio : saleToListRatio * 100;
-    if (ratioPercent <= 95) buyerScore += 2;
-    else if (ratioPercent <= 98) buyerScore += 1;
-    else if (ratioPercent >= 102) buyerScore -= 2;
-    else if (ratioPercent >= 100) buyerScore -= 1;
+    if (ratioPercent <= SALE_TO_LIST_RATIO.SIGNIFICANT_DISCOUNT) buyerScore += 2;
+    else if (ratioPercent <= SALE_TO_LIST_RATIO.SLIGHT_DISCOUNT) buyerScore += 1;
+    else if (ratioPercent >= SALE_TO_LIST_RATIO.ABOVE_LIST_STRONG) buyerScore -= 2;
+    else if (ratioPercent >= SALE_TO_LIST_RATIO.AT_OR_ABOVE_LIST) buyerScore -= 1;
   }
 
   if (factorsCount === 0) {
@@ -153,22 +114,22 @@ function calculateMarketType(
   let type: 'buyer' | 'seller' | 'balanced';
   let strength: 'strong' | 'moderate' | 'slight';
 
-  if (normalizedScore >= 1.5) {
+  if (normalizedScore >= NORMALIZED_SCORE.STRONG) {
     type = 'buyer';
     strength = 'strong';
-  } else if (normalizedScore >= 0.75) {
+  } else if (normalizedScore >= NORMALIZED_SCORE.MODERATE) {
     type = 'buyer';
     strength = 'moderate';
-  } else if (normalizedScore >= 0.25) {
+  } else if (normalizedScore >= NORMALIZED_SCORE.SLIGHT) {
     type = 'buyer';
     strength = 'slight';
-  } else if (normalizedScore <= -1.5) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.STRONG) {
     type = 'seller';
     strength = 'strong';
-  } else if (normalizedScore <= -0.75) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.MODERATE) {
     type = 'seller';
     strength = 'moderate';
-  } else if (normalizedScore <= -0.25) {
+  } else if (normalizedScore <= -NORMALIZED_SCORE.SLIGHT) {
     type = 'seller';
     strength = 'slight';
   } else {
@@ -192,14 +153,14 @@ function getMarketTempo(
 } {
   // Prioritize days on market for tempo assessment
   if (daysOnMarket !== null) {
-    if (daysOnMarket <= 21) {
+    if (daysOnMarket <= DAYS_ON_MARKET.FAST_TEMPO) {
       return {
         tempo: 'fast',
         label: 'Fast-Moving Market',
         description: 'Homes are selling quickly. Buyers need to act fast.',
       };
     }
-    if (daysOnMarket <= 45) {
+    if (daysOnMarket <= DAYS_ON_MARKET.MODERATE_TEMPO) {
       return {
         tempo: 'moderate',
         label: 'Moderate Pace',
@@ -215,14 +176,14 @@ function getMarketTempo(
 
   // Fall back to hotness score
   if (hotnessScore !== null) {
-    if (hotnessScore >= 70) {
+    if (hotnessScore >= HOTNESS_SCORE.HOT) {
       return {
         tempo: 'fast',
         label: 'Hot Market',
         description: 'High demand and quick sales expected.',
       };
     }
-    if (hotnessScore >= 40) {
+    if (hotnessScore >= HOTNESS_SCORE.ACTIVE) {
       return {
         tempo: 'moderate',
         label: 'Active Market',
@@ -258,11 +219,27 @@ export function MarketPulse({
   report,
   className = '',
 }: MarketPulseProps): React.ReactElement {
-  // Extract metric values
-  const daysOnMarket = getMetricValueWithAliases(report, PULSE_METRICS[0]);
-  const activeListings = getMetricValueWithAliases(report, PULSE_METRICS[1]);
-  const hotnessScore = getMetricValueWithAliases(report, PULSE_METRICS[2]);
-  const saleToListRatio = getMetricValueWithAliases(report, PULSE_METRICS[3]);
+  // Extract metric values using shared helpers
+  const daysOnMarket = getMetricValueWithAliases(
+    report,
+    PULSE_METRICS[0].id,
+    PULSE_METRICS[0].aliases
+  );
+  const activeListings = getMetricValueWithAliases(
+    report,
+    PULSE_METRICS[1].id,
+    PULSE_METRICS[1].aliases
+  );
+  const hotnessScore = getMetricValueWithAliases(
+    report,
+    PULSE_METRICS[2].id,
+    PULSE_METRICS[2].aliases
+  );
+  const saleToListRatio = getMetricValueWithAliases(
+    report,
+    PULSE_METRICS[3].id,
+    PULSE_METRICS[3].aliases
+  );
 
   // Check if we have any data
   const hasAnyData =
@@ -271,9 +248,15 @@ export function MarketPulse({
     hotnessScore !== null ||
     saleToListRatio !== null;
 
-  // Calculate market type and tempo
-  const marketType = calculateMarketType(daysOnMarket, hotnessScore, saleToListRatio);
-  const marketTempo = getMarketTempo(daysOnMarket, hotnessScore);
+  // Calculate market type and tempo (memoized to avoid expensive recalculations)
+  const marketType = useMemo(
+    () => calculateMarketType(daysOnMarket, hotnessScore, saleToListRatio),
+    [daysOnMarket, hotnessScore, saleToListRatio]
+  );
+  const marketTempo = useMemo(
+    () => getMarketTempo(daysOnMarket, hotnessScore),
+    [daysOnMarket, hotnessScore]
+  );
 
   // Get AI analysis
   const aiAnalysis =
@@ -480,28 +463,28 @@ export function MarketPulse({
           metricId="days_on_market"
           value={daysOnMarket}
           label="Days on Market"
-          trend={getMetricTrend(report, PULSE_METRICS[0])}
+          trend={getMetricTrend(report, PULSE_METRICS[0].id, PULSE_METRICS[0].aliases)}
         />
 
         <MetricDisplay
           metricId="active_listing_count"
           value={activeListings}
           label="Active Listings"
-          trend={getMetricTrend(report, PULSE_METRICS[1])}
+          trend={getMetricTrend(report, PULSE_METRICS[1].id, PULSE_METRICS[1].aliases)}
         />
 
         <MetricDisplay
           metricId="hotness_score"
           value={hotnessScore}
           label="Hotness Score"
-          trend={getMetricTrend(report, PULSE_METRICS[2])}
+          trend={getMetricTrend(report, PULSE_METRICS[2].id, PULSE_METRICS[2].aliases)}
         />
 
         <MetricDisplay
           metricId="sale_to_list_ratio"
           value={saleToListRatio}
           label="Sale-to-List Ratio"
-          trend={getMetricTrend(report, PULSE_METRICS[3])}
+          trend={getMetricTrend(report, PULSE_METRICS[3].id, PULSE_METRICS[3].aliases)}
         />
       </div>
 
@@ -609,7 +592,7 @@ export function MarketPulse({
               <p className="report-body-sm" style={{ margin: 0 }}>
                 {(() => {
                   const ratioPercent = saleToListRatio > 2 ? saleToListRatio : saleToListRatio * 100;
-                  if (ratioPercent >= 100) {
+                  if (ratioPercent >= SALE_TO_LIST_RATIO.AT_OR_ABOVE_LIST) {
                     return 'Homes selling at or above list price. Price competitively for sellers.';
                   }
                   return `Average ${(100 - ratioPercent).toFixed(1)}% discount from list. Factor into pricing strategy.`;

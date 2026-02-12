@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   ShieldAlert,
@@ -14,6 +14,15 @@ import {
 
 import { SectionCard, AIAnalysisBlock } from '../core';
 import { getMetricWithAliases } from '../../utils/metricHelpers';
+import {
+  OVERVALUED_PCT,
+  DAYS_ON_MARKET,
+  INVENTORY_MONTHS,
+  VACANCY_RATE,
+  UNEMPLOYMENT_RATE,
+  JOB_GROWTH,
+  RISK_SCORE,
+} from '../../utils/thresholds';
 import type { ReportInstance, NewsItem } from '../../../../types';
 
 /**
@@ -102,7 +111,7 @@ function calculateOvervaluationRisk(
 ): { severity: RiskSeverity; description: string; details: string; value: string } | null {
   if (overvaluedPct === null) return null;
 
-  if (overvaluedPct >= 15) {
+  if (overvaluedPct >= OVERVALUED_PCT.HIGH_RISK) {
     return {
       severity: 'high',
       description: 'Prices significantly above fair value',
@@ -110,7 +119,7 @@ function calculateOvervaluationRisk(
       value: `${overvaluedPct.toFixed(1)}% overvalued`,
     };
   }
-  if (overvaluedPct >= 5) {
+  if (overvaluedPct >= OVERVALUED_PCT.MEDIUM_RISK) {
     return {
       severity: 'medium',
       description: 'Prices moderately elevated',
@@ -118,7 +127,7 @@ function calculateOvervaluationRisk(
       value: `${overvaluedPct.toFixed(1)}% above fair value`,
     };
   }
-  if (overvaluedPct >= -5) {
+  if (overvaluedPct >= -OVERVALUED_PCT.FAIR_VALUE_THRESHOLD) {
     return {
       severity: 'low',
       description: 'Prices near fair value',
@@ -149,13 +158,13 @@ function calculateLiquidityRisk(
 
   // Days on market evaluation (higher = harder to sell)
   if (daysOnMarket !== null) {
-    if (daysOnMarket >= 90) {
+    if (daysOnMarket >= DAYS_ON_MARKET.HIGH_LIQUIDITY_RISK) {
       score += 2;
       factors.push(`${Math.round(daysOnMarket)} days to sell`);
-    } else if (daysOnMarket >= 60) {
+    } else if (daysOnMarket >= DAYS_ON_MARKET.MEDIUM_LIQUIDITY_RISK) {
       score += 1;
       factors.push(`${Math.round(daysOnMarket)} days avg`);
-    } else if (daysOnMarket >= 30) {
+    } else if (daysOnMarket >= DAYS_ON_MARKET.SLIGHT_SELLERS) {
       factors.push(`${Math.round(daysOnMarket)} days`);
     } else {
       factors.push(`${Math.round(daysOnMarket)} days (fast)`);
@@ -164,10 +173,10 @@ function calculateLiquidityRisk(
 
   // Inventory evaluation (higher months = harder to sell)
   if (inventory !== null) {
-    if (inventory >= 6) {
+    if (inventory >= INVENTORY_MONTHS.HIGH_RISK) {
       score += 2;
       factors.push(`${inventory.toFixed(1)} months inventory`);
-    } else if (inventory >= 4) {
+    } else if (inventory >= INVENTORY_MONTHS.MEDIUM_RISK) {
       score += 1;
       factors.push(`${inventory.toFixed(1)} months supply`);
     } else {
@@ -210,7 +219,7 @@ function calculateVacancyRisk(
 ): { severity: RiskSeverity; description: string; details: string; value: string } | null {
   if (vacancyRate === null) return null;
 
-  if (vacancyRate >= 10) {
+  if (vacancyRate >= VACANCY_RATE.HIGH_RISK) {
     return {
       severity: 'high',
       description: 'High vacancy in the area',
@@ -218,7 +227,7 @@ function calculateVacancyRisk(
       value: `${vacancyRate.toFixed(1)}% vacancy rate`,
     };
   }
-  if (vacancyRate >= 6) {
+  if (vacancyRate >= VACANCY_RATE.MEDIUM_RISK) {
     return {
       severity: 'medium',
       description: 'Elevated vacancy levels',
@@ -249,10 +258,10 @@ function calculateEconomicRisk(
 
   // Unemployment evaluation
   if (unemploymentRate !== null) {
-    if (unemploymentRate >= 8) {
+    if (unemploymentRate >= UNEMPLOYMENT_RATE.HIGH_RISK) {
       score += 2;
       factors.push(`${unemploymentRate.toFixed(1)}% unemployment`);
-    } else if (unemploymentRate >= 5) {
+    } else if (unemploymentRate >= UNEMPLOYMENT_RATE.ELEVATED_RISK) {
       score += 1;
       factors.push(`${unemploymentRate.toFixed(1)}% unemployment`);
     } else {
@@ -262,10 +271,10 @@ function calculateEconomicRisk(
 
   // Job growth evaluation (negative growth is concerning)
   if (jobGrowth !== null) {
-    if (jobGrowth < -2) {
+    if (jobGrowth < JOB_GROWTH.DECLINING) {
       score += 2;
       factors.push(`${jobGrowth.toFixed(1)}% job growth`);
-    } else if (jobGrowth < 1) {
+    } else if (jobGrowth < JOB_GROWTH.STAGNANT) {
       score += 1;
       factors.push(`${jobGrowth.toFixed(1)}% job growth`);
     } else {
@@ -374,13 +383,13 @@ function getRiskScoreFromDetails(
   if (riskScore === undefined || riskScore === null) return null;
 
   let interpretation: string;
-  if (riskScore >= 80) {
+  if (riskScore >= RISK_SCORE.VERY_LOW) {
     interpretation = 'Very low risk profile';
-  } else if (riskScore >= 60) {
+  } else if (riskScore >= RISK_SCORE.LOW) {
     interpretation = 'Below average risk';
-  } else if (riskScore >= 40) {
+  } else if (riskScore >= RISK_SCORE.MODERATE) {
     interpretation = 'Moderate risk level';
-  } else if (riskScore >= 20) {
+  } else if (riskScore >= RISK_SCORE.ELEVATED) {
     interpretation = 'Above average risk';
   } else {
     interpretation = 'High risk profile';
@@ -421,11 +430,15 @@ export function RiskAssessment({
     getMetricWithAliases(report, 'job_growth_yoy') ??
     getMetricWithAliases(report, 'job_growth');
 
-  // Calculate risk indicators
-  const overvaluationRisk = calculateOvervaluationRisk(overvaluedPct);
-  const liquidityRisk = calculateLiquidityRisk(daysOnMarket, inventory);
-  const vacancyRisk = calculateVacancyRisk(vacancyRate);
-  const economicRisk = calculateEconomicRisk(unemploymentRate, jobGrowth);
+  // Calculate risk indicators (memoized to avoid expensive recalculations)
+  const riskCalculations = useMemo(() => ({
+    overvaluation: calculateOvervaluationRisk(overvaluedPct),
+    liquidity: calculateLiquidityRisk(daysOnMarket, inventory),
+    vacancy: calculateVacancyRisk(vacancyRate),
+    economic: calculateEconomicRisk(unemploymentRate, jobGrowth),
+  }), [overvaluedPct, daysOnMarket, inventory, vacancyRate, unemploymentRate, jobGrowth]);
+
+  const { overvaluation: overvaluationRisk, liquidity: liquidityRisk, vacancy: vacancyRisk, economic: economicRisk } = riskCalculations;
 
   // Get risk score from score breakdown
   const riskScore = getRiskScoreFromDetails(report);
@@ -587,9 +600,9 @@ export function RiskAssessment({
                 className="report-heading-md"
                 style={{
                   color:
-                    riskScore.score >= 60
+                    riskScore.score >= RISK_SCORE.LOW
                       ? 'var(--report-success)'
-                      : riskScore.score >= 40
+                      : riskScore.score >= RISK_SCORE.MODERATE
                       ? 'var(--report-gold)'
                       : 'var(--report-error)',
                   margin: 0,

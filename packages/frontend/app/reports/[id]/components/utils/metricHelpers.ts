@@ -160,3 +160,72 @@ export function hasAllMetrics(
 ): boolean {
   return metricIds.every(id => getMetricWithAliases(report, id) !== null);
 }
+
+/**
+ * Trend direction type
+ */
+export type TrendDirection = 'up' | 'down' | 'stable';
+
+/**
+ * Trend data for displaying metric changes over time
+ */
+export interface MetricTrend {
+  direction: TrendDirection;
+  changePct: number;
+  sparklineData?: number[];
+}
+
+/**
+ * Get a metric value trying the primary ID and a list of aliases
+ *
+ * This is a convenience wrapper around getMetricWithAliases that accepts
+ * an explicit list of aliases to try in order.
+ */
+export function getMetricValueWithAliases(
+  report: ReportWithTemplate,
+  metricId: string,
+  aliases: string[] = []
+): number | null {
+  // Try primary ID first
+  const primaryValue = getMetricWithAliases(report, metricId);
+  if (primaryValue !== null) return primaryValue;
+
+  // Try aliases
+  for (const alias of aliases) {
+    const aliasValue = getMetricWithAliases(report, alias);
+    if (aliasValue !== null) return aliasValue;
+  }
+
+  return null;
+}
+
+/**
+ * Get historical trend data for a metric, trying the primary ID and aliases
+ *
+ * Returns trend information including direction, percentage change, and
+ * sparkline data points extracted from the report's historical data.
+ */
+export function getMetricTrend(
+  report: ReportWithTemplate,
+  metricId: string,
+  aliases: string[] = []
+): MetricTrend | undefined {
+  const historical = report.populated_data?.historical;
+  if (!historical) return undefined;
+
+  // Try primary ID and aliases
+  const idsToTry = [metricId, ...aliases];
+
+  for (const id of idsToTry) {
+    const histData = historical[id];
+    if (histData && histData.data && histData.data.length >= 2) {
+      return {
+        direction: histData.trend as TrendDirection,
+        changePct: histData.change_pct,
+        sparklineData: histData.data.map((d: { value: number }) => d.value),
+      };
+    }
+  }
+
+  return undefined;
+}

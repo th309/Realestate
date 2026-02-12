@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   TrendingDown,
@@ -335,10 +335,14 @@ export function RisksAndConsiderations({
     getMetricWithAliases(report, 'median_household_income') ??
     getMetricWithAliases(report, 'median_income');
 
-  // Calculate risk indicators
-  const overvaluationRisk = calculateOvervaluationRisk(overvaluedPct);
-  const affordabilityRisk = calculateAffordabilityStress(homeValue, medianIncome);
-  const volatilityRisk = calculateVolatilityRisk(report);
+  // Calculate risk indicators (memoized to avoid expensive recalculations)
+  const riskCalculations = useMemo(() => ({
+    overvaluation: calculateOvervaluationRisk(overvaluedPct),
+    affordability: calculateAffordabilityStress(homeValue, medianIncome),
+    volatility: calculateVolatilityRisk(report),
+  }), [overvaluedPct, homeValue, medianIncome, report]);
+
+  const { overvaluation: overvaluationRisk, affordability: affordabilityRisk, volatility: volatilityRisk } = riskCalculations;
 
   // Build risk indicators array
   const riskIndicators: RiskIndicator[] = [];
