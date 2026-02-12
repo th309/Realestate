@@ -341,7 +341,11 @@ export interface ReportInstance {
 
 export interface PopulatedReportData {
   current: Record<string, number | string | null>;
-  historical: Record<string, TimeSeriesPoint[]>;
+  historical: Record<string, {
+    data: Array<{ date: string; value: number }>;
+    trend: 'up' | 'down' | 'stable';
+    change_pct: number;
+  }>;
   benchmarks: {
     national?: Record<string, number>;
     state?: Record<string, number>;
@@ -352,23 +356,12 @@ export interface PopulatedReportData {
     investoredge?: ScoreData;
   };
   demographics?: Record<string, any>;
-  migration?: {
-    net_migration: number;
-    origins: { geography: Geography; count: number }[];
-    destinations: { geography: Geography; count: number }[];
-    trend: number[];
-  };
   comparables?: {
     geography: Geography;
     metrics: Record<string, number>;
     scores: Record<string, number>;
   }[];
   news?: NewsItem[];
-  cycle?: {
-    position: 'early_recovery' | 'expansion' | 'hyper_supply' | 'recession';
-    historical_peak: { date: string; value: number };
-    historical_trough: { date: string; value: number };
-  };
   pro_forma?: ProFormaData;
   /** Real-time data from news and economic indicators */
   realtime?: {

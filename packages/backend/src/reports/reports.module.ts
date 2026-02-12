@@ -15,9 +15,10 @@ import { GeminiNewsService } from './gemini-news.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { MetricsModule } from '../metrics/metrics.module';
+import { TimeSeriesModule } from '../timeseries/timeseries.module';
 
 @Module({
-  imports: [SupabaseModule, ScoringModule, MetricsModule],
+  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule],
   providers: [ReportsService, ClaudeService, GeminiNewsService],
   controllers: [ReportsController],
   exports: [ReportsService, ClaudeService, GeminiNewsService],

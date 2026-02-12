@@ -39,10 +39,7 @@ import { PersonalAffordability } from './sections/PersonalAffordability';
 import { BudgetBreakdown } from './sections/BudgetBreakdown';
 import { SavingsTimeline } from './sections/SavingsTimeline';
 import { AlternativeAreas } from './sections/AlternativeAreas';
-import { MigrationSankey } from './sections/MigrationSankey';
 import { RankedList } from './sections/RankedList';
-import { CycleIndicator } from './sections/CycleIndicator';
-import { CycleDiagram } from './sections/CycleDiagram';
 import { IndicatorDashboard } from './sections/IndicatorDashboard';
 import { PercentileRank } from './sections/PercentileRank';
 import { ProFormaAssumptions } from './sections/ProFormaAssumptions';
@@ -176,13 +173,10 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType<SectionProps>> = {
   savings_timeline: SavingsTimeline,
   alternative_areas: AlternativeAreas,
 
-  // Migration sections
-  migration_sankey: MigrationSankey,
+  // Ranked list sections
   ranked_list: RankedList,
 
-  // Cycle/Indicator sections
-  cycle_indicator: CycleIndicator,
-  cycle_diagram: CycleDiagram,
+  // Indicator sections
   indicator_dashboard: IndicatorDashboard,
   percentile_rank: PercentileRank,
   percentile_bands: PercentileRank, // Alias

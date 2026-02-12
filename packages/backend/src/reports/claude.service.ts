@@ -21,6 +21,11 @@ interface NarrativeSection {
   output_format?: 'text' | 'json_array' | 'json_object';
 }
 
+interface NewsContext {
+  news_context?: string;
+  market_signal_summary?: string;
+}
+
 interface ConversationMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -59,14 +64,25 @@ export class ClaudeService {
   ): Promise<Record<string, string | string[] | Record<string, any>>> {
     const results: Record<string, string | string[] | Record<string, any>> = {};
 
+    // Build news context enhancement for all narratives
+    const newsEnhancement = this.buildNewsEnhancement(context);
+
     for (const section of sections) {
       try {
-        const prompt = this.interpolateTemplate(
+        const basePrompt = this.interpolateTemplate(
           section.prompt_template,
           context,
         );
+
+        // Enhance prompt with news context when available
+        const enhancedPrompt = this.enhancePromptWithNews(
+          basePrompt,
+          newsEnhancement,
+          section.id,
+        );
+
         const response = await this.generateCompletion(
-          prompt,
+          enhancedPrompt,
           section.max_tokens,
         );
 
@@ -101,8 +117,9 @@ export class ClaudeService {
     userMessage: string,
     history: ConversationMessage[],
     report: any,
+    newsContext?: string,
   ): Promise<string> {
-    const systemPrompt = this.buildConversationSystemPrompt(report);
+    const systemPrompt = this.buildConversationSystemPrompt(report, newsContext);
     const messages = this.buildConversationMessages(history, userMessage);
 
     try {
@@ -120,23 +137,40 @@ export class ClaudeService {
     geographyName: string,
     metrics: Record<string, any>,
     userInputs: Record<string, any>,
+    newsContext?: string,
   ): Promise<string> {
-    const prompt = `Analyze this real estate investment opportunity in ${geographyName}.
+    let prompt = `Analyze this real estate investment opportunity in ${geographyName}.
 
 Market Metrics:
 ${JSON.stringify(metrics, null, 2)}
 
 User Investment Parameters:
-${JSON.stringify(userInputs, null, 2)}
+${JSON.stringify(userInputs, null, 2)}`;
+
+    // Add news context if available
+    if (newsContext && newsContext !== 'No recent news available for this market.') {
+      prompt += `
+
+Recent Local News & Market Intelligence:
+${newsContext}`;
+    }
+
+    prompt += `
 
 Provide a concise investment analysis covering:
 1. Cash flow potential
 2. Appreciation outlook
-3. Risk factors
+3. Risk factors${newsContext ? ' (include any news-related risks)' : ''}
 4. Entry point assessment
 5. Recommendation
 
-Keep the analysis under 400 words and be specific with numbers.`;
+${newsContext ? `When relevant, incorporate recent news into your analysis. For example:
+- How might employer expansions/layoffs affect rental demand?
+- What impact could new development projects have on supply?
+- Are there policy changes that could affect investment returns?
+Reference specific news items that strengthen or weaken the investment case.
+
+` : ''}Keep the analysis under 400 words and be specific with numbers.`;
 
     try {
       return await this.generateCompletion(prompt, 600);
@@ -208,13 +242,13 @@ Keep the analysis under 400 words and be specific with numbers.`;
     });
   }
 
-  private buildConversationSystemPrompt(report: any): string {
+  private buildConversationSystemPrompt(report: any, newsContext?: string): string {
     const userType = report.user_type || 'homebuyer';
     const heroScore = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
     const geographyName =
       report.primary_geography_name || 'the selected market';
 
-    return `You are an expert real estate market analyst for PropertyIQ, helping ${
+    let prompt = `You are an expert real estate market analyst for PropertyIQ, helping ${
       userType === 'investor'
         ? 'real estate investors'
         : 'homebuyers and renters'
@@ -225,15 +259,34 @@ You are discussing a ${report.template?.name || 'Market'} report for ${geography
 Key Market Data:
 - ${heroScore} Score: ${userType === 'investor' ? report.investoredge_score : report.homeready_score}/100
 - Geography Type: ${report.primary_geography_type}
-${report.scores_snapshot ? `- Market Scores: ${JSON.stringify(report.scores_snapshot)}` : ''}
+${report.scores_snapshot ? `- Market Scores: ${JSON.stringify(report.scores_snapshot)}` : ''}`;
+
+    // Add news context if available
+    if (newsContext && newsContext !== 'No recent news available for this market.') {
+      prompt += `
+
+Recent Local News & Market Intelligence:
+${newsContext}`;
+    }
+
+    prompt += `
 
 Guidelines:
 1. Be helpful, concise, and data-driven
 2. Focus on ${userType === 'investor' ? 'investment decisions (cash flow, appreciation, risk)' : 'homebuying decisions (affordability, timing, neighborhoods)'}
 3. Reference specific data points from the report
-4. Acknowledge limitations when asked about unavailable data
-5. Provide actionable recommendations
-6. Keep responses under 300 words unless more detail is requested`;
+4. When relevant, incorporate recent local news to provide timely, contextual insights
+5. Acknowledge limitations when asked about unavailable data
+6. Provide actionable recommendations
+7. Keep responses under 300 words unless more detail is requested
+
+When using news context:
+- Reference specific developments, employers, or events when they support your analysis
+- Explain how recent news might impact the user's decision (e.g., "The recent announcement of [employer] expanding could drive rental demand...")
+- Be balanced - consider both positive and negative news implications
+- Don't force news into every response - only use it when genuinely relevant to the question`;
+
+    return prompt;
   }
 
   private buildConversationMessages(
@@ -263,5 +316,133 @@ Guidelines:
       fallbacks[sectionId] ||
       'Analysis pending. Please refresh to see updated insights.'
     );
+  }
+
+  /**
+   * Build news enhancement context from available news data
+   */
+  private buildNewsEnhancement(context: Record<string, any>): string | null {
+    const newsContext = context.news_context;
+    const signalSummary = context.market_signal_summary;
+
+    if (!newsContext || newsContext === 'No recent news available for this market.') {
+      return null;
+    }
+
+    const parts: string[] = [];
+
+    parts.push('\n\n---\nRECENT LOCAL NEWS & MARKET INTELLIGENCE\n');
+    parts.push(newsContext);
+
+    if (signalSummary) {
+      parts.push(`\n${signalSummary}`);
+    }
+
+    parts.push('\n---\n');
+
+    return parts.join('');
+  }
+
+  /**
+   * Enhance a prompt with news context and instructions
+   */
+  private enhancePromptWithNews(
+    basePrompt: string,
+    newsEnhancement: string | null,
+    sectionId: string,
+  ): string {
+    if (!newsEnhancement) {
+      return basePrompt;
+    }
+
+    // Section-specific instructions for incorporating news
+    const newsInstructions = this.getNewsInstructionsForSection(sectionId);
+
+    return `${basePrompt}
+${newsEnhancement}
+${newsInstructions}`;
+  }
+
+  /**
+   * Get section-specific instructions for incorporating news context
+   */
+  private getNewsInstructionsForSection(sectionId: string): string {
+    const instructions: Record<string, string> = {
+      market_summary: `
+IMPORTANT: Incorporate relevant recent news into your analysis. For example:
+- If there's employer expansion news, mention how it could drive housing demand
+- If there's new development announced, note its potential impact on supply
+- If there are infrastructure projects, discuss accessibility improvements
+- If there are policy changes, explain implications for buyers/investors
+Be specific but concise - reference the actual news when relevant to the market narrative.`,
+
+      trend_observations: `
+IMPORTANT: When identifying trends, consider recent local news that may explain or amplify observed patterns:
+- Employment news affecting demand trends
+- Development projects impacting supply
+- Economic indicators supporting or contradicting price movements
+Reference specific news items when they help explain a trend.`,
+
+      investment_thesis: `
+IMPORTANT: Factor recent news into your investment assessment:
+- Major employer moves (expansion/layoffs) affect rental demand and appreciation
+- New development projects impact future supply and competition
+- Infrastructure investments can shift neighborhood desirability
+- Policy changes may affect investment returns (taxes, regulations)
+Cite specific news that strengthens or weakens the investment case.`,
+
+      risk_factors: `
+IMPORTANT: Consider recent news when assessing risks:
+- Employer layoffs or departures increase vacancy risk
+- New supply from development projects could pressure rents
+- Climate events may signal insurance or disaster risk
+- Policy changes could affect returns or regulations
+Include news-based risks alongside data-driven risks.`,
+
+      economic_outlook: `
+IMPORTANT: Incorporate recent economic news into your outlook:
+- Job growth announcements from specific employers
+- Industry changes affecting the local economy
+- Infrastructure investments improving economic potential
+- Migration trends supported by employment opportunities
+Ground your outlook in both data and recent developments.`,
+
+      migration_analysis: `
+IMPORTANT: Consider news that may explain migration patterns:
+- Major employer relocations or expansions attracting workers
+- Cost of living changes driving migration
+- Quality of life improvements (infrastructure, amenities)
+- Remote work trends affecting location choices
+Reference specific news that supports migration trends.`,
+
+      cycle_explanation: `
+IMPORTANT: Use recent news to contextualize cycle position:
+- Development pipeline affecting future supply
+- Economic indicators supporting the current phase
+- Policy changes that may accelerate or slow cycle progression
+Connect news events to where we are in the market cycle.`,
+
+      market_story: `
+IMPORTANT: Weave recent news into the market narrative:
+- Who is moving here and why (employment, lifestyle)?
+- What developments are shaping the community?
+- How are local policies affecting housing?
+- What economic forces are driving change?
+Use specific news items to bring the story to life.`,
+
+      affordability_outlook: `
+IMPORTANT: Factor recent developments into affordability projections:
+- Income growth from employer expansions
+- Housing supply from new developments
+- Policy changes affecting affordability programs
+- Economic trends impacting household budgets
+Ground your outlook in recent local developments.`,
+    };
+
+    // Default instruction for sections not specifically mapped
+    const defaultInstruction = `
+IMPORTANT: If any of the recent local news above is relevant to your analysis, incorporate it naturally. Reference specific developments, employers, or events that support your points. This makes the analysis more timely and locally relevant.`;
+
+    return instructions[sectionId] || defaultInstruction;
   }
 }

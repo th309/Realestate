@@ -13,8 +13,10 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ClaudeService } from './claude.service';
 import { GeminiNewsService } from './gemini-news.service';
+import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { randomBytes } from 'crypto';
+import { HISTORY_MONTHS_MAX } from '../common/history.constants';
 
 export interface ReportTemplate {
   id: string;
@@ -25,6 +27,37 @@ export interface ReportTemplate {
   version: number;
   tier_required: string;
   config: any;
+}
+
+/**
+ * Score contextualization - provides human-readable interpretation of scores
+ */
+export interface ScoreContext {
+  /** Human-readable interpretation (e.g., "Excellent buying conditions") */
+  interpretation: string;
+  /** Percentile comparison text (e.g., "Top 15% of metros in your price range") */
+  percentile_text: string;
+  /** Practical dollar impact (e.g., "Historically, homes in similar markets appreciated...") */
+  dollar_impact?: string;
+  /** Comparison to other areas (e.g., "Better than 85% of comparable areas") */
+  comparison?: string;
+}
+
+/**
+ * Score type definitions for contextualization
+ */
+type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
+
+/** Historical data for a single metric */
+export interface HistoricalMetricData {
+  data: Array<{ date: string; value: number }>;
+  trend: 'up' | 'down' | 'stable';
+  change_pct: number;
+}
+
+/** Historical data collection for all metrics */
+export interface HistoricalData {
+  [metricId: string]: HistoricalMetricData;
 }
 
 /** Market metrics for AI context - matches template placeholders */
@@ -104,6 +137,7 @@ export class ReportsService {
     private readonly scoringService: ScoringService,
     private readonly claudeService: ClaudeService,
     private readonly geminiNewsService: GeminiNewsService,
+    private readonly timeSeriesService: TimeSeriesService,
   ) {}
 
   /**
@@ -229,6 +263,12 @@ export class ReportsService {
         allRequiredMetrics,
       );
 
+      // 1c. Fetch historical data for key metrics (last 6 months)
+      const historicalData = await this.fetchHistoricalData(
+        dto.primary_geography.id,
+        geoType,
+      );
+
       // 2. Scout news via Gemini (with caching)
       const newsResult = await this.geminiNewsService.getOrScoutNews(
         dto.primary_geography.id,
@@ -245,6 +285,21 @@ export class ReportsService {
       // Get signal summary if news available
       const signalSummary = newsResult
         ? this.geminiNewsService.summarizeSignals(newsResult)
+        : null;
+
+      // 2b. Generate score contexts for human-readable interpretations
+      const scoreContexts = scores
+        ? this.generateAllScoreContexts(
+            {
+              homeready: scores.scores.homeready,
+              investoredge: scores.scores.investoredge,
+              markethealth: scores.scores.markethealth,
+            },
+            {
+              geography_type: geoType,
+              median_price: marketMetrics.median_listing_price || marketMetrics.zhvi,
+            },
+          )
         : null;
 
       // 3. Assemble report data
@@ -267,7 +322,7 @@ export class ReportsService {
           median_income: marketMetrics.median_income,
           population: marketMetrics.population,
         },
-        historical: {},
+        historical: historicalData,
         benchmarks: {},
         scores: {
           homeready: scores
@@ -275,6 +330,7 @@ export class ReportsService {
                 score: scores.scores.homeready.score,
                 grade: scores.scores.homeready.grade,
                 trend: 'stable',
+                context: scoreContexts?.homeready || undefined,
               }
             : undefined,
           investoredge: scores
@@ -282,6 +338,7 @@ export class ReportsService {
                 score: scores.scores.investoredge.score,
                 grade: scores.scores.investoredge.grade,
                 trend: 'stable',
+                context: scoreContexts?.investoredge || undefined,
               }
             : undefined,
           markethealth: scores
@@ -289,6 +346,7 @@ export class ReportsService {
                 score: scores.scores.markethealth.score,
                 grade: scores.scores.markethealth.grade,
                 trend: 'stable',
+                context: scoreContexts?.markethealth || undefined,
               }
             : undefined,
         },
@@ -401,6 +459,16 @@ export class ReportsService {
             market_signal_summary: signalSummary
               ? `Overall market signal: ${signalSummary.overall.toUpperCase()} (${signalSummary.bullish_count} bullish, ${signalSummary.bearish_count} bearish signals)`
               : null,
+            // Score context for AI narratives
+            homeready_context: scoreContexts?.homeready?.interpretation || null,
+            homeready_comparison: scoreContexts?.homeready?.comparison || null,
+            homeready_impact: scoreContexts?.homeready?.dollar_impact || null,
+            investoredge_context: scoreContexts?.investoredge?.interpretation || null,
+            investoredge_comparison: scoreContexts?.investoredge?.comparison || null,
+            investoredge_impact: scoreContexts?.investoredge?.dollar_impact || null,
+            markethealth_context: scoreContexts?.markethealth?.interpretation || null,
+            markethealth_comparison: scoreContexts?.markethealth?.comparison || null,
+            markethealth_impact: scoreContexts?.markethealth?.dollar_impact || null,
             ...dto.user_inputs,
           },
         );
@@ -571,11 +639,31 @@ export class ReportsService {
     // Get report for context
     const report = await this.getReport(reportId, userId);
 
+    // Extract news context from report's realtime data if available
+    let newsContext: string | undefined;
+    const realtimeData = report.populated_data?.realtime;
+    if (realtimeData && realtimeData.news && realtimeData.news.length > 0) {
+      // Format news for conversation context using the same format as narrative generation
+      const newsResult = {
+        local_news: realtimeData.news,
+        economic_indicators: realtimeData.indicators || [],
+        market_signals: realtimeData.signals || [],
+        national_context: realtimeData.national_context,
+      };
+      newsContext = this.geminiNewsService.formatNewsForPrompt(newsResult as any, {
+        maxNewsItems: 5,
+        includeIndicators: true,
+        includeSignals: true,
+        includeNational: true,
+      });
+    }
+
     // Generate AI response
     const response = await this.claudeService.generateConversationResponse(
       content,
       conversation.messages || [],
       report,
+      newsContext,
     );
 
     // Update conversation
@@ -925,6 +1013,132 @@ export class ReportsService {
   }
 
   /**
+   * Fetch historical data for key metrics (last 6 months)
+   *
+   * Metrics with timeseries support:
+   * - zhvi (home_value): Zillow Home Value Index
+   * - zori (rent_index): Zillow Observed Rent Index
+   * - days_on_market: Median days on market from Realtor
+   * - active_listing_count (for_sale_inventory): Active listings from Realtor
+   * - hotness_score: Market hotness from Realtor
+   * - cap_rate: Calculated cap rate (computed from ZHVI + ZORI)
+   *
+   * @param geographyId - The geography ID (CBSA code, FIPS, or ZIP)
+   * @param geographyType - Type of geography
+   * @returns Historical data for each metric with trend and change percentage
+   */
+  private async fetchHistoricalData(
+    geographyId: string,
+    geographyType: 'metro' | 'county' | 'zip',
+  ): Promise<HistoricalData> {
+    const historical: HistoricalData = {};
+
+    // Key metrics that have timeseries data
+    // Map report metric names to timeseries metricIds
+    const metricsToFetch: Array<{ reportKey: string; timeseriesId: string }> = [
+      { reportKey: 'zhvi', timeseriesId: 'home_value' },
+      { reportKey: 'zori', timeseriesId: 'rent_index' },
+      { reportKey: 'days_on_market', timeseriesId: 'days_on_market' },
+      { reportKey: 'active_listing_count', timeseriesId: 'for_sale_inventory' },
+      { reportKey: 'hotness_score', timeseriesId: 'hotness_score' },
+      { reportKey: 'cap_rate', timeseriesId: 'cap_rate' },
+    ];
+
+    // Fetch all metrics in parallel for performance
+    const fetchPromises = metricsToFetch.map(async ({ reportKey, timeseriesId }) => {
+      try {
+        // Use lastPoints to get the most recent N months of data
+        // HISTORY_MONTHS_MAX = 6, so we fetch 6 data points
+        const data = await this.timeSeriesService.getTimeSeries(
+          timeseriesId,
+          geographyType,
+          geographyId,
+          undefined, // startDate
+          undefined, // endDate
+          undefined, // limit
+          HISTORY_MONTHS_MAX, // lastPoints - get last 6 months
+        );
+
+        if (!data || data.length === 0) {
+          this.logger.debug(`No historical data for ${reportKey} in ${geographyType} ${geographyId}`);
+          return { reportKey, result: null };
+        }
+
+        // Calculate trend and change percentage
+        const { trend, change_pct } = this.calculateTrendAndChange(data);
+
+        return {
+          reportKey,
+          result: {
+            data: data.map(d => ({ date: d.date, value: d.value })),
+            trend,
+            change_pct,
+          } as HistoricalMetricData,
+        };
+      } catch (error) {
+        this.logger.warn(`Failed to fetch historical data for ${reportKey}: ${error.message}`);
+        return { reportKey, result: null };
+      }
+    });
+
+    // Wait for all fetches to complete
+    const results = await Promise.all(fetchPromises);
+
+    // Build the historical data object
+    for (const { reportKey, result } of results) {
+      if (result) {
+        historical[reportKey] = result;
+      }
+    }
+
+    this.logger.log(
+      `Fetched historical data for ${geographyType} ${geographyId}: ${Object.keys(historical).length} metrics`,
+    );
+
+    return historical;
+  }
+
+  /**
+   * Calculate trend direction and percentage change from timeseries data
+   *
+   * @param data - Array of timeseries data points (ordered chronologically, oldest first)
+   * @returns Object with trend ('up', 'down', 'stable') and change_pct
+   */
+  private calculateTrendAndChange(data: TimeSeriesDataPoint[]): {
+    trend: 'up' | 'down' | 'stable';
+    change_pct: number;
+  } {
+    if (data.length < 2) {
+      return { trend: 'stable', change_pct: 0 };
+    }
+
+    // First value is oldest, last value is most recent
+    const oldestValue = data[0].value;
+    const latestValue = data[data.length - 1].value;
+
+    // Calculate percentage change
+    let change_pct = 0;
+    if (oldestValue !== 0) {
+      change_pct = ((latestValue - oldestValue) / Math.abs(oldestValue)) * 100;
+    }
+
+    // Round to 2 decimal places
+    change_pct = Math.round(change_pct * 100) / 100;
+
+    // Determine trend with a threshold for "stable" (within +/- 1%)
+    let trend: 'up' | 'down' | 'stable';
+    if (change_pct > 1) {
+      trend = 'up';
+    } else if (change_pct < -1) {
+      trend = 'down';
+    } else {
+      trend = 'stable';
+    }
+
+    return { trend, change_pct };
+  }
+
+  /**
    * Format number for display
    */
   private formatNumber(value: number | undefined, decimals = 0): string {
@@ -948,5 +1162,308 @@ export class ReportsService {
     if (value === undefined || value === null) return 'N/A';
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(decimals)}%`;
+  }
+
+  // ============================================================================
+  // Score Contextualization
+  // ============================================================================
+
+  /**
+   * Generate human-readable context for a score
+   *
+   * @param score - The numeric score (0-100)
+   * @param scoreType - The type of score (homeready, investoredge, markethealth)
+   * @param geoData - Optional geography data for enhanced context
+   * @returns ScoreContext with interpretation and comparison text
+   */
+  generateScoreContext(
+    score: number,
+    scoreType: ScoreType,
+    geoData?: {
+      geography_type?: 'metro' | 'county' | 'zip';
+      median_price?: number;
+      percentile?: number;
+      total_markets?: number;
+    },
+  ): ScoreContext {
+    // Get base interpretation based on score range
+    const interpretation = this.getScoreInterpretation(score, scoreType);
+
+    // Generate percentile text
+    const percentile_text = this.getPercentileText(score, scoreType, geoData);
+
+    // Generate dollar impact based on score type and value
+    const dollar_impact = this.getDollarImpact(score, scoreType, geoData?.median_price);
+
+    // Generate comparison text
+    const comparison = this.getComparisonText(score, geoData);
+
+    return {
+      interpretation,
+      percentile_text,
+      dollar_impact,
+      comparison,
+    };
+  }
+
+  /**
+   * Get human-readable interpretation based on score range
+   */
+  private getScoreInterpretation(score: number, scoreType: ScoreType): string {
+    // Score range labels based on GRADE_THRESHOLDS
+    const getRangeLabel = (score: number): string => {
+      if (score >= 93) return 'exceptional';
+      if (score >= 87) return 'excellent';
+      if (score >= 80) return 'very good';
+      if (score >= 73) return 'good';
+      if (score >= 67) return 'above average';
+      if (score >= 60) return 'moderate';
+      if (score >= 50) return 'below average';
+      if (score >= 40) return 'poor';
+      return 'very poor';
+    };
+
+    const rangeLabel = getRangeLabel(score);
+
+    // Score-type specific interpretations
+    const interpretations: Record<ScoreType, Record<string, string>> = {
+      homeready: {
+        exceptional: 'Exceptional buying conditions with strong appreciation potential',
+        excellent: 'Excellent market for homebuyers with favorable long-term outlook',
+        'very good': 'Very good buying opportunity with solid fundamentals',
+        good: 'Good conditions for buyers seeking stable markets',
+        'above average': 'Above average market with reasonable buying conditions',
+        moderate: 'Moderate conditions - consider timing and specific neighborhoods',
+        'below average': 'Below average conditions - buyer caution advised',
+        poor: 'Poor buying conditions - significant headwinds present',
+        'very poor': 'Very challenging market for homebuyers',
+      },
+      investoredge: {
+        exceptional: 'Exceptional investment opportunity with strong returns expected',
+        excellent: 'Excellent rental market with high yield potential',
+        'very good': 'Very good investment fundamentals and cash flow potential',
+        good: 'Good investment conditions with reasonable returns',
+        'above average': 'Above average returns likely compared to most markets',
+        moderate: 'Moderate investment potential - selective opportunities exist',
+        'below average': 'Below average returns expected - careful analysis needed',
+        poor: 'Poor investment conditions - limited upside potential',
+        'very poor': 'Very challenging for real estate investment',
+      },
+      markethealth: {
+        exceptional: 'Exceptionally strong market with high demand and activity',
+        excellent: 'Excellent market health with robust buyer competition',
+        'very good': 'Very healthy market conditions with strong momentum',
+        good: 'Good market dynamics with balanced supply and demand',
+        'above average': 'Above average market activity and conditions',
+        moderate: 'Moderate market conditions - neither hot nor cold',
+        'below average': 'Below average market activity - slower conditions',
+        poor: 'Poor market health - low demand and slow activity',
+        'very poor': 'Very weak market conditions with significant oversupply',
+      },
+    };
+
+    return interpretations[scoreType][rangeLabel] || 'Score data available';
+  }
+
+  /**
+   * Generate percentile comparison text
+   */
+  private getPercentileText(
+    score: number,
+    scoreType: ScoreType,
+    geoData?: { geography_type?: 'metro' | 'county' | 'zip'; percentile?: number; total_markets?: number },
+  ): string {
+    // If we have actual percentile data, use it
+    if (geoData?.percentile !== undefined) {
+      const position = geoData.percentile;
+      if (position <= 10) return `Top 10% of ${this.getGeoLabel(geoData.geography_type)}s`;
+      if (position <= 25) return `Top 25% of ${this.getGeoLabel(geoData.geography_type)}s`;
+      if (position <= 50) return `Top half of ${this.getGeoLabel(geoData.geography_type)}s`;
+      if (position <= 75) return `Bottom half of ${this.getGeoLabel(geoData.geography_type)}s`;
+      return `Bottom 25% of ${this.getGeoLabel(geoData.geography_type)}s`;
+    }
+
+    // Estimate percentile from score (scores are normalized 0-100 across all markets)
+    // Since scores are z-score normalized, score roughly maps to percentile position
+    const estimatedPercentile = 100 - score; // Higher score = lower (better) percentile
+
+    const geoLabel = this.getGeoLabel(geoData?.geography_type);
+
+    if (score >= 90) {
+      return `Top 10% of ${geoLabel}s nationwide`;
+    } else if (score >= 80) {
+      return `Top 20% of ${geoLabel}s nationwide`;
+    } else if (score >= 70) {
+      return `Top 30% of ${geoLabel}s nationwide`;
+    } else if (score >= 60) {
+      return `Above average among ${geoLabel}s`;
+    } else if (score >= 50) {
+      return `Average compared to other ${geoLabel}s`;
+    } else if (score >= 40) {
+      return `Below average among ${geoLabel}s`;
+    } else {
+      return `Bottom 40% of ${geoLabel}s nationwide`;
+    }
+  }
+
+  /**
+   * Get geography label for display
+   */
+  private getGeoLabel(geoType?: 'metro' | 'county' | 'zip'): string {
+    switch (geoType) {
+      case 'metro': return 'metro area';
+      case 'county': return 'county';
+      case 'zip': return 'ZIP code';
+      default: return 'market';
+    }
+  }
+
+  /**
+   * Generate practical dollar impact text based on score type
+   */
+  private getDollarImpact(
+    score: number,
+    scoreType: ScoreType,
+    medianPrice?: number,
+  ): string | undefined {
+    // Don't generate dollar impact if no price data
+    if (!medianPrice) return undefined;
+
+    // Calculate appreciation/return estimates based on score
+    // These are rough estimates based on historical data patterns
+    switch (scoreType) {
+      case 'homeready': {
+        // HomeReady predicts 3-year appreciation
+        // High scores (80+) historically correlate with ~5-8% annual appreciation
+        // Low scores (40-) correlate with 0-2% annual appreciation
+        let annualAppreciation: number;
+        if (score >= 80) {
+          annualAppreciation = 5 + ((score - 80) / 20) * 3; // 5-8%
+        } else if (score >= 60) {
+          annualAppreciation = 3 + ((score - 60) / 20) * 2; // 3-5%
+        } else if (score >= 40) {
+          annualAppreciation = 1 + ((score - 40) / 20) * 2; // 1-3%
+        } else {
+          annualAppreciation = Math.max(0, (score / 40) * 1); // 0-1%
+        }
+
+        const threeYearGain = medianPrice * (Math.pow(1 + annualAppreciation / 100, 3) - 1);
+
+        if (threeYearGain > 10000) {
+          return `Homes in similar markets have historically appreciated ~${this.formatCurrency(threeYearGain)} over 3 years`;
+        }
+        return undefined;
+      }
+
+      case 'investoredge': {
+        // InvestorEdge predicts total return (appreciation + yield)
+        // High scores suggest ~8-12% total annual return
+        // Low scores suggest 2-5% total annual return
+        let totalReturn: number;
+        if (score >= 80) {
+          totalReturn = 8 + ((score - 80) / 20) * 4; // 8-12%
+        } else if (score >= 60) {
+          totalReturn = 5 + ((score - 60) / 20) * 3; // 5-8%
+        } else if (score >= 40) {
+          totalReturn = 3 + ((score - 40) / 20) * 2; // 3-5%
+        } else {
+          totalReturn = 2 + (score / 40) * 1; // 2-3%
+        }
+
+        const annualReturn = medianPrice * (totalReturn / 100);
+
+        if (annualReturn > 5000) {
+          return `Expected annual return potential of ~${this.formatCurrency(annualReturn)} (${totalReturn.toFixed(1)}% yield + appreciation)`;
+        }
+        return undefined;
+      }
+
+      case 'markethealth': {
+        // MarketHealth is about current conditions, not returns
+        // Focus on liquidity and time-to-sell implications
+        if (score >= 80) {
+          return 'Properties typically sell within 2-3 weeks at or above asking price';
+        } else if (score >= 60) {
+          return 'Properties typically sell within 30-45 days near asking price';
+        } else if (score >= 40) {
+          return 'Properties may take 60-90 days to sell, often with price negotiations';
+        } else {
+          return 'Extended time on market common; significant negotiation expected';
+        }
+      }
+
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Generate comparison text based on score and geography
+   */
+  private getComparisonText(
+    score: number,
+    geoData?: { geography_type?: 'metro' | 'county' | 'zip'; total_markets?: number },
+  ): string | undefined {
+    // Calculate approximate percentile from score
+    // Scores are normalized 0-100, so a score of 75 means roughly better than 75% of markets
+    const betterThanPercent = Math.round(score);
+
+    if (score >= 80) {
+      return `Better than ${betterThanPercent}% of comparable areas`;
+    } else if (score >= 60) {
+      return `Outperforming ${betterThanPercent}% of similar markets`;
+    } else if (score >= 40) {
+      return `Performing similar to average markets`;
+    } else {
+      return `Underperforming compared to ${100 - betterThanPercent}% of markets`;
+    }
+  }
+
+  /**
+   * Generate score contexts for all score types in a report
+   * Returns a map of score type to context
+   */
+  generateAllScoreContexts(
+    scores: {
+      homeready?: { score: number; grade: string };
+      investoredge?: { score: number; grade: string };
+      markethealth?: { score: number; grade: string };
+    },
+    geoData?: {
+      geography_type?: 'metro' | 'county' | 'zip';
+      median_price?: number;
+    },
+  ): Record<ScoreType, ScoreContext | null> {
+    const contexts: Record<ScoreType, ScoreContext | null> = {
+      homeready: null,
+      investoredge: null,
+      markethealth: null,
+    };
+
+    if (scores.homeready) {
+      contexts.homeready = this.generateScoreContext(
+        scores.homeready.score,
+        'homeready',
+        geoData,
+      );
+    }
+
+    if (scores.investoredge) {
+      contexts.investoredge = this.generateScoreContext(
+        scores.investoredge.score,
+        'investoredge',
+        geoData,
+      );
+    }
+
+    if (scores.markethealth) {
+      contexts.markethealth = this.generateScoreContext(
+        scores.markethealth.score,
+        'markethealth',
+        geoData,
+      );
+    }
+
+    return contexts;
   }
 }
