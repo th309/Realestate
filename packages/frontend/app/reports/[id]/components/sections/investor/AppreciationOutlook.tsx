@@ -4,9 +4,89 @@ import React from 'react';
 import { TrendingUp, AlertTriangle, Calendar, Target } from 'lucide-react';
 
 import { SectionCard, MetricDisplay, TrendSparkline, AIAnalysisBlock } from '../core';
-import type { TrendDirection } from '../core';
-import { getMetricWithAliases } from '../../utils/metricHelpers';
+import type { MetricTrend, TrendDirection } from '../core';
 import type { ReportInstance } from '../../../../types';
+
+/**
+ * Metric configuration for appreciation metrics display
+ */
+interface AppreciationMetricConfig {
+  id: string;
+  label: string;
+  aliases?: string[];
+}
+
+/**
+ * Pool of appreciation-related metrics
+ * Priority order - pick first 6 with data
+ */
+const APPRECIATION_METRICS_POOL: AppreciationMetricConfig[] = [
+  { id: 'home_value', label: 'Median Home Value', aliases: ['zhvi', 'median_listing_price'] },
+  { id: 'home_value_yoy', label: 'YoY Appreciation', aliases: ['zhvi_yoy', 'home_price_yoy'] },
+  { id: 'home_price_forecast', label: '12-Month Forecast', aliases: ['zhvf_1yr_pct', 'price_forecast_1yr'] },
+  { id: 'overvalued_pct', label: 'Overvalued %', aliases: ['valuation_premium'] },
+  { id: 'appreciation_3yr', label: '3-Year Appreciation', aliases: ['total_appreciation_3yr'] },
+  { id: 'appreciation_5yr', label: '5-Year Appreciation', aliases: ['total_appreciation_5yr'] },
+  { id: 'price_per_sqft', label: 'Price per Sq Ft', aliases: ['median_price_sqft'] },
+  { id: 'median_sale_price', label: 'Median Sale Price', aliases: ['sold_price'] },
+  { id: 'list_price', label: 'Median List Price', aliases: ['median_listing_price'] },
+  { id: 'sale_to_list', label: 'Sale-to-List Ratio', aliases: ['sale_to_list_ratio'] },
+  { id: 'months_of_supply', label: 'Months of Supply', aliases: ['inventory_months'] },
+  { id: 'home_value_mom', label: 'MoM Change', aliases: ['zhvi_mom', 'price_mom'] },
+];
+
+/**
+ * Get metric value from pool config - checks current data then historical
+ */
+function getMetricFromPool(
+  report: ReportInstance,
+  config: AppreciationMetricConfig
+): number | null {
+  // Try primary ID first
+  const ids = [config.id, ...(config.aliases ?? [])];
+
+  for (const id of ids) {
+    // Try current data
+    const currentValue = report.populated_data?.current?.[id];
+    if (currentValue !== undefined && currentValue !== null) {
+      return Number(currentValue);
+    }
+
+    // Try historical data (latest value)
+    const histData = report.populated_data?.historical?.[id];
+    if (histData && histData.data && histData.data.length > 0) {
+      return histData.data[histData.data.length - 1].value;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get historical trend for a metric from pool config
+ */
+function getMetricTrendFromPool(
+  report: ReportInstance,
+  config: AppreciationMetricConfig
+): MetricTrend | undefined {
+  const historical = report.populated_data?.historical;
+  if (!historical) return undefined;
+
+  const ids = [config.id, ...(config.aliases ?? [])];
+
+  for (const id of ids) {
+    const histData = historical[id];
+    if (histData?.data && histData.data.length >= 2) {
+      return {
+        direction: histData.trend as TrendDirection,
+        changePct: histData.change_pct,
+        sparklineData: histData.data.map((d: { value: number }) => d.value),
+      };
+    }
+  }
+
+  return undefined;
+}
 
 /**
  * Props for AppreciationOutlook section
@@ -211,28 +291,31 @@ export function AppreciationOutlook({
   report,
   className = '',
 }: AppreciationOutlookProps): React.ReactElement {
-  // Get home value metrics with alias fallbacks
-  const homeValue =
-    getMetricWithAliases(report, 'home_value') ??
-    getMetricWithAliases(report, 'zhvi') ??
-    getMetricWithAliases(report, 'median_listing_price');
+  // Check all metrics in the pool and pick the first 6 that have data
+  const allMetricsWithData = APPRECIATION_METRICS_POOL.map((config) => {
+    const value = getMetricFromPool(report, config);
+    const trend = getMetricTrendFromPool(report, config);
+    return {
+      ...config,
+      value,
+      trend,
+    };
+  });
 
-  // Get YoY appreciation rate
-  const yoyAppreciation =
-    getMetricWithAliases(report, 'zhvi_yoy') ??
-    getMetricWithAliases(report, 'home_value_yoy') ??
-    getMetricWithAliases(report, 'home_price_yoy');
+  // Filter to metrics with data, take first 6
+  const metricsWithData = allMetricsWithData.filter((m) => m.value !== null).slice(0, 6);
+  const hasAnyData = metricsWithData.length > 0;
 
-  // Get 12-month forecast
-  const forecast =
-    getMetricWithAliases(report, 'zhvf_1yr_pct') ??
-    getMetricWithAliases(report, 'home_price_forecast') ??
-    getMetricWithAliases(report, 'price_forecast_1yr');
+  // Get specific values for outlook calculations (using pool helper)
+  const homeValueConfig = APPRECIATION_METRICS_POOL.find((c) => c.id === 'home_value');
+  const yoyConfig = APPRECIATION_METRICS_POOL.find((c) => c.id === 'home_value_yoy');
+  const forecastConfig = APPRECIATION_METRICS_POOL.find((c) => c.id === 'home_price_forecast');
+  const overvaluedConfig = APPRECIATION_METRICS_POOL.find((c) => c.id === 'overvalued_pct');
 
-  // Get overvalued percentage for valuation risk
-  const overvaluedPct =
-    getMetricWithAliases(report, 'overvalued_pct') ??
-    getMetricWithAliases(report, 'valuation_premium');
+  const homeValue = homeValueConfig ? getMetricFromPool(report, homeValueConfig) : null;
+  const yoyAppreciation = yoyConfig ? getMetricFromPool(report, yoyConfig) : null;
+  const forecast = forecastConfig ? getMetricFromPool(report, forecastConfig) : null;
+  const overvaluedPct = overvaluedConfig ? getMetricFromPool(report, overvaluedConfig) : null;
 
   // Get historical trend for home values (ZHVI)
   const zhviTrend =
@@ -259,7 +342,7 @@ export function AppreciationOutlook({
     report.ai_narratives?.investment_outlook;
 
   // Handle case where no data is available
-  if (!homeValue && yoyAppreciation === null && forecast === null) {
+  if (!hasAnyData) {
     return (
       <SectionCard
         title="Appreciation Outlook"
@@ -400,40 +483,26 @@ export function AppreciationOutlook({
         </div>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricDisplay
-          metricId="home_value"
-          value={homeValue}
-          label="Median Home Value"
-          trend={
-            zhviTrend
-              ? {
-                  direction: zhviTrend.direction,
-                  changePct: zhviTrend.changePct,
-                  sparklineData: zhviTrend.sparklineData,
-                }
-              : undefined
-          }
-        />
-
-        <MetricDisplay
-          metricId="zhvi_yoy"
-          value={yoyAppreciation}
-          label="YoY Appreciation"
-        />
-
-        <MetricDisplay
-          metricId="zhvf_1yr_pct"
-          value={forecast}
-          label="12-Month Forecast"
-        />
-
-        <MetricDisplay
-          metricId="overvalued_pct"
-          value={overvaluedPct}
-          label="Overvalued %"
-        />
+      {/* Key Metrics Grid - Shows first 6 metrics with data */}
+      <div className="mb-6">
+        <h4 className="report-label mb-4">Appreciation Metrics</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {metricsWithData.map((metric) => (
+            <div
+              key={metric.id}
+              className="rounded-lg p-3"
+              style={{ backgroundColor: 'var(--report-cream)' }}
+            >
+              <MetricDisplay
+                metricId={metric.id}
+                value={metric.value}
+                label={metric.label}
+                trend={metric.trend}
+                compact
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Historical Appreciation Visualization */}

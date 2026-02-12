@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Info } from 'lucide-react';
 import type { UseWizardStateReturn } from '../../hooks/useWizardState';
 import type { UserInputField } from '../../types';
@@ -10,9 +10,28 @@ interface StepUserInputsProps {
 }
 
 export const StepUserInputs: React.FC<StepUserInputsProps> = ({ wizardState }) => {
-  const { selectedTemplate, userInputs, setUserInput } = wizardState;
+  const { selectedTemplate, userInputs, setUserInput, setUserInputs } = wizardState;
 
   const inputs = selectedTemplate?.config.user_inputs || [];
+
+  // Initialize user inputs with default values on mount
+  useEffect(() => {
+    if (inputs.length === 0) return;
+
+    const defaults: Record<string, any> = {};
+    let hasNewDefaults = false;
+
+    inputs.forEach((input) => {
+      if (input.default !== undefined && userInputs[input.field_name] === undefined) {
+        defaults[input.field_name] = input.default;
+        hasNewDefaults = true;
+      }
+    });
+
+    if (hasNewDefaults) {
+      setUserInputs({ ...userInputs, ...defaults });
+    }
+  }, [inputs, userInputs, setUserInputs]);
 
   if (inputs.length === 0) {
     return (

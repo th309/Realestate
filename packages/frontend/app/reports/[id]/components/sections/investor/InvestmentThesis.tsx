@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, DollarSign, Percent, BarChart3 } from 'lucide-react';
+import { TrendingUp, DollarSign, Percent, BarChart3, Home, Clock, Calculator } from 'lucide-react';
 
 import { SectionCard, MetricDisplay, AIAnalysisBlock } from '../core';
 import {
@@ -25,7 +25,12 @@ interface MetricConfig {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const METRICS: MetricConfig[] = [
+/**
+ * Pool of investment-relevant metrics for the thesis section
+ * We pick the first 6 that have data for this geography
+ * Priority order: most important investment metrics first
+ */
+const METRICS_POOL: MetricConfig[] = [
   {
     id: 'cap_rate',
     aliases: ['capitalization_rate'],
@@ -39,9 +44,63 @@ const METRICS: MetricConfig[] = [
     icon: DollarSign,
   },
   {
+    id: 'cash_on_cash',
+    aliases: ['cash_on_cash_return', 'coc_return'],
+    label: 'Cash-on-Cash',
+    icon: Calculator,
+  },
+  {
     id: 'appreciation_rate',
     aliases: ['zhvi_yoy', 'home_value_yoy', 'price_growth_yoy'],
-    label: 'Appreciation Rate',
+    label: 'Appreciation',
+    icon: TrendingUp,
+  },
+  {
+    id: 'grm',
+    aliases: ['gross_rent_multiplier'],
+    label: 'Gross Rent Multiplier',
+    icon: BarChart3,
+  },
+  {
+    id: 'rent_to_price',
+    aliases: ['rent_to_price_ratio', 'price_to_rent'],
+    label: 'Rent-to-Price',
+    icon: Percent,
+  },
+  {
+    id: 'home_value',
+    aliases: ['zhvi', 'median_home_value'],
+    label: 'Median Home Value',
+    icon: Home,
+  },
+  {
+    id: 'median_rent',
+    aliases: ['zori', 'median_rental_price'],
+    label: 'Median Rent',
+    icon: DollarSign,
+  },
+  {
+    id: 'days_on_market',
+    aliases: ['dom', 'average_dom'],
+    label: 'Days on Market',
+    icon: Clock,
+  },
+  {
+    id: 'vacancy_rate',
+    aliases: ['rental_vacancy_rate'],
+    label: 'Vacancy Rate',
+    icon: Home,
+  },
+  {
+    id: 'home_price_forecast',
+    aliases: ['price_forecast', 'zhvf'],
+    label: 'Price Forecast',
+    icon: TrendingUp,
+  },
+  {
+    id: 'rent_growth_yoy',
+    aliases: ['zori_yoy', 'rental_growth'],
+    label: 'Rent Growth YoY',
     icon: BarChart3,
   },
 ];
@@ -99,7 +158,8 @@ export function InvestmentThesis({
   const investmentAnalysis = report.ai_narrative?.investment_analysis;
 
   // Gather metrics with their values and trends using shared helpers
-  const metricsWithData = METRICS.map((metric) => {
+  // Pick the first 6 metrics from the pool that have data
+  const metricsWithData = METRICS_POOL.map((metric) => {
     const value = getMetricValueWithAliases(report, metric.id, metric.aliases);
     const trend = getMetricTrend(report, metric.id, metric.aliases);
 
@@ -108,7 +168,9 @@ export function InvestmentThesis({
       value,
       trend,
     };
-  }).filter((m) => m.value !== null);
+  })
+    .filter((m) => m.value !== null)
+    .slice(0, 6);
 
   const hasScore = score !== null && score !== undefined;
   const hasMetrics = metricsWithData.length > 0;
@@ -200,7 +262,7 @@ export function InvestmentThesis({
         {hasMetrics && (
           <div>
             <h4 className="report-label mb-[var(--report-space-md)]">Key Investment Metrics</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--report-space-md)]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-[var(--report-space-sm)]">
               {metricsWithData.map((metric) => (
                 <MetricDisplay
                   key={metric.id}
@@ -208,6 +270,7 @@ export function InvestmentThesis({
                   value={metric.value}
                   label={metric.label}
                   trend={metric.trend}
+                  compact
                 />
               ))}
             </div>

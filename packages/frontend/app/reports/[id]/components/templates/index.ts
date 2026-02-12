@@ -67,6 +67,11 @@ import {
   TalkingPoints,
 } from '../sections/agent';
 
+// Comparison sections
+import { ComparisonHeader } from '../sections/ComparisonHeader';
+import { ComparisonTable } from '../sections/ComparisonTable';
+import { ComparisonChartGrid } from '../sections/ComparisonChartGrid';
+
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
@@ -95,7 +100,7 @@ export interface ReportTemplateDefinition {
 }
 
 /** Available report template types */
-export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot';
+export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot' | 'comparison';
 
 // -----------------------------------------------------------------------------
 // Template Definitions
@@ -133,6 +138,15 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
       { component: PriceTrends, id: 'price-trends' },
       { component: SupplyDemand, id: 'supply-demand' },
       { component: TalkingPoints, id: 'talking-points' },
+    ],
+  },
+  comparison: {
+    name: 'Market Comparison',
+    description: 'Side-by-side market comparison',
+    sections: [
+      { component: ComparisonHeader, id: 'comparison-header' },
+      { component: ComparisonTable, id: 'comparison-metrics' },
+      { component: ComparisonChartGrid, id: 'comparison-charts' },
     ],
   },
 };

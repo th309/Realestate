@@ -22,6 +22,7 @@ export interface ReportWithTemplate extends ReportInstance {
     name: string;
     icon: string;
     config: {
+      report_type?: 'snapshot' | 'comparison' | 'investment' | 'affordability' | 'cycle';
       pages: Array<{
         id: string;
         name: string;
@@ -32,4 +33,4 @@ export interface ReportWithTemplate extends ReportInstance {
   };
 }
 
-export { BrandingConfig };
+export type { BrandingConfig };

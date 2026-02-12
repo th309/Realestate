@@ -1,10 +1,14 @@
 'use client';
 
 import React from 'react';
-import { SectionProps } from '../types';
+import type { ReportInstance } from '../../../types';
 import { MapPin, AlertTriangle } from 'lucide-react';
 
-export function ComparisonHeader({ section, report }: SectionProps) {
+interface ComparisonHeaderProps {
+  report: ReportInstance;
+}
+
+export function ComparisonHeader({ report }: ComparisonHeaderProps) {
   const geographies = [
     { name: report.primary_geography_name, type: report.primary_geography_type },
     ...(report.comparison_geographies || []),

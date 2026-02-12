@@ -375,6 +375,17 @@ export interface PopulatedReportData {
     };
     fetched_at?: string;
   };
+  /** Comparison geography data for comparison reports */
+  comparisons?: Record<string, {
+    geography: Geography;
+    current: Record<string, number | string | null>;
+    historical?: Record<string, {
+      data: Array<{ date: string; value: number }>;
+      trend: 'up' | 'down' | 'stable';
+      change_pct: number;
+    }>;
+    scores?: Record<string, number | ScoreData>;
+  }>;
 }
 
 export interface TimeSeriesPoint {

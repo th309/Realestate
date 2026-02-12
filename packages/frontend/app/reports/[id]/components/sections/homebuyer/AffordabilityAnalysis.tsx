@@ -5,9 +5,37 @@ import { Home, DollarSign, TrendingUp, AlertTriangle, Calculator } from 'lucide-
 
 import { formatMetricValue } from '@/lib/data';
 import { SectionCard, MetricDisplay, AIAnalysisBlock, TrendSparkline } from '../core';
-import type { TrendDirection } from '../core';
-import { getMetricWithAliases } from '../../utils/metricHelpers';
+import type { TrendDirection, MetricTrend } from '../core';
+import { getMetricWithGeoFallback } from '../../utils/metricHelpers';
 import type { ReportInstance } from '../../../../types';
+
+/**
+ * Metric configuration for affordability display
+ */
+interface MetricConfig {
+  id: string;
+  label: string;
+  description: string;
+}
+
+/**
+ * Pool of affordability-relevant metrics using registry IDs
+ * Priority order - pick first 6 with data
+ */
+const AFFORDABILITY_METRICS_POOL: MetricConfig[] = [
+  { id: 'home_value', label: 'Median Home Value', description: 'Typical home price in the area' },
+  { id: 'median_income', label: 'Median Income', description: 'Local household earning power' },
+  { id: 'affordability_index', label: 'Affordability Index', description: 'Market affordability score' },
+  { id: 'price_to_income', label: 'Price-to-Income', description: 'Home price vs. income ratio' },
+  { id: 'home_value_yoy', label: 'Price Change YoY', description: 'Annual price appreciation' },
+  { id: 'income_growth_yoy', label: 'Income Growth YoY', description: 'Annual income growth' },
+  { id: 'mortgage_rate', label: 'Mortgage Rate', description: 'Current avg. mortgage rate' },
+  { id: 'monthly_payment', label: 'Est. Monthly Payment', description: 'Typical mortgage payment' },
+  { id: 'rent_vs_own', label: 'Rent vs. Own', description: 'Comparison of costs' },
+  { id: 'median_rent', label: 'Median Rent', description: 'Typical rental cost' },
+  { id: 'home_price_forecast', label: 'Price Forecast', description: '12-month price outlook' },
+  { id: 'cost_of_living_index', label: 'Cost of Living', description: 'Area cost index' },
+];
 
 export interface AffordabilityAnalysisProps {
   /** The full report data */
@@ -85,6 +113,50 @@ function getHistoricalTrend(
 }
 
 /**
+ * Get metric value - checks current data then historical
+ */
+function getMetricValue(
+  report: ReportInstance,
+  metricId: string
+): { value: number | null; sourceLabel: string | null } {
+  // Try current data first
+  const currentValue = report.populated_data?.current?.[metricId];
+  if (currentValue !== undefined && currentValue !== null) {
+    return { value: Number(currentValue), sourceLabel: null };
+  }
+
+  // Try historical data
+  const histData = report.populated_data?.historical?.[metricId];
+  if (histData && histData.data && histData.data.length > 0) {
+    return { value: histData.data[histData.data.length - 1].value, sourceLabel: null };
+  }
+
+  return { value: null, sourceLabel: null };
+}
+
+/**
+ * Get trend data for a metric from the pool
+ */
+function getPoolMetricTrend(
+  report: ReportInstance,
+  metricId: string
+): MetricTrend | undefined {
+  const historical = report.populated_data?.historical;
+  if (!historical) return undefined;
+
+  const histData = historical[metricId];
+  if (histData && histData.data && histData.data.length >= 2) {
+    return {
+      direction: histData.trend as TrendDirection,
+      changePct: histData.change_pct,
+      sparklineData: histData.data.map((d) => d.value),
+    };
+  }
+
+  return undefined;
+}
+
+/**
  * AffordabilityAnalysis - HomeReady report section analyzing housing affordability
  *
  * This section helps homebuyers understand if they can afford homes in this market
@@ -96,29 +168,59 @@ export function AffordabilityAnalysis({
   report,
   className = '',
 }: AffordabilityAnalysisProps): React.ReactElement {
-  // Get key metrics with alias fallbacks
-  const homeValue =
-    getMetricWithAliases(report, 'zhvi') ??
-    getMetricWithAliases(report, 'median_listing_price') ??
-    getMetricWithAliases(report, 'home_value');
+  // Check all metrics in the pool and pick the first 6 that have data
+  const allMetricsWithData = AFFORDABILITY_METRICS_POOL.map((config) => {
+    const { value, sourceLabel } = getMetricValue(report, config.id);
+    const trend = getPoolMetricTrend(report, config.id);
+    return {
+      ...config,
+      value,
+      sourceLabel,
+      trend,
+    };
+  });
 
-  const medianIncome =
-    getMetricWithAliases(report, 'median_household_income') ??
-    getMetricWithAliases(report, 'median_income');
+  // Filter to metrics with data, take first 6
+  const metricsWithData = allMetricsWithData.filter((m) => m.value !== null).slice(0, 6);
 
-  const affordabilityIndex = getMetricWithAliases(report, 'affordability_index');
+  // Get key metrics with geo fallback (try zip → county → state → national)
+  const homeValueResult = getMetricWithGeoFallback(
+    report as any,
+    'zhvi',
+    ['median_listing_price', 'home_value']
+  );
+  const homeValue = homeValueResult.value;
 
-  // Get historical trends if available
+  const incomeResult = getMetricWithGeoFallback(
+    report as any,
+    'median_income',
+    ['median_household_income', 'hh_income', 'household_income']
+  );
+  // If still no income, use US national median as reference ($75,000 as of 2024)
+  const US_NATIONAL_MEDIAN_INCOME = 75000;
+  const medianIncome = incomeResult.value ?? US_NATIONAL_MEDIAN_INCOME;
+
+  // Get historical trends if available (try multiple metric IDs)
   const homeValueTrend = getHistoricalTrend(report, 'zhvi') ??
-    getHistoricalTrend(report, 'home_value');
+    getHistoricalTrend(report, 'home_value') ??
+    getHistoricalTrend(report, 'median_listing_price');
   const incomeTrend = getHistoricalTrend(report, 'median_household_income') ??
     getHistoricalTrend(report, 'median_income');
+
+  // Try to get additional trends - affordability index or price-to-income
+  const affordabilityTrend = getHistoricalTrend(report, 'affordability_index') ??
+    getHistoricalTrend(report, 'price_to_income');
+  const priceMomTrend = getHistoricalTrend(report, 'home_value_mom') ??
+    getHistoricalTrend(report, 'median_listing_price_mom');
 
   // Get AI narrative if available
   const aiNarrative = report.ai_narrative?.affordability_analysis;
 
-  // Handle case where no core data is available
-  if (!homeValue && !medianIncome) {
+  // Check if we have any data to show
+  const hasPoolMetrics = metricsWithData.length > 0;
+
+  // Handle case where no home value data is available and no pool metrics
+  if (!homeValue && !hasPoolMetrics) {
     return (
       <SectionCard
         title="Affordability Analysis"
@@ -209,58 +311,79 @@ export function AffordabilityAnalysis({
         </div>
       )}
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <MetricDisplay
-          metricId="home_value"
-          value={homeValue}
-          label="Median Home Value"
-          trend={homeValueTrend ? {
-            direction: homeValueTrend.direction,
-            changePct: homeValueTrend.changePct,
-            sparklineData: homeValueTrend.sparklineData,
-          } : undefined}
-        />
-
-        <MetricDisplay
-          metricId="median_household_income"
-          value={medianIncome}
-          label="Median Household Income"
-          trend={incomeTrend ? {
-            direction: incomeTrend.direction,
-            changePct: incomeTrend.changePct,
-            sparklineData: incomeTrend.sparklineData,
-          } : undefined}
-        />
-
-        {/* Price-to-Income Ratio or Affordability Index */}
-        {affordabilityIndex !== null ? (
-          <MetricDisplay
-            metricId="affordability_index"
-            value={affordabilityIndex}
-            label="Affordability Index"
-          />
-        ) : (
-          <div className="report-metric-card">
-            <p className="report-metric-label">Price-to-Income Ratio</p>
-            {priceToIncomeRatio !== null ? (
-              <>
-                <p className="report-metric-value">{priceToIncomeRatio.toFixed(1)}x</p>
-                <p
-                  className="text-xs mt-1"
-                  style={{ color: 'var(--report-stone-light)' }}
-                >
-                  {priceToIncomeRatio <= 4 ? 'Within traditional limits' : 'Above 4x guideline'}
-                </p>
-              </>
-            ) : (
-              <p className="report-metric-value" style={{ opacity: 0.4 }}>
-                &mdash;
-              </p>
-            )}
+      {/* Key Affordability Metrics Grid - Pool-based (up to 6 metrics) */}
+      {hasPoolMetrics && (
+        <div className="mb-6">
+          <h4 className="report-label mb-4">Key Affordability Indicators</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {metricsWithData.map((metric) => (
+              <div
+                key={metric.id}
+                className="rounded-lg p-3"
+                style={{ backgroundColor: 'var(--report-cream)' }}
+              >
+                <MetricDisplay
+                  metricId={metric.id}
+                  value={metric.value}
+                  label={metric.label}
+                  trend={metric.trend}
+                  compact
+                />
+                {metric.sourceLabel && (
+                  <p
+                    className="text-xs mt-1 px-1.5 py-0.5 rounded inline-block"
+                    style={{
+                      backgroundColor: 'var(--report-warning-bg)',
+                      color: 'var(--report-warning)',
+                    }}
+                  >
+                    {metric.sourceLabel}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+          {/* Metric descriptions */}
+          <div
+            className="mt-4 p-3 rounded-lg"
+            style={{ backgroundColor: 'var(--report-cream)' }}
+          >
+            <p className="report-label mb-2">What These Metrics Mean</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {metricsWithData.map((metric) => (
+                <div key={metric.id} className="flex items-start gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                    style={{ backgroundColor: 'var(--report-gold)' }}
+                  />
+                  <p className="report-body-sm">
+                    <strong>{metric.label}:</strong> {metric.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price-to-Income Ratio Card (calculated, shown when pool doesn't include it) */}
+      {priceToIncomeRatio !== null && !metricsWithData.some((m) => m.id === 'price_to_income') && (
+        <div className="mb-6">
+          <div
+            className="rounded-lg p-4 inline-block"
+            style={{ backgroundColor: 'var(--report-cream)' }}
+          >
+            <p className="report-label mb-1">Price-to-Income Ratio</p>
+            <p className="report-metric-value">{priceToIncomeRatio.toFixed(1)}x</p>
+            <p
+              className="text-xs mt-1"
+              style={{ color: 'var(--report-stone-light)' }}
+            >
+              {priceToIncomeRatio <= 4 ? 'Within traditional limits' : 'Above 4x guideline'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Affordability Gap Visualization */}
       {homeValue && affordablePrice && (
@@ -383,7 +506,7 @@ export function AffordabilityAnalysis({
       )}
 
       {/* Historical Trends Section */}
-      {(homeValueTrend || incomeTrend) && (
+      {(homeValueTrend || incomeTrend || affordabilityTrend || priceMomTrend) && (
         <div className="mb-6">
           <h4
             className="report-heading-sm mb-3"
@@ -401,19 +524,39 @@ export function AffordabilityAnalysis({
                 className="p-4 rounded-[var(--report-radius-md)]"
                 style={{ backgroundColor: 'var(--report-cream)' }}
               >
-                <p
-                  className="text-xs font-medium uppercase tracking-wide mb-2"
-                  style={{ color: 'var(--report-stone-light)' }}
-                >
-                  Home Value Trend
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p
+                    className="text-xs font-medium uppercase tracking-wide"
+                    style={{ color: 'var(--report-stone-light)' }}
+                  >
+                    Home Value Trend
+                  </p>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      homeValueTrend.direction === 'up'
+                        ? 'bg-[var(--report-warning-bg)] text-[var(--report-warning)]'
+                        : homeValueTrend.direction === 'down'
+                        ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
+                        : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
+                    }`}
+                  >
+                    {homeValueTrend.changePct >= 0 ? '+' : ''}{homeValueTrend.changePct.toFixed(1)}%
+                  </span>
+                </div>
                 <TrendSparkline
                   data={homeValueTrend.sparklineData}
                   trend={homeValueTrend.direction}
                   changePct={homeValueTrend.changePct}
-                  width={120}
-                  height={32}
+                  width={150}
+                  height={36}
                 />
+                <p className="text-xs mt-2" style={{ color: 'var(--report-stone-light)' }}>
+                  {homeValueTrend.direction === 'up'
+                    ? 'Rising prices may reduce buying power'
+                    : homeValueTrend.direction === 'down'
+                    ? 'Falling prices may improve affordability'
+                    : 'Prices holding steady'}
+                </p>
               </div>
             )}
             {incomeTrend && (
@@ -421,19 +564,119 @@ export function AffordabilityAnalysis({
                 className="p-4 rounded-[var(--report-radius-md)]"
                 style={{ backgroundColor: 'var(--report-cream)' }}
               >
-                <p
-                  className="text-xs font-medium uppercase tracking-wide mb-2"
-                  style={{ color: 'var(--report-stone-light)' }}
-                >
-                  Income Trend
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p
+                    className="text-xs font-medium uppercase tracking-wide"
+                    style={{ color: 'var(--report-stone-light)' }}
+                  >
+                    Income Trend
+                  </p>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      incomeTrend.direction === 'up'
+                        ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
+                        : incomeTrend.direction === 'down'
+                        ? 'bg-[var(--report-error-bg)] text-[var(--report-error)]'
+                        : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
+                    }`}
+                  >
+                    {incomeTrend.changePct >= 0 ? '+' : ''}{incomeTrend.changePct.toFixed(1)}%
+                  </span>
+                </div>
                 <TrendSparkline
                   data={incomeTrend.sparklineData}
                   trend={incomeTrend.direction}
                   changePct={incomeTrend.changePct}
-                  width={120}
-                  height={32}
+                  width={150}
+                  height={36}
                 />
+                <p className="text-xs mt-2" style={{ color: 'var(--report-stone-light)' }}>
+                  {incomeTrend.direction === 'up'
+                    ? 'Rising incomes improve buying power'
+                    : incomeTrend.direction === 'down'
+                    ? 'Falling incomes reduce buying power'
+                    : 'Incomes holding steady'}
+                </p>
+              </div>
+            )}
+            {affordabilityTrend && (
+              <div
+                className="p-4 rounded-[var(--report-radius-md)]"
+                style={{ backgroundColor: 'var(--report-cream)' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p
+                    className="text-xs font-medium uppercase tracking-wide"
+                    style={{ color: 'var(--report-stone-light)' }}
+                  >
+                    Affordability Index
+                  </p>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      affordabilityTrend.direction === 'up'
+                        ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
+                        : affordabilityTrend.direction === 'down'
+                        ? 'bg-[var(--report-warning-bg)] text-[var(--report-warning)]'
+                        : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
+                    }`}
+                  >
+                    {affordabilityTrend.changePct >= 0 ? '+' : ''}{affordabilityTrend.changePct.toFixed(1)}%
+                  </span>
+                </div>
+                <TrendSparkline
+                  data={affordabilityTrend.sparklineData}
+                  trend={affordabilityTrend.direction}
+                  changePct={affordabilityTrend.changePct}
+                  width={150}
+                  height={36}
+                />
+                <p className="text-xs mt-2" style={{ color: 'var(--report-stone-light)' }}>
+                  {affordabilityTrend.direction === 'up'
+                    ? 'Market becoming more affordable'
+                    : affordabilityTrend.direction === 'down'
+                    ? 'Market becoming less affordable'
+                    : 'Affordability holding steady'}
+                </p>
+              </div>
+            )}
+            {priceMomTrend && !incomeTrend && (
+              <div
+                className="p-4 rounded-[var(--report-radius-md)]"
+                style={{ backgroundColor: 'var(--report-cream)' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p
+                    className="text-xs font-medium uppercase tracking-wide"
+                    style={{ color: 'var(--report-stone-light)' }}
+                  >
+                    Monthly Price Change
+                  </p>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      priceMomTrend.direction === 'up'
+                        ? 'bg-[var(--report-warning-bg)] text-[var(--report-warning)]'
+                        : priceMomTrend.direction === 'down'
+                        ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
+                        : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
+                    }`}
+                  >
+                    {priceMomTrend.changePct >= 0 ? '+' : ''}{priceMomTrend.changePct.toFixed(1)}%
+                  </span>
+                </div>
+                <TrendSparkline
+                  data={priceMomTrend.sparklineData}
+                  trend={priceMomTrend.direction}
+                  changePct={priceMomTrend.changePct}
+                  width={150}
+                  height={36}
+                />
+                <p className="text-xs mt-2" style={{ color: 'var(--report-stone-light)' }}>
+                  {priceMomTrend.direction === 'up'
+                    ? 'Prices accelerating month-over-month'
+                    : priceMomTrend.direction === 'down'
+                    ? 'Price growth slowing down'
+                    : 'Price momentum stable'}
+                </p>
               </div>
             )}
           </div>

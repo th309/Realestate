@@ -1,20 +1,45 @@
 'use client';
 
 import React from 'react';
-import { SectionProps } from '../types';
+import type { ReportInstance } from '../../../types';
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
-export function ComparisonTable({ section, report }: SectionProps) {
-  const metrics = section.config?.metrics || ['zhvi', 'zori', 'cap_rate', 'days_on_market'];
+interface ComparisonTableProps {
+  report: ReportInstance;
+}
 
-  const geographies = [
+// Default metrics to compare when no config provided
+const DEFAULT_METRICS = ['home_value', 'days_on_market', 'for_sale_inventory', 'hotness_score', 'median_income', 'cap_rate'];
+
+interface Geography {
+  id: string;
+  name: string;
+}
+
+export function ComparisonTable({ report }: ComparisonTableProps) {
+  const metrics = DEFAULT_METRICS;
+
+  const geographies: Geography[] = [
     { id: report.primary_geography_id, name: report.primary_geography_name },
     ...(report.comparison_geographies || []),
   ];
 
-  const getMetricLabel = (metric: string) =>
+  const getMetricLabel = (metric: string): string =>
     metric.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+  const getValue = (geo: Geography, metric: string): number | null => {
+    if (geo.id === report.primary_geography_id) {
+      // Primary geography - use current data
+      const value = report.populated_data?.current?.[metric];
+      return value !== undefined && value !== null ? Number(value) : null;
+    } else {
+      // Comparison geography - use comparisons data
+      const compData = report.populated_data?.comparisons?.[geo.id];
+      const value = compData?.current?.[metric];
+      return value !== undefined && value !== null ? Number(value) : null;
+    }
+  };
 
   // Determine winner for each metric (higher is better for most, lower for some)
   const lowerIsBetter = ['days_on_market', 'vacancy_rate', 'unemployment_rate'];
@@ -59,13 +84,7 @@ export function ComparisonTable({ section, report }: SectionProps) {
           </thead>
           <tbody>
             {metrics.map((metric: string) => {
-              const values = geographies.map((geo, index) => {
-                if (index === 0) {
-                  return report.populated_data?.current?.[metric] as number | null;
-                }
-                // For comparison geographies, would need separate data
-                return report.populated_data?.comparables?.find(c => c.geography.id === geo.id)?.metrics?.[metric] ?? null;
-              });
+              const values = geographies.map((geo) => getValue(geo, metric));
               const winner = getWinner(metric, values);
 
               return (

@@ -8,7 +8,6 @@ import {
   getMetricValueWithAliases,
   getMetricTrend,
 } from '../../utils/metricHelpers';
-import type { MetricTrend } from '../../utils/metricHelpers';
 import {
   CAP_RATE,
   GROSS_RENT_MULTIPLIER,
@@ -41,14 +40,14 @@ interface CashFlowMetricConfig {
 }
 
 /**
- * Cash flow metrics configuration
+ * Pool of cash flow metrics - priority order, first 6 with data are displayed
  */
-const CASH_FLOW_METRICS: CashFlowMetricConfig[] = [
+const CASH_FLOW_METRICS_POOL: CashFlowMetricConfig[] = [
   {
     id: 'cap_rate',
     aliases: ['capitalization_rate', 'noi_yield'],
     label: 'Cap Rate',
-    description: 'Primary yield metric - Net Operating Income as % of property value',
+    description: 'Net Operating Income as % of property value',
     interpretation: {
       good: 'Strong cash flow potential with healthy returns',
       moderate: 'Acceptable yield for the market conditions',
@@ -59,7 +58,7 @@ const CASH_FLOW_METRICS: CashFlowMetricConfig[] = [
     id: 'gross_yield',
     aliases: ['gross_rental_yield', 'rental_yield'],
     label: 'Gross Yield',
-    description: 'Gross rental income as % of property value (before expenses)',
+    description: 'Gross rental income as % of property value',
     interpretation: {
       good: 'High gross income relative to property cost',
       moderate: 'Average gross income for the area',
@@ -70,7 +69,7 @@ const CASH_FLOW_METRICS: CashFlowMetricConfig[] = [
     id: 'grm',
     aliases: ['gross_rent_multiplier'],
     label: 'GRM',
-    description: 'Gross Rent Multiplier - years of rent to equal purchase price',
+    description: 'Years of rent to equal purchase price',
     interpretation: {
       good: 'Lower GRM indicates faster payback potential',
       moderate: 'Typical GRM for this market',
@@ -81,11 +80,77 @@ const CASH_FLOW_METRICS: CashFlowMetricConfig[] = [
     id: 'rent_index',
     aliases: ['zori', 'median_rent', 'expected_rent'],
     label: 'Expected Rent',
-    description: 'Typical monthly rental income for the area',
+    description: 'Typical monthly rental income',
     interpretation: {
       good: 'Strong rental market with solid income potential',
       moderate: 'Average rental rates for the region',
       poor: 'Below-average rental rates may limit returns',
+    },
+  },
+  {
+    id: 'cash_on_cash',
+    aliases: ['cash_on_cash_return', 'coc_return'],
+    label: 'Cash-on-Cash',
+    description: 'Annual cash return on invested capital',
+    interpretation: {
+      good: 'Excellent return on your cash investment',
+      moderate: 'Reasonable return for the capital deployed',
+      poor: 'Lower returns may require leverage optimization',
+    },
+  },
+  {
+    id: 'net_yield',
+    aliases: ['net_rental_yield', 'net_operating_yield'],
+    label: 'Net Yield',
+    description: 'Rental yield after operating expenses',
+    interpretation: {
+      good: 'Strong net income after expenses',
+      moderate: 'Average net returns for the market',
+      poor: 'High operating costs may impact profitability',
+    },
+  },
+  {
+    id: 'vacancy_rate',
+    aliases: ['rental_vacancy', 'vacancy_pct'],
+    label: 'Vacancy Rate',
+    description: 'Percentage of vacant rental units',
+    interpretation: {
+      good: 'Low vacancy indicates strong tenant demand',
+      moderate: 'Typical vacancy for this market',
+      poor: 'High vacancy may indicate weak rental demand',
+    },
+  },
+  {
+    id: 'rent_growth_yoy',
+    aliases: ['rental_growth', 'rent_yoy'],
+    label: 'Rent Growth',
+    description: 'Year-over-year rent increase',
+    interpretation: {
+      good: 'Strong rent growth supports income appreciation',
+      moderate: 'Stable rental income growth',
+      poor: 'Flat or declining rents may limit returns',
+    },
+  },
+  {
+    id: 'price_to_rent',
+    aliases: ['price_rent_ratio'],
+    label: 'Price-to-Rent',
+    description: 'Home price relative to annual rent',
+    interpretation: {
+      good: 'Lower ratio favors rental income strategy',
+      moderate: 'Balanced for both strategies',
+      poor: 'Higher ratio favors appreciation strategy',
+    },
+  },
+  {
+    id: 'operating_expense_ratio',
+    aliases: ['expense_ratio', 'oer'],
+    label: 'Expense Ratio',
+    description: 'Operating costs as % of income',
+    interpretation: {
+      good: 'Low expenses maximize net cash flow',
+      moderate: 'Typical operating expenses',
+      poor: 'High expenses may reduce profitability',
     },
   },
 ];
@@ -181,40 +246,31 @@ function calculateCashFlowAssessment(
  * Helps investors answer: What returns can I expect from rental income?
  *
  * Displays:
- * - Key yield metrics (cap rate, gross yield, GRM, expected rent)
+ * - Key yield metrics from pool (cap rate, gross yield, GRM, rent, cash-on-cash, etc.)
  * - Pro forma data if available
  * - Historical trends for yield metrics
  * - AI analysis focused on cash flow implications
  */
 export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.ReactElement {
-  // Extract metric values using shared helpers
-  const capRate = getMetricValueWithAliases(
-    report,
-    CASH_FLOW_METRICS[0].id,
-    CASH_FLOW_METRICS[0].aliases
-  );
-  const grossYield = getMetricValueWithAliases(
-    report,
-    CASH_FLOW_METRICS[1].id,
-    CASH_FLOW_METRICS[1].aliases
-  );
-  const grm = getMetricValueWithAliases(
-    report,
-    CASH_FLOW_METRICS[2].id,
-    CASH_FLOW_METRICS[2].aliases
-  );
-  const expectedRent = getMetricValueWithAliases(
-    report,
-    CASH_FLOW_METRICS[3].id,
-    CASH_FLOW_METRICS[3].aliases
-  );
+  // Check all metrics in the pool and pick the first 6 that have data
+  const allMetricsWithData = CASH_FLOW_METRICS_POOL.map((config) => {
+    const value = getMetricValueWithAliases(report, config.id, config.aliases);
+    const trend = getMetricTrend(report, config.id, config.aliases);
+    return {
+      ...config,
+      value,
+      trend,
+    };
+  });
 
-  // Check if we have any data
-  const hasAnyData =
-    capRate !== null ||
-    grossYield !== null ||
-    grm !== null ||
-    expectedRent !== null;
+  // Filter to metrics with data, take first 6
+  const metricsWithData = allMetricsWithData.filter((m) => m.value !== null).slice(0, 6);
+  const hasAnyData = metricsWithData.length > 0;
+
+  // Get specific values for assessment calculation (use from pool data)
+  const capRate = allMetricsWithData.find((m) => m.id === 'cap_rate')?.value ?? null;
+  const grossYield = allMetricsWithData.find((m) => m.id === 'gross_yield')?.value ?? null;
+  const grm = allMetricsWithData.find((m) => m.id === 'grm')?.value ?? null;
 
   // Get pro forma data
   const proForma = report.populated_data?.pro_forma;
@@ -346,47 +402,27 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
         </div>
       )}
 
-      {/* Key Metrics Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 'var(--report-space-md)',
-          marginBottom: 'var(--report-space-lg)',
-        }}
-      >
-        {/* Cap Rate */}
-        <MetricDisplay
-          metricId="cap_rate"
-          value={capRate}
-          label="Cap Rate"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[0].id, CASH_FLOW_METRICS[0].aliases)}
-        />
-
-        {/* Gross Yield */}
-        <MetricDisplay
-          metricId="gross_yield"
-          value={grossYield}
-          label="Gross Yield"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[1].id, CASH_FLOW_METRICS[1].aliases)}
-        />
-
-        {/* GRM */}
-        <MetricDisplay
-          metricId="grm"
-          value={grm}
-          label="Gross Rent Multiplier"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[2].id, CASH_FLOW_METRICS[2].aliases)}
-        />
-
-        {/* Expected Rent */}
-        <MetricDisplay
-          metricId="rent_index"
-          value={expectedRent}
-          label="Expected Rent"
-          trend={getMetricTrend(report, CASH_FLOW_METRICS[3].id, CASH_FLOW_METRICS[3].aliases)}
-        />
-      </div>
+      {/* Key Metrics Grid - displays first 6 metrics with data */}
+      {metricsWithData.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: 'var(--report-space-md)',
+            marginBottom: 'var(--report-space-lg)',
+          }}
+        >
+          {metricsWithData.map((metric) => (
+            <MetricDisplay
+              key={metric.id}
+              metricId={metric.id}
+              value={metric.value}
+              label={metric.label}
+              trend={metric.trend}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Pro Forma Summary (if available) */}
       {hasProForma && proForma && (
@@ -498,8 +534,8 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
         </div>
       )}
 
-      {/* Metric Interpretations */}
-      {hasAnyData && (
+      {/* Metric Interpretations - shows descriptions for displayed metrics */}
+      {metricsWithData.length > 0 && (
         <div
           className="report-card-subtle"
           style={{
@@ -516,20 +552,17 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
               gap: 'var(--report-space-sm)',
             }}
           >
-            {CASH_FLOW_METRICS.map((metric) => {
-              const value = getMetricValueWithAliases(report, metric.id, metric.aliases);
-              if (value === null) return null;
-
+            {metricsWithData.map((metric) => {
               // Determine quality for this metric
               let quality: 'good' | 'moderate' | 'poor' = 'moderate';
-              if (metric.id === 'cap_rate') {
-                quality = evaluateCapRate(value) || 'moderate';
-              } else if (metric.id === 'grm') {
-                quality = evaluateGRM(value) || 'moderate';
+              if (metric.id === 'cap_rate' && metric.value !== null) {
+                quality = evaluateCapRate(metric.value) || 'moderate';
+              } else if (metric.id === 'grm' && metric.value !== null) {
+                quality = evaluateGRM(metric.value) || 'moderate';
               }
 
               return (

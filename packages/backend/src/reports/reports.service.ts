@@ -269,6 +269,34 @@ export class ReportsService {
         geoType,
       );
 
+      // 1d. Fetch comparison geography data
+      const comparisons: Record<string, any> = {};
+      if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
+        for (const compGeo of dto.comparison_geographies) {
+          const compGeoType = compGeo.type as 'metro' | 'county' | 'zip';
+          const compMetrics = await this.fetchMarketMetrics(
+            compGeo.id,
+            compGeoType,
+            allRequiredMetrics,
+          );
+          const compHistorical = await this.fetchHistoricalData(
+            compGeo.id,
+            compGeoType,
+          );
+          const compScores = await this.scoringService.getScore(
+            compGeo.id,
+            compGeoType,
+          );
+
+          comparisons[compGeo.id] = {
+            geography: compGeo,
+            current: compMetrics,
+            historical: compHistorical,
+            scores: compScores,
+          };
+        }
+      }
+
       // 2. Scout news via Gemini (with caching)
       const newsResult = await this.geminiNewsService.getOrScoutNews(
         dto.primary_geography.id,
@@ -360,6 +388,7 @@ export class ReportsService {
               fetched_at: newsResult.scout_metadata.search_timestamp,
             }
           : null,
+        comparisons: Object.keys(comparisons).length > 0 ? comparisons : undefined,
       };
 
       // 4. Generate AI narratives (Claude) with news context
