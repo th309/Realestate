@@ -889,6 +889,7 @@ export class ScoringService {
       await this.fetchCensusData(locationsMap, geography, periodDate);
       await this.fetchEconomicData(locationsMap, geography, periodDate);
     } else if (geography === 'zip') {
+      await this.backfillFromCounty(locationsMap, periodDate, ['demand_score', 'hotness_score']);
       await this.fetchZipCensusData(locationsMap, periodDate);
     }
 
