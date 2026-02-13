@@ -1244,7 +1244,7 @@ export class ScoringService {
         return;
       }
       if (data) {
-        for (const row of data) {
+        for (const row of data as any[]) {
           const values: Record<string, number | null> = {};
           for (const metric of metricsToInherit) {
             values[metric] = row[metric] ?? null;
