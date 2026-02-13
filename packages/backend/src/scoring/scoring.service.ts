@@ -1165,7 +1165,7 @@ export class ScoringService {
       }
 
       if (inherited.length > 0) {
-        location._inherited = inherited;
+        location._inherited = [...(location._inherited || []), ...inherited];
       }
     }
   }
