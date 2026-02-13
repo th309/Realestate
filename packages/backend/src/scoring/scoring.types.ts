@@ -62,8 +62,10 @@ export interface LocationMetrics {
   // Realtor metrics
   hotness_score?: number;
   demand_score?: number;
+  supply_score?: number;
   pending_ratio?: number;
   price_reduced_share?: number;
+  median_days_on_market?: number;
   active_listing_count_yy?: number;
   price_reduced_count_yy?: number;
   // Census/Economic metrics (may be inherited for ZIP)
@@ -88,6 +90,8 @@ export interface ScoreResult {
     investoredge: SingleScoreResult;
     markethealth: SingleScoreResult;
   };
+  /** Per-metric z-scores for this location (shared across all score types) */
+  z_scores?: Record<string, number>;
   return_1y?: number;
   return_3y_ann?: number;
 }
