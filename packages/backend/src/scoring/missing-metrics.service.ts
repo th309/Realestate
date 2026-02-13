@@ -45,6 +45,7 @@ export const METRIC_MISSING_STRATEGIES: Record<string, NullStrategy> = {
   pending_ratio: 'neutral',
   median_days_on_market: 'neutral',
   hotness_score: 'skip',
+  demand_score: 'skip',
   months_of_supply: 'neutral',
   active_listing_count_yy: 'neutral',
   new_listing_count_yy: 'skip',
