@@ -1435,7 +1435,13 @@ export class ScoringService {
     const availableMetrics = metricNames.filter(
       m => (location as any)[m] !== null && (location as any)[m] !== undefined,
     ).length;
-    const completeness = (availableMetrics / metricNames.length) * 100;
+    let completeness = (availableMetrics / metricNames.length) * 100;
+
+    // Discount for inherited metrics (5pp per inherited metric)
+    const inheritedCount = location._inherited
+      ? location._inherited.filter(m => metricNames.includes(m)).length
+      : 0;
+    completeness = Math.max(0, completeness - inheritedCount * 5);
 
     // Factor 2: Model Strength (40%)
     // correlation × 125, capped at 100

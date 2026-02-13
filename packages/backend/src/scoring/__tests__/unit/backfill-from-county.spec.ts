@@ -204,3 +204,52 @@ describe('backfillFromCounty', () => {
     expect(location._inherited).toBeUndefined();
   });
 });
+
+describe('confidence discount for inherited metrics', () => {
+  it('should reduce completeness by 5pp per inherited metric', async () => {
+    const mockSupabase = createMockSupabase({});
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ScoringService,
+        NormalizationService,
+        InheritanceService,
+        MarketHealthService,
+        { provide: SUPABASE_CLIENT, useValue: mockSupabase },
+      ],
+    }).compile();
+
+    const service = module.get<ScoringService>(ScoringService);
+
+    // Location with 2 inherited metrics — all 4 HR ZIP formula metrics present
+    const location: LocationMetrics = {
+      location_id: '90210',
+      location_name: 'Beverly Hills',
+      demand_score: 72,
+      hotness_score: 65,
+      median_days_on_market: 30,
+      pending_ratio: 0.5,
+      affordability_ratio: 1.2,
+      _inherited: ['demand_score', 'hotness_score'],
+    };
+
+    // HomeReady ZIP formula has 4 metrics: demand_score, median_days_on_market, pending_ratio, affordability_ratio
+    // Only demand_score is in _inherited AND in the formula (hotness_score is not in HR ZIP formula)
+    const result = (service as any).calculateConfidence(location, 'zip', 'homeready');
+
+    // Without discount: all 4 metrics present = 100% completeness
+    // With discount: 1 inherited metric in formula (demand_score) = -5pp = 95% completeness
+    // Factor 1 = 95 * 0.30 = 28.5
+    // Factor 2 = min(0.15 * 125, 100) = 18.75 * 0.40 = 7.5
+    // Factor 3 = 100 * 0.15 = 15
+    // Factor 4 = 80 * 0.15 = 12 (has hotness_score)
+    // Total = 63.0
+
+    // Without discount it would be:
+    // Factor 1 = 100 * 0.30 = 30
+    // Total = 64.5
+
+    // So confidence with discount should be less than without
+    expect(result.confidence).toBeLessThan(64.5);
+    expect(result.confidence).toBeGreaterThan(60); // sanity check
+  });
+});
