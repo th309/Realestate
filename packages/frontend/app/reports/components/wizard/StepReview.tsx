@@ -41,10 +41,19 @@ interface StepReviewProps {
 // Convert template sections to draggable items
 function sectionsToItems(pages: ReportPage[]): SectionItem[] {
   const items: SectionItem[] = [];
-  pages.forEach((page) => {
-    page.sections.forEach((section) => {
+  const idCounts: Record<string, number> = {};
+
+  pages.forEach((page, pageIndex) => {
+    page.sections.forEach((section, sectionIndex) => {
+      // Ensure unique IDs by appending page/section index if there are duplicates
+      const baseId = section.id;
+      idCounts[baseId] = (idCounts[baseId] || 0) + 1;
+      const uniqueId = idCounts[baseId] > 1
+        ? `${baseId}-${pageIndex}-${sectionIndex}`
+        : baseId;
+
       items.push({
-        id: section.id,
+        id: uniqueId,
         type: section.type,
         name: section.config?.title || section.config?.name || '',
         description: section.config?.description,

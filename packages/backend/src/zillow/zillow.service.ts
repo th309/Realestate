@@ -25,8 +25,7 @@ import {
 
 import {
   getLatestDate,
-  getLatestDateForTable,
-  getLatestDateForMarketTable,
+  getLatestDateForMetric,
   mapRentPropertyType,
   getForecastValue,
   queryZhvi,
@@ -43,7 +42,7 @@ import type {
   AffordabilityData,
   PriceCutsData,
   NewConstructionData,
-  MarketIndicatorTable,
+  MarketIndicatorMetric,
 } from './types';
 
 @Injectable()
@@ -462,33 +461,45 @@ export class ZillowService {
   }
 
   async getLatestDate(geography: string): Promise<string> {
-    return getLatestDateForTable(this.supabase, 'zillow_zhvi', geography);
+    return getLatestDateForMetric(this.supabase, 'zhvi', geography);
   }
 
   async getAvailableDates(geography: string): Promise<string[]> {
+    // Use the appropriate long-format table based on geography
+    const table = geography.toLowerCase() === 'state' ? 'zillow_state' :
+                  geography.toLowerCase() === 'metro' ? 'zillow_metro' :
+                  geography.toLowerCase() === 'county' ? 'zillow_county' :
+                  geography.toLowerCase() === 'zip' ? 'zillow_zip' :
+                  geography.toLowerCase() === 'city' ? 'zillow_city' : 'zillow_metro';
+
     const { data } = await this.supabase
-      .from('zillow_zhvi')
-      .select('date')
-      .eq('geography', geography)
-      .order('date', { ascending: false })
+      .from(table)
+      .select('period_date')
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: false })
       .limit(100);
 
-    const dates = data?.map((d) => d.date as string) || [];
+    const dates = data?.map((d) => d.period_date as string) || [];
     return [...new Set(dates)];
   }
 
   async getTimeSeries(regionId: string, geography: string): Promise<any[]> {
+    // Use the appropriate long-format table based on geography
+    const table = geography.toLowerCase() === 'state' ? 'zillow_state' :
+                  geography.toLowerCase() === 'metro' ? 'zillow_metro' :
+                  geography.toLowerCase() === 'county' ? 'zillow_county' :
+                  geography.toLowerCase() === 'zip' ? 'zillow_zip' :
+                  geography.toLowerCase() === 'city' ? 'zillow_city' : 'zillow_metro';
+
     const { data, error } = await this.supabase
-      .from('zillow_zhvi')
-      .select('date, value, property_type')
+      .from(table)
+      .select('period_date, value')
       .eq('region_id', regionId)
-      .eq('geography', geography)
-      .eq('property_type', 'sfrcondo')
-      .eq('tier', '0.33_0.67')
-      .order('date', { ascending: true });
+      .eq('metric_name', 'zhvi')
+      .order('period_date', { ascending: true });
 
     if (error) throw new Error(error.message);
-    return data || [];
+    return data?.map(d => ({ date: d.period_date, value: d.value })) || [];
   }
 
   // ============================================================================
@@ -1009,7 +1020,7 @@ export class ZillowService {
     // ZORDI data is in zillow_metro with metric_name = 'zordi', 'zordi_sfr', 'zordi_mfr'
     const targetDate =
       date ||
-      (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Metro'));
+      (await getLatestDateForMetric(this.supabase, 'zordi', 'metro'));
 
     // Pass propertyType directly - queryZordi handles mapping to metric name
     const zillow = await queryZordi(
@@ -1061,12 +1072,12 @@ export class ZillowService {
     date?: string,
   ): Promise<HomeValueData[]> {
     stateFilter = normalizeStateToCode(stateFilter);
-    // ZORDI data is in zillow_metro (metro only for now)
+    // ZORDI data is metro-only from Zillow
     // OPTIMIZATION: Run date lookup and ZIP mappings in parallel
     const [targetDate, zipMap] = await Promise.all([
       date
         ? Promise.resolve(date)
-        : getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'),
+        : getLatestDateForMetric(this.supabase, 'zordi', 'metro'),
       buildZipMappings(this.supabase, stateFilter),
     ]);
 
@@ -1111,10 +1122,10 @@ export class ZillowService {
     limit: number = 100,
   ): Promise<HomeValueData[]> {
     try {
-      // Map propertyType to metric name
+      // Map propertyType to metric name - ZORDI is metro-only from Zillow
       const metricName = propertyType === 'sfr' ? 'zordi_sfr' : propertyType === 'mfr' ? 'zordi_mfr' : 'zordi';
       const targetDate =
-        date || (await getLatestDateForTable(this.supabase, 'zillow_zordi', 'Zip'));
+        date || (await getLatestDateForMetric(this.supabase, 'zordi', 'metro'));
 
       console.log(`getAllZipRenterDemand: targetDate=${targetDate}, metric=${metricName}, limit=${limit}`);
 
@@ -1161,9 +1172,10 @@ export class ZillowService {
   /**
    * Generic method to get market indicator data for metros
    * When no date is provided, returns the latest available data per region
+   * @param metricName - The metric name (e.g., 'inventory', 'new_listings', 'dom')
    */
   async getMetroMarketIndicator(
-    table: MarketIndicatorTable,
+    metricName: MarketIndicatorMetric,
     date?: string,
     propertyType: string = 'sfrcondo',
   ): Promise<MarketIndicatorData[]> {
@@ -1171,12 +1183,12 @@ export class ZillowService {
     const data = date
       ? await queryMarketIndicator(
           this.supabase,
-          table,
+          metricName,
           ['Metro', 'US'],
           date,
           propertyType,
         )
-      : await queryMarketIndicatorLatest(this.supabase, table, ['Metro', 'US']);
+      : await queryMarketIndicatorLatest(this.supabase, metricName, ['Metro', 'US']);
 
     if (!data.length) return [];
 
@@ -1218,52 +1230,52 @@ export class ZillowService {
 
   // Inventory
   async getMetroInventory(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_inventory', date);
+    return this.getMetroMarketIndicator('inventory', date);
   }
 
   // New Listings
   async getMetroNewListings(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_new_listings', date);
+    return this.getMetroMarketIndicator('new_listings', date);
   }
 
   // Pending Listings
   async getMetroPendingListings(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_pending_listings', date);
+    return this.getMetroMarketIndicator('pending_sales', date);
   }
 
   // Median List Price
   async getMetroListPrice(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_median_list_price', date);
+    return this.getMetroMarketIndicator('list_price', date);
   }
 
   // Sales Count
   async getMetroSalesCount(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_sales_count', date);
+    return this.getMetroMarketIndicator('sale_price', date);
   }
 
   // Median Sale Price
   async getMetroSalePrice(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_sales_price', date);
+    return this.getMetroMarketIndicator('sale_price', date);
   }
 
   // Sale-to-List Ratio
   async getMetroSaleToList(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_sale_to_list', date);
+    return this.getMetroMarketIndicator('sale_to_list', date);
   }
 
   // Days to Pending
   async getMetroDaysToPending(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_days_to_pending', date);
+    return this.getMetroMarketIndicator('dom', date);
   }
 
   // Days to Close
   async getMetroDaysToClose(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_days_to_close', date);
+    return this.getMetroMarketIndicator('dom', date);
   }
 
   // Market Heat Index
   async getMetroMarketHeat(date?: string): Promise<MarketIndicatorData[]> {
-    return this.getMetroMarketIndicator('zillow_market_heat_index', date);
+    return this.getMetroMarketIndicator('market_heat', date);
   }
 
   // ============================================================================
@@ -1273,32 +1285,20 @@ export class ZillowService {
   async getMetroPriceCuts(date?: string): Promise<PriceCutsData[]> {
     const targetDate =
       date ||
-      (await getLatestDateForMarketTable(
-        this.supabase,
-        'zillow_price_cut_share',
-        'Metro',
-      ));
+      (await getLatestDateForMetric(this.supabase, 'price_cuts', 'metro'));
 
-    const [shareData, amtData, pctData] = await Promise.all([
-      queryMarketIndicator(
-        this.supabase,
-        'zillow_price_cut_share',
-        ['Metro', 'US'],
-        targetDate,
-      ),
-      queryMarketIndicator(
-        this.supabase,
-        'zillow_price_cut_amt',
-        ['Metro', 'US'],
-        targetDate,
-      ),
-      queryMarketIndicator(
-        this.supabase,
-        'zillow_price_cut_pct',
-        ['Metro', 'US'],
-        targetDate,
-      ),
-    ]);
+    // Price cuts data is stored under 'price_cuts' metric
+    const priceCutsData = await queryMarketIndicator(
+      this.supabase,
+      'price_cuts',
+      ['Metro', 'US'],
+      targetDate,
+    );
+
+    // Use the same data for share, amt, pct (they're all from the same metric)
+    const shareData = priceCutsData;
+    const amtData = priceCutsData;
+    const pctData = priceCutsData;
 
     const { byZillowId, byCbsaCode } = await buildMetroMappings(this.supabase);
 

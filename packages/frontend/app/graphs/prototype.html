@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PropertyIQ Graphs - Redesign Prototype</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* =============================================================================
+       MATERIAL DESIGN 3 THEME - PropertyIQ Colors
+       Matches globals.css exactly
+       ============================================================================= */
+    :root {
+      /* M3 Primary - Purple */
+      --md-primary: #6750a4;
+      --md-on-primary: #ffffff;
+      --md-primary-container: #eaddff;
+      --md-on-primary-container: #21005d;
+
+      /* M3 Secondary */
+      --md-secondary: #625b71;
+      --md-on-secondary: #ffffff;
+      --md-secondary-container: #e8def8;
+      --md-on-secondary-container: #1d192b;
+
+      /* M3 Tertiary - Rose/Mauve */
+      --md-tertiary: #7d5260;
+      --md-on-tertiary: #ffffff;
+      --md-tertiary-container: #ffd8e4;
+      --md-on-tertiary-container: #31111d;
+
+      /* M3 Surface Colors (Light Mode) */
+      --md-surface: #fef7ff;
+      --md-surface-dim: #ded8e1;
+      --md-surface-bright: #fef7ff;
+      --md-surface-container-lowest: #ffffff;
+      --md-surface-container-low: #f7f2fa;
+      --md-surface-container: #f3edf7;
+      --md-surface-container-high: #ece6f0;
+      --md-surface-container-highest: #e6e0e9;
+      --md-on-surface: #1d1b20;
+      --md-on-surface-variant: #49454f;
+
+      /* M3 Outline Colors */
+      --md-outline: #79747e;
+      --md-outline-variant: #cac4d0;
+
+      /* M3 Error */
+      --md-error: #b3261e;
+
+      /* Semantic */
+      --success: #2e7d32;
+      --warning: #ed6c02;
+
+      /* M3 Elevation */
+      --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+      --elevation-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+      --elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--md-surface);
+      color: var(--md-on-surface);
+      min-height: 100vh;
+    }
+
+    /* =============================================================================
+       LAYOUT - Three Zone Structure
+       ============================================================================= */
+    .page-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    /* Breadcrumbs */
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--md-on-surface-variant);
+      margin-bottom: 16px;
+    }
+
+    .breadcrumbs a {
+      color: var(--md-primary);
+      text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+      text-decoration: underline;
+    }
+
+    /* Page Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 24px;
+    }
+
+    .page-title-section {
+      flex: 1;
+    }
+
+    .page-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--md-primary);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--md-on-surface);
+      letter-spacing: -0.25px;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--md-on-surface-variant);
+      max-width: 600px;
+    }
+
+    /* =============================================================================
+       MY MARKETS BAR - Top Zone
+       ============================================================================= */
+    .my-markets-bar {
+      background: var(--md-surface-container);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .my-markets-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .market-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .market-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--md-surface-container-lowest);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .market-chip:hover {
+      background: var(--md-primary-container);
+      border-color: var(--md-primary);
+    }
+
+    .market-chip.active {
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border-color: var(--md-primary);
+    }
+
+    .market-chip .score {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .market-chip.active .score {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .market-chip:not(.active) .score {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+    }
+
+    .add-market-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: transparent;
+      border: 2px dashed var(--md-outline-variant);
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .add-market-btn:hover {
+      border-color: var(--md-primary);
+      color: var(--md-primary);
+    }
+
+    /* =============================================================================
+       MAIN CONTENT - Two Column Layout
+       ============================================================================= */
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+    }
+
+    /* =============================================================================
+       HERO COMPARISON SECTION - Center Zone
+       ============================================================================= */
+    .hero-section {
+      background: var(--md-surface-container-lowest);
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: var(--elevation-1);
+    }
+
+    .hero-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--md-on-surface-variant);
+      margin-top: 4px;
+    }
+
+    .template-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .template-tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .template-tab:hover {
+      background: var(--md-surface-container);
+    }
+
+    .template-tab.active {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+    }
+
+    /* Score Showdown */
+    .score-showdown {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 32px;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .market-score-card {
+      background: var(--md-surface-container-low);
+      border-radius: 24px;
+      padding: 28px;
+      text-align: center;
+      position: relative;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .market-score-card.winner {
+      background: var(--md-primary-container);
+      border-color: var(--md-primary);
+    }
+
+    .winner-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .market-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      margin-bottom: 16px;
+    }
+
+    .score-gauge {
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 16px;
+      position: relative;
+    }
+
+    .score-gauge svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .score-gauge-bg {
+      fill: none;
+      stroke: var(--md-surface-container-high);
+      stroke-width: 12;
+    }
+
+    .score-gauge-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease;
+    }
+
+    .score-gauge-fill.excellent {
+      stroke: var(--success);
+    }
+
+    .score-gauge-fill.good {
+      stroke: var(--md-primary);
+    }
+
+    .score-gauge-fill.fair {
+      stroke: var(--warning);
+    }
+
+    .score-value {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .score-number {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--md-on-surface);
+    }
+
+    .score-grade {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+    }
+
+    .score-label {
+      font-size: 13px;
+      color: var(--md-on-surface-variant);
+    }
+
+    .vs-divider {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vs-badge {
+      background: var(--md-surface-container-high);
+      color: var(--md-on-surface-variant);
+      padding: 12px 20px;
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* Priority Breakdown */
+    .priority-section {
+      background: var(--md-surface-container);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .priority-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .priority-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+    }
+
+    .priority-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--md-surface-container-lowest);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .priority-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .priority-rank {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .priority-rank.primary {
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+    }
+
+    .priority-rank.tertiary {
+      background: var(--md-tertiary);
+      color: var(--md-on-tertiary);
+    }
+
+    .priority-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .priority-icon.primary {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+    }
+
+    .priority-icon.tertiary {
+      background: var(--md-tertiary-container);
+      color: var(--md-on-tertiary-container);
+    }
+
+    .priority-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .priority-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      margin-bottom: 2px;
+    }
+
+    .priority-detail {
+      font-size: 13px;
+      color: var(--md-on-surface-variant);
+    }
+
+    .priority-winner {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 100px;
+      flex-shrink: 0;
+    }
+
+    .priority-winner.primary {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+    }
+
+    .priority-winner.tertiary {
+      background: var(--md-tertiary-container);
+      color: var(--md-on-tertiary-container);
+    }
+
+    /* D3 Visualization Area */
+    .viz-container {
+      background: var(--md-surface-container);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .viz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .viz-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+    }
+
+    .viz-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .viz-btn {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--md-outline-variant);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .viz-btn:hover {
+      border-color: var(--md-primary);
+      color: var(--md-primary);
+    }
+
+    .viz-btn.active {
+      background: var(--md-primary);
+      border-color: var(--md-primary);
+      color: var(--md-on-primary);
+    }
+
+    .scatter-plot {
+      height: 280px;
+      background: var(--md-surface-container-lowest);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Simulated scatter plot points */
+    .scatter-point {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+
+    .scatter-point.primary {
+      background: var(--md-primary);
+    }
+
+    .scatter-point.tertiary {
+      background: var(--md-tertiary);
+    }
+
+    .scatter-point.highlight {
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--md-on-surface);
+      opacity: 1;
+    }
+
+    /* =============================================================================
+       EXPLORATION SIDEBAR - Right Zone
+       ============================================================================= */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .sidebar-card {
+      background: var(--md-surface-container-lowest);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--elevation-1);
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+    }
+
+    .sidebar-action {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-primary);
+      cursor: pointer;
+    }
+
+    /* Question Cards */
+    .question-card {
+      background: var(--md-surface-container);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .question-card:hover {
+      background: var(--md-primary-container);
+    }
+
+    .question-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .question-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+
+    .question-text {
+      font-size: 13px;
+      color: var(--md-on-surface);
+      line-height: 1.4;
+    }
+
+    /* AI Insights Card */
+    .ai-insights-card {
+      background: linear-gradient(135deg, var(--md-primary-container), var(--md-tertiary-container));
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .ai-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ai-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .ai-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-on-primary-container);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .ai-content {
+      font-size: 14px;
+      color: var(--md-on-surface);
+      line-height: 1.6;
+    }
+
+    .ai-content strong {
+      color: var(--md-primary);
+    }
+
+    /* Metric Explorer Mini */
+    .metric-explorer {
+      margin-top: 16px;
+    }
+
+    .metric-category {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .metric-chip {
+      padding: 6px 12px;
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .metric-chip:hover {
+      border-color: var(--md-primary);
+      color: var(--md-primary);
+    }
+
+    .metric-chip.active {
+      background: var(--md-primary);
+      border-color: var(--md-primary);
+      color: var(--md-on-primary);
+    }
+
+    /* Report CTA */
+    .report-cta {
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border: none;
+      border-radius: 100px;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: var(--elevation-1);
+    }
+
+    .report-cta:hover {
+      background: var(--md-on-primary-container);
+      box-shadow: var(--elevation-2);
+    }
+
+    /* =============================================================================
+       RESPONSIVE
+       ============================================================================= */
+    @media (max-width: 1200px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page-container {
+        padding: 16px;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .score-showdown {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .vs-divider {
+        flex-direction: row;
+      }
+
+      .sidebar {
+        grid-template-columns: 1fr;
+      }
+
+      .market-chips {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+      }
+    }
+
+    /* Icons (simplified SVG inline) */
+    .icon {
+      width: 18px;
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+      <a href="#">Home</a>
+      <span>/</span>
+      <span>Market Analytics</span>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="page-header">
+      <div class="page-title-section">
+        <div class="page-label">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Market Analytics
+        </div>
+        <h1 class="page-title">Compare Your Markets</h1>
+        <p class="page-subtitle">See how your saved markets stack up based on what matters most to you.</p>
+      </div>
+    </header>
+
+    <!-- My Markets Bar -->
+    <div class="my-markets-bar">
+      <span class="my-markets-label">My Markets</span>
+      <div class="market-chips">
+        <button class="market-chip active">
+          Austin, TX
+          <span class="score">78</span>
+        </button>
+        <button class="market-chip">
+          Denver, CO
+          <span class="score">72</span>
+        </button>
+        <button class="market-chip">
+          Nashville, TN
+          <span class="score">75</span>
+        </button>
+        <button class="add-market-btn">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add Market
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Hero Comparison Section -->
+      <section class="hero-section">
+        <div class="hero-header">
+          <div>
+            <h2 class="hero-title">Affordability Showdown</h2>
+            <p class="hero-subtitle">Which market fits your budget better?</p>
+          </div>
+          <div class="template-tabs">
+            <button class="template-tab active">Affordability</button>
+            <button class="template-tab">Investment</button>
+            <button class="template-tab">Momentum</button>
+            <button class="template-tab">Custom</button>
+          </div>
+        </div>
+
+        <!-- Score Showdown -->
+        <div class="score-showdown">
+          <!-- Winner Card -->
+          <div class="market-score-card winner">
+            <div class="winner-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+              </svg>
+              Winner
+            </div>
+            <h3 class="market-name">Austin, TX</h3>
+            <div class="score-gauge">
+              <svg viewBox="0 0 100 100">
+                <circle class="score-gauge-bg" cx="50" cy="50" r="42"></circle>
+                <circle class="score-gauge-fill good" cx="50" cy="50" r="42"
+                  stroke-dasharray="264" stroke-dashoffset="58"></circle>
+              </svg>
+              <div class="score-value">
+                <div class="score-number">78</div>
+                <div class="score-grade">Good</div>
+              </div>
+            </div>
+            <p class="score-label">HomeReady Score</p>
+          </div>
+
+          <!-- VS Divider -->
+          <div class="vs-divider">
+            <span class="vs-badge">VS</span>
+          </div>
+
+          <!-- Comparison Card -->
+          <div class="market-score-card">
+            <h3 class="market-name">Denver, CO</h3>
+            <div class="score-gauge">
+              <svg viewBox="0 0 100 100">
+                <circle class="score-gauge-bg" cx="50" cy="50" r="42"></circle>
+                <circle class="score-gauge-fill good" cx="50" cy="50" r="42"
+                  stroke-dasharray="264" stroke-dashoffset="74"></circle>
+              </svg>
+              <div class="score-value">
+                <div class="score-number">72</div>
+                <div class="score-grade">Good</div>
+              </div>
+            </div>
+            <p class="score-label">HomeReady Score</p>
+          </div>
+        </div>
+
+        <!-- Priority Breakdown -->
+        <div class="priority-section">
+          <div class="priority-header">
+            <h3 class="priority-title">Why Austin Wins For You</h3>
+          </div>
+
+          <div class="priority-item">
+            <div class="priority-rank primary">1</div>
+            <div class="priority-icon primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <div class="priority-content">
+              <div class="priority-label">Better Affordability</div>
+              <div class="priority-detail">Price-to-income ratio 4.2 vs 5.8</div>
+            </div>
+            <span class="priority-winner primary">Austin</span>
+          </div>
+
+          <div class="priority-item">
+            <div class="priority-rank primary">2</div>
+            <div class="priority-icon primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+            </div>
+            <div class="priority-content">
+              <div class="priority-label">Stronger Appreciation</div>
+              <div class="priority-detail">5-year CAGR 8.2% vs 6.1%</div>
+            </div>
+            <span class="priority-winner primary">Austin</span>
+          </div>
+
+          <div class="priority-item">
+            <div class="priority-rank tertiary">3</div>
+            <div class="priority-icon tertiary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+              </svg>
+            </div>
+            <div class="priority-content">
+              <div class="priority-label">Job Market Growth</div>
+              <div class="priority-detail">Employment growth 3.8% vs 4.2%</div>
+            </div>
+            <span class="priority-winner tertiary">Denver</span>
+          </div>
+        </div>
+
+        <!-- D3 Visualization -->
+        <div class="viz-container">
+          <div class="viz-header">
+            <h4 class="viz-title">Affordability vs Appreciation</h4>
+            <div class="viz-controls">
+              <button class="viz-btn active">Scatter</button>
+              <button class="viz-btn">Heatmap</button>
+              <button class="viz-btn">Trend</button>
+            </div>
+          </div>
+          <div class="scatter-plot">
+            <!-- Simulated scatter points -->
+            <div class="scatter-point primary" style="left: 25%; top: 40%;"></div>
+            <div class="scatter-point primary" style="left: 30%; top: 35%;"></div>
+            <div class="scatter-point primary" style="left: 35%; top: 45%;"></div>
+            <div class="scatter-point tertiary" style="left: 55%; top: 55%;"></div>
+            <div class="scatter-point tertiary" style="left: 60%; top: 50%;"></div>
+            <div class="scatter-point tertiary" style="left: 65%; top: 60%;"></div>
+            <!-- Highlighted markets -->
+            <div class="scatter-point primary highlight" style="left: 32%; top: 38%;"></div>
+            <div class="scatter-point tertiary highlight" style="left: 58%; top: 52%;"></div>
+            <!-- Axis labels would be added by D3 -->
+            <span style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--md-on-surface-variant);">Price-to-Income Ratio →</span>
+            <span style="position: absolute; left: 8px; top: 50%; transform: rotate(-90deg) translateX(-50%); font-size: 11px; color: var(--md-on-surface-variant);">5Y Appreciation →</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <!-- Quick Questions -->
+        <div class="sidebar-card">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">Explore Questions</h3>
+            <span class="sidebar-action">See All</span>
+          </div>
+          <div class="question-card">
+            <div class="question-icon">💰</div>
+            <span class="question-text">Can I afford to buy in Austin with $85K income?</span>
+          </div>
+          <div class="question-card">
+            <div class="question-icon">📈</div>
+            <span class="question-text">Which market appreciated faster in the last 5 years?</span>
+          </div>
+          <div class="question-card">
+            <div class="question-icon">🏠</div>
+            <span class="question-text">What's the rent vs buy breakeven in Denver?</span>
+          </div>
+        </div>
+
+        <!-- AI Insights -->
+        <div class="ai-insights-card">
+          <div class="ai-header">
+            <div class="ai-icon">✨</div>
+            <span class="ai-label">Quinn's Insight</span>
+          </div>
+          <p class="ai-content">
+            <strong>Austin edges ahead</strong> for your priorities. While Denver has stronger job growth,
+            Austin's lower price-to-income ratio (4.2 vs 5.8) and higher 5-year appreciation make it
+            the better fit for first-time buyers focused on affordability.
+          </p>
+        </div>
+
+        <!-- Metric Categories -->
+        <div class="sidebar-card">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">Compare Metrics</h3>
+          </div>
+          <div class="metric-explorer">
+            <div class="metric-category">Affordability</div>
+            <div class="metric-chips">
+              <span class="metric-chip active">Price/Income</span>
+              <span class="metric-chip">Median Price</span>
+              <span class="metric-chip">Rent/Income</span>
+            </div>
+          </div>
+          <div class="metric-explorer">
+            <div class="metric-category">Growth</div>
+            <div class="metric-chips">
+              <span class="metric-chip">1Y Apprec.</span>
+              <span class="metric-chip">5Y CAGR</span>
+              <span class="metric-chip">Inventory</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generate Report CTA -->
+        <button class="report-cta">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          Generate Full Report
+        </button>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

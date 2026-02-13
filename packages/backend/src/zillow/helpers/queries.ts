@@ -112,43 +112,22 @@ export async function getLatestDate(
   }
 }
 
-// Map table names to metric names for latest date lookup
-const tableToMetricForDate: Record<string, MetricName> = {
-  zillow_zhvi: 'zhvi',
-  zillow_zori: 'zori',
-  zillow_zordi: 'zordi',
-  zillow_inventory: 'inventory',
-  zillow_new_listings: 'new_listings',
-  zillow_pending_listings: 'pending_sales',
-  zillow_median_list_price: 'list_price',
-  zillow_sales_count: 'sale_price',
-  zillow_sales_price: 'sale_price',
-  zillow_sale_to_list: 'sale_to_list',
-  zillow_days_to_pending: 'dom',
-  zillow_days_to_close: 'dom',
-  zillow_market_heat_index: 'market_heat',
-  zillow_price_cut_share: 'price_cuts',
-  zillow_price_cut_amt: 'price_cuts',
-  zillow_price_cut_pct: 'price_cuts',
-  zillow_new_construction_sales_count: 'sale_price',
-  zillow_new_construction_sale_price: 'sale_price',
-};
-
-// Backwards-compatible alias that maps table names to metrics
-export const getLatestDateForTable = async (
+/**
+ * Get latest date for a metric at a geography level.
+ * @param metricName - The metric name (e.g., 'zori', 'zordi', 'zhvi')
+ * @param geography - The geography level (e.g., 'metro', 'county', 'zip')
+ */
+export const getLatestDateForMetric = async (
   supabase: SupabaseClient,
-  table: string,
+  metricName: MetricName,
   geography: string,
 ): Promise<string> => {
-  const metricName = tableToMetricForDate[table] || 'zhvi';
   return getLatestDate(
     supabase,
     geography.toLowerCase() as GeographyType,
     metricName,
   );
 };
-
-export const getLatestDateForMarketTable = getLatestDateForTable;
 
 /**
  * Paginated query helper to overcome Supabase's 1000 row default limit
@@ -635,38 +614,18 @@ export async function queryMarketHeat(
   }));
 }
 
-// Map old table names to new metric names (shared across functions)
-const TABLE_TO_METRIC_MAP: Record<string, MetricName> = {
-  zillow_inventory: 'inventory',
-  zillow_new_listings: 'new_listings',
-  zillow_pending_listings: 'pending_sales',
-  zillow_median_list_price: 'list_price',
-  zillow_sales_count: 'sale_price',
-  zillow_sales_price: 'sale_price',
-  zillow_sale_to_list: 'sale_to_list',
-  zillow_days_to_pending: 'dom',
-  zillow_days_to_close: 'dom',
-  zillow_price_cut_share: 'price_cuts',
-  zillow_price_cut_amt: 'price_cuts',
-  zillow_price_cut_pct: 'price_cuts',
-  zillow_market_heat_index: 'market_heat',
-  zillow_new_construction_sales_count: 'sale_price',
-  zillow_new_construction_sale_price: 'sale_price',
-  zillow_affordability: 'zhvi',
-};
-
 /**
- * Generic query for market indicators (legacy-compatible)
+ * Generic query for market indicators.
+ * @param metricName - The metric name (e.g., 'inventory', 'new_listings', 'price_cuts')
  */
 export async function queryMarketIndicator(
   supabase: SupabaseClient,
-  table: string,
+  metricName: MetricName,
   geography: string | string[],
   targetDate: string,
   _propertyType?: string,
   regionIds?: string[],
 ) {
-  const metricName = TABLE_TO_METRIC_MAP[table] || 'zhvi';
   const geoType = (
     Array.isArray(geography) ? geography[0] : geography
   ).toLowerCase() as GeographyType;
@@ -684,16 +643,16 @@ export async function queryMarketIndicator(
 }
 
 /**
- * Query market indicators using latest available data per region
- * Returns each region's most recent data point (not limited to a single global date)
+ * Query market indicators using latest available data per region.
+ * Returns each region's most recent data point (not limited to a single global date).
+ * @param metricName - The metric name (e.g., 'inventory', 'new_listings')
  */
 export async function queryMarketIndicatorLatest(
   supabase: SupabaseClient,
-  table: string,
+  metricName: MetricName,
   geography: string | string[],
   regionIds?: string[],
 ) {
-  const metricName = TABLE_TO_METRIC_MAP[table] || 'zhvi';
   const geoType = (
     Array.isArray(geography) ? geography[0] : geography
   ).toLowerCase() as GeographyType;

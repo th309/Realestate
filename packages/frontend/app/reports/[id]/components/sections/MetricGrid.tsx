@@ -11,13 +11,19 @@ export function MetricGrid({ section, report }: SectionProps) {
   const metrics = section.config?.metrics || [];
   const columns = section.config?.columns || 3;
 
-  const metricsWithValues = metrics.map((metricId: string) => ({
+  interface MetricWithValue {
+    metricId: string;
+    value: number | null;
+    label: string;
+  }
+
+  const metricsWithValues: MetricWithValue[] = metrics.map((metricId: string) => ({
     metricId,
     value: getMetricWithAliases(report, metricId),
     label: metricId.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
   }));
 
-  const hasAnyData = metricsWithValues.some((m) => m.value !== null);
+  const hasAnyData = metricsWithValues.some((m: MetricWithValue) => m.value !== null);
 
   if (!hasAnyData) {
     return (

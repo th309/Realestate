@@ -1,0 +1,243 @@
+{
+  "generated_at": "2026-02-13 14:06:07 UTC",
+  "geo_level": "county",
+  "total_rows": 288768,
+  "score_types": [
+    {
+      "score_type": "homeready",
+      "target_column": "excess_div_3y",
+      "n_total": 144384,
+      "n_with_target": 74308,
+      "insample": {
+        "n": 74308,
+        "pearson_r": 0.2993,
+        "spearman_r": 0.2708,
+        "quintile_table": [
+          {
+            "quintile": 1,
+            "avg_score": 11.13,
+            "avg_excess_return": -2.2812,
+            "count": 14890,
+            "beat_median_rate": 32.2
+          },
+          {
+            "quintile": 2,
+            "avg_score": 31.66,
+            "avg_excess_return": -0.8296,
+            "count": 14864,
+            "beat_median_rate": 43.8
+          },
+          {
+            "quintile": 3,
+            "avg_score": 51.09,
+            "avg_excess_return": -0.1298,
+            "count": 14839,
+            "beat_median_rate": 52.6
+          },
+          {
+            "quintile": 4,
+            "avg_score": 69.65,
+            "avg_excess_return": 0.2063,
+            "count": 14908,
+            "beat_median_rate": 57.9
+          },
+          {
+            "quintile": 5,
+            "avg_score": 89.67,
+            "avg_excess_return": 0.5535,
+            "count": 14807,
+            "beat_median_rate": 63.2
+          }
+        ],
+        "decile_spread": {
+          "top_decile_avg_excess": 0.6066,
+          "bottom_decile_avg_excess": -2.8804,
+          "decile_spread": 3.487
+        },
+        "ic_statistics": {
+          "mean_ic": 0.2588,
+          "std_ic": 0.0728,
+          "ir": 3.5544,
+          "hit_rate": 100.0,
+          "n_periods": 26
+        }
+      },
+      "oos": {
+        "error": "oos_results_not_found",
+        "path": null
+      },
+      "time_stability": {
+        "by_year": [
+          {
+            "year": 2020,
+            "n": 967,
+            "mean_ic": 0.0553,
+            "n_periods": 1,
+            "quintile_spread": 0.6664,
+            "decile_spread": 1.0858,
+            "failed": false
+          },
+          {
+            "year": 2021,
+            "n": 33952,
+            "mean_ic": 0.2923,
+            "n_periods": 12,
+            "quintile_spread": 3.2146,
+            "decile_spread": 3.9085,
+            "failed": false
+          },
+          {
+            "year": 2022,
+            "n": 36356,
+            "mean_ic": 0.2448,
+            "n_periods": 12,
+            "quintile_spread": 2.5742,
+            "decile_spread": 3.2289,
+            "failed": false
+          },
+          {
+            "year": 2023,
+            "n": 3033,
+            "mean_ic": 0.2273,
+            "n_periods": 1,
+            "quintile_spread": 2.1708,
+            "decile_spread": 2.2624,
+            "failed": false
+          },
+          {
+            "year": 2024,
+            "n": 0,
+            "skipped": true
+          }
+        ],
+        "failure_years": [],
+        "all_years_pass": true
+      },
+      "calibration": {
+        "decile_calibration": [
+          {
+            "decile": 1,
+            "predicted_percentile": 5.0,
+            "actual_percentile": 20.3,
+            "deviation": 15.3,
+            "n": 7461
+          },
+          {
+            "decile": 2,
+            "predicted_percentile": 15.0,
+            "actual_percentile": 32.7,
+            "deviation": 17.67,
+            "n": 7429
+          },
+          {
+            "decile": 3,
+            "predicted_percentile": 25.0,
+            "actual_percentile": 40.2,
+            "deviation": 15.19,
+            "n": 7466
+          },
+          {
+            "decile": 4,
+            "predicted_percentile": 35.0,
+            "actual_percentile": 46.1,
+            "deviation": 11.13,
+            "n": 7398
+          },
+          {
+            "decile": 5,
+            "predicted_percentile": 45.0,
+            "actual_percentile": 50.7,
+            "deviation": 5.73,
+            "n": 7404
+          },
+          {
+            "decile": 6,
+            "predicted_percentile": 55.0,
+            "actual_percentile": 54.3,
+            "deviation": 0.74,
+            "n": 7435
+          },
+          {
+            "decile": 7,
+            "predicted_percentile": 65.0,
+            "actual_percentile": 55.9,
+            "deviation": 9.14,
+            "n": 7482
+          },
+          {
+            "decile": 8,
+            "predicted_percentile": 75.0,
+            "actual_percentile": 56.7,
+            "deviation": 18.27,
+            "n": 7426
+          },
+          {
+            "decile": 9,
+            "predicted_percentile": 85.0,
+            "actual_percentile": 60.5,
+            "deviation": 24.45,
+            "n": 7409
+          },
+          {
+            "decile": 10,
+            "predicted_percentile": 95.0,
+            "actual_percentile": 60.7,
+            "deviation": 34.29,
+            "n": 7398
+          }
+        ],
+        "mean_absolute_deviation": 15.19,
+        "well_calibrated": false
+      }
+    },
+    {
+      "score_type": "investoredge",
+      "target_column": "excess_total_div_3y",
+      "n_total": 144384,
+      "n_with_target": 0,
+      "insample": {
+        "error": "insufficient_data",
+        "n": 0
+      },
+      "oos": {
+        "error": "oos_results_not_found",
+        "path": null
+      },
+      "time_stability": {
+        "by_year": [
+          {
+            "year": 2020,
+            "n": 0,
+            "skipped": true
+          },
+          {
+            "year": 2021,
+            "n": 0,
+            "skipped": true
+          },
+          {
+            "year": 2022,
+            "n": 0,
+            "skipped": true
+          },
+          {
+            "year": 2023,
+            "n": 0,
+            "skipped": true
+          },
+          {
+            "year": 2024,
+            "n": 0,
+            "skipped": true
+          }
+        ],
+        "failure_years": [],
+        "all_years_pass": true
+      },
+      "calibration": {
+        "error": "insufficient_data",
+        "n": 0
+      }
+    }
+  ]
+}

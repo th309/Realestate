@@ -11,6 +11,12 @@ export interface MetricDefinition {
   dataSource: string;
   updateFrequency: string;
   notes?: string;
+  /** URL to the original data source */
+  sourceUrl?: string;
+  /** URL to methodology documentation */
+  methodology?: string;
+  /** Related metric IDs that users might find useful */
+  relatedMetrics?: string[];
 }
 
 export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
@@ -22,6 +28,8 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource: 'Realtor.com',
     updateFrequency: 'Monthly',
     notes: 'Based on active listings, not sold prices',
+    sourceUrl: 'https://www.realtor.com/research/data/',
+    relatedMetrics: ['listing_price', 'home_value_yoy', 'home_value_mom', 'price_per_sqft'],
   },
   listing_price: {
     id: 'listing_price',
@@ -30,6 +38,8 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource: 'Realtor.com',
     updateFrequency: 'Monthly',
     notes: 'Based on active listings; may differ from actual sale prices',
+    sourceUrl: 'https://www.realtor.com/research/data/',
+    relatedMetrics: ['home_value', 'price_per_sqft', 'sale_price'],
   },
   home_value_yoy: {
     id: 'home_value_yoy',
@@ -55,6 +65,9 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource: 'Zillow ZHVF',
     updateFrequency: 'Monthly',
     notes: 'Forecasts are estimates and actual results may vary',
+    sourceUrl: 'https://www.zillow.com/research/data/',
+    methodology: 'https://www.zillow.com/research/zhvi-methodology-2019-deep-26226/',
+    relatedMetrics: ['home_value', 'home_value_yoy'],
   },
 
   // Market Activity
@@ -218,6 +231,9 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     formula: 'Repeat-rent index methodology that controls for changes in rental mix over time',
     dataSource: 'Zillow ZORI',
     updateFrequency: 'Monthly',
+    sourceUrl: 'https://www.zillow.com/research/data/',
+    methodology: 'https://www.zillow.com/research/zillow-rent-index-methodology-2393/',
+    relatedMetrics: ['rent_yoy', 'cap_rate', 'gross_yield', 'rent_to_price'],
   },
   rent_yoy: {
     id: 'rent_yoy',
@@ -269,6 +285,7 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource: 'Calculated from Zillow ZORI (rent), HUD FMR (county fallback), Census ACS (rent fallback), and Zillow ZHVI (home value)',
     updateFrequency: 'Monthly',
     notes: 'Uses 60% NOI ratio (40% expense ratio for taxes, insurance, maintenance, vacancy). Rent sources: ZORI (primary), HUD FMR (counties), Census median_gross_rent (fallback).',
+    relatedMetrics: ['gross_yield', 'rent_to_price', 'price_to_rent', 'rent_index'],
   },
   gross_yield: {
     id: 'gross_yield',
@@ -367,6 +384,8 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     description: 'Total population count for the geographic area based on Census Bureau estimates.',
     dataSource: 'U.S. Census Bureau',
     updateFrequency: 'Annual',
+    sourceUrl: 'https://www.census.gov/data/tables/time-series/demo/popest/2020s-total-metro-and-micro-statistical-areas.html',
+    relatedMetrics: ['population_growth', 'median_income', 'median_age'],
   },
   population_growth: {
     id: 'population_growth',
@@ -416,6 +435,9 @@ export const METRIC_DEFINITIONS: Record<string, MetricDefinition> = {
     dataSource: 'Bureau of Labor Statistics (BLS LAUMT for metros, FRED for national/state/county)',
     updateFrequency: 'Monthly',
     notes: 'Available for National, 51 States, 380+ Metros, and 3,200+ Counties. Data typically released ~3 weeks after month end.',
+    sourceUrl: 'https://fred.stlouisfed.org/',
+    methodology: 'https://www.bls.gov/lau/laumthd.htm',
+    relatedMetrics: ['job_growth', 'gdp_growth', 'median_income'],
   },
   job_growth: {
     id: 'job_growth',

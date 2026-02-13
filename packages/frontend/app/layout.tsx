@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
+import { Roboto, Roboto_Mono, Source_Serif_4, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
@@ -18,6 +18,21 @@ const robotoMono = Roboto_Mono({
   variable: "--font-roboto-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
+  display: "swap",
+});
+
+// Editorial Typography for Reports
+const sourceSerif = Source_Serif_4({
+  variable: "--font-source-serif",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -111,7 +126,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col`}
       >
         <Providers>
           <Header />

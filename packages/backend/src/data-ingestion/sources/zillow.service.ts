@@ -6,6 +6,16 @@ import { ZILLOW_URLS } from '../config/zillow-urls';
 import { ImportResult, TimeSeriesRecord } from '../types';
 import { normalizeZipKey } from '../../common/zip';
 
+/**
+ * Normalize metric key to base metric name for database storage.
+ * e.g., 'zori_county' → 'zori', 'zordi' → 'zordi'
+ */
+function normalizeMetricName(metricKey: string): string {
+    // Strip geography suffixes like _county, _zip, _state
+    const baseName = metricKey.replace(/_(county|zip|state|metro|city)$/, '');
+    return baseName;
+}
+
 interface MarketRecord {
     region_id: string;
     region_name: string;
@@ -129,6 +139,9 @@ export class ZillowService {
                         /^\d{4}-\d{2}-\d{2}$/.test(key)
                     );
 
+                    // Normalize metric name for storage (e.g., 'zori_county' → 'zori')
+                    const normalizedMetricName = normalizeMetricName(metricName);
+
                     for (const dateCol of dateColumns) {
                         const value = parseFloat(record[dateCol]);
 
@@ -138,7 +151,7 @@ export class ZillowService {
                                 region_id: regionId,
                                 region_name: regionName,
                                 period_date: dateCol,
-                                metric_name: metricName,
+                                metric_name: normalizedMetricName,
                                 value: value
                             });
                         }

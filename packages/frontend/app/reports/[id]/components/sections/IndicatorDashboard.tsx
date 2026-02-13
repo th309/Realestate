@@ -55,21 +55,22 @@ export function IndicatorDashboard({ section, report }: SectionProps): React.Rea
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {indicators.map((indicatorId: string) => {
-          const value = report.populated_data?.current?.[indicatorId];
+          const rawValue = report.populated_data?.current?.[indicatorId];
+          const numericValue = rawValue !== null && rawValue !== undefined ? Number(rawValue) : null;
           const config = getIndicatorConfig(indicatorId);
           const format = getMetricFormat(indicatorId);
 
           // Determine status based on value ranges
           const getStatus = (): 'hot' | 'warm' | 'cold' | 'neutral' => {
-            if (value === null || value === undefined) return 'neutral';
+            if (numericValue === null || isNaN(numericValue)) return 'neutral';
             if (indicatorId === 'hotness_score') {
-              if (value > 70) return 'hot';
-              if (value > 40) return 'warm';
+              if (numericValue > 70) return 'hot';
+              if (numericValue > 40) return 'warm';
               return 'cold';
             }
             if (indicatorId === 'days_on_market') {
-              if (value < 30) return 'hot';
-              if (value < 60) return 'warm';
+              if (numericValue < 30) return 'hot';
+              if (numericValue < 60) return 'warm';
               return 'cold';
             }
             return 'neutral';
@@ -87,8 +88,8 @@ export function IndicatorDashboard({ section, report }: SectionProps): React.Rea
             <div key={indicatorId} className="bg-surface rounded-xl p-4">
               <p className="text-sm text-on-surface-variant mb-1">{config.label}</p>
               <p className="text-2xl font-bold text-on-surface mb-2">
-                {value !== null && value !== undefined
-                  ? formatMetricValue(value, format)
+                {numericValue !== null && !isNaN(numericValue)
+                  ? formatMetricValue(numericValue, format)
                   : '—'}
               </p>
               <span className={`text-xs px-2 py-1 rounded-full ${statusColors[status]}`}>

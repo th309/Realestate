@@ -504,9 +504,9 @@ export function RiskAssessment({
 
   // Get AI risk analysis
   const aiRiskAnalysis =
-    report.ai_narrative?.investment_analysis ||
-    report.ai_narratives?.risk_analysis ||
-    report.ai_narratives?.investment_analysis;
+    report.ai_narrative?.risks_opportunities ||
+    report.ai_narrative?.risk_analysis ||
+    report.ai_narratives?.risk_analysis;
 
   // Check if we have any data to show
   const hasRiskIndicators = riskIndicators.length > 0;

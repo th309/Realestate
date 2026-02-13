@@ -50,6 +50,15 @@ import { ScenarioCard } from './sections/ScenarioCard';
 import { ScenarioChart } from './sections/ScenarioChart';
 import { ForecastDisplay } from './sections/ForecastDisplay';
 
+// New comparison report sections (2026 redesign)
+import {
+  ComparisonHeroShowdown,
+  WhyWinnerWon,
+  ScoreCredibility,
+  MarketDeepDive,
+  AIRecommendation,
+} from './sections/comparison';
+
 // Wrapper components to adapt existing sections to SectionProps interface
 function ScoreGaugeDualWrapper({ section, report }: SectionProps) {
   const userType = report.user_type;
@@ -191,6 +200,13 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType<SectionProps>> = {
   scenario_card: ScenarioCard,
   scenario_chart: ScenarioChart,
   forecast_display: ForecastDisplay,
+
+  // Premium comparison report sections (2026 redesign)
+  comparison_hero_showdown: ComparisonHeroShowdown,
+  why_winner_won: WhyWinnerWon,
+  score_credibility: ScoreCredibility,
+  market_deep_dive: MarketDeepDive,
+  ai_recommendation: AIRecommendation,
 };
 
 interface SectionRendererProps {

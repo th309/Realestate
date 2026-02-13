@@ -37,8 +37,8 @@ export function ChartSingle({ section, report }: SectionProps): React.ReactEleme
 
   const historical = report.populated_data?.historical?.[metricId];
 
-  // Check for missing data
-  if (!historical || historical.length === 0) {
+  // Check for missing data - historical is an object with data array, trend, change_pct
+  if (!historical || !historical.data || historical.data.length === 0) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
         <h3 className="text-lg font-semibold text-on-surface mb-4">{title}</h3>
@@ -51,7 +51,7 @@ export function ChartSingle({ section, report }: SectionProps): React.ReactEleme
   }
 
   const format = getMetricFormat(metricId);
-  const data = historical.map((point: { date: string; value: number }) => ({
+  const data = historical.data.map((point: { date: string; value: number }) => ({
     date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
     value: point.value,
   }));

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   EntitlementsContextValue,
   EntitlementsState,
@@ -18,6 +18,31 @@ const defaultState: EntitlementsState = {
   loading: true,
   error: null,
 };
+
+// Session storage keys for dev toolbar persistence
+const STORAGE_KEYS = {
+  SIMULATED_TIER: 'devtools-simulated-tier',
+  SIMULATED_AUTH: 'devtools-simulated-auth',
+} as const;
+
+/** Read simulated tier from sessionStorage */
+function getStoredSimulatedTier(): UserTier | null {
+  if (typeof window === 'undefined') return null;
+  const stored = sessionStorage.getItem(STORAGE_KEYS.SIMULATED_TIER);
+  if (stored && ['free', 'pro', 'enterprise', 'admin'].includes(stored)) {
+    return stored as UserTier;
+  }
+  return null;
+}
+
+/** Read simulated auth from sessionStorage */
+function getStoredSimulatedAuth(): boolean | null {
+  if (typeof window === 'undefined') return null;
+  const stored = sessionStorage.getItem(STORAGE_KEYS.SIMULATED_AUTH);
+  if (stored === 'true') return true;
+  if (stored === 'false') return false;
+  return null;
+}
 
 const EntitlementsContext = createContext<EntitlementsContextValue | null>(null);
 
@@ -44,13 +69,34 @@ export function EntitlementsProvider({
   initialResources,
 }: EntitlementsProviderProps) {
   const [state, setState] = useState<EntitlementsState>(defaultState);
-  const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(null);
-  const [simulatedAuth, setSimulatedAuth] = useState<boolean | null>(null);
+  // Initialize from sessionStorage to persist across navigations
+  const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() => getStoredSimulatedTier());
+  const [simulatedAuth, setSimulatedAuthRaw] = useState<boolean | null>(() => getStoredSimulatedAuth());
 
-  // Wrap setSimulatedTier to add logging
+  // Use ref to track the latest simulatedTier for the refresh callback
+  const simulatedTierRef = useRef<UserTier | null>(simulatedTier);
+
+  // Wrap setSimulatedTier to persist to sessionStorage
   const setSimulatedTier = useCallback((tier: UserTier | null) => {
     console.log('[Entitlements] setSimulatedTier called with:', tier);
     setSimulatedTierRaw(tier);
+    simulatedTierRef.current = tier;
+    if (tier) {
+      sessionStorage.setItem(STORAGE_KEYS.SIMULATED_TIER, tier);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.SIMULATED_TIER);
+    }
+  }, []);
+
+  // Wrap setSimulatedAuth to persist to sessionStorage
+  const setSimulatedAuth = useCallback((auth: boolean | null) => {
+    console.log('[Entitlements] setSimulatedAuth called with:', auth);
+    setSimulatedAuthRaw(auth);
+    if (auth !== null) {
+      sessionStorage.setItem(STORAGE_KEYS.SIMULATED_AUTH, String(auth));
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.SIMULATED_AUTH);
+    }
   }, []);
 
   // Auto-generate resource list from registry if not provided
@@ -59,7 +105,7 @@ export function EntitlementsProvider({
     [initialResources]
   );
 
-  // Check URL for tier override (dev mode)
+  // Check URL for tier override (dev mode) - only on initial mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -68,14 +114,21 @@ export function EntitlementsProvider({
         setSimulatedTier(tierParam);
       }
     }
-  }, []);
+  }, [setSimulatedTier]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    simulatedTierRef.current = simulatedTier;
+  }, [simulatedTier]);
 
   const refresh = useCallback(async () => {
-    console.log('[Entitlements] refresh() called, simulatedTier=', simulatedTier);
+    // Use ref to get the latest simulated tier (avoids stale closure issues)
+    const currentTier = simulatedTierRef.current;
+    console.log('[Entitlements] refresh() called, simulatedTier=', currentTier);
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchEntitlements(resources, simulatedTier);
-      console.log('[Entitlements] setState with tier=', data.tier);
+      const data = await fetchEntitlements(resources, currentTier);
+      console.log('[Entitlements] setState with tier=', data.tier, 'simulatedTier was=', currentTier);
       setState(data);
     } catch (error) {
       // Fail open: default to free tier on API failure
@@ -86,12 +139,13 @@ export function EntitlementsProvider({
         error: null,
       }));
     }
-  }, [resources, simulatedTier]);
+  }, [resources]); // Remove simulatedTier from deps - we use the ref instead
 
+  // Refresh when simulatedTier changes
   useEffect(() => {
-    console.log('[Entitlements] useEffect triggered, refresh changed');
+    console.log('[Entitlements] simulatedTier changed to:', simulatedTier, '- triggering refresh');
     refresh();
-  }, [refresh]);
+  }, [simulatedTier, refresh]);
 
   const canAccess = useCallback((type: ResourceType, id: string): boolean => {
     const key = `${type}:${id}`;
@@ -145,10 +199,11 @@ export function EntitlementsProvider({
   }, []);
 
   const resetSimulation = useCallback(() => {
+    console.log('[Entitlements] resetSimulation called');
     setSimulatedTier(null);
     setSimulatedAuth(null);
-    refresh();
-  }, [refresh]);
+    // Note: refresh will be triggered by the simulatedTier useEffect
+  }, [setSimulatedTier, setSimulatedAuth]);
 
   const value = useMemo<EntitlementsContextValue>(() => ({
     ...state,
@@ -177,7 +232,9 @@ export function EntitlementsProvider({
     trackUpgradeClick,
     trackDismiss,
     simulatedTier,
+    setSimulatedTier,
     simulatedAuth,
+    setSimulatedAuth,
     resetSimulation,
     refresh,
   ]);

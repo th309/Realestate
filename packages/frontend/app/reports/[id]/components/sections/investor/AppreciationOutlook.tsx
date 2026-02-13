@@ -336,7 +336,6 @@ export function AppreciationOutlook({
 
   // Get AI narrative
   const aiNarrative =
-    report.ai_narrative?.investment_analysis ??
     report.ai_narrative?.appreciation_outlook ??
     report.ai_narratives?.appreciation_analysis ??
     report.ai_narratives?.investment_outlook;

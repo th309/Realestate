@@ -281,9 +281,8 @@ export function CashFlowAnalysis({ report }: CashFlowAnalysisProps): React.React
 
   // Get AI analysis focused on cash flow/investment
   const aiAnalysis =
-    report.ai_narrative?.investment_analysis ||
+    report.ai_narrative?.cash_flow_analysis ||
     report.ai_narratives?.cash_flow_analysis ||
-    report.ai_narratives?.investment_analysis ||
     report.ai_narratives?.yield_analysis;
 
   // If no data available, show unavailable state

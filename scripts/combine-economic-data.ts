@@ -35,7 +35,14 @@ function writeCSV(filename: string, data: any[]): void {
     return;
   }
 
-  const headers = Object.keys(data[0]);
+  // Collect ALL unique keys from all records to avoid dropping columns
+  const headerSet = new Set<string>();
+  for (const row of data) {
+    for (const key of Object.keys(row)) {
+      headerSet.add(key);
+    }
+  }
+  const headers = Array.from(headerSet);
   const rows = data.map(row =>
     headers.map(h => {
       const val = row[h];

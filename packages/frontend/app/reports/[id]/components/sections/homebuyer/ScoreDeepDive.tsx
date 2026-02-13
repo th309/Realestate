@@ -1,9 +1,31 @@
 'use client';
 
-import React from 'react';
-import { Target, DollarSign, Shield, TrendingUp, Users, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, DollarSign, Shield, TrendingUp, Users, AlertTriangle, BarChart3 } from 'lucide-react';
+import { formatMetricValue } from '@/lib/data';
 import { SectionCard, AIAnalysisBlock } from '../core';
+import { getMetricWithAliases } from '../../utils/metricHelpers';
 import type { ReportInstance } from '../../../../types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+interface QuintileData {
+  label: string;
+  scoreRange: string;
+  avgReturn1y: number | null;
+  avgReturn3y: number | null;
+  count: number;
+}
+
+interface QuintilePerformanceResponse {
+  quintiles: QuintileData[];
+  summary: {
+    topQuintileReturn: number | null;
+    bottomQuintileReturn: number | null;
+    spread: number | null;
+    totalSamples: number;
+  };
+}
 
 export interface ScoreDeepDiveProps {
   /** The full report data */
@@ -334,6 +356,10 @@ export function ScoreDeepDive({ report }: ScoreDeepDiveProps): React.ReactElemen
         </>
       )}
 
+      {/* Score Credibility / Predictive Performance */}
+      <hr className="report-divider" />
+      <ScoreCredibilityBlock score={score} report={report} scoreType="homeready" />
+
       {/* AI Analysis Block for additional context */}
       {report.ai_narratives?.score_analysis && (
         <>
@@ -350,6 +376,276 @@ export function ScoreDeepDive({ report }: ScoreDeepDiveProps): React.ReactElemen
         </>
       )}
     </SectionCard>
+  );
+}
+
+/**
+ * ScoreCredibilityBlock - Shows backtesting data proving scores predict performance
+ * Answers: "What does this score ACTUALLY mean for my investment?"
+ */
+function ScoreCredibilityBlock({
+  score,
+  report,
+  scoreType,
+}: {
+  score: number;
+  report: ReportInstance;
+  scoreType: 'homeready' | 'investoredge';
+}) {
+  const [quintileData, setQuintileData] = useState<QuintilePerformanceResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchQuintileData() {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/scoring/validation/quintile-performance?score_type=${scoreType}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setQuintileData(data);
+        }
+      } catch {
+        // Silently fail - section just won't show
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQuintileData();
+  }, [scoreType]);
+
+  // Get median price for dollar impact calculation
+  const medianPrice = getMetricWithAliases(report as any, 'zhvi')
+    ?? getMetricWithAliases(report as any, 'home_value')
+    ?? getMetricWithAliases(report as any, 'median_listing_price');
+
+  // Score context from backend
+  const scoreContext = report.populated_data?.scores?.[scoreType] as {
+    context?: {
+      dollar_impact?: string;
+      interpretation?: string;
+    };
+  } | undefined;
+
+  if (loading) {
+    return (
+      <div className="py-[var(--report-space-lg)]">
+        <div className="h-6 w-48 bg-[var(--report-cream-dark)] rounded animate-pulse mb-4" />
+        <div className="h-40 bg-[var(--report-cream)] rounded-lg animate-pulse" />
+      </div>
+    );
+  }
+
+  // Determine which quintile the score falls in
+  // Match user's score against actual quintile ranges from the API data
+  const getUserQuintile = (s: number, quintiles: QuintileData[]): number => {
+    for (let i = 0; i < quintiles.length; i++) {
+      const [min, max] = quintiles[i].scoreRange.split('-').map(Number);
+      if (s >= min && s <= max) return i;
+    }
+    // Fallback: find closest quintile
+    return 0;
+  };
+
+  const userQuintile = getUserQuintile(score, quintileData.quintiles);
+
+  return (
+    <div>
+      <div className="flex items-center gap-[var(--report-space-sm)] mb-[var(--report-space-md)]">
+        <div
+          className="w-8 h-8 rounded-[var(--report-radius-sm)] flex items-center justify-center"
+          style={{ backgroundColor: 'var(--report-cream)' }}
+        >
+          <BarChart3 className="w-4 h-4" style={{ color: 'var(--report-navy)' }} />
+        </div>
+        <h3 className="report-heading-sm" style={{ color: 'var(--report-navy)' }}>
+          What This Score Predicts
+        </h3>
+      </div>
+
+      <p
+        className="text-sm mb-[var(--report-space-lg)] leading-relaxed"
+        style={{ color: 'var(--report-stone)' }}
+      >
+        PropertyIQ scores are built on backtested data. Here's how markets with similar scores have
+        actually performed over 3 years.
+      </p>
+
+      {/* Quintile Performance Bars */}
+      {quintileData && quintileData.quintiles.length > 0 && (
+        <div className="mb-[var(--report-space-lg)]">
+          <div className="flex items-end gap-3 h-40 mb-3">
+            {quintileData.quintiles.map((q, i) => {
+              const isUserQuintile = i === userQuintile;
+              const return3y = q.avgReturn3y ?? 0;
+              // Scale bar height: max return maps to full height
+              const maxReturn = Math.max(
+                ...quintileData.quintiles.map((qq) => Math.abs(qq.avgReturn3y ?? 0))
+              );
+              const barHeight = maxReturn > 0 ? (Math.abs(return3y) / maxReturn) * 100 : 10;
+
+              return (
+                <div key={q.label} className="flex-1 flex flex-col items-center gap-1">
+                  {/* Return label */}
+                  <span
+                    className="text-xs font-semibold tabular-nums"
+                    style={{
+                      color: isUserQuintile
+                        ? 'var(--report-navy)'
+                        : 'var(--report-stone-light)',
+                    }}
+                  >
+                    {return3y >= 0 ? '+' : ''}{return3y.toFixed(1)}%
+                  </span>
+                  {/* Bar */}
+                  <div
+                    className="w-full rounded-t-md transition-all duration-500"
+                    style={{
+                      height: `${Math.max(barHeight, 8)}%`,
+                      backgroundColor: isUserQuintile
+                        ? 'var(--report-navy)'
+                        : return3y >= 0
+                        ? 'var(--report-cream-dark)'
+                        : 'var(--report-error-bg)',
+                      border: isUserQuintile ? '2px solid var(--report-navy)' : 'none',
+                    }}
+                  />
+                  {/* Quintile label */}
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: isUserQuintile
+                        ? 'var(--report-navy)'
+                        : 'var(--report-stone-light)',
+                      fontWeight: isUserQuintile ? 600 : 400,
+                    }}
+                  >
+                    {q.scoreRange}
+                  </span>
+                  {isUserQuintile && (
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: 'var(--report-navy)',
+                        color: 'white',
+                      }}
+                    >
+                      You
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-center" style={{ color: 'var(--report-stone-light)' }}>
+            3-Year Excess Return by Score Range
+          </p>
+        </div>
+      )}
+
+      {/* Dollar Impact Card */}
+      {medianPrice && quintileData && (
+        <div
+          className="p-5 rounded-xl mb-[var(--report-space-md)]"
+          style={{ backgroundColor: 'var(--report-success-bg)' }}
+        >
+          <DollarImpactDisplay
+            score={score}
+            medianPrice={Number(medianPrice)}
+            quintileData={quintileData}
+            userQuintile={userQuintile}
+            scoreType={scoreType}
+          />
+        </div>
+      )}
+
+      {/* Backend-provided dollar impact context */}
+      {scoreContext?.context?.dollar_impact && !medianPrice && (
+        <div
+          className="p-4 rounded-xl"
+          style={{ backgroundColor: 'var(--report-success-bg)' }}
+        >
+          <p className="text-sm font-medium" style={{ color: 'var(--report-success)' }}>
+            {scoreContext.context.dollar_impact}
+          </p>
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      <p
+        className="text-xs leading-relaxed"
+        style={{ color: 'var(--report-stone-light)' }}
+      >
+        Based on PropertyIQ backtesting across {quintileData?.summary?.totalSamples ?? 384} metros,
+        2018-2024. Past performance does not guarantee future results.
+      </p>
+    </div>
+  );
+}
+
+function DollarImpactDisplay({
+  score,
+  medianPrice,
+  quintileData,
+  userQuintile,
+  scoreType,
+}: {
+  score: number;
+  medianPrice: number;
+  quintileData: QuintilePerformanceResponse;
+  userQuintile: number;
+  scoreType: string;
+}) {
+  const userReturn3y = quintileData.quintiles[userQuintile]?.avgReturn3y ?? 0;
+  const medianReturn3y = quintileData.quintiles[2]?.avgReturn3y ?? 0; // Q3 is median
+
+  const userGain = Math.round(medianPrice * (userReturn3y / 100));
+  const medianGain = Math.round(medianPrice * (medianReturn3y / 100));
+  const advantage = userGain - medianGain;
+
+  const priceFormatted = formatMetricValue(medianPrice, 'currency');
+
+  return (
+    <div>
+      <h4
+        className="text-sm font-semibold uppercase tracking-wide mb-3"
+        style={{ color: 'var(--report-success)' }}
+      >
+        Dollar Impact on a {priceFormatted} Home
+      </h4>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-xs mb-1" style={{ color: 'var(--report-stone)' }}>
+            Score {score} markets (3yr avg)
+          </p>
+          <p className="text-xl font-bold" style={{ color: 'var(--report-navy)' }}>
+            {userGain >= 0 ? '+' : ''}{formatMetricValue(userGain, 'currency')}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--report-stone-light)' }}>
+            equity gain
+          </p>
+        </div>
+        <div>
+          <p className="text-xs mb-1" style={{ color: 'var(--report-stone)' }}>
+            Median markets (3yr avg)
+          </p>
+          <p className="text-xl font-bold" style={{ color: 'var(--report-stone)' }}>
+            {medianGain >= 0 ? '+' : ''}{formatMetricValue(medianGain, 'currency')}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--report-stone-light)' }}>
+            equity gain
+          </p>
+        </div>
+      </div>
+      {advantage > 0 && (
+        <p
+          className="mt-3 text-sm font-medium"
+          style={{ color: 'var(--report-success)' }}
+        >
+          That's {formatMetricValue(advantage, 'currency')} more equity than a typical market.
+        </p>
+      )}
+    </div>
   );
 }
 

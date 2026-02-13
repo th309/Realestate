@@ -64,7 +64,7 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
           <span className="text-sm font-medium text-on-surface">Predictive Scores</span>
         </div>
         <p className="text-xs text-on-surface-variant mb-3">
-          Markets scoring 80+ delivered 12% higher returns. Unlock scores that predict where the market is heading.
+          Top-scoring markets outperform their regional benchmarks. Unlock scores that predict excess returns.
         </p>
         <Link
           href="/pricing"
@@ -113,7 +113,7 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
       <div className="px-6 pb-4">
         <div className="bg-surface rounded-xl p-4 border border-outline-variant/50">
           <div className="text-xs font-medium text-on-surface-variant mb-3">
-            3-Year Cumulative Returns
+            3-Year Excess Returns vs Benchmark
           </div>
           <div className="space-y-2">
             <div>

@@ -203,7 +203,13 @@ export type SectionType =
   | 'pro_forma_returns'
   | 'pro_forma_sensitivity'
   | 'text_block'
-  | 'status_badge';
+  | 'status_badge'
+  // Premium comparison report sections (2026 redesign)
+  | 'comparison_hero_showdown'
+  | 'why_winner_won'
+  | 'score_credibility'
+  | 'market_deep_dive'
+  | 'ai_recommendation';
 
 export interface ReportSection {
   id: string;
@@ -386,6 +392,23 @@ export interface PopulatedReportData {
     }>;
     scores?: Record<string, number | ScoreData>;
   }>;
+  /** Priority-weighted winner for comparison reports (2026 redesign) */
+  priority_weighted_winner?: {
+    winnerId: string;
+    winnerName: string;
+    totalScore: number;
+    priorityScores: Array<{
+      priority: string;
+      weight: number;
+      winnerId: string;
+      winnerName: string;
+      keyMetric: string;
+      winnerValue: number | null;
+      loserValue: number | null;
+      reason: string;
+    }>;
+    reasons: string[];
+  };
 }
 
 export interface TimeSeriesPoint {

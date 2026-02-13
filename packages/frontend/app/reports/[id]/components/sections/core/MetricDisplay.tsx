@@ -29,6 +29,8 @@ export interface MetricDisplayProps {
   trend?: MetricTrend;
   /** Optional additional CSS classes */
   className?: string;
+  /** Compact mode for dense layouts (smaller text, less padding) */
+  compact?: boolean;
 }
 
 /**
@@ -74,20 +76,35 @@ export function MetricDisplay({
   label,
   trend,
   className = '',
+  compact = false,
 }: MetricDisplayProps): React.ReactElement {
   const format = getMetricFormat(metricId);
+
+  const cardClass = compact
+    ? `${className} text-center`.trim()
+    : `report-metric-card ${className}`.trim();
+
+  const labelClass = compact
+    ? 'text-xs font-medium uppercase tracking-wide mb-1'
+    : 'report-metric-label';
+
+  const valueClass = compact
+    ? 'text-lg font-semibold'
+    : 'report-metric-value';
 
   // Handle null/unavailable data
   if (value === null) {
     return (
-      <div className={`report-metric-card ${className}`.trim()}>
-        <p className="report-metric-label">{label}</p>
-        <p className="report-metric-value" style={{ opacity: 0.4 }}>
+      <div className={cardClass}>
+        <p className={labelClass} style={{ color: 'var(--report-stone-light)' }}>{label}</p>
+        <p className={valueClass} style={{ opacity: 0.4, color: 'var(--report-navy)' }}>
           —
         </p>
-        <p className="report-body-sm" style={{ marginTop: 'var(--report-space-xs)' }}>
-          Data unavailable
-        </p>
+        {!compact && (
+          <p className="report-body-sm" style={{ marginTop: 'var(--report-space-xs)' }}>
+            Data unavailable
+          </p>
+        )}
       </div>
     );
   }
@@ -95,19 +112,36 @@ export function MetricDisplay({
   const formattedValue = formatMetricValue(value, format);
 
   return (
-    <div className={`report-metric-card ${className}`.trim()}>
-      <p className="report-metric-label">{label}</p>
-      <p className="report-metric-value">{formattedValue}</p>
+    <div className={cardClass}>
+      <p className={labelClass} style={{ color: 'var(--report-stone-light)' }}>{label}</p>
+      <p className={valueClass} style={{ color: 'var(--report-navy)' }}>{formattedValue}</p>
 
       {trend && trend.sparklineData && trend.sparklineData.length >= 2 && (
-        <div style={{ marginTop: 'var(--report-space-xs)' }}>
+        <div style={{ marginTop: compact ? '4px' : 'var(--report-space-xs)' }}>
           <TrendSparkline
             data={trend.sparklineData}
             trend={trend.direction}
             changePct={trend.changePct}
-            width={80}
-            height={24}
+            width={compact ? 60 : 80}
+            height={compact ? 18 : 24}
           />
+        </div>
+      )}
+
+      {/* Show trend badge in compact mode if no sparkline */}
+      {compact && trend && (!trend.sparklineData || trend.sparklineData.length < 2) && (
+        <div className="mt-1">
+          <span
+            className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+              trend.direction === 'up'
+                ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
+                : trend.direction === 'down'
+                ? 'bg-[var(--report-error-bg)] text-[var(--report-error)]'
+                : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
+            }`}
+          >
+            {trend.changePct >= 0 ? '+' : ''}{trend.changePct.toFixed(1)}%
+          </span>
         </div>
       )}
     </div>

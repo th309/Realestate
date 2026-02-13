@@ -35,7 +35,9 @@ export function WinnerBadges({ section, report }: SectionProps) {
     if (!metricKey) return null;
 
     // Find the geography with highest score for this category
-    const primaryScore = scoreDetails?.[metricKey] as number | undefined;
+    // Use type assertion to access dynamic property
+    const detailsObj = scoreDetails as Record<string, number | undefined> | undefined;
+    const primaryScore = detailsObj?.[metricKey];
     let bestGeo = report.primary_geography_name;
     let bestScore = primaryScore ?? 0;
 

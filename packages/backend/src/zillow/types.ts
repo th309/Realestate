@@ -116,21 +116,14 @@ export interface NewConstructionData {
   price_per_sqft: number | null;
 }
 
-// Type for market indicator table names
-export type MarketIndicatorTable =
-  | 'zillow_inventory'
-  | 'zillow_new_listings'
-  | 'zillow_pending_listings'
-  | 'zillow_median_list_price'
-  | 'zillow_sales_count'
-  | 'zillow_sales_price'
-  | 'zillow_sale_to_list'
-  | 'zillow_days_to_pending'
-  | 'zillow_days_to_close'
-  | 'zillow_price_cut_share'
-  | 'zillow_price_cut_amt'
-  | 'zillow_price_cut_pct'
-  | 'zillow_market_heat_index'
-  | 'zillow_new_construction_sales_count'
-  | 'zillow_new_construction_sale_price'
-  | 'zillow_affordability';
+// Metric names for market indicators
+export type MarketIndicatorMetric =
+  | 'inventory'
+  | 'new_listings'
+  | 'pending_sales'
+  | 'list_price'
+  | 'sale_price'
+  | 'sale_to_list'
+  | 'dom'
+  | 'price_cuts'
+  | 'market_heat';

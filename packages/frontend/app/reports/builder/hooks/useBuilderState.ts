@@ -275,6 +275,32 @@ export const SECTION_TEMPLATES: Record<SectionType, { name: string; description:
     description: 'Status indicator badge',
     defaultConfig: {},
   },
+  // Premium comparison report sections (2026 redesign)
+  comparison_hero_showdown: {
+    name: 'Hero Showdown',
+    description: 'Side-by-side score comparison with winner',
+    defaultConfig: {},
+  },
+  why_winner_won: {
+    name: 'Why Winner Won',
+    description: '3 reasons based on user priorities',
+    defaultConfig: {},
+  },
+  score_credibility: {
+    name: 'Score Credibility',
+    description: 'Backtesting proof block',
+    defaultConfig: {},
+  },
+  market_deep_dive: {
+    name: 'Market Deep Dive',
+    description: 'Full market analysis per market',
+    defaultConfig: {},
+  },
+  ai_recommendation: {
+    name: 'AI Recommendation',
+    description: 'Personalized AI recommendation',
+    defaultConfig: {},
+  },
 };
 
 // Group sections by category

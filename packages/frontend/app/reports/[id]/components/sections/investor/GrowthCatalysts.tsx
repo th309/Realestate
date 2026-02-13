@@ -199,7 +199,7 @@ export function GrowthCatalysts({ report }: GrowthCatalystsProps): React.ReactEl
 
   // Get AI analysis for growth drivers
   const aiAnalysis =
-    report.ai_narrative?.investment_analysis ||
+    report.ai_narrative?.growth_drivers ||
     report.ai_narratives?.growth_drivers ||
     report.ai_narratives?.economic_outlook ||
     report.ai_narrative?.market_summary;

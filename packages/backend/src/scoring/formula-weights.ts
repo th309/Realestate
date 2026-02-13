@@ -32,32 +32,37 @@ export interface GeographyFormulas {
 
 /**
  * Fixed formula weights for all geography levels and score types.
- * These formulas were derived from machine learning analysis.
+ * v2.0: Optimized via walk-forward elastic net CV on excess returns vs division/state/metro benchmarks.
+ * All bootstrap tests significant (95% CI excludes 0).
  */
 export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   // ===================
-  // METRO LEVEL FORMULAS
+  // METRO LEVEL FORMULAS (OOS IC: HR=0.26, IE=0.52)
   // ===================
   metro: {
-    // HomeReady (Metro): Predicts 3-year price appreciation for homebuyers
+    // HomeReady (Metro): Predicts 3Y excess appreciation vs census division median
     homeready: {
-      hotness_score: { weight: 0.706, direction: 1 },
-      pending_ratio: { weight: 0.152, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.057, direction: -1 },
-      population_yoy: { weight: 0.054, direction: -1 },
-      demand_score: { weight: 0.031, direction: 1 },
+      median_days_on_market: { weight: 0.204, direction: -1 },
+      demand_score: { weight: 0.203, direction: 1 },
+      hotness_score: { weight: 0.169, direction: -1 },
+      affordability_ratio: { weight: 0.128, direction: 1 },
+      price_reduced_share: { weight: 0.099, direction: -1 },
+      pending_ratio: { weight: 0.072, direction: 1 },
+      unemployment_rate_yoy: { weight: 0.065, direction: -1 },
+      population_yoy: { weight: 0.060, direction: 1 },
     },
-    // InvestorEdge (Metro): Predicts total return (appreciation + rental yield)
+    // InvestorEdge (Metro): Predicts 3Y excess total return vs division median
     investoredge: {
-      hotness_score: { weight: 0.317, direction: 1 },
-      median_gross_rent: { weight: 0.315, direction: -1 },
-      affordability_ratio: { weight: 0.188, direction: -1 },
-      pending_ratio: { weight: 0.080, direction: 1 },
-      homeownership_rate: { weight: 0.047, direction: 1 },
-      population_yoy: { weight: 0.035, direction: -1 },
-      unemployment_rate_yoy: { weight: 0.018, direction: -1 },
+      median_days_on_market: { weight: 0.226, direction: -1 },
+      median_gross_rent: { weight: 0.200, direction: 1 },
+      supply_score: { weight: 0.160, direction: -1 },
+      demand_score: { weight: 0.101, direction: 1 },
+      pending_ratio: { weight: 0.098, direction: 1 },
+      population_yoy: { weight: 0.089, direction: 1 },
+      homeownership_rate: { weight: 0.064, direction: -1 },
+      price_reduced_share: { weight: 0.061, direction: -1 },
     },
-    // MarketHealth (Metro): Current market conditions (how hot is the market)
+    // MarketHealth (Metro): Current market conditions (not optimized - concurrent indicator)
     markethealth: {
       hotness_score: { weight: 0.416, direction: 1 },
       demand_score: { weight: 0.345, direction: 1 },
@@ -66,32 +71,32 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   },
 
   // ===================
-  // COUNTY LEVEL FORMULAS
+  // COUNTY LEVEL FORMULAS (OOS IC: HR=0.20, IE=0.20)
   // ===================
   county: {
-    // HomeReady (County)
+    // HomeReady (County): Predicts 3Y excess appreciation vs state median
     homeready: {
-      hotness_score: { weight: 0.403, direction: 1 },
-      affordability_ratio: { weight: 0.132, direction: 1 },
-      price_reduced_share: { weight: 0.119, direction: -1 },
-      population_yoy: { weight: 0.102, direction: -1 },
-      rent_price_ratio: { weight: 0.091, direction: 1 },
-      pending_ratio: { weight: 0.072, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.049, direction: 1 },
-      demand_score: { weight: 0.033, direction: 1 },
+      median_days_on_market: { weight: 0.227, direction: -1 },
+      pending_ratio: { weight: 0.207, direction: 1 },
+      population_yoy: { weight: 0.192, direction: 1 },
+      demand_score: { weight: 0.114, direction: 1 },
+      affordability_ratio: { weight: 0.109, direction: 1 },
+      supply_score: { weight: 0.080, direction: -1 },
+      price_reduced_share: { weight: 0.048, direction: 1 },
+      unemployment_rate_yoy: { weight: 0.024, direction: 1 },
     },
-    // InvestorEdge (County)
+    // InvestorEdge (County): Predicts 3Y excess total return vs state median
     investoredge: {
-      rent_price_ratio: { weight: 0.402, direction: 1 },
-      hotness_score: { weight: 0.244, direction: 1 },
-      affordability_ratio: { weight: 0.094, direction: 1 },
-      price_reduced_share: { weight: 0.082, direction: -1 },
-      population_yoy: { weight: 0.059, direction: -1 },
-      pending_ratio: { weight: 0.054, direction: 1 },
-      demand_score: { weight: 0.034, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.030, direction: 1 },
+      median_days_on_market: { weight: 0.220, direction: -1 },
+      population_yoy: { weight: 0.192, direction: 1 },
+      pending_ratio: { weight: 0.189, direction: 1 },
+      demand_score: { weight: 0.118, direction: 1 },
+      affordability_ratio: { weight: 0.105, direction: 1 },
+      supply_score: { weight: 0.081, direction: -1 },
+      median_gross_rent: { weight: 0.050, direction: 1 },
+      homeownership_rate: { weight: 0.046, direction: -1 },
     },
-    // MarketHealth (County)
+    // MarketHealth (County): Current market conditions (not optimized)
     markethealth: {
       hotness_score: { weight: 0.533, direction: 1 },
       demand_score: { weight: 0.254, direction: 1 },
@@ -100,26 +105,27 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   },
 
   // ===================
-  // ZIP LEVEL FORMULAS
+  // ZIP LEVEL FORMULAS (OOS IC: HR=0.15, IE=0.17)
   // ===================
   zip: {
-    // HomeReady (ZIP)
+    // HomeReady (ZIP): Predicts 3Y excess appreciation vs metro median
     homeready: {
-      hotness_score: { weight: 0.534, direction: 1 },
-      demand_score: { weight: 0.184, direction: 1 },
-      pending_ratio: { weight: 0.165, direction: 1 },
-      active_listing_count_yy: { weight: 0.101, direction: 1 },
-      price_reduced_count_yy: { weight: 0.016, direction: 1 },
+      demand_score: { weight: 0.458, direction: 1 },
+      median_days_on_market: { weight: 0.269, direction: -1 },
+      pending_ratio: { weight: 0.232, direction: 1 },
+      affordability_ratio: { weight: 0.042, direction: 1 },
     },
-    // InvestorEdge (ZIP): Same as HomeReady for ZIP level
+    // InvestorEdge (ZIP): Predicts 3Y excess total return vs metro median
     investoredge: {
-      hotness_score: { weight: 0.534, direction: 1 },
-      demand_score: { weight: 0.184, direction: 1 },
-      pending_ratio: { weight: 0.165, direction: 1 },
-      active_listing_count_yy: { weight: 0.101, direction: 1 },
-      price_reduced_count_yy: { weight: 0.016, direction: 1 },
+      demand_score: { weight: 0.293, direction: 1 },
+      median_days_on_market: { weight: 0.216, direction: -1 },
+      homeownership_rate: { weight: 0.191, direction: 1 },
+      pending_ratio: { weight: 0.181, direction: 1 },
+      hotness_score: { weight: 0.048, direction: 1 },
+      median_gross_rent: { weight: 0.041, direction: 1 },
+      price_reduced_share: { weight: 0.029, direction: 1 },
     },
-    // MarketHealth (ZIP)
+    // MarketHealth (ZIP): Current market conditions (not optimized)
     markethealth: {
       hotness_score: { weight: 0.699, direction: 1 },
       demand_score: { weight: 0.301, direction: 1 },
@@ -129,46 +135,49 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
 
 /**
  * Grade thresholds for converting scores (0-100) to letter grades.
+ * Adjusted for percentile-rank normalization (uniform distribution):
+ *   A+ = top 5%, A = top 10%, A- = top 15%, B+ = top 20%, etc.
  * Ordered from highest to lowest for efficient lookup.
  */
 export const GRADE_THRESHOLDS: Array<{ min: number; grade: string }> = [
-  { min: 93, grade: 'A+' },
-  { min: 87, grade: 'A' },
-  { min: 83, grade: 'A-' },
+  { min: 95, grade: 'A+' },
+  { min: 90, grade: 'A' },
+  { min: 85, grade: 'A-' },
   { min: 80, grade: 'B+' },
-  { min: 73, grade: 'B' },
-  { min: 70, grade: 'B-' },
-  { min: 67, grade: 'C+' },
-  { min: 60, grade: 'C' },
-  { min: 55, grade: 'C-' },
-  { min: 50, grade: 'D+' },
-  { min: 43, grade: 'D' },
-  { min: 40, grade: 'D-' },
+  { min: 70, grade: 'B' },
+  { min: 65, grade: 'B-' },
+  { min: 55, grade: 'C+' },
+  { min: 45, grade: 'C' },
+  { min: 35, grade: 'C-' },
+  { min: 30, grade: 'D+' },
+  { min: 20, grade: 'D' },
+  { min: 10, grade: 'D-' },
   { min: 0, grade: 'F' },
 ];
 
 /**
- * Model correlation values from validation.
+ * Model correlation values from walk-forward OOS validation.
  * Used in confidence calculation (Model Strength factor = correlation × 125, capped at 100).
+ * v2.0: Updated from walk-forward elastic net OOS IC (Spearman rank correlation).
  */
 export const MODEL_CORRELATIONS: Record<
   GeographyLevel,
   Record<ScoreType, number>
 > = {
   metro: {
-    homeready: 0.69,
-    investoredge: 0.79,
-    markethealth: 0.56,
+    homeready: 0.26,     // OOS IC from walk-forward CV
+    investoredge: 0.52,  // OOS IC from walk-forward CV
+    markethealth: 0.56,  // Kept from v1.0 (concurrent indicator)
   },
   county: {
-    homeready: 0.16,
-    investoredge: 0.09,
-    markethealth: 0.29,
+    homeready: 0.20,     // OOS IC from walk-forward CV
+    investoredge: 0.20,  // OOS IC from walk-forward CV
+    markethealth: 0.29,  // Kept from v1.0
   },
   zip: {
-    homeready: 0.37,
-    investoredge: 0.37,
-    markethealth: 0.26,
+    homeready: 0.15,     // OOS IC from walk-forward CV
+    investoredge: 0.17,  // OOS IC from walk-forward CV
+    markethealth: 0.26,  // Kept from v1.0
   },
 };
 
@@ -251,6 +260,50 @@ export function validateFormulaWeights(
 }
 
 /**
+ * Calibration table: maps score quintiles to average historical excess return.
+ * Built from v2.0 backtest data (metro level, 3Y excess vs Census Division median).
+ * Used for frontend tooltips, dollar impact calculations, and interpretation.
+ *
+ * Score semantics (percentile rank normalization):
+ *   Score 50 = median metro, predicted to earn roughly the benchmark return
+ *   Score 80 = top 20%, predicted to significantly outperform
+ *   Score 20 = bottom 20%, predicted to significantly underperform
+ *
+ * avgExcessReturn: 3-year annualized excess return vs regional benchmark (percentage points)
+ * Generated from get_quintile_performance() RPC on v2.0 backtest outcomes.
+ */
+export interface CalibrationEntry {
+  quintile: number;
+  scoreRange: [number, number];
+  label: string;
+  avgExcessReturn: number;
+}
+
+export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
+  homeready: [
+    { quintile: 1, scoreRange: [0, 20], label: 'Bottom 20%', avgExcessReturn: -1.74 },
+    { quintile: 2, scoreRange: [20, 40], label: 'Below Average', avgExcessReturn: -0.41 },
+    { quintile: 3, scoreRange: [40, 60], label: 'Average', avgExcessReturn: 0.06 },
+    { quintile: 4, scoreRange: [60, 80], label: 'Above Average', avgExcessReturn: 0.32 },
+    { quintile: 5, scoreRange: [80, 100], label: 'Top 20%', avgExcessReturn: 1.11 },
+  ],
+  investoredge: [
+    { quintile: 1, scoreRange: [0, 20], label: 'Bottom 20%', avgExcessReturn: -1.76 },
+    { quintile: 2, scoreRange: [20, 40], label: 'Below Average', avgExcessReturn: -0.12 },
+    { quintile: 3, scoreRange: [40, 60], label: 'Average', avgExcessReturn: 0.02 },
+    { quintile: 4, scoreRange: [60, 80], label: 'Above Average', avgExcessReturn: 0.55 },
+    { quintile: 5, scoreRange: [80, 100], label: 'Top 20%', avgExcessReturn: 0.69 },
+  ],
+  markethealth: [
+    { quintile: 1, scoreRange: [0, 20], label: 'Coldest 20%', avgExcessReturn: -1.50 },
+    { quintile: 2, scoreRange: [20, 40], label: 'Cool', avgExcessReturn: -0.30 },
+    { quintile: 3, scoreRange: [40, 60], label: 'Neutral', avgExcessReturn: 0.00 },
+    { quintile: 4, scoreRange: [60, 80], label: 'Warm', avgExcessReturn: 0.40 },
+    { quintile: 5, scoreRange: [80, 100], label: 'Hottest 20%', avgExcessReturn: 0.80 },
+  ],
+};
+
+/**
  * Current formula version identifier.
  */
-export const FORMULA_VERSION = 'v1.0';
+export const FORMULA_VERSION = 'v2.0';

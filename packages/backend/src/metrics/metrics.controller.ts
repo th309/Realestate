@@ -555,688 +555,162 @@ export class MetricsController {
   // ============================================================================
 
   /**
-   * Get 5-year home value growth for metros
-   * First tries pre-calculated table, falls back to on-the-fly calculation
+   * Get 5-year home value CAGR for metros
+   * Reads from pre-calculated table (calculated_metrics)
+   * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/metros')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
-    // First try pre-calculated data
-    const preCalculated =
-      await this.calculatedMetricsService.get5YrGrowthForMap('metro');
-    if (preCalculated.success && preCalculated.data.length > 0) {
-      return {
-        success: true,
-        count: preCalculated.data.length,
-        geography: 'Metro',
-        metric: 'home_value_5yr',
-        source: 'pre-calculated',
-        data: preCalculated.data,
-      };
-    }
+    const result = await this.calculatedMetricsService.get5YrGrowthForMap('metro');
 
-    // Fall back to on-the-fly calculation
-    return this.calculateMetroHomeValue5YrGrowth(date);
-  }
-
-  /**
-   * On-the-fly calculation for metro 5-year growth (fallback)
-   */
-  private async calculateMetroHomeValue5YrGrowth(date?: string) {
-    // Get current date (latest data from realtor_metro table)
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestDate } = await this.supabase
-        .from('realtor_metro')
-        .select('period_date')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestDate?.period_date;
-    }
-
-    if (!targetDate) {
-      return { success: false, error: 'No Realtor data available', data: [] };
-    }
-
-    // Calculate 5 years ago date
-    const currentDate = new Date(targetDate);
-    const fiveYearsAgo = new Date(currentDate);
-    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-
-    // Get current data from realtor_metro
-    const { data: currentData, error: currentError } = await this.supabase
-      .from('realtor_metro')
-      .select('cbsa_code, cbsa_title, median_listing_price')
-      .eq('period_date', targetDate)
-      .not('median_listing_price', 'is', null);
-
-    if (currentError || !currentData) {
+    if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: currentError?.message || 'Failed to fetch current data',
+        error: 'No pre-calculated CAGR data available for metros. Run the calculated metrics pipeline to generate data.',
+        geography: 'Metro',
+        metric: 'home_value_5yr_cagr',
         data: [],
       };
     }
 
-    // Get historical data (5 years ago) - try to get closest date within 3 months
-    const { data: pastData } = await this.supabase
-      .from('realtor_metro')
-      .select('cbsa_code, median_listing_price, period_date')
-      .gte('period_date', pastDateStr)
-      .lte(
-        'period_date',
-        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-      )
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: true });
-
-    // Create lookup for past values (use earliest available date per region)
-    const pastByRegion: Record<string, { value: number; date: string }> = {};
-    if (pastData) {
-      for (const row of pastData) {
-        if (!pastByRegion[row.cbsa_code]) {
-          pastByRegion[row.cbsa_code] = {
-            value: row.median_listing_price,
-            date: row.period_date,
-          };
-        }
-      }
-    }
-
-    // Calculate 5-year growth for each metro: ((current - past) / past) * 100
-    const results = currentData
-      .filter(
-        (metro) =>
-          pastByRegion[metro.cbsa_code] &&
-          pastByRegion[metro.cbsa_code].value > 0,
-      )
-      .map((metro) => {
-        const currentValue = metro.median_listing_price;
-        const pastValue = pastByRegion[metro.cbsa_code].value;
-
-        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
-
-        return {
-          region_id: metro.cbsa_code,
-          region_name: metro.cbsa_title,
-          cbsa_code: metro.cbsa_code,
-          value: Math.round(growthPct * 100) / 100,
-          cagr_5yr: Math.round(growthPct * 100) / 100,
-          date: targetDate,
-        };
-      });
-
     return {
       success: true,
-      count: results.length,
+      count: result.data.length,
       geography: 'Metro',
-      metric: 'home_value_5yr',
-      source: 'calculated',
-      current_date: targetDate,
-      past_date: pastDateStr,
-      data: results,
+      metric: 'home_value_5yr_cagr',
+      source: 'pre-calculated',
+      data: result.data,
     };
   }
 
   /**
-   * Get 5-year home value growth for national
-   * First tries pre-calculated table, falls back to on-the-fly calculation
+   * Get 5-year home value CAGR for national
+   * Reads from pre-calculated table (calculated_metrics)
+   * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/national')
   async getNationalHomeValue5YrGrowth(@Query('date') date?: string) {
-    // First try pre-calculated data
-    const preCalculated =
-      await this.calculatedMetricsService.get5YrGrowthForMap('national');
-    if (preCalculated.success && preCalculated.data.length > 0) {
-      return {
-        success: true,
-        count: preCalculated.data.length,
-        geography: 'National',
-        metric: 'home_value_5yr',
-        source: 'pre-calculated',
-        data: preCalculated.data,
-      };
-    }
+    const result = await this.calculatedMetricsService.get5YrGrowthForMap('national');
 
-    // Fall back to on-the-fly calculation
-    return this.calculateNationalHomeValue5YrGrowth(date);
-  }
-
-  /**
-   * On-the-fly calculation for national 5-year growth (fallback)
-   */
-  private async calculateNationalHomeValue5YrGrowth(date?: string) {
-    // Get current date
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestDate } = await this.supabase
-        .from('realtor_national')
-        .select('period_date')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestDate?.period_date;
-    }
-
-    if (!targetDate) {
-      return { success: false, error: 'No Realtor data available', data: [] };
-    }
-
-    // Calculate 5 years ago date
-    const currentDate = new Date(targetDate);
-    const fiveYearsAgo = new Date(currentDate);
-    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-
-    // Get current data from realtor_national
-    const { data: currentData, error: currentError } = await this.supabase
-      .from('realtor_national')
-      .select('median_listing_price')
-      .eq('period_date', targetDate)
-      .eq('country', 'United States')
-      .single();
-
-    if (currentError || !currentData) {
+    if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: currentError?.message || 'Failed to fetch current data',
-        data: [],
-      };
-    }
-
-    // Get historical data (5 years ago)
-    const { data: pastData } = await this.supabase
-      .from('realtor_national')
-      .select('median_listing_price, period_date')
-      .gte('period_date', pastDateStr)
-      .lte(
-        'period_date',
-        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-      )
-      .not('median_listing_price', 'is', null)
-      .eq('country', 'United States')
-      .order('period_date', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!pastData || !pastData.median_listing_price) {
-      // Return empty results if no history
-      return {
-        success: true,
-        count: 0,
+        error: 'No pre-calculated CAGR data available for national. Run the calculated metrics pipeline to generate data.',
         geography: 'National',
-        metric: 'home_value_5yr',
-        source: 'calculated',
+        metric: 'home_value_5yr_cagr',
         data: [],
       };
     }
-
-    // Calculate 5-year growth
-    const currentValue = currentData.median_listing_price;
-    const pastValue = pastData.median_listing_price;
-    const growthPct = ((currentValue - pastValue) / pastValue) * 100;
-
-    const result = {
-      region_id: 'usa',
-      region_name: 'United States',
-      value: Math.round(growthPct * 100) / 100,
-      cagr_5yr: Math.round(growthPct * 100) / 100,
-      date: targetDate,
-    };
 
     return {
       success: true,
-      count: 1,
+      count: result.data.length,
       geography: 'National',
-      metric: 'home_value_5yr',
-      source: 'calculated',
-      current_date: targetDate,
-      past_date: pastData.period_date,
-      data: [result],
+      metric: 'home_value_5yr_cagr',
+      source: 'pre-calculated',
+      data: result.data,
     };
   }
 
   /**
-   * Get 5-year home value growth for states
-   * First tries pre-calculated table, falls back to on-the-fly calculation
+   * Get 5-year home value CAGR for states
+   * Reads from pre-calculated table (calculated_metrics)
+   * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/states')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
-    // First try pre-calculated data
-    const preCalculated =
-      await this.calculatedMetricsService.get5YrGrowthForMap('state');
-    if (preCalculated.success && preCalculated.data.length > 0) {
-      return {
-        success: true,
-        count: preCalculated.data.length,
-        geography: 'State',
-        metric: 'home_value_5yr',
-        source: 'pre-calculated',
-        data: preCalculated.data,
-      };
-    }
+    const result = await this.calculatedMetricsService.get5YrGrowthForMap('state');
 
-    // Fall back to on-the-fly calculation
-    return this.calculateStateHomeValue5YrGrowth(date);
-  }
-
-  /**
-   * On-the-fly calculation for state 5-year growth (fallback)
-   */
-  private async calculateStateHomeValue5YrGrowth(date?: string) {
-    // Get current date
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestDate } = await this.supabase
-        .from('realtor_state')
-        .select('period_date')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestDate?.period_date;
-    }
-
-    if (!targetDate) {
-      return { success: false, error: 'No Realtor data available', data: [] };
-    }
-
-    // Calculate 5 years ago date
-    const currentDate = new Date(targetDate);
-    const fiveYearsAgo = new Date(currentDate);
-    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-
-    // Get current data from realtor_state
-    const { data: currentData, error: currentError } = await this.supabase
-      .from('realtor_state')
-      .select('state_id, state_name, median_listing_price')
-      .eq('period_date', targetDate)
-      .not('median_listing_price', 'is', null);
-
-    if (currentError || !currentData) {
+    if (!result.success || result.data.length === 0) {
       return {
         success: false,
-        error: currentError?.message || 'Failed to fetch current data',
+        error: 'No pre-calculated CAGR data available for states. Run the calculated metrics pipeline to generate data.',
+        geography: 'State',
+        metric: 'home_value_5yr_cagr',
         data: [],
       };
     }
 
-    // Get historical data (5 years ago)
-    const { data: pastData } = await this.supabase
-      .from('realtor_state')
-      .select('state_id, median_listing_price, period_date')
-      .gte('period_date', pastDateStr)
-      .lte(
-        'period_date',
-        new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-      )
-      .not('median_listing_price', 'is', null)
-      .order('period_date', { ascending: true });
-
-    // Create lookup for past values
-    const pastByRegion: Record<string, { value: number; date: string }> = {};
-    if (pastData) {
-      for (const row of pastData) {
-        if (!pastByRegion[row.state_id]) {
-          pastByRegion[row.state_id] = {
-            value: row.median_listing_price,
-            date: row.period_date,
-          };
-        }
-      }
-    }
-
-    // Calculate 5-year growth for each state
-    const results = currentData
-      .filter(
-        (state) =>
-          pastByRegion[state.state_id] &&
-          pastByRegion[state.state_id].value > 0,
-      )
-      .map((state) => {
-        const currentValue = state.median_listing_price;
-        const pastValue = pastByRegion[state.state_id].value;
-
-        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
-
-        return {
-          region_id: state.state_id,
-          region_name: state.state_name,
-          value: Math.round(growthPct * 100) / 100,
-          cagr_5yr: Math.round(growthPct * 100) / 100,
-          date: targetDate,
-        };
-      });
-
     return {
       success: true,
-      count: results.length,
+      count: result.data.length,
       geography: 'State',
-      metric: 'home_value_5yr',
-      source: 'calculated',
-      current_date: targetDate,
-      past_date: pastDateStr,
-      data: results,
+      metric: 'home_value_5yr_cagr',
+      source: 'pre-calculated',
+      data: result.data,
     };
   }
 
   /**
-   * Get 5-year home value growth for counties
-   * First tries pre-calculated table, falls back to on-the-fly calculation
+   * Get 5-year home value CAGR for counties
+   * Reads from pre-calculated table (calculated_metrics)
+   * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/counties')
   async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
-    // First try pre-calculated data
-    const preCalculated =
-      await this.calculatedMetricsService.get5YrGrowthForMap('county');
-    if (preCalculated.success && preCalculated.data.length > 0) {
+    const result = await this.calculatedMetricsService.get5YrGrowthForMap('county');
+
+    if (!result.success || result.data.length === 0) {
       return {
-        success: true,
-        count: preCalculated.data.length,
+        success: false,
+        error: 'No pre-calculated CAGR data available for counties. Run the calculated metrics pipeline to generate data.',
         geography: 'County',
-        metric: 'home_value_5yr',
-        source: 'pre-calculated',
-        data: preCalculated.data,
+        metric: 'home_value_5yr_cagr',
+        data: [],
       };
     }
 
-    // Fall back to on-the-fly calculation
-    return this.calculateCountyHomeValue5YrGrowth(date);
-  }
-
-  /**
-   * On-the-fly calculation for county 5-year growth (fallback)
-   */
-  private async calculateCountyHomeValue5YrGrowth(date?: string) {
-    // Get current date
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestDate } = await this.supabase
-        .from('realtor_county')
-        .select('period_date')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestDate?.period_date;
-    }
-
-    if (!targetDate) {
-      return { success: false, error: 'No Realtor data available', data: [] };
-    }
-
-    // Calculate 5 years ago date
-    const currentDate = new Date(targetDate);
-    const fiveYearsAgo = new Date(currentDate);
-    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-
-    // Get current data - paginate to get all counties
-    const allCurrentData: any[] = [];
-    let offset = 0;
-    const pageSize = 1000;
-
-    while (true) {
-      const { data: pageData, error } = await this.supabase
-        .from('realtor_county')
-        .select('county_fips, county_name, median_listing_price')
-        .eq('period_date', targetDate)
-        .not('median_listing_price', 'is', null)
-        .range(offset, offset + pageSize - 1);
-
-      if (error) {
-        return { success: false, error: error.message, data: [] };
-      }
-
-      if (!pageData || pageData.length === 0) break;
-      allCurrentData.push(...pageData);
-      if (pageData.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    // Get historical data - paginate
-    const allPastData: any[] = [];
-    offset = 0;
-
-    while (true) {
-      const { data: pageData } = await this.supabase
-        .from('realtor_county')
-        .select('county_fips, median_listing_price, period_date')
-        .gte('period_date', pastDateStr)
-        .lte(
-          'period_date',
-          new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
-        )
-        .not('median_listing_price', 'is', null)
-        .order('period_date', { ascending: true })
-        .range(offset, offset + pageSize - 1);
-
-      if (!pageData || pageData.length === 0) break;
-      allPastData.push(...pageData);
-      if (pageData.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    // Create lookup for past values
-    const pastByRegion: Record<string, { value: number; date: string }> = {};
-    for (const row of allPastData) {
-      if (!pastByRegion[row.county_fips]) {
-        pastByRegion[row.county_fips] = {
-          value: row.median_listing_price,
-          date: row.period_date,
-        };
-      }
-    }
-
-    // Calculate 5-year growth for each county
-    const results = allCurrentData
-      .filter(
-        (county) =>
-          pastByRegion[county.county_fips] &&
-          pastByRegion[county.county_fips].value > 0,
-      )
-      .map((county) => {
-        const currentValue = county.median_listing_price;
-        const pastValue = pastByRegion[county.county_fips].value;
-
-        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
-
-        return {
-          region_id: county.county_fips,
-          region_name: county.county_name,
-          county_fips: county.county_fips,
-          value: Math.round(growthPct * 100) / 100,
-          cagr_5yr: Math.round(growthPct * 100) / 100,
-          date: targetDate,
-        };
-      });
-
     return {
       success: true,
-      count: results.length,
+      count: result.data.length,
       geography: 'County',
-      metric: 'home_value_5yr',
-      source: 'calculated',
-      current_date: targetDate,
-      past_date: pastDateStr,
-      data: results,
+      metric: 'home_value_5yr_cagr',
+      source: 'pre-calculated',
+      data: result.data,
     };
   }
 
   /**
-   * Get 5-year home value growth for zip codes
-   * First tries pre-calculated table, falls back to on-the-fly calculation
+   * Get 5-year home value CAGR for zip codes
+   * Reads from pre-calculated table (calculated_metrics)
+   * CAGR is calculated during data ingestion by CalculatedMetricsService
+   * Note: State filtering should be done via the data layer or a dedicated filtered endpoint
    */
   @Get('home-value-5yr/zips')
   async getZipHomeValue5YrGrowth(
     @Query('state') state?: string,
     @Query('date') date?: string,
   ) {
-    // First try pre-calculated data (if no state filter)
-    if (!state) {
-      const preCalculated =
-        await this.calculatedMetricsService.get5YrGrowthForMap('zip');
-      if (preCalculated.success && preCalculated.data.length > 0) {
-        return {
-          success: true,
-          count: preCalculated.data.length,
-          geography: 'ZIP',
-          metric: 'home_value_5yr',
-          source: 'pre-calculated',
-          data: preCalculated.data,
-        };
-      }
+    const result = await this.calculatedMetricsService.get5YrGrowthForMap('zip');
+
+    if (!result.success || result.data.length === 0) {
+      return {
+        success: false,
+        error: 'No pre-calculated CAGR data available for ZIP codes. Run the calculated metrics pipeline to generate data.',
+        geography: 'ZIP',
+        metric: 'home_value_5yr_cagr',
+        data: [],
+      };
     }
 
-    // Fall back to on-the-fly calculation (also handles state filter)
-    return this.calculateZipHomeValue5YrGrowth(state, date);
-  }
-
-  /**
-   * On-the-fly calculation for zip 5-year growth (fallback)
-   */
-  private async calculateZipHomeValue5YrGrowth(state?: string, date?: string) {
-    if (state) state = normalizeStateToCode(state);
-    // Get current date
-    let targetDate = date;
-    if (!targetDate) {
-      const { data: latestDate } = await this.supabase
-        .from('realtor_zip')
-        .select('period_date')
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
-      targetDate = latestDate?.period_date;
-    }
-
-    if (!targetDate) {
-      return { success: false, error: 'No Realtor data available', data: [] };
-    }
-
-    // Calculate 5 years ago date
-    const currentDate = new Date(targetDate);
-    const fiveYearsAgo = new Date(currentDate);
-    fiveYearsAgo.setFullYear(currentDate.getFullYear() - 5);
-    const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-
-    // Build state filter pattern (zip_name format: "city, ST")
-    const statePattern = state ? `%, ${state.toUpperCase()}` : null;
-
-    // Get current data - paginate
-    const allCurrentData: any[] = [];
-    let offset = 0;
-    const pageSize = 1000;
-
-    while (true) {
-      let query = this.supabase
-        .from('realtor_zip')
-        .select('postal_code, zip_name, median_listing_price')
-        .eq('period_date', targetDate)
-        .not('median_listing_price', 'is', null);
-
-      if (statePattern) {
-        query = query.ilike('zip_name', statePattern);
-      }
-
-      const { data: pageData, error } = await query.range(
-        offset,
-        offset + pageSize - 1,
+    // Apply state filter if provided (filter pre-calculated data)
+    let filteredData = result.data;
+    if (state) {
+      const normalizedState = normalizeStateToCode(state);
+      const statePattern = `, ${normalizedState.toUpperCase()}`;
+      filteredData = result.data.filter((item: any) =>
+        item.region_name?.toUpperCase().endsWith(statePattern)
       );
-
-      if (error) {
-        return { success: false, error: error.message, data: [] };
-      }
-
-      if (!pageData || pageData.length === 0) break;
-      allCurrentData.push(...pageData);
-      if (pageData.length < pageSize) break;
-      offset += pageSize;
     }
-
-    // Get historical data - paginate
-    const allPastData: any[] = [];
-    offset = 0;
-
-    while (true) {
-      let query = this.supabase
-        .from('realtor_zip')
-        .select('postal_code, median_listing_price, period_date')
-        .gte('period_date', pastDateStr)
-        .lte(
-          'period_date',
-          new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
-        )
-        .not('median_listing_price', 'is', null)
-        .order('period_date', { ascending: true });
-
-      if (statePattern) {
-        query = query.ilike('zip_name', statePattern);
-      }
-
-      const { data: pageData } = await query.range(
-        offset,
-        offset + pageSize - 1,
-      );
-
-      if (!pageData || pageData.length === 0) break;
-      allPastData.push(...pageData);
-      if (pageData.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    // Create lookup for past values
-    const pastByRegion: Record<string, { value: number; date: string }> = {};
-    for (const row of allPastData) {
-      if (!pastByRegion[row.postal_code]) {
-        pastByRegion[row.postal_code] = {
-          value: row.median_listing_price,
-          date: row.period_date,
-        };
-      }
-    }
-
-    // Calculate 5-year growth for each zip
-    const results = allCurrentData
-      .filter(
-        (zip) =>
-          pastByRegion[zip.postal_code] &&
-          pastByRegion[zip.postal_code].value > 0,
-      )
-      .map((zip) => {
-        const currentValue = zip.median_listing_price;
-        const pastValue = pastByRegion[zip.postal_code].value;
-
-        const growthPct = ((currentValue - pastValue) / pastValue) * 100;
-
-        return {
-          region_id: zip.postal_code,
-          region_name: zip.zip_name,
-          postal_code: zip.postal_code,
-          value: Math.round(growthPct * 100) / 100,
-          cagr_5yr: Math.round(growthPct * 100) / 100,
-          date: targetDate,
-        };
-      });
 
     return {
       success: true,
-      count: results.length,
+      count: filteredData.length,
       geography: 'ZIP',
-      metric: 'home_value_5yr',
-      source: 'calculated',
-      current_date: targetDate,
-      past_date: pastDateStr,
-      data: results,
+      metric: 'home_value_5yr_cagr',
+      source: 'pre-calculated',
+      state_filter: state || null,
+      data: filteredData,
     };
   }
 

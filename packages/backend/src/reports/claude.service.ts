@@ -437,6 +437,32 @@ IMPORTANT: Factor recent developments into affordability projections:
 - Policy changes affecting affordability programs
 - Economic trends impacting household budgets
 Ground your outlook in recent local developments.`,
+
+      // Comparison report sections
+      why_winner_won: `
+IMPORTANT: Generate exactly 3 compelling reasons why the winner market is the best choice based on the user's stated priorities.
+- Each reason should directly tie to one of the user's priorities
+- Include specific metric comparisons (e.g., "Cap rate of 6.2% vs 4.8%")
+- Reference news/developments that support the advantage if relevant
+- Keep each reason to 1-2 sentences
+Output as a JSON array of 3 strings.`,
+
+      final_recommendation: `
+IMPORTANT: Provide a personalized final recommendation based on:
+- The user's stated priorities (weigh these heavily)
+- The data-driven winner analysis
+- The user's profile (homebuyer vs investor)
+- Any relevant news that affects the decision
+Be decisive - clearly state which market is recommended and why.
+Include 2-3 specific next steps the user should take.`,
+
+      comparison_overview: `
+IMPORTANT: Provide a balanced overview comparing the markets:
+- Acknowledge strengths of each market
+- Explain the key differentiators
+- Reference the user's priorities in your analysis
+- Use specific data points to support comparisons
+Keep the tone objective but helpful.`,
     };
 
     // Default instruction for sections not specifically mapped
@@ -444,5 +470,133 @@ Ground your outlook in recent local developments.`,
 IMPORTANT: If any of the recent local news above is relevant to your analysis, incorporate it naturally. Reference specific developments, employers, or events that support your points. This makes the analysis more timely and locally relevant.`;
 
     return instructions[sectionId] || defaultInstruction;
+  }
+
+  // ============================================================================
+  // Comparison Report Narrative Generation
+  // ============================================================================
+
+  /**
+   * Generate the "why winner won" narrative for comparison reports
+   */
+  async generateWhyWinnerWon(
+    context: {
+      winner_name: string;
+      priorities: string[];
+      priority_weighted_winner: any;
+      comparison_markets: any[];
+      user_type: 'homebuyer' | 'investor';
+    },
+  ): Promise<string[]> {
+    if (!this.claudeClient || !context.priority_weighted_winner) {
+      return [];
+    }
+
+    const priorityLabels: Record<string, string> = {
+      affordability: 'Affordability',
+      appreciation: 'Appreciation Potential',
+      job_market: 'Job Market Strength',
+      market_timing: 'Market Timing',
+      lifestyle: 'Lifestyle Factors',
+      cash_flow: 'Cash Flow',
+      tenant_demand: 'Tenant Demand',
+      entry_price: 'Entry Price',
+      stability: 'Market Stability',
+    };
+
+    const prompt = `You are analyzing a market comparison report. The user is a ${context.user_type} who prioritized: ${context.priorities.map(p => priorityLabels[p] || p).join(', ')}.
+
+The winner is ${context.winner_name}.
+
+Priority analysis results:
+${JSON.stringify(context.priority_weighted_winner.priorityScores, null, 2)}
+
+Generate exactly 3 compelling, specific reasons why ${context.winner_name} is the best choice for this user. Each reason should:
+1. Directly tie to one of the user's priorities
+2. Include specific metric comparisons when available
+3. Be 1-2 sentences maximum
+
+Return ONLY a JSON array of 3 strings, no other text. Example format:
+["Reason 1", "Reason 2", "Reason 3"]`;
+
+    try {
+      const response = await this.generateCompletion(prompt, 400);
+      const parsed = JSON.parse(response);
+      if (Array.isArray(parsed) && parsed.length >= 3) {
+        return parsed.slice(0, 3);
+      }
+      return context.priority_weighted_winner.reasons.slice(0, 3);
+    } catch (error) {
+      this.logger.warn('Failed to generate why_winner_won, using fallback:', error);
+      return context.priority_weighted_winner.reasons.slice(0, 3);
+    }
+  }
+
+  /**
+   * Generate the final recommendation narrative for comparison reports
+   */
+  async generateFinalRecommendation(
+    context: {
+      winner_name: string;
+      priorities: string[];
+      user_type: 'homebuyer' | 'investor';
+      user_inputs?: Record<string, any>;
+      priority_weighted_winner: any;
+      comparison_markets: any[];
+      news_context?: string;
+    },
+  ): Promise<string> {
+    if (!this.claudeClient) {
+      return `Based on your priorities, ${context.winner_name} is your recommended market.`;
+    }
+
+    const userContext = context.user_type === 'homebuyer'
+      ? 'homebuyer looking for a place to live'
+      : 'real estate investor seeking returns';
+
+    const priorityLabels: Record<string, string> = {
+      affordability: 'Affordability',
+      appreciation: 'Appreciation Potential',
+      job_market: 'Job Market Strength',
+      market_timing: 'Market Timing',
+      lifestyle: 'Lifestyle Factors',
+      cash_flow: 'Cash Flow',
+      tenant_demand: 'Tenant Demand',
+      entry_price: 'Entry Price',
+      stability: 'Market Stability',
+    };
+
+    let prompt = `You are a real estate expert providing a final recommendation to a ${userContext}.
+
+Their top priorities are: ${context.priorities.map(p => priorityLabels[p] || p).join(', ')}
+
+Based on comprehensive analysis, ${context.winner_name} is the recommended market because:
+${context.priority_weighted_winner.reasons.join('\n')}
+
+${context.user_inputs?.budget ? `Budget: ${context.user_inputs.budget}` : ''}
+${context.user_inputs?.timeline ? `Timeline: ${context.user_inputs.timeline}` : ''}`;
+
+    if (context.news_context && context.news_context !== 'No recent news available for this market.') {
+      prompt += `
+
+Recent market developments to consider:
+${context.news_context.slice(0, 500)}`;
+    }
+
+    prompt += `
+
+Write a personalized final recommendation in 2-3 paragraphs that:
+1. Clearly states the recommended market and why it aligns with their priorities
+2. Acknowledges any trade-offs or considerations
+3. Provides 2-3 specific next steps they should take
+
+Be warm but professional. Use "you" to address the user directly.`;
+
+    try {
+      return await this.generateCompletion(prompt, 500);
+    } catch (error) {
+      this.logger.error('Failed to generate final recommendation:', error);
+      return `Based on your priorities of ${context.priorities.join(', ')}, ${context.winner_name} emerges as your recommended market. This market scores highest on the factors that matter most to you. As your next step, we recommend exploring specific neighborhoods within ${context.winner_name} and connecting with local real estate professionals who can provide on-the-ground insights.`;
+    }
   }
 }

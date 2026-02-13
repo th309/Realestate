@@ -60,6 +60,27 @@ export interface HistoricalData {
   [metricId: string]: HistoricalMetricData;
 }
 
+/** Priority score breakdown for a single priority */
+export interface PriorityScore {
+  priority: string;
+  weight: number;
+  winnerId: string;
+  winnerName: string;
+  keyMetric: string;
+  winnerValue: number | null;
+  loserValue: number | null;
+  reason: string;
+}
+
+/** Result of priority-weighted winner calculation */
+export interface PriorityWeightedResult {
+  winnerId: string;
+  winnerName: string;
+  totalScore: number;
+  priorityScores: PriorityScore[];
+  reasons: string[];
+}
+
 /** Market metrics for AI context - matches template placeholders */
 export interface MarketMetrics {
   // Price metrics (Zillow)
@@ -214,7 +235,10 @@ export class ReportsService {
         primary_geography_type: dto.primary_geography.type,
         primary_geography_name: dto.primary_geography.name,
         comparison_geographies: dto.comparison_geographies || null,
-        user_inputs: dto.user_inputs || {},
+        user_inputs: {
+          ...dto.user_inputs,
+          priorities: dto.priorities || [],
+        },
         status: 'generating',
         generation_started_at: new Date().toISOString(),
       })
@@ -391,6 +415,37 @@ export class ReportsService {
         comparisons: Object.keys(comparisons).length > 0 ? comparisons : undefined,
       };
 
+      // 3b. Calculate priority-weighted winner for comparison reports
+      const priorities = dto.priorities || dto.user_inputs?.priorities || [];
+      let priorityWeightedWinner: PriorityWeightedResult | null = null;
+
+      if (priorities.length > 0 && dto.comparison_geographies && dto.comparison_geographies.length > 0) {
+        const comparisonMarketData = dto.comparison_geographies.map(compGeo => ({
+          geography: { id: compGeo.id, name: compGeo.name },
+          metrics: comparisons[compGeo.id]?.current || {},
+          scores: comparisons[compGeo.id]?.scores,
+        }));
+
+        priorityWeightedWinner = this.calculatePriorityWeightedWinner(
+          {
+            geography: { id: dto.primary_geography.id, name: dto.primary_geography.name },
+            metrics: marketMetrics,
+            scores,
+          },
+          comparisonMarketData,
+          priorities,
+          dto.user_type,
+        );
+
+        // Add winner data to populatedData
+        if (priorityWeightedWinner) {
+          (populatedData as any).priority_weighted_winner = priorityWeightedWinner;
+        }
+      }
+
+      // Store priorities in populated data for reference
+      (populatedData as any).priorities = priorities;
+
       // 4. Generate AI narratives (Claude) with news context
       let aiNarratives = {};
       if (template.config.ai_config?.narrative_sections) {
@@ -407,8 +462,9 @@ export class ReportsService {
         aiNarratives = await this.claudeService.generateNarratives(
           template.config.ai_config.narrative_sections,
           {
-            // Basic info
+            // Basic info - templates use both {{geography_name}} and {{primary_geography_name}}
             geography_name: dto.primary_geography.name,
+            primary_geography_name: dto.primary_geography.name,
             geography_type: dto.primary_geography.type,
             user_type: dto.user_type,
 
@@ -498,6 +554,22 @@ export class ReportsService {
             markethealth_context: scoreContexts?.markethealth?.interpretation || null,
             markethealth_comparison: scoreContexts?.markethealth?.comparison || null,
             markethealth_impact: scoreContexts?.markethealth?.dollar_impact || null,
+
+            // Priority and comparison context for comparison reports
+            priorities: priorities,
+            priorities_formatted: priorities.length > 0
+              ? priorities.map((p, i) => `${i + 1}. ${this.formatPriorityName(p)}`).join(', ')
+              : 'No priorities specified',
+            priority_weighted_winner: priorityWeightedWinner,
+            winner_name: priorityWeightedWinner?.winnerName || null,
+            winner_reasons: priorityWeightedWinner?.reasons || [],
+            comparison_markets: dto.comparison_geographies?.map(g => ({
+              id: g.id,
+              name: g.name,
+              metrics: comparisons[g.id]?.current,
+              scores: comparisons[g.id]?.scores,
+            })) || [],
+
             ...dto.user_inputs,
           },
         );
@@ -1193,6 +1265,24 @@ export class ReportsService {
     return `${sign}${value.toFixed(decimals)}%`;
   }
 
+  /**
+   * Format priority name for display
+   */
+  private formatPriorityName(priority: string): string {
+    const names: Record<string, string> = {
+      affordability: 'Affordability',
+      appreciation: 'Appreciation',
+      job_market: 'Job Market',
+      market_timing: 'Market Timing',
+      lifestyle: 'Lifestyle',
+      cash_flow: 'Cash Flow',
+      tenant_demand: 'Tenant Demand',
+      entry_price: 'Entry Price',
+      stability: 'Stability',
+    };
+    return names[priority] || priority;
+  }
+
   // ============================================================================
   // Score Contextualization
   // ============================================================================
@@ -1375,10 +1465,10 @@ export class ReportsService {
 
         const threeYearGain = medianPrice * (Math.pow(1 + annualAppreciation / 100, 3) - 1);
 
-        if (threeYearGain > 10000) {
-          return `Homes in similar markets have historically appreciated ~${this.formatCurrency(threeYearGain)} over 3 years`;
+        if (threeYearGain > 1000) {
+          return `Homes in similar markets have historically appreciated ~${this.formatCurrency(Math.round(threeYearGain))} over 3 years (${annualAppreciation.toFixed(1)}% annually)`;
         }
-        return undefined;
+        return `Limited appreciation expected (~${annualAppreciation.toFixed(1)}% annually) based on current market conditions`;
       }
 
       case 'investoredge': {
@@ -1491,5 +1581,279 @@ export class ReportsService {
     }
 
     return contexts;
+  }
+
+  // ============================================================================
+  // Priority-Weighted Winner Logic
+  // ============================================================================
+
+  /**
+   * Priority to metric mappings for each user type
+   */
+  private readonly PRIORITY_METRICS: Record<string, string[]> = {
+    // Homebuyer priorities
+    affordability: ['affordability_index', 'median_income', 'median_listing_price'],
+    appreciation: ['zhvi_yoy', 'zhvf_1yr_pct', 'zhvi_5y_cagr'],
+    job_market: ['job_growth_yoy', 'unemployment_rate'],
+    market_timing: ['days_on_market', 'months_of_supply', 'price_cut_pct'],
+    lifestyle: ['population', 'median_age', 'population_growth_yoy'],
+
+    // Investor priorities
+    cash_flow: ['cap_rate', 'gross_yield', 'rent_to_price_ratio'],
+    tenant_demand: ['zori_yoy', 'zordi', 'demand_score'],
+    entry_price: ['median_listing_price', 'overvalued_pct'],
+    stability: ['months_of_supply', 'inventory_yoy', 'zhvi_yoy'],
+  };
+
+  /**
+   * Metrics where lower values are better
+   */
+  private readonly LOWER_IS_BETTER: Set<string> = new Set([
+    'unemployment_rate',
+    'days_on_market',
+    'months_of_supply',
+    'price_cut_pct',
+    'median_listing_price',
+    'overvalued_pct',
+  ]);
+
+  /**
+   * Calculate the priority-weighted winner between markets
+   *
+   * @param primaryMarket - Primary market data with geography and metrics
+   * @param comparisonMarkets - Comparison market data
+   * @param priorities - User's priorities (up to 3)
+   * @param userType - homebuyer or investor
+   * @returns Winner information with reasons
+   */
+  calculatePriorityWeightedWinner(
+    primaryMarket: {
+      geography: { id: string; name: string };
+      metrics: MarketMetrics;
+      scores?: any;
+    },
+    comparisonMarkets: Array<{
+      geography: { id: string; name: string };
+      metrics: MarketMetrics;
+      scores?: any;
+    }>,
+    priorities: string[],
+    userType: 'homebuyer' | 'investor',
+  ): PriorityWeightedResult | null {
+    if (!priorities || priorities.length === 0 || comparisonMarkets.length === 0) {
+      return null;
+    }
+
+    // Combine all markets for comparison
+    const allMarkets = [
+      primaryMarket,
+      ...comparisonMarkets,
+    ];
+
+    // Weight by position: 1st priority = 3pts, 2nd = 2pts, 3rd = 1pt
+    const weights = [3, 2, 1];
+
+    // Track scores for each market
+    const marketScores: Map<string, number> = new Map();
+    const priorityResults: Array<{
+      priority: string;
+      weight: number;
+      winnerId: string;
+      winnerName: string;
+      keyMetric: string;
+      winnerValue: number | null;
+      loserValue: number | null;
+      reason: string;
+    }> = [];
+
+    // Initialize scores
+    for (const market of allMarkets) {
+      marketScores.set(market.geography.id, 0);
+    }
+
+    // Score each priority
+    for (let i = 0; i < Math.min(priorities.length, 3); i++) {
+      const priority = priorities[i];
+      const weight = weights[i];
+      const metricsForPriority = this.PRIORITY_METRICS[priority] || [];
+
+      if (metricsForPriority.length === 0) {
+        continue;
+      }
+
+      // Find the best market for this priority
+      let bestMarket = allMarkets[0];
+      let bestScore = -Infinity;
+      let keyMetric = metricsForPriority[0];
+      let bestValue: number | null = null;
+
+      for (const market of allMarkets) {
+        let priorityScore = 0;
+        let validMetrics = 0;
+
+        for (const metric of metricsForPriority) {
+          const value = market.metrics[metric as keyof MarketMetrics];
+          if (value != null && typeof value === 'number') {
+            // Normalize: lower is better metrics get inverted
+            const normalizedValue = this.LOWER_IS_BETTER.has(metric) ? -value : value;
+            priorityScore += normalizedValue;
+            validMetrics++;
+          }
+        }
+
+        // Average the score if we have valid metrics
+        const avgScore = validMetrics > 0 ? priorityScore / validMetrics : 0;
+
+        if (avgScore > bestScore) {
+          bestScore = avgScore;
+          bestMarket = market;
+          // Find the primary metric value for display
+          for (const m of metricsForPriority) {
+            const v = market.metrics[m as keyof MarketMetrics];
+            if (v != null) {
+              keyMetric = m;
+              bestValue = v as number;
+              break;
+            }
+          }
+        }
+      }
+
+      // Award points to the best market
+      const currentScore = marketScores.get(bestMarket.geography.id) || 0;
+      marketScores.set(bestMarket.geography.id, currentScore + weight);
+
+      // Find the "loser" value for comparison
+      let loserValue: number | null = null;
+      for (const market of allMarkets) {
+        if (market.geography.id !== bestMarket.geography.id) {
+          const v = market.metrics[keyMetric as keyof MarketMetrics];
+          if (v != null) {
+            loserValue = v as number;
+            break;
+          }
+        }
+      }
+
+      // Generate reason text
+      const reason = this.generatePriorityReason(
+        priority,
+        keyMetric,
+        bestValue,
+        loserValue,
+        bestMarket.geography.name,
+      );
+
+      priorityResults.push({
+        priority,
+        weight,
+        winnerId: bestMarket.geography.id,
+        winnerName: bestMarket.geography.name,
+        keyMetric,
+        winnerValue: bestValue,
+        loserValue,
+        reason,
+      });
+    }
+
+    // Find overall winner
+    let winnerId = allMarkets[0].geography.id;
+    let winnerName = allMarkets[0].geography.name;
+    let maxScore = 0;
+
+    for (const [marketId, score] of marketScores) {
+      if (score > maxScore) {
+        maxScore = score;
+        winnerId = marketId;
+        const market = allMarkets.find(m => m.geography.id === marketId);
+        winnerName = market?.geography.name || marketId;
+      }
+    }
+
+    // Generate top 3 reasons
+    const reasons = priorityResults
+      .filter(r => r.winnerId === winnerId)
+      .slice(0, 3)
+      .map(r => r.reason);
+
+    return {
+      winnerId,
+      winnerName,
+      totalScore: maxScore,
+      priorityScores: priorityResults,
+      reasons,
+    };
+  }
+
+  /**
+   * Generate a human-readable reason for why a market won on a priority
+   */
+  private generatePriorityReason(
+    priority: string,
+    metric: string,
+    winnerValue: number | null,
+    loserValue: number | null,
+    winnerName: string,
+  ): string {
+    const priorityLabels: Record<string, string> = {
+      affordability: 'Affordability',
+      appreciation: 'Appreciation Potential',
+      job_market: 'Job Market Strength',
+      market_timing: 'Market Timing',
+      lifestyle: 'Lifestyle Factors',
+      cash_flow: 'Cash Flow',
+      tenant_demand: 'Tenant Demand',
+      entry_price: 'Entry Price',
+      stability: 'Market Stability',
+    };
+
+    const metricDescriptions: Record<string, string> = {
+      affordability_index: 'better affordability ratio',
+      median_income: 'higher household incomes',
+      median_listing_price: 'lower median prices',
+      zhvi_yoy: 'stronger year-over-year appreciation',
+      zhvf_1yr_pct: 'better appreciation forecast',
+      zhvi_5y_cagr: 'stronger 5-year appreciation history',
+      job_growth_yoy: 'stronger job growth',
+      unemployment_rate: 'lower unemployment',
+      days_on_market: 'faster-selling market',
+      months_of_supply: 'tighter inventory',
+      price_cut_pct: 'fewer price cuts',
+      cap_rate: 'higher cap rate',
+      gross_yield: 'better gross yield',
+      rent_to_price_ratio: 'better rent-to-price ratio',
+      zori_yoy: 'stronger rent growth',
+      zordi: 'higher rental demand',
+      demand_score: 'stronger buyer demand',
+      overvalued_pct: 'less overvalued relative to fundamentals',
+      inventory_yoy: 'healthier inventory levels',
+      population: 'larger population base',
+      median_age: 'favorable demographics',
+      population_growth_yoy: 'stronger population growth',
+    };
+
+    const priorityLabel = priorityLabels[priority] || priority;
+    const metricDesc = metricDescriptions[metric] || metric;
+
+    if (winnerValue == null) {
+      return `${winnerName} wins on ${priorityLabel}`;
+    }
+
+    // Format the value based on the metric type
+    let formattedWinner = String(winnerValue);
+    let formattedLoser = loserValue != null ? String(loserValue) : 'N/A';
+
+    if (metric.includes('rate') || metric.includes('pct') || metric.includes('yoy') || metric.includes('cagr')) {
+      formattedWinner = `${winnerValue.toFixed(1)}%`;
+      formattedLoser = loserValue != null ? `${loserValue.toFixed(1)}%` : 'N/A';
+    } else if (metric.includes('price') || metric.includes('income')) {
+      formattedWinner = this.formatCurrency(winnerValue);
+      formattedLoser = loserValue != null ? this.formatCurrency(loserValue) : 'N/A';
+    } else if (metric === 'days_on_market' || metric === 'months_of_supply') {
+      formattedWinner = `${Math.round(winnerValue)} days`;
+      formattedLoser = loserValue != null ? `${Math.round(loserValue)} days` : 'N/A';
+    }
+
+    return `${winnerName} leads on ${priorityLabel} with ${metricDesc} (${formattedWinner} vs ${formattedLoser})`;
   }
 }
