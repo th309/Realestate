@@ -126,6 +126,7 @@ export class ScoringService {
               investoredge: { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
               markethealth: { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
             },
+            z_scores: zScores[location.location_id] || {},
           };
           allResults.push(result);
         }
@@ -846,7 +847,7 @@ export class ScoringService {
       const to = from + pageSize - 1;
       const { data, error } = await this.supabase
         .from(table)
-        .select(`${idCol}, ${nameCol}, hotness_score, demand_score, pending_ratio, price_reduced_share, active_listing_count_yy, price_reduced_count_yy, median_listing_price`)
+        .select(`${idCol}, ${nameCol}, hotness_score, demand_score, supply_score, pending_ratio, price_reduced_share, median_days_on_market, active_listing_count_yy, price_reduced_count_yy, median_listing_price`)
         .eq('period_date', periodDate)
         .order(idCol, { ascending: true })
         .range(from, to);
@@ -874,18 +875,25 @@ export class ScoringService {
         median_price: r.median_listing_price,
         hotness_score: r.hotness_score,
         demand_score: r.demand_score,
+        supply_score: r.supply_score,
         pending_ratio: r.pending_ratio,
         price_reduced_share: r.price_reduced_share,
+        median_days_on_market: r.median_days_on_market,
         active_listing_count_yy: r.active_listing_count_yy,
         price_reduced_count_yy: r.price_reduced_count_yy,
       });
     }
 
-    // For metro and county, also fetch census/economic data
+    // Fetch census/economic data for all geographies
     if (geography === 'metro' || geography === 'county') {
       await this.fetchCensusData(locationsMap, geography, periodDate);
       await this.fetchEconomicData(locationsMap, geography, periodDate);
+    } else if (geography === 'zip') {
+      await this.fetchZipCensusData(locationsMap, periodDate);
     }
+
+    // Fetch calculated metrics (rent_price_ratio, affordability_ratio) for all geographies
+    await this.fetchCalculatedMetrics(locationsMap, geography, periodDate);
 
     return Array.from(locationsMap.values());
   }
@@ -972,26 +980,108 @@ export class ScoringService {
   }
 
   /**
+   * Fetch census data for ZIP geography from census_zip table
+   * Provides population_yoy, median_gross_rent, homeownership_rate
+   */
+  private async fetchZipCensusData(
+    locationsMap: Map<string, LocationMetrics>,
+    periodDate: string,
+  ): Promise<void> {
+    const year = new Date(periodDate).getFullYear();
+
+    const pageSize = 1000;
+    let page = 0;
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await this.supabase
+        .from('census_zip')
+        .select('zcta, population_yoy, median_gross_rent, homeownership_rate, median_home_value, median_household_income')
+        .eq('year', year)
+        .order('zcta', { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        throw new Error(`Failed to fetch ZIP census data: ${error.message}`);
+      }
+      if (!data || data.length === 0) break;
+      for (const row of data) {
+        const location = locationsMap.get(row.zcta);
+        if (location) {
+          if (row.population_yoy != null) location.population_yoy = row.population_yoy;
+          if (row.median_gross_rent != null) location.median_gross_rent = row.median_gross_rent;
+          if (row.homeownership_rate != null) location.homeownership_rate = row.homeownership_rate;
+          // Use census median_home_value as fallback for median_price if not set from Realtor
+          if (location.median_price == null && row.median_home_value != null) {
+            location.median_price = row.median_home_value;
+          }
+        }
+      }
+      if (data.length < pageSize) break;
+      page += 1;
+    }
+  }
+
+  /**
    * Fetch calculated metrics (affordability_ratio, rent_price_ratio)
+   * Maps from DB column rent_to_price_ratio → LocationMetrics.rent_price_ratio
+   * Computes affordability_ratio from census data already on the location
    */
   private async fetchCalculatedMetrics(
     locationsMap: Map<string, LocationMetrics>,
     geography: GeographyLevel,
     periodDate: string,
   ): Promise<void> {
-    const { data } = await this.supabase
-      .from('calculated_metrics')
-      .select('geography_id, affordability_ratio, rent_price_ratio')
-      .eq('geography_type', geography)
-      .eq('period_date', periodDate);
+    // calculated_metrics uses end-of-month dates for rent_to_price_ratio,
+    // but scoring uses first-of-month dates. Try both: exact match first,
+    // then fall back to end of previous month.
+    const endOfPrevMonth = new Date(periodDate);
+    endOfPrevMonth.setDate(endOfPrevMonth.getDate() - 1);
+    const fallbackDate = endOfPrevMonth.toISOString().split('T')[0];
 
-    if (data) {
-      for (const row of data) {
-        const location = locationsMap.get(row.geography_id);
-        if (location) {
-          location.affordability_ratio = row.affordability_ratio;
-          location.rent_price_ratio = row.rent_price_ratio;
+    const datesToTry = [periodDate, fallbackDate];
+
+    for (const dateToQuery of datesToTry) {
+      let foundAny = false;
+      const pageSize = 1000;
+      let page = 0;
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await this.supabase
+          .from('calculated_metrics')
+          .select('geography_id, rent_to_price_ratio')
+          .eq('geography_type', geography)
+          .eq('period_date', dateToQuery)
+          .not('rent_to_price_ratio', 'is', null)
+          .order('geography_id', { ascending: true })
+          .range(from, to);
+
+        if (error) {
+          throw new Error(`Failed to fetch calculated metrics: ${error.message}`);
         }
+        if (!data || data.length === 0) break;
+        foundAny = true;
+        for (const row of data) {
+          const location = locationsMap.get(row.geography_id);
+          if (location && row.rent_to_price_ratio != null) {
+            location.rent_price_ratio = row.rent_to_price_ratio;
+          }
+        }
+        if (data.length < pageSize) break;
+        page += 1;
+      }
+      // If we found data with this date, no need to try fallback
+      if (foundAny) break;
+    }
+
+    // Compute affordability_ratio from census data already loaded on locations
+    // affordability_ratio = median_price / median_gross_rent / 12 (price-to-annual-rent)
+    // Higher = less affordable relative to rents = potentially overvalued
+    // For scoring formulas, direction=1 means higher ratio → higher score
+    for (const location of locationsMap.values()) {
+      if (location.median_price != null && location.median_gross_rent != null && location.median_gross_rent > 0) {
+        location.affordability_ratio = location.median_price / (location.median_gross_rent * 12);
       }
     }
   }
@@ -1075,6 +1165,106 @@ export class ScoringService {
 
       if (inherited.length > 0) {
         location._inherited = inherited;
+      }
+    }
+  }
+
+  /**
+   * Backfill missing ZIP metrics from parent county Realtor data.
+   * For ZIPs missing demand_score/hotness_score, looks up the parent county
+   * via geography_inheritance and copies the county's values.
+   */
+  private async backfillFromCounty(
+    locationsMap: Map<string, LocationMetrics>,
+    periodDate: string,
+    metricsToInherit: string[],
+  ): Promise<void> {
+    // 1. Find ZIPs missing any of the metrics
+    const missingZips: string[] = [];
+    for (const [zipId, location] of locationsMap) {
+      for (const metric of metricsToInherit) {
+        if ((location as any)[metric] == null) {
+          missingZips.push(zipId);
+          break;
+        }
+      }
+    }
+
+    if (missingZips.length === 0) return;
+
+    // 2. Bulk-fetch ZIP→county mappings
+    const zipToCounty = new Map<string, string>();
+    const pageSize = 1000;
+    for (let i = 0; i < missingZips.length; i += pageSize) {
+      const batch = missingZips.slice(i, i + pageSize);
+      const from = 0;
+      const to = batch.length - 1;
+      const { data, error } = await this.supabase
+        .from('geography_inheritance')
+        .select('geography_id, parent_county_fips')
+        .in('geography_id', batch)
+        .order('geography_id', { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        console.warn(`Failed to fetch geography_inheritance: ${error.message}`);
+        return;
+      }
+      if (data) {
+        for (const row of data) {
+          if (row.parent_county_fips) {
+            zipToCounty.set(row.geography_id, row.parent_county_fips);
+          }
+        }
+      }
+    }
+
+    if (zipToCounty.size === 0) return;
+
+    // 3. Get unique county FIPS codes and fetch their Realtor data
+    const uniqueCounties = [...new Set(zipToCounty.values())];
+    const countyMetrics = new Map<string, Record<string, number | null>>();
+
+    for (let i = 0; i < uniqueCounties.length; i += pageSize) {
+      const batch = uniqueCounties.slice(i, i + pageSize);
+      const selectCols = ['county_fips', ...metricsToInherit].join(', ');
+      const from = 0;
+      const to = batch.length - 1;
+      const { data, error } = await this.supabase
+        .from('realtor_county')
+        .select(selectCols)
+        .eq('period_date', periodDate)
+        .in('county_fips', batch)
+        .order('county_fips', { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        console.warn(`Failed to fetch county Realtor data: ${error.message}`);
+        return;
+      }
+      if (data) {
+        for (const row of data) {
+          const values: Record<string, number | null> = {};
+          for (const metric of metricsToInherit) {
+            values[metric] = row[metric] ?? null;
+          }
+          countyMetrics.set(row.county_fips, values);
+        }
+      }
+    }
+
+    // 4. Backfill missing ZIP values from parent county
+    for (const [zipId, countyFips] of zipToCounty) {
+      const location = locationsMap.get(zipId);
+      const county = countyMetrics.get(countyFips);
+      if (!location || !county) continue;
+
+      for (const metric of metricsToInherit) {
+        if ((location as any)[metric] == null && county[metric] != null) {
+          (location as any)[metric] = county[metric];
+          if (!location._inherited) location._inherited = [];
+          location._inherited.push(metric);
+        }
       }
     }
   }
@@ -1185,24 +1375,44 @@ export class ScoringService {
   }
 
   /**
-   * Normalize raw scores to 0-100 range
+   * Normalize raw scores to 0-100 using percentile rank.
+   *
+   * Score semantics:
+   *   50 = median (predicted to earn roughly the benchmark return)
+   *   80 = top 20% (predicted to significantly outperform)
+   *   20 = bottom 20% (predicted to significantly underperform)
+   *
+   * Produces a uniform distribution by construction (no outlier sensitivity).
    */
   private normalizeScores(rawScores: RawScoreResult[]): number[] {
     if (rawScores.length === 0) return [];
+    if (rawScores.length === 1) return [50];
 
-    const scores = rawScores.map(r => r.rawScore);
-    const minRaw = Math.min(...scores);
-    const maxRaw = Math.max(...scores);
+    // Build sorted index array (ascending by rawScore)
+    const indexed = rawScores.map((r, i) => ({ raw: r.rawScore, idx: i }));
+    indexed.sort((a, b) => a.raw - b.raw);
 
-    // Handle edge case where all scores are the same
-    if (maxRaw === minRaw) {
-      return rawScores.map(() => 50); // All get middle score
+    const result = new Array<number>(rawScores.length);
+    const n = rawScores.length;
+
+    // Handle ties: assign average rank to tied values
+    let i = 0;
+    while (i < n) {
+      let j = i;
+      // Find the end of the tie group
+      while (j < n && indexed[j].raw === indexed[i].raw) {
+        j++;
+      }
+      // Average percentile for this tie group
+      const avgPercentile = ((i + j - 1) / 2 / (n - 1)) * 100;
+      const rounded = Math.round(avgPercentile * 10) / 10;
+      for (let k = i; k < j; k++) {
+        result[indexed[k].idx] = rounded;
+      }
+      i = j;
     }
 
-    return rawScores.map(r => {
-      const normalized = ((r.rawScore - minRaw) / (maxRaw - minRaw)) * 100;
-      return Math.round(normalized * 10) / 10; // Round to 1 decimal
-    });
+    return result;
   }
 
   // ============================================================================
@@ -1286,6 +1496,7 @@ export class ScoringService {
           median_price: result.median_price,
           score_date: scoreDate,
           created_at: createdAt,
+          z_scores: result.z_scores || null,
         });
       }
     }
