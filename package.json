@@ -30,6 +30,7 @@
     "quinn:test": "npx tsx scripts/quinn-test/run-iterative.ts"
   },
   "dependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1",
     "csv-parse": "^5.6.0"
   },
   "devDependencies": {
