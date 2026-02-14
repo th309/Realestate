@@ -54,7 +54,9 @@ export function AlertsTab() {
       if (filter.severity !== 'all') params.append('severity', filter.severity);
       if (filter.scoreType !== 'all') params.append('scoreType', filter.scoreType);
 
-      const response = await fetch(`${apiUrl}/api/admin/alerts?${params}`);
+      const response = await fetch(`${apiUrl}/api/admin/alerts?${params}`, {
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -72,6 +74,7 @@ export function AlertsTab() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/admin/alerts/${alertId}/${action}`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       if (response.ok) {

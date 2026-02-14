@@ -136,7 +136,9 @@ export function MLValidationTab() {
     const interval = setInterval(async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiUrl}/api/admin/ml-validation/status/${jobId}`);
+        const response = await fetch(`${apiUrl}/api/admin/ml-validation/status/${jobId}`, {
+          credentials: 'include',
+        });
 
         if (response.ok) {
           const status: JobStatus = await response.json();
@@ -165,7 +167,9 @@ export function MLValidationTab() {
   const fetchPreviousResults = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/results?limit=10`);
+      const response = await fetch(`${apiUrl}/api/admin/ml-validation/results?limit=10`, {
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -179,7 +183,9 @@ export function MLValidationTab() {
   const fetchValidationResult = async (validationId: string) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/${validationId}`);
+      const response = await fetch(`${apiUrl}/api/admin/ml-validation/${validationId}`, {
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -200,6 +206,7 @@ export function MLValidationTab() {
       const response = await fetch(`${apiUrl}/api/admin/ml-validation/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(config),
       });
 
@@ -226,6 +233,7 @@ export function MLValidationTab() {
       const response = await fetch(`${apiUrl}/api/admin/ml-validation/apply-suggestions/${result.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ applyWeights, applyMetrics }),
       });
 

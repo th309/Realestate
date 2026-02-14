@@ -98,8 +98,8 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
         : '';
 
       const [resultsRes, confidenceRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtests?limit=50${geoFilter}`),
-        fetch(`${apiUrl}/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ''}`),
+        fetch(`${apiUrl}/api/admin/backtests?limit=50${geoFilter}`, { credentials: 'include' }),
+        fetch(`${apiUrl}/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ''}`, { credentials: 'include' }),
       ]);
 
       if (resultsRes.ok) {
@@ -127,6 +127,7 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
       const response = await fetch(`${apiUrl}/api/admin/backtests/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           geographyType: geography.type,
           scoreType: selectedScoreType === 'all' ? undefined : selectedScoreType,

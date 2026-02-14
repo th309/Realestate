@@ -165,11 +165,10 @@ export const METRICS: Record<string, MetricConfig> = {
     id: 'rent_for_houses',
     title: 'Renter Demand Index',
     format: 'index',
-    dataSource: 'calculated',
-    apiEndpoint: '/api/metrics/renter-demand/{geo}',
+    dataSource: 'zillow',
+    apiEndpoint: '/api/zillow/demand/{geo}',
     keyField: 'auto',
-    valueField: 'renter_demand_index',
-    supportedGeos: ['metro', 'county', 'zip'],
+    supportedGeos: ['metro'],
   },
 
   // ============================================================================
@@ -245,7 +244,6 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/pending-ratio/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
-    asPercent: true,
   },
 
   days_on_market: {
@@ -280,6 +278,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/price-reduced/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    asPercent: true,
   },
 
   sale_to_list: {
@@ -290,6 +289,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/sale-to-list/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro'],
+    asPercent: true,
   },
 
   // ============================================================================
@@ -395,6 +395,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/price-increased/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    asPercent: true,
   },
 
   new_listings_yoy: {

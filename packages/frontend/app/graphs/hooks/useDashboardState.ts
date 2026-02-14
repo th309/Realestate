@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ComparisonConfig } from '../types';
 import type { GeoLevel } from '@/lib/data';
 import { STATES } from '../constants';
@@ -34,15 +35,23 @@ export const BASELINE_GEO_LEVELS: { value: GeoLevel; label: string }[] = [
 ];
 
 export function useDashboardState() {
-  const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
-  const [selectedArea, setSelectedArea] = useState('');
-  const [selectedAreaId, setSelectedAreaId] = useState(''); // Empty until user selects (matches metro/county/city/zip)
-  const [metric, setMetric] = useState('listing_price'); // Default to listing_price
+  // Read URL parameters for initial state
+  const searchParams = useSearchParams();
+  const urlGeo = searchParams.get('geo');
+  const urlLevel = searchParams.get('level') as GeoLevel | null;
+  const urlName = searchParams.get('name');
+  const urlMetric = searchParams.get('metric');
+
+  const [geoLevel, setGeoLevel] = useState<GeoLevel>(urlLevel || 'state');
+  const [selectedArea, setSelectedArea] = useState(urlName || '');
+  const [selectedAreaId, setSelectedAreaId] = useState(urlGeo || ''); // Set from URL if provided
+  const [metric, setMetric] = useState(urlMetric || 'listing_price'); // Default to listing_price
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('Max');
   const [chartType, setChartType] = useState<ChartType>('area');
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isInsightLoading, setIsInsightLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
 
   const [comparison, setComparison] = useState<ComparisonConfig>({
     enabled: false,
@@ -114,12 +123,26 @@ export function useDashboardState() {
   // Track previous geoLevel to detect changes
   const [prevGeoLevel, setPrevGeoLevel] = useState<GeoLevel>(geoLevel);
 
+  // Mark as initialized from URL on first render if URL params were provided
   useEffect(() => {
-    // Only reset selectedArea when geoLevel actually changes; keep empty until user selects (match metro/county/city/zip)
+    if (!initializedFromUrl && (urlGeo || urlLevel || urlName || urlMetric)) {
+      setInitializedFromUrl(true);
+    }
+  }, [initializedFromUrl, urlGeo, urlLevel, urlName, urlMetric]);
+
+  useEffect(() => {
+    // Only reset selectedArea when geoLevel actually changes AND not on initial URL load
     if (geoLevel !== prevGeoLevel) {
       setPrevGeoLevel(geoLevel);
-      setSelectedArea('');
-      setSelectedAreaId('');
+
+      // Don't reset if this is the first render with URL params
+      if (initializedFromUrl && prevGeoLevel === (urlLevel || 'state')) {
+        // Skip reset on first change from URL-initialized state
+      } else {
+        setSelectedArea('');
+        setSelectedAreaId('');
+      }
+
       if (geoLevel !== 'national') {
         setComparison((prev) => ({ ...prev, enabled: false }));
       }
@@ -134,7 +157,7 @@ export function useDashboardState() {
         }
       }
     }
-  }, [geoLevel, prevGeoLevel, metric, metricOptionsList]);
+  }, [geoLevel, prevGeoLevel, metric, metricOptionsList, initializedFromUrl, urlLevel]);
 
   useEffect(() => {
     // Only reset baseline area when level changes and current area not in new options; allow empty

@@ -40,6 +40,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
       const response = await fetch('/api/admin/testers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ name: name.trim(), email: email.trim() || undefined }),
       });
 

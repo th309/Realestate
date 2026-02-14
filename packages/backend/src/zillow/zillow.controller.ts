@@ -46,14 +46,19 @@ export class ZillowController {
 
   @Get('zips')
   async getZipHomeValues(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('county') county?: string,
     @Query('date') date?: string,
   ) {
+    // State selection is required for ZIP data
     if (!state) {
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: 0,
+        geography: 'ZIP',
+        stateRequired: true,
+        message: 'Select a state to view ZIP code data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipHomeValues(state, county, date);
@@ -183,14 +188,20 @@ export class ZillowController {
 
   @Get('rent/zips')
   async getZipRent(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
   ) {
+    // State selection is required for ZIP data
     if (!state) {
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: 0,
+        geography: 'ZIP',
+        propertyType,
+        stateRequired: true,
+        message: 'Select a state to view ZIP code rent data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipRent(state, propertyType, date);
@@ -227,14 +238,20 @@ export class ZillowController {
 
   @Get('demand/zips')
   async getZipRenterDemand(
-    @Query('state') state: string,
+    @Query('state') state?: string,
     @Query('date') date?: string,
     @Query('propertyType') propertyType: string = 'all',
   ) {
+    // State selection is required for ZIP data
     if (!state) {
       return {
-        success: false,
-        error: 'State parameter is required for ZIP-level data',
+        success: true,
+        count: 0,
+        geography: 'ZIP',
+        propertyType,
+        stateRequired: true,
+        message: 'Select a state to view ZIP code demand data',
+        data: [],
       };
     }
     const data = await this.zillowService.getZipRenterDemand(

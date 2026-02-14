@@ -79,8 +79,9 @@ export const METRIC_DEFINITIONS: MetricDefinition[] = [
   { metricId: 'permits_yoy', metricName: 'Permits YoY', category: 'New Construction', tableName: 'permits_county', columnName: 'permits_yoy', source: 'Census', freshnessThresholdDays: 36, isNew: true },
   { metricId: 'sf_mf_ratio', metricName: 'SF/MF Ratio', category: 'New Construction', tableName: 'permits_county', columnName: 'sf_mf_ratio', source: 'Census', freshnessThresholdDays: 36, isNew: true, isPro: true },
   { metricId: 'permit_value_unit', metricName: 'Permit Value/Unit', category: 'New Construction', tableName: 'permits_county', columnName: 'value_per_unit', source: 'Census', freshnessThresholdDays: 36, isNew: true, isPro: true },
-  { metricId: 'new_construction_sales', metricName: 'New Construction Sales', category: 'New Construction', tableName: 'census_county', columnName: 'new_home_sales', source: 'Census', freshnessThresholdDays: 108 },
-  { metricId: 'new_construction_price', metricName: 'New Construction Price', category: 'New Construction', tableName: 'census_county', columnName: 'new_home_median_price', source: 'Census', freshnessThresholdDays: 108 },
+  { metricId: 'new_construction_sales', metricName: 'New Construction Sales', category: 'New Construction', tableName: 'zillow_metro', columnName: 'new_con_sales', source: 'Zillow', freshnessThresholdDays: 36 },
+  { metricId: 'new_construction_price', metricName: 'New Construction Price', category: 'New Construction', tableName: 'zillow_metro', columnName: 'new_con_median_price', source: 'Zillow', freshnessThresholdDays: 36 },
+  { metricId: 'new_construction_ppsf', metricName: 'New Construction $/SqFt', category: 'New Construction', tableName: 'zillow_metro', columnName: 'new_con_median_price_per_sqft', source: 'Zillow', freshnessThresholdDays: 36 },
   { metricId: 'new_construction_share', metricName: 'New Construction $Share', category: 'New Construction', tableName: 'calculated_metrics', columnName: 'new_construction_share', source: 'Calculated', freshnessThresholdDays: 108, isPro: true },
 
   // ═══════════════════════════════════════════════════════════════════════

@@ -131,13 +131,15 @@ async function processBatch(supabase: any, records: any[]): Promise<{ inserted: 
 async function streamImportZipCore(
   supabase: any,
   coreFilePath: string,
-  hotnessMap: Map<string, Partial<RealtorCombinedRecord>>
+  hotnessMap: Map<string, Partial<RealtorCombinedRecord>>,
+  sinceDate?: string | null
 ): Promise<{ recordsInserted: number; errors: number }> {
   return new Promise((resolve, reject) => {
     let recordsInserted = 0;
     let errors = 0;
     let batch: any[] = [];
     let totalRead = 0;
+    let skipped = 0;
 
     const parser = parse({
       columns: true,
@@ -148,6 +150,12 @@ async function streamImportZipCore(
     const fileStream = createReadStream(coreFilePath);
 
     parser.on('data', async (row) => {
+      // Skip records before the since date filter
+      if (sinceDate && row.month_date_yyyymm < sinceDate) {
+        skipped++;
+        return;
+      }
+
       const record = parseRow(row, hotnessMap);
       batch.push(record);
       totalRead++;
@@ -182,7 +190,7 @@ async function streamImportZipCore(
         errors += result.errors;
       }
 
-      console.log(`  📊 Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted`);
+      console.log(`  📊 Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted${skipped > 0 ? `, ${skipped.toLocaleString()} skipped (before filter)` : ''}`);
       resolve({ recordsInserted, errors });
     });
 
@@ -198,11 +206,14 @@ async function main() {
   const startTime = Date.now();
   const args = process.argv.slice(2);
   const useHistory = args.includes('--history');
+  const sinceArg = args.find(a => a.startsWith('--since='));
+  const sinceDate = sinceArg ? sinceArg.split('=')[1] : null; // e.g. --since=202601
 
   console.log('🏠 Realtor.com ZIP Data Import (Streaming)');
   console.log('='.repeat(60));
   console.log(`Date: ${new Date().toISOString()}`);
   console.log(`Mode: ${useHistory ? 'Historical files' : 'Current month download'}`);
+  if (sinceDate) console.log(`Filter: Only records >= ${sinceDate}`);
   console.log(`Batch size: ${BATCH_SIZE}`);
   console.log('');
 
@@ -218,7 +229,15 @@ async function main() {
   try {
     // Load hotness data first (smaller file, can fit in memory)
     console.log('📂 Loading hotness data...');
-    const hotnessResult = loadFromFile(DATASET_CONFIG.hotnessHistoryFile!);
+    const hotnessFile = useHistory ? DATASET_CONFIG.hotnessHistoryFile! : DATASET_CONFIG.id.replace('realtor-', 'RDC_Inventory_Hotness_Metrics_Zip.csv');
+    let hotnessResult;
+    if (useHistory) {
+      hotnessResult = loadFromFile(DATASET_CONFIG.hotnessHistoryFile!);
+    } else {
+      // Download current month hotness
+      const { downloadDataset } = await import('./realtor-import/download');
+      hotnessResult = await downloadDataset(DATASET_CONFIG.hotnessUrl!);
+    }
     if (!hotnessResult.success) {
       console.error(`❌ Failed to load hotness file: ${hotnessResult.error}`);
       await logger.fail(`Failed to load hotness file: ${hotnessResult.error}`);
@@ -232,10 +251,71 @@ async function main() {
     // Start ingestion log
     await logger.start();
 
-    // Stream and import core data
+    if (!useHistory) {
+      // Current month mode: download and import core data directly
+      console.log('\n💾 Downloading and importing current month core data...');
+      const { downloadDataset } = await import('./realtor-import/download');
+      const coreResult = await downloadDataset(DATASET_CONFIG.downloadUrl);
+      if (!coreResult.success) {
+        console.error(`❌ Failed to download core data: ${coreResult.error}`);
+        await logger.fail(`Failed to download core data: ${coreResult.error}`);
+        process.exit(1);
+      }
+
+      // Parse the CSV and process records
+      const { parse: parseCSV } = await import('csv-parse/sync');
+      const rows = parseCSV(coreResult.csvContent!, { columns: true, skip_empty_lines: true, trim: true });
+      console.log(`  ✅ Parsed ${rows.length.toLocaleString()} core records`);
+
+      let recordsInserted = 0;
+      let errors = 0;
+      const records = rows.map((row: any) => parseRow(row, hotnessMap));
+
+      // Import in batches
+      for (let i = 0; i < records.length; i += BATCH_SIZE) {
+        const batch = records.slice(i, i + BATCH_SIZE);
+        const result = await processBatch(supabase, batch);
+        recordsInserted += result.inserted;
+        errors += result.errors;
+
+        if ((i + BATCH_SIZE) % 10000 < BATCH_SIZE) {
+          console.log(`  📊 Progress: ${Math.min(i + BATCH_SIZE, records.length).toLocaleString()}/${records.length.toLocaleString()} records`);
+        }
+      }
+
+      // Complete ingestion log
+      await logger.complete({
+        recordsProcessed: records.length,
+        recordsSuccess: recordsInserted,
+        recordsError: errors,
+        errors: errors > 0 ? [`${errors} records failed`] : []
+      });
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log('\n' + '='.repeat(60));
+      console.log('📊 IMPORT SUMMARY');
+      console.log('='.repeat(60));
+      console.log(`Records imported: ${recordsInserted.toLocaleString()}`);
+      console.log(`Errors: ${errors}`);
+      console.log(`Duration: ${duration}s`);
+      console.log('='.repeat(60));
+
+      if (errors === 0) {
+        if (recordsInserted > 0) {
+          await refreshCalculatedMetrics(supabase);
+        }
+        console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
+      } else {
+        console.log('❌ IMPORT COMPLETED WITH ERRORS');
+        process.exit(1);
+      }
+      return;
+    }
+
+    // History mode: stream and import from large file
     console.log('\n💾 Streaming and importing core data...');
     const coreFilePath = join(DATA_DIR, DATASET_CONFIG.historyFile!);
-    const result = await streamImportZipCore(supabase, coreFilePath, hotnessMap);
+    const result = await streamImportZipCore(supabase, coreFilePath, hotnessMap, sinceDate);
 
     // Complete ingestion log
     await logger.complete({

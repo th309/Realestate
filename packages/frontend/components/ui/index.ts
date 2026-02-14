@@ -34,3 +34,6 @@ export { Select, MultiSelect } from './Select';
 
 // Tooltips & Popovers
 export { Tooltip, RichTooltip, Popover, InfoTooltip } from './Tooltip';
+
+// Metric Links
+export { MetricLink, MetricLinkInline } from './MetricLink';

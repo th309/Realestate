@@ -108,6 +108,12 @@ export function useMarketFactorsData(
       let trendPercent: number | null = null;
       if (firstValue != null && firstValue !== 0 && currentValue != null) {
         trendPercent = ((currentValue - firstValue) / Math.abs(firstValue)) * 100;
+        // Cap extreme trend percentages to ±99% for better UX
+        // Large swings happen with small base values (e.g., YoY metrics going from 0.1% to 0.5%)
+        // Showing +400% is technically correct but not useful to users
+        if (Math.abs(trendPercent) > 99) {
+          trendPercent = Math.sign(trendPercent) * 99;
+        }
       }
       const trendDirection: 'up' | 'down' | 'stable' =
         trendPercent == null ? 'stable' : trendPercent > 0.5 ? 'up' : trendPercent < -0.5 ? 'down' : 'stable';

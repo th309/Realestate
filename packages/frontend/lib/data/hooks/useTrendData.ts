@@ -68,7 +68,23 @@ export function useTrendData(
   const { months = 12, enabled = true } = options;
   const access = useMetricAccess(metricId);
 
-  // If metric is gated, return early without fetching
+  const queryKey = ['trend', metricId, geoLevel, regionId, months];
+
+  // IMPORTANT: Always call useQuery to maintain hook order consistency.
+  // Use enabled: false to skip fetching when metric is gated.
+  const {
+    data: trend,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchTrendData(metricId, geoLevel, regionId, months),
+    enabled: enabled && !!metricId && !!geoLevel && !!regionId && !access.gated,
+    staleTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 4 * 60 * 60 * 1000,
+  });
+
+  // If metric is gated, return gated result (after hooks have been called)
   if (access.gated) {
     return {
       trend: null,
@@ -84,20 +100,6 @@ export function useTrendData(
       tierRequired: access.tierRequired ?? undefined,
     };
   }
-
-  const queryKey = ['trend', metricId, geoLevel, regionId, months];
-
-  const {
-    data: trend,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey,
-    queryFn: () => fetchTrendData(metricId, geoLevel, regionId, months),
-    enabled: enabled && !!metricId && !!geoLevel && !!regionId,
-    staleTime: 2 * 60 * 60 * 1000, // 2 hours
-    gcTime: 4 * 60 * 60 * 1000,
-  });
 
   return {
     trend: trend ?? null,

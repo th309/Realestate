@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
-import { normalizeZipKey } from '../common/zip';
+import { normalizeZipKey, calculateCAGR } from '../common/zip';
 
 export interface CalculatedMetricsInput {
   geography_id: string;
@@ -536,15 +536,14 @@ export class CalculatedMetricsService {
         const pastValue = pastByRegion[metro.cbsa_code];
         if (!pastValue || pastValue === 0) continue;
 
-        const growthPct =
-          ((metro.median_listing_price - pastValue) / pastValue) * 100;
+        const cagr = calculateCAGR(pastValue, metro.median_listing_price, 5);
 
         recordsToUpsert.push({
           geography_id: metro.cbsa_code,
           geography_type: 'metro',
           geography_name: metro.cbsa_title,
           period_date: targetDate,
-          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+          home_value_5yr_cagr: cagr,
           calculated_at: new Date().toISOString(),
         });
 
@@ -660,8 +659,7 @@ export class CalculatedMetricsService {
         const pastValue = pastByRegion[state.state_id];
         if (!pastValue || pastValue === 0) continue;
 
-        const growthPct =
-          ((state.median_listing_price - pastValue) / pastValue) * 100;
+        const cagr = calculateCAGR(pastValue, state.median_listing_price, 5);
 
         const { error } = await this.supabase.from('calculated_metrics').upsert(
           {
@@ -669,7 +667,7 @@ export class CalculatedMetricsService {
             geography_type: 'state',
             geography_name: state.state_name,
             period_date: targetDate,
-            home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+            home_value_5yr_cagr: cagr,
             calculated_at: new Date().toISOString(),
           },
           {
@@ -772,14 +770,13 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[county.county_fips];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct =
-        ((county.median_listing_price - pastValue) / pastValue) * 100;
+      const cagr = calculateCAGR(pastValue, county.median_listing_price, 5);
       recordsToUpsert.push({
         geography_id: county.county_fips,
         geography_type: 'county',
         geography_name: county.county_name,
         period_date: targetDate,
-        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+        home_value_5yr_cagr: cagr,
         calculated_at: new Date().toISOString(),
       });
 
@@ -895,14 +892,13 @@ export class CalculatedMetricsService {
       const pastValue = pastByRegion[zipKey];
       if (!pastValue || pastValue === 0) continue;
 
-      const growthPct =
-        ((zip.median_listing_price - pastValue) / pastValue) * 100;
+      const cagr = calculateCAGR(pastValue, zip.median_listing_price, 5);
       recordsToUpsert.push({
         geography_id: zipKey,
         geography_type: 'zip',
         geography_name: zip.zip_name,
         period_date: targetDate,
-        home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+        home_value_5yr_cagr: cagr,
         calculated_at: new Date().toISOString(),
       });
 
@@ -997,8 +993,7 @@ export class CalculatedMetricsService {
       }
 
       const pastValue = pastData.median_listing_price;
-      const growthPct =
-        ((currentData.median_listing_price - pastValue) / pastValue) * 100;
+      const cagr = calculateCAGR(pastValue, currentData.median_listing_price, 5);
 
       const { error } = await this.supabase.from('calculated_metrics').upsert(
         {
@@ -1006,7 +1001,7 @@ export class CalculatedMetricsService {
           geography_type: 'national',
           geography_name: 'United States',
           period_date: targetDate,
-          home_value_5yr_cagr: Math.round(growthPct * 100) / 100,
+          home_value_5yr_cagr: cagr,
           calculated_at: new Date().toISOString(),
         },
         {

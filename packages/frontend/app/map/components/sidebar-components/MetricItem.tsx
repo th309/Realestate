@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { InfoSmallIcon, LockIcon } from '../Icons';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from '../../types';
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
@@ -86,7 +87,6 @@ export function MetricItem({
       >
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="truncate">{metric.name}</span>
-          {metric.isNew && <span className="text-[10px] text-rose-500 font-medium flex-shrink-0">New</span>}
         </span>
         <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
           {isLocked && (
@@ -143,6 +143,18 @@ export function MetricItem({
           {metricDef.notes && (
             <p className="text-[11px] text-on-surface-variant/70 italic mt-2">{metricDef.notes}</p>
           )}
+
+          {/* Link to full metric details page */}
+          <Link
+            href={`/metrics/${metric.id}`}
+            className="mt-3 flex items-center justify-center gap-1 w-full py-1.5 text-[11px] font-medium text-primary hover:text-primary/80 hover:bg-primary-container/30 rounded-lg transition-colors duration-200"
+            onClick={() => setShowInfo(false)}
+          >
+            View full details
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>,
         document.body
       )}

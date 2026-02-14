@@ -25,6 +25,62 @@ import { normalizeZipKey } from '../utils/zip';
 // ============================================================================
 
 /**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Upsert a batch with retry logic and rate limiting
+ */
+async function upsertBatchWithRetry(
+  supabase: SupabaseClient,
+  table: string,
+  batch: any[],
+  onConflict: string,
+  maxRetries: number = 3,
+  delayMs: number = 50
+): Promise<{ inserted: number; errors: number }> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const { error, data } = await supabase
+        .from(table)
+        .upsert(batch, {
+          onConflict,
+          ignoreDuplicates: false
+        })
+        .select();
+
+      if (error) {
+        if (attempt < maxRetries) {
+          const backoff = delayMs * Math.pow(2, attempt);
+          console.error(`  Batch error (attempt ${attempt + 1}/${maxRetries + 1}): ${error.message} - retrying in ${backoff}ms`);
+          await sleep(backoff);
+          continue;
+        }
+        console.error(`  Batch error (final attempt): ${error.message}`);
+        return { inserted: 0, errors: batch.length };
+      }
+
+      // Small delay between successful batches to avoid overwhelming Supabase
+      if (delayMs > 0) await sleep(delayMs);
+      return { inserted: data?.length || 0, errors: 0 };
+    } catch (err: any) {
+      if (attempt < maxRetries) {
+        const backoff = delayMs * Math.pow(2, attempt + 1);
+        console.error(`  Network error (attempt ${attempt + 1}/${maxRetries + 1}): ${err.message} - retrying in ${backoff}ms`);
+        await sleep(backoff);
+        continue;
+      }
+      console.error(`  Network error (final attempt): ${err.message}`);
+      return { inserted: 0, errors: batch.length };
+    }
+  }
+  return { inserted: 0, errors: batch.length };
+}
+
+/**
  * Parse a numeric value, returning null for empty/invalid values
  */
 function parseNumeric(value: string | undefined): number | null {
@@ -402,7 +458,7 @@ export function parseEconomicCountyCSV(csvContent: string): EconomicCountyRecord
 export async function importCensusNationalRecords(
   supabase: SupabaseClient,
   records: CensusNationalRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -443,7 +499,7 @@ export async function importCensusNationalRecords(
 export async function importCensusStateRecords(
   supabase: SupabaseClient,
   records: CensusStateRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -488,7 +544,7 @@ export async function importCensusStateRecords(
 export async function importCensusMetroRecords(
   supabase: SupabaseClient,
   records: CensusMetroRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -497,24 +553,12 @@ export async function importCensusMetroRecords(
 
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('census_metro')
-      .upsert(batch, {
-        onConflict: 'year,cbsa_code',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'census_metro', batch, 'year,cbsa_code');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 1000 === 0 || i + batchSize >= records.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 
@@ -533,7 +577,7 @@ export async function importCensusMetroRecords(
 export async function importCensusCountyRecords(
   supabase: SupabaseClient,
   records: CensusCountyRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -542,24 +586,12 @@ export async function importCensusCountyRecords(
 
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('census_county')
-      .upsert(batch, {
-        onConflict: 'year,fips_code',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'census_county', batch, 'year,fips_code');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 5000 === 0 || i + batchSize >= records.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 
@@ -578,7 +610,7 @@ export async function importCensusCountyRecords(
 export async function importCensusCityRecords(
   supabase: SupabaseClient,
   records: CensusCityRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -587,24 +619,12 @@ export async function importCensusCityRecords(
 
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('census_city')
-      .upsert(batch, {
-        onConflict: 'year,place_fips',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'census_city', batch, 'year,place_fips');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 10000 === 0 || i + batchSize >= records.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 
@@ -623,7 +643,7 @@ export async function importCensusCityRecords(
 export async function importCensusZipRecords(
   supabase: SupabaseClient,
   records: CensusZipRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -632,24 +652,12 @@ export async function importCensusZipRecords(
 
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('census_zip')
-      .upsert(batch, {
-        onConflict: 'year,zcta',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'census_zip', batch, 'year,zcta');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 10000 === 0 || i + batchSize >= records.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, records.length)}/${records.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 
@@ -672,7 +680,7 @@ export async function importCensusZipRecords(
 export async function importEconomicNationalRecords(
   supabase: SupabaseClient,
   records: EconomicNationalRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -719,7 +727,7 @@ export async function importEconomicNationalRecords(
 export async function importEconomicStateRecords(
   supabase: SupabaseClient,
   records: EconomicStateRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -770,7 +778,7 @@ export async function importEconomicStateRecords(
 export async function importEconomicMetroRecords(
   supabase: SupabaseClient,
   records: EconomicMetroRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -785,24 +793,12 @@ export async function importEconomicMetroRecords(
 
   for (let i = 0; i < formattedRecords.length; i += batchSize) {
     const batch = formattedRecords.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('economic_metro')
-      .upsert(batch, {
-        onConflict: 'period_date,cbsa_code',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'economic_metro', batch, 'period_date,cbsa_code');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 5000 === 0 || i + batchSize >= formattedRecords.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 
@@ -821,7 +817,7 @@ export async function importEconomicMetroRecords(
 export async function importEconomicCountyRecords(
   supabase: SupabaseClient,
   records: EconomicCountyRecord[],
-  batchSize: number = 100
+  batchSize: number = 1000
 ): Promise<ImportResult> {
   let recordsInserted = 0;
   let errors = 0;
@@ -836,24 +832,12 @@ export async function importEconomicCountyRecords(
 
   for (let i = 0; i < formattedRecords.length; i += batchSize) {
     const batch = formattedRecords.slice(i, i + batchSize);
-
-    const { error, data } = await supabase
-      .from('economic_county')
-      .upsert(batch, {
-        onConflict: 'period_date,fips_code',
-        ignoreDuplicates: false
-      })
-      .select();
-
-    if (error) {
-      console.error(`  Batch error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      recordsInserted += data?.length || 0;
-    }
+    const result = await upsertBatchWithRetry(supabase, 'economic_county', batch, 'period_date,fips_code');
+    recordsInserted += result.inserted;
+    errors += result.errors;
 
     if ((i + batchSize) % 10000 === 0 || i + batchSize >= formattedRecords.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records`);
+      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 

@@ -30,7 +30,7 @@ import {
 import type { GeographyType, ScoreType } from '../scoring.types';
 
 @ApiTags('score-validation')
-@Controller('api/admin/scores/validation')
+@Controller('api/scoring/validation')
 export class ValidationController {
   constructor(private readonly validationService: ValidationService) {}
 
@@ -56,7 +56,7 @@ export class ValidationController {
   /**
    * Get quintile analysis - performance by score bucket
    *
-   * GET /api/admin/scores/validation/quintile-analysis
+   * GET /api/scoring/validation/quintile-analysis
    */
   @Get('quintile-analysis')
   @ApiOperation({ summary: 'Get score performance by quintile' })
@@ -73,6 +73,68 @@ export class ValidationController {
     const h = horizon === '3y' ? '3y' : '1y';
 
     return this.validationService.getQuintileAnalysis(geoType, sType, h);
+  }
+
+  /**
+   * Get quintile performance data formatted for reports
+   * Returns average returns by score bucket for displaying score credibility
+   *
+   * GET /api/scoring/validation/quintile-performance
+   */
+  @Get('quintile-performance')
+  @ApiOperation({ summary: 'Get quintile performance data for reports' })
+  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge'], description: 'Score type (defaults to homeready)' })
+  async getQuintilePerformance(
+    @Query('score_type') scoreType?: string,
+  ): Promise<{
+    quintiles: Array<{
+      label: string;
+      scoreRange: string;
+      avgReturn1y: number | null;
+      avgReturn3y: number | null;
+      count: number;
+    }>;
+    summary: {
+      topQuintileReturn: number | null;
+      bottomQuintileReturn: number | null;
+      spread: number | null;
+      totalSamples: number;
+    };
+  }> {
+    const sType = scoreType ? this.validateScoreType(scoreType) : 'homeready';
+
+    // Get quintile data for metros (most reliable data)
+    const quintileData = await this.validationService.getQuintileAnalysis('metro', sType, '3y');
+
+    // Format for reports display
+    const quintiles = quintileData.map(q => ({
+      label: q.label,
+      scoreRange: `${Math.round(q.scoreMin)}-${Math.round(q.scoreMax)}`,
+      avgReturn1y: q.avgReturn1y != null ? Math.round(q.avgReturn1y * 10) / 10 : null,
+      avgReturn3y: q.avgReturn3y != null ? Math.round(q.avgReturn3y * 10) / 10 : null,
+      count: q.count,
+    }));
+
+    // Calculate summary metrics
+    const topQuintile = quintileData.find(q => q.quintile === 5);
+    const bottomQuintile = quintileData.find(q => q.quintile === 1);
+    const totalSamples = quintileData.reduce((sum, q) => sum + q.count, 0);
+
+    const topReturn = topQuintile?.avgReturn3y ?? null;
+    const bottomReturn = bottomQuintile?.avgReturn3y ?? null;
+    const spread = topReturn != null && bottomReturn != null
+      ? Math.round((topReturn - bottomReturn) * 10) / 10
+      : null;
+
+    return {
+      quintiles,
+      summary: {
+        topQuintileReturn: topReturn != null ? Math.round(topReturn * 10) / 10 : null,
+        bottomQuintileReturn: bottomReturn != null ? Math.round(bottomReturn * 10) / 10 : null,
+        spread,
+        totalSamples,
+      },
+    };
   }
 
   /**

@@ -418,7 +418,9 @@ export default function MLWorkflowPage() {
   const fetchAnalyticsHealth = useCallback(async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/health`);
+      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/health`, {
+        credentials: 'include',
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -445,7 +447,9 @@ export default function MLWorkflowPage() {
   const fetchCacheStatus = useCallback(async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/cache-status`);
+      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/cache-status`, {
+        credentials: 'include',
+      });
       
       if (res.ok) {
         const data = await res.json();
@@ -498,6 +502,7 @@ export default function MLWorkflowPage() {
         const res = await fetch(`${apiUrl}/api/admin/ml-workflow/run/${stepId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
         });
 
         if (!res.ok) {
@@ -526,7 +531,9 @@ export default function MLWorkflowPage() {
 
           try {
             // Poll job status
-            const jobRes = await fetch(`${apiUrl}/api/admin/ml-workflow/job/${jobId}`);
+            const jobRes = await fetch(`${apiUrl}/api/admin/ml-workflow/job/${jobId}`, {
+              credentials: 'include',
+            });
             if (!jobRes.ok) continue;
 
             const jobData = await jobRes.json();
@@ -534,7 +541,9 @@ export default function MLWorkflowPage() {
             // Poll for detailed progress for all steps (every 2 seconds)
             if (attempts % 2 === 0) {
               try {
-                const progressRes = await fetch(`${apiUrl}/api/admin/ml-workflow/export-progress`);
+                const progressRes = await fetch(`${apiUrl}/api/admin/ml-workflow/export-progress`, {
+                  credentials: 'include',
+                });
                 if (progressRes.ok) {
                   const progressData = await progressRes.json();
                   if (progressData.success && progressData.data) {

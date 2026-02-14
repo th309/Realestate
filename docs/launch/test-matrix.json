@@ -1,0 +1,137 @@
+{
+  "generated": "2026-02-09T10:30:00Z",
+  "backend_url": "https://backend-production-ee4d.up.railway.app",
+  "total_endpoints_tested": 178,
+  "summary": {
+    "passing": "~60%",
+    "failing_404": "~30%",
+    "empty_data": "~10%"
+  },
+  "categories": {
+    "zillow": {
+      "implemented": [
+        "/api/zillow/metros",
+        "/api/zillow/counties",
+        "/api/zillow/zips",
+        "/api/zillow/states",
+        "/api/zillow/cities",
+        "/api/zillow/rent/metros",
+        "/api/zillow/rent/counties",
+        "/api/zillow/rent/zips",
+        "/api/zillow/forecast/metros",
+        "/api/zillow/forecast/zips",
+        "/api/zillow/demand/metros",
+        "/api/zillow/demand/zips",
+        "/api/zillow/days-to-pending/metros",
+        "/api/zillow/days-to-close/metros",
+        "/api/zillow/price-cuts/metros",
+        "/api/zillow/sale-to-list/metros",
+        "/api/zillow/sale-price/metros",
+        "/api/zillow/list-price/metros",
+        "/api/zillow/sales-count/metros",
+        "/api/zillow/new-construction/metros",
+        "/api/zillow/market-heat/metros",
+        "/api/zillow/affordability/metros",
+        "/api/zillow/inventory/metros",
+        "/api/zillow/new-listings/metros",
+        "/api/zillow/pending-listings/metros"
+      ],
+      "not_implemented_404": [
+        "/api/zillow/national",
+        "/api/zillow/home-value-yoy/*",
+        "/api/zillow/home-value-mom/*",
+        "/api/zillow/home-value-5yr/*",
+        "/api/zillow/home-sales/*",
+        "/api/zillow/home-sales-yoy/*",
+        "/api/zillow/renter-demand/*"
+      ],
+      "route_mismatch": {
+        "test_expects": "/api/zillow/renter-demand/*",
+        "actual_route": "/api/zillow/demand/*"
+      }
+    },
+    "realtor": {
+      "status": "mostly_implemented",
+      "endpoints_count": 80
+    },
+    "metrics": {
+      "status": "partially_implemented",
+      "note": "Some return 404, some return 200"
+    },
+    "census": {
+      "status": "implemented"
+    },
+    "economic": {
+      "status": "implemented"
+    }
+  },
+  "endpoint_results": {
+    "passing_with_data": [
+      {"endpoint": "/api/zillow/metros", "status": 200, "rows": 881, "time_ms": 858},
+      {"endpoint": "/api/zillow/counties", "status": 200, "rows": 3073, "time_ms": 299},
+      {"endpoint": "/api/zillow/states", "status": 200, "rows": 51, "time_ms": 106},
+      {"endpoint": "/api/zillow/rent/metros", "status": 200, "rows": 686, "time_ms": 258},
+      {"endpoint": "/api/zillow/days-to-pending/metros", "status": 200, "rows": 637, "time_ms": 163},
+      {"endpoint": "/api/zillow/days-to-close/metros", "status": 200, "rows": 637, "time_ms": 135},
+      {"endpoint": "/api/zillow/price-cuts/metros", "status": 200, "rows": 928, "time_ms": 235},
+      {"endpoint": "/api/zillow/sale-to-list/metros", "status": 200, "rows": 619, "time_ms": 219},
+      {"endpoint": "/api/zillow/sale-price/metros", "status": 200, "rows": 748, "time_ms": 344},
+      {"endpoint": "/api/zillow/list-price/metros", "status": 200, "rows": 928, "time_ms": 231},
+      {"endpoint": "/api/zillow/sales-count/metros", "status": 200, "rows": 748, "time_ms": 129},
+      {"endpoint": "/api/zillow/new-construction/metros", "status": 200, "rows": 401, "time_ms": 243}
+    ],
+    "passing_empty": [
+      {"endpoint": "/api/zillow/zips", "status": 200, "rows": 0, "note": "Requires state param"},
+      {"endpoint": "/api/zillow/cities", "status": 200, "rows": 0, "note": "Requires state param"},
+      {"endpoint": "/api/zillow/rent/counties", "status": 200, "rows": 0, "note": "Data issue"},
+      {"endpoint": "/api/zillow/rent/zips", "status": 200, "rows": 0, "note": "Requires state param"},
+      {"endpoint": "/api/zillow/forecast/metros", "status": 200, "rows": 0, "note": "No forecast data"},
+      {"endpoint": "/api/zillow/forecast/zips", "status": 200, "rows": 0, "note": "No forecast data"}
+    ],
+    "failing_404": [
+      {"endpoint": "/api/zillow/national", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-yoy/metros", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-yoy/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-yoy/states", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-yoy/zips", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-yoy/national", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-mom/metros", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-mom/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-mom/states", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-mom/zips", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-mom/national", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-5yr/metros", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-5yr/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-5yr/states", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-5yr/zips", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-value-5yr/national", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales/metros", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales/states", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales/zips", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales-yoy/metros", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales-yoy/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales-yoy/states", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/home-sales-yoy/zips", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/renter-demand/metros", "status": 404, "reason": "Route mismatch - use /api/zillow/demand/metros"},
+      {"endpoint": "/api/zillow/renter-demand/counties", "status": 404, "reason": "Route not implemented"},
+      {"endpoint": "/api/zillow/renter-demand/zips", "status": 404, "reason": "Route mismatch - use /api/zillow/demand/zips"}
+    ]
+  },
+  "recommendations": {
+    "test_file_updates": [
+      "Update renter-demand/* to demand/* in test file",
+      "Remove or skip endpoints that intentionally don't exist",
+      "Add state parameter to zip/city endpoint tests"
+    ],
+    "route_implementations_needed": [
+      "Consider if home-value-yoy/mom/5yr are needed (data may be in main endpoints)",
+      "Consider if home-sales/* separate endpoints are needed",
+      "Add /api/zillow/national if national-level data is required"
+    ],
+    "data_issues": [
+      "rent/counties returns 0 rows - investigate data availability",
+      "forecast endpoints return 0 rows - check ZHVF data in database"
+    ]
+  }
+}

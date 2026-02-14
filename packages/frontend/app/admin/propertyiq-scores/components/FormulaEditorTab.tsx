@@ -107,6 +107,7 @@ export function FormulaEditorTab() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(
         `${apiUrl}/api/admin/formula-versions?scoreType=${selectedScoreType}&geography=${selectedGeography}`,
+        { credentials: 'include' },
       );
 
       if (response.ok) {
@@ -134,6 +135,7 @@ export function FormulaEditorTab() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(
         `${apiUrl}/api/admin/backtest-runs/confidence/summary`,
+        { credentials: 'include' },
       );
 
       if (response.ok) {
@@ -199,6 +201,7 @@ export function FormulaEditorTab() {
       const response = await fetch(`${apiUrl}/api/admin/formula-versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           scoreType: selectedScoreType,
           geography: selectedGeography,
@@ -232,6 +235,7 @@ export function FormulaEditorTab() {
       const versionRes = await fetch(`${apiUrl}/api/admin/formula-versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           scoreType: selectedScoreType,
           geography: selectedGeography,
@@ -249,6 +253,7 @@ export function FormulaEditorTab() {
       const testRes = await fetch(`${apiUrl}/api/admin/ab-tests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           name: testName,
           scoreType: selectedScoreType,

@@ -218,7 +218,7 @@ async function loadAllMetros(): Promise<Metro[]> {
 
     metrosLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/markets/metros`);
+            const res = await fetch(`${API_BASE_URL}/api/markets/metros`);
             if (!res.ok) {
                 throw new Error(`API returned ${res.status}`);
             }
@@ -270,7 +270,7 @@ async function loadAllCounties(): Promise<County[]> {
 
     countiesLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/markets/counties`);
+            const res = await fetch(`${API_BASE_URL}/api/markets/counties`);
             if (!res.ok) {
                 throw new Error(`API returned ${res.status}`);
             }
@@ -303,7 +303,7 @@ async function loadAllZips(): Promise<ZipCode[]> {
 
     zipsLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/markets/zips`);
+            const res = await fetch(`${API_BASE_URL}/api/markets/zips`);
             if (!res.ok) {
                 throw new Error(`API returned ${res.status}`);
             }
@@ -336,7 +336,7 @@ async function loadAllCities(): Promise<City[]> {
 
     citiesLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/markets/cities`);
+            const res = await fetch(`${API_BASE_URL}/api/markets/cities`);
             if (!res.ok) {
                 throw new Error(`API returned ${res.status}`);
             }

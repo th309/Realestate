@@ -98,6 +98,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
       try {
         const response = await fetch(endpoint, {
           headers: { 'x-user-tier': 'enterprise' },
+          credentials: 'include',
         });
 
         console.log('[ScoreCardsTab] Response status:', response.status);

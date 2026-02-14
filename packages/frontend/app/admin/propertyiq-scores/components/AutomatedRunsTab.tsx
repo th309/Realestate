@@ -147,8 +147,8 @@ export function AutomatedRunsTab() {
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runsRes, statsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtest-runs?limit=10`),
-        fetch(`${apiUrl}/api/admin/backtest-runs/statistics`),
+        fetch(`${apiUrl}/api/admin/backtest-runs?limit=10`, { credentials: 'include' }),
+        fetch(`${apiUrl}/api/admin/backtest-runs/statistics`, { credentials: 'include' }),
       ]);
 
       if (!runsRes.ok || !statsRes.ok) {
@@ -181,8 +181,8 @@ export function AutomatedRunsTab() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runRes, samplesRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}`),
-        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}/samples`),
+        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}`, { credentials: 'include' }),
+        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}/samples`, { credentials: 'include' }),
       ]);
 
       if (runRes.ok) {
@@ -210,7 +210,9 @@ export function AutomatedRunsTab() {
     const interval = setInterval(async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${apiUrl}/api/admin/backtest-runs/job/${triggerJobId}/status`);
+        const res = await fetch(`${apiUrl}/api/admin/backtest-runs/job/${triggerJobId}/status`, {
+          credentials: 'include',
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -239,6 +241,7 @@ export function AutomatedRunsTab() {
       const res = await fetch(`${apiUrl}/api/admin/backtest-runs/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(config),
       });
 

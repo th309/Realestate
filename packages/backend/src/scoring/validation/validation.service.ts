@@ -194,11 +194,39 @@ export class ValidationService {
   ): Promise<QuintileData[]> {
     const client = this.supabase.getClient();
 
-    // Build query
+    // Use server-side RPC for efficient aggregation (avoids Supabase row limits)
+    const { data: rpcData, error: rpcError } = await client.rpc(
+      'get_quintile_performance',
+      {
+        p_score_type: scoreType || 'homeready',
+        p_geography_type: geographyType || 'metro',
+        p_horizon: horizon,
+      },
+    );
+
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      return rpcData.map((row: any) => ({
+        quintile: row.quintile,
+        label: row.label,
+        scoreMin: parseFloat(row.score_min),
+        scoreMax: parseFloat(row.score_max),
+        avgScore: parseFloat(row.avg_score),
+        count: row.sample_count,
+        avgReturn1y: row.avg_return_1y != null ? parseFloat(row.avg_return_1y) : null,
+        avgReturn3y: row.avg_return_3y != null ? parseFloat(row.avg_return_3y) : null,
+        avgExcessVsState1y: row.avg_excess_vs_state_1y != null ? parseFloat(row.avg_excess_vs_state_1y) : null,
+        avgExcessVsState3y: row.avg_excess_vs_state_3y != null ? parseFloat(row.avg_excess_vs_state_3y) : null,
+        avgExcessVsNational1y: row.avg_excess_vs_national_1y != null ? parseFloat(row.avg_excess_vs_national_1y) : null,
+        avgExcessVsNational3y: row.avg_excess_vs_national_3y != null ? parseFloat(row.avg_excess_vs_national_3y) : null,
+      }));
+    }
+
+    // Fallback: client-side query if RPC fails
     let query = client
       .from('propertyiq_backtest_outcomes')
-      .select('*')
-      .not('score_value', 'is', null);
+      .select('score_value,outcome_1y_value,outcome_3y_value,rent_return_1y,rent_return_3y_cagr,excess_vs_state_1y,excess_vs_state_3y,excess_vs_national_1y,excess_vs_national_3y')
+      .not('score_value', 'is', null)
+      .limit(50000);
 
     if (geographyType) {
       query = query.eq('geography_type', geographyType);
@@ -207,8 +235,8 @@ export class ValidationService {
       query = query.eq('score_type', scoreType);
     }
 
-    const outcomeCol = horizon === '1y' ? 'outcome_1y_value' : 'outcome_3y_value';
-    query = query.not(outcomeCol, 'is', null);
+    const excessCol = horizon === '1y' ? 'excess_vs_state_1y' : 'excess_vs_state_3y';
+    query = query.not(excessCol, 'is', null);
 
     const { data, error } = await query;
 
@@ -216,7 +244,6 @@ export class ValidationService {
       return [];
     }
 
-    // Sort by score and divide into quintiles
     const sorted = [...data].sort((a, b) => a.score_value - b.score_value);
     const quintileSize = Math.ceil(sorted.length / 5);
 
@@ -226,11 +253,11 @@ export class ValidationService {
     for (let i = 0; i < 5; i++) {
       const start = i * quintileSize;
       const end = Math.min((i + 1) * quintileSize, sorted.length);
-      const quintileData = sorted.slice(start, end);
+      const quintileSlice = sorted.slice(start, end);
 
-      if (quintileData.length === 0) continue;
+      if (quintileSlice.length === 0) continue;
 
-      const scores = quintileData.map((d) => d.score_value);
+      const scores = quintileSlice.map((d) => d.score_value);
 
       quintiles.push({
         quintile: i + 1,
@@ -238,13 +265,13 @@ export class ValidationService {
         scoreMin: Math.min(...scores),
         scoreMax: Math.max(...scores),
         avgScore: this.avg(scores),
-        count: quintileData.length,
-        avgReturn1y: this.avg(quintileData.map((d) => d.outcome_1y_value)),
-        avgReturn3y: this.avg(quintileData.map((d) => d.outcome_3y_value)),
-        avgExcessVsState1y: this.avg(quintileData.map((d) => d.excess_vs_state_1y)),
-        avgExcessVsState3y: this.avg(quintileData.map((d) => d.excess_vs_state_3y)),
-        avgExcessVsNational1y: this.avg(quintileData.map((d) => d.excess_vs_national_1y)),
-        avgExcessVsNational3y: this.avg(quintileData.map((d) => d.excess_vs_national_3y)),
+        count: quintileSlice.length,
+        avgReturn1y: this.avg(quintileSlice.map((d) => d.outcome_1y_value)),
+        avgReturn3y: this.avg(quintileSlice.map((d) => d.outcome_3y_value)),
+        avgExcessVsState1y: this.avg(quintileSlice.map((d) => d.excess_vs_state_1y)),
+        avgExcessVsState3y: this.avg(quintileSlice.map((d) => d.excess_vs_state_3y)),
+        avgExcessVsNational1y: this.avg(quintileSlice.map((d) => d.excess_vs_national_1y)),
+        avgExcessVsNational3y: this.avg(quintileSlice.map((d) => d.excess_vs_national_3y)),
       });
     }
 

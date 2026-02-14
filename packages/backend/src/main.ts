@@ -46,5 +46,3 @@ async function bootstrap() {
   console.log(`📅 Build: ${new Date().toISOString()}`);
 }
 bootstrap();
-// rebuild
-// cache-bust 1738795000

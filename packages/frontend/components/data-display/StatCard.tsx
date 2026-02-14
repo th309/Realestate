@@ -4,6 +4,7 @@ import React from 'react';
 import { TrendIndicator, SparklineTrend } from './TrendIndicator';
 import { SkeletonStatCard } from '../ui/Skeleton';
 import { InfoTooltip } from '../ui/Tooltip';
+import { MetricLink } from '../ui/MetricLink';
 
 interface StatCardProps {
   label: string;
@@ -20,6 +21,8 @@ interface StatCardProps {
   onRetry?: () => void;
   variant?: 'default' | 'compact' | 'large';
   className?: string;
+  /** Optional metric ID - when provided, the label becomes a clickable link */
+  metricId?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -37,7 +40,19 @@ export const StatCard: React.FC<StatCardProps> = ({
   onRetry,
   variant = 'default',
   className = '',
+  metricId,
 }) => {
+  // Helper to render label - either as MetricLink or plain text
+  const renderLabel = (labelClassName: string) => {
+    if (metricId) {
+      return (
+        <MetricLink metricId={metricId} className={labelClassName}>
+          {label}
+        </MetricLink>
+      );
+    }
+    return <span className={labelClassName}>{label}</span>;
+  };
   if (loading) {
     return <SkeletonStatCard className={className} />;
   }
@@ -73,7 +88,9 @@ export const StatCard: React.FC<StatCardProps> = ({
             </div>
           )}
           <div>
-            <div className="text-xs text-on-surface-variant">{label}</div>
+            <div className="text-xs text-on-surface-variant">
+              {renderLabel('text-xs text-on-surface-variant')}
+            </div>
             <div className="text-sm font-medium text-on-surface">{value}</div>
           </div>
         </div>
@@ -94,9 +111,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-on-surface-variant">
-              {label}
-            </span>
+            {renderLabel('text-sm font-medium text-on-surface-variant')}
             {tooltip && <InfoTooltip content={tooltip} />}
           </div>
           {icon && (
@@ -145,9 +160,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-on-surface-variant">
-            {label}
-          </span>
+          {renderLabel('text-xs font-medium text-on-surface-variant')}
           {tooltip && <InfoTooltip content={tooltip} size="sm" />}
         </div>
         {icon && (

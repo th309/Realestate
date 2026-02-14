@@ -53,8 +53,8 @@ export function HistoryTab() {
       const typeFilter = selectedScoreType !== 'all' ? `?scoreType=${selectedScoreType}` : '';
 
       const [versionsRes, testsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/formula-versions${typeFilter}`),
-        fetch(`${apiUrl}/api/admin/ab-tests${typeFilter}`),
+        fetch(`${apiUrl}/api/admin/formula-versions${typeFilter}`, { credentials: 'include' }),
+        fetch(`${apiUrl}/api/admin/ab-tests${typeFilter}`, { credentials: 'include' }),
       ]);
 
       if (versionsRes.ok) {
@@ -81,6 +81,7 @@ export function HistoryTab() {
       const response = await fetch(`${apiUrl}/api/admin/formula-versions/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ version, scoreType }),
       });
 

@@ -203,7 +203,13 @@ export type SectionType =
   | 'pro_forma_returns'
   | 'pro_forma_sensitivity'
   | 'text_block'
-  | 'status_badge';
+  | 'status_badge'
+  // Premium comparison report sections (2026 redesign)
+  | 'comparison_hero_showdown'
+  | 'why_winner_won'
+  | 'score_credibility'
+  | 'market_deep_dive'
+  | 'ai_recommendation';
 
 export interface ReportSection {
   id: string;
@@ -341,7 +347,11 @@ export interface ReportInstance {
 
 export interface PopulatedReportData {
   current: Record<string, number | string | null>;
-  historical: Record<string, TimeSeriesPoint[]>;
+  historical: Record<string, {
+    data: Array<{ date: string; value: number }>;
+    trend: 'up' | 'down' | 'stable';
+    change_pct: number;
+  }>;
   benchmarks: {
     national?: Record<string, number>;
     state?: Record<string, number>;
@@ -352,23 +362,12 @@ export interface PopulatedReportData {
     investoredge?: ScoreData;
   };
   demographics?: Record<string, any>;
-  migration?: {
-    net_migration: number;
-    origins: { geography: Geography; count: number }[];
-    destinations: { geography: Geography; count: number }[];
-    trend: number[];
-  };
   comparables?: {
     geography: Geography;
     metrics: Record<string, number>;
     scores: Record<string, number>;
   }[];
   news?: NewsItem[];
-  cycle?: {
-    position: 'early_recovery' | 'expansion' | 'hyper_supply' | 'recession';
-    historical_peak: { date: string; value: number };
-    historical_trough: { date: string; value: number };
-  };
   pro_forma?: ProFormaData;
   /** Real-time data from news and economic indicators */
   realtime?: {
@@ -381,6 +380,34 @@ export interface PopulatedReportData {
       factors: string[];
     };
     fetched_at?: string;
+  };
+  /** Comparison geography data for comparison reports */
+  comparisons?: Record<string, {
+    geography: Geography;
+    current: Record<string, number | string | null>;
+    historical?: Record<string, {
+      data: Array<{ date: string; value: number }>;
+      trend: 'up' | 'down' | 'stable';
+      change_pct: number;
+    }>;
+    scores?: Record<string, number | ScoreData>;
+  }>;
+  /** Priority-weighted winner for comparison reports (2026 redesign) */
+  priority_weighted_winner?: {
+    winnerId: string;
+    winnerName: string;
+    totalScore: number;
+    priorityScores: Array<{
+      priority: string;
+      weight: number;
+      winnerId: string;
+      winnerName: string;
+      keyMetric: string;
+      winnerValue: number | null;
+      loserValue: number | null;
+      reason: string;
+    }>;
+    reasons: string[];
   };
 }
 

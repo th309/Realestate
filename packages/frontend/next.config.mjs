@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
+// Build cache buster: 2026-02-10-001
 const nextConfig = {
   output: 'standalone',
+  // Generate unique build ID to bust cache
+  generateBuildId: async () => {
+    return `build-${Date.now()}`;
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

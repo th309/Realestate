@@ -37,7 +37,9 @@ export function DataAlertsTab() {
       if (filter.severity !== 'all') params.append('severity', filter.severity);
       if (filter.type !== 'all') params.append('type', filter.type);
 
-      const response = await fetch(`${apiUrl}/api/health/data-alerts?${params}`);
+      const response = await fetch(`${apiUrl}/api/health/data-alerts?${params}`, {
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -60,6 +62,7 @@ export function DataAlertsTab() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/health/data-alerts/${alertId}/${action}`, {
         method: 'POST',
+        credentials: 'include',
       });
 
       if (response.ok) {

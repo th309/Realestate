@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       const text = await file.text()
 
       // Send to backend
-      const response = await fetch(`${BACKEND_URL}/data-ingestion/redfin`, {
+      const response = await fetch(`${BACKEND_URL}/api/data-ingestion/redfin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     } else {
       // JSON Body
       const body = await request.json()
-      const response = await fetch(`${BACKEND_URL}/data-ingestion/redfin`, {
+      const response = await fetch(`${BACKEND_URL}/api/data-ingestion/redfin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

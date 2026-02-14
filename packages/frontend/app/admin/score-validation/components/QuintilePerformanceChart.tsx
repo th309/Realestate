@@ -119,10 +119,10 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-on-surface">
-            Quintile Performance ({horizon === '1y' ? '1-Year' : '3-Year'} Horizon)
+            {horizon === '3y' ? '3-Year' : '1-Year'} Excess Return by Score Range
           </h3>
           <p className="text-xs text-on-surface-variant">
-            Average excess return vs state benchmark by score quintile
+            Average excess return vs regional benchmark by score quintile
           </p>
         </div>
         <div className="text-right">
@@ -176,7 +176,7 @@ export function QuintilePerformanceChart({ scoreType, geography, horizon }: Prop
       <div className="mt-3 flex justify-center gap-6 text-xs text-on-surface-variant">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-[#6366f1]" />
-          <span>Excess Return vs State</span>
+          <span>Excess Return vs Regional Benchmark</span>
         </div>
       </div>
     </div>

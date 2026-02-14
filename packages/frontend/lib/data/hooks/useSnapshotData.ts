@@ -76,7 +76,24 @@ export function useSnapshotData(
   const { stateFilter, enabled = true } = options;
   const access = useMetricAccess(metricId);
 
-  // If metric is gated, return early without fetching
+  const queryKey = ['snapshot', metricId, geoLevel, stateFilter].filter(Boolean);
+
+  // IMPORTANT: Always call useQuery to maintain hook order consistency.
+  // Use enabled: false to skip fetching when metric is gated.
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchSnapshotData(metricId, geoLevel, { state: stateFilter }),
+    enabled: enabled && !!metricId && !!geoLevel && !access.gated,
+    staleTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours (garbage collection)
+  });
+
+  // If metric is gated, return gated result (after hooks have been called)
   if (access.gated) {
     return {
       allData: {},
@@ -91,21 +108,6 @@ export function useSnapshotData(
       tierRequired: access.tierRequired ?? undefined,
     };
   }
-
-  const queryKey = ['snapshot', metricId, geoLevel, stateFilter].filter(Boolean);
-
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey,
-    queryFn: () => fetchSnapshotData(metricId, geoLevel, { state: stateFilter }),
-    enabled: enabled && !!metricId && !!geoLevel,
-    staleTime: 2 * 60 * 60 * 1000, // 2 hours
-    gcTime: 4 * 60 * 60 * 1000, // 4 hours (garbage collection)
-  });
 
   // Extract specific entry if regionId provided
   const allData = data ?? {};
