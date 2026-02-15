@@ -10,6 +10,8 @@ import { MetricPicker } from '../MetricPicker';
 import { WATERFALL_PRESETS, WATERFALL_PRESET_ORDER } from '../../constants/waterfallConfigs';
 import { RADAR_PROFILES, RADAR_PRESET_ORDER } from '../../constants/radarProfiles';
 import type { GeoLevel } from '@/lib/data';
+import { getMetricTitle } from '@/lib/data';
+import type { ChartType, ScatterScope } from '../../hooks/useGraphsState';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,7 @@ export function Sidebar({ state }: SidebarProps) {
   // ── Derived values ───────────────────────────────────────────────────────
 
   const primaryState = markets[0]?.state;
+  const primaryName = markets[0]?.name;
   const geoLevel: GeoLevel = (markets[0]?.type as GeoLevel) || 'metro';
 
   return (
@@ -98,6 +101,7 @@ export function Sidebar({ state }: SidebarProps) {
           scope={baselineType}
           onScopeChange={setBaselineType as (v: string) => void}
           primaryState={primaryState}
+          primaryName={primaryName}
           mode="baseline"
         />
       )}
@@ -106,6 +110,7 @@ export function Sidebar({ state }: SidebarProps) {
           scope={scope}
           onScopeChange={setScope as (v: string) => void}
           primaryState={primaryState}
+          primaryName={primaryName}
           mode="scope"
         />
       )}
@@ -204,6 +209,16 @@ export function Sidebar({ state }: SidebarProps) {
           </SidebarSection>
         </>
       )}
+
+      {/* Chart explanation */}
+      <ChartExplainer
+        chartType={chartType}
+        radarPreset={radarPreset}
+        raceMode={raceMode}
+        scope={scope}
+        scatterXMetric={scatterXMetric}
+        scatterYMetric={scatterYMetric}
+      />
     </aside>
   );
 }
@@ -533,6 +548,83 @@ function ScaleTypePicker({
       </div>
     </div>
   );
+}
+
+// ── Chart Explainer ─────────────────────────────────────────────────────────
+
+function ChartExplainer({
+  chartType,
+  radarPreset,
+  raceMode,
+  scope,
+  scatterXMetric,
+  scatterYMetric,
+}: {
+  chartType: ChartType;
+  radarPreset: RadarPreset;
+  raceMode: boolean;
+  scope: ScatterScope;
+  scatterXMetric: string;
+  scatterYMetric: string;
+}) {
+  const text = getExplainerText(chartType, radarPreset, raceMode, scope, scatterXMetric, scatterYMetric);
+  if (!text) return null;
+
+  return (
+    <div className="mt-auto pt-4 border-t border-outline-variant/20">
+      <p className="text-[11px] leading-relaxed text-on-surface-variant/70">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function getExplainerText(
+  chartType: ChartType,
+  radarPreset: RadarPreset,
+  raceMode: boolean,
+  scope: ScatterScope,
+  xMetric: string,
+  yMetric: string,
+): string {
+  const xLabel = getMetricTitle(xMetric);
+  const yLabel = getMetricTitle(yMetric);
+
+  switch (chartType) {
+    case 'timeseries':
+      return 'Tracks how a metric changes over time for your selected markets. Add markets to compare trends side-by-side.';
+
+    case 'scatter': {
+      const scopeLabel = scope === 'national' ? 'nationwide' : scope === 'region' ? 'in the census region' : 'in the state';
+      if (raceMode) {
+        return `Each dot is a metro area ${scopeLabel}, plotted by ${xLabel} vs ${yLabel}. The animation shows how metros move over time. Larger dots are your selected markets.`;
+      }
+      return `Each dot is a metro area ${scopeLabel}, plotted by ${xLabel} (x-axis) vs ${yLabel} (y-axis). Dot color reflects the Y metric quartile.`;
+    }
+
+    case 'waterfall':
+      return 'Breaks down how individual metrics contribute to the overall score, showing each factor\'s positive or negative impact.';
+
+    case 'radar': {
+      const profileName = radarPreset !== 'custom'
+        ? RADAR_PROFILES[radarPreset].title.toLowerCase()
+        : 'custom';
+      if (raceMode) {
+        return `Shows how the ${profileName} shape shifts over time. Each axis is a metric percentile rank (0-100) compared to all metros. Higher = stronger on that dimension.`;
+      }
+      return `Each axis shows a percentile rank (0-100) for the ${profileName} metrics compared to all metros. A larger shape means the market outperforms peers.`;
+    }
+
+    case 'bar': {
+      if (raceMode) {
+        return 'Animates the top metros over time, showing how rankings shift as values change month to month.';
+      }
+      return 'Ranks metros by the selected metric. Use scope to filter by state, region, or nationwide.';
+    }
+
+    default:
+      return '';
+  }
 }
 
 export default Sidebar;

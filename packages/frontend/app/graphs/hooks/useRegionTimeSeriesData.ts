@@ -2,14 +2,14 @@
  * Aggregate Time Series Hooks
  *
  * Computes average time series across multiple states:
- * - Census region average (all states in the region)
+ * - Census division average (all states in the same Census Division)
  * - National average (all 50 states + DC)
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchTimeSeriesData } from '@/lib/data/fetchers';
 import type { TimeSeriesPoint } from '@/lib/data';
-import { getRegionForState, CENSUS_REGIONS, STATE_NAMES } from '../constants/geoRegions';
+import { getDivisionForState, CENSUS_DIVISIONS, STATE_NAMES } from '../constants/geoRegions';
 
 const ALL_STATES = Object.keys(STATE_NAMES);
 
@@ -50,7 +50,7 @@ function fetchAndAverage(
   ).then(averageSeries);
 }
 
-// ── Census Region Average ─────────────────────────────────────────────────
+// ── Census Division Average ───────────────────────────────────────────────
 
 interface UseRegionTimeSeriesDataOptions {
   startDate?: string;
@@ -63,13 +63,13 @@ export function useRegionTimeSeriesData(
   options: UseRegionTimeSeriesDataOptions = {}
 ) {
   const { startDate, enabled = true } = options;
-  const regionSlug = stateAbbr ? getRegionForState(stateAbbr) : null;
-  const region = regionSlug ? CENSUS_REGIONS[regionSlug] : null;
+  const divisionSlug = stateAbbr ? getDivisionForState(stateAbbr) : null;
+  const division = divisionSlug ? CENSUS_DIVISIONS[divisionSlug] : null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['region-ts', metricId, regionSlug, startDate],
-    queryFn: () => fetchAndAverage(region!.states, metricId, startDate),
-    enabled: enabled && !!metricId && !!region,
+    queryKey: ['division-ts', metricId, divisionSlug, startDate],
+    queryFn: () => fetchAndAverage(division!.states, metricId, startDate),
+    enabled: enabled && !!metricId && !!division,
     staleTime: 2 * 60 * 60 * 1000,
     gcTime: 4 * 60 * 60 * 1000,
   });
@@ -78,7 +78,7 @@ export function useRegionTimeSeriesData(
     data: data ?? [],
     isLoading,
     error: error as Error | null,
-    regionLabel: region?.label ?? null,
+    regionLabel: division?.label ?? null,
   };
 }
 

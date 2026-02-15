@@ -19,9 +19,17 @@ export interface UseRadarRaceDataResult {
 
 /**
  * Fetches time series for each radar dimension for selected markets,
- * then builds frames showing how radar profiles evolve over time.
+ * then builds min/max-normalized frames (0-100) showing how radar
+ * profiles evolve over time.
  *
- * Data volume is small: dimensions × markets (e.g. 6 × 3 = 18 fetches).
+ * Normalization: for each dimension, collects ALL values across ALL markets
+ * and ALL time points, then scales each value to 0-100 based on that
+ * dimension's observed min/max range. This produces visible movement
+ * whenever a market's raw value changes — unlike percentile ranking
+ * against a static snapshot, which barely moves.
+ *
+ * For `invert` dimensions (lower-is-better), the scale is flipped so
+ * higher radar scores still mean "better".
  */
 export function useRadarRaceData(
   dimensions: RadarDimension[],
@@ -51,9 +59,19 @@ export function useRadarRaceData(
         markets.flatMap((market, marketIdx) =>
           dimensions.map(async (dim) => {
             try {
-              const res = await fetchTimeSeriesData(dim.key, geoLevel, market.id);
+              const tsMetric = dim.raceMetricId || dim.metricId || dim.key;
+              const res = await fetchTimeSeriesData(tsMetric, geoLevel, market.id);
               const months = new Map<string, number>();
-              for (const pt of res.data || []) {
+              const points = res.data || [];
+              // Detect sparse data: if time series has a mix of zeros and
+              // non-zeros, the zeros between non-zero values are likely
+              // placeholder/missing (common in quarterly economic data).
+              // Strip interleaved zeros so carry-forward can fill them.
+              const hasNonZero = points.some((p) => p.value !== 0);
+              const allNonZero = points.every((p) => p.value !== 0);
+              const isSparse = hasNonZero && !allNonZero;
+              for (const pt of points) {
+                if (isSparse && pt.value === 0) continue; // skip placeholder zeros
                 months.set(pt.date.slice(0, 7), pt.value);
               }
               allResults.push({ marketIdx, dimKey: dim.key, months });
@@ -71,7 +89,7 @@ export function useRadarRaceData(
         dataByMarket.get(marketIdx)!.set(dimKey, months);
       }
 
-      // Collect all months where at least one market has data for all dimensions
+      // Collect all months
       const allMonths = new Set<string>();
       for (const [, dimMap] of dataByMarket) {
         for (const [, months] of dimMap) {
@@ -80,44 +98,114 @@ export function useRadarRaceData(
       }
 
       const sortedMonths = [...allMonths].sort();
+      const totalDims = dimensions.length;
 
-      // Build frames
+      // Record which months have ORIGINAL data per (market, dim) before carry-forward.
+      const originalMonths = new Map<string, Set<string>>();
+      for (const [marketIdx, dimMap] of dataByMarket) {
+        for (const [dimKey, months] of dimMap) {
+          originalMonths.set(`${marketIdx}:${dimKey}`, new Set(months.keys()));
+        }
+      }
+
+      // Carry-forward: some dimensions (census, economic) are annual while
+      // others (realtor) are monthly. Fill gaps by repeating the last known
+      // value so annual data persists across all months in a year.
+      for (const [, dimMap] of dataByMarket) {
+        for (const [, months] of dimMap) {
+          if (months.size === 0) continue;
+          let lastVal: number | undefined;
+          for (const month of sortedMonths) {
+            const v = months.get(month);
+            if (v != null) {
+              lastVal = v;
+            } else if (lastVal != null) {
+              months.set(month, lastVal);
+            }
+          }
+        }
+      }
+
+      // Compute per-dimension min/max across ALL markets and ALL months.
+      // Used to normalize each dimension to 0-100.
+      const dimRanges: { min: number; max: number }[] = dimensions.map((dim) => {
+        let min = Infinity;
+        let max = -Infinity;
+        for (const [, dimMap] of dataByMarket) {
+          const months = dimMap.get(dim.key);
+          if (!months) continue;
+          for (const val of months.values()) {
+            if (val < min) min = val;
+            if (val > max) max = val;
+          }
+        }
+        return { min: min === Infinity ? 0 : min, max: max === -Infinity ? 100 : max };
+      });
+
+      // Build frames with min/max-normalized values.
       const result: RadarRaceFrame[] = [];
       for (const month of sortedMonths) {
-        const datasets: RadarDataSet[] = [];
+        let anyMarketHasData = false;
 
-        for (let i = 0; i < markets.length; i++) {
+        const datasets: RadarDataSet[] = markets.map((market, i) => {
           const dimMap = dataByMarket.get(i);
-          if (!dimMap) continue;
-
           const values: Record<string, number> = {};
-          let hasAllDims = true;
 
-          for (const dim of dimensions) {
-            const val = dimMap.get(dim.key)?.get(month);
+          for (let dimIdx = 0; dimIdx < totalDims; dimIdx++) {
+            const dim = dimensions[dimIdx];
+            const val = dimMap?.get(dim.key)?.get(month);
             if (val == null) {
-              hasAllDims = false;
-              break;
+              values[dim.key] = 50; // neutral fallback
+              continue;
             }
-            values[dim.key] = val;
+            anyMarketHasData = true;
+            const { min, max } = dimRanges[dimIdx];
+            const range = max - min;
+            // Normalize to 0-100; clamp to [5, 95] to keep polygons visible
+            const normalized = range > 0
+              ? Math.max(5, Math.min(95, ((val - min) / range) * 100))
+              : 50;
+            values[dim.key] = dim.invert ? (100 - normalized) : normalized;
           }
 
-          if (!hasAllDims) continue;
-
-          datasets.push({
-            label: markets[i].name,
+          return {
+            label: market.name,
             color: datasetColors[i] || '#0891b2',
             values,
-          });
-        }
+          };
+        });
 
-        // Only include frames where at least one market has full data
-        if (datasets.length > 0) {
+        if (anyMarketHasData) {
           result.push({ date: month, datasets });
         }
       }
 
-      return result;
+      // Trim leading frames where data is mostly carried-forward / flat.
+      // Start at the first month where at least one market has original
+      // (non-carried-forward) data on the majority of dimensions.
+      const halfDims = Math.ceil(totalDims / 2);
+      let startIdx = 0;
+      for (let i = 0; i < result.length; i++) {
+        const month = result[i].date;
+        let anyMarketReady = false;
+        for (let m = 0; m < markets.length; m++) {
+          let origCount = 0;
+          for (const dim of dimensions) {
+            const orig = originalMonths.get(`${m}:${dim.key}`);
+            if (orig && orig.has(month)) origCount++;
+          }
+          if (origCount >= halfDims) {
+            anyMarketReady = true;
+            break;
+          }
+        }
+        if (anyMarketReady) {
+          startIdx = i;
+          break;
+        }
+      }
+
+      return startIdx > 0 ? result.slice(startIdx) : result;
     },
     enabled: enabled && markets.length > 0 && dimensions.length > 0,
     staleTime: 10 * 60 * 1000,

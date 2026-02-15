@@ -47,6 +47,10 @@ const METRIC_GROUPS: { label: string; metrics: string[] }[] = [
     label: 'Construction',
     metrics: ['total_permits', 'sf_permits', 'mf_permits', 'permits_yoy'],
   },
+  {
+    label: 'PropertyIQ Scores',
+    metrics: ['homeready_score', 'investoredge_score', 'market_health_score'],
+  },
 ];
 
 export function MetricPicker({ value, onChange, geoLevel, fullWidth = false }: MetricPickerProps) {

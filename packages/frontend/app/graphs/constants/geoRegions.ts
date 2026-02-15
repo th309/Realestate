@@ -1,19 +1,49 @@
 /**
- * GEO REGIONS - Census region mapping and simplified US map paths
+ * GEO REGIONS - Census division/region mapping and simplified US map paths
  *
  * Provides:
- * - Census region definitions (Northeast, Midwest, South, West)
+ * - Census division definitions (9 divisions per Census Bureau)
+ * - Census region definitions (4 broad regions for visual mini-map)
  * - State abbreviation to full name mapping
- * - Helper functions for region lookups
+ * - Helper functions for division/region lookups
  * - Simplified SVG region paths for the ScopeMiniMap component
  *
- * Re-uses the canonical STATE_TO_CENSUS_REGION from ../constants.ts to avoid
- * duplication. This module adds region-oriented lookups and map visuals.
+ * Re-uses the canonical mappings from ../constants.ts to avoid duplication.
+ * "Region" scope filtering uses the 9 Census Divisions for granular comparisons.
+ * The mini-map visual uses the 4 broad Census Regions for simplicity.
  */
 
-import { STATE_TO_CENSUS_REGION, type CensusRegion, getRegionStates } from '../constants';
+import {
+  STATE_TO_CENSUS_DIVISION,
+  STATE_TO_CENSUS_REGION,
+  DIVISION_TO_REGION,
+  type CensusDivision,
+  type CensusRegion,
+  getDivisionStates,
+} from '../constants';
 
-// ── Census Regions ──────────────────────────────────────────────────────────
+// ── Census Divisions (9 per Census Bureau) ──────────────────────────────────
+
+export interface DivisionInfo {
+  label: string;
+  region: CensusRegion;
+  states: string[];
+}
+
+/** Census divisions keyed by lowercase slug */
+export const CENSUS_DIVISIONS: Record<string, DivisionInfo> = {
+  'new-england':          { label: 'New England',          region: 'Northeast', states: ['CT', 'ME', 'MA', 'NH', 'RI', 'VT'] },
+  'middle-atlantic':      { label: 'Middle Atlantic',      region: 'Northeast', states: ['NJ', 'NY', 'PA'] },
+  'east-north-central':   { label: 'East North Central',   region: 'Midwest',   states: ['IL', 'IN', 'MI', 'OH', 'WI'] },
+  'west-north-central':   { label: 'West North Central',   region: 'Midwest',   states: ['IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD'] },
+  'south-atlantic':       { label: 'South Atlantic',       region: 'South',     states: ['DE', 'DC', 'FL', 'GA', 'MD', 'NC', 'SC', 'VA', 'WV'] },
+  'east-south-central':   { label: 'East South Central',   region: 'South',     states: ['AL', 'KY', 'MS', 'TN'] },
+  'west-south-central':   { label: 'West South Central',   region: 'South',     states: ['AR', 'LA', 'OK', 'TX'] },
+  'mountain':             { label: 'Mountain',             region: 'West',      states: ['AZ', 'CO', 'ID', 'MT', 'NV', 'NM', 'UT', 'WY'] },
+  'pacific':              { label: 'Pacific',              region: 'West',      states: ['AK', 'CA', 'HI', 'OR', 'WA'] },
+};
+
+// ── Census Regions (4 broad groups — used for mini-map visual) ──────────────
 
 export interface RegionInfo {
   label: string;
@@ -43,6 +73,19 @@ export const CENSUS_REGIONS: Record<string, RegionInfo> = {
   },
 };
 
+/** Map from CensusDivision display name to lowercase slug */
+const DIVISION_NAME_TO_SLUG: Record<CensusDivision, string> = {
+  'New England': 'new-england',
+  'Middle Atlantic': 'middle-atlantic',
+  'East North Central': 'east-north-central',
+  'West North Central': 'west-north-central',
+  'South Atlantic': 'south-atlantic',
+  'East South Central': 'east-south-central',
+  'West South Central': 'west-south-central',
+  'Mountain': 'mountain',
+  'Pacific': 'pacific',
+};
+
 /** Map from CensusRegion display name to lowercase slug */
 const REGION_NAME_TO_SLUG: Record<CensusRegion, string> = {
   Northeast: 'northeast',
@@ -52,13 +95,32 @@ const REGION_NAME_TO_SLUG: Record<CensusRegion, string> = {
 };
 
 /**
- * Get the lowercase region slug for a state abbreviation.
+ * Get the lowercase division slug for a state abbreviation.
+ * Returns null if the state is not found.
+ */
+export function getDivisionForState(stateAbbr: string): string | null {
+  const division = STATE_TO_CENSUS_DIVISION[stateAbbr];
+  if (!division) return null;
+  return DIVISION_NAME_TO_SLUG[division] ?? null;
+}
+
+/**
+ * Get the lowercase region slug for a state abbreviation (broad 4-region).
  * Returns null if the state is not found.
  */
 export function getRegionForState(stateAbbr: string): string | null {
   const region = STATE_TO_CENSUS_REGION[stateAbbr];
   if (!region) return null;
   return REGION_NAME_TO_SLUG[region] ?? null;
+}
+
+/**
+ * Get the human-readable division label for a state abbreviation.
+ * Returns 'Unknown' if the state is not found.
+ */
+export function getDivisionLabel(stateAbbr: string): string {
+  const division = STATE_TO_CENSUS_DIVISION[stateAbbr];
+  return division ?? 'Unknown';
 }
 
 /**
@@ -71,11 +133,19 @@ export function getRegionLabel(stateAbbr: string): string {
 }
 
 /**
- * Get all state abbreviations in the same census region as the given state.
- * Delegates to the canonical getRegionStates from constants.ts.
+ * Get all state abbreviations in the same Census Division as the given state.
+ * Delegates to the canonical getDivisionStates from constants.ts.
+ */
+export function getStatesInDivision(stateAbbr: string): string[] {
+  return getDivisionStates(stateAbbr);
+}
+
+/**
+ * @deprecated Use getStatesInDivision for division-level granularity
+ * Get all state abbreviations in the same census division as the given state.
  */
 export function getStatesInRegion(stateAbbr: string): string[] {
-  return getRegionStates(stateAbbr);
+  return getDivisionStates(stateAbbr);
 }
 
 // ── State Names ─────────────────────────────────────────────────────────────

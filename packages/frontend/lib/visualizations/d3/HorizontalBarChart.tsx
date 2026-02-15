@@ -52,7 +52,23 @@ export interface HorizontalBarChartProps {
 
 const defaultFormatValue = (v: number): string => v.toLocaleString();
 
-const BASE_MARGINS = { top: 24, right: 80, bottom: 40, left: 160 };
+/**
+ * Shorten a metro name to its first city + state abbreviation(s).
+ *   "Washington-Arlington-Alexandria, DC-VA-MD-WV"  → "Washington, DC-VA-MD-WV"
+ *   "Kill Devil Hills-Nags Head, NC"                → "Kill Devil Hills, NC"
+ *   "Hilton Head Island-Bluffton, SC"               → "Hilton Head Island, SC"
+ *   "Cook County, IL"                               → "Cook County, IL"
+ */
+function shortenLabel(label: string): string {
+  const commaIdx = label.lastIndexOf(',');
+  if (commaIdx === -1) return label; // no state suffix — return as-is
+  const states = label.slice(commaIdx); // ", DC-VA-MD-WV"
+  const cityPart = label.slice(0, commaIdx); // "Washington-Arlington-Alexandria"
+  const firstCity = cityPart.split('-')[0].trim(); // "Washington"
+  return firstCity + states;
+}
+
+const BASE_MARGINS = { top: 24, right: 80, bottom: 40, left: 200 };
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -99,7 +115,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
   const isCompact = barCount > 15;
   const MARGINS = {
     ...BASE_MARGINS,
-    left: isCompact ? 130 : BASE_MARGINS.left,
+    left: isCompact ? 170 : BASE_MARGINS.left,
     top: isCompact ? 16 : BASE_MARGINS.top,
     bottom: isCompact ? 32 : BASE_MARGINS.bottom,
   };
@@ -245,8 +261,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
       .delay((_d, i) => i * staggerDelay)
       .attr('width', (d) => Math.max(0, xScale(d.value)));
 
-    // left label — fade in with bar, truncate long names in compact mode
-    const maxLabelChars = isCompact ? 18 : 24;
+    // left label — fade in with bar
     barGroups
       .append('text')
       .attr('x', -8)
@@ -256,7 +271,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
       .attr('fill', CHART_COLORS.onSurface)
       .attr('font-size', labelFontSize)
       .attr('font-weight', (d) => (d.highlighted ? 600 : 400))
-      .text((d) => d.label.length > maxLabelChars ? d.label.slice(0, maxLabelChars) + '…' : d.label)
+      .text((d) => shortenLabel(d.label))
       .attr('opacity', 0)
       .transition()
       .duration(500)
@@ -539,8 +554,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
           hideTooltip();
         });
 
-      // bar label (market name, inside/left of bar)
-      const raceMaxLabelChars = isCompact ? 18 : 24;
+      // bar label (market name, left of bar)
       enter
         .append('text')
         .attr('class', 'bar-label')
@@ -550,7 +564,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
         .attr('fill', CHART_COLORS.onSurface)
         .attr('font-size', labelFontSize)
         .attr('font-weight', (d) => (d.highlighted ? 600 : 400))
-        .text((d) => d.label.length > raceMaxLabelChars ? d.label.slice(0, raceMaxLabelChars) + '…' : d.label);
+        .text((d) => shortenLabel(d.label));
 
       // value label
       enter
@@ -595,7 +609,7 @@ export const HorizontalBarChart: React.FC<HorizontalBarChartProps> = ({
         .attr('y', yScale.bandwidth() / 2)
         .attr('font-size', labelFontSize)
         .attr('font-weight', (d: BarEntry) => (d.highlighted ? 600 : 400))
-        .text((d: BarEntry) => d.label.length > raceMaxLabelChars ? d.label.slice(0, raceMaxLabelChars) + '…' : d.label);
+        .text((d: BarEntry) => shortenLabel(d.label));
 
       // Value label — animate position + counter
       merged

@@ -176,7 +176,7 @@ export function AnimatedTimeSeriesChart({
         .attr('stop-color', primaryColor)
         .attr('stop-opacity', 0.02);
 
-      // Comparison gradient
+      // Comparison gradient (same weight as primary for equal visual prominence)
       const compGrad = defs.append('linearGradient')
         .attr('id', 'comparison-area-gradient')
         .attr('x1', '0%').attr('y1', '0%')
@@ -184,7 +184,7 @@ export function AnimatedTimeSeriesChart({
       compGrad.append('stop')
         .attr('offset', '0%')
         .attr('stop-color', comparisonColor)
-        .attr('stop-opacity', 0.15);
+        .attr('stop-opacity', 0.2);
       compGrad.append('stop')
         .attr('offset', '100%')
         .attr('stop-color', comparisonColor)
@@ -343,7 +343,7 @@ export function AnimatedTimeSeriesChart({
           .attr('d', compPathD)
           .attr('fill', 'none')
           .attr('stroke', comparisonColor)
-          .attr('stroke-width', 2)
+          .attr('stroke-width', 2.5)
           .attr('stroke-linecap', 'round')
           .attr('stroke-dasharray', 'none');
 
@@ -438,7 +438,7 @@ export function AnimatedTimeSeriesChart({
             .attr('d', compPathD)
             .attr('fill', 'none')
             .attr('stroke', comparisonColor)
-            .attr('stroke-width', 2)
+            .attr('stroke-width', 2.5)
             .attr('stroke-linecap', 'round');
 
           const node = newCompPath.node() as SVGPathElement | null;

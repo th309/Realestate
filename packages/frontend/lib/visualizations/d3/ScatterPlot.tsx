@@ -208,7 +208,8 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
     bottom: 60,
   }), []);
 
-  const effectiveHeight = responsiveHeight || height;
+  const playbackControlsHeight = isRaceMode ? 44 : 0;
+  const effectiveHeight = (responsiveHeight || height) - playbackControlsHeight;
   const chartWidth = (width || 600) - margins.left - margins.right;
   const chartHeight = effectiveHeight - margins.top - margins.bottom;
 
@@ -343,8 +344,11 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
       const duration = animate ? 600 : 0;
       const ease = d3.easeCubicInOut;
 
-      // ── Grid lines ──
+      // ── Grid lines (skip in race mode — race effect renders its own) ──
       const gridGroup = chart.select<SVGGElement>('.grid-group');
+      if (isRaceMode) {
+        gridGroup.selectAll('.x-grid, .y-grid').remove();
+      } else {
 
       // X grid
       const xTicks = (xScale as any).ticks(6) as number[];
@@ -413,6 +417,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
           .interrupt()
           .transition().duration(300).attr('opacity', 0).remove()
       );
+      } // end !isRaceMode grid lines
 
       // ── Quadrant lines ──
       const quadrantGroup = chart.select<SVGGElement>('.quadrant-group');
@@ -1013,6 +1018,32 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
     yAxisGroup.call(yAxisGen);
     yAxisGroup.selectAll('line, path').attr('stroke', CHART_COLORS.outline);
     yAxisGroup.selectAll('text').attr('fill', CHART_COLORS.onSurfaceVariant).attr('font-size', '11px');
+
+    // ── Grid lines (race mode) ──
+    const gridGroup = chart.select<SVGGElement>('.grid-group');
+    const xTicks = (globalXScale as any).ticks(6) as number[];
+    gridGroup.selectAll<SVGLineElement, number>('.x-grid')
+      .data(xTicks, (d: number) => d)
+      .join('line')
+      .attr('class', 'x-grid')
+      .attr('x1', d => globalXScale(d))
+      .attr('x2', d => globalXScale(d))
+      .attr('y1', 0)
+      .attr('y2', chartHeight)
+      .attr('stroke', CHART_COLORS.outlineVariant)
+      .attr('stroke-dasharray', '2,2');
+
+    const yTicks = (globalYScale as any).ticks(6) as number[];
+    gridGroup.selectAll<SVGLineElement, number>('.y-grid')
+      .data(yTicks, (d: number) => d)
+      .join('line')
+      .attr('class', 'y-grid')
+      .attr('x1', 0)
+      .attr('x2', chartWidth)
+      .attr('y1', d => globalYScale(d))
+      .attr('y2', d => globalYScale(d))
+      .attr('stroke', CHART_COLORS.outlineVariant)
+      .attr('stroke-dasharray', '2,2');
 
     // Axis labels (static)
     const xLabelEl = chart.select<SVGTextElement>('.x-axis-label');

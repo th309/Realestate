@@ -5,14 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useSnapshotData, fetchTimeSeriesData, formatMetricValue, getMetricFormat } from '@/lib/data';
 import type { GeoLevel } from '@/lib/data';
 import type { BarRaceFrame, BarEntry } from '@/lib/visualizations/d3/HorizontalBarChart';
-import { getRegionStates } from '../constants';
+import { getAllowedStates, matchesAllowedStates, parseStateFromName } from '../constants';
 import type { ScatterScope, BarSort, BarCount } from './useGraphsState';
-
-/** Extract state abbreviation from metro name (e.g., "Austin-Round Rock, TX" -> "TX") */
-function parseStateFromName(name: string): string | null {
-  const match = name.match(/,\s*([A-Z]{2})(?:\s*-\s*[A-Z]{2})*\s*$/);
-  return match ? match[1] : null;
-}
 
 export interface UseBarRaceDataResult {
   raceFrames: BarRaceFrame[];
@@ -69,41 +63,21 @@ export function useBarRaceData(
     let filtered: typeof entries;
     const primaryState = primaryMarket?.state ?? null;
 
-    if (geoLevel === 'zip') {
-      // ZIP: cascade metro → county → state
-      // For now, use state-level filtering (metro/county lookup requires additional data)
-      // TODO: Add metro/county lookup when ZIP metadata is available
+    if (geoLevel === 'zip' || geoLevel === 'county') {
+      // ZIP/County: filter to same state(s) as primary market
       if (primaryState) {
-        filtered = entries.filter((e) => {
-          const st = parseStateFromName(e.name);
-          return st === primaryState;
-        });
-      } else {
-        filtered = entries;
-      }
-    } else if (geoLevel === 'county') {
-      // County: always same state, ignore scope selector
-      if (primaryState) {
-        filtered = entries.filter((e) => {
-          const st = parseStateFromName(e.name);
-          return st === primaryState;
-        });
+        const allowed = getAllowedStates(primaryMarket?.name, primaryState, 'state');
+        filtered = allowed
+          ? entries.filter((e) => matchesAllowedStates(e.name, allowed))
+          : entries;
       } else {
         filtered = entries;
       }
     } else {
-      // Metro: respect scope selector
-      let allowedStates: Set<string> | null = null;
-      if (scope === 'state' && primaryState) {
-        allowedStates = new Set([primaryState]);
-      } else if (scope === 'region' && primaryState) {
-        allowedStates = new Set(getRegionStates(primaryState));
-      }
-      filtered = allowedStates
-        ? entries.filter((e) => {
-            const st = parseStateFromName(e.name);
-            return st !== null && allowedStates!.has(st);
-          })
+      // Metro: respect scope selector (handles multi-state metros)
+      const allowed = getAllowedStates(primaryMarket?.name, primaryState ?? undefined, scope);
+      filtered = allowed
+        ? entries.filter((e) => matchesAllowedStates(e.name, allowed))
         : entries;
     }
 

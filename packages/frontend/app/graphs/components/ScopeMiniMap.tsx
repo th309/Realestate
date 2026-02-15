@@ -4,8 +4,9 @@ import React, { useMemo } from 'react';
 import { MapPin, Map, Globe, Minus } from 'lucide-react';
 import {
   STATE_NAMES,
-  getRegionLabel,
+  getDivisionLabel,
 } from '../constants/geoRegions';
+import { parseAllStatesFromName } from '../constants';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ interface ScopeMiniMapProps {
   onScopeChange: (value: string) => void;
   /** Two-letter state abbreviation from the primary market */
   primaryState?: string;
+  /** Full name of the primary market (needed for multi-state metro labels) */
+  primaryName?: string;
   /** 'scope' for scatter/bar, 'baseline' for timeline */
   mode?: 'scope' | 'baseline';
   className?: string;
@@ -29,11 +32,20 @@ export function ScopeMiniMap({
   scope,
   onScopeChange,
   primaryState,
+  primaryName,
   mode = 'scope',
   className = '',
 }: ScopeMiniMapProps) {
-  const stateLabel = primaryState ? (STATE_NAMES[primaryState] ?? primaryState) : null;
-  const regionLabel = primaryState ? getRegionLabel(primaryState) : null;
+  // Washington-Arlington-Alexandria, DC-VA-MD-WV is unique: DC is not a state,
+  // so this metro doesn't belong to any single state. Show all spanned states.
+  const allStates = primaryName ? parseAllStatesFromName(primaryName) : [];
+  const isDCMetro = primaryState === 'DC' && allStates.length > 1;
+  const stateLabel = isDCMetro
+    ? allStates.join(', ')
+    : primaryState
+      ? (STATE_NAMES[primaryState] ?? primaryState)
+      : null;
+  const divisionLabel = primaryState ? getDivisionLabel(primaryState) : null;
 
   const sectionLabel = mode === 'baseline' ? 'Comparison Baseline' : 'Scope';
 
@@ -46,8 +58,8 @@ export function ScopeMiniMap({
       if (stateLabel) {
         opts.push({ key: 'state', label: `${stateLabel} Avg`, icon: MapPin });
       }
-      if (regionLabel && regionLabel !== 'Unknown') {
-        opts.push({ key: 'region', label: `${regionLabel} Avg`, icon: Map });
+      if (divisionLabel && divisionLabel !== 'Unknown') {
+        opts.push({ key: 'region', label: `${divisionLabel} Avg`, icon: Map });
       }
       opts.push({ key: 'national', label: 'National Avg', icon: Globe });
       return opts;
@@ -61,10 +73,10 @@ export function ScopeMiniMap({
     }
     return [
       { key: 'state' as Scope, label: stateLabel!, icon: MapPin },
-      { key: 'region' as Scope, label: `Census Region: ${regionLabel}`, icon: Map },
+      { key: 'region' as Scope, label: divisionLabel!, icon: Map },
       { key: 'national' as Scope, label: 'Nationwide', icon: Globe },
     ];
-  }, [mode, primaryState, stateLabel, regionLabel]);
+  }, [mode, primaryState, stateLabel, divisionLabel]);
 
   return (
     <div className={className}>

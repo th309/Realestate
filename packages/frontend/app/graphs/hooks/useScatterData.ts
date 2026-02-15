@@ -5,11 +5,13 @@ import { useSnapshotData } from '@/lib/data';
 import type { GeoLevel, SnapshotData } from '@/lib/data';
 import type { ScatterDataPoint } from '@/lib/visualizations/d3/ScatterPlot';
 import type { ScatterScope } from './useGraphsState';
-import { STATE_TO_CENSUS_REGION, getRegionStates } from '../constants';
+import { getAllowedStates, matchesAllowedStates, parseStateFromName } from '../constants';
 
 interface UseScatterDataOptions {
   /** Primary market ID to highlight */
   primaryId?: string;
+  /** Primary market name (needed for multi-state metro handling) */
+  primaryName?: string;
   /** State abbreviation of the primary market (for scope filtering) */
   primaryState?: string;
   /** Scope: 'state' = same state, 'region' = same census region, 'national' = all */
@@ -22,12 +24,6 @@ interface UseScatterDataResult {
   error: Error | null;
 }
 
-/** Extract state abbreviation from metro name (e.g., "Austin-Round Rock, TX" → "TX") */
-function parseStateFromName(name: string): string | null {
-  const match = name.match(/,\s*([A-Z]{2})(?:\s*-\s*[A-Z]{2})*\s*$/);
-  return match ? match[1] : null;
-}
-
 /**
  * Hook to produce ScatterDataPoint[] from two snapshot datasets.
  * Joins X-metric and Y-metric by regionId, filters by scope.
@@ -38,7 +34,7 @@ export function useScatterData(
   geoLevel: GeoLevel,
   options: UseScatterDataOptions
 ): UseScatterDataResult {
-  const { primaryId, primaryState, scope } = options;
+  const { primaryId, primaryName, primaryState, scope } = options;
 
   const xSnap = useSnapshotData(xMetricId, geoLevel);
   const ySnap = useSnapshotData(yMetricId, geoLevel);
@@ -53,13 +49,8 @@ export function useScatterData(
     const yData = ySnap.allData;
 
     // Determine allowed states for filtering
-    let allowedStates: Set<string> | null = null;
-    if (scope === 'state' && primaryState) {
-      allowedStates = new Set([primaryState]);
-    } else if (scope === 'region' && primaryState) {
-      allowedStates = new Set(getRegionStates(primaryState));
-    }
-    // scope === 'national' → no filtering
+    // For multi-state metros (e.g., DC-VA-MD-WV), includes all states
+    const allowedStates = getAllowedStates(primaryName, primaryState, scope);
 
     const points: ScatterDataPoint[] = [];
 
@@ -76,10 +67,7 @@ export function useScatterData(
       const name = (typeof xEntry === 'object' && xEntry.name) || regionId;
 
       // Filter by state scope
-      if (allowedStates) {
-        const state = parseStateFromName(name);
-        if (!state || !allowedStates.has(state)) continue;
-      }
+      if (allowedStates && !matchesAllowedStates(name, allowedStates)) continue;
 
       const isPrimary = regionId === primaryId;
 
@@ -94,7 +82,7 @@ export function useScatterData(
     }
 
     return points;
-  }, [xSnap.allData, ySnap.allData, isLoading, scope, primaryState, primaryId]);
+  }, [xSnap.allData, ySnap.allData, isLoading, scope, primaryName, primaryState, primaryId]);
 
   return { data, isLoading, error };
 }

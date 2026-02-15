@@ -653,20 +653,32 @@ function setupInteractions(
 
     const feature = e.features[0];
     const props = feature.properties || {};
+    const geoLevel = geoLevelRef.current;
 
-    // Extract geography info based on level
+    // Extract geography ID from GeoJSON properties.
+    // The enrichment step sets props.id, but we also handle raw GeoJSON
+    // properties (CBSAFP for metros, GEOID for counties/zips, etc.)
+    // to be resilient against race conditions or stale features.
+    const id = props.id
+      || props.CBSAFP   // Metro CBSA code
+      || props.GEOID     // Census GEOID (works for counties, zips, tracts)
+      || props.GEOID20   // ZIP ZCTA GEOID
+      || props.ZCTA5CE20 // ZIP ZCTA code
+      || feature.id
+      || '';
+
+    // Extract display name — prefer enriched name, fall back to raw GeoJSON
     const name = props.name || props.displayName || props.NAME || 'Unknown';
-    const id = props.id || feature.id || '';
     const value = props.value ?? null;
 
     // Get state abbreviation if available
-    const stateFips = props.STATEFP || (typeof id === 'string' ? id.substring(0, 2) : '');
+    const stateFips = props.STATEFP || (typeof id === 'string' && id.length >= 2 ? id.substring(0, 2) : '');
     const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
 
     onFeatureClick({
       id: String(id),
       name,
-      geoLevel: geoLevelRef.current,
+      geoLevel,
       value,
       stateAbbr
     });

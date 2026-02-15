@@ -44,16 +44,11 @@ export function MarketSearchBar({
   const handleSelectResult = (result: any) => {
     // Convert universal search result to MyMarket format
     // Universal search returns clean IDs: CBSA codes for metros, FIPS for counties, ZIP codes for zips
-    const geoType = result.type === 'metro' ? 'metro'
-      : result.type === 'county' ? 'county'
-      : result.type === 'zip' ? 'zip'
-      : result.type === 'state' ? 'state'
-      : 'metro'; // Cities default to metro (they often come paired with a metro result)
-
+    // Only metro/county/zip types are shown (filtered below), so no fallback needed
     const market: MyMarket = {
       id: result.id,
       name: result.name,
-      type: geoType as 'metro' | 'county' | 'zip',
+      type: result.type as 'metro' | 'county' | 'zip',
       state: result.state,
       score: null,
     };
@@ -62,6 +57,11 @@ export function MarketSearchBar({
     setSearchOpen(false);
     clearSearch();
   };
+
+  // Graphs page only supports metro, county, zip — filter out states/national/city
+  const supportedResults = searchResults.filter(
+    (r) => r.type === 'metro' || r.type === 'county' || r.type === 'zip'
+  );
 
   return (
     <div ref={searchRef as React.RefObject<HTMLDivElement>} className="flex items-center gap-2 relative">
@@ -124,7 +124,7 @@ export function MarketSearchBar({
 
       {/* Search input */}
       {searchOpen && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-surface-container-lowest rounded-2xl shadow-lg border border-outline-variant/30 z-50 overflow-hidden">
+        <div className="absolute left-0 top-full mt-2 min-w-[320px] w-max max-w-[420px] bg-surface-container-lowest rounded-2xl shadow-lg border border-outline-variant/30 z-50 overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-outline-variant/20">
             <Search className="w-4 h-4 text-on-surface-variant flex-shrink-0" />
             <input
@@ -151,22 +151,22 @@ export function MarketSearchBar({
               </div>
             )}
 
-            {!searchLoading && showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
+            {!searchLoading && showSearchResults && supportedResults.length === 0 && searchQuery.length >= 2 && (
               <p className="px-4 py-3 text-xs text-on-surface-variant text-center">
                 No markets found
               </p>
             )}
 
-            {searchResults.map((result) => (
+            {supportedResults.map((result) => (
               <button
                 key={result.id}
                 onClick={() => handleSelectResult(result)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-container transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-on-surface truncate">{result.name}</div>
+                  <div className="text-sm text-on-surface whitespace-nowrap">{result.name}</div>
                   {result.subtitle && (
-                    <div className="text-[10px] text-on-surface-variant">{result.subtitle}</div>
+                    <div className="text-[10px] text-on-surface-variant whitespace-nowrap">{result.subtitle}</div>
                   )}
                 </div>
                 <span className="text-[10px] text-on-surface-variant uppercase tracking-wider flex-shrink-0">

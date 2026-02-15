@@ -5,14 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useSnapshotData, fetchTimeSeriesData } from '@/lib/data';
 import type { GeoLevel } from '@/lib/data';
 import type { ScatterDataPoint } from '@/lib/visualizations/d3/ScatterPlot';
-import { getRegionStates } from '../constants';
+import { getAllowedStates, matchesAllowedStates } from '../constants';
 import type { ScatterScope } from './useGraphsState';
-
-/** Extract state abbreviation from metro name */
-function parseStateFromName(name: string): string | null {
-  const match = name.match(/,\s*([A-Z]{2})(?:\s*-\s*[A-Z]{2})*\s*$/);
-  return match ? match[1] : null;
-}
 
 export interface ScatterRaceFrame {
   date: string;
@@ -57,20 +51,12 @@ export function useScatterRaceData(
       entries.push({ id, name, value: val });
     }
 
-    // Filter by scope
-    let allowedStates: Set<string> | null = null;
+    // Filter by scope (handles multi-state metros like DC-VA-MD-WV)
     const primaryState = primaryMarket?.state ?? null;
-    if (scope === 'state' && primaryState) {
-      allowedStates = new Set([primaryState]);
-    } else if (scope === 'region' && primaryState) {
-      allowedStates = new Set(getRegionStates(primaryState));
-    }
+    const allowedStates = getAllowedStates(primaryMarket?.name, primaryState ?? undefined, scope);
 
     const filtered = allowedStates
-      ? entries.filter((e) => {
-          const st = parseStateFromName(e.name);
-          return st !== null && allowedStates!.has(st);
-        })
+      ? entries.filter((e) => matchesAllowedStates(e.name, allowedStates!))
       : entries;
 
     // For narrow scopes (state/region) include all markets; for national limit pool

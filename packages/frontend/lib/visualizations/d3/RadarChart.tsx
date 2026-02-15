@@ -20,6 +20,12 @@ export interface RadarDimension {
   key: string;
   label: string;
   description?: string;
+  /** Actual metric ID for data fetching (may differ from key) */
+  metricId?: string;
+  /** Override metric ID for race mode time series (when the primary metricId lacks time series data) */
+  raceMetricId?: string;
+  /** When true, lower raw values produce higher percentile scores */
+  invert?: boolean;
 }
 
 export interface RadarChartProps {
@@ -145,7 +151,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   const onFrameChangeRef = useRef(onFrameChange);
   onFrameChangeRef.current = onFrameChange;
 
-  const effectiveHeight = responsiveHeight || height;
+  const playbackControlsHeight = isRaceMode ? 44 : 0;
+  const effectiveHeight = (responsiveHeight || height) - playbackControlsHeight;
   const effectiveWidth = width || 400;
 
   // Reserve space for legend below the chart
@@ -392,7 +399,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       if (angleDeg < -60 && angleDeg > -120) dy = '0em'; // top
       if (angleDeg > 60 && angleDeg < 120) dy = '0.8em'; // bottom
 
-      return { x, y, textAnchor, dy, label: dim.label, index: i };
+      return { x, y, textAnchor, dy, label: dim.label, description: dim.description, index: i };
     });
 
     if (showLabels) {
@@ -409,6 +416,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         .attr('font-size', 12)
         .attr('font-weight', 500)
         .attr('fill', CHART_COLORS.onSurface)
+        .style('cursor', (d) => d.description ? 'help' : 'default')
         .text((d) => d.label);
 
       if (isFirstRender) {
@@ -429,16 +437,44 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           .attr('dy', (d) => d.dy);
       }
 
-      dimLabels.merge(dimLabelsEnter)
+      const merged = dimLabels.merge(dimLabelsEnter);
+      merged
         .interrupt()
         .attr('opacity', 1)
         .text((d) => d.label)
+        .style('cursor', (d) => d.description ? 'help' : 'default')
         .attr('text-anchor', (d) => d.textAnchor)
         .attr('dy', (d) => d.dy)
         .transition()
         .duration(300)
         .attr('x', (d) => d.x)
         .attr('y', (d) => d.y);
+
+      // Dimension label hover → show description tooltip
+      merged
+        .on('mouseenter', function (event, d) {
+          if (!d.description) return;
+          d3.select(this).attr('text-decoration', 'underline');
+          const html = `<div style="max-width:200px">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px">${d.label}</div>
+            <div style="font-size:12px;opacity:0.85">${d.description}</div>
+          </div>`;
+          showTooltipRef.current(
+            (event as MouseEvent).clientX,
+            (event as MouseEvent).clientY,
+            <div dangerouslySetInnerHTML={{ __html: html }} />
+          );
+        })
+        .on('mousemove', function (event) {
+          moveTooltipRef.current(
+            (event as MouseEvent).clientX,
+            (event as MouseEvent).clientY
+          );
+        })
+        .on('mouseleave', function () {
+          d3.select(this).attr('text-decoration', 'none');
+          hideTooltipRef.current();
+        });
     } else {
       dimLabelsGroup.selectAll('.dim-label').remove();
     }

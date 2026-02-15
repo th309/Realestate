@@ -29,7 +29,8 @@ interface UseMapSearchProps {
   mapRef: React.MutableRefObject<mapboxgl.Map | null>;
   onGeoLevelChange: (level: GeoLevel) => void;
   onStateChange: (state: string) => void;
-  accessToken: string;
+  /** @deprecated No longer used — search is backend-only */
+  accessToken?: string;
   geoLevel: GeoLevel;
   onHighlightFeature: (feature: SearchResult | null) => void;
 }
@@ -63,7 +64,7 @@ export function useMapSearch({
     searchRef,
     handleSearch,
     clearSearch,
-  } = useUniversalSearch({ accessToken });
+  } = useUniversalSearch({});
 
   const searchNavigatedRef = useRef(false);
 

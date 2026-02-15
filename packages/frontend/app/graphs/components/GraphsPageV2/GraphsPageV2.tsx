@@ -346,6 +346,7 @@ export function GraphsPageV2() {
     geoLevel,
     {
       primaryId: markets[0]?.id,
+      primaryName: markets[0]?.name,
       primaryState: markets[0]?.state,
       scope,
     }

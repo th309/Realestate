@@ -4,7 +4,7 @@ import { useMemo, useCallback } from 'react';
 import { useSnapshotData, formatMetricValue, getMetricFormat, getMetricTitle } from '@/lib/data';
 import type { GeoLevel, SnapshotData } from '@/lib/data';
 import type { BarEntry } from '@/lib/visualizations/d3/HorizontalBarChart';
-import { STATE_TO_CENSUS_REGION, getRegionStates } from '../constants';
+import { getAllowedStates, matchesAllowedStates, getScopeBenchmarkLabel } from '../constants';
 
 // Re-export shared types from useGraphsState for convenience
 export type { ScatterScope, BarSort, BarCount } from './useGraphsState';
@@ -20,11 +20,6 @@ export interface UseBarRankingDataResult {
   error: Error | null;
 }
 
-/** Extract state abbreviation from metro name (e.g., "Austin-Round Rock, TX" -> "TX") */
-function parseStateFromName(name: string): string | null {
-  const match = name.match(/,\s*([A-Z]{2})(?:\s*-\s*[A-Z]{2})*\s*$/);
-  return match ? match[1] : null;
-}
 
 /** Compute the median of a sorted (ascending) array of numbers */
 function median(sorted: number[]): number | null {
@@ -83,21 +78,13 @@ export function useBarRankingData(
     }
 
     // --- 3. Filter by scope ---
-    let allowedStates: Set<string> | null = null;
+    // For multi-state metros (e.g., DC-VA-MD-WV), state scope includes
+    // all states the metro spans so it can be meaningfully compared.
     const primaryState = primaryMarket?.state ?? null;
-
-    if (scope === 'state' && primaryState) {
-      allowedStates = new Set([primaryState]);
-    } else if (scope === 'region' && primaryState) {
-      allowedStates = new Set(getRegionStates(primaryState));
-    }
-    // scope === 'national' -> no filtering
+    const allowedStates = getAllowedStates(primaryMarket?.name, primaryState ?? undefined, scope);
 
     const filtered = allowedStates
-      ? entries.filter((e) => {
-          const st = parseStateFromName(e.name);
-          return st !== null && allowedStates!.has(st);
-        })
+      ? entries.filter((e) => matchesAllowedStates(e.name, allowedStates!))
       : entries;
 
     // --- 5. Sort by value ---
@@ -132,15 +119,7 @@ export function useBarRankingData(
     }));
 
     // --- 11. Benchmark label based on scope ---
-    let label: string;
-    if (scope === 'state' && primaryState) {
-      label = `${primaryState} Median`;
-    } else if (scope === 'region' && primaryState) {
-      const region = STATE_TO_CENSUS_REGION[primaryState];
-      label = region ? `${region} Median` : 'Regional Median';
-    } else {
-      label = 'National Median';
-    }
+    const label = getScopeBenchmarkLabel(primaryMarket?.name, primaryState ?? undefined, scope);
 
     return { data: barData, benchmarkValue: medianVal, benchmarkLabel: label };
   }, [allData, isLoading, primaryMarket, scope, sort, count]);

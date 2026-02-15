@@ -112,7 +112,7 @@ export class RealtorService {
       .range(offset, offset + this.PAGE_SIZE - 1);
 
     if (error) throw error;
-    return (data || []) as RealtorRow[];
+    return (data || []) as unknown as RealtorRow[];
   }
 
   /**
@@ -147,7 +147,7 @@ export class RealtorService {
         .range(offset, offset + this.PAGE_SIZE - 1);
 
       if (error) throw error;
-      const rows = (data || []) as RealtorRow[];
+      const rows = (data || []) as unknown as RealtorRow[];
 
       if (rows.length > 0) {
         allData.push(...rows);
@@ -592,7 +592,7 @@ export class RealtorService {
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return ((data || []) as RealtorRow[]).map((row) => {
+    return ((data || []) as unknown as RealtorRow[]).map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)
@@ -635,7 +635,7 @@ export class RealtorService {
     // Check if this is a growth/percent metric that needs data quality filtering
     const isGrowthMetric = metric.endsWith('_yy') || metric.endsWith('_mm');
 
-    return ((data || []) as RealtorRow[]).map((row) => {
+    return ((data || []) as unknown as RealtorRow[]).map((row) => {
       let value = Number(row[metric]) || 0;
 
       // Filter out only clearly corrupt data (values in millions of percent)

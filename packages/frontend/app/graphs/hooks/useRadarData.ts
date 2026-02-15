@@ -179,6 +179,9 @@ export function useRadarData(
         key: cfg.key,
         label: cfg.label,
         description: cfg.description,
+        metricId: cfg.metricId,
+        raceMetricId: cfg.raceMetricId,
+        invert: cfg.invert,
       })),
     [dimensionConfigs],
   );
