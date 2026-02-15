@@ -169,15 +169,17 @@ export class RedfinService {
             }
         }
 
-        // Insert
+        // NOTE: market_time_series table has been removed.
+        // Redfin data needs a dedicated table (like zillow_*/realtor_*) if re-enabled.
+        // For now, log what would have been inserted but skip the upsert.
         if (timeSeriesData.length > 0) {
-            const { error } = await supabase.from('market_time_series').upsert(timeSeriesData, { onConflict: 'region_id,date,metric_name,data_source,attributes', ignoreDuplicates: false });
-            if (error) {
-                this.logger.error(`Upsert error: ${error.message}`);
-                errors++;
-            } else {
-                timeSeriesInserted = timeSeriesData.length;
-            }
+            this.logger.warn(
+                `Skipping upsert: market_time_series table no longer exists. ` +
+                `${timeSeriesData.length} Redfin records were parsed but not stored. ` +
+                `Create a dedicated redfin_* table to re-enable ingestion.`
+            );
+            timeSeriesInserted = 0;
+            errors++;
         }
 
         return {

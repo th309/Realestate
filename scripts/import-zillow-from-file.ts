@@ -177,32 +177,10 @@ async function importZillowFromFile(
         for (let i = 0; i < timeSeriesData.length; i += batchSize) {
           const batch = timeSeriesData.slice(i, i + batchSize);
           
-          try {
-            const { data: tsResult, error: tsError } = await supabase
-              .from('market_time_series')
-              .upsert(batch, {
-                onConflict: 'region_id,date,metric_name,data_source,attributes',
-                ignoreDuplicates: false
-              })
-              .select();
-            
-            if (tsError) {
-              console.error(`❌ Error upserting time series batch for ${regionId}:`, tsError.message);
-              errors++;
-              errorDetails.push({
-                region: regionId,
-                error: tsError.message,
-                type: 'time_series_upsert',
-                batchSize: batch.length
-              });
-            } else {
-              const insertedCount = tsResult?.length || batch.length;
-              timeSeriesInserted += insertedCount;
-            }
-          } catch (err: any) {
-            console.error(`❌ Exception during upsert for ${regionId}:`, err.message);
-            errors++;
-          }
+          // NOTE: market_time_series table has been removed.
+          // Zillow data should be imported to dedicated zillow_* tables instead.
+          console.warn(`⚠️ Skipping ${batch.length} records for ${regionId}: market_time_series table no longer exists. Use dedicated zillow_* tables.`);
+          errors++;
         }
       }
       

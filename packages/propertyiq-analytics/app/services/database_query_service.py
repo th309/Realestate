@@ -41,8 +41,6 @@ class DatabaseQueryService:
         'calculated_metrics',
         # Geographic reference data
         'geographies', 'geography_inheritance',
-        # Market time series
-        'market_time_series',
         # HUD Fair Market Rent
         'hud_fmr',
         # Building permits (Census BPS)
