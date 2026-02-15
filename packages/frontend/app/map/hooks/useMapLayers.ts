@@ -546,20 +546,20 @@ function addMapLayers(
       case 'number':
       case 'index':
         // Plain number with thousands separator
-        valueFormat = ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
+        valueFormat = ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
         break;
       case 'days':
         // Number with "days" suffix
         valueFormat = [
           'concat',
-          ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
+          ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
           ' days'
         ];
         break;
       case 'currency':
       default:
         // Currency with $ prefix
-        valueFormat = ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
+        valueFormat = ['concat', '$', ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
         break;
     }
 
