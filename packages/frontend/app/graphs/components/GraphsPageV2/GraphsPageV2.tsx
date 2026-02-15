@@ -9,6 +9,8 @@ import { useWaterfallData } from '../../hooks/useWaterfallData';
 import { useRadarData } from '../../hooks/useRadarData';
 import { useBarRankingData } from '../../hooks/useBarRankingData';
 import { useBarRaceData } from '../../hooks/useBarRaceData';
+import { useScatterRaceData } from '../../hooks/useScatterRaceData';
+import { useRadarRaceData } from '../../hooks/useRadarRaceData';
 import { useRegionTimeSeriesData, useNationalTimeSeriesData } from '../../hooks/useRegionTimeSeriesData';
 import { useTimeSeriesData, getMetricTitle, getMetricFormat } from '@/lib/data';
 import type { GeoLevel, ScoreType } from '@/lib/data';
@@ -41,7 +43,9 @@ function tfToStartDate(tf: TimeFrame): string | undefined {
 /** Map MetricFormat to D3 ScatterPlot FormatType */
 function toScatterFormat(fmt: string): FormatType {
   if (fmt === 'currency') return 'currency';
-  if (fmt === 'percent' || fmt === 'percent_abs') return 'percent';
+  if (fmt === 'percent_abs') return 'percentAbs';
+  if (fmt === 'percent') return 'percent';
+  if (fmt === 'days') return 'days';
   return 'number';
 }
 
@@ -314,6 +318,17 @@ export function GraphsPageV2() {
   const xFormat = toScatterFormat(getMetricFormat(scatterXMetric));
   const yFormat = toScatterFormat(getMetricFormat(scatterYMetric));
 
+  // ── SCATTER RACE DATA ─────────────────────────────────────────────────────
+
+  const scatterRaceData = useScatterRaceData(
+    scatterXMetric,
+    scatterYMetric,
+    geoLevel,
+    markets[0] || null,
+    scope,
+    chartType === 'scatter' && raceMode,
+  );
+
   // ── WATERFALL DATA ─────────────────────────────────────────────────────────
 
   const waterfallData = useWaterfallData(
@@ -335,6 +350,18 @@ export function GraphsPageV2() {
     geoLevel,
     radarMarkets,
     radarMetrics.length > 0 ? radarMetrics : undefined,
+  );
+
+  // ── RADAR RACE DATA ──────────────────────────────────────────────────────
+
+  const RADAR_RACE_COLORS = ['#0891b2', '#3b82f6', '#ea580c'];
+
+  const radarRaceData = useRadarRaceData(
+    radarData.dimensions,
+    geoLevel,
+    radarMarkets,
+    RADAR_RACE_COLORS,
+    chartType === 'radar' && raceMode,
   );
 
   // ── BAR RANKING DATA ──────────────────────────────────────────────────────
@@ -425,13 +452,18 @@ export function GraphsPageV2() {
                   {...chartMotion}
                   className="w-full h-full"
                 >
-                  {scatterData.isLoading ? (
-                    <LoadingSpinner label="Loading scatter data..." />
+                  {(raceMode ? scatterRaceData.isLoading : scatterData.isLoading) ? (
+                    <LoadingSpinner label={raceMode ? 'Building scatter animation...' : 'Loading scatter data...'} />
                   ) : scatterData.error ? (
                     <ErrorMessage error={scatterData.error.message} />
-                  ) : scatterData.data.length === 0 ? (
+                  ) : !raceMode && scatterData.data.length === 0 ? (
                     <EmptyState
                       title="No data available for this combination"
+                      subtitle="Try a different metric or broader scope"
+                    />
+                  ) : raceMode && scatterRaceData.frames.length === 0 ? (
+                    <EmptyState
+                      title="No time series data for scatter animation"
                       subtitle="Try a different metric or broader scope"
                     />
                   ) : (
@@ -447,6 +479,8 @@ export function GraphsPageV2() {
                       showQuadrants={showQuadrants}
                       colorByCategory={false}
                       sizeByValue
+                      raceFrames={raceMode ? scatterRaceData.frames : undefined}
+                      autoPlay={raceMode}
                       onPointClick={(point) => {
                         selectMarket({
                           id: point.id,
@@ -506,8 +540,8 @@ export function GraphsPageV2() {
                       title="Select markets to compare"
                       subtitle="Add up to 3 markets for radar comparison"
                     />
-                  ) : radarData.isLoading ? (
-                    <LoadingSpinner label="Building radar profile..." />
+                  ) : (raceMode ? radarRaceData.isLoading : radarData.isLoading) ? (
+                    <LoadingSpinner label={raceMode ? 'Building radar animation...' : 'Building radar profile...'} />
                   ) : radarData.error ? (
                     <ErrorMessage error={radarData.error.message} />
                   ) : radarData.datasets.length === 0 ? (
@@ -515,10 +549,17 @@ export function GraphsPageV2() {
                       title="No data available for this profile"
                       subtitle="Try a different radar preset or add more markets"
                     />
+                  ) : raceMode && radarRaceData.frames.length === 0 ? (
+                    <EmptyState
+                      title="No time series data for radar animation"
+                      subtitle="Try a different profile or add more markets"
+                    />
                   ) : (
                     <RadarChart
                       datasets={radarData.datasets}
                       dimensions={radarData.dimensions}
+                      raceFrames={raceMode ? radarRaceData.frames : undefined}
+                      autoPlay={raceMode}
                     />
                   )}
                 </motion.div>
