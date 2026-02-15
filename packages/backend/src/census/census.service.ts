@@ -119,13 +119,13 @@ export class CensusService {
 
     const { data, error } = await this.supabase
       .from('census_national')
-      .select('*')
+      .select(`year, ${metric}`)
       .eq('year', latestYear)
       .limit(1);
 
     if (error) throw error;
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+    return ((data || []) as unknown as CensusRow[]).map((row) => ({
       region_id: 'US',
       region_name: 'United States',
       value: toMetricValue(row[metric]),
@@ -153,13 +153,13 @@ export class CensusService {
 
     const { data, error } = await this.supabase
       .from('census_state')
-      .select('*')
+      .select(`year, state_fips, state_name, ${metric}`)
       .eq('year', latestYear);
 
     if (error) throw error;
-    this.setCache(cacheKey, data as CensusRow[]);
+    this.setCache(cacheKey, data as unknown as CensusRow[]);
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+    return ((data || []) as unknown as CensusRow[]).map((row) => ({
       region_id: String(row.state_fips || ''),
       region_name: String(row.state_name || ''),
       value: toMetricValue(row[metric]),
@@ -188,13 +188,13 @@ export class CensusService {
 
     const { data, error } = await this.supabase
       .from('census_metro')
-      .select('*')
+      .select(`year, cbsa_code, cbsa_title, ${metric}`)
       .eq('year', latestYear);
 
     if (error) throw error;
-    this.setCache(cacheKey, data as CensusRow[]);
+    this.setCache(cacheKey, data as unknown as CensusRow[]);
 
-    return ((data || []) as CensusRow[]).map((row) => ({
+    return ((data || []) as unknown as CensusRow[]).map((row) => ({
       region_id: String(row.cbsa_code || ''),
       region_name: String(row.cbsa_title || ''),
       value: toMetricValue(row[metric]),
@@ -230,14 +230,14 @@ export class CensusService {
     while (true) {
       const { data, error } = await this.supabase
         .from('census_county')
-        .select('*')
+        .select(`year, fips_code, county_name, state_fips, ${metric}`)
         .eq('year', latestYear)
         .range(offset, offset + batchSize - 1);
 
       if (error) throw error;
       if (!data || data.length === 0) break;
 
-      allData.push(...(data as CensusRow[]));
+      allData.push(...(data as unknown as CensusRow[]));
       if (data.length < batchSize) break;
       offset += batchSize;
     }
@@ -282,7 +282,7 @@ export class CensusService {
     while (true) {
       let query = this.supabase
         .from('census_city')
-        .select('*')
+        .select(`year, place_fips, place_name, state_fips, ${metric}`)
         .eq('year', latestYear)
         .range(offset, offset + batchSize - 1);
 
@@ -294,7 +294,7 @@ export class CensusService {
       if (error) throw error;
       if (!data || data.length === 0) break;
 
-      allData.push(...(data as CensusRow[]));
+      allData.push(...(data as unknown as CensusRow[]));
       if (data.length < batchSize) break;
       offset += batchSize;
     }
