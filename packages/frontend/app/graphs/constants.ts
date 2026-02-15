@@ -214,6 +214,30 @@ export const SOURCES: Record<string, string> = {
   cost_of_living: 'Bureau of Economic Analysis RPP',
 };
 
+// ── CENSUS REGION MAPPING ──
+export type CensusRegion = 'Northeast' | 'Midwest' | 'South' | 'West';
+
+export const STATE_TO_CENSUS_REGION: Record<string, CensusRegion> = {
+  CT: 'Northeast', ME: 'Northeast', MA: 'Northeast', NH: 'Northeast', RI: 'Northeast', VT: 'Northeast',
+  NJ: 'Northeast', NY: 'Northeast', PA: 'Northeast',
+  IL: 'Midwest', IN: 'Midwest', MI: 'Midwest', OH: 'Midwest', WI: 'Midwest',
+  IA: 'Midwest', KS: 'Midwest', MN: 'Midwest', MO: 'Midwest', NE: 'Midwest', ND: 'Midwest', SD: 'Midwest',
+  DE: 'South', FL: 'South', GA: 'South', MD: 'South', NC: 'South', SC: 'South', VA: 'South', WV: 'South', DC: 'South',
+  AL: 'South', KY: 'South', MS: 'South', TN: 'South',
+  AR: 'South', LA: 'South', OK: 'South', TX: 'South',
+  AZ: 'West', CO: 'West', ID: 'West', MT: 'West', NV: 'West', NM: 'West', UT: 'West', WY: 'West',
+  AK: 'West', CA: 'West', HI: 'West', OR: 'West', WA: 'West',
+};
+
+/** Get all state abbreviations in the same census region */
+export function getRegionStates(stateAbbr: string): string[] {
+  const region = STATE_TO_CENSUS_REGION[stateAbbr];
+  if (!region) return [stateAbbr];
+  return Object.entries(STATE_TO_CENSUS_REGION)
+    .filter(([, r]) => r === region)
+    .map(([s]) => s);
+}
+
 // Helper function to get source for a metric
 export function getMetricSource(metricId: string): string {
   return SOURCES[metricId] || 'Data source not specified';

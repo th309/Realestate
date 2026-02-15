@@ -87,6 +87,15 @@ export default function MapPage() {
     setSelectedGeography(geography);
     if (geography) {
       setRightPanelOpen(true);
+      // Persist to localStorage so other pages (graphs, reports) can pick it up
+      try {
+        localStorage.setItem('propertyiq-last-geography', JSON.stringify({
+          id: geography.id,
+          name: geography.name,
+          type: geography.geoLevel,
+          state: geography.stateAbbr,
+        }));
+      } catch { /* ignore storage errors */ }
     }
   }, []);
 

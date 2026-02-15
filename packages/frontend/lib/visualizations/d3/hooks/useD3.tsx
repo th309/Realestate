@@ -26,11 +26,17 @@ export function useD3<T extends SVGSVGElement>(
 
 /**
  * Hook for responsive D3 charts
- * Returns dimensions that update on resize
+ * Returns dimensions that update on resize.
+ *
+ * When fillHeight is true, the chart uses the container's actual height
+ * instead of computing it from the aspect ratio. This is useful when the
+ * container is sized by CSS (e.g. flex-1, h-full) and the chart should
+ * fill all available space.
  */
 export function useResponsiveD3<T extends HTMLDivElement>(
   aspectRatio: number = 16 / 9,
-  minHeight: number = 200
+  minHeight: number = 200,
+  fillHeight: boolean = false
 ) {
   const containerRef = useRef<T>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -39,7 +45,9 @@ export function useResponsiveD3<T extends HTMLDivElement>(
     const updateDimensions = () => {
       if (containerRef.current) {
         const width = containerRef.current.clientWidth;
-        const height = Math.max(width / aspectRatio, minHeight);
+        const height = fillHeight
+          ? Math.max(containerRef.current.clientHeight, minHeight)
+          : Math.max(width / aspectRatio, minHeight);
         setDimensions({ width, height });
       }
     };
@@ -52,7 +60,7 @@ export function useResponsiveD3<T extends HTMLDivElement>(
     }
 
     return () => resizeObserver.disconnect();
-  }, [aspectRatio, minHeight]);
+  }, [aspectRatio, minHeight, fillHeight]);
 
   return { containerRef, ...dimensions };
 }

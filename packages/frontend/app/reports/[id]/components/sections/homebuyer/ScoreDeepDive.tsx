@@ -447,7 +447,7 @@ function ScoreCredibilityBlock({
     return 0;
   };
 
-  const userQuintile = getUserQuintile(score, quintileData.quintiles);
+  const userQuintile = getUserQuintile(score, quintileData?.quintiles || []);
 
   return (
     <div>

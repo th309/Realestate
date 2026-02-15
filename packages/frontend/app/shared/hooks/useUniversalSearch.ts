@@ -19,6 +19,28 @@ interface MapboxFeature {
     context?: MapboxContext[];
 }
 
+/**
+ * Parse the primary state abbreviation from a geography name.
+ * Handles patterns like:
+ *   "Chicago-Naperville-Elgin, IL-IN" → "IL"
+ *   "Houston-Pasadena-The Woodlands, TX" → "TX"
+ *   "Cook County, IL" → "IL"
+ * Returns null if no match found.
+ */
+function parseStateFromName(name: string): string | null {
+    const match = name.match(/,\s*([A-Z]{2})(?:-[A-Z]{2})*\s*$/);
+    return match ? match[1] : null;
+}
+
+/**
+ * Resolve the state abbreviation for a search result.
+ * Prefers the name-parsed state (reliable for multi-state metros) over the
+ * database state_code (which may be wrong for multi-state geographies).
+ */
+function resolveState(name: string, dbStateCode?: string): string {
+    return parseStateFromName(name) || dbStateCode || '';
+}
+
 interface UseUniversalSearchProps {
     accessToken?: string;
     initialQuery?: string;
@@ -189,18 +211,20 @@ export function useUniversalSearch({
                     }
                 }
 
+                const resolvedName = effectiveType === 'zip' ? feature.text || name :
+                    effectiveType === 'county' ? countyName : name;
+
                 const primaryResult: SearchResult = {
                     // For ZIPs, use the actual postal code (feature.text) as ID, not Mapbox's internal ID
                     // For counties, use fips_code from backend match
                     id: effectiveType === 'zip' ? (feature.text || feature.id) :
                         effectiveType === 'county' ? countyId : feature.id,
-                    name: effectiveType === 'zip' ? feature.text || name :
-                        effectiveType === 'county' ? countyName : name,
+                    name: resolvedName,
                     type: effectiveType,
                     subtitle: effectiveType === 'metro' ? 'Metropolitan Statistical Area' : undefined,
                     center: feature.center,
                     bbox: feature.bbox,
-                    state: stateAbbrev,
+                    state: resolveState(resolvedName, stateAbbrev),
                 };
 
                 // If it's a city (or we are specifically looking for metros), try to find/create a companion
@@ -223,7 +247,7 @@ export function useUniversalSearch({
                             center: (matchingMetro.longitude && matchingMetro.latitude)
                                 ? [Number(matchingMetro.longitude), Number(matchingMetro.latitude)]
                                 : (feature.center as [number, number]),
-                            state: matchingMetro.state_code,
+                            state: resolveState(matchingMetro.name, matchingMetro.state_code),
                         };
 
                         // If filtering specifically for metros, ONLY return the metro
@@ -257,7 +281,7 @@ export function useUniversalSearch({
                     name: m.name,
                     type: 'metro' as const,
                     subtitle: 'Metropolitan Statistical Area',
-                    state: m.state_code,
+                    state: resolveState(m.name, m.state_code),
                     center: (m.longitude && m.latitude)
                         ? [Number(m.longitude), Number(m.latitude)]
                         : undefined,
@@ -272,7 +296,7 @@ export function useUniversalSearch({
                     id: c.fips_code || c.geography_id,
                     name: c.name,
                     type: 'county' as const,
-                    state: c.state_code,
+                    state: resolveState(c.name, c.state_code),
                     center: (c.longitude && c.latitude)
                         ? [Number(c.longitude), Number(c.latitude)]
                         : undefined,

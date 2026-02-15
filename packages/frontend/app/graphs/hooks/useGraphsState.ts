@@ -14,7 +14,7 @@ export type RadarPreset = 'homebuyer' | 'investor' | 'market_health' | 'custom';
 export type BarSort = 'asc' | 'desc';
 export type BarCount = 10 | 25;
 export type ScoreTypeOption = 'homeready' | 'investoredge' | 'markethealth';
-export type ScaleType = 'linear' | 'log';
+export type ScaleType = 'auto' | 'linear' | 'log';
 
 // Backward-compat aliases (old components still reference these)
 export type TemplateType = 'affordability' | 'investment' | 'momentum' | 'cashflow' | 'custom';
@@ -134,8 +134,8 @@ const DEFAULT_STATE: GraphsState = {
   activeMetric: 'home_value',
   scatterXMetric: 'cap_rate',
   scatterYMetric: 'days_on_market',
-  scatterXScaleType: 'linear',
-  scatterYScaleType: 'linear',
+  scatterXScaleType: 'auto',
+  scatterYScaleType: 'auto',
   showRegression: true,
   showQuadrants: true,
   waterfallPreset: 'investment',

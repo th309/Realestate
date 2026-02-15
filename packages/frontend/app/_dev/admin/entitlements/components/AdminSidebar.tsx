@@ -64,7 +64,7 @@ export function AdminSidebar() {
           <div key={idx} className="mb-4">
             {'href' in section ? (
               <Link
-                href={section.href}
+                href={section.href || '#'}
                 className={`
                   flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                   ${pathname === section.href
@@ -73,7 +73,7 @@ export function AdminSidebar() {
                   }
                 `}
               >
-                <section.icon className="w-5 h-5" />
+                {section.icon && <section.icon className="w-5 h-5" />}
                 {section.label}
               </Link>
             ) : (

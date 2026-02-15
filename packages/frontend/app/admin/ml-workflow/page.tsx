@@ -914,7 +914,7 @@ export default function MLWorkflowPage() {
             </div>
             
             {/* Check if this is the Monthly Report with validation data */}
-            {lastStepResult.metrics?.verdict ? (
+            {(lastStepResult.metrics as ValidationReportMetrics | undefined)?.verdict ? (
               <ValidationReportView metrics={lastStepResult.metrics as ValidationReportMetrics} />
             ) : (
               <pre className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-lg overflow-auto max-h-64">

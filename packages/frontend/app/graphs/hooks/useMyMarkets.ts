@@ -156,17 +156,41 @@ function getStoredMarkets(): MyMarket[] {
   }
 }
 
-// Helper: Get recent markets from localStorage
+// Helper: Get recent markets from localStorage, falling back to geography history
 function getRecentMarkets(): MyMarket[] {
-  if (typeof window === 'undefined') return getDefaultMarkets();
+  if (typeof window === 'undefined') return [];
 
   try {
     const stored = localStorage.getItem('propertyiq_recent_markets');
-    if (!stored) return getDefaultMarkets();
-    return JSON.parse(stored) as MyMarket[];
+    if (stored) {
+      const parsed = JSON.parse(stored) as MyMarket[];
+      if (parsed.length > 0) return parsed;
+    }
   } catch {
-    return getDefaultMarkets();
+    // fall through
   }
+
+  // Fallback: last geography the user viewed on the maps page
+  try {
+    const lastGeo = localStorage.getItem('propertyiq-last-geography');
+    if (lastGeo) {
+      const geo = JSON.parse(lastGeo);
+      if (geo?.id && geo?.name && ['metro', 'county', 'zip'].includes(geo.type)) {
+        return [{
+          id: geo.id,
+          name: geo.name,
+          type: geo.type as 'metro' | 'county' | 'zip',
+          state: geo.state,
+          score: null,
+          lastViewed: new Date().toISOString(),
+        }];
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  return [];
 }
 
 // Helper: Save recent market to localStorage
@@ -182,13 +206,5 @@ function saveRecentMarket(market: MyMarket) {
   }
 }
 
-// Default markets for new users (onboarding fallback)
-function getDefaultMarkets(): MyMarket[] {
-  return [
-    { id: 'austin-tx', name: 'Austin, TX', type: 'metro', state: 'TX', score: null },
-    { id: 'denver-co', name: 'Denver, CO', type: 'metro', state: 'CO', score: null },
-    { id: 'nashville-tn', name: 'Nashville, TN', type: 'metro', state: 'TN', score: null },
-  ];
-}
 
 export default useMyMarkets;

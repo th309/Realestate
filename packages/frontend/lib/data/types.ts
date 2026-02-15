@@ -219,6 +219,8 @@ export interface ScoreResponse {
     investoredge: SingleScoreResult;
     markethealth: SingleScoreResult;
   };
+  /** Per-metric z-scores (available when expanded=true) */
+  z_scores?: Record<string, number>;
   return_1y?: number;
   return_3y_ann?: number;
 }

@@ -313,7 +313,6 @@ export const MOCK_BACKTEST_RESULT = {
     },
     confidenceScore: 88,
     previousConfidence: 85,
-    status: 'healthy',
   },
 };
 

@@ -2,37 +2,41 @@ import * as d3 from 'd3';
 
 // M3 Chart Color Palette
 export const CHART_COLORS = {
-  // Primary series
-  primary: '#6750a4',
+  // Primary series (teal)
+  primary: '#0891b2',
   onPrimary: '#ffffff',
-  primaryContainer: '#eaddff',
+  primaryContainer: '#cffafe',
 
-  // Comparison series
-  comparison: '#0891b2', // Cyan/Teal
-  comparisonLight: '#67e8f9',
+  // Comparison series (blue)
+  comparison: '#3b82f6',
+  comparisonLight: '#93c5fd',
 
-  // Baseline series
-  baseline: '#ea580c', // Orange
+  // Baseline series (orange — unchanged)
+  baseline: '#ea580c',
   baselineLight: '#fdba74',
+
+  // User's market highlight (amber)
+  highlight: '#f59e0b',
+  highlightLight: '#fde68a',
 
   // Additional series for multi-series charts
   series: [
-    '#6750a4', // Purple (primary)
-    '#0891b2', // Cyan
+    '#0891b2', // Teal (primary)
+    '#3b82f6', // Blue
     '#ea580c', // Orange
     '#16a34a', // Green
-    '#dc2626', // Red
+    '#f59e0b', // Amber
     '#7c3aed', // Violet
-    '#0d9488', // Teal
-    '#ca8a04', // Yellow
+    '#0d9488', // Teal-dark
+    '#dc2626', // Red
   ],
 
-  // Semantic colors
+  // Semantic colors (unchanged)
   positive: '#16a34a',
   negative: '#dc2626',
   neutral: '#6b7280',
 
-  // Surface colors
+  // Surface colors (unchanged)
   surface: '#fef7ff',
   surfaceContainer: '#f3edf7',
   outline: '#79747e',
@@ -182,12 +186,18 @@ export const formatters = {
 
   percentAbs: (value: number) => `${value.toFixed(1)}%`,
 
-  number: (value: number) =>
-    value >= 1e6
-      ? `${(value / 1e6).toFixed(1)}M`
-      : value >= 1e3
-      ? `${(value / 1e3).toFixed(1)}K`
-      : value.toFixed(1),
+  number: (value: number) => {
+    const abs = Math.abs(value);
+    if (abs >= 1e6) {
+      const m = value / 1e6;
+      return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`;
+    }
+    if (abs >= 1e3) {
+      const k = value / 1e3;
+      return k % 1 === 0 ? `${k}K` : `${k.toFixed(1)}K`;
+    }
+    return value % 1 === 0 ? `${value}` : value.toFixed(1);
+  },
 
   integer: (value: number) => Math.round(value).toLocaleString(),
 

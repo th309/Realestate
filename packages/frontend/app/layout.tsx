@@ -130,7 +130,7 @@ export default function RootLayout({
       >
         <Providers>
           <Header />
-          <main className="flex-1 min-h-0">
+          <main className="flex-1 min-h-0 flex flex-col">
             {children}
           </main>
           <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4 pb-12">

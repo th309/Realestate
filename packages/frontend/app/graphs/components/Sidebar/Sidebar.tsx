@@ -486,12 +486,15 @@ function ScaleTypePicker({
   onXChange: (type: ScaleType) => void;
   onYChange: (type: ScaleType) => void;
 }) {
+  const SCALE_OPTIONS = ['auto', 'linear', 'log'] as const;
+  const scaleLabel = (t: ScaleType) => t === 'auto' ? 'Auto' : t === 'linear' ? 'Lin' : 'Log';
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-on-surface-variant">X Axis</span>
         <div className="flex gap-0.5">
-          {(['linear', 'log'] as const).map((t) => (
+          {SCALE_OPTIONS.map((t) => (
             <button
               key={`x-${t}`}
               onClick={() => onXChange(t)}
@@ -503,7 +506,7 @@ function ScaleTypePicker({
                 }
               `}
             >
-              {t === 'linear' ? 'Lin' : 'Log'}
+              {scaleLabel(t)}
             </button>
           ))}
         </div>
@@ -511,7 +514,7 @@ function ScaleTypePicker({
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-on-surface-variant">Y Axis</span>
         <div className="flex gap-0.5">
-          {(['linear', 'log'] as const).map((t) => (
+          {SCALE_OPTIONS.map((t) => (
             <button
               key={`y-${t}`}
               onClick={() => onYChange(t)}
@@ -523,7 +526,7 @@ function ScaleTypePicker({
                 }
               `}
             >
-              {t === 'linear' ? 'Lin' : 'Log'}
+              {scaleLabel(t)}
             </button>
           ))}
         </div>

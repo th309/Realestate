@@ -40,13 +40,51 @@ function tfToStartDate(tf: TimeFrame): string | undefined {
   return now.toISOString().slice(0, 10);
 }
 
-/** Map MetricFormat to D3 ScatterPlot FormatType */
+/**
+ * Map registry MetricFormat → D3 chart FormatType.
+ *
+ * The data layer stores ALL percentage metrics as already-multiplied values
+ * (e.g. 5.0 means 5%). D3's `percent` formatter multiplies by 100 again,
+ * so we must use `percentAbs` (which just appends %) for both `percent`
+ * and `percent_abs` registry formats.
+ */
 function toScatterFormat(fmt: string): FormatType {
   if (fmt === 'currency') return 'currency';
-  if (fmt === 'percent_abs') return 'percentAbs';
-  if (fmt === 'percent') return 'percent';
+  if (fmt === 'percent' || fmt === 'percent_abs') return 'percentAbs';
   if (fmt === 'days') return 'days';
   return 'number';
+}
+
+/**
+ * Auto-detect whether log scale is appropriate for an array of values.
+ * Returns 'log' when the data spans > 1 order of magnitude AND is
+ * right-skewed (median much less than mean), which compresses the
+ * majority of points into a small area on linear scale.
+ * All values must be positive for log to work.
+ */
+function autoScaleType(values: number[]): 'linear' | 'log' {
+  if (values.length < 4) return 'linear';
+
+  const min = Math.min(...values);
+  if (min <= 0) return 'linear'; // log can't handle zero or negative
+
+  const max = Math.max(...values);
+  const ratio = max / min;
+
+  // Need at least ~10× range before log makes sense
+  if (ratio < 10) return 'linear';
+
+  // Check skewness — if median is < 30% of mean, data is heavily right-skewed
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+
+  if (median < mean * 0.3) return 'log';
+
+  // Also use log if range spans > 2 orders of magnitude regardless
+  if (ratio > 100) return 'log';
+
+  return 'linear';
 }
 
 // ── Inline helper components ─────────────────────────────────────────────────
@@ -318,6 +356,19 @@ export function GraphsPageV2() {
   const xFormat = toScatterFormat(getMetricFormat(scatterXMetric));
   const yFormat = toScatterFormat(getMetricFormat(scatterYMetric));
 
+  // Resolve 'auto' scale types based on actual data distribution
+  const effectiveXScaleType = useMemo(() => {
+    if (scatterXScaleType !== 'auto') return scatterXScaleType;
+    if (scatterData.data.length === 0) return 'linear' as const;
+    return autoScaleType(scatterData.data.map(d => d.x));
+  }, [scatterXScaleType, scatterData.data]);
+
+  const effectiveYScaleType = useMemo(() => {
+    if (scatterYScaleType !== 'auto') return scatterYScaleType;
+    if (scatterData.data.length === 0) return 'linear' as const;
+    return autoScaleType(scatterData.data.map(d => d.y));
+  }, [scatterYScaleType, scatterData.data]);
+
   // ── SCATTER RACE DATA ─────────────────────────────────────────────────────
 
   const scatterRaceData = useScatterRaceData(
@@ -473,8 +524,8 @@ export function GraphsPageV2() {
                       yLabel={yLabel}
                       xFormat={xFormat}
                       yFormat={yFormat}
-                      xScaleType={scatterXScaleType}
-                      yScaleType={scatterYScaleType}
+                      xScaleType={effectiveXScaleType}
+                      yScaleType={effectiveYScaleType}
                       showRegression={showRegression}
                       showQuadrants={showQuadrants}
                       colorByCategory={false}

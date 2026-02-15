@@ -73,9 +73,10 @@ export function useScatterRaceData(
         })
       : entries;
 
-    // Take top POOL_SIZE by value
+    // For narrow scopes (state/region) include all markets; for national limit pool
+    // to avoid hundreds of parallel API calls.
     const sorted = [...filtered].sort((a, b) => b.value - a.value);
-    const pool = sorted.slice(0, POOL_SIZE);
+    const pool = scope === 'national' ? sorted.slice(0, POOL_SIZE) : sorted;
 
     // Always include primary market
     const primaryId = primaryMarket?.id ?? null;
@@ -164,7 +165,7 @@ export function useScatterRaceData(
             label: market.name,
             x: xVal,
             y: yVal,
-            size: market.id === primaryId ? 1.5 : 1,
+            size: market.id === primaryId ? 14 : 8,
           });
         }
 
