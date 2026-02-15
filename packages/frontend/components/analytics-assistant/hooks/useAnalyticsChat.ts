@@ -49,13 +49,13 @@ export function useAnalyticsChat(options: UseChatOptions = {}): UseChatReturn {
 
       try {
         // Build request body
-        const requestBody: Record<string, unknown> = {
+        const requestBody: {
+          message: string;
+          context?: AnalyticsContext;
+        } = {
           message: content.trim(),
+          ...(options.context && { context: options.context }),
         };
-
-        if (options.context) {
-          requestBody.context = options.context;
-        }
 
         const response = await fetch(
           `/api/analytics/chat/${conversationIdRef.current}`,
@@ -72,22 +72,22 @@ export function useAnalyticsChat(options: UseChatOptions = {}): UseChatReturn {
           throw new Error(data.error || 'Failed to get response');
         }
 
-        let content = typeof data.response === 'string' ? data.response.trim() : '';
-        if (!content && data.structuredData?.rankings?.items?.length) {
+        let responseContent = typeof data.response === 'string' ? data.response.trim() : '';
+        if (!responseContent && data.structuredData?.rankings?.items?.length) {
           const r = data.structuredData.rankings;
           const label = r.direction === 'bottom' ? 'Bottom' : 'Top';
           const top = r.items.slice(0, 5);
-          content = `${label} markets:\n${top.map((i: { rank: number; name: string; score?: number; state?: string }) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`).join('\n')}`;
+          responseContent = `${label} markets:\n${top.map((i: { rank: number; name: string; score?: number; state?: string }) => `${i.rank}. ${i.name}${i.score != null ? ` (${i.score})` : ''}${i.state ? `, ${i.state}` : ''}`).join('\n')}`;
         }
-        if (!content && data.structuredData?.errorMessage) {
-          content = `Unable to retrieve rankings: ${data.structuredData.errorMessage}`;
+        if (!responseContent && data.structuredData?.errorMessage) {
+          responseContent = `Unable to retrieve rankings: ${data.structuredData.errorMessage}`;
         }
-        if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
+        if (!responseContent) responseContent = 'I received your message but had trouble showing a response. Please try again.';
 
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          content,
+          content: responseContent,
           toolsUsed: data.toolsUsed,
           timestamp: new Date().toISOString(),
           // Include structured data for visual rendering if present

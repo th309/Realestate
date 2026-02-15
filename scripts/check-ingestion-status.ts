@@ -102,7 +102,6 @@ async function checkStatus() {
 
     const tables = [
         { name: 'markets', desc: 'Geographic regions' },
-        { name: 'market_time_series', desc: 'Generic time series' },
         { name: 'zillow_zhvi', desc: 'Zillow Home Value Index' },
         { name: 'zillow_zori', desc: 'Zillow Rent Index' },
         { name: 'zillow_zhvf', desc: 'Zillow Home Value Forecast' },
@@ -164,19 +163,7 @@ async function checkStatus() {
         console.log(`  ZORI: Last insert at ${recentZori[0].created_at}, date: ${recentZori[0].date}`);
     }
 
-    // market_time_series freshness
-    const { data: recentTS } = await supabase
-        .from('market_time_series')
-        .select('date, metric_name, data_source')
-        .order('id', { ascending: false })
-        .limit(3);
-
-    if (recentTS && recentTS.length > 0) {
-        console.log(`  Time Series: Last entries:`);
-        recentTS.forEach(r => {
-            console.log(`        ${r.data_source}/${r.metric_name} @ ${r.date}`);
-        });
-    }
+    // market_time_series table has been removed (data migrated to source-specific tables)
 
     // ========================================================================
     // 5. Check for potential issues

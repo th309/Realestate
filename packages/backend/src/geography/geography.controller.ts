@@ -180,6 +180,7 @@ export class GeographyController {
   async search(
     @Query('query') query: string,
     @Query('type') type?: string,
+    @Query('limit') limitStr?: string,
   ): Promise<any[]> {
     if (!query || query.length < 2) {
       throw new HttpException(
@@ -187,8 +188,9 @@ export class GeographyController {
         HttpStatus.BAD_REQUEST,
       );
     }
+    const limit = limitStr ? Math.min(parseInt(limitStr, 10) || 15, 50) : undefined;
     try {
-      return await this.geographyService.searchGeographies(query, type);
+      return await this.geographyService.searchGeographies(query, type, limit);
     } catch (error: any) {
       this.logger.error(`Error searching geographies for "${query}"`, error);
       throw new HttpException(

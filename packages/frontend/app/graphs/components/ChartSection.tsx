@@ -70,8 +70,8 @@ const chartTypeConfig = [
 
 // M3 Color tokens for chart
 const CHART_COLORS = {
-  primary: '#6750a4',       // Purple - primary area
-  comparison: '#0891b2',    // Cyan/Teal - comparison area (more distinct)
+  primary: '#0891b2',       // Teal - primary area
+  comparison: '#3b82f6',    // Blue - comparison area
   baseline: '#ea580c',      // Bright orange - baseline (highly visible)
   tertiary: '#7d5260',
   outline: '#79747e',

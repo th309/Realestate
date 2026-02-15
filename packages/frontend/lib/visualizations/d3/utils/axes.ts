@@ -10,13 +10,58 @@ interface AxisConfig {
   gridLines?: boolean;
 }
 
+/**
+ * For log scales, d3's `.ticks(n)` is a weak hint and often produces
+ * dozens of ticks (1, 2, 3, 5 at every order of magnitude).
+ * This helper generates clean "1-2-5" ticks capped at `maxTicks`.
+ */
+function logTickValues(scale: d3.AxisScale<d3.AxisDomain>, maxTicks: number): number[] {
+  const domain = (scale as any).domain() as [number, number];
+  const lo = Math.max(domain[0], 1e-10);
+  const hi = Math.max(domain[1], lo * 1.01);
+
+  const logLo = Math.floor(Math.log10(lo));
+  const logHi = Math.ceil(Math.log10(hi));
+
+  // Generate candidate ticks: 1, 2, 5 × each power of 10
+  const candidates: number[] = [];
+  for (let p = logLo; p <= logHi; p++) {
+    const base = Math.pow(10, p);
+    for (const m of [1, 2, 5]) {
+      const v = base * m;
+      if (v >= lo * 0.99 && v <= hi * 1.01) candidates.push(v);
+    }
+  }
+
+  if (candidates.length <= maxTicks) return candidates;
+
+  // Too many — thin to powers of 10 only
+  const powersOf10 = candidates.filter(v => {
+    const l = Math.log10(v);
+    return Math.abs(l - Math.round(l)) < 0.001;
+  });
+  if (powersOf10.length <= maxTicks && powersOf10.length >= 2) return powersOf10;
+
+  // Still too many — evenly sample
+  const step = Math.max(1, Math.floor(candidates.length / maxTicks));
+  return candidates.filter((_, i) => i % step === 0).slice(0, maxTicks);
+}
+
+/** Detect if the underlying scale is logarithmic */
+function isLogScale(scale: d3.AxisScale<d3.AxisDomain>): boolean {
+  // d3.scaleLog has a `.base()` method that linear/other scales lack
+  return typeof (scale as any).base === 'function';
+}
+
 // Create X axis generator
 export function createXAxis(config: AxisConfig): d3.Axis<d3.AxisDomain> {
   const { scale, tickCount = 6, tickFormat, formatType, gridLines } = config;
 
   const axis = d3.axisBottom(scale);
 
-  if (tickCount) {
+  if (isLogScale(scale)) {
+    axis.tickValues(logTickValues(scale, tickCount) as d3.AxisDomain[]);
+  } else if (tickCount) {
     axis.ticks(tickCount);
   }
 
@@ -39,7 +84,9 @@ export function createYAxis(config: AxisConfig): d3.Axis<d3.AxisDomain> {
 
   const axis = d3.axisLeft(scale);
 
-  if (tickCount) {
+  if (isLogScale(scale)) {
+    axis.tickValues(logTickValues(scale, tickCount) as d3.AxisDomain[]);
+  } else if (tickCount) {
     axis.ticks(tickCount);
   }
 

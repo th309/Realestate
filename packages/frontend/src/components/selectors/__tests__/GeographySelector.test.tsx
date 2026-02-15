@@ -6,7 +6,7 @@ describe('GeographySelector', () => {
   const defaultProps = {
     currentLevel: 'zip' as const,
     currentRegion: { id: '60601', name: 'Chicago, IL 60601' },
-    availableLevels: ['national', 'state', 'metro', 'county', 'zip'] as const,
+    availableLevels: ['national', 'state', 'metro', 'county', 'zip'] as ('national' | 'state' | 'metro' | 'county' | 'zip' | 'city')[],
     onSelect: vi.fn(),
   };
 

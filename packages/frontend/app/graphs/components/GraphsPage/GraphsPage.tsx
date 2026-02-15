@@ -21,15 +21,15 @@ export function GraphsPage() {
   const {
     primaryMarket,
     comparisonMarket,
-    activeTemplate,
-    vizType,
+    chartType: activeTemplate,
+    chartType: vizType,
     activeMetric,
     userType,
     selectMarket,
-    setActiveTemplate,
-    setVizType,
+    setChartType: setActiveTemplate,
+    setChartType: setVizType,
     setActiveMetric,
-  } = useGraphsState();
+  } = useGraphsState() as any;
 
   // User's markets hook
   const {

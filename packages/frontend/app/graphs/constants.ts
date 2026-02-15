@@ -214,6 +214,179 @@ export const SOURCES: Record<string, string> = {
   cost_of_living: 'Bureau of Economic Analysis RPP',
 };
 
+// ── CENSUS DIVISION & REGION MAPPING ──
+// Uses the 9 Census Divisions for granular comparisons, grouped under 4 Census Regions.
+// Source: U.S. Census Bureau — Census Regions and Divisions of the United States
+
+export type CensusDivision =
+  | 'New England'
+  | 'Middle Atlantic'
+  | 'East North Central'
+  | 'West North Central'
+  | 'South Atlantic'
+  | 'East South Central'
+  | 'West South Central'
+  | 'Mountain'
+  | 'Pacific';
+
+export type CensusRegion = 'Northeast' | 'Midwest' | 'South' | 'West';
+
+export const STATE_TO_CENSUS_DIVISION: Record<string, CensusDivision> = {
+  // Division 1: New England (Region: Northeast)
+  CT: 'New England', ME: 'New England', MA: 'New England', NH: 'New England', RI: 'New England', VT: 'New England',
+  // Division 2: Middle Atlantic (Region: Northeast)
+  NJ: 'Middle Atlantic', NY: 'Middle Atlantic', PA: 'Middle Atlantic',
+  // Division 3: East North Central (Region: Midwest)
+  IL: 'East North Central', IN: 'East North Central', MI: 'East North Central', OH: 'East North Central', WI: 'East North Central',
+  // Division 4: West North Central (Region: Midwest)
+  IA: 'West North Central', KS: 'West North Central', MN: 'West North Central', MO: 'West North Central',
+  NE: 'West North Central', ND: 'West North Central', SD: 'West North Central',
+  // Division 5: South Atlantic (Region: South)
+  DE: 'South Atlantic', DC: 'South Atlantic', FL: 'South Atlantic', GA: 'South Atlantic', MD: 'South Atlantic',
+  NC: 'South Atlantic', SC: 'South Atlantic', VA: 'South Atlantic', WV: 'South Atlantic',
+  // Division 6: East South Central (Region: South)
+  AL: 'East South Central', KY: 'East South Central', MS: 'East South Central', TN: 'East South Central',
+  // Division 7: West South Central (Region: South)
+  AR: 'West South Central', LA: 'West South Central', OK: 'West South Central', TX: 'West South Central',
+  // Division 8: Mountain (Region: West)
+  AZ: 'Mountain', CO: 'Mountain', ID: 'Mountain', MT: 'Mountain', NV: 'Mountain', NM: 'Mountain', UT: 'Mountain', WY: 'Mountain',
+  // Division 9: Pacific (Region: West)
+  AK: 'Pacific', CA: 'Pacific', HI: 'Pacific', OR: 'Pacific', WA: 'Pacific',
+};
+
+export const DIVISION_TO_REGION: Record<CensusDivision, CensusRegion> = {
+  'New England': 'Northeast',
+  'Middle Atlantic': 'Northeast',
+  'East North Central': 'Midwest',
+  'West North Central': 'Midwest',
+  'South Atlantic': 'South',
+  'East South Central': 'South',
+  'West South Central': 'South',
+  'Mountain': 'West',
+  'Pacific': 'West',
+};
+
+/** Legacy alias — maps state to its 4-region Census Region */
+export const STATE_TO_CENSUS_REGION: Record<string, CensusRegion> = Object.fromEntries(
+  Object.entries(STATE_TO_CENSUS_DIVISION).map(([st, div]) => [st, DIVISION_TO_REGION[div]])
+);
+
+/** Get all state abbreviations in the same Census Division */
+export function getDivisionStates(stateAbbr: string): string[] {
+  const division = STATE_TO_CENSUS_DIVISION[stateAbbr];
+  if (!division) return [stateAbbr];
+  return Object.entries(STATE_TO_CENSUS_DIVISION)
+    .filter(([, d]) => d === division)
+    .map(([s]) => s);
+}
+
+/** @deprecated Use getDivisionStates — kept for any legacy callers */
+export function getRegionStates(stateAbbr: string): string[] {
+  return getDivisionStates(stateAbbr);
+}
+
+// ── STATE PARSING HELPERS ──
+
+/**
+ * Extract the PRIMARY state abbreviation from a geography name.
+ * Returns only the first state listed.
+ *   "Chicago-Naperville-Elgin, IL-IN" → "IL"
+ *   "Washington-Arlington-Alexandria, DC-VA-MD-WV" → "DC"
+ *   "Cook County, IL" → "IL"
+ */
+export function parseStateFromName(name: string): string | null {
+  const match = name.match(/,\s*([A-Z]{2})(?:\s*-\s*[A-Z]{2})*\s*$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Extract ALL state abbreviations from a geography name.
+ * Multi-state metros return all states they span.
+ *   "Chicago-Naperville-Elgin, IL-IN" → ["IL", "IN"]
+ *   "Washington-Arlington-Alexandria, DC-VA-MD-WV" → ["DC", "VA", "MD", "WV"]
+ *   "Cook County, IL" → ["IL"]
+ */
+export function parseAllStatesFromName(name: string): string[] {
+  const match = name.match(/,\s*((?:[A-Z]{2})(?:\s*-\s*[A-Z]{2})*)\s*$/);
+  if (!match) return [];
+  return match[1].split(/\s*-\s*/);
+}
+
+/**
+ * Build the set of allowed states for scope-based filtering.
+ * For multi-state metros (e.g., DC-VA-MD-WV), state scope includes
+ * ALL states the metro spans so it can be meaningfully compared.
+ *
+ * "region" scope uses Census Divisions (9 divisions, e.g. South Atlantic)
+ * rather than the broad 4-region grouping — giving more meaningful comparisons.
+ */
+export function getAllowedStates(
+  primaryName: string | undefined,
+  primaryState: string | undefined,
+  scope: 'state' | 'region' | 'national',
+): Set<string> | null {
+  if (scope === 'national' || !primaryState) return null;
+
+  if (scope === 'state') {
+    // For multi-state metros, include all states they span
+    const states = primaryName ? parseAllStatesFromName(primaryName) : [];
+    if (states.length > 1) {
+      return new Set(states);
+    }
+    return new Set([primaryState]);
+  }
+
+  if (scope === 'region') {
+    // Include all states in the same Census Division, plus any extra
+    // states from a multi-state metro that might cross division boundaries
+    const divisionStates = new Set(getDivisionStates(primaryState));
+    if (primaryName) {
+      for (const st of parseAllStatesFromName(primaryName)) {
+        divisionStates.add(st);
+      }
+    }
+    return divisionStates;
+  }
+
+  return null;
+}
+
+/**
+ * Check if a geography name belongs to any of the allowed states.
+ * For multi-state metros, passes if ANY of their states is allowed.
+ */
+export function matchesAllowedStates(name: string, allowedStates: Set<string>): boolean {
+  const states = parseAllStatesFromName(name);
+  if (states.length === 0) return false;
+  return states.some((st) => allowedStates.has(st));
+}
+
+/**
+ * Build the benchmark label for the current scope.
+ */
+export function getScopeBenchmarkLabel(
+  primaryName: string | undefined,
+  primaryState: string | undefined,
+  scope: 'state' | 'region' | 'national',
+): string {
+  if (scope === 'national' || !primaryState) return 'National Median';
+
+  if (scope === 'state') {
+    const states = primaryName ? parseAllStatesFromName(primaryName) : [];
+    if (states.length > 1) {
+      return `${states.join('/')} Median`;
+    }
+    return `${primaryState} Median`;
+  }
+
+  if (scope === 'region') {
+    const division = STATE_TO_CENSUS_DIVISION[primaryState];
+    return division ? `${division} Median` : 'Regional Median';
+  }
+
+  return 'National Median';
+}
+
 // Helper function to get source for a metric
 export function getMetricSource(metricId: string): string {
   return SOURCES[metricId] || 'Data source not specified';

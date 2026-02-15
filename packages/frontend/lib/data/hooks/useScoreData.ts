@@ -60,21 +60,7 @@ export function useScoreData(
   const { enabled = true, expanded = false, historyMonths = 0 } = options;
   const { getAccess } = useEntitlements();
   const scoresAccess = getAccess('feature', 'scores');
-
-  // If scores feature is gated, return early without fetching
-  if (scoresAccess.level === 'none') {
-    return {
-      data: null,
-      homeready: null,
-      investoredge: null,
-      markethealth: null,
-      isLoading: false,
-      error: null,
-      refetch: () => {},
-      gated: true,
-      tierRequired: scoresAccess.tierRequired ?? undefined,
-    };
-  }
+  const isGated = scoresAccess.level === 'none';
 
   const queryKey = ['scores', geoLevel, regionId, expanded, historyMonths].filter(
     (v) => v !== null && v !== undefined
@@ -96,10 +82,25 @@ export function useScoreData(
       }
       return fetchScore(geoLevel, regionId);
     },
-    enabled: enabled && !!geoLevel && !!regionId,
+    // Disable query when gated or when caller disables it
+    enabled: enabled && !isGated && !!geoLevel && !!regionId,
     staleTime: 5 * 60 * 1000, // 5 minutes - scores can change more frequently
     gcTime: 30 * 60 * 1000,
   });
+
+  if (isGated) {
+    return {
+      data: null,
+      homeready: null,
+      investoredge: null,
+      markethealth: null,
+      isLoading: false,
+      error: null,
+      refetch: () => {},
+      gated: true,
+      tierRequired: scoresAccess.tierRequired ?? undefined,
+    };
+  }
 
   return {
     data: data ?? null,

@@ -12,10 +12,12 @@ interface TemplateVisualizationProps {
   onVizTypeChange: (viz: VizType) => void;
 }
 
-const VIZ_TYPES: { id: VizType; label: string }[] = [
+const VIZ_TYPES: { id: string; label: string }[] = [
+  { id: 'timeseries', label: 'Timeline' },
   { id: 'scatter', label: 'Scatter' },
-  { id: 'heatmap', label: 'Heatmap' },
-  { id: 'trend', label: 'Trend' },
+  { id: 'waterfall', label: 'Waterfall' },
+  { id: 'radar', label: 'Radar' },
+  { id: 'bar', label: 'Rankings' },
 ];
 
 /**
@@ -43,7 +45,7 @@ export function TemplateVisualization({
           {VIZ_TYPES.map(vt => (
             <button
               key={vt.id}
-              onClick={() => onVizTypeChange(vt.id)}
+              onClick={() => onVizTypeChange(vt.id as any)}
               className={`
                 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                 ${vizType === vt.id

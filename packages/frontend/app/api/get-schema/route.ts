@@ -17,7 +17,6 @@ export async function GET() {
     // List of tables to inspect (we'll try to query them all)
     const tablesToCheck = [
       'markets',
-      'market_time_series',
       'time_series_data',
       'current_scores',
       'user_favorites',

@@ -188,10 +188,10 @@ export function formatTooltipValue(
       valueColor = value >= 100 ? '#b91c1c' : '#3b82f6';
       break;
     case 'number':
-      displayValue = value >= 0 ? value.toLocaleString('en-US') : 'No data';
+      displayValue = value >= 0 ? Math.round(value).toLocaleString('en-US') : 'No data';
       break;
     case 'days':
-      displayValue = value >= 0 ? `${value.toLocaleString('en-US')} days` : 'No data';
+      displayValue = value >= 0 ? `${Math.round(value).toLocaleString('en-US')} days` : 'No data';
       break;
     case 'currency':
     default:

@@ -337,9 +337,8 @@ serve(async (req) => {
         return Math.round(((r.rawScore - minRaw) / (maxRaw - minRaw)) * 100 * 10) / 10;
       });
 
-      // Save scores
-      for (let i = 0; i < locations.length; i++) {
-        const location = locations[i];
+      // Build all score rows, then batch-upsert
+      const scoreRows = locations.map((location, i) => {
         const score = normalizedScores[i];
         const grade = scoreToGrade(score);
 
@@ -357,28 +356,34 @@ serve(async (req) => {
         ) / 10;
         const confidenceLevel = getConfidenceLevel(confidence);
 
-        const { error } = await supabase.from('propertyiq_scores').upsert(
-          {
-            geography: geoLevel,
-            location_id: location.location_id,
-            location_name: location.location_name,
-            score_type: scoreType,
-            score,
-            grade,
-            confidence,
-            confidence_level: confidenceLevel,
-            median_price: location.median_price,
-            score_date: targetDate,
-            created_at: new Date().toISOString(),
-          },
-          { onConflict: 'geography,location_id,score_type,score_date' }
-        );
+        return {
+          geography: geoLevel,
+          location_id: location.location_id,
+          location_name: location.location_name,
+          score_type: scoreType,
+          score,
+          grade,
+          confidence,
+          confidence_level: confidenceLevel,
+          median_price: location.median_price,
+          score_date: targetDate,
+          created_at: new Date().toISOString(),
+        };
+      });
+
+      // Upsert in batches of 1000 to reduce round trips and WAL churn
+      const BATCH_SIZE = 1000;
+      for (let i = 0; i < scoreRows.length; i += BATCH_SIZE) {
+        const batch = scoreRows.slice(i, i + BATCH_SIZE);
+        const { error } = await supabase
+          .from('propertyiq_scores')
+          .upsert(batch, { onConflict: 'geography,location_id,score_type,score_date' });
 
         if (error) {
-          errors++;
-          console.error(`Error saving score: ${error.message}`);
+          errors += batch.length;
+          console.error(`Batch upsert failed (rows ${i}-${i + batch.length}): ${error.message}`);
         } else {
-          calculated++;
+          calculated += batch.length;
         }
       }
     }

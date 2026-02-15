@@ -429,15 +429,22 @@ export function MarketDashboard({
   // Unsupported metrics will just return null values
   const metricIds = useMemo(() => [
     // Core metrics for AI insights
-    'home_value', 'home_value_yoy', 'days_on_market', 'for_sale_inventory',
+    'home_value', 'home_value_yoy', 'home_value_mom', 'days_on_market', 'for_sale_inventory',
     'inventory_yoy', 'rent_index', 'cap_rate', 'price_cut_pct',
     // Homebuyer view metrics
     'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
     'new_listings_yoy', 'hotness_score', 'pending_ratio', 'sale_to_list',
+    'years_to_save', 'homeowner_affordability', 'renter_affordability', 'income_to_rent',
+    'price_increase_pct', 'new_listings', 'inventory_surplus',
     // Investor view metrics
     'gross_yield', 'rent_for_houses', 'grm',
+    'home_value_5yr', 'overvalued_pct',
     // Shared metrics
     'median_income', 'population', 'population_growth',
+    'unemployment_rate', 'job_growth', 'cost_of_living',
+    'total_permits', 'sf_permits', 'mf_permits', 'permits_yoy',
+    // PropertyIQ scores
+    'homeready_score', 'investoredge_score', 'market_health_score',
   ], []);
 
   // Fetch metric data using the data layer hook

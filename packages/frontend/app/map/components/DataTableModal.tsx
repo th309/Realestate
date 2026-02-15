@@ -32,7 +32,7 @@ function formatValue(value: number | null, format: MetricFormat): string {
         case 'number':
             return value >= 1000
                 ? `${(value / 1000).toFixed(1)}K`
-                : value.toLocaleString();
+                : Math.round(value).toLocaleString();
         case 'days':
             return `${Math.round(value)} days`;
         case 'index':

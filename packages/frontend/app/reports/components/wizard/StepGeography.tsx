@@ -43,8 +43,7 @@ export const StepGeography: React.FC<StepGeographyProps> = ({ wizardState }) => 
     handleSearch,
     clearSearch,
   } = useUniversalSearch({
-    accessToken: '', // Mapbox accessToken is handled internally or by global mapboxgl
-    filterByGeoLevel: searchFilter
+    filterByGeoLevel: searchFilter,
   });
 
   const isComparison = selectedTemplate?.config.comparison !== undefined;

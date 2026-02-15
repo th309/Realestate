@@ -226,14 +226,32 @@ export class GeographyService implements OnModuleInit {
   async searchGeographies(
     query: string,
     type?: string,
-    limit: number = 5,
+    limit: number = 15,
   ): Promise<any[]> {
     this.logger.log(`Searching geographies: "${query}" (type: ${type || 'all'})`);
 
     let dbQuery = this.supabase
       .from('geographies')
-      .select('geography_id, geography_type, name, name_short, state_code, cbsa_code, cbsa_name, latitude, longitude')
-      .ilike('name', `%${query}%`)
+      .select('geography_id, geography_type, name, name_short, state_code, cbsa_code, cbsa_name, fips_code, latitude, longitude, population');
+
+    // Split query into words so "washington dc" matches names containing
+    // both "washington" AND "dc" even if they're not adjacent.
+    // Single-word queries also match against name_short for short metro names.
+    const words = query.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 1) {
+      // Single word: match name OR name_short
+      const pattern = `%${words[0]}%`;
+      dbQuery = dbQuery.or(`name.ilike.${pattern},name_short.ilike.${pattern}`);
+    } else {
+      // Multi-word: each word must appear in the name (AND semantics)
+      for (const word of words) {
+        dbQuery = dbQuery.ilike('name', `%${word}%`);
+      }
+    }
+
+    dbQuery = dbQuery
+      .order('population', { ascending: false, nullsFirst: false })
       .limit(limit);
 
     if (type) {

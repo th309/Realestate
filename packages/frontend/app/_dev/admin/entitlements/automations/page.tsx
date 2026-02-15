@@ -26,7 +26,7 @@ type ActionType = 'send_email' | 'add_tag' | 'start_trial' | 'notify_slack' | 'c
 interface AutomationTrigger {
   type: TriggerType;
   condition: string;
-  value?: number;
+  value?: number | string;
 }
 
 interface AutomationAction {

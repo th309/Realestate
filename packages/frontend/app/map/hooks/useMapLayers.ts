@@ -238,25 +238,29 @@ function removeExistingLayers(map: mapboxgl.Map): void {
 }
 
 function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null {
-  // All GeoJSON now comes from the backend API
+  // Prefer static files (served from /public, no backend or DB hit).
+  // Fall back to backend API for layers without static files.
+  if (geoLevel === 'metro') {
+    return '/geojson/cbsa_2023.json';
+  }
+
+  // These layers use the backend API (cached 24h in-memory).
+  // Run `npx tsx scripts/generate-static-geojson.ts` to create static
+  // versions, then swap the URLs here.
   if (geoLevel === 'national') {
     return `${API_URL}${GEOJSON_SOURCES.national}`;
   } else if (geoLevel === 'state') {
     return `${API_URL}${GEOJSON_SOURCES.state}`;
   } else if (geoLevel === 'county') {
-    // Use state-specific endpoint if state selected, otherwise all counties
     if (selectedState) {
       return `${API_URL}${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`;
     }
     return `${API_URL}${GEOJSON_SOURCES.county}`;
-  } else if (geoLevel === 'metro') {
-    return `${API_URL}${GEOJSON_SOURCES.metro}`;
   } else if (geoLevel === 'city' && selectedState) {
     return `${API_URL}${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`;
   } else if (geoLevel === 'zip' && selectedState) {
     return `${API_URL}${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`;
   } else if (geoLevel === 'tract' && selectedState) {
-    // Tracts not yet available - table is empty
     console.warn('Tract data not available');
     return null;
   }
@@ -542,20 +546,20 @@ function addMapLayers(
       case 'number':
       case 'index':
         // Plain number with thousands separator
-        valueFormat = ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
+        valueFormat = ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }];
         break;
       case 'days':
         // Number with "days" suffix
         valueFormat = [
           'concat',
-          ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
+          ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }],
           ' days'
         ];
         break;
       case 'currency':
       default:
         // Currency with $ prefix
-        valueFormat = ['concat', '$', ['number-format', ['get', 'value'], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
+        valueFormat = ['concat', '$', ['number-format', ['round', ['get', 'value']], { 'min-fraction-digits': 0, 'max-fraction-digits': 0 }]];
         break;
     }
 
@@ -649,20 +653,32 @@ function setupInteractions(
 
     const feature = e.features[0];
     const props = feature.properties || {};
+    const geoLevel = geoLevelRef.current;
 
-    // Extract geography info based on level
+    // Extract geography ID from GeoJSON properties.
+    // The enrichment step sets props.id, but we also handle raw GeoJSON
+    // properties (CBSAFP for metros, GEOID for counties/zips, etc.)
+    // to be resilient against race conditions or stale features.
+    const id = props.id
+      || props.CBSAFP   // Metro CBSA code
+      || props.GEOID     // Census GEOID (works for counties, zips, tracts)
+      || props.GEOID20   // ZIP ZCTA GEOID
+      || props.ZCTA5CE20 // ZIP ZCTA code
+      || feature.id
+      || '';
+
+    // Extract display name — prefer enriched name, fall back to raw GeoJSON
     const name = props.name || props.displayName || props.NAME || 'Unknown';
-    const id = props.id || feature.id || '';
     const value = props.value ?? null;
 
     // Get state abbreviation if available
-    const stateFips = props.STATEFP || (typeof id === 'string' ? id.substring(0, 2) : '');
+    const stateFips = props.STATEFP || (typeof id === 'string' && id.length >= 2 ? id.substring(0, 2) : '');
     const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
 
     onFeatureClick({
       id: String(id),
       name,
-      geoLevel: geoLevelRef.current,
+      geoLevel,
       value,
       stateAbbr
     });

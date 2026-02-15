@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { GraphsPage } from './components/GraphsPage';
+import { GraphsPageV2 } from './components/GraphsPageV2';
 
 function LoadingFallback() {
   return (
@@ -17,7 +17,7 @@ function LoadingFallback() {
 export default function GraphsPageWrapper() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <GraphsPage />
+      <GraphsPageV2 />
     </Suspense>
   );
 }

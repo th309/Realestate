@@ -63,7 +63,6 @@ export const DATA_DATES: Record<DataSource, string> = {
  * Metrics that only have data at the METRO level
  */
 export const METRO_ONLY_METRICS = new Set([
-  'rent_index',
   'rent_for_houses',
   'income_to_rent',
   'homeowner_affordability',
@@ -779,7 +778,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'homeready_score',
     rangeType: 'full',
-    hasTimeSeries: false,
+    hasTimeSeries: true,
   },
 
   investoredge_score: {
@@ -792,7 +791,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'investoredge_score',
     rangeType: 'full',
-    hasTimeSeries: false,
+    hasTimeSeries: true,
   },
 
   market_health_score: {
@@ -805,7 +804,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'market_health_score',
     rangeType: 'full',
-    hasTimeSeries: false,
+    hasTimeSeries: true,
   },
 };
 
