@@ -7,3 +7,4 @@ export * from './Sidebar';
 export * from './BenchmarkPanel';
 export * from './DataTableModal';
 export * from './RightDetailPanel';
+export * from './MapContextMenu';

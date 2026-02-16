@@ -32,7 +32,7 @@ export function MetricTitle({
 
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const triggerRef = useRef<HTMLElement>(null);
+  const iconRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const closeTooltip = useCallback(() => {
@@ -43,8 +43,8 @@ export function MetricTitle({
   }, []);
 
   const calculatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
+    if (!iconRef.current) return;
+    const rect = iconRef.current.getBoundingClientRect();
     const tooltipWidth = 288;
     const tooltipHeight = 240;
     const gap = 12;
@@ -75,7 +75,10 @@ export function MetricTitle({
     setPosition({ top, left });
   }, []);
 
-  const handleClick = useCallback(() => {
+  const handleInfoClick = useCallback((e: React.MouseEvent) => {
+    // Stop propagation so parent click handlers (metric switching) don't fire
+    e.stopPropagation();
+    e.preventDefault();
     if (!showTooltip || !metricDef) return;
     if (isOpen) {
       closeTooltip();
@@ -96,7 +99,7 @@ export function MetricTitle({
     function handleClickOutside(e: MouseEvent) {
       if (
         tooltipRef.current && !tooltipRef.current.contains(e.target as Node) &&
-        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+        iconRef.current && !iconRef.current.contains(e.target as Node)
       ) {
         closeTooltip();
       }
@@ -111,12 +114,23 @@ export function MetricTitle({
 
   return (
     <>
-      <Tag
-        ref={triggerRef as unknown as React.Ref<HTMLDivElement>}
-        className={`${hasTooltip ? 'decoration-dotted underline underline-offset-2 decoration-on-surface-variant/30 cursor-pointer' : ''} ${className}`}
-        onClick={handleClick}
-      >
+      <Tag className={className}>
         {title}
+        {hasTooltip && (
+          <span
+            ref={iconRef}
+            role="button"
+            tabIndex={0}
+            onClick={handleInfoClick}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleInfoClick(e as unknown as React.MouseEvent); } }}
+            className="inline-flex items-center justify-center w-3.5 h-3.5 ml-1 align-middle text-on-surface-variant/40 hover:text-on-surface-variant transition-colors duration-150 cursor-pointer"
+            aria-label={`Info about ${title}`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 12.5a5.5 5.5 0 110-11 5.5 5.5 0 010 11zM7.25 7h1.5v4h-1.5V7zm0-2.5h1.5V6h-1.5V4.5z" />
+            </svg>
+          </span>
+        )}
       </Tag>
 
       {isOpen && metricDef && typeof document !== 'undefined' && createPortal(

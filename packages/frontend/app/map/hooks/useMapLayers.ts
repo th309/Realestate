@@ -73,6 +73,7 @@ interface UseMapLayersProps {
   mapLoaded: boolean;
   highlightedFeature?: SearchResult | null;
   onFeatureClick?: (geography: SelectedGeography | null) => void;
+  onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void;
 }
 
 export function useMapLayers({
@@ -85,7 +86,8 @@ export function useMapLayers({
   mapData,
   mapLoaded,
   highlightedFeature,
-  onFeatureClick
+  onFeatureClick,
+  onFeatureContextMenu
 }: UseMapLayersProps) {
   // Store current geoLevel in ref for click handler
   const geoLevelRef = useRef(geoLevel);
@@ -162,11 +164,11 @@ export function useMapLayers({
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson, highlightedFeature);
 
       // Setup hover and click interactions
-      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick);
+      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick, onFeatureContextMenu);
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, highlightedFeature, onFeatureClick]);
+  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, highlightedFeature, onFeatureClick, onFeatureContextMenu]);
 
   // Effect to trigger logic when core dependencies change
   useEffect(() => {
@@ -598,7 +600,8 @@ function setupInteractions(
   forecastHorizon: ForecastHorizon,
   geoLevelRef: React.MutableRefObject<GeoLevel>,
   selectedMetric: string,
-  onFeatureClick?: (geography: SelectedGeography | null) => void
+  onFeatureClick?: (geography: SelectedGeography | null) => void,
+  onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void
 ): void {
   map.on('mouseenter', 'geo-fills', () => {
     map.getCanvas().style.cursor = 'pointer';
@@ -692,6 +695,35 @@ function setupInteractions(
     if (features.length === 0) {
       onFeatureClick(null);
     }
+  });
+
+  // Right-click context menu on features
+  map.on('contextmenu', 'geo-fills', (e) => {
+    if (!onFeatureContextMenu || !e.features || e.features.length === 0) return;
+    e.preventDefault();
+
+    const feature = e.features[0];
+    const props = feature.properties || {};
+    const geoLevel = geoLevelRef.current;
+
+    const id = props.id
+      || props.CBSAFP
+      || props.GEOID
+      || props.GEOID20
+      || props.ZCTA5CE20
+      || feature.id
+      || '';
+
+    const name = props.name || props.displayName || props.NAME || 'Unknown';
+    const value = props.value ?? null;
+    const stateFips = props.STATEFP || (typeof id === 'string' && id.length >= 2 ? id.substring(0, 2) : '');
+    const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
+
+    onFeatureContextMenu({
+      geography: { id: String(id), name, geoLevel, value, stateAbbr },
+      x: e.originalEvent.clientX,
+      y: e.originalEvent.clientY,
+    });
   });
 }
 

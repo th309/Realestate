@@ -11,7 +11,7 @@ import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
 
 // Import components
 import { MenuIcon, TableIcon } from './components';
-import { SearchWidget, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel } from './components';
+import { SearchWidget, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel, MapContextMenu } from './components';
 import { Breadcrumbs } from '@/components/navigation';
 
 // Import hooks
@@ -47,6 +47,7 @@ export default function MapPage() {
   const [selectedGeography, setSelectedGeography] = useState<SelectedGeography | null>(null);
   const [showTableView, setShowTableView] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ geography: SelectedGeography; x: number; y: number } | null>(null);
   const isResizing = useRef(false);
   const pathname = usePathname();
 
@@ -99,10 +100,15 @@ export default function MapPage() {
     }
   }, []);
 
+  const handleFeatureContextMenu = useCallback((info: { geography: SelectedGeography; x: number; y: number }) => {
+    setContextMenu(info);
+  }, []);
+
   const { updateMapLayers } = useMapLayers({
     map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
     highlightedFeature,
-    onFeatureClick: handleFeatureClick
+    onFeatureClick: handleFeatureClick,
+    onFeatureContextMenu: handleFeatureContextMenu
   });
 
   // Single fetch through data binding layer: scores with 3-month trend for sidebar + right panel
@@ -256,6 +262,14 @@ export default function MapPage() {
       }
     };
   }, []);
+
+  // Close context menu on map move/zoom
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const close = () => setContextMenu(null);
+    map.current.on('movestart', close);
+    return () => { map.current?.off('movestart', close); };
+  }, [mapLoaded]);
 
   // Adjust zoom for different geo levels (skip if search already handled navigation)
   useEffect(() => {
@@ -426,6 +440,16 @@ export default function MapPage() {
             forecastHorizon={forecastHorizon}
           />
         </main>
+
+        {/* Right-click context menu */}
+        {contextMenu && (
+          <MapContextMenu
+            geography={contextMenu.geography}
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
 
         {/* Right Detail Panel - shows when a region is clicked */}
         <RightDetailPanel
