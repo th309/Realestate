@@ -49,9 +49,20 @@ const KEY_FINDINGS = [
   },
 ];
 
+function resolveReportPath() {
+  // Handle both Turbopack (cwd = workspace root) and standard Next.js (cwd = packages/frontend)
+  const candidates = [
+    path.join(process.cwd(), 'docs', 'audits', '2026-02-13-v2-validation-report.md'),
+    path.join(process.cwd(), '..', '..', 'docs', 'audits', '2026-02-13-v2-validation-report.md'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 export default function MethodologyPage() {
-  const reportPath = path.join(process.cwd(), '..', '..', 'docs', 'audits', '2026-02-13-v2-validation-report.md');
-  const reportContent = fs.readFileSync(reportPath, 'utf-8');
+  const reportContent = fs.readFileSync(resolveReportPath(), 'utf-8');
 
   return (
     <div className="mt-12 space-y-16">
