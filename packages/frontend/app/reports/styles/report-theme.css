@@ -390,6 +390,63 @@
 .report-animate-in-delay-4 { animation-delay: 0.4s; opacity: 0; }
 .report-animate-in-delay-5 { animation-delay: 0.5s; opacity: 0; }
 
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .report-animate-in,
+  .report-animate-in-delay-1,
+  .report-animate-in-delay-2,
+  .report-animate-in-delay-3,
+  .report-animate-in-delay-4,
+  .report-animate-in-delay-5 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .report-card-elevated:hover {
+    transform: none;
+  }
+
+  .report-btn-primary:hover {
+    transform: none;
+  }
+
+  .report-skeleton {
+    animation: none;
+  }
+}
+
+/* ========================================
+   Responsive Breakpoints
+   ======================================== */
+
+@media (max-width: 640px) {
+  .report-heading-display {
+    font-size: 1.75rem;
+  }
+
+  .report-heading-lg {
+    font-size: 1.5rem;
+  }
+
+  .report-heading-md {
+    font-size: 1.125rem;
+  }
+
+  .report-heading-sm {
+    font-size: 1rem;
+  }
+
+  .report-section {
+    padding: var(--report-space-lg);
+    border-radius: var(--report-radius-lg);
+  }
+
+  .report-metric-value {
+    font-size: 1.5rem;
+  }
+}
+
 /* ========================================
    Section Styles
    ======================================== */

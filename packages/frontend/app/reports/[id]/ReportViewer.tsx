@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Download,
   Share2,
   MessageSquare,
   Loader2,
@@ -612,21 +611,6 @@ function formatSectionName(sectionId: string): string {
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
-}
-
-// Legacy Page Icon Helper (kept for compatibility)
-function PageIcon({ pageName }: { pageName: string }) {
-  const iconClass = 'w-4 h-4 text-[var(--report-navy)]';
-  const name = pageName.toLowerCase();
-
-  if (name.includes('afford')) return <DollarSign className={iconClass} />;
-  if (name.includes('migrat')) return <Users className={iconClass} />;
-  if (name.includes('demo')) return <Users className={iconClass} />;
-  if (name.includes('economic')) return <BarChart3 className={iconClass} />;
-  if (name.includes('story') || name.includes('narrative')) return <FileText className={iconClass} />;
-  if (name.includes('home') || name.includes('personal')) return <Home className={iconClass} />;
-
-  return <FileText className={iconClass} />;
 }
 
 export default ReportViewer;
