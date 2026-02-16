@@ -133,6 +133,24 @@ export class ReportsController {
   }
 
   /**
+   * Regenerate narratives after personalization inputs change
+   *
+   * POST /reports/:id/regenerate-narratives
+   */
+  @Post(':id/regenerate-narratives')
+  async regenerateNarratives(
+    @Param('id') id: string,
+    @Body() body: { user_inputs: Record<string, any> },
+    @Headers('x-user-id') userId: string,
+  ) {
+    if (!userId) {
+      throw new HttpException('User ID required', HttpStatus.UNAUTHORIZED);
+    }
+
+    return this.reportsService.regenerateNarratives(id, userId, body.user_inputs);
+  }
+
+  /**
    * Send a message in report conversation
    *
    * POST /reports/:id/conversation
