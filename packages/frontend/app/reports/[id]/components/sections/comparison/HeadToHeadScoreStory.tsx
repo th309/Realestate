@@ -6,6 +6,7 @@ import { BarChart3, Trophy, Check } from 'lucide-react';
 import type { ReportInstance } from '../../../../types';
 import type { ScoreComponentBreakdown, ComponentStatus } from '@/lib/data';
 import { SectionCard, AIAnalysisBlock } from '../core';
+import { formatComponentLabel } from '../../utils/scoreHelpers';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -40,13 +41,6 @@ const MARKET_COLORS = [
 // ---------------------------------------------------------------------------
 // Helper Functions
 // ---------------------------------------------------------------------------
-
-/** Convert snake_case component name into a readable label */
-function formatComponentLabel(component: string): string {
-  return component
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 /** Map a ComponentStatus to its display bar color */
 function getStatusColor(status: ComponentStatus): string {

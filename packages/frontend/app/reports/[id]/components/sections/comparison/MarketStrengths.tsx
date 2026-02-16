@@ -8,6 +8,7 @@ import type { ScoreComponentBreakdown } from '@/lib/data';
 import { SectionCard } from '../core/SectionCard';
 import { ComponentScoreBadge } from '../core/ComponentScoreBadge';
 import { AIAnalysisBlock } from '../core/AIAnalysisBlock';
+import { formatComponentLabel } from '../../utils/scoreHelpers';
 
 interface MarketStrengthsProps {
   report: ReportInstance;
@@ -19,15 +20,6 @@ interface MarketEntry {
   name: string;
   components: ScoreComponentBreakdown[];
   score: number | null;
-}
-
-/**
- * Converts a snake_case component name into a human-readable Title Case label.
- */
-function formatComponentLabel(component: string): string {
-  return component
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /**

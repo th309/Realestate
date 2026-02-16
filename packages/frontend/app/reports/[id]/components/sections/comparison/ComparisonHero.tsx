@@ -7,6 +7,7 @@ import type { ReportInstance } from '../../../../types';
 import type { ScoreComponentBreakdown } from '@/lib/data';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { AIAnalysisBlock } from '../core';
+import { formatComponentLabel } from '../../utils/scoreHelpers';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -26,17 +27,6 @@ interface MarketCard {
   name: string;
   score: number | null;
   isWinner: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Helper Functions
-// ---------------------------------------------------------------------------
-
-/** Convert snake_case component name into a readable label */
-function formatComponentLabel(component: string): string {
-  return component
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------

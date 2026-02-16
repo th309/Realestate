@@ -4,7 +4,13 @@ import React from 'react';
 import { TrendingUp, TrendingDown, MapPin, Calendar, Shield } from 'lucide-react';
 
 import type { ReportInstance } from '../../../../types';
-import type { ScoreComponentBreakdown } from '@/lib/data';
+import {
+  getScoreStrokeColor,
+  getScoreGrade,
+  getScoreLabel,
+  deriveConfidence,
+  formatComponentLabel,
+} from '../../utils/scoreHelpers';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -18,60 +24,11 @@ export interface InvestorHeroProps {
 // Helper Functions
 // ---------------------------------------------------------------------------
 
-/** Score-to-stroke-color mapping */
-function getScoreStrokeColor(score: number): string {
-  if (score >= 70) return 'var(--report-success)';
-  if (score >= 50) return 'var(--report-warning)';
-  return 'var(--report-error)';
-}
-
 /** Score-to-text-color tailwind class */
 function getScoreColorClass(score: number): string {
   if (score >= 70) return 'text-[var(--report-success)]';
   if (score >= 50) return 'text-[var(--report-warning)]';
   return 'text-[var(--report-error)]';
-}
-
-/** Derive a letter grade from numeric score */
-function getScoreGrade(score: number): string {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B+';
-  if (score >= 70) return 'B';
-  if (score >= 60) return 'C+';
-  if (score >= 50) return 'C';
-  if (score >= 40) return 'D';
-  return 'F';
-}
-
-/** Derive a human-readable label from numeric score */
-function getScoreLabel(score: number): string {
-  if (score >= 80) return 'Excellent';
-  if (score >= 70) return 'Good';
-  if (score >= 50) return 'Moderate';
-  if (score >= 30) return 'Below Average';
-  return 'Challenging';
-}
-
-/** Determine confidence level from component data completeness */
-function deriveConfidence(
-  reportConfidence: 'high' | 'medium' | 'low' | null,
-  components?: ScoreComponentBreakdown[],
-): 'HIGH' | 'MEDIUM' | 'LOW' | null {
-  // Prefer the explicit report-level confidence
-  if (reportConfidence) {
-    return reportConfidence.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW';
-  }
-
-  // Fall back to deriving from component data coverage
-  if (!components || components.length === 0) return null;
-
-  const avgMetrics =
-    components.reduce((sum, c) => sum + (c.contributing_metrics?.length ?? 0), 0) /
-    components.length;
-
-  if (avgMetrics >= 3) return 'HIGH';
-  if (avgMetrics >= 2) return 'MEDIUM';
-  return 'LOW';
 }
 
 /** Confidence badge color mapping */
@@ -117,13 +74,6 @@ function formatDate(dateStr: string | null): string {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-/** Prettify a component name into a readable label */
-function formatComponentLabel(component: string): string {
-  return component
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------

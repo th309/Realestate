@@ -6,6 +6,7 @@ import { BarChart3 } from 'lucide-react';
 import type { ReportInstance } from '../../../../types';
 import type { ScoreComponentBreakdown, ComponentStatus } from '@/lib/data';
 import { SectionCard, AIAnalysisBlock } from '../core';
+import { formatComponentLabel } from '../../utils/scoreHelpers';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -54,13 +55,6 @@ function getStatusBgColor(status: ComponentStatus): string {
 /** Capitalize a status label */
 function formatStatus(status: ComponentStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-/** Convert snake_case component name into a readable label */
-function formatComponentLabel(component: string): string {
-  return component
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------

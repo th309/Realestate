@@ -7,6 +7,7 @@ import { formatMetricValue } from '@/lib/data';
 import { SectionCard, MetricDisplay, TrendSparkline } from '../core';
 import type { MetricTrend } from '../core';
 import { getMetricWithAliases, getMetricTrend, getScoreContext } from '../../utils/metricHelpers';
+import { getScoreStrokeColor, getScoreLabel, getScoreGrade } from '../../utils/scoreHelpers';
 import type { ReportInstance } from '../../../../types';
 
 export interface ExecutiveSummaryProps {
@@ -39,30 +40,6 @@ function getScoreColorClass(score: number): string {
   if (score >= 70) return 'text-[var(--report-success)]';
   if (score >= 50) return 'text-[var(--report-warning)]';
   return 'text-[var(--report-error)]';
-}
-
-function getScoreStrokeColor(score: number): string {
-  if (score >= 70) return 'var(--report-success)';
-  if (score >= 50) return 'var(--report-warning)';
-  return 'var(--report-error)';
-}
-
-function getScoreLabel(score: number): string {
-  if (score >= 80) return 'Excellent';
-  if (score >= 70) return 'Good';
-  if (score >= 50) return 'Moderate';
-  if (score >= 30) return 'Below Average';
-  return 'Challenging';
-}
-
-function getScoreGrade(score: number): string {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B+';
-  if (score >= 70) return 'B';
-  if (score >= 60) return 'C+';
-  if (score >= 50) return 'C';
-  if (score >= 40) return 'D';
-  return 'F';
 }
 
 function calculateTrend(

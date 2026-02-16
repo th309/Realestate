@@ -9,6 +9,7 @@ import {
   getMetricValueWithAliases,
   getMetricTrend,
 } from '../../utils/metricHelpers';
+import { getScoreStrokeColor } from '../../utils/scoreHelpers';
 import type { ReportInstance } from '../../../../types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -136,16 +137,7 @@ function getScoreColorClass(score: number): string {
 }
 
 /**
- * Get score ring stroke color based on score value
- */
-function getScoreStrokeColor(score: number): string {
-  if (score >= 70) return 'var(--report-success)';
-  if (score >= 50) return 'var(--report-warning)';
-  return 'var(--report-error)';
-}
-
-/**
- * Get score label based on score value
+ * Get score label based on score value (investor-specific labels)
  */
 function getScoreLabel(score: number): string {
   if (score >= 80) return 'Strong Investment';

@@ -9,6 +9,7 @@ import { formatMetricValue } from '@/lib/data';
 import type { MetricFormat, ComponentStatus, ScoreComponentBreakdown } from '@/lib/data';
 import type { ReportInstance } from '../../../../types';
 import { getMetricValueWithAliases } from '../../utils/metricHelpers';
+import { formatComponentLabel } from '../../utils/scoreHelpers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,14 +97,6 @@ function getCompMetricValue(comp: any, metricId: string): number | null {
     if (aliasVal !== undefined && aliasVal !== null) return Number(aliasVal);
   }
   return null;
-}
-
-/** Convert snake_case component name into a readable label. */
-function formatComponentLabel(component: string): string {
-  return component
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
 
 // ---------------------------------------------------------------------------
