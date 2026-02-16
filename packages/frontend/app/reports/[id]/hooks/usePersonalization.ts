@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import {
+  calculatePITI,
+  calculateMaxAffordablePrice,
+} from '../components/utils/affordabilityCalc';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -38,34 +42,26 @@ function calculateAffordability(
   income: number,
   downPayment: number | undefined,
   medianPrice: number | null,
-): AffordabilityCalc {
+): AffordabilityCalc | null {
+  if (!medianPrice) return null;
   const monthlyIncome = income / 12;
-  const price = medianPrice || 400000; // fallback
-  const dp = downPayment || price * 0.2;
-  const dpPct = dp / price;
-  const loanAmount = price - dp;
-  const monthlyRate = 0.07 / 12; // 7% rate assumption
-  const numPayments = 360; // 30 years
 
-  const monthlyMortgage = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-  const monthlyTax = (price * 0.012) / 12;
-  const monthlyInsurance = (price * 0.005) / 12;
-  const monthlyPITI = monthlyMortgage + monthlyTax + monthlyInsurance;
+  const piti = calculatePITI({
+    price: medianPrice,
+    downPayment: downPayment || undefined,
+  });
 
-  const dtiRatio = monthlyPITI / monthlyIncome;
+  const dtiRatio = piti.monthlyPITI / monthlyIncome;
 
-  // Max affordable: 28% DTI target
-  const targetMonthly = monthlyIncome * 0.28;
-  const maxLoan = targetMonthly / (monthlyRate * Math.pow(1 + monthlyRate, numPayments) /
-    (Math.pow(1 + monthlyRate, numPayments) - 1));
-  const maxAffordablePrice = maxLoan + (downPayment || maxLoan * 0.25);
+  const maxAffordablePrice = calculateMaxAffordablePrice(monthlyIncome, {
+    downPayment,
+  });
 
   return {
-    monthlyPITI: Math.round(monthlyPITI),
+    monthlyPITI: Math.round(piti.monthlyPITI),
     dtiRatio: Math.round(dtiRatio * 100) / 100,
-    maxAffordablePrice: Math.round(maxAffordablePrice),
-    downPaymentPct: Math.round(dpPct * 100) / 100,
+    maxAffordablePrice,
+    downPaymentPct: Math.round(piti.downPaymentPct * 100) / 100,
   };
 }
 
@@ -78,6 +74,7 @@ export function usePersonalization(
   const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
   const [dirty, setDirty] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const initialRef = useRef(initialInputs);
 
   const setInput = useCallback((key: keyof UserInputs, value: any) => {
@@ -126,6 +123,11 @@ export function usePersonalization(
 
       if (narrativeKeys.size === 0) return;
 
+      // Cancel any in-flight request before starting a new one
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setRegenerating(narrativeKeys);
 
       try {
@@ -133,16 +135,22 @@ export function usePersonalization(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_inputs: inputs }),
+          signal: controller.signal,
         });
-      } catch {
-        // Silently fail — narratives will keep showing old values
+      } catch (e) {
+        // Ignore abort errors; silently fail on network errors
+        if (e instanceof DOMException && e.name === 'AbortError') return;
       } finally {
-        setRegenerating(new Set());
+        // Only clear regenerating if this is still the active request
+        if (abortRef.current === controller) {
+          setRegenerating(new Set());
+        }
       }
     }, 2000);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (abortRef.current) abortRef.current.abort();
     };
   }, [inputs, dirty, reportId]);
 

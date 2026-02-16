@@ -19,6 +19,7 @@ import {
   getMetricWithAliases,
   getMetricValueWithAliases,
 } from '../../utils/metricHelpers';
+import { calculatePITI } from '../../utils/affordabilityCalc';
 import type { ReportInstance } from '../../../../types';
 
 export interface AffordabilityDeepDiveProps {
@@ -32,26 +33,9 @@ function findComponent(
   report: ReportInstance,
   componentName: string
 ): ScoreComponentBreakdown | undefined {
-  const components = (report.scores_snapshot as any)
-    ?.homeready_components as ScoreComponentBreakdown[] | undefined;
+  const components = report.scores_snapshot
+    ?.homeready_components;
   return components?.find((c) => c.component === componentName);
-}
-
-/**
- * Estimate monthly PITI from home price.
- * Assumes 7% rate, 30yr, 1.2% tax, 0.5% insurance, no PMI.
- */
-function estimatePITI(homePrice: number): number {
-  const downPaymentPct = 0.2;
-  const loanAmount = homePrice * (1 - downPaymentPct);
-  const monthlyRate = 0.07 / 12;
-  const numPayments = 360;
-  const monthlyPI =
-    (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-  const monthlyTax = (homePrice * 0.012) / 12;
-  const monthlyInsurance = (homePrice * 0.005) / 12;
-  return Math.round(monthlyPI + monthlyTax + monthlyInsurance);
 }
 
 /**
@@ -77,7 +61,9 @@ export function AffordabilityDeepDive({
     (medianPrice && medianIncome && medianIncome > 0
       ? Math.round((medianPrice / medianIncome) * 10) / 10
       : null);
-  const estimatedPiti = medianPrice ? estimatePITI(medianPrice) : null;
+  const estimatedPiti = medianPrice
+    ? Math.round(calculatePITI({ price: medianPrice }).monthlyPITI)
+    : null;
 
   // -- Benchmarks --
   const nationalBenchmarks = report.populated_data?.benchmarks?.national;
