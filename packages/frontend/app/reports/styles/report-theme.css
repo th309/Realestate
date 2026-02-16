@@ -502,18 +502,105 @@
    ======================================== */
 
 @media print {
+  /* Base */
   .report-page {
     background: white;
+    font-size: 11pt;
+    line-height: 1.5;
   }
 
-  .report-card,
-  .report-card-elevated,
-  .report-section {
+  /* Remove shadows and simplify borders */
+  .report-card, .report-card-elevated, .report-section {
     box-shadow: none;
     border: 1px solid #e5e5e5;
+    break-inside: avoid;
   }
 
+  /* Page breaks */
+  .report-page-break {
+    break-before: page;
+  }
+  .report-page-break-after {
+    break-after: page;
+  }
+  .report-no-break {
+    break-inside: avoid;
+  }
+
+  /* Hide screen-only elements */
   .report-no-print {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .report-print-only {
+    display: block !important;
+  }
+
+  /* Flatten gradients */
+  [class*="bg-gradient"] {
+    background: white !important;
+  }
+
+  /* Print-optimized colors */
+  .report-page {
+    --report-navy: #1b2e4a;
+    --report-cream: #f8f6f1;
+    --report-stone: #6b7280;
+  }
+
+  /* Animations off */
+  .report-animate-in {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* Section spacing for print */
+  section[id] {
+    margin-bottom: 24pt;
+    break-inside: avoid;
+  }
+
+  /* Score rings: ensure SVG prints */
+  svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Footer on every page */
+  .report-print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #9ca3af;
+    padding: 8pt 0;
+    border-top: 0.5pt solid #e5e5e5;
+  }
+
+  /* Cover page */
+  .report-print-cover {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    break-after: page;
+    text-align: center;
+  }
+
+  /* TOC */
+  .report-print-toc {
+    break-after: page;
+  }
+}
+
+/* Screen: hide print-only elements */
+@media screen {
+  .report-print-only {
     display: none !important;
   }
 }

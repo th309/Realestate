@@ -35,6 +35,7 @@ import { UserType, ReportInstance } from '../types';
 import { ConversationPanel } from './ConversationPanel';
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { getTemplate, ReportTemplateType } from './components/templates';
+import { PDFExportButton } from './export/PDFExport';
 import '../styles/report-theme.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -233,10 +234,22 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
               <button className="report-btn-ghost" title="Print report">
                 <Printer className="w-4 h-4" />
               </button>
-              <button className="report-btn-primary" title="Download PDF">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Download</span>
-              </button>
+              <PDFExportButton
+                title={report.title}
+                marketName={report.primary_geography_name}
+                score={report.homeready_score ?? report.investoredge_score ?? (report as any).markethealth_score}
+                scoreLabel={
+                  templateType.includes('investoredge') ? 'InvestorEdge Score' :
+                  templateType.includes('market_snapshot') ? 'MarketHealth Score' :
+                  'HomeReady Score'
+                }
+                grade={(report.scores_snapshot as any)?.homeready_grade ?? (report.scores_snapshot as any)?.investoredge_grade ?? (report.scores_snapshot as any)?.markethealth_grade}
+                generatedDate={new Date(report.created_at).toLocaleDateString()}
+                dataAsOfDate={report.data_as_of_date || 'N/A'}
+                aiModel={report.ai_model_used}
+                sections={templateSections.map(s => ({ id: s.id, name: formatSectionName(s.id) }))}
+                templateType={templateType}
+              />
             </div>
           </div>
         </div>
