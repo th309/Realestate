@@ -13,6 +13,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { SectionProps } from '../types';
 
 export function ChartSingle({ section, report }: SectionProps): React.ReactElement {
@@ -41,7 +42,7 @@ export function ChartSingle({ section, report }: SectionProps): React.ReactEleme
   if (!historical || !historical.data || historical.data.length === 0) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">{title}</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-4">{metricId ? <MetricTitle metricId={metricId} /> : title}</h3>
         <div className="flex items-center justify-center gap-2 text-on-surface-variant py-8">
           <AlertTriangle className="w-5 h-5" />
           <span>Historical data not available</span>
@@ -60,7 +61,7 @@ export function ChartSingle({ section, report }: SectionProps): React.ReactEleme
 
   return (
     <div className="bg-surface-container rounded-2xl p-6">
-      <h3 className="text-lg font-semibold text-on-surface mb-4">{title}</h3>
+      <h3 className="text-lg font-semibold text-on-surface mb-4">{metricId ? <MetricTitle metricId={metricId} /> : title}</h3>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'line' ? (

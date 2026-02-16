@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
-import { InfoSmallIcon, LockIcon } from '../Icons';
+import { LockIcon } from '../Icons';
 import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType } from '../../types';
 import { ForecastHorizonSelector } from './ForecastHorizonSelector';
 import { PropertyTypeSelector } from './PropertyTypeSelector';
-import { getMetricDefinition } from '../../data/metricDefinitions';
-import { getMetricDataDate, formatDataDateForDisplay } from '../../config';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import { useEntitlements } from '@/lib/entitlements';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
@@ -39,39 +37,7 @@ export function MetricItem({
 }: MetricItemProps) {
   const { isMetricGated } = useEntitlements();
   const isLocked = isMetricGated(metric.id);
-  const [showInfo, setShowInfo] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
-  const infoRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLSpanElement>(null);
-
-  // Close popup when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
-        setShowInfo(false);
-      }
-    }
-
-    if (showInfo) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showInfo]);
-
-  const handleInfoClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPopupPosition({
-        top: rect.top,
-        left: rect.right + 8, // 8px gap to the right
-      });
-    }
-    setShowInfo(!showInfo);
-  };
-
-  const metricDef = getMetricDefinition(metric.id);
 
   return (
     <div className="relative">
@@ -86,78 +52,14 @@ export function MetricItem({
           }`}
       >
         <span className="flex items-center gap-1.5 min-w-0">
-          <span className="truncate">{metric.name}</span>
+          <MetricTitle metricId={metric.id} className="truncate" />
         </span>
-        <span className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-          {isLocked && (
+        {isLocked && (
+          <span className="flex items-center flex-shrink-0 ml-1">
             <LockIcon className="w-3.5 h-3.5 text-on-surface-variant/60" />
-          )}
-          <span
-            ref={buttonRef}
-            onClick={handleInfoClick}
-            className="cursor-pointer hover:text-primary transition-colors duration-200"
-          >
-            <InfoSmallIcon />
           </span>
-        </span>
+        )}
       </button>
-
-      {/* Metric Info Popup - M3 Dialog styling */}
-      {showInfo && metricDef && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={infoRef}
-          className="fixed w-72 bg-surface-container-lowest rounded-[28px] elevation-3 border border-outline-variant p-3 text-xs"
-          style={{
-            top: popupPosition.top,
-            left: popupPosition.left,
-            zIndex: 99999,
-          }}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <h4 className="font-semibold text-on-surface">{metricDef.name}</h4>
-            <button
-              onClick={() => setShowInfo(false)}
-              className="text-on-surface-variant hover:text-on-surface text-lg leading-none transition-colors duration-200"
-            >
-              &times;
-            </button>
-          </div>
-
-          <p className="text-on-surface-variant mb-3">{metricDef.description}</p>
-
-          {metricDef.formula && (
-            <div className="mb-2">
-              <span className="font-medium text-on-surface">Formula: </span>
-              <span className="text-on-surface-variant font-mono text-[11px] bg-surface-container px-1 py-0.5 rounded">
-                {metricDef.formula}
-              </span>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-on-surface-variant border-t border-outline-variant pt-2 mt-2">
-            <span><span className="font-medium">Source:</span> {metricDef.dataSource}</span>
-            <span><span className="font-medium">Updates:</span> {metricDef.updateFrequency}</span>
-            <span><span className="font-medium">As of:</span> {formatDataDateForDisplay(getMetricDataDate(metric.id))}</span>
-          </div>
-
-          {metricDef.notes && (
-            <p className="text-[11px] text-on-surface-variant/70 italic mt-2">{metricDef.notes}</p>
-          )}
-
-          {/* Link to full metric details page */}
-          <Link
-            href={`/metrics/${metric.id}`}
-            className="mt-3 flex items-center justify-center gap-1 w-full py-1.5 text-[11px] font-medium text-primary hover:text-primary/80 hover:bg-primary-container/30 rounded-lg transition-colors duration-200"
-            onClick={() => setShowInfo(false)}
-          >
-            View full details
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </div>,
-        document.body
-      )}
 
       {/* Rent Index Type Selector */}
       {metric.id === 'rent_index' && isSelected && (

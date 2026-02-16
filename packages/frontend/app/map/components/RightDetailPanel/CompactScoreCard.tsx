@@ -17,6 +17,7 @@ import { getMetricCategories } from '../../config/metric-categories';
 import { getMetricConfig, type GeoLevel } from '../../config/metrics';
 import { formatValue, getMetricFormat } from '../../utils/metricUtils';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { ViewMode } from '../../types';
 
 export interface TrendData {
@@ -31,9 +32,10 @@ interface SubScoreDisplayProps {
   formattedValue: string;
   trend: TrendData;
   loading?: boolean;
+  metricId?: string;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading }) => {
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading, metricId }) => {
   const getTrendIcon = () => {
     if (trend.direction === 'up') return <TrendingUp className="w-2.5 h-2.5" />;
     if (trend.direction === 'down') return <TrendingDown className="w-2.5 h-2.5" />;
@@ -56,7 +58,7 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
   return (
     <div className="flex flex-col items-center flex-1 min-w-0">
       <span className="text-[9px] text-on-surface-variant mb-0.5 truncate max-w-full" title={label}>
-        {label}
+        {metricId ? <MetricTitle metricId={metricId} /> : label}
       </span>
       {loading ? (
         <Loader2 className="w-3 h-3 animate-spin text-on-surface-variant" />
@@ -289,6 +291,7 @@ export const CompactScoreCard = memo(function CompactScoreCard({
               <SubScoreDisplay
                 key={ind.metricId}
                 label={ind.label}
+                metricId={ind.metricId}
                 formattedValue={ind.formattedValue}
                 trend={ind.trend}
                 loading={metricsLoading}

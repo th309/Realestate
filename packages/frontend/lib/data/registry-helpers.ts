@@ -4,8 +4,10 @@
  * Utility functions for working with the metric registry.
  */
 
-import type { GeoLevel, MetricConfig, MetricFormat } from './types';
+import type { GeoLevel, MetricConfig, MetricFormat, DataSource } from './types';
 import { METRICS, DATA_DATES, METRO_ONLY_METRICS, GEO_ZOOM_LEVELS } from './registry';
+export type { MetricDefinition } from './definitions';
+export { METRIC_DEFINITIONS, getMetricDefinition, getDataSourceAnchor } from './definitions';
 
 /**
  * Get metric configuration by ID

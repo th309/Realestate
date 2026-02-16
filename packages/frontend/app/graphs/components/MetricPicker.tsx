@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
-import { getMetricTitle, getMetricsForGeoLevel, isMetricSupportedForGeo, metricHasTimeSeries } from '@/lib/data';
+import { getMetricsForGeoLevel, isMetricSupportedForGeo, metricHasTimeSeries } from '@/lib/data';
 import type { GeoLevel } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface MetricPickerProps {
   value: string;
@@ -67,8 +68,6 @@ export function MetricPicker({ value, onChange, geoLevel, fullWidth = false }: M
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const title = getMetricTitle(value);
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -83,7 +82,9 @@ export function MetricPicker({ value, onChange, geoLevel, fullWidth = false }: M
           }
         `}
       >
-        <span className={`font-medium truncate ${fullWidth ? '' : 'max-w-[180px]'}`}>{title}</span>
+        <span className={`font-medium truncate ${fullWidth ? '' : 'max-w-[180px]'}`}>
+          <MetricTitle metricId={value} showTooltip={false} />
+        </span>
         <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -121,7 +122,7 @@ export function MetricPicker({ value, onChange, geoLevel, fullWidth = false }: M
                       >
                         {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
                         <span className={isSelected ? 'font-medium' : ''}>
-                          {getMetricTitle(metricId)}
+                          <MetricTitle metricId={metricId} showTooltip={false} />
                         </span>
                       </button>
                     );

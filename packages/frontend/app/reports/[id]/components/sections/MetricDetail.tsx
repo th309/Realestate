@@ -3,6 +3,7 @@
 import { AlertTriangle, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 import type { SectionProps } from '../types';
 import { getMetricWithAliases } from '../utils/metricHelpers';
@@ -20,7 +21,7 @@ export function MetricDetail({ section, report }: SectionProps) {
   if (value === null) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <p className="text-sm text-on-surface-variant mb-2">{label}</p>
+        <p className="text-sm text-on-surface-variant mb-2">{metricId ? <MetricTitle metricId={metricId} /> : label}</p>
         <div className="flex items-center gap-2 text-on-surface-variant">
           <AlertTriangle className="w-5 h-5" />
           <span>Data not available</span>
@@ -48,7 +49,7 @@ export function MetricDetail({ section, report }: SectionProps) {
   return (
     <div className="bg-surface-container rounded-2xl p-6">
       <div className="flex items-start justify-between mb-2">
-        <p className="text-sm text-on-surface-variant">{label}</p>
+        <p className="text-sm text-on-surface-variant">{metricId ? <MetricTitle metricId={metricId} /> : label}</p>
         {yoyChange != null && (
           <div className={`flex items-center gap-1 ${trendColor}`}>
             <TrendIcon className="w-4 h-4" />

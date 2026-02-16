@@ -3,6 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 import type { SectionProps } from '../types';
 import { getMetricWithAliases } from '../utils/metricHelpers';
@@ -43,7 +44,7 @@ export function MetricGrid({ section, report }: SectionProps) {
 
         return (
           <div key={metricId} className="bg-surface-container rounded-xl p-4">
-            <p className="text-sm text-on-surface-variant mb-1">{label}</p>
+            <p className="text-sm text-on-surface-variant mb-1"><MetricTitle metricId={metricId} /></p>
             <p className="text-2xl font-semibold text-on-surface">
               {value !== null ? (
                 formatMetricValue(value, format)

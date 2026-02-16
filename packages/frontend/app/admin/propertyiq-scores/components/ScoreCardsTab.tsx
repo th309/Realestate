@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface Geography {
   type: 'metro' | 'county' | 'zip';
@@ -56,6 +57,12 @@ const SCORE_LABELS: Record<string, string> = {
   markethealth: 'Market Health',
   homeready: 'HomeReady',
   investoredge: 'InvestorEdge',
+};
+
+const SCORE_TYPE_TO_METRIC_ID: Record<string, string> = {
+  markethealth: 'market_health_score',
+  homeready: 'homeready_score',
+  investoredge: 'investoredge_score',
 };
 
 const GRADE_COLORS: Record<string, string> = {
@@ -282,7 +289,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
             `}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-on-surface-variant">{score.label}</span>
+              <MetricTitle metricId={SCORE_TYPE_TO_METRIC_ID[score.type]} className="text-sm font-medium text-on-surface-variant" />
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   score.confidenceLevel === 'HIGH'
@@ -338,7 +345,7 @@ function ExpandedScoreView({
     <div className="bg-surface-container rounded-xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-on-surface">{score.label}</h3>
+          <MetricTitle metricId={SCORE_TYPE_TO_METRIC_ID[score.type]} as="h3" className="text-lg font-semibold text-on-surface" />
           <p className="text-sm text-on-surface-variant">{locationName}</p>
         </div>
         <div className="text-right">

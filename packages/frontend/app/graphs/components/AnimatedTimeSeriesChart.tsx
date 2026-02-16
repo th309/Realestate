@@ -17,7 +17,8 @@ import {
   getChartDimensions,
   type ChartMargins,
 } from '@/lib/visualizations/d3/utils/axes';
-import { formatMetricValue, getMetricFormat, getMetricTitle } from '@/lib/data';
+import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { TimeSeriesPoint } from '@/lib/data';
 import type { TimeFrame } from '../hooks/useGraphsState';
 
@@ -76,7 +77,6 @@ export function AnimatedTimeSeriesChart({
   const hasAnimatedIn = useRef(false);
 
   const format = getMetricFormat(metricId);
-  const metricTitle = getMetricTitle(metricId);
 
   // Parse dates once
   const parsedPrimary = useMemo(() =>
@@ -778,7 +778,7 @@ export function AnimatedTimeSeriesChart({
     <div ref={containerRef as React.RefObject<HTMLDivElement>} className="w-full h-full relative">
       {/* Metric title */}
       <div className="absolute top-0 left-14 text-xs font-medium text-on-surface-variant uppercase tracking-wider">
-        {metricTitle}
+        <MetricTitle metricId={metricId} />
       </div>
 
       <svg

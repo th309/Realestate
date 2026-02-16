@@ -56,6 +56,23 @@ export const DATA_DATES: Record<DataSource, string> = {
 };
 
 // ============================================================================
+// DATA SOURCE → PAGE ANCHOR MAPPING
+// ============================================================================
+
+/**
+ * Maps DataSource values to anchor IDs on the /data page.
+ * Used by the /data page to link metrics back to their provider cards.
+ */
+export const DATA_SOURCE_ANCHORS: Record<DataSource, string> = {
+  zillow: 'zillow',
+  realtor: 'realtor-com',
+  census: 'census',
+  calculated: 'propertyiq',
+  fred: 'fred',
+  propertyiq: 'propertyiq',
+};
+
+// ============================================================================
 // METRO-ONLY METRICS
 // ============================================================================
 

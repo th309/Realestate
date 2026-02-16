@@ -3,7 +3,8 @@
 import React, { useMemo } from 'react';
 import * as d3 from 'd3';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useTimeSeriesData, formatMetricValue, getMetricFormat, getMetricTitle } from '@/lib/data';
+import { useTimeSeriesData, formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { MyMarket } from '../hooks/useMyMarkets';
 
 interface MetricQuickCardsProps {
@@ -64,7 +65,6 @@ function QuickCard({
   );
 
   const format = getMetricFormat(metricId);
-  const title = getMetricTitle(metricId);
   const formattedValue = current != null ? formatMetricValue(current, format) : '--';
 
   const trendDir = trendChange != null
@@ -91,7 +91,7 @@ function QuickCard({
 
         <div className="flex-1 min-w-0">
           <div className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wider truncate">
-            {title}
+            <MetricTitle metricId={metricId} />
           </div>
           <div className="flex items-center gap-1.5">
             {isLoading ? (
@@ -129,7 +129,7 @@ function QuickCard({
       `}
     >
       <div className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider truncate">
-        {title}
+        <MetricTitle metricId={metricId} />
       </div>
 
       <div className="flex items-end justify-between gap-2">

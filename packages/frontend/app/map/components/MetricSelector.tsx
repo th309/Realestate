@@ -5,6 +5,7 @@ import { Check, X, Lock } from 'lucide-react';
 import { useAllMetricOptions } from '@/app/map/hooks/useMetricOptions';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
 import type { GeoLevel } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 // Available metrics for selection
 interface AvailableMetric {
@@ -183,7 +184,7 @@ export const MetricSelector: React.FC<MetricSelectorProps> = ({
                         }
                       `}
                     >
-                      {m.name}
+                      <MetricTitle metricId={m.id} showTooltip={false} />
                       {m.locked && <Lock className="w-3.5 h-3.5" />}
                     </button>
                   );

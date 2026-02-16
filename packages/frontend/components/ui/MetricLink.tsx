@@ -3,8 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Tooltip } from './Tooltip';
-import { getMetricDefinition } from '@/app/map/data/metricDefinitions';
-import { getMetricTitle } from '@/lib/data';
+import { getMetricDefinition, getMetricTitle } from '@/lib/data';
 
 export interface MetricLinkProps {
   /** The metric ID to link to */

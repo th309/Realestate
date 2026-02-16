@@ -4,7 +4,7 @@ import React from 'react';
 import { TrendIndicator, SparklineTrend } from './TrendIndicator';
 import { SkeletonStatCard } from '../ui/Skeleton';
 import { InfoTooltip } from '../ui/Tooltip';
-import { MetricLink } from '../ui/MetricLink';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface StatCardProps {
   label: string;
@@ -42,14 +42,10 @@ export const StatCard: React.FC<StatCardProps> = ({
   className = '',
   metricId,
 }) => {
-  // Helper to render label - either as MetricLink or plain text
+  // Helper to render label - either as MetricTitle (with tooltip) or plain text
   const renderLabel = (labelClassName: string) => {
     if (metricId) {
-      return (
-        <MetricLink metricId={metricId} className={labelClassName}>
-          {label}
-        </MetricLink>
-      );
+      return <MetricTitle metricId={metricId} className={labelClassName} />;
     }
     return <span className={labelClassName}>{label}</span>;
   };

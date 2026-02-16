@@ -62,6 +62,7 @@ export {
   // Constants
   METRICS,
   DATA_DATES,
+  DATA_SOURCE_ANCHORS,
   METRO_ONLY_METRICS,
   GEO_ZOOM_LEVELS,
   GEOJSON_SOURCES,
@@ -87,7 +88,12 @@ export {
   getAllMetricIds,
   getMetricsByDataSource,
   getMetricsForGeoLevel,
+  getMetricDefinition,
+  getDataSourceAnchor,
+  METRIC_DEFINITIONS,
 } from './registry-helpers';
+
+export type { MetricDefinition } from './registry-helpers';
 
 // ============================================================================
 // FORMATTING

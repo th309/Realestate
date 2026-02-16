@@ -3,6 +3,7 @@
 import { AlertTriangle } from 'lucide-react';
 
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 import type { SectionProps } from '../types';
 import { getMetricWithAliases } from '../utils/metricHelpers';
@@ -30,7 +31,7 @@ export function MetricComparison({ section, report }: SectionProps) {
   if (comparisons.length === 0) {
     return (
       <div className="bg-surface-container rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-on-surface mb-4">{label}</h3>
+        <h3 className="text-lg font-semibold text-on-surface mb-4">{metricId ? <MetricTitle metricId={metricId} /> : label}</h3>
         <div className="flex items-center gap-2 text-on-surface-variant">
           <AlertTriangle className="w-5 h-5" />
           <span>Data not available</span>
@@ -43,7 +44,7 @@ export function MetricComparison({ section, report }: SectionProps) {
 
   return (
     <div className="bg-surface-container rounded-2xl p-6">
-      <h3 className="text-lg font-semibold text-on-surface mb-4">{label}</h3>
+      <h3 className="text-lg font-semibold text-on-surface mb-4">{metricId ? <MetricTitle metricId={metricId} /> : label}</h3>
       <div className="space-y-3">
         {comparisons.map((comp) => (
           <div

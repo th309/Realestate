@@ -9,6 +9,7 @@ import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { MetricSelector } from '@/app/map/components/MetricSelector';
 import { useEntitlements } from '@/lib/entitlements';
 import { ScorePaywall } from '@/components/entitlements';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -28,9 +29,10 @@ interface SubScoreDisplayProps {
   formattedValue: string;
   trend: TrendData;
   loading?: boolean;
+  metricId?: string;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading }) => {
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading, metricId }) => {
   const getTrendIcon = () => {
     if (trend.direction === 'up') return <TrendingUp className="w-3 h-3" />;
     if (trend.direction === 'down') return <TrendingDown className="w-3 h-3" />;
@@ -53,7 +55,7 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
   return (
     <div className="flex flex-col items-center flex-1 min-w-0">
       <span className="text-[11px] text-on-surface-variant mb-1 truncate max-w-full" title={label}>
-        {label}
+        {metricId ? <MetricTitle metricId={metricId} /> : label}
       </span>
       {loading ? (
         <Loader2 className="w-4 h-4 animate-spin text-on-surface-variant" />
@@ -171,6 +173,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
                 <SubScoreDisplay
                   key={ind.metricId}
                   label={ind.label}
+                  metricId={ind.metricId}
                   formattedValue={ind.formattedValue}
                   trend={ind.trend}
                   loading={metricsLoading}

@@ -13,6 +13,7 @@ import {
   getStatusBadgeClasses,
   getCoverageColor,
 } from './dataCards.types';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 export function DataCardsTab() {
   const [metrics, setMetrics] = useState<MetricHealth[]>([]);
@@ -181,7 +182,7 @@ export function DataCardsTab() {
                 <tr key={metric.metricId} data-testid="metric-health-row">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-on-surface">{metric.metricName}</span>
+                      <MetricTitle metricId={metric.metricId} className="font-medium text-on-surface" />
                       {metric.isNew && (
                         <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-green-100 text-green-700">
                           New

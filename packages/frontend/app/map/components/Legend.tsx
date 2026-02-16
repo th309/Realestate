@@ -4,11 +4,11 @@ import type { GeoLevel, ForecastHorizon, MapData } from '../types';
 import {
   COLOR_SCALE,
   getMetricFormat,
-  getMetricTitle,
   calculateValueRange,
   formatValue,
 } from '../utils';
 import { getMetricDataDate, formatDataDateForDisplay } from '../config';
+import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface LegendProps {
   selectedMetric: string;
@@ -24,7 +24,6 @@ export function Legend({
   mapData,
 }: LegendProps) {
   const metricFormat = getMetricFormat(selectedMetric);
-  const legendTitle = getMetricTitle(selectedMetric, forecastHorizon);
 
   // Use shared range calculation - ensures consistency with map layer colors
   // Pass selectedMetric and geoLevel (e.g., permits 0–200+ scale only at county)
@@ -45,7 +44,7 @@ export function Legend({
     const singleValueLabel = formatValue(min, metricFormat, 'min', selectedMetric);
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-2">
           <div className="w-6 md:w-8 h-4 md:h-5 rounded" style={{ backgroundColor: COLOR_SCALE[3] }} />
           <span className="text-xs md:text-sm text-on-surface-variant">{singleValueLabel}</span>
@@ -59,7 +58,7 @@ export function Legend({
   if (metricFormat === 'percent') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -78,7 +77,7 @@ export function Legend({
   if (metricFormat === 'percent_abs') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -97,7 +96,7 @@ export function Legend({
   if (metricFormat === 'index') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -116,7 +115,7 @@ export function Legend({
   if (metricFormat === 'number') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -135,7 +134,7 @@ export function Legend({
   if (metricFormat === 'days') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -154,7 +153,7 @@ export function Legend({
 
   return (
     <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">{legendTitle}</div>
+      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
       <div className="flex items-center gap-0.5 md:gap-1">
         {COLOR_SCALE.map((color, i) => (
           <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />

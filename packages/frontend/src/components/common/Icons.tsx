@@ -149,6 +149,12 @@ export const MarketsIcon = ({ className = "w-5 h-5" }: { className?: string }) =
     </svg>
 );
 
+export const DataIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" className={className}>
+        <path d="M480-120q-151 0-255.5-46.5T120-280v-400q0-66 105.5-113T480-840q149 0 254.5 47T840-680v400q0 67-104.5 113.5T480-120Zm0-479q89 0 179-25.5T760-679q-11-29-100.5-55T480-760q-91 0-178.5 25.5T200-679q14 30 101.5 55T480-599Zm0 199q42 0 81-4t74.5-11.5q35.5-7.5 67-18.5t57.5-25v-120q-26 14-57.5 25t-67 18.5Q600-528 561-524t-81 4q-42 0-82-4t-75.5-11.5Q287-543 256-554t-56-25v120q25 14 56 25t66.5 18.5Q358-408 398-404t82 4Zm0 200q46 0 93-7.5t87.5-21q40.5-13.5 67-31t26.5-36v-120q-26 14-57.5 25t-67 18.5Q594-328 555-324t-75 4q-42 0-82-4t-75.5-11.5Q287-343 256-354t-56-25v120q0 18 26.5 36t67 31q40.5 13.5 87.5 21t99 7.5Z" />
+    </svg>
+);
+
 export const ChevronLeftIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
