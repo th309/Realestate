@@ -50,10 +50,11 @@ const KEY_FINDINGS = [
 ];
 
 function resolveReportPath() {
-  // Handle both Turbopack (cwd = workspace root) and standard Next.js (cwd = packages/frontend)
   const candidates = [
-    path.join(process.cwd(), 'docs', 'audits', '2026-02-13-v2-validation-report.md'),
-    path.join(process.cwd(), '..', '..', 'docs', 'audits', '2026-02-13-v2-validation-report.md'),
+    // Co-located file (works in Docker/Vercel where docs/ isn't available)
+    path.join(process.cwd(), 'app', 'scores', 'methodology', 'validation-report.md'),
+    // Workspace root (Turbopack dev: cwd = workspace root)
+    path.join(process.cwd(), 'packages', 'frontend', 'app', 'scores', 'methodology', 'validation-report.md'),
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
