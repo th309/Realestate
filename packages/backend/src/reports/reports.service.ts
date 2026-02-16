@@ -271,12 +271,14 @@ export class ReportsService {
     const client = this.supabase.getClient();
 
     try {
-      // 1. Fetch PropertyIQ scores
+      // 1. Fetch PropertyIQ scores (with component breakdowns for report sections)
       // Map geography type to GeographyLevel (metro, county, zip)
       const geoType = dto.primary_geography.type as 'metro' | 'county' | 'zip';
       const scores = await this.scoringService.getScore(
         dto.primary_geography.id,
         geoType,
+        undefined,
+        { components: true },
       );
 
       // 1b. Fetch market metrics for AI context (based on template requirements)
@@ -313,6 +315,8 @@ export class ReportsService {
           const compScores = await this.scoringService.getScore(
             compGeo.id,
             compGeoType,
+            undefined,
+            { components: true },
           );
 
           comparisons[compGeo.id] = {
@@ -386,6 +390,7 @@ export class ReportsService {
                 grade: scores.scores.homeready.grade,
                 trend: 'stable',
                 context: scoreContexts?.homeready || undefined,
+                components: scores.scores.homeready.components || undefined,
               }
             : undefined,
           investoredge: scores
@@ -394,6 +399,7 @@ export class ReportsService {
                 grade: scores.scores.investoredge.grade,
                 trend: 'stable',
                 context: scoreContexts?.investoredge || undefined,
+                components: scores.scores.investoredge.components || undefined,
               }
             : undefined,
           markethealth: scores
@@ -402,6 +408,7 @@ export class ReportsService {
                 grade: scores.scores.markethealth.grade,
                 trend: 'stable',
                 context: scoreContexts?.markethealth || undefined,
+                components: scores.scores.markethealth.components || undefined,
               }
             : undefined,
         },

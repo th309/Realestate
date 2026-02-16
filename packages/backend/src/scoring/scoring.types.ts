@@ -17,6 +17,7 @@ export type {
   ConfidenceLevel,
   MetricWeight,
   FormulaDefinition,
+  ComponentGroupDefinition,
 } from './formula-weights';
 
 export {
@@ -27,11 +28,61 @@ export {
   CONFIDENCE_LEVELS,
   ALERT_THRESHOLDS,
   FORMULA_VERSION,
+  COMPONENT_GROUPS,
   scoreToGrade,
   getConfidenceLevel,
   getRequiredMetrics,
   validateFormulaWeights,
 } from './formula-weights';
+
+// ============================================================================
+// Component Breakdown Types
+// ============================================================================
+
+/**
+ * Status label for a score component based on its normalized score.
+ * Used in component breakdowns to provide quick-read assessments.
+ */
+export type ComponentStatus = 'excellent' | 'strong' | 'moderate' | 'watch' | 'concern';
+
+/**
+ * Breakdown of a single component's contribution to an overall score.
+ * Each score type is composed of 3-5 components (e.g., HomeReady has
+ * affordability, market_timing, stability, growth_potential).
+ */
+export interface ScoreComponentBreakdown {
+  /** Component name (e.g., 'affordability', 'market_timing') */
+  component: string;
+  /** Normalized component score (0-100) */
+  score: number;
+  /** Weight of this component in the overall score (0-1, sums to ~1.0) */
+  weight: number;
+  /** Quick-read status label based on score thresholds */
+  status: ComponentStatus;
+  /** Individual metrics that contribute to this component */
+  contributing_metrics: {
+    /** Metric name as used in FORMULA_WEIGHTS */
+    metric: string;
+    /** Standardized z-score for this metric */
+    z_score: number;
+    /** Whether higher values help (+1) or hurt (-1) the score */
+    direction: 'positive' | 'negative';
+    /** Raw metric value before standardization, null if unavailable */
+    raw_value: number | null;
+  }[];
+}
+
+/**
+ * Extended score result that includes per-component breakdowns.
+ * Returned when options.components === true on getScore().
+ */
+export interface ScoreWithComponents {
+  score: number;
+  grade: string;
+  confidence: number;
+  confidence_level: import('./formula-weights').ConfidenceLevel;
+  components: ScoreComponentBreakdown[];
+}
 
 // ============================================================================
 // Access Control Types
@@ -127,6 +178,8 @@ export interface SingleScoreResult {
   trend_change?: number;
   /** Up to 6 months of history for real-time calculations when historyMonths requested */
   history?: ScoreHistoryResult;
+  /** Per-component breakdown when options.components === true */
+  components?: ScoreComponentBreakdown[];
 }
 
 // ============================================================================

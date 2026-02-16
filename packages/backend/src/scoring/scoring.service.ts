@@ -20,6 +20,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import {
   FORMULA_WEIGHTS,
+  COMPONENT_GROUPS,
   MODEL_CORRELATIONS,
   SAMPLE_SIZE_SCORES,
   scoreToGrade,
@@ -34,12 +35,23 @@ import {
   LocationMetrics,
   ScoreResult,
   SingleScoreResult,
+  ScoreComponentBreakdown,
+  ScoreWithComponents,
+  ComponentStatus,
   SCORE_HISTORY_MONTHS_MAX,
   ScoreHistoryResult,
 } from './scoring.types';
 
 // Re-export types for consumers
-export type { GeographyType, LocationMetrics, ScoreResult, SingleScoreResult };
+export type {
+  GeographyType,
+  LocationMetrics,
+  ScoreResult,
+  SingleScoreResult,
+  ScoreComponentBreakdown,
+  ScoreWithComponents,
+  ComponentStatus,
+};
 
 interface ZScoreMap {
   [locationId: string]: { [metricName: string]: number };
@@ -145,18 +157,42 @@ export class ScoringService {
    * Get scores for a single location.
    * When historyMonths > 0 (max SCORE_HISTORY_MONTHS_MAX), fetches up to 6 months of history,
    * sets trend_change (current - prior period) and attaches history for frontend real-time calculations.
+   * When components === true, includes per-component score breakdowns for each score type.
    */
   async getScore(
     locationId: string,
     geography: GeographyLevel,
     periodDate?: string,
-    options?: { historyMonths?: number },
+    options?: { historyMonths?: number; components?: boolean },
   ): Promise<ScoreResult | null> {
     const targetDate = periodDate || (await this.getLatestScoreDate(geography));
     if (!targetDate) return null;
 
     const result = await this.getScoreForDate(locationId, geography, targetDate);
     if (!result) return null;
+
+    // Attach component breakdowns if requested
+    if (options?.components && result.z_scores) {
+      const zScores = result.z_scores;
+      // Build a raw values map from z_scores keys (raw values aren't stored in DB,
+      // so we pass null — the z_scores are what matter for the breakdown calculation)
+      const rawValues: Record<string, number | null> = {};
+      for (const key of Object.keys(zScores)) {
+        rawValues[key] = null;
+      }
+
+      for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
+        const scoreData = result.scores[scoreType];
+        if (scoreData && scoreData.score > 0) {
+          scoreData.components = this.calculateComponentBreakdown(
+            scoreType,
+            geography,
+            zScores,
+            rawValues,
+          );
+        }
+      }
+    }
 
     const rawMonths = options?.historyMonths ?? 0;
     const historyMonths = Math.min(Math.max(0, rawMonths), SCORE_HISTORY_MONTHS_MAX);
@@ -442,10 +478,15 @@ export class ScoringService {
     };
     let locationName = '';
     let medianPrice: number | null = null;
+    let zScores: Record<string, number> | undefined;
 
     for (const row of data) {
       locationName = row.location_name || locationName;
       medianPrice = row.median_price ?? medianPrice;
+      // z_scores are the same across all score types for a location; grab from first row that has them
+      if (!zScores && row.z_scores && typeof row.z_scores === 'object') {
+        zScores = row.z_scores;
+      }
       const scoreType = row.score_type as ScoreType;
       scoresByType[scoreType] = {
         score: row.score,
@@ -466,6 +507,7 @@ export class ScoringService {
         investoredge: scoresByType.investoredge || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
         markethealth: scoresByType.markethealth || { score: 0, grade: 'F', confidence: 0, confidence_level: 'INSUFFICIENT' },
       },
+      z_scores: zScores,
       return_1y: data[0]?.return_1y,
       return_3y_ann: data[0]?.return_3y_ann,
     };
@@ -1414,6 +1456,152 @@ export class ScoringService {
     }
 
     return result;
+  }
+
+  // ============================================================================
+  // Private: Component Breakdown
+  // ============================================================================
+
+  /**
+   * Calculate per-component score breakdowns for a single location.
+   *
+   * Groups the location's z-scores by component (using COMPONENT_GROUPS),
+   * computes a weighted average z-score per component using the metric
+   * weights from FORMULA_WEIGHTS, then normalizes each component score
+   * to the 0-100 range using a z-score → percentile mapping.
+   *
+   * @param scoreType - Which score to break down
+   * @param geography - Geography level (affects which metrics and components exist)
+   * @param locationZScores - Map of metric_name → z-score for this location
+   * @param rawValues - Map of metric_name → raw value for this location
+   * @returns Array of component breakdowns, one per non-empty component
+   */
+  private calculateComponentBreakdown(
+    scoreType: ScoreType,
+    geography: GeographyLevel,
+    locationZScores: Record<string, number>,
+    rawValues: Record<string, number | null>,
+  ): ScoreComponentBreakdown[] {
+    const componentGroups = COMPONENT_GROUPS[scoreType]?.[geography];
+    if (!componentGroups) return [];
+
+    const formula = FORMULA_WEIGHTS[geography][scoreType];
+    const breakdowns: ScoreComponentBreakdown[] = [];
+
+    for (const [componentName, metricNames] of Object.entries(componentGroups)) {
+      // Skip empty component groups (e.g., growth_potential at ZIP level)
+      if (!metricNames || metricNames.length === 0) continue;
+
+      const contributingMetrics: ScoreComponentBreakdown['contributing_metrics'] = [];
+      let weightedZScoreSum = 0;
+      let totalWeight = 0;
+
+      for (const metricName of metricNames) {
+        const metricDef = formula[metricName];
+        if (!metricDef) continue;
+
+        const zScore = locationZScores[metricName];
+        const rawValue = rawValues[metricName] ?? null;
+
+        contributingMetrics.push({
+          metric: metricName,
+          z_score: zScore ?? 0,
+          direction: metricDef.direction === 1 ? 'positive' : 'negative',
+          raw_value: rawValue,
+        });
+
+        if (zScore !== undefined) {
+          // Same formula as applyFormula: direction * weight * z_score
+          weightedZScoreSum += metricDef.direction * metricDef.weight * zScore;
+          totalWeight += metricDef.weight;
+        }
+      }
+
+      // Normalize the weighted sum by the component's total weight
+      // so the result is comparable across components regardless of how
+      // many metrics each component has.
+      const normalizedZScore = totalWeight > 0
+        ? weightedZScoreSum / totalWeight
+        : 0;
+
+      // Convert z-score to 0-100 scale using CDF approximation.
+      // A z-score of 0 maps to 50, +2 maps to ~97.7, -2 maps to ~2.3.
+      // This produces a distribution that feels natural: most scores
+      // cluster near 50, with tails reaching toward 0 and 100.
+      const componentScore = this.zScoreToPercentile(normalizedZScore);
+
+      // Determine the component's weight in the overall score:
+      // sum of the individual metric weights in this component
+      const componentWeight = metricNames.reduce((sum, m) => {
+        return sum + (formula[m]?.weight ?? 0);
+      }, 0);
+
+      const status = this.scoreToComponentStatus(componentScore);
+
+      breakdowns.push({
+        component: componentName,
+        score: componentScore,
+        weight: Math.round(componentWeight * 1000) / 1000,
+        status,
+        contributing_metrics: contributingMetrics,
+      });
+    }
+
+    return breakdowns;
+  }
+
+  /**
+   * Convert a z-score to a 0-100 percentile using the standard normal CDF.
+   * Uses a rational approximation (Abramowitz & Stegun) for speed.
+   *
+   * Examples:
+   *   z = -3  → ~0.1
+   *   z = -2  → ~2.3
+   *   z = -1  → ~15.9
+   *   z =  0  → 50.0
+   *   z =  1  → ~84.1
+   *   z =  2  → ~97.7
+   *   z =  3  → ~99.9
+   */
+  private zScoreToPercentile(z: number): number {
+    // Clamp to [-4, 4] to avoid extreme values
+    const clamped = Math.max(-4, Math.min(4, z));
+
+    // Approximation of the standard normal CDF (Abramowitz & Stegun 26.2.17)
+    const a1 = 0.254829592;
+    const a2 = -0.284496736;
+    const a3 = 1.421413741;
+    const a4 = -1.453152027;
+    const a5 = 1.061405429;
+    const p = 0.3275911;
+
+    const sign = clamped < 0 ? -1 : 1;
+    const x = Math.abs(clamped) / Math.sqrt(2);
+    const t = 1.0 / (1.0 + p * x);
+    const y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+    const cdf = 0.5 * (1.0 + sign * y);
+    const score = Math.round(cdf * 1000) / 10; // 0-100 with 1 decimal
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  /**
+   * Map a component score (0-100) to a human-readable status label.
+   *
+   * Thresholds are chosen to produce a reasonable distribution:
+   *   excellent: top ~20% (80+)
+   *   strong:    next ~15% (65-79)
+   *   moderate:  middle ~15% (50-64)
+   *   watch:     next ~15% (35-49)
+   *   concern:   bottom ~35% (<35)
+   */
+  private scoreToComponentStatus(score: number): ComponentStatus {
+    if (score >= 80) return 'excellent';
+    if (score >= 65) return 'strong';
+    if (score >= 50) return 'moderate';
+    if (score >= 35) return 'watch';
+    return 'concern';
   }
 
   // ============================================================================

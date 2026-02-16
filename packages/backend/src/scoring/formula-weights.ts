@@ -259,6 +259,101 @@ export function validateFormulaWeights(
   return { valid, sum };
 }
 
+// ============================================================================
+// Component Groups
+// ============================================================================
+
+/**
+ * Component groupings for score breakdowns.
+ *
+ * Maps each metric in FORMULA_WEIGHTS to a logical component within each
+ * score type and geography level. Used by calculateComponentBreakdown()
+ * to produce per-component scores.
+ *
+ * Design principles:
+ * - Every metric in FORMULA_WEIGHTS must appear in exactly one component group
+ * - Components align with the legacy component names (HomeReadyComponents, etc.)
+ *   for backwards compatibility, minus 'livability' which had no real metrics
+ * - When a geography has fewer metrics, some components may have only 1 metric
+ */
+export type ComponentGroupDefinition = Record<string, string[]>;
+
+export const COMPONENT_GROUPS: Record<
+  ScoreType,
+  Record<GeographyLevel, ComponentGroupDefinition>
+> = {
+  // -----------------------------------------------------------------------
+  // HomeReady: affordability, market_timing, stability, growth_potential
+  // -----------------------------------------------------------------------
+  homeready: {
+    metro: {
+      affordability: ['affordability_ratio'],
+      market_timing: ['demand_score', 'hotness_score', 'pending_ratio'],
+      stability: ['median_days_on_market', 'price_reduced_share'],
+      growth_potential: ['unemployment_rate_yoy', 'population_yoy'],
+    },
+    county: {
+      affordability: ['affordability_ratio'],
+      market_timing: ['demand_score', 'pending_ratio', 'price_reduced_share'],
+      stability: ['median_days_on_market', 'supply_score'],
+      growth_potential: ['population_yoy', 'unemployment_rate_yoy'],
+    },
+    zip: {
+      affordability: ['affordability_ratio'],
+      market_timing: ['demand_score', 'pending_ratio'],
+      stability: ['median_days_on_market'],
+      growth_potential: [], // no growth metrics at ZIP level
+    },
+  },
+
+  // -----------------------------------------------------------------------
+  // InvestorEdge: cash_flow, rent_demand, appreciation, entry_point, risk
+  // -----------------------------------------------------------------------
+  investoredge: {
+    metro: {
+      cash_flow: ['median_gross_rent'],
+      rent_demand: ['demand_score', 'pending_ratio'],
+      appreciation: ['population_yoy'],
+      entry_point: ['homeownership_rate', 'price_reduced_share'],
+      risk: ['median_days_on_market', 'supply_score'],
+    },
+    county: {
+      cash_flow: ['median_gross_rent'],
+      rent_demand: ['demand_score', 'pending_ratio'],
+      appreciation: ['population_yoy'],
+      entry_point: ['affordability_ratio', 'homeownership_rate'],
+      risk: ['median_days_on_market', 'supply_score'],
+    },
+    zip: {
+      cash_flow: ['median_gross_rent'],
+      rent_demand: ['demand_score', 'hotness_score', 'pending_ratio'],
+      appreciation: ['homeownership_rate'],
+      entry_point: ['price_reduced_share'],
+      risk: ['median_days_on_market'],
+    },
+  },
+
+  // -----------------------------------------------------------------------
+  // MarketHealth: demand_strength, supply_balance
+  // MarketHealth has only 2-3 metrics, so we group into 2 components.
+  // price_stability and economic_foundation are omitted since no metrics map.
+  // -----------------------------------------------------------------------
+  markethealth: {
+    metro: {
+      demand_strength: ['hotness_score', 'demand_score'],
+      supply_balance: ['pending_ratio'],
+    },
+    county: {
+      demand_strength: ['hotness_score', 'demand_score'],
+      supply_balance: ['pending_ratio'],
+    },
+    zip: {
+      demand_strength: ['hotness_score', 'demand_score'],
+      supply_balance: [], // no supply metric at ZIP for markethealth
+    },
+  },
+};
+
 /**
  * Calibration table: maps score quintiles to average historical excess return.
  * Built from v2.0 backtest data (metro level, 3Y excess vs Census Division median).
