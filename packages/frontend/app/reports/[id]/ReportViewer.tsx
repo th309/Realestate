@@ -238,8 +238,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
       {/* Main Content */}
       <div className="flex">
         <main className={`flex-1 ${showConversation ? 'lg:pr-[400px]' : ''}`}>
-          {/* Report Hero - skip for homeready since the Hero section handles it */}
-          {templateType !== 'homeready' && (
+          {/* Report Hero - skip for homeready/investoredge since their Hero sections handle it */}
+          {templateType !== 'homeready' && templateType !== 'investoredge' && (
             <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
               <div className="max-w-4xl mx-auto px-6 py-10">
                 <div className="report-animate-in">
@@ -308,8 +308,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
                 <section
                   key={id}
                   id={id}
-                  className={`${id === 'hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
-                  style={{ animationDelay: `${(index + (templateType === 'homeready' ? 1 : 3)) * 100}ms` }}
+                  className={`${id === 'hero' || id === 'investor-hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
+                  style={{ animationDelay: `${(index + (templateType === 'homeready' || templateType === 'investoredge' ? 1 : 3)) * 100}ms` }}
                 >
                   <SectionErrorBoundary sectionId={id}>
                     <Section report={reportInstance} />
@@ -435,6 +435,18 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
   if (id === 'bottom-line') return <Target className={iconClass} />;
   if (id === 'market-pulse') return <Activity className={iconClass} />;
 
+  // InvestorEdge sections
+  if (id === 'investor-hero') return <Home className={iconClass} />;
+  if (id === 'investor-score-story') return <BarChart3 className={iconClass} />;
+  if (id === 'cash-flow') return <DollarSign className={iconClass} />;
+  if (id === 'rent-demand') return <Users className={iconClass} />;
+  if (id === 'appreciation') return <TrendingUp className={iconClass} />;
+  if (id === 'entry-point') return <DollarSign className={iconClass} />;
+  if (id === 'risk') return <AlertTriangle className={iconClass} />;
+  if (id === 'investment-thesis') return <Target className={iconClass} />;
+  if (id === 'pro-forma') return <BarChart3 className={iconClass} />;
+  if (id === 'investor-bottom-line') return <Target className={iconClass} />;
+
   // Legacy / other report types
   if (id.includes('executive') || id.includes('summary')) return <FileText className={iconClass} />;
   if (id.includes('score') || id.includes('thesis')) return <TrendingUp className={iconClass} />;
@@ -455,6 +467,7 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
 
 // Format section ID to display name
 const SECTION_DISPLAY_NAMES: Record<string, string> = {
+  // HomeReady
   'hero': 'Overview',
   'score-story': 'Score Breakdown',
   'affordability-deep-dive': 'Affordability',
@@ -464,6 +477,17 @@ const SECTION_DISPLAY_NAMES: Record<string, string> = {
   'your-priorities': 'Your Priorities',
   'bottom-line': 'Bottom Line',
   'market-pulse': 'Market Pulse',
+  // InvestorEdge
+  'investor-hero': 'Overview',
+  'investor-score-story': 'Score Breakdown',
+  'cash-flow': 'Cash Flow',
+  'rent-demand': 'Rent Demand',
+  'appreciation': 'Appreciation',
+  'entry-point': 'Entry Point',
+  'risk': 'Risk Assessment',
+  'investment-thesis': 'Investment Thesis',
+  'pro-forma': 'Pro Forma',
+  'investor-bottom-line': 'Bottom Line',
 };
 
 function formatSectionName(sectionId: string): string {

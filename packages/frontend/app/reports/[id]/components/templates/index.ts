@@ -52,13 +52,18 @@ import {
   BottomLine,
 } from '../sections/homebuyer';
 
-// Investor sections
+// Investor sections (redesigned)
 import {
-  InvestmentThesis,
-  CashFlowAnalysis,
-  AppreciationOutlook,
-  GrowthCatalysts,
-  RiskAssessment,
+  InvestorHero,
+  InvestorScoreStory,
+  CashFlowDeepDive,
+  RentDemandDeepDive,
+  AppreciationDeepDive,
+  EntryPointDeepDive,
+  RiskDeepDive,
+  InvestmentThesisSection,
+  ProFormaSnapshot,
+  InvestorBottomLine,
 } from '../sections/investor';
 
 // Agent sections
@@ -129,13 +134,19 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
   },
   investoredge: {
     name: 'InvestorEdge Report',
-    description: 'Investment opportunity analysis',
+    description: 'Score-driven investment opportunity analysis',
     sections: [
-      { component: InvestmentThesis, id: 'investment-thesis' },
-      { component: CashFlowAnalysis, id: 'cash-flow' },
-      { component: AppreciationOutlook, id: 'appreciation' },
-      { component: GrowthCatalysts, id: 'growth-catalysts' },
-      { component: RiskAssessment, id: 'risk-assessment' },
+      { component: InvestorHero, id: 'investor-hero' },
+      { component: InvestorScoreStory, id: 'investor-score-story' },
+      { component: CashFlowDeepDive, id: 'cash-flow' },
+      { component: RentDemandDeepDive, id: 'rent-demand' },
+      { component: AppreciationDeepDive, id: 'appreciation' },
+      { component: EntryPointDeepDive, id: 'entry-point' },
+      { component: RiskDeepDive, id: 'risk' },
+      { component: InvestmentThesisSection, id: 'investment-thesis' },
+      { component: ProFormaSnapshot, id: 'pro-forma' },
+      { component: InvestorBottomLine, id: 'investor-bottom-line' },
+      { component: SharedMarketPulse, id: 'market-pulse' },
     ],
   },
   market_snapshot: {
