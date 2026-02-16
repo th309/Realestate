@@ -4,29 +4,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Share2,
-  MessageSquare,
   Loader2,
   FileText,
-  TrendingUp,
-  Newspaper,
   MapPin,
   Calendar,
-  Printer,
   Sparkles,
-  BarChart3,
-  Home,
-  Users,
-  DollarSign,
-  Activity,
   AlertTriangle,
-  Star,
-  Target,
-  Shield,
-  Clock,
-  Layers,
-  Trophy,
-  Lightbulb,
 } from 'lucide-react';
 import { BrandingProvider } from './components/BrandingProvider';
 import { ReportWithTemplate } from './components/types';
@@ -34,9 +17,12 @@ import { UserType, ReportInstance } from '../types';
 import { ConversationPanel } from './ConversationPanel';
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { getTemplate, ReportTemplateType } from './components/templates';
-import { PDFExportButton } from './export/PDFExport';
 import { PersonalizationPanel } from './components/PersonalizationPanel';
 import { usePersonalization } from './hooks/usePersonalization';
+import { GeneratingState, GENERATION_STEPS } from './components/GeneratingState';
+import { SectionIcon, formatSectionName } from './components/utils/sectionDisplay';
+import { ReportHeader } from './components/ReportHeader';
+import { ReportFooter } from './components/ReportFooter';
 import '../styles/report-theme.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -64,12 +50,6 @@ async function fetchReport(reportId: string): Promise<ReportWithTemplate | null>
   return response.json();
 }
 
-const GENERATION_STEPS = [
-  { id: 'scores', label: 'Calculating market scores', icon: TrendingUp, description: 'Analyzing market health indicators' },
-  { id: 'news', label: 'Gathering market signals', icon: Newspaper, description: 'Collecting recent market data' },
-  { id: 'ai', label: 'Generating AI analysis', icon: Sparkles, description: 'Creating personalized insights' },
-];
-
 export function ReportViewer({ reportId }: ReportViewerProps) {
   const [report, setReport] = useState<ReportWithTemplate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +57,17 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
   const [showConversation, setShowConversation] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
   const [agentViewMode, setAgentViewMode] = useState<'client' | 'prep'>('client');
+
+  // Personalization hook — must be called unconditionally (before any early returns)
+  const medianPrice = report
+    ? ((report as unknown as ReportInstance).populated_data as any)?.current?.zhvi ??
+      ((report as unknown as ReportInstance).populated_data as any)?.current?.home_value ?? null
+    : null;
+  const personalization = usePersonalization(
+    reportId,
+    report ? (report as unknown as ReportInstance).user_inputs as any : undefined,
+    typeof medianPrice === 'number' ? medianPrice : null,
+  );
 
   const pollReport = useCallback(async () => {
     try {
@@ -190,7 +181,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
 
   // Determine template based on report type first, then user type
   const reportType = report.template?.config?.report_type;
-  const isAgentReport = (report.user_type as string) === 'agent' || reportType === 'snapshot';
+  const isAgentReport = report.user_type === 'agent' || reportType === 'snapshot';
   let templateType: ReportTemplateType;
 
   if (reportType === 'comparison' && report.comparison_geographies && report.comparison_geographies.length > 0) {
@@ -209,61 +200,17 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
   // Convert report to ReportInstance for new section components
   const reportInstance = report as unknown as ReportInstance;
 
-  // Personalization
-  const medianPrice = (reportInstance.populated_data as any)?.current?.zhvi ??
-    (reportInstance.populated_data as any)?.current?.home_value ?? null;
-  const personalization = usePersonalization(
-    reportId,
-    reportInstance.user_inputs as any,
-    typeof medianPrice === 'number' ? medianPrice : null,
-  );
-
   return (
     <div className="report-page min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[var(--report-cream)] border-b border-[rgba(27,46,74,0.08)] backdrop-blur-sm report-no-print">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/reports" className="report-btn-ghost">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Reports
-            </Link>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowConversation(!showConversation)}
-                className={`report-btn-ghost ${showConversation ? 'bg-[var(--report-navy)] text-white hover:bg-[var(--report-navy-light)]' : ''}`}
-                title="Ask AI about this report"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Ask AI</span>
-              </button>
-              <button className="report-btn-ghost" title="Share report">
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button className="report-btn-ghost" title="Print report">
-                <Printer className="w-4 h-4" />
-              </button>
-              <PDFExportButton
-                title={report.title}
-                marketName={report.primary_geography_name}
-                score={report.homeready_score ?? report.investoredge_score ?? (report as any).markethealth_score}
-                scoreLabel={
-                  templateType.includes('investoredge') ? 'InvestorEdge Score' :
-                  templateType.includes('market_snapshot') ? 'MarketHealth Score' :
-                  'HomeReady Score'
-                }
-                grade={(report.scores_snapshot as any)?.homeready_grade ?? (report.scores_snapshot as any)?.investoredge_grade ?? (report.scores_snapshot as any)?.markethealth_grade}
-                generatedDate={new Date(report.created_at).toLocaleDateString()}
-                dataAsOfDate={report.data_as_of_date || 'N/A'}
-                aiModel={report.ai_model_used}
-                sections={templateSections.map(s => ({ id: s.id, name: formatSectionName(s.id) }))}
-                templateType={templateType}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
+      <ReportHeader
+        report={report}
+        templateType={templateType}
+        templateSections={templateSections}
+        showConversation={showConversation}
+        setShowConversation={setShowConversation}
+        formatSectionName={formatSectionName}
+      />
 
       {/* Personalization Panel - only show for non-agent reports */}
       {!isAgentReport && (
@@ -391,22 +338,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
             </BrandingProvider>
 
             {/* Report Footer */}
-            <footer className="mt-16 pt-8 border-t border-[rgba(27,46,74,0.08)]">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--report-navy)] flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-semibold text-[var(--report-navy)]">PropertyIQ</span>
-                </div>
-                <p className="report-body-sm mb-2">AI-powered real estate market intelligence</p>
-                <p className="text-xs text-[var(--report-stone-light)]">
-                  Report generated on {new Date(report.created_at).toLocaleDateString()} ·
-                  Data as of {report.data_as_of_date}
-                  {report.ai_model_used && ` · AI Model: ${report.ai_model_used}`}
-                </p>
-              </div>
-            </footer>
+            <ReportFooter report={report} />
           </div>
         </main>
 
@@ -417,200 +349,6 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
       </div>
     </div>
   );
-}
-
-// Generating State Component
-function GeneratingState({ report, step }: { report: ReportWithTemplate; step: number }) {
-  const currentStep = GENERATION_STEPS[step];
-
-  return (
-    <div className="report-page min-h-screen flex items-center justify-center">
-      <div className="text-center max-w-lg px-6">
-        {/* Animated Loader */}
-        <div className="relative mb-10">
-          <div className="w-28 h-28 mx-auto rounded-full bg-[var(--report-cream-dark)] flex items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-inner">
-              <Loader2 className="w-10 h-10 text-[var(--report-navy)] animate-spin" />
-            </div>
-          </div>
-          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-full shadow-md border border-[rgba(27,46,74,0.08)]">
-            <span className="text-sm font-medium text-[var(--report-navy)]">
-              Step {step + 1} of {GENERATION_STEPS.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Title */}
-        <h2 className="report-heading-lg mb-2">Generating Your Report</h2>
-        <p className="report-body mb-8">{report.primary_geography_name}</p>
-
-        {/* Progress Steps */}
-        <div className="report-card p-5 text-left">
-          {GENERATION_STEPS.map((s, index) => {
-            const Icon = s.icon;
-            const isActive = index === step;
-            const isComplete = index < step;
-
-            return (
-              <div
-                key={s.id}
-                className={`flex items-center gap-4 p-3 rounded-xl transition-all ${isActive ? 'bg-[var(--report-cream)]' : ''}`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    isComplete
-                      ? 'bg-[var(--report-success)] text-white'
-                      : isActive
-                      ? 'bg-[var(--report-navy)] text-white'
-                      : 'bg-[var(--report-cream-dark)] text-[var(--report-stone-light)]'
-                  }`}
-                >
-                  {isComplete ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <Icon className="w-5 h-5" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className={`text-sm font-medium ${isActive ? 'text-[var(--report-navy)]' : 'text-[var(--report-stone)]'}`}>
-                    {s.label}
-                  </p>
-                  <p className="text-xs text-[var(--report-stone-light)]">{s.description}</p>
-                </div>
-                {isActive && <Loader2 className="w-5 h-5 text-[var(--report-navy)] animate-spin" />}
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="report-body-sm mt-6">This usually takes 10-30 seconds</p>
-      </div>
-    </div>
-  );
-}
-
-// Section Icon Helper (for new template system)
-function SectionIcon({ sectionId }: { sectionId: string }) {
-  const iconClass = 'w-4 h-4 text-[var(--report-navy)]';
-  const id = sectionId.toLowerCase();
-
-  // New HomeReady sections
-  if (id === 'hero') return <Home className={iconClass} />;
-  if (id === 'score-story') return <BarChart3 className={iconClass} />;
-  if (id === 'affordability-deep-dive') return <DollarSign className={iconClass} />;
-  if (id === 'market-timing-deep-dive') return <Clock className={iconClass} />;
-  if (id === 'stability-deep-dive') return <Shield className={iconClass} />;
-  if (id === 'growth-potential-deep-dive') return <TrendingUp className={iconClass} />;
-  if (id === 'your-priorities') return <Star className={iconClass} />;
-  if (id === 'bottom-line') return <Target className={iconClass} />;
-  if (id === 'market-pulse') return <Activity className={iconClass} />;
-
-  // InvestorEdge sections
-  if (id === 'investor-hero') return <Home className={iconClass} />;
-  if (id === 'investor-score-story') return <BarChart3 className={iconClass} />;
-  if (id === 'cash-flow') return <DollarSign className={iconClass} />;
-  if (id === 'rent-demand') return <Users className={iconClass} />;
-  if (id === 'appreciation') return <TrendingUp className={iconClass} />;
-  if (id === 'entry-point') return <DollarSign className={iconClass} />;
-  if (id === 'risk') return <AlertTriangle className={iconClass} />;
-  if (id === 'investment-thesis') return <Target className={iconClass} />;
-  if (id === 'pro-forma') return <BarChart3 className={iconClass} />;
-  if (id === 'investor-bottom-line') return <Target className={iconClass} />;
-
-  // Comparison sections
-  if (id === 'comparison-hero') return <Trophy className={iconClass} />;
-  if (id === 'head-to-head') return <BarChart3 className={iconClass} />;
-  if (id === 'component-showdown') return <Layers className={iconClass} />;
-  if (id === 'priority-analysis') return <Star className={iconClass} />;
-  if (id === 'market-strengths') return <Sparkles className={iconClass} />;
-  if (id === 'comparison-verdict') return <Target className={iconClass} />;
-
-  // Agent Client sections
-  if (id === 'client-overview') return <Home className={iconClass} />;
-  if (id === 'client-price') return <DollarSign className={iconClass} />;
-  if (id === 'client-conditions') return <Activity className={iconClass} />;
-  if (id === 'client-meaning') return <Lightbulb className={iconClass} />;
-  if (id === 'agent-branding') return <Users className={iconClass} />;
-
-  // Agent Prep sections
-  if (id === 'prep-stats') return <BarChart3 className={iconClass} />;
-  if (id === 'prep-talking-points') return <MessageSquare className={iconClass} />;
-  if (id === 'prep-objections') return <Shield className={iconClass} />;
-  if (id === 'prep-competitive') return <MapPin className={iconClass} />;
-  if (id === 'prep-signals') return <Newspaper className={iconClass} />;
-
-  // Legacy / other report types
-  if (id.includes('executive') || id.includes('summary')) return <FileText className={iconClass} />;
-  if (id.includes('score') || id.includes('thesis')) return <TrendingUp className={iconClass} />;
-  if (id.includes('afford')) return <DollarSign className={iconClass} />;
-  if (id.includes('market') || id.includes('conditions')) return <BarChart3 className={iconClass} />;
-  if (id.includes('risk')) return <AlertTriangle className={iconClass} />;
-  if (id.includes('next') || id.includes('steps')) return <Activity className={iconClass} />;
-  if (id.includes('cash') || id.includes('flow')) return <DollarSign className={iconClass} />;
-  if (id.includes('appreciation') || id.includes('growth')) return <TrendingUp className={iconClass} />;
-  if (id.includes('catalyst')) return <Sparkles className={iconClass} />;
-  if (id.includes('price') || id.includes('trend')) return <BarChart3 className={iconClass} />;
-  if (id.includes('supply') || id.includes('demand')) return <Activity className={iconClass} />;
-  if (id.includes('talking') || id.includes('point')) return <MessageSquare className={iconClass} />;
-  if (id.includes('pulse')) return <Activity className={iconClass} />;
-
-  return <FileText className={iconClass} />;
-}
-
-// Format section ID to display name
-const SECTION_DISPLAY_NAMES: Record<string, string> = {
-  // HomeReady
-  'hero': 'Overview',
-  'score-story': 'Score Breakdown',
-  'affordability-deep-dive': 'Affordability',
-  'market-timing-deep-dive': 'Market Timing',
-  'stability-deep-dive': 'Stability',
-  'growth-potential-deep-dive': 'Growth Potential',
-  'your-priorities': 'Your Priorities',
-  'bottom-line': 'Bottom Line',
-  'market-pulse': 'Market Pulse',
-  // InvestorEdge
-  'investor-hero': 'Overview',
-  'investor-score-story': 'Score Breakdown',
-  'cash-flow': 'Cash Flow',
-  'rent-demand': 'Rent Demand',
-  'appreciation': 'Appreciation',
-  'entry-point': 'Entry Point',
-  'risk': 'Risk Assessment',
-  'investment-thesis': 'Investment Thesis',
-  'pro-forma': 'Pro Forma',
-  'investor-bottom-line': 'Bottom Line',
-  // Comparison
-  'comparison-hero': 'Overview',
-  'head-to-head': 'Score Comparison',
-  'component-showdown': 'Component Breakdown',
-  'priority-analysis': 'Priority Analysis',
-  'market-strengths': 'Market Strengths',
-  'comparison-verdict': 'The Verdict',
-  // Agent Client
-  'client-overview': 'Market Overview',
-  'client-price': 'Price & Value',
-  'client-conditions': 'Market Conditions',
-  'client-meaning': 'What It Means',
-  'agent-branding': 'Your Agent',
-  // Agent Prep
-  'prep-stats': 'Quick Stats',
-  'prep-talking-points': 'Talking Points',
-  'prep-objections': 'Objection Handlers',
-  'prep-competitive': 'Competitive Context',
-  'prep-signals': 'Market Signals',
-};
-
-function formatSectionName(sectionId: string): string {
-  if (SECTION_DISPLAY_NAMES[sectionId]) {
-    return SECTION_DISPLAY_NAMES[sectionId];
-  }
-  return sectionId
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
 
 export default ReportViewer;
