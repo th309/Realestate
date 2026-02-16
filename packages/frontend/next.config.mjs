@@ -31,6 +31,7 @@ const nextConfig = {
     return config;
   },
   transpilePackages: ['recharts'],
+  turbopack: {},
 };
 
 export default nextConfig;
