@@ -36,6 +36,8 @@ import { ConversationPanel } from './ConversationPanel';
 import { SectionErrorBoundary } from './components/SectionErrorBoundary';
 import { getTemplate, ReportTemplateType } from './components/templates';
 import { PDFExportButton } from './export/PDFExport';
+import { PersonalizationPanel } from './components/PersonalizationPanel';
+import { usePersonalization } from './hooks/usePersonalization';
 import '../styles/report-theme.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -208,6 +210,15 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
   // Convert report to ReportInstance for new section components
   const reportInstance = report as unknown as ReportInstance;
 
+  // Personalization
+  const medianPrice = (reportInstance.populated_data as any)?.current?.zhvi ??
+    (reportInstance.populated_data as any)?.current?.home_value ?? null;
+  const personalization = usePersonalization(
+    reportId,
+    reportInstance.user_inputs as any,
+    typeof medianPrice === 'number' ? medianPrice : null,
+  );
+
   return (
     <div className="report-page min-h-screen">
       {/* Header */}
@@ -254,6 +265,18 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
           </div>
         </div>
       </header>
+
+      {/* Personalization Panel - only show for non-agent reports */}
+      {!isAgentReport && (
+        <PersonalizationPanel
+          inputs={personalization.inputs}
+          setInput={personalization.setInput as (key: string, value: any) => void}
+          dirty={personalization.dirty}
+          reset={personalization.reset}
+          regenerating={personalization.regenerating}
+          userType={report.user_type}
+        />
+      )}
 
       {/* Agent Mode Toggle */}
       {isAgentReport && (
