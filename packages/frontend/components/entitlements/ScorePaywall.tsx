@@ -67,11 +67,17 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
           Top-scoring markets outperform their regional benchmarks. Unlock scores that predict excess returns.
         </p>
         <Link
-          href="/pricing"
+          href="/pricing#scores"
           onClick={handleClick}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
         >
           Unlock Scores <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+        <Link
+          href="/scores/methodology"
+          className="inline-flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors mt-1"
+        >
+          See the proof behind our scores
         </Link>
       </div>
     );
@@ -139,14 +145,21 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
       </div>
 
       {/* CTA */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-6 space-y-2">
         <Link
-          href="/pricing"
+          href="/pricing#scores"
           onClick={handleClick}
           className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors shadow-md"
         >
           {isAuthenticated ? 'Unlock Predictive Scores' : 'Sign Up Free'}
           <ArrowRight className="w-4 h-4" />
+        </Link>
+        <Link
+          href="/scores/methodology"
+          className="flex items-center justify-center gap-1 text-sm text-primary hover:underline transition-colors"
+        >
+          See the proof behind our scores
+          <ArrowRight className="w-3 h-3" />
         </Link>
       </div>
     </div>
