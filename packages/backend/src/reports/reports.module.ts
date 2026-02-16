@@ -17,9 +17,10 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { TimeSeriesModule } from '../timeseries/timeseries.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
+import { PartnersModule } from '../partners/partners.module';
 
 @Module({
-  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule],
+  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule, PartnersModule],
   providers: [ReportsService, ClaudeService, GeminiNewsService],
   controllers: [ReportsController],
   exports: [ReportsService, ClaudeService, GeminiNewsService],

@@ -25,6 +25,7 @@ import { FeaturesModule } from './admin/features/features.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { RedisModule } from './redis/redis.module';
 import { MarketAnalysisModule } from './market-analysis/market-analysis.module';
+import { PartnersModule } from './partners/partners.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -55,6 +56,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     FeaturesModule,
     EntitlementsModule,
     MarketAnalysisModule,
+    PartnersModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],

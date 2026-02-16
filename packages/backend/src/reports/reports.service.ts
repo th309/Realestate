@@ -15,7 +15,10 @@ import { ClaudeService } from './claude.service';
 import { GeminiNewsService } from './gemini-news.service';
 import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
+import { PartnersService } from '../partners/partners.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
+import { NARRATIVE_PROMPTS, SECTIONS_BY_REPORT_TYPE, NarrativePromptConfig } from './narrative-prompts';
+import { ScoreComponentBreakdown, ComponentStatus } from '../scoring/scoring.types';
 import { randomBytes } from 'crypto';
 import { HISTORY_MONTHS_MAX } from '../common/history.constants';
 
@@ -161,6 +164,7 @@ export class ReportsService {
     private readonly geminiNewsService: GeminiNewsService,
     private readonly timeSeriesService: TimeSeriesService,
     private readonly entitlementsService: EntitlementsService,
+    private readonly partnersService: PartnersService,
   ) {}
 
   /**
@@ -455,6 +459,40 @@ export class ReportsService {
 
       // Store priorities in populated data for reference
       (populatedData as any).priorities = priorities;
+
+      // 3c. Fetch partner recommendations for this report
+      try {
+        const partnerContextTypes = ['affordability', 'timing', 'stability', 'growth', 'verdict'];
+        // Add investor contexts if investor report
+        if (dto.user_type === 'investor') {
+          partnerContextTypes.push('cash_flow', 'entry_point', 'risk', 'pro_forma');
+        }
+
+        const recommendations =
+          await this.partnersService.getRecommendationsForReport(
+            partnerContextTypes,
+            {
+              geographyType: dto.primary_geography.type,
+              geographyId: dto.primary_geography.id,
+              templateVars: {
+                geography_name: dto.primary_geography.name || '',
+                // Add score values as template vars if available
+                ...(scores
+                  ? {
+                      homeready_score: String(Math.round(scores.scores.homeready.score)),
+                      investoredge_score: String(Math.round(scores.scores.investoredge.score)),
+                      markethealth_score: String(Math.round(scores.scores.markethealth.score)),
+                    }
+                  : {}),
+              },
+            },
+          );
+
+        (populatedData as any).recommendations = recommendations;
+      } catch (partnerError) {
+        this.logger.warn('Failed to fetch partner recommendations, continuing without them:', partnerError);
+        (populatedData as any).recommendations = {};
+      }
 
       // 4. Generate AI narratives (Claude) with news context — only for entitled users
       let aiNarratives = {};
