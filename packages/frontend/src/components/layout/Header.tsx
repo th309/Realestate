@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
     MenuIcon, CloseIcon, PersonIcon, SettingsIcon, CreditCardIcon,
     BookIcon, HierarchyIcon, HelpIcon, LogoutIcon, HomeIcon,
-    MapIcon, TrendingIcon, ArticleIcon, InfoIcon, MoneyIcon, MarketsIcon
+    MapIcon, TrendingIcon, ArticleIcon, InfoIcon, MoneyIcon, MarketsIcon, ScoreIcon
 } from '@/src/components/common/Icons';
 
 const NAV_LINKS = [
@@ -15,6 +15,7 @@ const NAV_LINKS = [
     { name: 'Markets', href: '/market', icon: MarketsIcon },
     { name: 'Graphs', href: '/graphs', icon: TrendingIcon },
     { name: 'Reports', href: '/reports', icon: ArticleIcon },
+    { name: 'Scores', href: '/scores', icon: ScoreIcon },
     { name: 'About us', href: '/about', icon: InfoIcon },
     { name: 'Pricing', href: '/pricing', icon: MoneyIcon },
 ];
