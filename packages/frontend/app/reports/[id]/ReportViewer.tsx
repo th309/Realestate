@@ -27,6 +27,7 @@ import {
   Clock,
   Layers,
   Trophy,
+  Lightbulb,
 } from 'lucide-react';
 import { BrandingProvider } from './components/BrandingProvider';
 import { ReportWithTemplate } from './components/types';
@@ -73,6 +74,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [showConversation, setShowConversation] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
+  const [agentViewMode, setAgentViewMode] = useState<'client' | 'prep'>('client');
 
   const pollReport = useCallback(async () => {
     try {
@@ -186,10 +188,13 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
 
   // Determine template based on report type first, then user type
   const reportType = report.template?.config?.report_type;
+  const isAgentReport = (report.user_type as string) === 'agent' || reportType === 'snapshot';
   let templateType: ReportTemplateType;
 
   if (reportType === 'comparison' && report.comparison_geographies && report.comparison_geographies.length > 0) {
     templateType = 'comparison';
+  } else if (isAgentReport) {
+    templateType = agentViewMode === 'prep' ? 'market_snapshot_prep' : 'market_snapshot_client';
   } else if (userType === 'investor') {
     templateType = 'investoredge';
   } else {
@@ -237,11 +242,41 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
         </div>
       </header>
 
+      {/* Agent Mode Toggle */}
+      {isAgentReport && (
+        <div className="bg-white border-b border-[rgba(27,46,74,0.08)] report-no-print">
+          <div className="max-w-6xl mx-auto px-6 py-3">
+            <div className="flex items-center justify-center gap-1 p-1 rounded-lg bg-[var(--report-cream)] w-fit mx-auto">
+              <button
+                onClick={() => setAgentViewMode('client')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  agentViewMode === 'client'
+                    ? 'bg-white text-[var(--report-navy)] shadow-sm'
+                    : 'text-[var(--report-stone)] hover:text-[var(--report-navy)]'
+                }`}
+              >
+                Client View
+              </button>
+              <button
+                onClick={() => setAgentViewMode('prep')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  agentViewMode === 'prep'
+                    ? 'bg-white text-[var(--report-navy)] shadow-sm'
+                    : 'text-[var(--report-stone)] hover:text-[var(--report-navy)]'
+                }`}
+              >
+                Agent Prep
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex">
         <main className={`flex-1 ${showConversation ? 'lg:pr-[400px]' : ''}`}>
-          {/* Report Hero - skip for homeready/investoredge/comparison since their Hero sections handle it */}
-          {templateType !== 'homeready' && templateType !== 'investoredge' && templateType !== 'comparison' && (
+          {/* Report Hero - skip for redesigned templates since their Hero/Overview sections handle it */}
+          {templateType !== 'homeready' && templateType !== 'investoredge' && templateType !== 'comparison' && templateType !== 'market_snapshot_client' && templateType !== 'market_snapshot_prep' && (
             <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
               <div className="max-w-4xl mx-auto px-6 py-10">
                 <div className="report-animate-in">
@@ -310,8 +345,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
                 <section
                   key={id}
                   id={id}
-                  className={`${id === 'hero' || id === 'investor-hero' || id === 'comparison-hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
-                  style={{ animationDelay: `${(index + (templateType === 'homeready' || templateType === 'investoredge' || templateType === 'comparison' ? 1 : 3)) * 100}ms` }}
+                  className={`${id === 'hero' || id === 'investor-hero' || id === 'comparison-hero' || id === 'client-overview' ? 'mb-0' : 'mb-10'} report-animate-in`}
+                  style={{ animationDelay: `${(index + 1) * 100}ms` }}
                 >
                   <SectionErrorBoundary sectionId={id}>
                     <Section report={reportInstance} />
@@ -457,6 +492,20 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
   if (id === 'market-strengths') return <Sparkles className={iconClass} />;
   if (id === 'comparison-verdict') return <Target className={iconClass} />;
 
+  // Agent Client sections
+  if (id === 'client-overview') return <Home className={iconClass} />;
+  if (id === 'client-price') return <DollarSign className={iconClass} />;
+  if (id === 'client-conditions') return <Activity className={iconClass} />;
+  if (id === 'client-meaning') return <Lightbulb className={iconClass} />;
+  if (id === 'agent-branding') return <Users className={iconClass} />;
+
+  // Agent Prep sections
+  if (id === 'prep-stats') return <BarChart3 className={iconClass} />;
+  if (id === 'prep-talking-points') return <MessageSquare className={iconClass} />;
+  if (id === 'prep-objections') return <Shield className={iconClass} />;
+  if (id === 'prep-competitive') return <MapPin className={iconClass} />;
+  if (id === 'prep-signals') return <Newspaper className={iconClass} />;
+
   // Legacy / other report types
   if (id.includes('executive') || id.includes('summary')) return <FileText className={iconClass} />;
   if (id.includes('score') || id.includes('thesis')) return <TrendingUp className={iconClass} />;
@@ -505,6 +554,18 @@ const SECTION_DISPLAY_NAMES: Record<string, string> = {
   'priority-analysis': 'Priority Analysis',
   'market-strengths': 'Market Strengths',
   'comparison-verdict': 'The Verdict',
+  // Agent Client
+  'client-overview': 'Market Overview',
+  'client-price': 'Price & Value',
+  'client-conditions': 'Market Conditions',
+  'client-meaning': 'What It Means',
+  'agent-branding': 'Your Agent',
+  // Agent Prep
+  'prep-stats': 'Quick Stats',
+  'prep-talking-points': 'Talking Points',
+  'prep-objections': 'Objection Handlers',
+  'prep-competitive': 'Competitive Context',
+  'prep-signals': 'Market Signals',
 };
 
 function formatSectionName(sectionId: string): string {

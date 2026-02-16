@@ -66,12 +66,22 @@ import {
   InvestorBottomLine,
 } from '../sections/investor';
 
-// Agent sections
+// Agent sections (legacy + redesigned)
 import {
   MarketPulse,
   PriceTrends,
   SupplyDemand,
   TalkingPoints,
+  ClientOverview,
+  ClientPriceValue,
+  ClientMarketConditions,
+  ClientMeaning,
+  AgentBranding,
+  PrepQuickStats,
+  PrepTalkingPoints,
+  PrepObjectionHandlers,
+  PrepCompetitiveContext,
+  PrepNewsSignals,
 } from '../sections/agent';
 
 // Shared sections
@@ -115,7 +125,7 @@ export interface ReportTemplateDefinition {
 }
 
 /** Available report template types */
-export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot' | 'comparison';
+export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot' | 'market_snapshot_client' | 'market_snapshot_prep' | 'comparison';
 
 // -----------------------------------------------------------------------------
 // Template Definitions
@@ -156,12 +166,34 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
   },
   market_snapshot: {
     name: 'Market Snapshot',
-    description: 'Agent market briefing',
+    description: 'Agent market briefing (legacy)',
     sections: [
       { component: MarketPulse, id: 'market-pulse' },
       { component: PriceTrends, id: 'price-trends' },
       { component: SupplyDemand, id: 'supply-demand' },
       { component: TalkingPoints, id: 'talking-points' },
+    ],
+  },
+  market_snapshot_client: {
+    name: 'Client Market Report',
+    description: 'Clean, shareable market overview for clients',
+    sections: [
+      { component: ClientOverview, id: 'client-overview' },
+      { component: ClientPriceValue, id: 'client-price' },
+      { component: ClientMarketConditions, id: 'client-conditions' },
+      { component: ClientMeaning, id: 'client-meaning' },
+      { component: AgentBranding, id: 'agent-branding' },
+    ],
+  },
+  market_snapshot_prep: {
+    name: 'Agent Prep View',
+    description: 'Dense internal briefing for agent preparation',
+    sections: [
+      { component: PrepQuickStats, id: 'prep-stats' },
+      { component: PrepTalkingPoints, id: 'prep-talking-points' },
+      { component: PrepObjectionHandlers, id: 'prep-objections' },
+      { component: PrepCompetitiveContext, id: 'prep-competitive' },
+      { component: PrepNewsSignals, id: 'prep-signals' },
     ],
   },
   comparison: {
