@@ -177,13 +177,10 @@ export function HeadToHeadScoreStory({ report, className = '' }: HeadToHeadScore
     (report.scores_snapshot as any)?.[componentsKey] ?? [];
 
   // -----------------------------------------------------------------------
-  // Comparison market components
+  // Comparison market components (use comparisons record keyed by geo ID)
   // -----------------------------------------------------------------------
-  const comparables = (report.populated_data?.comparables ?? []) as Array<{
-    geography: { id: string; name: string };
-    current?: Record<string, any>;
-    scores?: Record<string, any>;
-  }>;
+  const comparisons = report.populated_data?.comparisons;
+  const comparisonGeos = report.comparison_geographies ?? [];
 
   // Build an ordered list of markets with their components
   const allMarkets: MarketComponents[] = [
@@ -193,12 +190,15 @@ export function HeadToHeadScoreStory({ report, className = '' }: HeadToHeadScore
       components: primaryComponents,
       colorVar: MARKET_COLORS[0],
     },
-    ...comparables.map((comp, i) => ({
-      id: comp.geography.id,
-      name: comp.geography.name,
-      components: ((comp.scores?.[scoreType + '_components'] ?? []) as ScoreComponentBreakdown[]),
-      colorVar: MARKET_COLORS[Math.min(i + 1, MARKET_COLORS.length - 1)],
-    })),
+    ...comparisonGeos.map((geo, i) => {
+      const comp = comparisons?.[geo.id];
+      return {
+        id: geo.id,
+        name: comp?.geography?.name ?? geo.name,
+        components: ((comp?.scores as any)?.[scoreType + '_components'] ?? []) as ScoreComponentBreakdown[],
+        colorVar: MARKET_COLORS[Math.min(i + 1, MARKET_COLORS.length - 1)],
+      };
+    }),
   ];
 
   // -----------------------------------------------------------------------

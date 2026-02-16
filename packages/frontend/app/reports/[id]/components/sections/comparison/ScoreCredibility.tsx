@@ -47,10 +47,8 @@ export function ScoreCredibility({ section, report }: SectionProps) {
       return isInvestor ? report.investoredge_score : report.homeready_score;
     }
 
-    const comp = report.populated_data?.comparables?.find(
-      c => c.geography.id === winnerData.winnerId
-    );
-    return comp?.scores?.[scoreType] as number | null ?? null;
+    const comp = report.populated_data?.comparisons?.[winnerData.winnerId];
+    return (comp?.scores?.[scoreType] as number | null) ?? null;
   })();
 
   // Fetch quintile performance data

@@ -119,13 +119,9 @@ export function ComponentShowdown({ report, className }: ComponentShowdownProps)
   const primaryComponents: ScoreComponentBreakdown[] =
     (report.scores_snapshot as any)?.[componentsKey] || [];
 
-  // Comparison market data (from comparables)
-  const comparables = report.populated_data?.comparables || [];
-
-  // Also index comparisons keyed by geo id for richer data access
-  const comparisons = (report.populated_data as any)?.comparisons as
-    | Record<string, any>
-    | undefined;
+  // Comparison market data (use comparisons record keyed by geo ID)
+  const comparisons = report.populated_data?.comparisons;
+  const comparisonGeos = report.comparison_geographies ?? [];
 
   if (primaryComponents.length === 0) {
     return (
@@ -165,29 +161,20 @@ export function ComponentShowdown({ report, className }: ComponentShowdownProps)
           ];
 
           // Add comparison markets
-          for (const comparable of comparables) {
-            const compScores = (comparable.scores as any)?.[componentsKey] as
+          for (const geo of comparisonGeos) {
+            const compData = comparisons?.[geo.id];
+            const compScores = (compData?.scores as any)?.[componentsKey] as
               | ScoreComponentBreakdown[]
               | undefined;
             const matchingComp = compScores?.find(
-              (c) => c.component === componentName
-            );
-            // Also try the comparisons map
-            const compFromMap = comparisons?.[comparable.geography.id];
-            const compMapScores = (compFromMap?.scores as any)?.[componentsKey] as
-              | ScoreComponentBreakdown[]
-              | undefined;
-            const matchingCompFromMap = compMapScores?.find(
               (c: ScoreComponentBreakdown) => c.component === componentName
             );
 
-            const resolved = matchingComp || matchingCompFromMap;
-
             markets.push({
-              id: comparable.geography.id,
-              name: comparable.geography.name,
-              componentScore: resolved?.score ?? 0,
-              componentStatus: resolved?.status ?? 'moderate',
+              id: geo.id,
+              name: compData?.geography?.name ?? geo.name,
+              componentScore: matchingComp?.score ?? 0,
+              componentStatus: matchingComp?.status ?? 'moderate',
             });
           }
 
@@ -285,9 +272,7 @@ export function ComponentShowdown({ report, className }: ComponentShowdownProps)
                             return getMetricValueWithAliases(report as any, metric.metricId);
                           }
                           // Comparison market
-                          const compData =
-                            comparisons?.[market.id] ||
-                            comparables.find((c) => c.geography.id === market.id);
+                          const compData = comparisons?.[market.id];
                           return getCompMetricValue(compData, metric.metricId);
                         });
 

@@ -56,13 +56,10 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
     : (report.homeready_score ?? report.scores_snapshot?.homeready_score ?? null);
 
   // -----------------------------------------------------------------------
-  // Comparison markets
+  // Comparison markets (use comparisons record keyed by geo ID)
   // -----------------------------------------------------------------------
-  const comparables = (report.populated_data?.comparables ?? []) as Array<{
-    geography: { id: string; name: string };
-    current?: Record<string, any>;
-    scores?: Record<string, any>;
-  }>;
+  const comparisons = report.populated_data?.comparisons;
+  const comparisonGeos = report.comparison_geographies ?? [];
 
   // -----------------------------------------------------------------------
   // Priority-weighted winner
@@ -79,12 +76,15 @@ export function ComparisonHero({ report, className = '' }: ComparisonHeroProps):
       score: primaryScore,
       isWinner: priorityWinner?.winnerId === report.primary_geography_id,
     },
-    ...comparables.map((comp) => ({
-      id: comp.geography.id,
-      name: comp.geography.name,
-      score: (comp.scores?.[scoreType] as number) ?? null,
-      isWinner: priorityWinner?.winnerId === comp.geography.id,
-    })),
+    ...comparisonGeos.map((geo) => {
+      const comp = comparisons?.[geo.id];
+      return {
+        id: geo.id,
+        name: comp?.geography?.name ?? geo.name,
+        score: (comp?.scores?.[scoreType] as number) ?? null,
+        isWinner: priorityWinner?.winnerId === geo.id,
+      };
+    }),
   ];
 
   // Fallback: if no priority winner set, use highest score

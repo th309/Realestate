@@ -69,7 +69,10 @@ export function MarketDeepDive({ section, report }: SectionProps) {
   const scoreType = isInvestor ? 'investoredge' : 'homeready';
   const scoreLabel = isInvestor ? 'InvestorEdge' : 'HomeReady';
 
-  // Build market data list
+  // Build market data list (use comparisons record keyed by geo ID)
+  const comparisons = report.populated_data?.comparisons;
+  const comparisonGeos = report.comparison_geographies ?? [];
+
   const markets: MarketData[] = [
     {
       id: report.primary_geography_id,
@@ -80,12 +83,16 @@ export function MarketDeepDive({ section, report }: SectionProps) {
       } as Record<string, number>,
       historical: report.populated_data?.historical,
     },
-    ...(report.populated_data?.comparables || []).map(comp => ({
-      id: comp.geography.id,
-      name: comp.geography.name,
-      metrics: comp.metrics,
-      scores: comp.scores,
-    })),
+    ...comparisonGeos.map(geo => {
+      const comp = comparisons?.[geo.id];
+      return {
+        id: geo.id,
+        name: comp?.geography?.name ?? geo.name,
+        metrics: (comp?.current ?? {}) as Record<string, number | string | null>,
+        scores: (comp?.scores ?? {}) as Record<string, number>,
+        historical: comp?.historical,
+      };
+    }),
   ];
 
   // Get AI-generated risks and opportunities
