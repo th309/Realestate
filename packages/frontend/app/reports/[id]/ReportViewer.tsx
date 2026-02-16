@@ -25,6 +25,8 @@ import {
   Target,
   Shield,
   Clock,
+  Layers,
+  Trophy,
 } from 'lucide-react';
 import { BrandingProvider } from './components/BrandingProvider';
 import { ReportWithTemplate } from './components/types';
@@ -238,8 +240,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
       {/* Main Content */}
       <div className="flex">
         <main className={`flex-1 ${showConversation ? 'lg:pr-[400px]' : ''}`}>
-          {/* Report Hero - skip for homeready/investoredge since their Hero sections handle it */}
-          {templateType !== 'homeready' && templateType !== 'investoredge' && (
+          {/* Report Hero - skip for homeready/investoredge/comparison since their Hero sections handle it */}
+          {templateType !== 'homeready' && templateType !== 'investoredge' && templateType !== 'comparison' && (
             <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
               <div className="max-w-4xl mx-auto px-6 py-10">
                 <div className="report-animate-in">
@@ -308,8 +310,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
                 <section
                   key={id}
                   id={id}
-                  className={`${id === 'hero' || id === 'investor-hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
-                  style={{ animationDelay: `${(index + (templateType === 'homeready' || templateType === 'investoredge' ? 1 : 3)) * 100}ms` }}
+                  className={`${id === 'hero' || id === 'investor-hero' || id === 'comparison-hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
+                  style={{ animationDelay: `${(index + (templateType === 'homeready' || templateType === 'investoredge' || templateType === 'comparison' ? 1 : 3)) * 100}ms` }}
                 >
                   <SectionErrorBoundary sectionId={id}>
                     <Section report={reportInstance} />
@@ -447,6 +449,14 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
   if (id === 'pro-forma') return <BarChart3 className={iconClass} />;
   if (id === 'investor-bottom-line') return <Target className={iconClass} />;
 
+  // Comparison sections
+  if (id === 'comparison-hero') return <Trophy className={iconClass} />;
+  if (id === 'head-to-head') return <BarChart3 className={iconClass} />;
+  if (id === 'component-showdown') return <Layers className={iconClass} />;
+  if (id === 'priority-analysis') return <Star className={iconClass} />;
+  if (id === 'market-strengths') return <Sparkles className={iconClass} />;
+  if (id === 'comparison-verdict') return <Target className={iconClass} />;
+
   // Legacy / other report types
   if (id.includes('executive') || id.includes('summary')) return <FileText className={iconClass} />;
   if (id.includes('score') || id.includes('thesis')) return <TrendingUp className={iconClass} />;
@@ -488,6 +498,13 @@ const SECTION_DISPLAY_NAMES: Record<string, string> = {
   'investment-thesis': 'Investment Thesis',
   'pro-forma': 'Pro Forma',
   'investor-bottom-line': 'Bottom Line',
+  // Comparison
+  'comparison-hero': 'Overview',
+  'head-to-head': 'Score Comparison',
+  'component-showdown': 'Component Breakdown',
+  'priority-analysis': 'Priority Analysis',
+  'market-strengths': 'Market Strengths',
+  'comparison-verdict': 'The Verdict',
 };
 
 function formatSectionName(sectionId: string): string {

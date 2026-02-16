@@ -4,6 +4,10 @@
 // New comparison components (2026 redesign v2)
 export { ComparisonHero } from './ComparisonHero';
 export { HeadToHeadScoreStory } from './HeadToHeadScoreStory';
+export { ComponentShowdown } from './ComponentShowdown';
+export { PriorityWeightedAnalysis } from './PriorityWeightedAnalysis';
+export { MarketStrengths } from './MarketStrengths';
+export { ComparisonVerdict } from './ComparisonVerdict';
 
 // Original comparison components (backward compatibility)
 export { ComparisonHeroShowdown } from './ComparisonHeroShowdown';

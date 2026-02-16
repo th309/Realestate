@@ -77,10 +77,15 @@ import {
 // Shared sections
 import { MarketPulse as SharedMarketPulse } from '../sections/shared';
 
-// Comparison sections
-import { ComparisonHeader } from '../sections/ComparisonHeader';
-import { ComparisonTable } from '../sections/ComparisonTable';
-import { ComparisonChartGrid } from '../sections/ComparisonChartGrid';
+// Comparison sections (redesigned)
+import {
+  ComparisonHero,
+  HeadToHeadScoreStory,
+  ComponentShowdown,
+  PriorityWeightedAnalysis,
+  MarketStrengths,
+  ComparisonVerdict,
+} from '../sections/comparison';
 
 // -----------------------------------------------------------------------------
 // Types
@@ -161,11 +166,15 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
   },
   comparison: {
     name: 'Market Comparison',
-    description: 'Side-by-side market comparison',
+    description: 'Score-driven side-by-side market comparison',
     sections: [
-      { component: ComparisonHeader, id: 'comparison-header' },
-      { component: ComparisonTable, id: 'comparison-metrics' },
-      { component: ComparisonChartGrid, id: 'comparison-charts' },
+      { component: ComparisonHero, id: 'comparison-hero' },
+      { component: HeadToHeadScoreStory, id: 'head-to-head' },
+      { component: ComponentShowdown, id: 'component-showdown' },
+      { component: PriorityWeightedAnalysis, id: 'priority-analysis' },
+      { component: MarketStrengths, id: 'market-strengths' },
+      { component: ComparisonVerdict, id: 'comparison-verdict' },
+      { component: SharedMarketPulse, id: 'market-pulse' },
     ],
   },
 };
