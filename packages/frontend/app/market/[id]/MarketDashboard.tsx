@@ -381,7 +381,7 @@ export function MarketDashboard({
           </p>
           <div className="flex flex-col gap-3">
             <Link
-              href="/pricing"
+              href="/pricing#data-depth"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
             >
               Upgrade to Pro

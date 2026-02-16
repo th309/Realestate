@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Lock } from 'lucide-react';
+import { Sparkles, Lock, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export type AIAnalysisVariant = 'insight' | 'summary' | 'recommendation';
 
@@ -103,11 +104,20 @@ export function AIAnalysisBlock({
           role="region"
           aria-label="AI Analysis Upgrade"
         >
-          <div className="flex items-center gap-2 text-[var(--report-stone-light)]">
-            <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <p className="text-sm">
-              AI-powered analysis is available with an Enterprise plan.
-            </p>
+          <div className="flex items-center justify-between gap-2 text-[var(--report-stone-light)]">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <p className="text-sm">
+                AI-powered analysis is available with a Pro plan.
+              </p>
+            </div>
+            <Link
+              href="/pricing#reports"
+              className="inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--report-navy)' }}
+            >
+              See sample <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
         </div>
       );

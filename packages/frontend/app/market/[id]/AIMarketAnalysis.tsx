@@ -349,7 +349,7 @@ export function AIMarketAnalysis({
               Basic data summary based on available metrics.
             </p>
             <Link
-              href="/pricing"
+              href="/pricing#ai-insights"
               className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors shrink-0 ml-3"
             >
               Unlock AI insights <ArrowRight className="w-3 h-3" />
