@@ -15,3 +15,21 @@ export type { RisksAndConsiderationsProps } from './RisksAndConsiderations';
 
 export { ScoreDeepDive } from './ScoreDeepDive';
 export type { ScoreDeepDiveProps } from './ScoreDeepDive';
+
+export { AffordabilityDeepDive } from './AffordabilityDeepDive';
+export type { AffordabilityDeepDiveProps } from './AffordabilityDeepDive';
+
+export { MarketTimingDeepDive } from './MarketTimingDeepDive';
+export type { MarketTimingDeepDiveProps } from './MarketTimingDeepDive';
+
+export { StabilityDeepDive } from './StabilityDeepDive';
+export type { StabilityDeepDiveProps } from './StabilityDeepDive';
+
+export { GrowthPotentialDeepDive } from './GrowthPotentialDeepDive';
+export type { GrowthPotentialDeepDiveProps } from './GrowthPotentialDeepDive';
+
+export { YourPriorities } from './YourPriorities';
+export type { YourPrioritiesProps } from './YourPriorities';
+
+export { BottomLine } from './BottomLine';
+export type { BottomLineProps } from './BottomLine';
