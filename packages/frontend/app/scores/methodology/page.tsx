@@ -1,5 +1,8 @@
-import { DollarSign, Briefcase, Target, Database, TrendingUp, Shield, CheckCircle } from 'lucide-react';
+import fs from 'fs';
+import path from 'path';
+import { DollarSign, Briefcase, Target, Database, TrendingUp, Shield, CheckCircle, FileText } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -47,6 +50,9 @@ const KEY_FINDINGS = [
 ];
 
 export default function MethodologyPage() {
+  const reportPath = path.join(process.cwd(), '..', '..', 'docs', 'audits', '2026-02-13-v2-validation-report.md');
+  const reportContent = fs.readFileSync(reportPath, 'utf-8');
+
   return (
     <div className="mt-12 space-y-16">
       {/* Header */}
@@ -145,8 +151,26 @@ export default function MethodologyPage() {
         </div>
       </section>
 
-      {/* Technical Validation Report - rendered in Task 6 */}
-      <section id="technical-report" />
+      {/* Technical Validation Report */}
+      <section id="technical-report" className="mt-16">
+        <div className="border-t border-outline-variant pt-12">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+              Technical Validation Report
+            </p>
+          </div>
+          <h2 className="text-2xl font-[var(--font-source-serif)] text-on-surface mt-2">
+            Walk-forward elastic net cross-validation with bootstrap significance testing
+          </h2>
+          <p className="text-sm text-on-surface-variant mt-2 mb-8">
+            Full methodology and results from our v2.0 scoring model validation, covering December 2020 through December 2025.
+          </p>
+          <MarkdownRenderer content={reportContent} />
+        </div>
+      </section>
     </div>
   );
 }
