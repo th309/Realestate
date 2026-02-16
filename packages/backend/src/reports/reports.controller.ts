@@ -63,12 +63,13 @@ export class ReportsController {
   async generateReport(
     @Body() dto: GenerateReportDto,
     @Headers('x-user-id') userId: string,
+    @Headers('x-user-tier') userTier?: string,
   ) {
     if (!userId) {
       throw new HttpException('User ID required', HttpStatus.UNAUTHORIZED);
     }
 
-    const reportId = await this.reportsService.generateReport(userId, dto);
+    const reportId = await this.reportsService.generateReport(userId, dto, userTier);
     return { report_id: reportId, status: 'generating' };
   }
 
@@ -142,12 +143,13 @@ export class ReportsController {
     @Param('id') id: string,
     @Body() body: { user_inputs: Record<string, any> },
     @Headers('x-user-id') userId: string,
+    @Headers('x-user-tier') userTier?: string,
   ) {
     if (!userId) {
       throw new HttpException('User ID required', HttpStatus.UNAUTHORIZED);
     }
 
-    return this.reportsService.regenerateNarratives(id, userId, body.user_inputs);
+    return this.reportsService.regenerateNarratives(id, userId, body.user_inputs, userTier);
   }
 
   /**
@@ -160,6 +162,7 @@ export class ReportsController {
     @Param('id') reportId: string,
     @Body() dto: SendMessageDto,
     @Headers('x-user-id') userId: string,
+    @Headers('x-user-tier') userTier?: string,
   ) {
     if (!userId) {
       throw new HttpException('User ID required', HttpStatus.UNAUTHORIZED);
@@ -169,6 +172,7 @@ export class ReportsController {
       reportId,
       userId,
       dto.content,
+      userTier,
     );
   }
 

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
 import type { WizardState, GenerateReportRequest, GenerateReportResponse } from '../types';
 
 // Backend API URL
@@ -14,6 +15,7 @@ export interface UseReportGenerationReturn {
 
 export function useReportGeneration(): UseReportGenerationReturn {
   const router = useRouter();
+  const { simulatedTier, tier } = useEntitlements();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,11 +60,13 @@ export function useReportGeneration(): UseReportGenerationReturn {
       // TODO: Get actual user ID from auth context
       const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
+      const effectiveTier = simulatedTier || tier;
       const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': userId,
+          ...(effectiveTier ? { 'x-user-tier': effectiveTier } : {}),
         },
         body: JSON.stringify(requestBody),
       });
@@ -81,7 +85,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
       setError(err instanceof Error ? err.message : 'Failed to generate report');
       setIsGenerating(false);
     }
-  }, [router]);
+  }, [router, simulatedTier, tier]);
 
   const clearError = useCallback(() => {
     setError(null);

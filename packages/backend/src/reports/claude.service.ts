@@ -6,7 +6,7 @@
  * - Narrative generation for reports
  * - Conversation responses with report context
  *
- * Note: Real-time news/indicators are handled by GeminiNewsService
+ * Note: Real-time news/indicators are handled by ClaudeNewsService
  */
 
 import { Injectable, Logger } from '@nestjs/common';

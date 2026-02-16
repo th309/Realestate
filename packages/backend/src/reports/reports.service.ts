@@ -12,7 +12,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { ClaudeService } from './claude.service';
-import { GeminiNewsService } from './gemini-news.service';
+import { ClaudeNewsService } from './claude-news.service';
 import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
@@ -161,7 +161,7 @@ export class ReportsService {
     private readonly supabase: SupabaseService,
     private readonly scoringService: ScoringService,
     private readonly claudeService: ClaudeService,
-    private readonly geminiNewsService: GeminiNewsService,
+    private readonly claudeNewsService: ClaudeNewsService,
     private readonly timeSeriesService: TimeSeriesService,
     private readonly entitlementsService: EntitlementsService,
     private readonly partnersService: PartnersService,
@@ -212,6 +212,7 @@ export class ReportsService {
   async generateReport(
     userId: string,
     dto: GenerateReportDto,
+    userTier?: string,
   ): Promise<string> {
     const client = this.supabase.getClient();
     const startTime = Date.now();
@@ -257,7 +258,7 @@ export class ReportsService {
     }
 
     // 3. Kick off async generation (in background)
-    this.generateReportAsync(report.id, template, dto, startTime, userId);
+    this.generateReportAsync(report.id, template, dto, startTime, userId, userTier);
 
     return report.id;
   }
@@ -271,6 +272,7 @@ export class ReportsService {
     dto: GenerateReportDto,
     startTime: number,
     userId: string,
+    userTier?: string,
   ): Promise<void> {
     const client = this.supabase.getClient();
 
@@ -332,8 +334,8 @@ export class ReportsService {
         }
       }
 
-      // 2. Scout news via Gemini (with caching)
-      const newsResult = await this.geminiNewsService.getOrScoutNews(
+      // 2. Scout news via Claude (with caching)
+      const newsResult = await this.claudeNewsService.getOrScoutNews(
         dto.primary_geography.id,
         geoType,
         dto.primary_geography.name,
@@ -347,7 +349,7 @@ export class ReportsService {
 
       // Get signal summary if news available
       const signalSummary = newsResult
-        ? this.geminiNewsService.summarizeSignals(newsResult)
+        ? this.claudeNewsService.summarizeSignals(newsResult)
         : null;
 
       // 2b. Generate score contexts for human-readable interpretations
@@ -429,6 +431,29 @@ export class ReportsService {
         comparisons: Object.keys(comparisons).length > 0 ? comparisons : undefined,
       };
 
+      // 3a. Fetch benchmarks from parent geography levels
+      try {
+        const benchmarks: Record<string, any> = {};
+
+        // State benchmark: use the state from dto.primary_geography.state
+        if (dto.primary_geography.state) {
+          const stateMetrics = await this.fetchStateBenchmark(dto.primary_geography.state);
+          if (stateMetrics && Object.keys(stateMetrics).length > 0) {
+            benchmarks.state = stateMetrics;
+          }
+        }
+
+        // National benchmark
+        const nationalMetrics = await this.fetchNationalBenchmark();
+        if (nationalMetrics && Object.keys(nationalMetrics).length > 0) {
+          benchmarks.national = nationalMetrics;
+        }
+
+        populatedData.benchmarks = benchmarks;
+      } catch (benchmarkError) {
+        this.logger.warn('Failed to fetch benchmarks, continuing with empty:', benchmarkError);
+      }
+
       // 3b. Calculate priority-weighted winner for comparison reports
       const priorities = dto.priorities || dto.user_inputs?.priorities || [];
       let priorityWeightedWinner: PriorityWeightedResult | null = null;
@@ -496,7 +521,7 @@ export class ReportsService {
 
       // 4. Generate AI narratives (Claude) with news context — only for entitled users
       let aiNarratives = {};
-      const aiAccess = await this.entitlementsService.checkAccess(userId, null, ['feature:ai_insights']);
+      const aiAccess = await this.entitlementsService.checkAccess(userId, userTier || null, ['feature:ai_insights']);
       const hasAiInsights = aiAccess.access['feature:ai_insights']?.level === 'full';
 
       if (!hasAiInsights) {
@@ -506,7 +531,7 @@ export class ReportsService {
       if (hasAiInsights && template.config.ai_config?.narrative_sections) {
         // Format news for Claude prompt context
         const newsContext = newsResult
-          ? this.geminiNewsService.formatNewsForPrompt(newsResult, {
+          ? this.claudeNewsService.formatNewsForPrompt(newsResult, {
               maxNewsItems: 5,
               includeIndicators: true,
               includeSignals: true,
@@ -765,6 +790,7 @@ export class ReportsService {
     reportId: string,
     userId: string,
     content: string,
+    userTier?: string,
   ): Promise<any> {
     const client = this.supabase.getClient();
 
@@ -806,7 +832,7 @@ export class ReportsService {
         market_signals: realtimeData.signals || [],
         national_context: realtimeData.national_context,
       };
-      newsContext = this.geminiNewsService.formatNewsForPrompt(newsResult as any, {
+      newsContext = this.claudeNewsService.formatNewsForPrompt(newsResult as any, {
         maxNewsItems: 5,
         includeIndicators: true,
         includeSignals: true,
@@ -815,7 +841,7 @@ export class ReportsService {
     }
 
     // Check AI entitlement before generating conversation response
-    const convAiAccess = await this.entitlementsService.checkAccess(userId, null, ['feature:ai_insights']);
+    const convAiAccess = await this.entitlementsService.checkAccess(userId, userTier || null, ['feature:ai_insights']);
     if (convAiAccess.access['feature:ai_insights']?.level !== 'full') {
       return {
         messages: [
@@ -1106,7 +1132,7 @@ export class ReportsService {
           }
         }
       } else if (geographyType === 'county') {
-        // Get Realtor county data
+        // Get Realtor county data (all available fields)
         const { data: realtorData } = await client
           .from('realtor_county')
           .select('*')
@@ -1121,6 +1147,71 @@ export class ReportsService {
           metrics.days_on_market = realtorData.median_days_on_market;
           metrics.active_listing_count = realtorData.active_listing_count;
           metrics.inventory_yoy = realtorData.active_listing_count_yy;
+          // Additional realtor fields (same as metro)
+          if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
+          if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
+          if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
+          if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
+        }
+
+        // Get Zillow ZHVI data for county (use fips_code)
+        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
+          const { data: zhviData } = await client
+            .from('zillow_county')
+            .select('value')
+            .eq('fips_code', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (zhviData) {
+            metrics.zhvi = zhviData.value;
+          }
+        }
+
+        // Get YoY ZHVI change for county (compare current to 12 months ago)
+        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
+          const { data: zhviHistory } = await client
+            .from('zillow_county')
+            .select('value, period_date')
+            .eq('fips_code', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(13);
+
+          if (zhviHistory && zhviHistory.length >= 12) {
+            const current = zhviHistory[0]?.value;
+            const yearAgo = zhviHistory[12]?.value;
+            if (current && yearAgo) {
+              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+            }
+          }
+        }
+
+        // Get ZORI (rent) data for county
+        if (shouldFetch('zori') || shouldFetch('rent')) {
+          const { data: zoriData } = await client
+            .from('zillow_county')
+            .select('value')
+            .eq('fips_code', geographyId)
+            .eq('metric_name', 'zori')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (zoriData) {
+            metrics.zori = zoriData.value;
+          }
+        }
+
+        // If no ZHVI from Zillow, use median_listing_price from Realtor as substitute
+        if (!metrics.zhvi && metrics.median_listing_price) {
+          metrics.zhvi = metrics.median_listing_price;
+          // Calculate YoY from realtor data if we don't have Zillow YoY
+          if (!metrics.zhvi_yoy && metrics.median_listing_price_yoy != null) {
+            metrics.zhvi_yoy = metrics.median_listing_price_yoy;
+          }
         }
 
         // Get calculated metrics
@@ -1137,9 +1228,33 @@ export class ReportsService {
           metrics.cap_rate = calcMetrics.cap_rate;
           metrics.gross_yield = calcMetrics.gross_yield;
           metrics.affordability_ratio = calcMetrics.affordability_ratio;
+          metrics.grm = calcMetrics.grm;
+          metrics.overvalued_pct = calcMetrics.overvalued_pct;
+          metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
+          metrics.affordability_index = calcMetrics.affordability_percentile;
+          metrics.gross_rent_multiplier = calcMetrics.grm;
+        }
+
+        // Get Census data for county (population, income, etc.)
+        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
+          const { data: censusData } = await client
+            .from('census_county')
+            .select('total_population, median_household_income, median_age, population_yoy')
+            .eq('fips_code', geographyId)
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (censusData) {
+            metrics.median_income = censusData.median_household_income;
+            metrics.median_household_income = censusData.median_household_income;
+            metrics.population = censusData.total_population;
+            metrics.median_age = censusData.median_age;
+            metrics.population_growth_yoy = censusData.population_yoy;
+          }
         }
       } else if (geographyType === 'zip') {
-        // Get Realtor zip data
+        // Get Realtor zip data (all available fields)
         const { data: realtorData } = await client
           .from('realtor_zip')
           .select('*')
@@ -1153,6 +1268,71 @@ export class ReportsService {
           metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
           metrics.days_on_market = realtorData.median_days_on_market;
           metrics.active_listing_count = realtorData.active_listing_count;
+          metrics.inventory_yoy = realtorData.active_listing_count_yy;
+          // Additional realtor fields (same as metro)
+          if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
+          if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
+          if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
+          if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
+        }
+
+        // Get Zillow ZHVI data for zip (use region_name which stores ZIP code)
+        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
+          const { data: zhviData } = await client
+            .from('zillow_zip')
+            .select('value')
+            .eq('region_name', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (zhviData) {
+            metrics.zhvi = zhviData.value;
+          }
+        }
+
+        // Get YoY ZHVI change for zip
+        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
+          const { data: zhviHistory } = await client
+            .from('zillow_zip')
+            .select('value, period_date')
+            .eq('region_name', geographyId)
+            .eq('metric_name', 'zhvi')
+            .order('period_date', { ascending: false })
+            .limit(13);
+
+          if (zhviHistory && zhviHistory.length >= 12) {
+            const current = zhviHistory[0]?.value;
+            const yearAgo = zhviHistory[12]?.value;
+            if (current && yearAgo) {
+              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+            }
+          }
+        }
+
+        // Get ZORI (rent) data for zip
+        if (shouldFetch('zori') || shouldFetch('rent')) {
+          const { data: zoriData } = await client
+            .from('zillow_zip')
+            .select('value')
+            .eq('region_name', geographyId)
+            .eq('metric_name', 'zori')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (zoriData) {
+            metrics.zori = zoriData.value;
+          }
+        }
+
+        // If no ZHVI from Zillow, use median_listing_price from Realtor as substitute
+        if (!metrics.zhvi && metrics.median_listing_price) {
+          metrics.zhvi = metrics.median_listing_price;
+          if (!metrics.zhvi_yoy && metrics.median_listing_price_yoy != null) {
+            metrics.zhvi_yoy = metrics.median_listing_price_yoy;
+          }
         }
 
         // Get calculated metrics
@@ -1168,6 +1348,30 @@ export class ReportsService {
         if (calcMetrics) {
           metrics.cap_rate = calcMetrics.cap_rate;
           metrics.gross_yield = calcMetrics.gross_yield;
+          metrics.grm = calcMetrics.grm;
+          metrics.overvalued_pct = calcMetrics.overvalued_pct;
+          metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
+          metrics.affordability_index = calcMetrics.affordability_percentile;
+          metrics.gross_rent_multiplier = calcMetrics.grm;
+        }
+
+        // Get Census data for zip (population, income, etc.)
+        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
+          const { data: censusData } = await client
+            .from('census_zip')
+            .select('population, median_household_income, median_age, population_yoy')
+            .eq('zcta', geographyId)
+            .order('year', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (censusData) {
+            metrics.median_income = censusData.median_household_income;
+            metrics.median_household_income = censusData.median_household_income;
+            metrics.population = censusData.population;
+            metrics.median_age = censusData.median_age;
+            metrics.population_growth_yoy = censusData.population_yoy;
+          }
         }
       }
 
@@ -1188,6 +1392,86 @@ export class ReportsService {
     }
 
     return metrics;
+  }
+
+  /**
+   * Fetch state-level benchmark metrics from realtor_state table.
+   * Returns key metrics for comparison: median_listing_price, days_on_market,
+   * active_listing_count, inventory_yoy, hotness_score.
+   *
+   * @param stateCode - State abbreviation (e.g., "CA", "TX") or FIPS code
+   */
+  private async fetchStateBenchmark(stateCode: string): Promise<Record<string, any>> {
+    const client = this.supabase.getClient();
+    const benchmarks: Record<string, any> = {};
+
+    try {
+      // realtor_state uses state_id as the abbreviation (e.g., "NV", "CA")
+      // If stateCode looks like a FIPS (2-digit number), we still try it as-is
+      // since the realtor service handles conversion elsewhere
+      const { data: stateData } = await client
+        .from('realtor_state')
+        .select('*')
+        .eq('state_id', stateCode.toUpperCase())
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (stateData) {
+        benchmarks.median_listing_price = stateData.median_listing_price;
+        benchmarks.days_on_market = stateData.median_days_on_market;
+        benchmarks.active_listing_count = stateData.active_listing_count;
+        benchmarks.inventory_yoy = stateData.active_listing_count_yy;
+        benchmarks.hotness_score = stateData.hotness_score;
+        benchmarks.median_listing_price_yoy = stateData.median_listing_price_yy;
+        benchmarks.pending_ratio = stateData.pending_ratio;
+        benchmarks.price_reduced_share = stateData.price_reduced_share;
+        benchmarks.demand_score = stateData.demand_score;
+      }
+
+      this.logger.log(`Fetched state benchmark for ${stateCode}: ${Object.keys(benchmarks).filter(k => benchmarks[k] != null).length} fields`);
+    } catch (error) {
+      this.logger.warn(`Failed to fetch state benchmark for ${stateCode}:`, error);
+    }
+
+    return benchmarks;
+  }
+
+  /**
+   * Fetch national-level benchmark metrics from realtor_national table.
+   * Returns key metrics for comparison: median_listing_price, days_on_market,
+   * active_listing_count, inventory_yoy, hotness_score.
+   */
+  private async fetchNationalBenchmark(): Promise<Record<string, any>> {
+    const client = this.supabase.getClient();
+    const benchmarks: Record<string, any> = {};
+
+    try {
+      const { data: nationalData } = await client
+        .from('realtor_national')
+        .select('*')
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (nationalData) {
+        benchmarks.median_listing_price = nationalData.median_listing_price;
+        benchmarks.days_on_market = nationalData.median_days_on_market;
+        benchmarks.active_listing_count = nationalData.active_listing_count;
+        benchmarks.inventory_yoy = nationalData.active_listing_count_yy;
+        benchmarks.hotness_score = nationalData.hotness_score;
+        benchmarks.median_listing_price_yoy = nationalData.median_listing_price_yy;
+        benchmarks.pending_ratio = nationalData.pending_ratio;
+        benchmarks.price_reduced_share = nationalData.price_reduced_share;
+        benchmarks.demand_score = nationalData.demand_score;
+      }
+
+      this.logger.log(`Fetched national benchmark: ${Object.keys(benchmarks).filter(k => benchmarks[k] != null).length} fields`);
+    } catch (error) {
+      this.logger.warn('Failed to fetch national benchmark:', error);
+    }
+
+    return benchmarks;
   }
 
   /**
@@ -2367,6 +2651,7 @@ export class ReportsService {
     reportId: string,
     userId: string,
     userInputs: Record<string, any>,
+    userTier?: string,
   ): Promise<{ updated_keys: string[]; ai_narrative: Record<string, any> }> {
     const client = this.supabase.getClient();
 
