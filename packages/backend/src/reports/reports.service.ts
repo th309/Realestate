@@ -14,6 +14,7 @@ import { ScoringService } from '../scoring/scoring.service';
 import { ClaudeService } from './claude.service';
 import { GeminiNewsService } from './gemini-news.service';
 import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { randomBytes } from 'crypto';
 import { HISTORY_MONTHS_MAX } from '../common/history.constants';
@@ -159,6 +160,7 @@ export class ReportsService {
     private readonly claudeService: ClaudeService,
     private readonly geminiNewsService: GeminiNewsService,
     private readonly timeSeriesService: TimeSeriesService,
+    private readonly entitlementsService: EntitlementsService,
   ) {}
 
   /**
@@ -251,7 +253,7 @@ export class ReportsService {
     }
 
     // 3. Kick off async generation (in background)
-    this.generateReportAsync(report.id, template, dto, startTime);
+    this.generateReportAsync(report.id, template, dto, startTime, userId);
 
     return report.id;
   }
@@ -264,6 +266,7 @@ export class ReportsService {
     template: ReportTemplate,
     dto: GenerateReportDto,
     startTime: number,
+    userId: string,
   ): Promise<void> {
     const client = this.supabase.getClient();
 
@@ -446,9 +449,16 @@ export class ReportsService {
       // Store priorities in populated data for reference
       (populatedData as any).priorities = priorities;
 
-      // 4. Generate AI narratives (Claude) with news context
+      // 4. Generate AI narratives (Claude) with news context — only for entitled users
       let aiNarratives = {};
-      if (template.config.ai_config?.narrative_sections) {
+      const aiAccess = await this.entitlementsService.checkAccess(userId, null, ['feature:ai_insights']);
+      const hasAiInsights = aiAccess.access['feature:ai_insights']?.level === 'full';
+
+      if (!hasAiInsights) {
+        this.logger.log(`[Report] Skipping AI narratives — user ${userId} does not have ai_insights`);
+      }
+
+      if (hasAiInsights && template.config.ai_config?.narrative_sections) {
         // Format news for Claude prompt context
         const newsContext = newsResult
           ? this.geminiNewsService.formatNewsForPrompt(newsResult, {
@@ -757,6 +767,28 @@ export class ReportsService {
         includeSignals: true,
         includeNational: true,
       });
+    }
+
+    // Check AI entitlement before generating conversation response
+    const convAiAccess = await this.entitlementsService.checkAccess(userId, null, ['feature:ai_insights']);
+    if (convAiAccess.access['feature:ai_insights']?.level !== 'full') {
+      return {
+        messages: [
+          ...(conversation.messages || []),
+          {
+            id: Date.now().toString(),
+            role: 'user',
+            content,
+            timestamp: new Date().toISOString(),
+          },
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: 'AI-powered conversation requires an Enterprise plan. Upgrade to unlock AI chat for your reports.',
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      };
     }
 
     // Generate AI response

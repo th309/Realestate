@@ -1152,36 +1152,55 @@ export class CalculatedMetricsService {
 
     for (const targetDate of uniqueDates) {
       // Get ZORI (rent) data for all metros from zillow_metro table
-      const { data: zoriData, error: zoriError } = await this.supabase
-        .from('zillow_metro')
-        .select('region_id, region_name, value, cbsa_code')
-        .eq('metric_name', 'zori')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null);
+      // Paginated ZORI fetch for metros
+      const zoriData: any[] = [];
+      let zoriOff = 0;
+      while (true) {
+        const { data: page, error: zoriError } = await this.supabase
+          .from('zillow_metro')
+          .select('region_id, region_name, value, cbsa_code')
+          .eq('metric_name', 'zori')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(zoriOff, zoriOff + 1999);
+        if (zoriError) {
+          errors.push(`${targetDate}: ${zoriError.message}`);
+          break;
+        }
+        if (!page || page.length === 0) break;
+        zoriData.push(...page);
+        if (page.length < 2000) break;
+        zoriOff += 2000;
+      }
 
-      if (zoriError || !zoriData) {
-        errors.push(
-          `${targetDate}: ${zoriError?.message || 'Failed to fetch ZORI data'}`,
-        );
+      if (zoriData.length === 0) {
         continue;
       }
 
-      // Get ZHVI (value) data for all metros from zillow_metro table
-      // Use same date as ZORI if possible, or latest available at that time
-      const { data: zhviData, error: zhviError } = await this.supabase
-        .from('zillow_metro')
-        .select('region_id, value, cbsa_code, region_name')
-        .eq('metric_name', 'zhvi')
-        .eq('period_date', targetDate) // Ideally matched
-        .not('value', 'is', null);
+      // Get ZHVI (value) data for all metros (paginated)
+      const zhviDataAll: any[] = [];
+      let zhviOff = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('zillow_metro')
+          .select('region_id, value, cbsa_code, region_name')
+          .eq('metric_name', 'zhvi')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(zhviOff, zhviOff + 1999);
+        if (!page || page.length === 0) break;
+        zhviDataAll.push(...page);
+        if (page.length < 2000) break;
+        zhviOff += 2000;
+      }
 
-      // Fallback if exact date match fails (ZHVI might be updated at different cadence than ZORI)
+      // Fallback if exact date match fails (ZHVI might be updated at different cadence)
       let zhviRows: Array<{
         region_id: number;
         value: number;
         cbsa_code: string | null;
         region_name: string | null;
-      }> = zhviData ?? [];
+      }> = zhviDataAll;
       if (zhviRows.length === 0) {
         const { data: zhviDateRow } = await this.supabase
           .from('zillow_metro')
@@ -1193,15 +1212,19 @@ export class CalculatedMetricsService {
           .single();
 
         if (zhviDateRow?.period_date) {
-          const { data: zhviDataFallback } = await this.supabase
-            .from('zillow_metro')
-            .select('region_id, value, cbsa_code, region_name')
-            .eq('metric_name', 'zhvi')
-            .eq('period_date', zhviDateRow.period_date)
-            .not('value', 'is', null);
-
-          if (zhviDataFallback && zhviDataFallback.length > 0) {
-            zhviRows = zhviDataFallback;
+          let fbOff = 0;
+          while (true) {
+            const { data: page } = await this.supabase
+              .from('zillow_metro')
+              .select('region_id, value, cbsa_code, region_name')
+              .eq('metric_name', 'zhvi')
+              .eq('period_date', zhviDateRow.period_date)
+              .not('value', 'is', null)
+              .range(fbOff, fbOff + 1999);
+            if (!page || page.length === 0) break;
+            zhviRows.push(...page);
+            if (page.length < 2000) break;
+            fbOff += 2000;
           }
         }
       }
@@ -1297,15 +1320,24 @@ export class CalculatedMetricsService {
           }
         }
 
-        // Look up component counties for these metros from geographies table
-        const { data: countyRows } = await this.supabase
-          .from('geographies')
-          .select('cbsa_code, fips_code, population')
-          .eq('geography_type', 'county')
-          .in('cbsa_code', cbsasWithZhviOnly)
-          .not('fips_code', 'is', null);
+        // Look up component counties for these metros (paginated)
+        const countyRows: any[] = [];
+        let cOff = 0;
+        while (true) {
+          const { data: page } = await this.supabase
+            .from('geographies')
+            .select('cbsa_code, fips_code, population')
+            .eq('geography_type', 'county')
+            .in('cbsa_code', cbsasWithZhviOnly)
+            .not('fips_code', 'is', null)
+            .range(cOff, cOff + 1999);
+          if (!page || page.length === 0) break;
+          countyRows.push(...page);
+          if (page.length < 2000) break;
+          cOff += 2000;
+        }
 
-        if (countyRows && countyRows.length > 0) {
+        if (countyRows.length > 0) {
           // Group counties by CBSA
           const countiesByCbsa: Record<
             string,
@@ -1329,14 +1361,24 @@ export class CalculatedMetricsService {
             )
             .filter(Boolean) as string[];
 
-          const { data: fmrRows } = await this.supabase
-            .from('hud_fmr')
-            .select('fips_code, fmr_2br')
-            .eq('year', targetYear)
-            .in('fips_code', allFips)
-            .not('fmr_2br', 'is', null);
+          // Paginated HUD FMR fetch
+          const fmrRows: any[] = [];
+          let fmrOff = 0;
+          while (true) {
+            const { data: page } = await this.supabase
+              .from('hud_fmr')
+              .select('fips_code, fmr_2br')
+              .eq('year', targetYear)
+              .in('fips_code', allFips)
+              .not('fmr_2br', 'is', null)
+              .range(fmrOff, fmrOff + 1999);
+            if (!page || page.length === 0) break;
+            fmrRows.push(...page);
+            if (page.length < 2000) break;
+            fmrOff += 2000;
+          }
 
-          if (fmrRows && fmrRows.length > 0) {
+          if (fmrRows.length > 0) {
             const fmrByFips: Record<string, number> = {};
             for (const r of fmrRows) {
               const fips =
@@ -1548,38 +1590,59 @@ export class CalculatedMetricsService {
       | 'renter_demand_index',
     geographyType: 'metro' | 'county' | 'zip' | 'state' | 'national' = 'metro',
   ): Promise<{ data: any[]; success: boolean; source: string }> {
-    // Get latest period_date for this metric
-    const { data: latestRow } = await this.supabase
-      .from('calculated_metrics')
-      .select('period_date')
-      .eq('geography_type', geographyType)
-      .not(metricName, 'is', null)
-      .order('period_date', { ascending: false })
-      .limit(1)
-      .single();
+    // Get the 3 most recent distinct period_dates for this metric
+    // (ZORI, ZHVI, Realtor, HUD data may arrive on different dates)
+    const uniqueRecentDates: string[] = [];
+    let dateCursor: string | null = null;
+    for (let i = 0; i < 3; i++) {
+      const q = this.supabase
+        .from('calculated_metrics')
+        .select('period_date')
+        .eq('geography_type', geographyType)
+        .not(metricName, 'is', null);
+      if (dateCursor) q.lt('period_date', dateCursor);
+      const { data: dateRow } = await q
+        .order('period_date', { ascending: false })
+        .limit(1)
+        .single();
+      if (!dateRow?.period_date) break;
+      uniqueRecentDates.push(dateRow.period_date);
+      dateCursor = dateRow.period_date;
+    }
 
-    if (!latestRow?.period_date) {
+    if (uniqueRecentDates.length === 0) {
       return { data: [], success: false, source: 'calculated_metrics' };
     }
 
-    // Get all data for that period (paginated to avoid Supabase 1000 row limit)
-    const allData: any[] = [];
-    let offset = 0;
+    // Fetch data from the most recent dates (paginated), keeping latest per geography
+    const dataByGeoId: Record<string, any> = {};
 
-    while (true) {
-      const { data: pageData, error } = await this.supabase
-        .from('calculated_metrics')
-        .select(`geography_id, geography_name, ${metricName}, period_date`)
-        .eq('geography_type', geographyType)
-        .eq('period_date', latestRow.period_date)
-        .not(metricName, 'is', null)
-        .range(offset, offset + this.PAGE_SIZE - 1);
+    for (const periodDate of uniqueRecentDates) {
+      let offset = 0;
+      while (true) {
+        const { data: pageData, error } = await this.supabase
+          .from('calculated_metrics')
+          .select(`geography_id, geography_name, ${metricName}, period_date`)
+          .eq('geography_type', geographyType)
+          .eq('period_date', periodDate)
+          .not(metricName, 'is', null)
+          .range(offset, offset + this.PAGE_SIZE - 1);
 
-      if (error || !pageData || pageData.length === 0) break;
-      allData.push(...pageData);
-      if (pageData.length < this.PAGE_SIZE) break;
-      offset += this.PAGE_SIZE;
+        if (error || !pageData || pageData.length === 0) break;
+
+        for (const row of pageData) {
+          // Only keep the latest value per geography (dates are iterated newest-first)
+          if (!dataByGeoId[row.geography_id]) {
+            dataByGeoId[row.geography_id] = row;
+          }
+        }
+
+        if (pageData.length < this.PAGE_SIZE) break;
+        offset += this.PAGE_SIZE;
+      }
     }
+
+    const allData = Object.values(dataByGeoId);
 
     if (allData.length === 0) {
       return { data: [], success: false, source: 'calculated_metrics' };
@@ -1630,26 +1693,44 @@ export class CalculatedMetricsService {
     let totalStored = 0;
 
     for (const targetDate of uniqueDates) {
-      // Get ZORI (rent) data for all counties
-      const { data: zoriData } = await this.supabase
-        .from('zillow_county')
-        .select('region_id, region_name, value, fips_code')
-        .eq('metric_name', 'zori')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null);
+      // Get ZORI (rent) data for all counties (paginated)
+      const zoriData: any[] = [];
+      let zoriOffset = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('zillow_county')
+          .select('region_id, region_name, value, fips_code')
+          .eq('metric_name', 'zori')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(zoriOffset, zoriOffset + 1999);
+        if (!page || page.length === 0) break;
+        zoriData.push(...page);
+        if (page.length < 2000) break;
+        zoriOffset += 2000;
+      }
 
-      if (!zoriData || zoriData.length === 0) {
+      if (zoriData.length === 0) {
         // Skip dates with no data (common if ZORI is less frequent)
         continue;
       }
 
-      // Get ZHVI data (property value) for all counties
-      const { data: zhviData } = await this.supabase
-        .from('zillow_county')
-        .select('region_id, region_name, value, fips_code')
-        .eq('metric_name', 'zhvi')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null);
+      // Get ZHVI data (property value) for all counties (paginated)
+      const zhviData: any[] = [];
+      let zhviOffset = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('zillow_county')
+          .select('region_id, region_name, value, fips_code')
+          .eq('metric_name', 'zhvi')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(zhviOffset, zhviOffset + 1999);
+        if (!page || page.length === 0) break;
+        zhviData.push(...page);
+        if (page.length < 2000) break;
+        zhviOffset += 2000;
+      }
 
       // Build price and name lookups by FIPS (5-digit normalized)
       const priceByCode: Record<string, number> = {};
@@ -1806,6 +1887,8 @@ export class CalculatedMetricsService {
 
     // ── REALTOR LISTING PRICE FALLBACK for counties without Zillow ZHVI ──
     // Counties that have Realtor median_listing_price + HUD FMR but no Zillow data
+    // Use the latest ZORI date as the stored period_date so all data aligns for map queries
+    const latestZoriTargetDate = uniqueDates.length > 0 ? uniqueDates[0] : null;
     try {
       // Get latest Realtor county data
       const { data: realtorLatest } = await this.supabase
@@ -1818,39 +1901,69 @@ export class CalculatedMetricsService {
       if (realtorLatest?.period_date) {
         const realtorDate = realtorLatest.period_date;
         const realtorYear = parseInt(realtorDate.substring(0, 4));
+        // Use ZORI date for storage to align with ZORI-based records on the map
+        const storagePeriodDate = latestZoriTargetDate ?? realtorDate;
 
-        // Get all Realtor county listing prices
-        const { data: realtorCounties } = await this.supabase
-          .from('realtor_county')
-          .select('county_fips, county_name, median_listing_price')
-          .eq('period_date', realtorDate)
-          .not('median_listing_price', 'is', null)
-          .not('county_fips', 'is', null);
+        // Get all Realtor county listing prices (paginated)
+        const realtorCounties: any[] = [];
+        let rcOff = 0;
+        while (true) {
+          const { data: page } = await this.supabase
+            .from('realtor_county')
+            .select('county_fips, county_name, median_listing_price')
+            .eq('period_date', realtorDate)
+            .not('median_listing_price', 'is', null)
+            .not('county_fips', 'is', null)
+            .range(rcOff, rcOff + 1999);
+          if (!page || page.length === 0) break;
+          realtorCounties.push(...page);
+          if (page.length < 2000) break;
+          rcOff += 2000;
+        }
 
-        if (realtorCounties && realtorCounties.length > 0) {
+        if (realtorCounties.length > 0) {
           const normFips = (f: string | null | undefined) =>
             f && /^\d+$/.test(f) ? String(parseInt(f, 10)).padStart(5, '0') : f;
 
-          // Find which FIPS already have calculated_metrics (from ZHVI-based passes)
-          const { data: existingRows } = await this.supabase
-            .from('calculated_metrics')
-            .select('geography_id')
-            .eq('geography_type', 'county')
-            .not('cap_rate', 'is', null);
+          // Find which FIPS already have calculated_metrics for the target date (paginated)
+          const existingRows: any[] = [];
+          let exOff = 0;
+          while (true) {
+            const { data: page } = await this.supabase
+              .from('calculated_metrics')
+              .select('geography_id')
+              .eq('geography_type', 'county')
+              .eq('period_date', storagePeriodDate)
+              .not('cap_rate', 'is', null)
+              .range(exOff, exOff + 1999);
+            if (!page || page.length === 0) break;
+            existingRows.push(...page);
+            if (page.length < 2000) break;
+            exOff += 2000;
+          }
 
           const existingFips = new Set(
-            (existingRows || []).map((r) => r.geography_id),
+            existingRows.map((r) => r.geography_id),
           );
 
-          // Get HUD FMR for the Realtor year
-          const { data: fmrRows } = await this.supabase
-            .from('hud_fmr')
-            .select('fips_code, fmr_2br')
-            .eq('year', realtorYear)
-            .not('fmr_2br', 'is', null);
+          // Get HUD FMR for the Realtor year (paginated)
+          const fmrRows: any[] = [];
+          let fmrOff = 0;
+          while (true) {
+            const { data: page } = await this.supabase
+              .from('hud_fmr')
+              .select('fips_code, fmr_2br')
+              .eq('year', realtorYear)
+              .not('fmr_2br', 'is', null)
+              .range(fmrOff, fmrOff + 1999);
+            if (!page || page.length === 0) break;
+            fmrRows.push(...page);
+            if (page.length < 2000) break;
+            fmrOff += 2000;
+          }
 
           const fmrByFips: Record<string, number> = {};
-          if (fmrRows) {
+          if (fmrRows.length > 0) {
             for (const r of fmrRows) {
               const fips = normFips(r.fips_code);
               if (fips && r.fmr_2br != null) fmrByFips[fips] = r.fmr_2br;
@@ -1868,14 +1981,24 @@ export class CalculatedMetricsService {
 
           const countyZoriByFips: Record<string, number> = {};
           if (latestZoriDate?.period_date) {
-            const { data: zoriRows } = await this.supabase
-              .from('zillow_county')
-              .select('fips_code, value')
-              .eq('metric_name', 'zori')
-              .eq('period_date', latestZoriDate.period_date)
-              .not('value', 'is', null);
+            // Paginated county ZORI fetch
+            const zoriRows: any[] = [];
+            let zrOff = 0;
+            while (true) {
+              const { data: page } = await this.supabase
+                .from('zillow_county')
+                .select('fips_code, value')
+                .eq('metric_name', 'zori')
+                .eq('period_date', latestZoriDate.period_date)
+                .not('value', 'is', null)
+                .range(zrOff, zrOff + 1999);
+              if (!page || page.length === 0) break;
+              zoriRows.push(...page);
+              if (page.length < 2000) break;
+              zrOff += 2000;
+            }
 
-            if (zoriRows) {
+            if (zoriRows.length > 0) {
               for (const r of zoriRows) {
                 const fips = normFips(r.fips_code);
                 if (fips && r.value) countyZoriByFips[fips] = r.value;
@@ -1908,7 +2031,7 @@ export class CalculatedMetricsService {
               geography_id: fips,
               geography_type: 'county',
               geography_name: county.county_name || `County ${fips}`,
-              period_date: realtorDate,
+              period_date: storagePeriodDate,
               cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
               gross_yield: grossYield ? Math.round(grossYield * 100) / 100 : null,
               rent_to_price_ratio: rentToPriceRatio
@@ -1984,17 +2107,24 @@ export class CalculatedMetricsService {
     let totalStored = 0;
 
     for (const targetDate of uniqueDates) {
-      // Get ZHVI data for all zips in the same period
-      // Limit to 50k to prevent OOM, though zips are ~33k usually.
-      const { data: zhviData } = await this.supabase
-        .from('zillow_zip')
-        .select('region_name, value, county_fips')
-        .eq('metric_name', 'zhvi')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null)
-        .limit(50000);
+      // Get ZHVI data for all zips (paginated)
+      const zhviData: any[] = [];
+      let zhviZipOff = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('zillow_zip')
+          .select('region_name, value, county_fips')
+          .eq('metric_name', 'zhvi')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(zhviZipOff, zhviZipOff + 4999);
+        if (!page || page.length === 0) break;
+        zhviData.push(...page);
+        if (page.length < 5000) break;
+        zhviZipOff += 5000;
+      }
 
-      if (!zhviData || zhviData.length === 0) {
+      if (zhviData.length === 0) {
         continue;
       }
 
@@ -2079,16 +2209,25 @@ export class CalculatedMetricsService {
         offset += pageSize;
       }
 
-      // ZIP fallback: estimated cap rate
+      // ZIP fallback: estimated cap rate (paginated county ZORI)
       const countyRentByFips: Record<string, number> = {};
-      const { data: countyZoriRows } = await this.supabase
-        .from('zillow_county')
-        .select('fips_code, value')
-        .eq('metric_name', 'zori')
-        .eq('period_date', targetDate)
-        .not('value', 'is', null);
+      const countyZoriRows: any[] = [];
+      let czOff = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('zillow_county')
+          .select('fips_code, value')
+          .eq('metric_name', 'zori')
+          .eq('period_date', targetDate)
+          .not('value', 'is', null)
+          .range(czOff, czOff + 1999);
+        if (!page || page.length === 0) break;
+        countyZoriRows.push(...page);
+        if (page.length < 2000) break;
+        czOff += 2000;
+      }
 
-      if (countyZoriRows) {
+      if (countyZoriRows.length > 0) {
         for (const r of countyZoriRows) {
           const fips = normalizeFipsZip(r.fips_code);
           if (fips && r.value) countyRentByFips[fips] = r.value;
@@ -2096,13 +2235,23 @@ export class CalculatedMetricsService {
       }
 
       const targetYear = parseInt(targetDate.substring(0, 4));
-      const { data: fmrRows } = await this.supabase
-        .from('hud_fmr')
-        .select('fips_code, fmr_2br')
-        .eq('year', targetYear)
-        .not('fmr_2br', 'is', null);
+      // Paginated HUD FMR fetch
+      const fmrRows: any[] = [];
+      let fmrZipOff = 0;
+      while (true) {
+        const { data: page } = await this.supabase
+          .from('hud_fmr')
+          .select('fips_code, fmr_2br')
+          .eq('year', targetYear)
+          .not('fmr_2br', 'is', null)
+          .range(fmrZipOff, fmrZipOff + 1999);
+        if (!page || page.length === 0) break;
+        fmrRows.push(...page);
+        if (page.length < 2000) break;
+        fmrZipOff += 2000;
+      }
 
-      if (fmrRows) {
+      if (fmrRows.length > 0) {
         for (const r of fmrRows) {
           const fips = normalizeFipsZip(r.fips_code);
           if (fips && r.fmr_2br && countyRentByFips[fips] == null) {
@@ -2158,6 +2307,8 @@ export class CalculatedMetricsService {
 
     // ── REALTOR LISTING PRICE FALLBACK for zips without Zillow ZHVI ──
     // Zips that have Realtor median_listing_price + HUD FMR but no Zillow data
+    // Use the latest ZORI date for storage alignment with ZORI-based records
+    const latestZoriTargetDateZip = uniqueDates.length > 0 ? uniqueDates[0] : null;
     try {
       // Get latest Realtor zip date
       const { data: realtorZipLatest } = await this.supabase
@@ -2169,6 +2320,7 @@ export class CalculatedMetricsService {
 
       if (realtorZipLatest?.period_date) {
         const realtorDate = realtorZipLatest.period_date;
+        const zipStoragePeriodDate = latestZoriTargetDateZip ?? realtorDate;
         const realtorYear = parseInt(realtorDate.substring(0, 4));
 
         // Find which zips already have cap_rate in calculated_metrics
@@ -2212,15 +2364,24 @@ export class CalculatedMetricsService {
           offset += 5000;
         }
 
-        // Get HUD FMR for rent proxy
-        const { data: fmrRowsForZip } = await this.supabase
-          .from('hud_fmr')
-          .select('fips_code, fmr_2br')
-          .eq('year', realtorYear)
-          .not('fmr_2br', 'is', null);
+        // Get HUD FMR for rent proxy (paginated)
+        const fmrRowsForZip: any[] = [];
+        let fzOff = 0;
+        while (true) {
+          const { data: page } = await this.supabase
+            .from('hud_fmr')
+            .select('fips_code, fmr_2br')
+            .eq('year', realtorYear)
+            .not('fmr_2br', 'is', null)
+            .range(fzOff, fzOff + 1999);
+          if (!page || page.length === 0) break;
+          fmrRowsForZip.push(...page);
+          if (page.length < 2000) break;
+          fzOff += 2000;
+        }
 
         const fmrByFipsForZip: Record<string, number> = {};
-        if (fmrRowsForZip) {
+        if (fmrRowsForZip.length > 0) {
           for (const r of fmrRowsForZip) {
             const fips =
               r.fips_code && /^\d+$/.test(r.fips_code)
@@ -2241,14 +2402,24 @@ export class CalculatedMetricsService {
           .single();
 
         if (latestZoriDateZip?.period_date) {
-          const { data: zoriRowsZip } = await this.supabase
-            .from('zillow_county')
-            .select('fips_code, value')
-            .eq('metric_name', 'zori')
-            .eq('period_date', latestZoriDateZip.period_date)
-            .not('value', 'is', null);
+          // Paginated county ZORI fetch for ZIP fallback
+          const zoriRowsZip: any[] = [];
+          let zrzOff = 0;
+          while (true) {
+            const { data: page } = await this.supabase
+              .from('zillow_county')
+              .select('fips_code, value')
+              .eq('metric_name', 'zori')
+              .eq('period_date', latestZoriDateZip.period_date)
+              .not('value', 'is', null)
+              .range(zrzOff, zrzOff + 1999);
+            if (!page || page.length === 0) break;
+            zoriRowsZip.push(...page);
+            if (page.length < 2000) break;
+            zrzOff += 2000;
+          }
 
-          if (zoriRowsZip) {
+          if (zoriRowsZip.length > 0) {
             for (const r of zoriRowsZip) {
               const fips =
                 r.fips_code && /^\d+$/.test(r.fips_code)
@@ -2300,7 +2471,7 @@ export class CalculatedMetricsService {
               geography_id: zipCode,
               geography_type: 'zip',
               geography_name: zip.zip_name || zipCode,
-              period_date: realtorDate,
+              period_date: zipStoragePeriodDate,
               cap_rate: capRate ? Math.round(capRate * 100) / 100 : null,
               gross_yield: grossYield
                 ? Math.round(grossYield * 100) / 100

@@ -16,9 +16,10 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { MetricsModule } from '../metrics/metrics.module';
 import { TimeSeriesModule } from '../timeseries/timeseries.module';
+import { EntitlementsModule } from '../entitlements/entitlements.module';
 
 @Module({
-  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule],
+  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule],
   providers: [ReportsService, ClaudeService, GeminiNewsService],
   controllers: [ReportsController],
   exports: [ReportsService, ClaudeService, GeminiNewsService],

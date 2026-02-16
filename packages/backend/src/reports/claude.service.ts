@@ -181,6 +181,13 @@ Reference specific news items that strengthen or weaken the investment case.
   }
 
   /**
+   * Generate a single completion from a prompt (public wrapper)
+   */
+  async complete(prompt: string, maxTokens: number): Promise<string> {
+    return this.generateCompletion(prompt, maxTokens);
+  }
+
+  /**
    * Check if service is available
    */
   isAvailable(): boolean {

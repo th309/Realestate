@@ -28,6 +28,7 @@ import { ShareButton } from '../ShareButton';
 import { SaveGraphButton } from '../SaveGraphButton';
 import { SaveTemplateModal } from '../SaveTemplateModal';
 import { TemplatePicker } from '../TemplatePicker';
+import { Breadcrumbs } from '@/components/navigation';
 
 const TIME_FRAMES: TimeFrame[] = ['1Y', '3Y', '5Y', '10Y', 'Max'];
 
@@ -445,6 +446,7 @@ export function GraphsPageV2() {
     <div className="h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden">
       {/* ── COMPACT HEADER ── */}
       <header className="flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/40 px-4 md:px-6 py-3">
+        <Breadcrumbs items={[{ label: 'Graphs' }]} className="mb-2" />
         <div className="max-w-[1600px] mx-auto flex items-center gap-3 flex-wrap">
           <MarketSearchBar
             primaryMarket={primaryMarket}

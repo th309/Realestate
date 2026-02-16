@@ -308,7 +308,10 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
     regionId: selectedArea,
   });
 
-  const metricsLoading = homereadyMetrics.loading || investoredgeMetrics.loading || markethealthMetrics.loading;
+  // Per-score loading: each card only waits for its own metrics
+  const homereadyMetricsLoading = homereadyMetrics.loading;
+  const investoredgeMetricsLoading = investoredgeMetrics.loading;
+  const markethealthMetricsLoading = markethealthMetrics.loading;
 
   // Fetch scores
   useEffect(() => {
@@ -399,7 +402,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         confidence={confidenceLabel}
         indicators={getIndicatorsForMetrics('homeready')}
         loading={loading}
-        metricsLoading={metricsLoading}
+        metricsLoading={homereadyMetricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.homeready}
         onMetricsChange={handleMetricsChange('homeready')}
@@ -411,7 +414,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         confidence={confidenceLabel}
         indicators={getIndicatorsForMetrics('investoredge')}
         loading={loading}
-        metricsLoading={metricsLoading}
+        metricsLoading={investoredgeMetricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.investoredge}
         onMetricsChange={handleMetricsChange('investoredge')}
@@ -423,7 +426,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
         confidence={confidenceLabel}
         indicators={getIndicatorsForMetrics('markethealth')}
         loading={loading}
-        metricsLoading={metricsLoading}
+        metricsLoading={markethealthMetricsLoading}
         isAdmin={isAdmin}
         selectedMetricIds={metricSelections.markethealth}
         onMetricsChange={handleMetricsChange('markethealth')}
