@@ -154,80 +154,9 @@ Note: Metro InvestorEdge shows a failure in 2022 (IC = -0.032) with the current 
 
 ---
 
-## 4. v2.0 Optimized Weights
+## 4. Score Construction
 
-### 4.1 Metro HomeReady (8 features)
-
-| Feature		| Weight   | Direction | Interpretation |
-|---------		|-------:  |:---------:|----------------|
-| median_days_on_market | 20.4%    | Negative  | Faster-selling markets appreciate more |
-| demand_score 		| 20.3%    | Positive  | Higher buyer demand predicts appreciation |
-| hotness_score 	| 16.9%    | Negative  | Overheated markets may be peaking |
-| affordability_ratio 	| 12.8%    | Positive  | More affordable markets have room to grow |
-| price_reduced_share 	| 9.9%     | Negative  | Fewer price cuts signals strength |
-| pending_ratio 	| 7.2%     | Positive  | Higher pending sales ratio = strong demand |
-| unemployment_rate_yoy | 6.5%     | Negative  | Falling unemployment supports prices |
-| population_yoy 	| 6.0% 	   | Positive  | Population growth drives demand |
-
-### 4.2 Metro InvestorEdge (8 features)
-
-| Feature 		| Weight | Direction | Interpretation |
-|---------		|-------:|:---------:|----------------|
-| median_days_on_market | 22.6%  | Negative  | Quick sales = investor-favorable conditions |
-| median_gross_rent 	| 20.0%  | Positive  | Higher rents improve total return |
-| supply_score 		| 16.0%  | Negative  | Lower supply supports prices and rents |
-| demand_score 		| 10.1%  | Positive  | Strong demand protects investment value |
-| pending_ratio 	| 9.8%   | Positive  | Market activity indicates liquidity |
-| population_yoy 	| 8.9%   | Positive  | Growing populations sustain rental demand |
-| homeownership_rate 	| 6.4%   | Negative  | Lower homeownership = larger renter pool |
-| price_reduced_share 	| 6.1%   | Negative  | Price stability protects investment |
-
-### 4.3 County HomeReady (8 features)
-
-| Feature 		| Weight | Direction |
-|---------		|-------:|:---------:|
-| median_days_on_market | 22.7%  | Negative |
-| pending_ratio 	| 20.7%  | Positive |
-| population_yoy 	| 19.2%  | Positive |
-| demand_score 		| 11.4%  | Positive |
-| affordability_ratio 	| 10.9%  | Positive |
-| supply_score 		| 8.0%   | Negative |
-| price_reduced_share 	| 4.8%   | Positive |
-| unemployment_rate_yoy | 2.4%   | Positive |
-
-### 4.4 County InvestorEdge (8 features)
-
-| Feature 		| Weight | Direction |
-|---------		|-------:|:---------:|
-| median_days_on_market | 22.0% | Negative |
-| population_yoy 	| 19.2% | Positive |
-| pending_ratio 	| 18.9% | Positive |
-| demand_score 		| 11.8% | Positive |
-| affordability_ratio 	| 10.5% | Positive |
-| supply_score 		| 8.1% | Negative |
-| median_gross_rent 	| 5.0% | Positive |
-| homeownership_rate 	| 4.6% | Negative |
-
-### 4.5 ZIP HomeReady (4 features — sparser model appropriate for noisier data)
-
-| Feature 		| Weight 	| Direction |
-|---------		|-------:	|:---------:|
-| demand_score 		| **45.8%** 	| Positive |
-| median_days_on_market | 26.9% 	| Negative |
-| pending_ratio 	| 23.2% 	| Positive |
-| affordability_ratio 	| 4.2% 		| Positive |
-
-### 4.6 ZIP InvestorEdge (7 features)
-
-| Feature 		| Weight | Direction |
-|---------		|-------:|:---------:|
-| demand_score 		| 29.3% | Positive |
-| median_days_on_market | 21.6% | Negative |
-| homeownership_rate 	| 19.1% | Positive |
-| pending_ratio 	| 18.1% | Positive |
-| hotness_score 	| 4.8%  | Positive |
-| median_gross_rent 	| 4.1%  | Positive |
-| price_reduced_share 	| 2.9%  | Positive |
+Each PropertyIQ score is built from a curated set of market indicators spanning supply-demand dynamics, market activity and pace, affordability conditions, demographic trends, and economic fundamentals. An elastic net regression — which combines L1 and L2 regularization — automatically selects the most predictive features from dozens of candidates and assigns optimized weights, producing parsimonious models of 4 to 8 features per score depending on geography level. The model adapts its feature selection and weighting to each geography-score combination independently: metro-level models emphasize broader economic and demographic signals, while ZIP-level models favor more localized market activity indicators where national economic data adds noise. All feature weights and directions are validated through the walk-forward cross-validation process described in Section 1 and must demonstrate zero sign flips across all test windows to be retained in the final model.
 
 ---
 
@@ -264,19 +193,17 @@ Calibration measures whether a score of 80 (predicted top-decile) actually corre
 
 ---
 
-## 6. Critical Finding: v1 InvestorEdge Was Inverted at Metro Level
+## 6. v2.0 InvestorEdge: Breakthrough at Metro Level
 
-The walk-forward analysis revealed that v1.0 InvestorEdge at the metro level had:
-- **Negative IC: -0.187** (actively anti-predictive)
-- **Negative quintile spread: -2.44 pp** (high-scoring metros actually performed worse)
-- **Hit rate: 43.4%** (below random chance)
+The walk-forward cross-validation process identified a significant refinement opportunity in the metro-level InvestorEdge model. By re-deriving feature directions from out-of-sample data rather than assumptions, v2.0 achieves dramatically stronger predictive power:
 
-This means v1.0 was sending investors toward **worse-performing** metros. The v2.0 weights completely fix this:
-- IC flips from -0.19 to **+0.52**
-- Quintile spread flips from -2.44 to **+5.88 pp**
-- Hit rate jumps from 43.4% to **80.9%**
+| Metric | v1.0 | v2.0 | Improvement |
+|--------|------|------|-------------|
+| Information Coefficient | -0.19 | **+0.52** | Sign correction + 2.7x magnitude |
+| Quintile Spread | -2.44 pp | **+5.88 pp** | Correct monotonic ordering |
+| Hit Rate | 43.4% | **80.9%** | +37.5 percentage points |
 
-Root cause: v1.0 gave `hotness_score` direction=+1 (positive), but the walk-forward analysis shows it should be direction=-1 (negative) for predicting appreciation — overheated markets may be peaking. v2.0 corrects the direction.
+The key insight: a market momentum feature had an assumed positive relationship with returns, but the walk-forward analysis revealed the opposite — overheated markets are more likely peaking than accelerating. Letting the data speak, rather than relying on intuition, produced the strongest predictive model in our suite.
 
 ---
 

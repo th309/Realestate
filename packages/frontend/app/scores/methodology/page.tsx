@@ -18,11 +18,11 @@ const STATS = [
 ];
 
 const QUINTILES = [
-  { label: 'Q1 (Bottom 20%)', range: '0–20', return: -1.92, width: 10 },
-  { label: 'Q2', range: '21–40', return: -0.53, width: 25 },
-  { label: 'Q3', range: '41–60', return: 0.14, width: 40 },
-  { label: 'Q4', range: '61–80', return: 0.69, width: 65 },
   { label: 'Q5 (Top 20%)', range: '80–100', return: 1.15, width: 100 },
+  { label: 'Q4', range: '61–80', return: 0.69, width: 65 },
+  { label: 'Q3', range: '41–60', return: 0.14, width: 40 },
+  { label: 'Q2', range: '21–40', return: -0.53, width: 25 },
+  { label: 'Q1 (Bottom 20%)', range: '0–20', return: -1.92, width: 10 },
 ];
 
 const KEY_FINDINGS = [
