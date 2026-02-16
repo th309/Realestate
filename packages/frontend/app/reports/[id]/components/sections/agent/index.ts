@@ -24,3 +24,18 @@ export type { ClientMeaningProps } from './ClientMeaning';
 
 export { AgentBranding } from './AgentBranding';
 export type { AgentBrandingProps } from './AgentBranding';
+
+export { PrepQuickStats } from './PrepQuickStats';
+export type { PrepQuickStatsProps } from './PrepQuickStats';
+
+export { PrepTalkingPoints } from './PrepTalkingPoints';
+export type { PrepTalkingPointsProps } from './PrepTalkingPoints';
+
+export { PrepObjectionHandlers } from './PrepObjectionHandlers';
+export type { PrepObjectionHandlersProps } from './PrepObjectionHandlers';
+
+export { PrepCompetitiveContext } from './PrepCompetitiveContext';
+export type { PrepCompetitiveContextProps } from './PrepCompetitiveContext';
+
+export { PrepNewsSignals } from './PrepNewsSignals';
+export type { PrepNewsSignalsProps } from './PrepNewsSignals';
