@@ -40,14 +40,16 @@
 import type { ComponentType } from 'react';
 import type { ReportInstance } from '../../../types';
 
-// Homebuyer sections
+// Homebuyer sections (redesigned)
 import {
-  ExecutiveSummary,
-  ScoreDeepDive,
-  AffordabilityAnalysis,
-  MarketConditions,
-  RisksAndConsiderations,
-  NextSteps,
+  Hero,
+  ScoreStory,
+  AffordabilityDeepDive,
+  MarketTimingDeepDive,
+  StabilityDeepDive,
+  GrowthPotentialDeepDive,
+  YourPriorities,
+  BottomLine,
 } from '../sections/homebuyer';
 
 // Investor sections
@@ -66,6 +68,9 @@ import {
   SupplyDemand,
   TalkingPoints,
 } from '../sections/agent';
+
+// Shared sections
+import { MarketPulse as SharedMarketPulse } from '../sections/shared';
 
 // Comparison sections
 import { ComparisonHeader } from '../sections/ComparisonHeader';
@@ -109,14 +114,17 @@ export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot
 export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefinition> = {
   homeready: {
     name: 'HomeReady Report',
-    description: 'Comprehensive homebuyer analysis',
+    description: 'Comprehensive homebuyer analysis with score-driven narrative',
     sections: [
-      { component: ExecutiveSummary, id: 'executive-summary' },
-      { component: ScoreDeepDive, id: 'score-deep-dive' },
-      { component: AffordabilityAnalysis, id: 'affordability' },
-      { component: MarketConditions, id: 'market-conditions' },
-      { component: RisksAndConsiderations, id: 'risks' },
-      { component: NextSteps, id: 'next-steps' },
+      { component: Hero, id: 'hero' },
+      { component: ScoreStory, id: 'score-story' },
+      { component: AffordabilityDeepDive, id: 'affordability-deep-dive' },
+      { component: MarketTimingDeepDive, id: 'market-timing-deep-dive' },
+      { component: StabilityDeepDive, id: 'stability-deep-dive' },
+      { component: GrowthPotentialDeepDive, id: 'growth-potential-deep-dive' },
+      { component: YourPriorities, id: 'your-priorities' },
+      { component: BottomLine, id: 'bottom-line' },
+      { component: SharedMarketPulse, id: 'market-pulse' },
     ],
   },
   investoredge: {

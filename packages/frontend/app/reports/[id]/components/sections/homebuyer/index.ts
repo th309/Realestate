@@ -33,3 +33,7 @@ export type { YourPrioritiesProps } from './YourPriorities';
 
 export { BottomLine } from './BottomLine';
 export type { BottomLineProps } from './BottomLine';
+
+export { Hero } from './Hero';
+
+export { ScoreStory } from './ScoreStory';

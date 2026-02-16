@@ -21,6 +21,10 @@ import {
   DollarSign,
   Activity,
   AlertTriangle,
+  Star,
+  Target,
+  Shield,
+  Clock,
 } from 'lucide-react';
 import { BrandingProvider } from './components/BrandingProvider';
 import { ReportWithTemplate } from './components/types';
@@ -234,64 +238,66 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
       {/* Main Content */}
       <div className="flex">
         <main className={`flex-1 ${showConversation ? 'lg:pr-[400px]' : ''}`}>
-          {/* Report Hero */}
-          <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
-            <div className="max-w-4xl mx-auto px-6 py-10">
-              <div className="report-animate-in">
-                {/* Report Type Badge */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="report-badge report-badge-ready">
-                    {report.template?.name || 'Market Report'}
-                  </span>
-                  <span className="text-xs text-[var(--report-stone-light)]">
-                    Generated {new Date(report.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h1 className="text-3xl md:text-4xl font-semibold text-[var(--report-navy)] tracking-tight mb-4" style={{ fontFamily: 'var(--report-font-display)' }}>
-                  {report.title}
-                </h1>
-
-                {/* Meta Row */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--report-stone)]">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-[var(--report-stone-light)]" />
-                    <span>{report.primary_geography_name}</span>
+          {/* Report Hero - skip for homeready since the Hero section handles it */}
+          {templateType !== 'homeready' && (
+            <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
+              <div className="max-w-4xl mx-auto px-6 py-10">
+                <div className="report-animate-in">
+                  {/* Report Type Badge */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="report-badge report-badge-ready">
+                      {report.template?.name || 'Market Report'}
+                    </span>
+                    <span className="text-xs text-[var(--report-stone-light)]">
+                      Generated {new Date(report.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-[var(--report-stone-light)]" />
-                    <span>Data as of {report.data_as_of_date}</span>
-                  </div>
-                  {report.ai_model_used && (
+
+                  {/* Title */}
+                  <h1 className="text-3xl md:text-4xl font-semibold text-[var(--report-navy)] tracking-tight mb-4" style={{ fontFamily: 'var(--report-font-display)' }}>
+                    {report.title}
+                  </h1>
+
+                  {/* Meta Row */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--report-stone)]">
                     <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-[var(--report-stone-light)]" />
-                      <span>AI-Enhanced</span>
+                      <MapPin className="w-4 h-4 text-[var(--report-stone-light)]" />
+                      <span>{report.primary_geography_name}</span>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Table of Contents */}
-              {templateSections.length > 1 && (
-                <nav className="mt-8 p-5 report-card report-animate-in report-animate-in-delay-1">
-                  <h3 className="report-label mb-3">In this report</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {templateSections.map((section) => (
-                      <a
-                        key={section.id}
-                        href={`#${section.id}`}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
-                      >
-                        <SectionIcon sectionId={section.id} />
-                        <span className="truncate">{formatSectionName(section.id)}</span>
-                      </a>
-                    ))}
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-[var(--report-stone-light)]" />
+                      <span>Data as of {report.data_as_of_date}</span>
+                    </div>
+                    {report.ai_model_used && (
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[var(--report-stone-light)]" />
+                        <span>AI-Enhanced</span>
+                      </div>
+                    )}
                   </div>
-                </nav>
-              )}
+                </div>
+
+                {/* Table of Contents */}
+                {templateSections.length > 1 && (
+                  <nav className="mt-8 p-5 report-card report-animate-in report-animate-in-delay-1">
+                    <h3 className="report-label mb-3">In this report</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {templateSections.map((section) => (
+                        <a
+                          key={section.id}
+                          href={`#${section.id}`}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
+                        >
+                          <SectionIcon sectionId={section.id} />
+                          <span className="truncate">{formatSectionName(section.id)}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </nav>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Report Body */}
           <div className="max-w-4xl mx-auto px-6 py-10">
@@ -302,8 +308,8 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
                 <section
                   key={id}
                   id={id}
-                  className="mb-10 report-animate-in"
-                  style={{ animationDelay: `${(index + 3) * 100}ms` }}
+                  className={`${id === 'hero' ? 'mb-0' : 'mb-10'} report-animate-in`}
+                  style={{ animationDelay: `${(index + (templateType === 'homeready' ? 1 : 3)) * 100}ms` }}
                 >
                   <SectionErrorBoundary sectionId={id}>
                     <Section report={reportInstance} />
@@ -418,6 +424,18 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
   const iconClass = 'w-4 h-4 text-[var(--report-navy)]';
   const id = sectionId.toLowerCase();
 
+  // New HomeReady sections
+  if (id === 'hero') return <Home className={iconClass} />;
+  if (id === 'score-story') return <BarChart3 className={iconClass} />;
+  if (id === 'affordability-deep-dive') return <DollarSign className={iconClass} />;
+  if (id === 'market-timing-deep-dive') return <Clock className={iconClass} />;
+  if (id === 'stability-deep-dive') return <Shield className={iconClass} />;
+  if (id === 'growth-potential-deep-dive') return <TrendingUp className={iconClass} />;
+  if (id === 'your-priorities') return <Star className={iconClass} />;
+  if (id === 'bottom-line') return <Target className={iconClass} />;
+  if (id === 'market-pulse') return <Activity className={iconClass} />;
+
+  // Legacy / other report types
   if (id.includes('executive') || id.includes('summary')) return <FileText className={iconClass} />;
   if (id.includes('score') || id.includes('thesis')) return <TrendingUp className={iconClass} />;
   if (id.includes('afford')) return <DollarSign className={iconClass} />;
@@ -436,7 +454,22 @@ function SectionIcon({ sectionId }: { sectionId: string }) {
 }
 
 // Format section ID to display name
+const SECTION_DISPLAY_NAMES: Record<string, string> = {
+  'hero': 'Overview',
+  'score-story': 'Score Breakdown',
+  'affordability-deep-dive': 'Affordability',
+  'market-timing-deep-dive': 'Market Timing',
+  'stability-deep-dive': 'Stability',
+  'growth-potential-deep-dive': 'Growth Potential',
+  'your-priorities': 'Your Priorities',
+  'bottom-line': 'Bottom Line',
+  'market-pulse': 'Market Pulse',
+};
+
 function formatSectionName(sectionId: string): string {
+  if (SECTION_DISPLAY_NAMES[sectionId]) {
+    return SECTION_DISPLAY_NAMES[sectionId];
+  }
   return sectionId
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
