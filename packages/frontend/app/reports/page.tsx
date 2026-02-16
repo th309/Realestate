@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home, TrendingUp, MapPin, DollarSign, ChevronRight, Plus, X, Sparkles, Info, AlertCircle, History, Clock, FileText } from 'lucide-react';
 import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
+import { Breadcrumbs } from '@/components/navigation';
 import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
 import { SearchWidget } from '@/app/map/components/SearchWidget';
 import type { SearchResult } from '@/app/map/types';
@@ -820,7 +821,8 @@ function ReportsContent() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-6" />
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight mb-3">
@@ -870,13 +872,18 @@ export default function ReportsPage() {
         type="feature"
         id="reports"
         fallback={
-          <div className="flex items-center justify-center min-h-screen bg-surface">
+          <div className="min-h-screen bg-surface">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8">
+              <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-6" />
+            </div>
+            <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 120px)' }}>
             <PaywallCard
               type="feature"
               id="reports"
               title="Unlock Market Reports"
               description="Generate AI-powered market analysis reports with deep data insights, custom comparisons, and exportable formats."
             />
+            </div>
           </div>
         }
       >

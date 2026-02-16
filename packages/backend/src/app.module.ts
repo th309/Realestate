@@ -24,6 +24,7 @@ import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-pe
 import { FeaturesModule } from './admin/features/features.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { RedisModule } from './redis/redis.module';
+import { MarketAnalysisModule } from './market-analysis/market-analysis.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -53,6 +54,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     AnalyticsPersistenceModule,
     FeaturesModule,
     EntitlementsModule,
+    MarketAnalysisModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],

@@ -130,6 +130,11 @@ export {
   // Markets
   fetchMarketStats,
   type MarketStats,
+
+  // Market AI analysis
+  fetchMarketAnalysis,
+  type MarketAnalysisSection,
+  type MarketAnalysisResult,
 } from './fetchers';
 
 // ============================================================================

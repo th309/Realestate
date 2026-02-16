@@ -9,7 +9,6 @@ import {
   Download,
   RefreshCw,
   ChevronLeft,
-  Sparkles,
   MapPin,
   ArrowUpRight,
   ArrowDownRight,
@@ -18,9 +17,10 @@ import {
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
 import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
+import { Breadcrumbs } from '@/components/navigation';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { useEntitlements } from '@/lib/entitlements';
-import { EntitlementGate, InsightsPaywall } from '@/components/entitlements';
+import { AIMarketAnalysis } from './AIMarketAnalysis';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -112,15 +112,13 @@ function MetricCategorySection({
   icon,
   metricIds,
   factorsData,
-  factorsLoading,
   delay = 0,
 }: {
   categoryName: string;
   subtext?: string;
   icon: React.ReactNode;
   metricIds: string[];
-  factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null }>;
-  factorsLoading: boolean;
+  factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null; isLoading?: boolean }>;
   delay?: number;
 }) {
   // Get metric names from config
@@ -151,7 +149,7 @@ function MetricCategorySection({
             <MetricCard
               key={metricId}
               label={config?.title || metricId.replace(/_/g, ' ')}
-              formattedValue={factorsLoading ? '...' : (datum?.formattedValue ?? '--')}
+              formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '--')}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? 'stable'}
               delay={delay + i * 0.05}
@@ -159,130 +157,6 @@ function MetricCategorySection({
           );
         })}
       </div>
-    </motion.div>
-  );
-}
-
-// AI Insight card - generates specific, data-driven market analysis
-interface AIInsightCardProps {
-  marketName: string;
-  score: number;
-  view: string;
-  metrics: Record<string, { value: number | null; formattedValue: string; percentChange: number | null }>;
-  scores: {
-    homeready: { score: number; grade: string };
-    investoredge: { score: number; grade: string };
-    markethealth: { score: number; grade: string };
-  };
-  lastUpdated: string;
-}
-
-function AIInsightCard({ marketName, score, view, metrics, scores, lastUpdated }: AIInsightCardProps) {
-  const generateInsight = () => {
-    const insights: string[] = [];
-    const isInvestor = view === 'investor';
-
-    // Get key metrics with fallbacks
-    const homeValue = metrics.home_value;
-    const homeValueYoy = metrics.home_value_yoy;
-    const daysOnMarket = metrics.days_on_market;
-    const inventory = metrics.for_sale_inventory;
-    const inventoryYoy = metrics.inventory_yoy;
-    const rentIndex = metrics.rent_index;
-    const capRate = metrics.cap_rate;
-    const priceCut = metrics.price_cut_pct;
-
-    // Opening statement with score context
-    const scoreLabel = score >= 75 ? 'excellent' : score >= 60 ? 'strong' : score >= 45 ? 'moderate' : 'challenging';
-    insights.push(`${marketName} currently shows ${scoreLabel} conditions for ${isInvestor ? 'investors' : 'homebuyers'} with a score of ${score}.`);
-
-    // Home value trends - use percentChange from the metric or from home_value_yoy
-    const homeValueTrend = homeValue?.percentChange ?? homeValueYoy?.value;
-    if (homeValue?.formattedValue && homeValueTrend != null) {
-      const trend = homeValueTrend;
-      const trendDesc = trend > 5 ? 'rapidly appreciating' : trend > 2 ? 'steadily growing' : trend > 0 ? 'slightly up' : trend > -2 ? 'stabilizing' : 'declining';
-      insights.push(`Home values are ${trendDesc} at ${homeValue.formattedValue} (${trend >= 0 ? '+' : ''}${trend.toFixed(1)}% YoY).`);
-    }
-
-    // Market activity (days on market & inventory)
-    if (daysOnMarket?.value != null) {
-      const dom = daysOnMarket.value;
-      const inv = inventory?.value;
-      const invTrend = inventory?.percentChange ?? inventoryYoy?.value;
-
-      let marketTempo = '';
-      if (dom < 20) {
-        marketTempo = 'extremely competitive';
-      } else if (dom < 35) {
-        marketTempo = 'moving quickly';
-      } else if (dom < 60) {
-        marketTempo = 'balanced with reasonable time to decide';
-      } else {
-        marketTempo = 'slower-paced, giving buyers negotiating leverage';
-      }
-
-      let invContext = '';
-      if (invTrend != null) {
-        invContext = invTrend > 10 ? ' Inventory is up, improving buyer options.' :
-                     invTrend < -10 ? ' Inventory is tightening.' : '';
-      }
-
-      insights.push(`The market is ${marketTempo} with homes averaging ${Math.round(dom)} days on market.${invContext}`);
-    }
-
-    // Price cuts indicator
-    if (priceCut?.value != null && priceCut.value > 0) {
-      const pct = priceCut.value;
-      if (pct > 25) {
-        insights.push(`${pct.toFixed(0)}% of listings have price cuts, indicating buyer negotiating power.`);
-      } else if (pct > 15) {
-        insights.push(`Price reductions on ${pct.toFixed(0)}% of listings suggest some flexibility.`);
-      }
-    }
-
-    // Investor-specific insights
-    if (isInvestor) {
-      if (capRate?.value != null && rentIndex?.formattedValue) {
-        const cap = capRate.value;
-        const capDesc = cap >= 7 ? 'strong cash flow potential' : cap >= 5 ? 'moderate yields' : 'appreciation-focused';
-        insights.push(`Cap rates around ${cap.toFixed(1)}% indicate ${capDesc} with rents at ${rentIndex.formattedValue}/month.`);
-      } else if (rentIndex?.formattedValue) {
-        insights.push(`Current rents averaging ${rentIndex.formattedValue}/month.`);
-      }
-    }
-
-    // Format the update date
-    const updateDate = new Date(lastUpdated);
-    const formattedDate = updateDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-    return {
-      text: insights.join(' '),
-      asOf: formattedDate,
-    };
-  };
-
-  const insight = generateInsight();
-
-  return (
-    <motion.div
-      className="bg-gradient-to-br from-primary/5 via-surface-container to-tertiary/5 rounded-2xl p-6 border border-primary/20"
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.6, duration: 0.5 }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/15">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-on-surface">AI Market Analysis</h3>
-            <p className="text-xs text-on-surface-variant">Powered by PropertyIQ</p>
-          </div>
-        </div>
-        <span className="text-xs text-on-surface-variant/70">Data as of {insight.asOf}</span>
-      </div>
-      <p className="text-on-surface-variant leading-relaxed">{insight.text}</p>
     </motion.div>
   );
 }
@@ -448,7 +322,7 @@ export function MarketDashboard({
   ], []);
 
   // Fetch metric data using the data layer hook
-  const { cards: factorsData, isLoading: factorsLoading } = useDataCardBatch(
+  const { cards: factorsData } = useDataCardBatch(
     metricIds,
     geographyType as GeoLevel,
     geographyId,
@@ -531,6 +405,13 @@ export function MarketDashboard({
       {/* Header */}
       <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-sm border-b border-outline-variant">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
+          <Breadcrumbs
+            items={[
+              { label: 'Markets', href: '/market' },
+              { label: data.geography.name },
+            ]}
+            className="mb-3"
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
@@ -653,37 +534,31 @@ export function MarketDashboard({
                     icon={category.icon}
                     metricIds={category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? []}
                     factorsData={factorsData}
-                    factorsLoading={factorsLoading}
                     delay={catIndex * 0.15}
                   />
                 ))}
               </div>
             </div>
 
-            {/* AI Insight - Premium Feature */}
-            <EntitlementGate
-              type="feature"
-              id="ai_insights"
-              fallback={<InsightsPaywall compact />}
-            >
-              <AIInsightCard
-                marketName={data.geography.name}
-                score={primaryScore.score}
-                view={activeView}
-                metrics={Object.fromEntries(
-                  Object.entries(factorsData).map(([key, card]) => [
-                    key,
-                    {
-                      value: card.value,
-                      formattedValue: card.formattedValue,
-                      percentChange: card.percentChange,
-                    }
-                  ])
-                )}
-                scores={data.scores}
-                lastUpdated={data.lastUpdated}
-              />
-            </EntitlementGate>
+            {/* AI Market Analysis / Market Overview (handles entitlement internally) */}
+            <AIMarketAnalysis
+              geoType={geographyType}
+              geoId={geographyId}
+              marketName={data.geography.name}
+              view={activeView}
+              metrics={Object.fromEntries(
+                Object.entries(factorsData).map(([key, card]) => [
+                  key,
+                  {
+                    value: card.value,
+                    formattedValue: card.formattedValue,
+                    percentChange: card.percentChange,
+                  }
+                ])
+              )}
+              scores={data.scores}
+              lastUpdated={data.lastUpdated}
+            />
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 pt-2">

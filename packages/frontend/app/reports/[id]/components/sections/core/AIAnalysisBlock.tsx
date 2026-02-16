@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Lock } from 'lucide-react';
 
 export type AIAnalysisVariant = 'insight' | 'summary' | 'recommendation';
 
@@ -14,6 +14,8 @@ export interface AIAnalysisBlockProps {
   variant?: AIAnalysisVariant;
   /** Optional additional CSS classes */
   className?: string;
+  /** When true and content is empty, show an upgrade hint instead of returning null */
+  showUpgradeHint?: boolean;
 }
 
 /**
@@ -80,6 +82,7 @@ export function AIAnalysisBlock({
   title,
   variant = 'insight',
   className = '',
+  showUpgradeHint = false,
 }: AIAnalysisBlockProps): React.ReactElement | null {
   const styles = VARIANT_STYLES[variant];
 
@@ -91,8 +94,24 @@ export function AIAnalysisBlock({
     (p) => typeof p === 'string' && p.trim() !== ''
   );
 
-  // Return null if no valid content
+  // Show upgrade hint when content is empty
   if (validParagraphs.length === 0) {
+    if (showUpgradeHint) {
+      return (
+        <div
+          className={`p-[var(--report-space-lg)] bg-[var(--report-cream)] border border-dashed border-[rgba(27,46,74,0.12)] rounded-[var(--report-radius-md)] ${className}`.trim()}
+          role="region"
+          aria-label="AI Analysis Upgrade"
+        >
+          <div className="flex items-center gap-2 text-[var(--report-stone-light)]">
+            <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <p className="text-sm">
+              AI-powered analysis is available with an Enterprise plan.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 

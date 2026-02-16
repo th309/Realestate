@@ -37,3 +37,10 @@ export {
 
 // Market data (stats, lists)
 export { fetchMarketStats, type MarketStats } from './markets';
+
+// Market AI analysis
+export {
+  fetchMarketAnalysis,
+  type MarketAnalysisSection,
+  type MarketAnalysisResult,
+} from './market-analysis';

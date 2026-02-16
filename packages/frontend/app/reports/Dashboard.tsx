@@ -7,6 +7,7 @@ import { PreviewPanel } from './components/preview/PreviewPanel';
 import { ReportHistoryRefined } from './components/ReportHistoryRefined';
 import { useWizardState } from './hooks/useWizardState';
 import { useReportGeneration } from './hooks/useReportGeneration';
+import { Breadcrumbs } from '@/components/navigation';
 import './styles/report-theme.css';
 
 export const Dashboard: React.FC = () => {
@@ -25,6 +26,8 @@ export const Dashboard: React.FC = () => {
       />
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-8 lg:py-12">
+        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-6" />
+
         {/* Header Section */}
         <header className="mb-12 report-animate-in">
           <div className="flex items-center gap-3 mb-4">

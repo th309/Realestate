@@ -260,7 +260,7 @@ export function RightDetailPanel({
                         {factor.label}
                       </span>
                       <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
-                        {factorsLoading ? '...' : (datum?.formattedValue ?? '--')}
+                        {(!datum && factorsLoading) ? '...' : (datum?.formattedValue ?? '--')}
                         {datum?.trendPercent != null && (
                           <span className={`text-[9px] font-normal ml-1 ${datum.trendPercent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                             {datum.trendPercent >= 0 ? '+' : ''}{datum.trendPercent.toFixed(0)}%
