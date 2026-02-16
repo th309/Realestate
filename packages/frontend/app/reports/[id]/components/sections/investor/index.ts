@@ -12,3 +12,12 @@ export type { InvestmentThesisProps } from './InvestmentThesis';
 
 export { RiskAssessment } from './RiskAssessment';
 export type { RiskAssessmentProps } from './RiskAssessment';
+
+export { InvestorHero } from './InvestorHero';
+export type { InvestorHeroProps } from './InvestorHero';
+
+export { InvestorScoreStory } from './InvestorScoreStory';
+export type { InvestorScoreStoryProps } from './InvestorScoreStory';
+
+export { InvestorBottomLine } from './InvestorBottomLine';
+export type { InvestorBottomLineProps } from './InvestorBottomLine';
