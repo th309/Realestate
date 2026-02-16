@@ -2,6 +2,8 @@
 // PROPERTYIQ REPORTS SYSTEM - TYPESCRIPT TYPES
 // ============================================================================
 
+import type { ScoreComponentBreakdown } from '@/lib/data';
+
 // -----------------------------------------------------------------------------
 // GEOGRAPHY
 // -----------------------------------------------------------------------------
@@ -268,6 +270,42 @@ export interface DataRequirements {
 }
 
 // -----------------------------------------------------------------------------
+// USER INPUTS (TYPED)
+// -----------------------------------------------------------------------------
+
+/**
+ * Typed user inputs for report generation.
+ * Extends Record<string, any> for backward compatibility with arbitrary fields.
+ */
+export interface ReportUserInputs extends Record<string, any> {
+  // Homebuyer inputs
+  priorities?: string[];
+  income?: number;
+  down_payment?: number;
+  timeline?: string;
+  first_time_buyer?: boolean;
+  // Investor inputs
+  investment_budget?: number;
+  target_cap_rate?: number;
+  strategy?: string;
+  portfolio_size?: number;
+  risk_tolerance?: string;
+  target_return?: number;
+}
+
+// -----------------------------------------------------------------------------
+// PARTNER RECOMMENDATIONS
+// -----------------------------------------------------------------------------
+
+export interface PartnerRecommendation {
+  name: string;
+  description: string;
+  cta_text: string;
+  cta_url: string;
+  logo_url?: string;
+}
+
+// -----------------------------------------------------------------------------
 // REPORT INSTANCES
 // -----------------------------------------------------------------------------
 
@@ -289,7 +327,7 @@ export interface ReportInstance {
   comparison_geographies: Geography[] | null;
 
   // User inputs
-  user_inputs: Record<string, any>;
+  user_inputs: ReportUserInputs;
 
   // Populated data
   populated_data: PopulatedReportData | null;
@@ -316,6 +354,7 @@ export interface ReportInstance {
       value?: number;
       competition?: number;
     };
+    homeready_components?: ScoreComponentBreakdown[];
     investoredge_score?: number;
     investoredge_details?: {
       cash_flow?: number;
@@ -323,6 +362,9 @@ export interface ReportInstance {
       risk?: number;
       liquidity?: number;
     };
+    investoredge_components?: ScoreComponentBreakdown[];
+    markethealth_score?: number;
+    markethealth_components?: ScoreComponentBreakdown[];
     scores?: any;
   } | null;
 
@@ -362,6 +404,8 @@ export interface PopulatedReportData {
     investoredge?: ScoreData;
   };
   demographics?: Record<string, any>;
+  /** Partner recommendations keyed by recommendation slot/type */
+  recommendations?: Record<string, PartnerRecommendation | null>;
   comparables?: {
     geography: Geography;
     metrics: Record<string, number>;

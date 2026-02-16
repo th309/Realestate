@@ -36,6 +36,8 @@ export type {
   // Score data
   ScoreType,
   ConfidenceLevel,
+  ComponentStatus,
+  ScoreComponentBreakdown,
   SingleScoreResult,
   ScoreResponse,
   BatchScoreResponse,
