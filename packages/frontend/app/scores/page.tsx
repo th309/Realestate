@@ -9,7 +9,7 @@ const scoreCards = [
     iconContainer: 'bg-primary-container text-on-primary-container',
     description:
       'Predicts home price appreciation potential. Best for homebuyers and primary-residence investors.',
-    measures: ['Demand score', 'Days on market', 'Affordability ratio', 'Market hotness'],
+    measures: ['Demand score', 'Days on market', 'Affordability ratio', 'Price reduction trends'],
     badgeColor: 'bg-primary/10 text-primary',
     sampleScore: 'Score: 82 \u00b7 Grade: A',
   },
