@@ -108,7 +108,7 @@ export function PriorityWeightedAnalysis({
   report,
   className,
 }: PriorityWeightedAnalysisProps) {
-  const priorityWinner = (report.populated_data as any)
+  const priorityWinner = report.populated_data
     ?.priority_weighted_winner as PriorityWeightedWinner | undefined;
 
   // Conditional render: return null if no data

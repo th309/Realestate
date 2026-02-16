@@ -142,7 +142,7 @@ export function ClientMeaning({
 }: ClientMeaningProps): React.ReactElement {
   // Get MarketHealth score
   const score =
-    (report.scores_snapshot as any)?.markethealth_score ??
+    report.scores_snapshot?.markethealth_score ??
     (report as any).markethealth_score ??
     null;
 

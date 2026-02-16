@@ -60,7 +60,7 @@ export function MarketStrengths({
         : report.homeready_score,
     },
     ...comparisons.map((geo) => {
-      const comp = (report.populated_data as any)?.comparisons?.[geo.id];
+      const comp = report.populated_data?.comparisons?.[geo.id];
       return {
         id: geo.id,
         name: geo.name,

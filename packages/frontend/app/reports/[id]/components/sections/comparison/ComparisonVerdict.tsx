@@ -21,7 +21,7 @@ interface ComparisonVerdictProps {
 function getVerdict(
   report: ReportInstance
 ): { type: 'positive' | 'cautious' | 'wait'; label: string } {
-  const winner = (report.populated_data as any)?.priority_weighted_winner;
+  const winner = report.populated_data?.priority_weighted_winner;
   const isInvestor = report.user_type === 'investor';
   const primaryScore = isInvestor
     ? report.investoredge_score
@@ -36,10 +36,10 @@ function getVerdict(
 
   // Check if scores are close
   const comparisons = report.comparison_geographies || [];
-  const compData = (report.populated_data as any)?.comparisons;
+  const compData = report.populated_data?.comparisons;
   if (comparisons.length > 0 && compData) {
     const scoreType = isInvestor ? 'investoredge' : 'homeready';
-    const compScore = compData[comparisons[0].id]?.scores?.[scoreType];
+    const compScore = compData[comparisons[0].id]?.scores?.[scoreType] as number | undefined;
     if (
       primaryScore != null &&
       compScore != null &&
@@ -71,21 +71,13 @@ export function ComparisonVerdict({
     ? report.investoredge_score
     : report.homeready_score;
 
-  const winner = (report.populated_data as any)?.priority_weighted_winner as
-    | {
-        winnerId: string;
-        winnerName: string;
-        totalScore: number;
-        priorityScores: any[];
-        reasons: string[];
-      }
-    | undefined;
+  const winner = report.populated_data?.priority_weighted_winner;
 
   const verdict = getVerdict(report);
 
   // Get comparison score for "X vs Y" display
   const comparisons = report.comparison_geographies || [];
-  const compData = (report.populated_data as any)?.comparisons;
+  const compData = report.populated_data?.comparisons;
   const firstCompScore =
     comparisons.length > 0 && compData
       ? (compData[comparisons[0].id]?.scores?.[scoreType] as number | null)

@@ -97,9 +97,9 @@ export function PrepQuickStats({
 }: PrepQuickStatsProps): React.ReactElement {
   // Get MarketHealth score and components
   const marketHealthScore =
-    (report.scores_snapshot as any)?.markethealth_score ?? null;
+    report.scores_snapshot?.markethealth_score ?? null;
   const marketHealthComponents =
-    (report.scores_snapshot as any)?.markethealth_components ?? [];
+    report.scores_snapshot?.markethealth_components ?? [];
 
   // Build stat data from configs
   const stats = STAT_CONFIGS.map((config) => {

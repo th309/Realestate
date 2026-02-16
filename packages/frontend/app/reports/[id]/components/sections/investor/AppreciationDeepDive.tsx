@@ -32,8 +32,8 @@ function findComponent(
   report: ReportInstance,
   componentName: string
 ): ScoreComponentBreakdown | undefined {
-  const components = (report.scores_snapshot as any)
-    ?.investoredge_components as ScoreComponentBreakdown[] | undefined;
+  const components = report.scores_snapshot
+    ?.investoredge_components;
   return components?.find((c) => c.component === componentName);
 }
 

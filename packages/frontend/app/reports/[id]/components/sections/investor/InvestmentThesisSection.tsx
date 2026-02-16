@@ -59,8 +59,8 @@ export function InvestmentThesisSection({
   className = '',
 }: InvestmentThesisSectionProps): React.ReactElement | null {
   // ---- Gate: only render when meaningful data exists ----
-  const components = (report.scores_snapshot as any)
-    ?.investoredge_components as ScoreComponentBreakdown[] | undefined;
+  const components = report.scores_snapshot
+    ?.investoredge_components;
 
   const narrative =
     report.ai_narrative?.investment_thesis_narrative ??
