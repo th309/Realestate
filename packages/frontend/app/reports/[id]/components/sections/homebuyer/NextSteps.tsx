@@ -38,7 +38,7 @@ interface MarketContext {
   affordabilityIndex: number | null;
   priceChangePercent: number | null;
   daysOnMarket: number | null;
-  userType: 'homebuyer' | 'investor';
+  userType: string;
 }
 
 /**

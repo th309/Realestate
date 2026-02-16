@@ -26,27 +26,27 @@ export const TEMPLATE_INFO: Record<ReportType, {
   snapshot: {
     name: 'Market Snapshot',
     shortDescription: 'Quick pulse on any single market',
-    userTypeRelevance: { homebuyer: 1, investor: 1 },
+    userTypeRelevance: { homebuyer: 1, investor: 1, agent: 1 },
   },
   comparison: {
     name: 'Market Comparison',
     shortDescription: 'Side-by-side comparison of 2-5 markets',
-    userTypeRelevance: { homebuyer: 2, investor: 2 },
+    userTypeRelevance: { homebuyer: 2, investor: 2, agent: 2 },
   },
   investment: {
     name: 'Investment Analysis',
     shortDescription: 'Deep dive for investors with pro forma',
-    userTypeRelevance: { homebuyer: 3, investor: 1 },
+    userTypeRelevance: { homebuyer: 3, investor: 1, agent: 2 },
   },
   affordability: {
     name: 'Affordability & Migration',
     shortDescription: 'Demographics and population flow analysis',
-    userTypeRelevance: { homebuyer: 1, investor: 2 },
+    userTypeRelevance: { homebuyer: 1, investor: 2, agent: 2 },
   },
   cycle: {
     name: 'Market Cycle & Risk',
     shortDescription: 'Cycle position and scenario analysis',
-    userTypeRelevance: { homebuyer: 2, investor: 1 },
+    userTypeRelevance: { homebuyer: 2, investor: 1, agent: 1 },
   },
 };
 
@@ -90,7 +90,7 @@ export const WIZARD_STEPS = [
 export const USER_TYPE_CONFIG: Record<UserType, {
   label: string;
   description: string;
-  heroScore: 'homeready' | 'investoredge';
+  heroScore: 'homeready' | 'investoredge' | 'markethealth';
   icon: string;
 }> = {
   homebuyer: {
@@ -104,6 +104,12 @@ export const USER_TYPE_CONFIG: Record<UserType, {
     description: 'Looking to invest in real estate',
     heroScore: 'investoredge',
     icon: 'TrendingUp',
+  },
+  agent: {
+    label: 'Real Estate Agent',
+    description: 'Market briefing and client reports',
+    heroScore: 'markethealth',
+    icon: 'Briefcase',
   },
 };
 

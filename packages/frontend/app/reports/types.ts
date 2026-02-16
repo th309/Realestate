@@ -90,7 +90,7 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
 // USER TYPE
 // -----------------------------------------------------------------------------
 
-export type UserType = 'homebuyer' | 'investor';
+export type UserType = 'homebuyer' | 'investor' | 'agent';
 
 // -----------------------------------------------------------------------------
 // REPORT TEMPLATES

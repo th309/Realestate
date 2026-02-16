@@ -23,9 +23,9 @@ import { GeneratingState, GENERATION_STEPS } from './components/GeneratingState'
 import { SectionIcon, formatSectionName } from './components/utils/sectionDisplay';
 import { ReportHeader } from './components/ReportHeader';
 import { ReportFooter } from './components/ReportFooter';
+import { API_URL } from '@/lib/data/fetchers/base';
 import '../styles/report-theme.css';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const POLL_INTERVAL = 2000;
 
 interface ReportViewerProps {
@@ -63,10 +63,22 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
     ? ((report as unknown as ReportInstance).populated_data as any)?.current?.zhvi ??
       ((report as unknown as ReportInstance).populated_data as any)?.current?.home_value ?? null
     : null;
+  const handleNarrativesUpdated = useCallback((narrative: Record<string, string | string[]>) => {
+    setReport(prev => {
+      if (!prev) return prev;
+      // Merge updated narratives into existing ai_narrative, casting for type compatibility
+      const merged = { ...prev.ai_narrative } as Record<string, any>;
+      for (const [key, value] of Object.entries(narrative)) {
+        merged[key] = value;
+      }
+      return { ...prev, ai_narrative: merged };
+    });
+  }, []);
   const personalization = usePersonalization(
     reportId,
     report ? (report as unknown as ReportInstance).user_inputs as any : undefined,
     typeof medianPrice === 'number' ? medianPrice : null,
+    handleNarrativesUpdated,
   );
 
   const pollReport = useCallback(async () => {

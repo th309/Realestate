@@ -5,8 +5,7 @@ import {
   calculatePITI,
   calculateMaxAffordablePrice,
 } from '../components/utils/affordabilityCalc';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { regenerateNarratives } from '@/lib/data';
 
 interface UserInputs {
   income?: number;
@@ -69,6 +68,7 @@ export function usePersonalization(
   reportId: string,
   initialInputs: UserInputs | undefined,
   medianPrice: number | null,
+  onNarrativesUpdated?: (narrative: Record<string, string | string[]>) => void,
 ): PersonalizationState {
   const [inputs, setInputsState] = useState<UserInputs>(initialInputs || {});
   const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
@@ -131,12 +131,10 @@ export function usePersonalization(
       setRegenerating(narrativeKeys);
 
       try {
-        await fetch(`${API_URL}/api/reports/${reportId}/regenerate-narratives`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_inputs: inputs }),
-          signal: controller.signal,
-        });
+        const result = await regenerateNarratives(reportId, { ...inputs }, controller.signal);
+        if (result.ai_narrative && onNarrativesUpdated) {
+          onNarrativesUpdated(result.ai_narrative);
+        }
       } catch (e) {
         // Ignore abort errors; silently fail on network errors
         if (e instanceof DOMException && e.name === 'AbortError') return;

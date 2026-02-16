@@ -66,12 +66,8 @@ import {
   InvestorBottomLine,
 } from '../sections/investor';
 
-// Agent sections (legacy + redesigned)
+// Agent sections (redesigned)
 import {
-  MarketPulse,
-  PriceTrends,
-  SupplyDemand,
-  TalkingPoints,
   ClientOverview,
   ClientPriceValue,
   ClientMarketConditions,
@@ -125,7 +121,7 @@ export interface ReportTemplateDefinition {
 }
 
 /** Available report template types */
-export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot' | 'market_snapshot_client' | 'market_snapshot_prep' | 'comparison';
+export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot_client' | 'market_snapshot_prep' | 'comparison';
 
 // -----------------------------------------------------------------------------
 // Template Definitions
@@ -162,16 +158,6 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
       { component: ProFormaSnapshot, id: 'pro-forma' },
       { component: InvestorBottomLine, id: 'investor-bottom-line' },
       { component: SharedMarketPulse, id: 'market-pulse' },
-    ],
-  },
-  market_snapshot: {
-    name: 'Market Snapshot',
-    description: 'Agent market briefing (legacy)',
-    sections: [
-      { component: MarketPulse, id: 'market-pulse' },
-      { component: PriceTrends, id: 'price-trends' },
-      { component: SupplyDemand, id: 'supply-demand' },
-      { component: TalkingPoints, id: 'talking-points' },
     ],
   },
   market_snapshot_client: {

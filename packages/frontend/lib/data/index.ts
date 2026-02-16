@@ -143,6 +143,9 @@ export {
   fetchMarketAnalysis,
   type MarketAnalysisSection,
   type MarketAnalysisResult,
+
+  // Reports
+  regenerateNarratives,
 } from './fetchers';
 
 // ============================================================================

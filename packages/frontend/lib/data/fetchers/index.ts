@@ -44,3 +44,6 @@ export {
   type MarketAnalysisSection,
   type MarketAnalysisResult,
 } from './market-analysis';
+
+// Reports
+export { regenerateNarratives } from './reports';
