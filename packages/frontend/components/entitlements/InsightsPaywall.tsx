@@ -67,7 +67,7 @@ export function InsightsPaywall({ className = '', compact = false }: InsightsPay
           Hard data meets soft signals. Get AI analysis that factors in news, trends, and local context for deeper market understanding.
         </p>
         <Link
-          href="/pricing"
+          href="/pricing#ai-insights"
           onClick={handleClick}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
         >
@@ -128,7 +128,7 @@ export function InsightsPaywall({ className = '', compact = false }: InsightsPay
       {/* CTA */}
       <div className="px-6 pb-6">
         <Link
-          href="/pricing"
+          href="/pricing#ai-insights"
           onClick={handleClick}
           className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors shadow-md"
         >

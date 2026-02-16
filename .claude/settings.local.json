@@ -218,7 +218,28 @@
       "Bash(cmd.exe /c \"taskkill /PID 46376 /F /T\")",
       "Bash(cmd.exe /c \"taskkill /F /IM node.exe\")",
       "Bash(cmd.exe /c \"wmic process where \"\"ProcessId=46376\"\" call terminate\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(gh:*)",
+      "Bash(PORT=3000 npx next dev:*)",
+      "Bash(cmd.exe /c \"taskkill /F /IM node.exe /T\")",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :3000 | findstr LISTENING\")",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :3001 | findstr LISTENING\")",
+      "Bash(cmd.exe /c \"netstat -ano\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 48316 /T & taskkill /F /PID 29748 /T & taskkill /F /PID 5436 /T\")",
+      "Bash(cmd.exe /c \"wmic process where \"\"ProcessId=48316\"\" delete\")",
+      "Bash(cmd.exe /c \"wmic process where \"\"ProcessId=29748\"\" delete\")",
+      "Bash(cmd.exe /c \"wmic process where \"\"ProcessId=5436\"\" delete\")",
+      "Bash(cmd.exe /c \"taskkill /F /PID 5436 /T\")",
+      "mcp__plugin_playwright_playwright__browser_tabs",
+      "mcp__plugin_playwright_playwright__browser_press_key",
+      "Bash(while read pid)",
+      "Bash(do taskkill //F //PID \"$pid\")",
+      "Bash(npx nest start:*)",
+      "mcp__plugin_supabase_supabase__list_projects",
+      "Bash(NEXT_LINT_DURING_BUILD=false npx next build:*)",
+      "Bash(npx next dev:*)",
+      "Bash(npx:*)"
     ]
   }
 }
