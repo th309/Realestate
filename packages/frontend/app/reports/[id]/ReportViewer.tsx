@@ -23,6 +23,7 @@ import { GeneratingState, GENERATION_STEPS } from './components/GeneratingState'
 import { SectionIcon, formatSectionName } from './components/utils/sectionDisplay';
 import { ReportHeader } from './components/ReportHeader';
 import { ReportFooter } from './components/ReportFooter';
+import { normalizeReport } from './components/utils/normalizeReport';
 import { API_URL } from '@/lib/data/fetchers/base';
 import '../styles/report-theme.css';
 
@@ -47,7 +48,8 @@ async function fetchReport(reportId: string): Promise<ReportWithTemplate | null>
     throw new Error(`Failed to fetch report: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return normalizeReport(data);
 }
 
 export function ReportViewer({ reportId }: ReportViewerProps) {

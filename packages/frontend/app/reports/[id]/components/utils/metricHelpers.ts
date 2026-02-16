@@ -108,12 +108,27 @@ export function getMetricValueWithFallback(
  */
 const METRIC_ALIASES: Record<string, string[]> = {
   zhvi: ['home_value', 'median_listing_price'],
+  home_value: ['zhvi', 'median_listing_price'],
+  median_listing_price: ['zhvi', 'home_value'],
   median_household_income: ['median_income'],
+  median_income: ['median_household_income'],
   net_migration: ['migration_net'],
-  population_growth_yoy: ['population_growth'],
+  population_growth_yoy: ['population_growth', 'population_yoy'],
+  population_yoy: ['population_growth_yoy', 'population_growth'],
   unemployment_rate: ['unemployment'],
   job_growth_yoy: ['job_growth'],
   income_growth_yoy: ['income_growth'],
+  // YoY aliases — sections look for various names
+  home_value_yoy: ['zhvi_yoy', 'median_listing_price_yoy'],
+  zhvi_yoy: ['home_value_yoy', 'median_listing_price_yoy'],
+  // Listing/inventory aliases
+  for_sale_inventory: ['active_listing_count'],
+  active_listing_count: ['for_sale_inventory'],
+  median_days_on_market: ['days_on_market'],
+  days_on_market: ['median_days_on_market'],
+  price_cut_pct: ['price_reduced_share'],
+  price_reduced_share: ['price_cut_pct'],
+  hotness_score: ['market_hotness'],
 };
 
 /**
