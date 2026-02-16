@@ -236,6 +236,22 @@ test.describe('Report Viewer', () => {
 
       await expect(page.locator('#your-priorities')).toBeVisible();
     });
+
+    test('personalization panel updates on input change', async ({ page }) => {
+      await mockReportAPI(page, MOCK_HOMEREADY_REPORT);
+      await navigateToReport(page, MOCK_HOMEREADY_REPORT.id);
+
+      // Open the personalization panel
+      await page.getByText('Personalize This Report').click();
+      await expect(page.getByText('Annual Income')).toBeVisible();
+
+      // Find the income input and change its value
+      const incomeInput = page.getByLabel('Annual Income');
+      await incomeInput.fill('120000');
+
+      // A "Modified" badge should appear indicating personalization is active
+      await expect(page.getByText('Modified')).toBeVisible();
+    });
   });
 
   test.describe('InvestorEdge Report', () => {
@@ -275,6 +291,14 @@ test.describe('Report Viewer', () => {
       // Both market names should appear
       await expect(page.getByText('Austin, TX')).toBeVisible();
       await expect(page.getByText('Dallas, TX')).toBeVisible();
+    });
+
+    test('displays priority-analysis section', async ({ page }) => {
+      await mockReportAPI(page, MOCK_COMPARISON_REPORT);
+      await navigateToReport(page, MOCK_COMPARISON_REPORT.id);
+
+      // Priority analysis section should be visible in comparison reports
+      await expect(page.locator('#priority-analysis')).toBeVisible();
     });
   });
 
