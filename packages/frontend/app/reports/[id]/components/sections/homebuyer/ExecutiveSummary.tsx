@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Home, TrendingUp, Clock, PiggyBank, DollarSign, Activity, BarChart3 } from 'lucide-react';
+import { Home, TrendingUp, Clock, PiggyBank, DollarSign, Activity, BarChart3, Sparkles } from 'lucide-react';
 
 import { formatMetricValue } from '@/lib/data';
-import { SectionCard, MetricDisplay, AIAnalysisBlock, TrendSparkline } from '../core';
+import { SectionCard, MetricDisplay, TrendSparkline } from '../core';
 import type { MetricTrend } from '../core';
 import { getMetricWithAliases, getMetricTrend, getScoreContext } from '../../utils/metricHelpers';
 import type { ReportInstance } from '../../../../types';
@@ -13,9 +13,6 @@ export interface ExecutiveSummaryProps {
   report: ReportInstance;
 }
 
-/**
- * Metric configuration for the executive summary
- */
 interface MetricConfig {
   id: string;
   aliases: string[];
@@ -23,14 +20,6 @@ interface MetricConfig {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-/**
- * Pool of homebuyer-relevant metrics for executive summary
- * We'll pick the first 6 that have data for this geography
- */
-/**
- * Metrics pool using registry IDs directly - no aliases needed
- * Priority order: most commonly available first
- */
 const METRICS_POOL: MetricConfig[] = [
   { id: 'home_value', aliases: [], label: 'Median Home Value', icon: Home },
   { id: 'days_on_market', aliases: [], label: 'Days on Market', icon: Clock },
@@ -94,29 +83,16 @@ function calculateTrend(
   };
 }
 
-/**
- * ExecutiveSummary - Comprehensive overview for HomeReady report
- *
- * Displays:
- * - HomeReady Score with grade and contextualization
- * - Score interpretation (what it means, dollar impact, peer comparison)
- * - 3-6 key market indicators with trends
- * - AI-generated market summary
- */
 export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.ReactElement {
   const score = report.homeready_score;
   const marketSummary = report.ai_narrative?.market_summary || report.ai_narrative?.market_story;
 
-  // Get score context for in-depth interpretation
   const scoreContext = getScoreContext(report as any, 'homeready');
 
-  // Gather metrics - check all in pool, pick first 6 with data
   const metricsWithData = METRICS_POOL.map((metric) => {
-    // Get value from current data or historical
     let value = report.populated_data?.current?.[metric.id] ?? null;
     if (value !== null) value = Number(value);
 
-    // Try historical data if no current value
     if (value === null) {
       const histData = report.populated_data?.historical?.[metric.id];
       if (histData && histData.data && histData.data.length > 0) {
@@ -127,15 +103,9 @@ export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.React
     const historicalData = report.populated_data?.historical?.[metric.id];
     const trend = calculateTrend(historicalData);
 
-    return {
-      ...metric,
-      value,
-      trend,
-    };
+    return { ...metric, value, trend };
   }).filter((m) => m.value !== null).slice(0, 6);
 
-  // Get historical trends for sparklines section
-  // Check both zhvi and home_value keys for compatibility
   const zhviTrend = report.populated_data?.historical?.zhvi ??
     report.populated_data?.historical?.home_value;
   const domTrend = report.populated_data?.historical?.days_on_market;
@@ -156,127 +126,122 @@ export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.React
     );
   }
 
+  // Split AI summary into paragraphs for better rendering
+  const summaryParagraphs = hasSummary
+    ? (marketSummary as string).split(/\n\n|\n/).filter(p => p.trim())
+    : [];
+
   return (
     <SectionCard title="Executive Summary" icon={TrendingUp}>
       <div className="space-y-[var(--report-space-xl)]">
-        {/* HomeReady Score Section with Context */}
-        {hasScore && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--report-space-lg)]">
-            {/* Score Ring and Label */}
-            <div className="flex flex-col items-center text-center">
-              <div className="relative" style={{ width: 160, height: 160 }}>
-                <svg
-                  width="160"
-                  height="160"
-                  viewBox="0 0 160 160"
-                  role="img"
-                  aria-label={`HomeReady Score: ${score} out of 100`}
-                >
+
+        {/* HERO: Score + AI Analysis side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-[var(--report-space-lg)]">
+
+          {/* Score Ring - compact, left column */}
+          {hasScore && (
+            <div className="flex flex-col items-center text-center lg:pt-2">
+              <div className="relative" style={{ width: 140, height: 140 }}>
+                <svg width="140" height="140" viewBox="0 0 140 140" role="img" aria-label={`HomeReady Score: ${score} out of 100`}>
+                  <circle cx="70" cy="70" r="60" fill="none" stroke="var(--report-cream-dark)" strokeWidth="10" />
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="70"
-                    fill="none"
-                    stroke="var(--report-cream-dark)"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="70"
-                    fill="none"
-                    stroke={getScoreStrokeColor(score)}
-                    strokeWidth="12"
-                    strokeDasharray={`${(score / 100) * 440} 440`}
+                    cx="70" cy="70" r="60" fill="none"
+                    stroke={getScoreStrokeColor(score)} strokeWidth="10"
+                    strokeDasharray={`${(score / 100) * 377} 377`}
                     strokeLinecap="round"
                     style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span
-                    className={`text-4xl font-bold ${getScoreColorClass(score)}`}
+                    className={`text-3xl font-bold ${getScoreColorClass(score)}`}
                     style={{ fontFamily: 'var(--report-font-display)' }}
                   >
                     {score}
                   </span>
-                  <span className="report-label mt-1">HomeReady</span>
+                  <span className="report-label mt-0.5 text-[10px]">HomeReady</span>
                 </div>
               </div>
-
-              <div className="mt-4">
-                <span
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
-                  style={{
-                    backgroundColor: score >= 70 ? 'var(--report-success-bg)' : score >= 50 ? 'var(--report-warning-bg)' : 'var(--report-error-bg)',
-                    color: getScoreStrokeColor(score),
-                  }}
-                >
-                  Grade: {getScoreGrade(score)} • {getScoreLabel(score)}
-                </span>
-              </div>
+              <span
+                className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{
+                  backgroundColor: score >= 70 ? 'var(--report-success-bg)' : score >= 50 ? 'var(--report-warning-bg)' : 'var(--report-error-bg)',
+                  color: getScoreStrokeColor(score),
+                }}
+              >
+                {getScoreGrade(score)} · {getScoreLabel(score)}
+              </span>
             </div>
+          )}
 
-            {/* Score Interpretation */}
-            <div className="lg:col-span-2 space-y-4">
-              <div>
-                <h3 className="report-heading-md mb-2">{report.primary_geography_name}</h3>
-                <p className="report-body">
-                  {scoreContext?.interpretation ||
-                    `The HomeReady Score evaluates affordability, market stability, value potential, and buyer competition to help you understand how favorable this market is for purchasing a home.`}
-                </p>
-              </div>
-
-              {/* Score Context Cards */}
-              {scoreContext && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {scoreContext.percentileText && (
-                    <div
-                      className="p-3 rounded-lg"
-                      style={{ backgroundColor: 'var(--report-cream)' }}
-                    >
-                      <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--report-stone-light)' }}>
-                        Peer Comparison
-                      </p>
-                      <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
-                        {scoreContext.percentileText}
-                      </p>
-                    </div>
-                  )}
-
-                  {scoreContext.dollarImpact && (
-                    <div
-                      className="p-3 rounded-lg"
-                      style={{ backgroundColor: 'var(--report-success-bg)' }}
-                    >
-                      <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--report-stone-light)' }}>
-                        Dollar Impact
-                      </p>
-                      <p className="text-sm font-medium" style={{ color: 'var(--report-success)' }}>
-                        {scoreContext.dollarImpact}
-                      </p>
-                    </div>
-                  )}
-
-                  {scoreContext.comparison && (
-                    <div
-                      className="p-3 rounded-lg sm:col-span-2"
-                      style={{ backgroundColor: 'var(--report-cream)' }}
-                    >
-                      <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--report-stone-light)' }}>
-                        Market Position
-                      </p>
-                      <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
-                        {scoreContext.comparison}
-                      </p>
-                    </div>
-                  )}
-                </div>
+          {/* AI Analysis - the hero content */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-3">
+              <h3
+                className="text-xl font-semibold"
+                style={{ color: 'var(--report-navy)', fontFamily: 'var(--report-font-display)' }}
+              >
+                {report.primary_geography_name}
+              </h3>
+              {hasSummary && (
+                <span
+                  className="flex items-center gap-1 text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'var(--report-cream-dark)', color: 'var(--report-stone-light)' }}
+                >
+                  <Sparkles className="w-2.5 h-2.5" />
+                  AI
+                </span>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Key Market Indicators - Show up to 6 */}
+            {hasSummary ? (
+              <div className="space-y-3">
+                {summaryParagraphs.map((paragraph, i) => (
+                  <p
+                    key={i}
+                    className="text-[0.9375rem] leading-[1.7]"
+                    style={{ color: i === 0 ? 'var(--report-navy)' : 'var(--report-stone)' }}
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="report-body">
+                {scoreContext?.interpretation ||
+                  'The HomeReady Score evaluates affordability, market stability, value potential, and buyer competition to help you understand how favorable this market is for purchasing a home.'}
+              </p>
+            )}
+
+            {/* Context cards inline under the narrative */}
+            {scoreContext && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                {scoreContext.percentileText && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--report-cream)' }}>
+                    <p className="text-[10px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--report-stone-light)' }}>
+                      Peer Comparison
+                    </p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
+                      {scoreContext.percentileText}
+                    </p>
+                  </div>
+                )}
+                {scoreContext.dollarImpact && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--report-success-bg)' }}>
+                    <p className="text-[10px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--report-stone-light)' }}>
+                      Dollar Impact
+                    </p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--report-success)' }}>
+                      {scoreContext.dollarImpact}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Key Market Indicators */}
         {hasMetrics && (
           <div>
             <h4 className="report-label mb-[var(--report-space-md)]">Key Market Indicators</h4>
@@ -295,20 +260,15 @@ export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.React
           </div>
         )}
 
-        {/* Historical Trends Section - Show 2 sparklines */}
+        {/* Historical Trends */}
         {(zhviTrend || domTrend) && (
           <div>
             <h4 className="report-label mb-[var(--report-space-md)]">6-Month Trends</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {zhviTrend && zhviTrend.data && zhviTrend.data.length >= 2 && (
-                <div
-                  className="p-4 rounded-lg"
-                  style={{ backgroundColor: 'var(--report-cream)' }}
-                >
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--report-cream)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
-                      Home Values
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>Home Values</p>
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                         zhviTrend.trend === 'up'
@@ -336,14 +296,9 @@ export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.React
               )}
 
               {domTrend && domTrend.data && domTrend.data.length >= 2 && (
-                <div
-                  className="p-4 rounded-lg"
-                  style={{ backgroundColor: 'var(--report-cream)' }}
-                >
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--report-cream)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
-                      Days on Market
-                    </p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>Days on Market</p>
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                         domTrend.trend === 'up'
@@ -371,15 +326,6 @@ export function ExecutiveSummary({ report }: ExecutiveSummaryProps): React.React
               )}
             </div>
           </div>
-        )}
-
-        {/* AI Market Summary */}
-        {hasSummary && (
-          <AIAnalysisBlock
-            title="Market Overview"
-            content={marketSummary}
-            variant="summary"
-          />
         )}
       </div>
     </SectionCard>

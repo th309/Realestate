@@ -324,7 +324,10 @@ export function AnimatedTimeSeriesChart({
           .transition()
           .duration(1200)
           .ease(d3.easeCubicOut)
-          .attr('stroke-dashoffset', 0);
+          .attr('stroke-dashoffset', 0)
+          .on('end', function() {
+            d3.select(this).attr('stroke-dasharray', 'none');
+          });
       }
 
       // Comparison (if present, animate in after primary)

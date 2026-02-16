@@ -387,122 +387,13 @@ export function AffordabilityAnalysis({
 
       {/* Affordability Gap Visualization */}
       {homeValue && affordablePrice && (
-        <div
-          className="rounded-[var(--report-radius-md)] p-5 mb-6"
-          style={{ backgroundColor: 'var(--report-cream)' }}
-        >
-          <h4
-            className="report-heading-sm mb-4"
-            style={{ color: 'var(--report-navy)' }}
-          >
-            The Affordability Gap
-          </h4>
-
-          <div className="flex items-center justify-between mb-4">
-            {/* Affordable Price */}
-            <div className="text-center">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2"
-                style={{ backgroundColor: 'var(--report-success-bg)' }}
-              >
-                <DollarSign
-                  className="w-5 h-5"
-                  style={{ color: 'var(--report-success)' }}
-                />
-              </div>
-              <p
-                className="text-xs font-medium uppercase tracking-wide mb-1"
-                style={{ color: 'var(--report-stone-light)' }}
-              >
-                Affordable at 4x Income
-              </p>
-              <p
-                className="text-xl font-semibold"
-                style={{ color: 'var(--report-success)' }}
-              >
-                {formatMetricValue(affordablePrice, 'currency')}
-              </p>
-            </div>
-
-            {/* Gap Bar */}
-            <div className="flex-1 mx-6">
-              <div
-                className="h-3 rounded-full overflow-hidden"
-                style={{ backgroundColor: 'var(--report-cream-dark)' }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${affordabilityBarWidth}%`,
-                    backgroundColor: isAffordable
-                      ? 'var(--report-success)'
-                      : 'var(--report-error)',
-                  }}
-                />
-              </div>
-              {affordabilityGap !== null && !isAffordable && (
-                <div className="flex justify-center mt-2">
-                  <span
-                    className="text-xs font-medium px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: 'var(--report-error-bg)',
-                      color: 'var(--report-error)',
-                    }}
-                  >
-                    Gap: {formatMetricValue(affordabilityGap, 'currency')}
-                    {gapPercentage !== null && ` (${gapPercentage.toFixed(0)}% above)`}
-                  </span>
-                </div>
-              )}
-              {isAffordable && (
-                <div className="flex justify-center mt-2">
-                  <span
-                    className="text-xs font-medium px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: 'var(--report-success-bg)',
-                      color: 'var(--report-success)',
-                    }}
-                  >
-                    Market is affordable
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Median Price */}
-            <div className="text-center">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2"
-                style={{ backgroundColor: 'var(--report-cream-dark)' }}
-              >
-                <Home
-                  className="w-5 h-5"
-                  style={{ color: 'var(--report-navy)' }}
-                />
-              </div>
-              <p
-                className="text-xs font-medium uppercase tracking-wide mb-1"
-                style={{ color: 'var(--report-stone-light)' }}
-              >
-                Median Home Price
-              </p>
-              <p
-                className="text-xl font-semibold"
-                style={{ color: 'var(--report-navy)' }}
-              >
-                {formatMetricValue(homeValue, 'currency')}
-              </p>
-            </div>
-          </div>
-
-          {/* Context about the 4x rule */}
-          <p
-            className="text-xs text-center"
-            style={{ color: 'var(--report-stone-light)' }}
-          >
-            Based on the traditional guideline that home prices should not exceed 4x annual household income
-          </p>
-        </div>
+        <AffordabilityGapChart
+          homeValue={homeValue}
+          medianIncome={medianIncome}
+          affordablePrice={affordablePrice}
+          userIncome={(report as any).user_inputs?.household_income ?? (report as any).user_inputs?.annual_income}
+          isAffordable={isAffordable}
+        />
       )}
 
       {/* Historical Trends Section */}
@@ -704,32 +595,190 @@ export function AffordabilityAnalysis({
         />
       )}
 
-      {/* Key Takeaway for Homebuyers */}
-      {homeValue && medianIncome && !aiNarrative && (
-        <div
-          className="mt-4 p-4 rounded-[var(--report-radius-md)] border-l-4"
-          style={{
-            backgroundColor: 'var(--report-cream)',
-            borderLeftColor: 'var(--report-gold)',
-          }}
-        >
-          <p
-            className="text-sm font-medium mb-1"
-            style={{ color: 'var(--report-navy)' }}
-          >
-            What This Means For You
-          </p>
-          <p
-            className="text-sm"
-            style={{ color: 'var(--report-stone)' }}
-          >
-            {isAffordable
-              ? `At ${priceToIncomeRatio?.toFixed(1)}x the median income, this market offers good affordability for homebuyers. A household earning the median income could reasonably afford the typical home.`
-              : `At ${priceToIncomeRatio?.toFixed(1)}x the median income, homebuyers may need to save more for a down payment, consider homes below the median price, or look at nearby more affordable areas.`}
-          </p>
-        </div>
-      )}
     </SectionCard>
+  );
+}
+
+/**
+ * AffordabilityGapChart - Visual comparison of home price vs. what's affordable
+ *
+ * Centers on median home price, then shows horizontal bars comparing
+ * what's affordable at the area median income, and optionally the user's income.
+ */
+function AffordabilityGapChart({
+  homeValue,
+  medianIncome,
+  affordablePrice,
+  userIncome,
+  isAffordable,
+}: {
+  homeValue: number;
+  medianIncome: number;
+  affordablePrice: number;
+  userIncome?: number;
+  isAffordable: boolean;
+}) {
+  const userAffordablePrice = userIncome ? userIncome * 4 : null;
+
+  // Scale: everything relative to the largest value
+  const maxValue = Math.max(
+    homeValue,
+    affordablePrice,
+    userAffordablePrice ?? 0
+  );
+
+  const barPct = (val: number) => Math.max(8, (val / maxValue) * 100);
+
+  const medianGap = homeValue - affordablePrice;
+  const medianGapPct = affordablePrice > 0 ? (medianGap / affordablePrice) * 100 : 0;
+  const userGap = userAffordablePrice ? homeValue - userAffordablePrice : null;
+  const userGapPct = userAffordablePrice && userAffordablePrice > 0
+    ? ((userGap ?? 0) / userAffordablePrice) * 100
+    : null;
+
+  return (
+    <div
+      className="rounded-[var(--report-radius-md)] p-5 mb-6"
+      style={{ backgroundColor: 'var(--report-cream)' }}
+    >
+      <h4
+        className="report-heading-sm mb-5"
+        style={{ color: 'var(--report-navy)' }}
+      >
+        The Affordability Gap
+      </h4>
+
+      <div className="space-y-5">
+        {/* Median Home Price - the anchor */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <Home className="w-4 h-4" style={{ color: 'var(--report-navy)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
+                Median Home Price
+              </span>
+            </div>
+            <span
+              className="text-lg font-bold tabular-nums"
+              style={{ color: 'var(--report-navy)', fontFamily: 'var(--report-font-display)' }}
+            >
+              {formatMetricValue(homeValue, 'currency')}
+            </span>
+          </div>
+          <div
+            className="h-4 rounded-full"
+            style={{
+              width: `${barPct(homeValue)}%`,
+              backgroundColor: 'var(--report-navy)',
+            }}
+          />
+        </div>
+
+        {/* Affordable at Median Income */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" style={{ color: isAffordable ? 'var(--report-success)' : 'var(--report-warning)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--report-stone)' }}>
+                Affordable at Area Median Income
+              </span>
+              <span
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{ backgroundColor: 'var(--report-cream-dark)', color: 'var(--report-stone-light)' }}
+              >
+                {formatMetricValue(medianIncome, 'currency')}/yr
+              </span>
+            </div>
+            <span
+              className="text-lg font-bold tabular-nums"
+              style={{ color: isAffordable ? 'var(--report-success)' : 'var(--report-stone)' }}
+            >
+              {formatMetricValue(affordablePrice, 'currency')}
+            </span>
+          </div>
+          <div className="relative">
+            <div
+              className="h-4 rounded-full"
+              style={{
+                width: `${barPct(affordablePrice)}%`,
+                backgroundColor: isAffordable ? 'var(--report-success)' : 'var(--report-warning)',
+              }}
+            />
+          </div>
+          {medianGap > 0 && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--report-warning)' }}>
+              {formatMetricValue(medianGap, 'currency')} short ({medianGapPct.toFixed(0)}% gap)
+            </p>
+          )}
+          {medianGap <= 0 && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--report-success)' }}>
+              Within budget by {formatMetricValue(Math.abs(medianGap), 'currency')}
+            </p>
+          )}
+        </div>
+
+        {/* User's Income (if provided) */}
+        {userAffordablePrice !== null && userIncome && (
+          <>
+            <div
+              className="border-t my-1"
+              style={{ borderColor: 'var(--report-cream-dark)' }}
+            />
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" style={{ color: (userGap ?? 0) <= 0 ? 'var(--report-success)' : 'var(--report-navy)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--report-navy)' }}>
+                    Affordable at Your Income
+                  </span>
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded"
+                    style={{ backgroundColor: 'var(--report-navy)', color: 'white' }}
+                  >
+                    {formatMetricValue(userIncome, 'currency')}/yr
+                  </span>
+                </div>
+                <span
+                  className="text-lg font-bold tabular-nums"
+                  style={{
+                    color: (userGap ?? 0) <= 0 ? 'var(--report-success)' : 'var(--report-navy)',
+                    fontFamily: 'var(--report-font-display)',
+                  }}
+                >
+                  {formatMetricValue(userAffordablePrice, 'currency')}
+                </span>
+              </div>
+              <div
+                className="h-4 rounded-full"
+                style={{
+                  width: `${barPct(userAffordablePrice)}%`,
+                  backgroundColor: (userGap ?? 0) <= 0 ? 'var(--report-success)' : 'var(--report-navy)',
+                  opacity: 0.8,
+                }}
+              />
+              {userGap !== null && userGap > 0 && (
+                <p className="text-xs mt-1.5" style={{ color: 'var(--report-warning)' }}>
+                  {formatMetricValue(userGap, 'currency')} short ({userGapPct?.toFixed(0)}% gap)
+                </p>
+              )}
+              {userGap !== null && userGap <= 0 && (
+                <p className="text-xs mt-1.5" style={{ color: 'var(--report-success)' }}>
+                  Within your budget by {formatMetricValue(Math.abs(userGap), 'currency')}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footnote */}
+      <p
+        className="text-xs mt-5 text-center"
+        style={{ color: 'var(--report-stone-light)' }}
+      >
+        Based on the guideline that home prices should not exceed 4x annual household income
+      </p>
+    </div>
   );
 }
 

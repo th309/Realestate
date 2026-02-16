@@ -16,6 +16,20 @@ const nextConfig = {
       './public/geojson/**',
     ],
   },
+  // Exclude 1.3GB of static GeoJSON from Turbopack/webpack watching in dev
+  // These files are served as-is from /public and rarely change
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/public/geojson/**',
+        ],
+      };
+    }
+    return config;
+  },
   transpilePackages: ['recharts'],
 };
 

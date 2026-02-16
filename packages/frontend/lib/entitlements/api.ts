@@ -19,22 +19,40 @@ export async function fetchEntitlements(
   params.set('_t', Date.now().toString());
 
   const url = `${API_URL}/api/entitlements/check?${params}`;
-  console.log('[Entitlements] Fetching:', url.substring(0, 100) + '..., tier=' + tierOverride);
 
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    cache: 'no-store',
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    // Network error (backend unreachable) — fail open with free tier defaults
+    console.warn('[Entitlements] Backend unreachable, defaulting to free tier');
+    return {
+      tier: (tierOverride as any) || 'free',
+      access: {},
+      trial: null,
+      loading: false,
+      error: null,
+    };
+  }
 
   if (!response.ok) {
-    throw new Error('Failed to fetch entitlements');
+    console.warn('[Entitlements] API returned', response.status, '- defaulting to free tier');
+    return {
+      tier: (tierOverride as any) || 'free',
+      access: {},
+      trial: null,
+      loading: false,
+      error: null,
+    };
   }
 
   const data = await response.json();
-  console.log('[Entitlements] Response tier:', data.tier, 'access count:', Object.keys(data.access).length);
 
   return {
     tier: data.tier,

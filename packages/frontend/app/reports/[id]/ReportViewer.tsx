@@ -177,8 +177,6 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
   }
 
   const userType = report.user_type as UserType;
-  const heroScore = userType === 'investor' ? report.investoredge_score : report.homeready_score;
-  const heroScoreType = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
 
   // Determine template based on report type first, then user type
   const reportType = report.template?.config?.report_type;
@@ -274,35 +272,29 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
                 </div>
               </div>
 
-              {/* Hero Score Card */}
-              {heroScore && (
-                <div className="mt-8 report-animate-in report-animate-in-delay-1">
-                  <HeroScoreCard score={heroScore} scoreType={heroScoreType} userType={userType} />
-                </div>
+              {/* Table of Contents */}
+              {templateSections.length > 1 && (
+                <nav className="mt-8 p-5 report-card report-animate-in report-animate-in-delay-1">
+                  <h3 className="report-label mb-3">In this report</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {templateSections.map((section) => (
+                      <a
+                        key={section.id}
+                        href={`#${section.id}`}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
+                      >
+                        <SectionIcon sectionId={section.id} />
+                        <span className="truncate">{formatSectionName(section.id)}</span>
+                      </a>
+                    ))}
+                  </div>
+                </nav>
               )}
             </div>
           </div>
 
           {/* Report Body */}
           <div className="max-w-4xl mx-auto px-6 py-10">
-            {/* Table of Contents */}
-            {templateSections.length > 1 && (
-              <nav className="mb-10 p-5 report-card report-animate-in report-animate-in-delay-2">
-                <h3 className="report-label mb-3">In this report</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {templateSections.map((section) => (
-                    <a
-                      key={section.id}
-                      href={`#${section.id}`}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
-                    >
-                      <SectionIcon sectionId={section.id} />
-                      <span className="truncate">{formatSectionName(section.id)}</span>
-                    </a>
-                  ))}
-                </div>
-              </nav>
-            )}
 
             {/* Dynamic Sections - Using New Template System */}
             <BrandingProvider>
@@ -345,79 +337,6 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
           <ConversationPanel reportId={reportId} reportTitle={report.title} onClose={() => setShowConversation(false)} />
         )}
       </div>
-    </div>
-  );
-}
-
-// Hero Score Card Component
-interface HeroScoreCardProps {
-  score: number;
-  scoreType: string;
-  userType: UserType;
-}
-
-function HeroScoreCard({ score, scoreType }: HeroScoreCardProps) {
-  const getScoreInfo = (s: number) => {
-    if (s >= 80) return { label: 'Excellent', color: 'var(--report-success)', bg: 'var(--report-success-bg)' };
-    if (s >= 70) return { label: 'Good', color: 'var(--report-success)', bg: 'var(--report-success-bg)' };
-    if (s >= 50) return { label: 'Moderate', color: 'var(--report-gold)', bg: 'rgba(196, 163, 90, 0.15)' };
-    if (s >= 30) return { label: 'Below Average', color: 'var(--report-warning)', bg: 'var(--report-warning-bg)' };
-    return { label: 'Poor', color: 'var(--report-error)', bg: 'var(--report-error-bg)' };
-  };
-
-  const scoreInfo = getScoreInfo(score);
-
-  return (
-    <div className="report-card p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="report-label mb-2">{scoreType} Score</p>
-          <div className="flex items-baseline gap-3">
-            <span className="text-5xl font-semibold" style={{ color: scoreInfo.color, fontFamily: 'var(--report-font-display)' }}>
-              {score}
-            </span>
-            <span className="text-lg text-[var(--report-stone-light)]">/100</span>
-          </div>
-          <div
-            className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-sm font-medium"
-            style={{ background: scoreInfo.bg, color: scoreInfo.color }}
-          >
-            {score >= 70 ? <TrendingUp className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
-            {scoreInfo.label}
-          </div>
-        </div>
-        <LargeScoreRing score={score} color={scoreInfo.color} />
-      </div>
-    </div>
-  );
-}
-
-// Large Score Ring
-function LargeScoreRing({ score, color }: { score: number; color: string }) {
-  const size = 120;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = (score / 100) * circumference;
-  const offset = circumference - progress;
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={strokeWidth} fill="none" stroke="var(--report-cream-dark)" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          strokeWidth={strokeWidth}
-          fill="none"
-          stroke={color}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 1s ease' }}
-        />
-      </svg>
     </div>
   );
 }
