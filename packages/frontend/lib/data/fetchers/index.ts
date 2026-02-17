@@ -33,6 +33,10 @@ export {
   fetchScore,
   fetchBatchScores,
   fetchScoreExpanded,
+  fetchTopMarkets,
+  type TopMarketsGeo,
+  type TopMarketsScoreType,
+  type TopMarketEntry,
 } from './scores';
 
 // Market data (stats, lists)
@@ -86,7 +90,22 @@ export {
 } from './search';
 
 // Scoring validation & report templates
-export { fetchQuintilePerformance, fetchReportTemplates } from './scoring';
+export {
+  fetchQuintilePerformance,
+  fetchReportTemplates,
+  fetchValidationSummary,
+  fetchValidationQuintiles,
+  fetchValidationScatter,
+  fetchValidationTimeSeries,
+  fetchValidationGeography,
+  type ValidationGeography,
+  type ValidationScoreType,
+  type ValidationSummary,
+  type ValidationQuintile,
+  type ValidationScatterPoint,
+  type ValidationTimeSeriesPoint,
+  type ValidationGeographyBreakdown,
+} from './scoring';
 
 // Pricing (admin features)
 export { fetchPricingSummary, type PricingTier } from './pricing';

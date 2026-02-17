@@ -120,6 +120,8 @@ interface ScatterPlotProps {
   };
   colorByCategory?: boolean;
   sizeByValue?: boolean;
+  /** Base dot radius in px (default 8 when sizeByValue is false) */
+  dotRadius?: number;
   height?: number;
   className?: string;
   onPointClick?: (point: ScatterDataPoint) => void;
@@ -146,6 +148,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
   quadrantLabels,
   colorByCategory = true,
   sizeByValue = true,
+  dotRadius: dotRadiusProp,
   height = 400,
   className = '',
   onPointClick,
@@ -574,7 +577,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
           moveTooltipRef.current(event.clientX, event.clientY);
         })
         .on('mouseleave', function (this: SVGCircleElement, _event: MouseEvent, d: ScatterDataPoint) {
-          const targetR = sizeByValue ? sizeScale(d.size ?? 1) : 8;
+          const targetR = sizeByValue ? sizeScale(d.size ?? 1) : (dotRadiusProp ?? 8);
           d3.select(this)
             .interrupt('hover')
             .transition('hover')
@@ -591,7 +594,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
         .duration(400)
         .delay((_, i) => isInitial ? i * 15 : 0)
         .ease(ease)
-        .attr('r', d => sizeByValue ? sizeScale(d.size ?? 1) : 8)
+        .attr('r', d => sizeByValue ? sizeScale(d.size ?? 1) : (dotRadiusProp ?? 8))
         .attr('opacity', 0.7);
 
       // Update
@@ -622,7 +625,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
               moveTooltipRef.current(event.clientX, event.clientY);
             })
             .on('mouseleave', function (this: SVGCircleElement, _event: MouseEvent, d: ScatterDataPoint) {
-              const targetR = sizeByValue ? sizeScale(d.size ?? 1) : 8;
+              const targetR = sizeByValue ? sizeScale(d.size ?? 1) : (dotRadiusProp ?? 8);
               d3.select(this)
                 .interrupt('hover')
                 .transition('hover')
@@ -641,7 +644,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
         .ease(ease)
         .attr('cx', d => xScale(d.x))
         .attr('cy', d => yScale(d.y))
-        .attr('r', d => sizeByValue ? sizeScale(d.size ?? 1) : 8);
+        .attr('r', d => sizeByValue ? sizeScale(d.size ?? 1) : (dotRadiusProp ?? 8));
 
       // Exit
       points.exit()
@@ -921,7 +924,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = ({
     xFormat, yFormat, xLabel, yLabel,
     xScaleType, yScaleType,
     showRegression, showQuadrants, quadrantLabels,
-    colorByCategory, sizeByValue, isRaceMode,
+    colorByCategory, sizeByValue, dotRadiusProp, isRaceMode,
   ]);
 
   // ── Race mode rendering ──

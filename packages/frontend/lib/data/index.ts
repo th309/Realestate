@@ -135,6 +135,10 @@ export {
   fetchScore,
   fetchBatchScores,
   fetchScoreExpanded,
+  fetchTopMarkets,
+  type TopMarketsGeo,
+  type TopMarketsScoreType,
+  type TopMarketEntry,
 
   // Markets
   fetchMarketStats,
@@ -182,6 +186,18 @@ export {
   // Scoring validation & report templates
   fetchQuintilePerformance,
   fetchReportTemplates,
+  fetchValidationSummary,
+  fetchValidationQuintiles,
+  fetchValidationScatter,
+  fetchValidationTimeSeries,
+  fetchValidationGeography,
+  type ValidationGeography,
+  type ValidationScoreType,
+  type ValidationSummary,
+  type ValidationQuintile,
+  type ValidationScatterPoint,
+  type ValidationTimeSeriesPoint,
+  type ValidationGeographyBreakdown,
 
   // Pricing
   fetchPricingSummary,
@@ -229,7 +245,24 @@ export {
   type UseMarketSnapshotOptions,
   type UseMarketSnapshotResult,
 
+  // Top markets (rankings)
+  useTopMarkets,
+  type UseTopMarketsOptions,
+  type UseTopMarketsResult,
+
   // Metric access (entitlements gating)
   useMetricAccess,
   type MetricAccessResult,
+
+  // Validation data hooks
+  useValidationSummary,
+  useValidationQuintiles,
+  useValidationScatter,
+  useValidationTimeSeries,
+  useValidationGeography,
+  type UseValidationSummaryOptions,
+  type UseValidationQuintilesOptions,
+  type UseValidationScatterOptions,
+  type UseValidationTimeSeriesOptions,
+  type UseValidationGeographyOptions,
 } from './hooks';

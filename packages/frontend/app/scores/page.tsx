@@ -129,7 +129,7 @@ export default function ScoresPage() {
           appreciation over three years.
         </p>
         <Link
-          href="/scores/methodology"
+          href="/scores/accuracy"
           className="inline-flex items-center gap-2 text-primary font-medium hover:underline mt-4"
         >
           See the proof <ArrowRight className="w-4 h-4" />

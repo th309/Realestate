@@ -288,10 +288,10 @@ export class ValidationService {
   ): Promise<ScatterPoint[]> {
     const client = this.supabase.getClient();
 
-    // Build query
+    // Build query — include geography_type so we know which name table to use
     let query = client
       .from('propertyiq_backtest_outcomes')
-      .select('geography_id, score_date, score_value, outcome_1y_value, outcome_3y_value, excess_vs_state_1y, excess_vs_state_3y')
+      .select('geography_id, geography_type, score_date, score_value, outcome_1y_value, outcome_3y_value, excess_vs_state_1y, excess_vs_state_3y')
       .not('score_value', 'is', null)
       .limit(limit);
 
@@ -308,12 +308,16 @@ export class ValidationService {
       return [];
     }
 
-    // Get geography names
+    // Batch-lookup geography names
+    const nameMap = await this.resolveGeographyNames(
+      data.map((d) => ({ id: d.geography_id, type: d.geography_type })),
+    );
+
     const points: ScatterPoint[] = [];
     for (const d of data) {
       points.push({
         geographyId: d.geography_id,
-        geographyName: d.geography_id, // TODO: lookup actual name
+        geographyName: nameMap.get(d.geography_id) || d.geography_id,
         scoreDate: d.score_date,
         score: d.score_value,
         return1y: d.outcome_1y_value,
@@ -324,6 +328,70 @@ export class ValidationService {
     }
 
     return points;
+  }
+
+  /**
+   * Resolve geography IDs to human-readable names.
+   * - Metro: cbsa_title from realtor_metro (e.g. "Palm Bay-Melbourne-Titusville, FL")
+   * - County: county_name from realtor_county, formatted as "X County, ST"
+   * - ZIP: geography_id as-is
+   */
+  private async resolveGeographyNames(
+    geos: { id: string; type: string }[],
+  ): Promise<Map<string, string>> {
+    const nameMap = new Map<string, string>();
+    const client = this.supabase.getClient();
+
+    // Collect unique IDs per type
+    const idsByType = new Map<string, Set<string>>();
+    for (const g of geos) {
+      if (!idsByType.has(g.type)) idsByType.set(g.type, new Set());
+      idsByType.get(g.type)!.add(g.id);
+    }
+
+    // Batch lookup from propertyiq_scores (one row per location_id per score_date,
+    // but we only need distinct location_id + location_name)
+    for (const [geoType, ids] of idsByType) {
+      if (geoType === 'zip') continue; // ZIPs stay as-is
+
+      const idArray = [...ids];
+      // Process in batches of 500 to stay within Supabase .in() limits
+      for (let i = 0; i < idArray.length; i += 500) {
+        const batch = idArray.slice(i, i + 500);
+        const { data } = await client
+          .from('propertyiq_scores')
+          .select('location_id, location_name')
+          .eq('geography', geoType)
+          .in('location_id', batch)
+          .limit(5000);
+
+        if (data) {
+          for (const row of data) {
+            if (nameMap.has(row.location_id) || !row.location_name) continue;
+
+            if (geoType === 'county') {
+              // location_name stored as "autauga, al" — format to "Autauga County, AL"
+              const parts = row.location_name.split(', ');
+              if (parts.length === 2) {
+                const county = parts[0]
+                  .split(' ')
+                  .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+                  .join(' ');
+                const state = parts[1].toUpperCase();
+                nameMap.set(row.location_id, `${county} County, ${state}`);
+              } else {
+                nameMap.set(row.location_id, row.location_name);
+              }
+            } else {
+              // Metro names already have proper format (e.g. "Aberdeen, SD")
+              nameMap.set(row.location_id, row.location_name);
+            }
+          }
+        }
+      }
+    }
+
+    return nameMap;
   }
 
   /**
@@ -422,6 +490,15 @@ export class ValidationService {
 
       const { data: topData } = await topQuery;
 
+      // Resolve top performer name
+      let topName = topData?.[0]?.geography_id || '';
+      if (topData?.[0]) {
+        const nameMap = await this.resolveGeographyNames([
+          { id: topData[0].geography_id, type: geoType },
+        ]);
+        topName = nameMap.get(topData[0].geography_id) || topData[0].geography_id;
+      }
+
       results.push({
         geographyType: geoType,
         totalScores: summary.totalScores,
@@ -432,7 +509,7 @@ export class ValidationService {
         topPerformer: topData?.[0]
           ? {
               id: topData[0].geography_id,
-              name: topData[0].geography_id, // TODO: lookup name
+              name: topName,
               score: topData[0].score_value,
               excessReturn: topData[0].excess_vs_state_3y,
             }

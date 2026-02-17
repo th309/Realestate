@@ -59,3 +59,24 @@ export {
   useMetricAccess,
   type MetricAccessResult,
 } from './useMetricAccess';
+
+// Top markets (rankings)
+export {
+  useTopMarkets,
+  type UseTopMarketsOptions,
+  type UseTopMarketsResult,
+} from './useTopMarkets';
+
+// Validation data hooks
+export {
+  useValidationSummary,
+  useValidationQuintiles,
+  useValidationScatter,
+  useValidationTimeSeries,
+  useValidationGeography,
+  type UseValidationSummaryOptions,
+  type UseValidationQuintilesOptions,
+  type UseValidationScatterOptions,
+  type UseValidationTimeSeriesOptions,
+  type UseValidationGeographyOptions,
+} from './useValidationData';
