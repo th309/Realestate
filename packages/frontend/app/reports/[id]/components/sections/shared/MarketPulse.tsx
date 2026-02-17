@@ -75,13 +75,15 @@ function getNewsItems(report: ReportInstance): NewsItem[] {
 function getEconomicIndicators(report: ReportInstance): EconomicIndicator[] {
   const indicators: EconomicIndicator[] = [];
 
-  // Realtime indicators (object with arbitrary keys)
+  // Realtime indicators (array of EconomicIndicator objects from news scouting)
   const rtIndicators = report.populated_data?.realtime?.indicators;
-  if (rtIndicators && typeof rtIndicators === 'object') {
-    for (const [key, val] of Object.entries(rtIndicators)) {
-      if (val !== null && val !== undefined) {
-        const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-        indicators.push({ label, value: String(val) });
+  if (Array.isArray(rtIndicators) && rtIndicators.length > 0) {
+    for (const ind of rtIndicators) {
+      if (ind && typeof ind === 'object' && ind.indicator_name) {
+        indicators.push({
+          label: ind.indicator_name,
+          value: ind.current_value ?? '—',
+        });
       }
     }
     if (indicators.length > 0) return indicators.slice(0, 6);
