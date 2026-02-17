@@ -11,8 +11,10 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { API_URL } from '@/lib/data';
 import type { SearchResult } from '@/app/map/types';
+
+// Inline env var for client-side usage — NEXT_PUBLIC_ vars are replaced at build time
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * Parse the primary state abbreviation from a geography name.
