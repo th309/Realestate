@@ -27,7 +27,7 @@ const feedbackSchema = z.object({
     type: z.string(),
     size: z.number(),
   })).default([]),
-  browser_info: z.record(z.string()).optional(),
+  browser_info: z.record(z.string(), z.string()).optional(),
 });
 
 // Rate limiting: simple in-memory store (use Redis in production)
