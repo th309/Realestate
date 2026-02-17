@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 import { MetricTitle } from '@/app/components/MetricTitle';
 
 interface Geography {
@@ -92,8 +93,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
       setLoading(true);
       setError(null);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const endpoint = `${apiUrl}/api/scores/${geography.type}/${encodeURIComponent(geography.id)}`;
+      const endpoint = `/api/scores/${geography.type}/${encodeURIComponent(geography.id)}`;
 
       console.log('[ScoreCardsTab] Fetching scores from:', endpoint);
       console.log('[ScoreCardsTab] Geography details:', {
@@ -103,7 +103,7 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
       });
 
       try {
-        const response = await fetch(endpoint, {
+        const response = await fetchAPIRaw(endpoint, {
           headers: { 'x-user-tier': 'enterprise' },
           credentials: 'include',
         });

@@ -11,7 +11,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { API_URL } from '@/app/map/config';
+import { API_URL } from '@/lib/data';
 import type { SearchResult } from '@/app/map/types';
 
 /**

@@ -15,6 +15,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 import { WorkflowStepCard } from './components/WorkflowStepCard';
 import {
   WorkflowStep,
@@ -417,10 +418,7 @@ export default function MLWorkflowPage() {
   // Fetch analytics service health
   const fetchAnalyticsHealth = useCallback(async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/health`, {
-        credentials: 'include',
-      });
+      const res = await fetchAPIRaw('/api/admin/ml-workflow/health');
 
       if (res.ok) {
         const data = await res.json();
@@ -446,10 +444,7 @@ export default function MLWorkflowPage() {
   // Fetch cache status from analytics service
   const fetchCacheStatus = useCallback(async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/ml-workflow/cache-status`, {
-        credentials: 'include',
-      });
+      const res = await fetchAPIRaw('/api/admin/ml-workflow/cache-status');
       
       if (res.ok) {
         const data = await res.json();
@@ -486,7 +481,6 @@ export default function MLWorkflowPage() {
   // Run a single step and wait for completion
   const runStepAndWait = useCallback(
     async (stepId: string): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const startedAt = new Date().toISOString();
 
       // Update UI - running with startedAt
@@ -499,10 +493,9 @@ export default function MLWorkflowPage() {
 
       try {
         // Start the step
-        const res = await fetch(`${apiUrl}/api/admin/ml-workflow/run/${stepId}`, {
+        const res = await fetchAPIRaw(`/api/admin/ml-workflow/run/${stepId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
         });
 
         if (!res.ok) {
@@ -531,9 +524,7 @@ export default function MLWorkflowPage() {
 
           try {
             // Poll job status
-            const jobRes = await fetch(`${apiUrl}/api/admin/ml-workflow/job/${jobId}`, {
-              credentials: 'include',
-            });
+            const jobRes = await fetchAPIRaw(`/api/admin/ml-workflow/job/${jobId}`);
             if (!jobRes.ok) continue;
 
             const jobData = await jobRes.json();
@@ -541,9 +532,7 @@ export default function MLWorkflowPage() {
             // Poll for detailed progress for all steps (every 2 seconds)
             if (attempts % 2 === 0) {
               try {
-                const progressRes = await fetch(`${apiUrl}/api/admin/ml-workflow/export-progress`, {
-                  credentials: 'include',
-                });
+                const progressRes = await fetchAPIRaw('/api/admin/ml-workflow/export-progress');
                 if (progressRes.ok) {
                   const progressData = await progressRes.json();
                   if (progressData.success && progressData.data) {

@@ -5,7 +5,7 @@
  */
 
 // Base utilities
-export { API_URL, fetchAPI, fetchAPIWithParams } from './base';
+export { API_URL, fetchAPI, fetchAPIWithParams, fetchAPIRaw } from './base';
 
 // Snapshot data (current values)
 export {
@@ -69,3 +69,21 @@ export {
 
 // Benchmarks
 export { fetchBenchmarks, type BenchmarkData } from './benchmarks';
+
+// GeoJSON
+export { getGeoJsonApiUrl } from './geojson';
+
+// Market search lists
+export {
+  fetchMetrosList,
+  fetchCountiesList,
+  fetchZipsList,
+  fetchCitiesList,
+  fetchMarketsMetros,
+  fetchMarketsCounties,
+  fetchMarketsZips,
+  fetchMarketsCities,
+} from './search';
+
+// Scoring validation & report templates
+export { fetchQuintilePerformance, fetchReportTemplates } from './scoring';

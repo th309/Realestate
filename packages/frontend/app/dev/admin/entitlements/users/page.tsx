@@ -24,8 +24,7 @@ import {
   FileText,
   Bookmark,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchAPIRaw } from '@/lib/data';
 
 // Types
 interface UserOverride {
@@ -460,9 +459,9 @@ export default function UserOverridesPage() {
       if (tierFilter) params.append('tier', tierFilter);
 
       const [usersRes, statsRes, featuresRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/users?${params}`),
-        fetch(`${API_URL}/api/admin/users/stats`),
-        fetch(`${API_URL}/api/admin/features`),
+        fetchAPIRaw(`/api/admin/users?${params}`),
+        fetchAPIRaw('/api/admin/users/stats'),
+        fetchAPIRaw('/api/admin/features'),
       ]);
 
       if (usersRes.ok) {
@@ -545,7 +544,7 @@ export default function UserOverridesPage() {
 
   const handleAddOverride = async (userId: string, featureSlug: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/users/${userId}/overrides`, {
+      const res = await fetchAPIRaw(`/api/admin/users/${userId}/overrides`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featureSlug }),
@@ -561,7 +560,7 @@ export default function UserOverridesPage() {
 
   const handleRemoveOverride = async (userId: string, featureSlug: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/users/${userId}/overrides/${featureSlug}`, {
+      const res = await fetchAPIRaw(`/api/admin/users/${userId}/overrides/${featureSlug}`, {
         method: 'DELETE',
       });
 

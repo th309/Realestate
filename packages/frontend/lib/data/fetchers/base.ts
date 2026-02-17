@@ -56,3 +56,21 @@ export async function fetchAPIWithParams<T>(
   }
   return response.json();
 }
+
+/**
+ * Raw fetch wrapper — returns the Response object for callers that need
+ * custom error handling (e.g. admin pages that inspect status codes or
+ * parse error bodies differently).
+ *
+ * All fetch traffic still routes through the data layer.
+ */
+export async function fetchAPIRaw(
+  endpoint: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const url = `${API_URL}${endpoint}`;
+  return fetch(url, {
+    credentials: 'include',
+    ...init,
+  });
+}

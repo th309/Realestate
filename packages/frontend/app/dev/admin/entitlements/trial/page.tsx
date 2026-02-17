@@ -17,8 +17,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchAPIRaw } from '@/lib/data';
 
 // Types
 interface TrialConfig {
@@ -164,9 +163,9 @@ export default function TrialSettingsPage() {
       setError(null);
 
       const [configRes, statsRes, trialsRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/trial/config`),
-        fetch(`${API_URL}/api/admin/trial/stats`),
-        fetch(`${API_URL}/api/admin/trial/users`),
+        fetchAPIRaw('/api/admin/trial/config'),
+        fetchAPIRaw('/api/admin/trial/stats'),
+        fetchAPIRaw('/api/admin/trial/users'),
       ]);
 
       if (configRes.ok) {
@@ -229,7 +228,7 @@ export default function TrialSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const res = await fetch(`${API_URL}/api/admin/trial/config`, {
+      const res = await fetchAPIRaw('/api/admin/trial/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -254,7 +253,7 @@ export default function TrialSettingsPage() {
 
   const handleExtendTrial = async (userId: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/trial/users/${userId}/extend`, {
+      const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}/extend`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days: 7 }),
@@ -269,7 +268,7 @@ export default function TrialSettingsPage() {
 
   const handleCancelTrial = async (userId: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/trial/users/${userId}`, {
+      const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}`, {
         method: 'DELETE',
       });
       if (res.ok) {

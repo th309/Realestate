@@ -56,16 +56,8 @@ export function ScoreCredibility({ section, report }: SectionProps) {
     async function fetchQuintileData() {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const response = await fetch(
-          `${apiUrl}/api/scoring/validation/quintile-performance?score_type=${scoreType}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch quintile data');
-        }
-
-        const data = await response.json();
+        const { fetchQuintilePerformance } = await import('@/lib/data');
+        const data = await fetchQuintilePerformance<QuintilePerformanceResponse>(scoreType);
         setQuintileData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');

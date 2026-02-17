@@ -9,6 +9,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 import {
   PipelineRun,
   AVAILABLE_PIPELINES,
@@ -43,13 +44,11 @@ export function PipelineRunsTab() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
     try {
       // Fetch both pipeline runs and data sources in parallel
       const [runsResponse, sourcesResponse] = await Promise.all([
-        fetch(`${apiUrl}/api/health/pipeline-runs`, { credentials: 'include' }),
-        fetch(`${apiUrl}/api/health/data-sources`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/health/pipeline-runs`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/health/data-sources`, { credentials: 'include' }),
       ]);
 
       if (runsResponse.ok) {
@@ -77,8 +76,7 @@ export function PipelineRunsTab() {
   const handleTriggerPipeline = async (pipelineName: string) => {
     setTriggering(pipelineName);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/pipelines/${pipelineName}/trigger`, {
+      const response = await fetchAPIRaw(`/api/pipelines/${pipelineName}/trigger`, {
         method: 'POST',
         credentials: 'include',
       });

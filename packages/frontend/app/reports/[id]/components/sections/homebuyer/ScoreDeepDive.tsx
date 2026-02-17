@@ -5,9 +5,8 @@ import { Target, DollarSign, Shield, TrendingUp, Users, AlertTriangle, BarChart3
 import { formatMetricValue } from '@/lib/data';
 import { SectionCard, AIAnalysisBlock } from '../core';
 import { getMetricWithAliases } from '../../utils/metricHelpers';
+import { fetchQuintilePerformance } from '@/lib/data';
 import type { ReportInstance } from '../../../../types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface QuintileData {
   label: string;
@@ -398,13 +397,8 @@ function ScoreCredibilityBlock({
   useEffect(() => {
     async function fetchQuintileData() {
       try {
-        const res = await fetch(
-          `${API_URL}/api/scoring/validation/quintile-performance?score_type=${scoreType}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setQuintileData(data);
-        }
+        const data = await fetchQuintilePerformance<QuintilePerformanceResponse>(scoreType);
+        setQuintileData(data);
       } catch {
         // Silently fail - section just won't show
       } finally {

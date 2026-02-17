@@ -6,8 +6,7 @@ import { UserTypeToggle } from './UserTypeToggle';
 import { TEMPLATE_INFO, TIER_INFO } from '../../constants';
 import type { UseWizardStateReturn } from '../../hooks/useWizardState';
 import type { ReportTemplate, ReportType, SubscriptionTier } from '../../types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchReportTemplates } from '@/lib/data';
 
 // Default templates with proper AI narrative sections (used if API returns empty)
 const DEFAULT_TEMPLATES: ReportTemplate[] = [
@@ -173,12 +172,10 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
 
   // Fetch templates from API
   useEffect(() => {
-    fetch(`${API_URL}/api/reports/templates`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch templates');
-        const data = await res.json();
+    fetchReportTemplates<ReportTemplate>()
+      .then((data) => {
         // Use API templates if available, otherwise use defaults
-        const templateList = Array.isArray(data) && data.length > 0 ? data : DEFAULT_TEMPLATES;
+        const templateList = data.length > 0 ? data : DEFAULT_TEMPLATES;
         setTemplates(templateList);
       })
       .catch((err) => {

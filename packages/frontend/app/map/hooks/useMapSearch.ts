@@ -6,8 +6,6 @@ import type { SearchResult, GeoLevel } from '../types';
 import { ANIMATION_DURATIONS, MAP_PADDING } from '../config';
 import { useUniversalSearch } from '../../shared/hooks/useUniversalSearch';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 // Mapbox Geocoding API response types
 interface MapboxContext {
   id: string;

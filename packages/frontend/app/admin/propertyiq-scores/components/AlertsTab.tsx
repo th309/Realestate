@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface Alert {
   id: string;
@@ -48,13 +49,12 @@ export function AlertsTab() {
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const params = new URLSearchParams();
       if (filter.status !== 'all') params.append('status', filter.status);
       if (filter.severity !== 'all') params.append('severity', filter.severity);
       if (filter.scoreType !== 'all') params.append('scoreType', filter.scoreType);
 
-      const response = await fetch(`${apiUrl}/api/admin/alerts?${params}`, {
+      const response = await fetchAPIRaw(`/api/admin/alerts?${params}`, {
         credentials: 'include',
       });
 
@@ -71,8 +71,7 @@ export function AlertsTab() {
 
   const handleAction = async (alertId: string, action: 'acknowledge' | 'resolve' | 'dismiss') => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/alerts/${alertId}/${action}`, {
+      const response = await fetchAPIRaw(`/api/admin/alerts/${alertId}/${action}`, {
         method: 'POST',
         credentials: 'include',
       });

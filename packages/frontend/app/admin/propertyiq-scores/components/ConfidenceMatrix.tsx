@@ -12,6 +12,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface ConfidenceResult {
   confidence_score: number;
@@ -131,8 +132,7 @@ export function ConfidenceMatrix({ onCellClick }: ConfidenceMatrixProps) {
       setLoading(true);
       setError(null);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/confidence/summary`, {
+      const res = await fetchAPIRaw(`/api/admin/backtest-runs/confidence/summary`, {
         credentials: 'include',
       });
       if (!res.ok) {

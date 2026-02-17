@@ -10,9 +10,8 @@ import {
   getMetricTrend,
 } from '../../utils/metricHelpers';
 import { getScoreStrokeColor } from '../../utils/scoreHelpers';
+import { fetchQuintilePerformance } from '@/lib/data';
 import type { ReportInstance } from '../../../../types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface QuintileData {
   label: string;
@@ -328,12 +327,8 @@ function InvestorScoreCredibility({
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(
-          `${API_URL}/api/scoring/validation/quintile-performance?score_type=investoredge`
-        );
-        if (res.ok) {
-          setQuintileData(await res.json());
-        }
+        const data = await fetchQuintilePerformance<QuintilePerformanceResponse>('investoredge');
+        setQuintileData(data);
       } catch {
         // Silently fail
       } finally {

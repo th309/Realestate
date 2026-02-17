@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 import { StatusBanner } from './components/StatusBanner';
 import { DataCardsTab } from './components/DataCardsTab';
 import { DataSourcesTab } from './components/DataSourcesTab';
@@ -51,8 +52,7 @@ export default function DataAdminPage() {
   const fetchHealthSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/health/data-summary`, {
+      const response = await fetchAPIRaw(`/api/health/data-summary`, {
         credentials: 'include',
       });
 

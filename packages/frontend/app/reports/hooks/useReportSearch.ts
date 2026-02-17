@@ -2,9 +2,10 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Geography, GeographyType } from '../types';
 import { US_STATES, STATE_CENTERS } from '@/app/map/types';
 
+import { fetchMarketsMetros, fetchMarketsCounties, fetchMarketsZips, fetchMarketsCities } from '@/lib/data';
+
 // TODO: move to env or shared config
-const MAPBOX_TOKEN = 'pk.eyJ1IjoidHJveWhvdXN0b24iLCJhIjoiY21hZzFzaXJjMGEzcDJqcHByb29xM2lndSJ9.sataRzk3HaLNolfOnIc7Jw';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 interface Metro {
   regionId: number;
@@ -70,9 +71,7 @@ async function loadAllMetros(): Promise<Metro[]> {
   if (metrosLoadingPromise) return metrosLoadingPromise;
   metrosLoadingPromise = (async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/markets/metros`);
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      const data = await res.json();
+      const data = await fetchMarketsMetros();
       if (Array.isArray(data) && data.length >= 10) {
         // ... (API mapping logic)
         const apiMetros = data.map((m: any) => ({
@@ -95,21 +94,21 @@ async function loadAllMetros(): Promise<Metro[]> {
 async function loadAllCounties(): Promise<County[]> {
   if (countiesCache) return countiesCache;
   if (countiesLoadingPromise) return countiesLoadingPromise;
-  countiesLoadingPromise = fetch(`${API_BASE_URL}/markets/counties`).then(r => r.json()).catch(() => []);
+  countiesLoadingPromise = fetchMarketsCounties<County>().catch(() => []);
   return countiesLoadingPromise as Promise<County[]>;
 }
 
 async function loadAllZips(): Promise<ZipCode[]> {
   if (zipsCache) return zipsCache;
   if (zipsLoadingPromise) return zipsLoadingPromise;
-  zipsLoadingPromise = fetch(`${API_BASE_URL}/markets/zips`).then(r => r.json()).catch(() => []);
+  zipsLoadingPromise = fetchMarketsZips<ZipCode>().catch(() => []);
   return zipsLoadingPromise as Promise<ZipCode[]>;
 }
 
 async function loadAllCities(): Promise<City[]> {
   if (citiesCache) return citiesCache;
   if (citiesLoadingPromise) return citiesLoadingPromise;
-  citiesLoadingPromise = fetch(`${API_BASE_URL}/markets/cities`).then(r => r.json()).catch(() => []);
+  citiesLoadingPromise = fetchMarketsCities<City>().catch(() => []);
   return citiesLoadingPromise as Promise<City[]>;
 }
 

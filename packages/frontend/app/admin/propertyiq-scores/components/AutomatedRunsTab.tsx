@@ -13,6 +13,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface BacktestMetrics {
   r2: number;
@@ -145,10 +146,9 @@ export function AutomatedRunsTab() {
       setLoading(true);
       setError(null);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runsRes, statsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtest-runs?limit=10`, { credentials: 'include' }),
-        fetch(`${apiUrl}/api/admin/backtest-runs/statistics`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtest-runs?limit=10`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtest-runs/statistics`, { credentials: 'include' }),
       ]);
 
       if (!runsRes.ok || !statsRes.ok) {
@@ -179,10 +179,9 @@ export function AutomatedRunsTab() {
   // Fetch run details
   const fetchRunDetails = async (runId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [runRes, samplesRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}`, { credentials: 'include' }),
-        fetch(`${apiUrl}/api/admin/backtest-runs/${runId}/samples`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtest-runs/${runId}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtest-runs/${runId}/samples`, { credentials: 'include' }),
       ]);
 
       if (runRes.ok) {
@@ -209,8 +208,7 @@ export function AutomatedRunsTab() {
 
     const interval = setInterval(async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${apiUrl}/api/admin/backtest-runs/job/${triggerJobId}/status`, {
+        const res = await fetchAPIRaw(`/api/admin/backtest-runs/job/${triggerJobId}/status`, {
           credentials: 'include',
         });
         if (res.ok) {
@@ -237,8 +235,7 @@ export function AutomatedRunsTab() {
       setIsTriggering(true);
       setError(null);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${apiUrl}/api/admin/backtest-runs/trigger`, {
+      const res = await fetchAPIRaw(`/api/admin/backtest-runs/trigger`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

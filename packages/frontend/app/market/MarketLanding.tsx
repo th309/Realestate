@@ -9,8 +9,6 @@ import { SearchWidget } from '@/app/map/components/SearchWidget';
 import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
 import type { SearchResult } from '@/app/map/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 // Popular metros to display as quick links
 const POPULAR_METROS = [
   { id: '35620', name: 'New York-Newark-Jersey City, NY-NJ-PA', state: 'NY' },

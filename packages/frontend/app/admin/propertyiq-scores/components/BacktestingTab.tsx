@@ -14,6 +14,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 import { ConfidenceMatrix } from './ConfidenceMatrix';
 import { ConfidenceTrendChart } from './ConfidenceTrendChart';
 import { ComponentAnalysis } from './ComponentAnalysis';
@@ -92,14 +93,13 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const geoFilter = geography?.id
         ? `&geographyType=${geography.type}`
         : '';
 
       const [resultsRes, confidenceRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/backtests?limit=50${geoFilter}`, { credentials: 'include' }),
-        fetch(`${apiUrl}/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ''}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtests?limit=50${geoFilter}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ''}`, { credentials: 'include' }),
       ]);
 
       if (resultsRes.ok) {
@@ -123,8 +123,7 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
 
     setRunning(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/backtests/run`, {
+      const response = await fetchAPIRaw(`/api/admin/backtests/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

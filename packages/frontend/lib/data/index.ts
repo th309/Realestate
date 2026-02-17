@@ -114,6 +114,7 @@ export {
   API_URL,
   fetchAPI,
   fetchAPIWithParams,
+  fetchAPIRaw,
 
   // Snapshot
   fetchSnapshotData,
@@ -164,6 +165,23 @@ export {
   // Benchmarks
   fetchBenchmarks,
   type BenchmarkData,
+
+  // GeoJSON
+  getGeoJsonApiUrl,
+
+  // Market search lists
+  fetchMetrosList,
+  fetchCountiesList,
+  fetchZipsList,
+  fetchCitiesList,
+  fetchMarketsMetros,
+  fetchMarketsCounties,
+  fetchMarketsZips,
+  fetchMarketsCities,
+
+  // Scoring validation & report templates
+  fetchQuintilePerformance,
+  fetchReportTemplates,
 } from './fetchers';
 
 // ============================================================================

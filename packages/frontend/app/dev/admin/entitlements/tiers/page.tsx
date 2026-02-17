@@ -29,8 +29,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchAPIRaw } from '@/lib/data';
 
 // Tier styling
 const TIER_STYLES: Record<string, { bg: string; border: string; text: string; chip: string; header: string }> = {
@@ -275,7 +274,7 @@ export default function TiersConfigurationPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/features/matrix`);
+      const response = await fetchAPIRaw('/api/admin/features/matrix');
       const result = await response.json();
 
       if (!result.success) {
@@ -404,7 +403,7 @@ export default function TiersConfigurationPage() {
       for (const [tierSlug, featureUpdates] of Object.entries(tierUpdates)) {
         if (Object.keys(featureUpdates).length === 0) continue;
 
-        const response = await fetch(`${API_URL}/api/admin/features/tier/${tierSlug}`, {
+        const response = await fetchAPIRaw(`/api/admin/features/tier/${tierSlug}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ features: featureUpdates }),

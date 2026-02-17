@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface FormulaVersion {
   id: string;
@@ -49,12 +50,11 @@ export function HistoryTab() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const typeFilter = selectedScoreType !== 'all' ? `?scoreType=${selectedScoreType}` : '';
 
       const [versionsRes, testsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/formula-versions${typeFilter}`, { credentials: 'include' }),
-        fetch(`${apiUrl}/api/admin/ab-tests${typeFilter}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/formula-versions${typeFilter}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/ab-tests${typeFilter}`, { credentials: 'include' }),
       ]);
 
       if (versionsRes.ok) {
@@ -77,8 +77,7 @@ export function HistoryTab() {
     if (!confirm(`Activate version ${version}? This will make it the active formula.`)) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/formula-versions/activate`, {
+      const response = await fetchAPIRaw(`/api/admin/formula-versions/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

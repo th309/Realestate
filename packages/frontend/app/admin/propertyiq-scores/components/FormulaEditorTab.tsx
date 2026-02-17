@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 // New features-based format from SCORING_SYSTEM_SPEC
 interface FormulaFeature {
@@ -104,9 +105,8 @@ export function FormulaEditorTab() {
   const fetchVersions = async () => {
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(
-        `${apiUrl}/api/admin/formula-versions?scoreType=${selectedScoreType}&geography=${selectedGeography}`,
+      const response = await fetchAPIRaw(
+        `/api/admin/formula-versions?scoreType=${selectedScoreType}&geography=${selectedGeography}`,
         { credentials: 'include' },
       );
 
@@ -132,9 +132,8 @@ export function FormulaEditorTab() {
 
   const fetchConfidenceData = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(
-        `${apiUrl}/api/admin/backtest-runs/confidence/summary`,
+      const response = await fetchAPIRaw(
+        `/api/admin/backtest-runs/confidence/summary`,
         { credentials: 'include' },
       );
 
@@ -197,8 +196,7 @@ export function FormulaEditorTab() {
 
     setSaving(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/formula-versions`, {
+      const response = await fetchAPIRaw(`/api/admin/formula-versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -229,10 +227,8 @@ export function FormulaEditorTab() {
 
     setSaving(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
       // First create the new version
-      const versionRes = await fetch(`${apiUrl}/api/admin/formula-versions`, {
+      const versionRes = await fetchAPIRaw(`/api/admin/formula-versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -250,7 +246,7 @@ export function FormulaEditorTab() {
       const newVersion = await versionRes.json();
 
       // Then create the A/B test
-      const testRes = await fetch(`${apiUrl}/api/admin/ab-tests`, {
+      const testRes = await fetchAPIRaw(`/api/admin/ab-tests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

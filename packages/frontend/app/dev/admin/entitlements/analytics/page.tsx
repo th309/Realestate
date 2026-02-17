@@ -16,8 +16,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchAPIRaw } from '@/lib/data';
 
 // Types
 interface MetricCardData {
@@ -177,8 +176,8 @@ export default function AnalyticsDashboardPage() {
       const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;
 
       const [statsRes, funnelRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/analytics/paywall?days=${days}`),
-        fetch(`${API_URL}/api/admin/analytics/funnel?days=${days}`),
+        fetchAPIRaw(`/api/admin/analytics/paywall?days=${days}`),
+        fetchAPIRaw(`/api/admin/analytics/funnel?days=${days}`),
       ]);
 
       if (statsRes.ok) {

@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface MLValidationConfig {
   scoreType: 'homeready' | 'investoredge' | 'market_health';
@@ -135,8 +136,7 @@ export function MLValidationTab() {
 
     const interval = setInterval(async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiUrl}/api/admin/ml-validation/status/${jobId}`, {
+        const response = await fetchAPIRaw(`/api/admin/ml-validation/status/${jobId}`, {
           credentials: 'include',
         });
 
@@ -166,8 +166,7 @@ export function MLValidationTab() {
 
   const fetchPreviousResults = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/results?limit=10`, {
+      const response = await fetchAPIRaw(`/api/admin/ml-validation/results?limit=10`, {
         credentials: 'include',
       });
 
@@ -182,8 +181,7 @@ export function MLValidationTab() {
 
   const fetchValidationResult = async (validationId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/${validationId}`, {
+      const response = await fetchAPIRaw(`/api/admin/ml-validation/${validationId}`, {
         credentials: 'include',
       });
 
@@ -202,8 +200,7 @@ export function MLValidationTab() {
     setResult(null);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/run`, {
+      const response = await fetchAPIRaw(`/api/admin/ml-validation/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -229,8 +226,7 @@ export function MLValidationTab() {
     if (!result) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const response = await fetch(`${apiUrl}/api/admin/ml-validation/apply-suggestions/${result.id}`, {
+      const response = await fetchAPIRaw(`/api/admin/ml-validation/apply-suggestions/${result.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

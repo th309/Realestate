@@ -12,8 +12,7 @@ import {
   Eye,
   MousePointerClick,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchAPIRaw } from '@/lib/data';
 
 interface OverviewStats {
   paywallViews: number;
@@ -72,9 +71,9 @@ export default function EntitlementsOverviewPage() {
       setError(null);
 
       const [analyticsRes, trialStatsRes, userStatsRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/analytics/paywall?days=30`),
-        fetch(`${API_URL}/api/admin/trial/stats`),
-        fetch(`${API_URL}/api/admin/users/stats`),
+        fetchAPIRaw('/api/admin/analytics/paywall?days=30'),
+        fetchAPIRaw('/api/admin/trial/stats'),
+        fetchAPIRaw('/api/admin/users/stats'),
       ]);
 
       let paywallViews = 0;

@@ -2,8 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
 import { US_STATES } from '@/app/map/types';
 import type { GeoLevel } from '@/lib/data';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchMetrosList, fetchCountiesList, fetchZipsList, fetchCitiesList } from '@/lib/data';
 
 interface Metro {
     regionId: number;
@@ -218,11 +217,7 @@ async function loadAllMetros(): Promise<Metro[]> {
 
     metrosLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/markets/metros`);
-            if (!res.ok) {
-                throw new Error(`API returned ${res.status}`);
-            }
-            const data = await res.json();
+            const data = await fetchMetrosList<{ regionId: number; name: string }>();
 
             // Only use API data if it has a reasonable number of metros
             if (Array.isArray(data) && data.length >= MIN_METRO_COUNT) {
@@ -270,11 +265,7 @@ async function loadAllCounties(): Promise<County[]> {
 
     countiesLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/markets/counties`);
-            if (!res.ok) {
-                throw new Error(`API returned ${res.status}`);
-            }
-            const data = await res.json();
+            const data = await fetchCountiesList<County>();
 
             if (Array.isArray(data) && data.length > 0) {
                 console.log(`[County Load] API returned ${data.length} counties`);
@@ -303,11 +294,7 @@ async function loadAllZips(): Promise<ZipCode[]> {
 
     zipsLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/markets/zips`);
-            if (!res.ok) {
-                throw new Error(`API returned ${res.status}`);
-            }
-            const data = await res.json();
+            const data = await fetchZipsList<ZipCode>();
 
             if (Array.isArray(data) && data.length > 0) {
                 console.log(`[ZIP Load] API returned ${data.length} ZIP codes`);
@@ -336,11 +323,7 @@ async function loadAllCities(): Promise<City[]> {
 
     citiesLoadingPromise = (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/markets/cities`);
-            if (!res.ok) {
-                throw new Error(`API returned ${res.status}`);
-            }
-            const data = await res.json();
+            const data = await fetchCitiesList<City>();
 
             if (Array.isArray(data) && data.length > 0) {
                 console.log(`[City Load] API returned ${data.length} cities`);

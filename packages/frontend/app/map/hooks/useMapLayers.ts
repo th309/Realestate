@@ -15,9 +15,7 @@ import {
 } from '../utils';
 import { getMetricDataDate, formatDataDateForDisplay } from '../config/metrics';
 import { normalizeZipKey } from '@/lib/format/zip';
-
-// API URL for backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getGeoJsonApiUrl } from '@/lib/data';
 
 /**
  * Fetch with retry logic for large GeoJSON endpoints (county, zip)
@@ -250,18 +248,18 @@ function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null
   // Run `npx tsx scripts/generate-static-geojson.ts` to create static
   // versions, then swap the URLs here.
   if (geoLevel === 'national') {
-    return `${API_URL}${GEOJSON_SOURCES.national}`;
+    return getGeoJsonApiUrl(GEOJSON_SOURCES.national);
   } else if (geoLevel === 'state') {
-    return `${API_URL}${GEOJSON_SOURCES.state}`;
+    return getGeoJsonApiUrl(GEOJSON_SOURCES.state);
   } else if (geoLevel === 'county') {
     if (selectedState) {
-      return `${API_URL}${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`;
+      return getGeoJsonApiUrl(`${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`);
     }
-    return `${API_URL}${GEOJSON_SOURCES.county}`;
+    return getGeoJsonApiUrl(GEOJSON_SOURCES.county);
   } else if (geoLevel === 'city' && selectedState) {
-    return `${API_URL}${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`;
+    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`);
   } else if (geoLevel === 'zip' && selectedState) {
-    return `${API_URL}${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`;
+    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.zip}/${selectedState.toUpperCase()}`);
   } else if (geoLevel === 'tract' && selectedState) {
     console.warn('Tract data not available');
     return null;
