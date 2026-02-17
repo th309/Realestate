@@ -173,7 +173,7 @@ export class ClaudeNewsService {
   private readonly logger = new Logger(ClaudeNewsService.name);
   private readonly anthropicClient: Anthropic | null = null;
   private readonly anthropicApiKey: string | null;
-  private readonly claudeModel = 'claude-sonnet-4-5-20250929';
+  private readonly claudeModel = 'claude-haiku-4-5-20251001';
   private readonly cacheTtlHours = 24;
 
   constructor(
@@ -239,8 +239,8 @@ export class ClaudeNewsService {
       scoutOptions,
     );
 
-    // Cache the result (non-blocking, don't fail report if cache write fails)
-    if (result) {
+    // Cache the result only if it has actual data (don't cache empty parse failures)
+    if (result && (result.local_news.length > 0 || result.economic_indicators.length > 0)) {
       try {
         await this.cacheNewsResult(result);
       } catch (cacheError) {
@@ -283,39 +283,67 @@ export class ClaudeNewsService {
     );
 
     try {
-      const response = await this.anthropicClient.messages.create({
+      // Run local news scouting and national context in parallel
+      const newsPromise = this.anthropicClient.messages.create({
         model: this.claudeModel,
-        max_tokens: 4096,
+        max_tokens: 16384,
         tools: [
           {
             type: 'web_search_20250305',
             name: 'web_search',
-            max_uses: 5,
+            max_uses: 3,
           },
         ],
         messages: [{ role: 'user', content: prompt }],
       });
 
+      const nationalPromise = includeNationalContext
+        ? this.fetchNationalContext().catch((err) => {
+            this.logger.warn(`National context fetch failed: ${err?.message || err}`);
+            return null;
+          })
+        : Promise.resolve(null);
+
+      const [response, nationalContext] = await Promise.all([newsPromise, nationalPromise]);
+
       // Extract text from response (may have multiple content blocks due to tool use)
       const textBlocks = response.content.filter(
         (block): block is Anthropic.TextBlock => block.type === 'text',
       );
-      const text = textBlocks.map((b) => b.text).join('\n');
 
-      if (!text || text.trim().length === 0) {
-        this.logger.warn(`Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}. Content blocks: ${response.content.length} (types: ${response.content.map(b => b.type).join(', ')})`);
+      this.logger.log(`News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`);
+
+      if (response.stop_reason === 'max_tokens') {
+        this.logger.warn(`News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`);
       }
 
-      const parsed = this.parseResponse(text);
+      if (textBlocks.length === 0) {
+        this.logger.warn(`Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}.`);
+      }
+
+      // Strip <cite> tags from web search responses (they waste tokens and pollute JSON values)
+      const stripCitations = (text: string) =>
+        text.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
+
+      // Try each text block individually, last first (final block has the JSON answer)
+      let parsed: any = null;
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const blockText = stripCitations(textBlocks[i].text);
+        const result = this.parseResponse(blockText);
+        if (result.local_news?.length || result.economic_indicators?.length || result.market_signals?.length) {
+          this.logger.log(`Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`);
+          parsed = result;
+          break;
+        }
+      }
+      // Fallback: join all text blocks and try once more
+      if (!parsed) {
+        const allText = stripCitations(textBlocks.map((b) => b.text).join('\n'));
+        parsed = this.parseResponse(allText);
+      }
 
       if (!parsed.local_news?.length && !parsed.economic_indicators?.length && !parsed.market_signals?.length) {
-        this.logger.warn(`No news data parsed for ${geographyName}. Raw text length: ${text.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`);
-      }
-
-      // Fetch national context separately if requested
-      let nationalContext: NationalContext | null = null;
-      if (includeNationalContext) {
-        nationalContext = await this.fetchNationalContext();
+        this.logger.warn(`No news data parsed for ${geographyName}. Text blocks: ${textBlocks.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`);
       }
 
       const processingTime = Date.now() - startTime;
@@ -376,7 +404,7 @@ Return as JSON:
     try {
       const response = await this.anthropicClient.messages.create({
         model: this.claudeModel,
-        max_tokens: 512,
+        max_tokens: 4096,
         tools: [
           {
             type: 'web_search_20250305',
@@ -387,12 +415,20 @@ Return as JSON:
         messages: [{ role: 'user', content: prompt }],
       });
 
-      // Extract text from response
+      // Extract text from response - strip citations and try each block (last first)
       const textBlocks = response.content.filter(
         (block): block is Anthropic.TextBlock => block.type === 'text',
       );
-      const text = textBlocks.map((b) => b.text).join('\n');
-      return this.parseResponse(text);
+      const strip = (t: string) => t.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
+      for (let i = textBlocks.length - 1; i >= 0; i--) {
+        const result = this.parseResponse(strip(textBlocks[i].text));
+        if (result.fed_rate_news || result.mortgage_rate_trend || result.national_housing_news?.length) {
+          return result;
+        }
+      }
+      // Fallback: join all
+      const allText = strip(textBlocks.map((b) => b.text).join('\n'));
+      return this.parseResponse(allText);
     } catch (error: any) {
       this.logger.error(
         `Failed to fetch national context: ${error?.message || error}`,
@@ -419,42 +455,11 @@ Return as JSON:
           ? `${geographyName} County, ${state}`
           : `the ${geographyName} metropolitan area`;
 
-    return `You are a real estate market research analyst. Search for recent news, economic indicators, and market signals that could impact the real estate market in ${locationContext}.
+    return `You are a real estate market research analyst. Search for recent news and signals affecting the real estate market in ${locationContext}.
 
-## SEARCH FOCUS (Last ${lookbackDays} days)
+Search for: "${geographyName} real estate housing market ${state}" and "${geographyName} jobs employers development ${state}"
 
-### 1. EMPLOYER & JOBS NEWS (High Impact)
-- Company expansions, new headquarters, hiring announcements
-- New manufacturing plants, data centers, distribution centers
-- Layoffs, plant closures, companies leaving
-- Search: "${geographyName} ${state} jobs hiring", "${geographyName} company expansion", "${geographyName} layoffs"
-
-### 2. DEVELOPMENT NEWS
-- New housing developments, apartments, townhomes
-- Commercial projects, mixed-use developments
-- Industrial/warehouse facilities
-- Search: "${geographyName} housing development", "${geographyName} apartments construction"
-
-### 3. POLICY & REGULATION
-- Zoning changes, rent control, property tax changes
-- Housing policy, ADU laws, short-term rental rules
-- Search: "${geographyName} zoning", "${geographyName} property tax", "${geographyName} housing policy"
-
-### 4. INFRASTRUCTURE
-- Transit expansions, highway projects, airport improvements
-- Search: "${geographyName} transit", "${geographyName} infrastructure"
-
-### 5. CLIMATE & ENVIRONMENT
-- Recent weather events, flood zones, wildfire risk, insurance issues
-- Search: "${geographyName} flood", "${geographyName} insurance"
-
-### 6. ECONOMIC INDICATORS
-- Unemployment rate, job growth, building permits
-- Search: "${state} unemployment", "${geographyName} job growth"
-
-### 7. MARKET SIGNALS
-- Real estate market reports, investor activity, migration trends
-- Search: "${geographyName} real estate market", "${geographyName} housing market"
+Find the top ${maxItems} most impactful items from the last ${lookbackDays} days across: employer/jobs news, housing development, policy changes, infrastructure projects, climate/insurance events, and market reports.
 
 ## OUTPUT FORMAT (JSON)
 
@@ -514,36 +519,117 @@ Return as JSON:
 2. Include source URLs when available
 3. Use actual publication dates
 4. Only report factual news, no speculation
+5. CRITICAL: JSON string values must be plain text only — do NOT include <cite>, HTML tags, or any markup inside JSON values. Summaries should be 2-3 sentences of clean prose.
 
 Search and compile results for ${locationContext}:`;
   }
 
   /**
-   * Parse JSON from Claude response
+   * Parse JSON from Claude response text.
+   * Handles: code-fenced JSON, raw JSON, and JSON embedded in conversational text.
    */
   private parseResponse(text: string): any {
-    // Try markdown code block
-    const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
-    if (jsonMatch) {
+    const empty = { local_news: [], economic_indicators: [], market_signals: [] };
+    if (!text || text.trim().length === 0) return empty;
+
+    // Strategy 1: markdown code block
+    const jsonMatches = [...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/g)];
+    for (const match of jsonMatches) {
       try {
-        return JSON.parse(jsonMatch[1]);
+        const parsed = JSON.parse(match[1].trim());
+        if (parsed && typeof parsed === 'object') {
+          this.logger.log(`parseResponse: parsed from code fence`);
+          return parsed;
+        }
       } catch {}
     }
 
-    // Try raw JSON
+    // Strategy 2: raw JSON (entire text is JSON)
     try {
-      return JSON.parse(text);
+      const parsed = JSON.parse(text.trim());
+      if (parsed && typeof parsed === 'object') return parsed;
     } catch {}
 
-    // Try to find JSON object
-    const objectMatch = text.match(/\{[\s\S]*\}/);
-    if (objectMatch) {
+    // Strategy 3: Find JSON starting with { and containing our expected keys.
+    // Locate the opening brace before "local_news" or other expected key,
+    // then use string-aware brace matching to find the closing brace.
+    const keyPatterns = ['"local_news"', '"economic_indicators"', '"market_signals"',
+                         '"fed_rate_news"', '"mortgage_rate_trend"', '"national_housing_news"'];
+    for (const keyPattern of keyPatterns) {
+      const keyIdx = text.indexOf(keyPattern);
+      if (keyIdx < 0) continue;
+
+      // Walk backwards from the key to find the opening {
+      let openBrace = -1;
+      for (let i = keyIdx - 1; i >= 0; i--) {
+        if (text[i] === '{') { openBrace = i; break; }
+        // If we hit something that can't be in JSON before the first key, stop
+        if (text[i] === '\n' && i < keyIdx - 5) {
+          // Check if what's between here and keyIdx could be valid JSON
+          const between = text.substring(i, keyIdx).trim();
+          if (between && !between.startsWith('{') && between !== '') continue;
+        }
+      }
+      if (openBrace < 0) continue;
+
+      // String-aware brace matching from openBrace
+      const closeBrace = this.findMatchingBrace(text, openBrace);
+      if (closeBrace < 0) continue;
+
+      const candidate = text.substring(openBrace, closeBrace + 1);
       try {
-        return JSON.parse(objectMatch[0]);
-      } catch {}
+        const parsed = JSON.parse(candidate);
+        if (parsed && typeof parsed === 'object') {
+          this.logger.log(`parseResponse: parsed via key-search (key=${keyPattern}, length=${candidate.length})`);
+          return parsed;
+        }
+      } catch (e: any) {
+        this.logger.warn(`parseResponse: key-search candidate failed: ${e.message?.substring(0, 80)}`);
+      }
     }
 
-    return { local_news: [], economic_indicators: [], market_signals: [] };
+    this.logger.warn(`Could not parse JSON from response (${text.length} chars). First 300 chars: ${text.substring(0, 300)}`);
+    return empty;
+  }
+
+  /**
+   * Find the matching closing brace for an opening brace, skipping braces inside JSON strings.
+   * Returns the index of the closing brace, or -1 if not found.
+   */
+  private findMatchingBrace(text: string, openIndex: number): number {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = openIndex; i < text.length; i++) {
+      const ch = text[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (ch === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (ch === '{' || ch === '[') {
+        depth++;
+      } else if (ch === '}' || ch === ']') {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+
+    return -1;
   }
 
   // ---------------------------------------------------------------------------
