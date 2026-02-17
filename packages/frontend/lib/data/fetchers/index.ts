@@ -87,3 +87,6 @@ export {
 
 // Scoring validation & report templates
 export { fetchQuintilePerformance, fetchReportTemplates } from './scoring';
+
+// Pricing (admin features)
+export { fetchPricingSummary, type PricingTier } from './pricing';

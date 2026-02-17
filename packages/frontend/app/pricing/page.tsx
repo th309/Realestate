@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   CreditCard, Check, Sparkles, Clock, BarChart3, MapPin,
@@ -10,65 +10,7 @@ import {
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
-
-const PLANS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    description: 'Explore the platform',
-    features: [
-      'Interactive market maps',
-      'State & metro data',
-      'Basic market trends',
-      'Limited reports',
-    ],
-    cta: 'Get Started',
-    href: '/map',
-    highlight: false,
-  },
-  {
-    name: 'Pro',
-    price: '$29',
-    period: '/month',
-    description: 'The unfair advantage',
-    features: [
-      'Everything in Free',
-      'County & ZIP code data',
-      'PropertyIQ Scores',
-      'AI market analysis',
-      'Unlimited AI reports',
-      'Full analytics suite',
-    ],
-    cta: 'Start Free Trial',
-    href: '/map',
-    highlight: true,
-  },
-  {
-    name: 'Team',
-    price: '$99',
-    period: '/month',
-    description: 'For brokerages',
-    features: [
-      'Everything in Pro',
-      'Up to 5 team members',
-      'White-label reports',
-      'API access',
-      'Priority support',
-      'Custom branding',
-    ],
-    cta: 'Contact Sales',
-    href: '/about',
-    highlight: false,
-  },
-];
-
-// Map plan names to tier slugs
-const PLAN_TO_TIER: Record<string, string> = {
-  'Free': 'free',
-  'Pro': 'pro',
-  'Team': 'enterprise',
-};
+import { fetchPricingSummary, type PricingTier } from '@/lib/data';
 
 export default function PricingPage() {
   return (
@@ -81,6 +23,24 @@ export default function PricingPage() {
 function PricingContent() {
   const { tier, trial, loading, refresh } = useEntitlements();
   const searchParams = useSearchParams();
+
+  const [plans, setPlans] = useState<PricingTier[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  // Fetch plan data from DB
+  useEffect(() => {
+    fetchPricingSummary()
+      .then(data => setPlans(data.tiers))
+      .catch(err => {
+        console.warn('Pricing fetch failed, using fallback:', err.message);
+        setPlans([
+          { slug: 'free', name: 'Free', price_monthly: '0', price_yearly: '0', description: 'Explore the platform', features: [] },
+          { slug: 'pro', name: 'Pro', price_monthly: '29', price_yearly: '290', description: 'The unfair advantage', features: [] },
+          { slug: 'enterprise', name: 'Enterprise', price_monthly: '99', price_yearly: '990', description: 'For brokerages', features: [] },
+        ]);
+      })
+      .finally(() => setPlansLoading(false));
+  }, []);
 
   // Refresh entitlements when returning from Stripe checkout
   useEffect(() => {
@@ -119,19 +79,60 @@ function PricingContent() {
 
         {/* Pricing Cards */}
         <div className="mt-8 grid md:grid-cols-3 gap-4">
-          {PLANS.map((plan) => {
-            const planTier = PLAN_TO_TIER[plan.name];
-            const isCurrentPlan = effectiveTier === planTier;
-            const isTrialPlan = trial?.active && trial.tier === planTier;
+          {plans.map((plan) => {
+            const isCurrentPlan = effectiveTier === plan.slug;
+            const isTrialPlan = trial?.active && trial.tier === plan.slug;
+            const isHighlighted = plan.slug === 'pro';
+            const priceDisplay = plan.price_monthly === '0' || plan.price_monthly === '0.00' ? '$0' : `$${Math.round(parseFloat(plan.price_monthly || '0'))}`;
+            const periodDisplay = priceDisplay === '$0' ? 'forever' : '/month';
+            const ctaText = plan.slug === 'enterprise' ? 'Contact Sales' : plan.slug === 'pro' ? 'Start Free Trial' : 'Get Started';
+            const ctaHref = plan.slug === 'enterprise' ? '/about' : '/map';
+
+            // Build feature bullet list from DB features
+            const featureBullets: string[] = [];
+
+            if (plan.slug !== 'free') {
+              // For paid plans, start with "Everything in [previous plan]"
+              featureBullets.push(plan.slug === 'pro' ? 'Everything in Free' : 'Everything in Pro');
+            }
+
+            // Add geography features
+            const geoFeatures = plan.features.filter(f => f.category === 'geography');
+            if (geoFeatures.some(f => f.slug === 'geo_county')) featureBullets.push('County-level data');
+            if (geoFeatures.some(f => f.slug === 'geo_zip')) featureBullets.push('ZIP code data');
+
+            // Add key feature highlights
+            const featureFeatures = plan.features.filter(f => f.category === 'features');
+            if (featureFeatures.some(f => f.slug === 'feature_scores')) featureBullets.push('PropertyIQ Scores');
+            if (featureFeatures.some(f => f.slug === 'feature_ai_insights')) featureBullets.push('AI market analysis');
+            if (featureFeatures.some(f => f.slug === 'feature_reports')) featureBullets.push('Unlimited AI reports');
+            if (featureFeatures.some(f => f.slug === 'feature_analytics_assistant')) featureBullets.push('Full analytics suite');
+
+            // Fallback: if no specific features matched, show generic counts
+            if (featureBullets.length <= 1) {
+              if (plan.features.length > 0) {
+                featureBullets.push(`${plan.features.length} features included`);
+              }
+            }
+
+            // For free tier, add some descriptive items
+            if (plan.slug === 'free' && featureBullets.length === 0) {
+              featureBullets.push('Interactive market maps');
+              featureBullets.push('National & state data');
+              featureBullets.push('Basic market trends');
+              if (plan.features.some(f => f.slug === 'preview_reports_limit')) {
+                featureBullets.push('Limited reports');
+              }
+            }
 
             return (
               <div
-                key={plan.name}
+                key={plan.slug}
                 className={`
                   relative rounded-xl p-4 transition-all
                   ${isCurrentPlan
                     ? 'bg-primary-container border-2 border-primary shadow-lg ring-2 ring-primary/20'
-                    : plan.highlight
+                    : isHighlighted
                       ? 'bg-primary-container border-2 border-primary shadow-lg scale-[1.03]'
                       : 'bg-surface-container border border-outline-variant hover:border-primary/30'
                   }
@@ -142,7 +143,7 @@ function PricingContent() {
                     <Check className="w-3 h-3" />
                     {isTrialPlan ? 'Trial Active' : 'Current Plan'}
                   </div>
-                ) : plan.highlight && (
+                ) : isHighlighted && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 bg-primary text-on-primary text-[11px] font-medium rounded-full flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     Most Popular
@@ -150,27 +151,27 @@ function PricingContent() {
                 )}
 
                 <div className="text-center mb-4">
-                  <h3 className={`text-base font-semibold mb-1 ${plan.highlight || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface'}`}>
+                  <h3 className={`text-base font-semibold mb-1 ${isHighlighted || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface'}`}>
                     {plan.name}
                   </h3>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className={`text-3xl font-bold ${plan.highlight || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface'}`}>
-                      {plan.price}
+                    <span className={`text-3xl font-bold ${isHighlighted || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface'}`}>
+                      {priceDisplay}
                     </span>
-                    <span className={`text-xs ${plan.highlight || isCurrentPlan ? 'text-on-primary-container/70' : 'text-on-surface-variant'}`}>
-                      {plan.period}
+                    <span className={`text-xs ${isHighlighted || isCurrentPlan ? 'text-on-primary-container/70' : 'text-on-surface-variant'}`}>
+                      {periodDisplay}
                     </span>
                   </div>
-                  <p className={`text-xs mt-1 ${plan.highlight || isCurrentPlan ? 'text-on-primary-container/80' : 'text-on-surface-variant'}`}>
+                  <p className={`text-xs mt-1 ${isHighlighted || isCurrentPlan ? 'text-on-primary-container/80' : 'text-on-surface-variant'}`}>
                     {plan.description}
                   </p>
                 </div>
 
                 <ul className="space-y-2 mb-4">
-                  {plan.features.map((feature) => (
+                  {featureBullets.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
-                      <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${plan.highlight || isCurrentPlan ? 'text-primary' : 'text-primary'}`} />
-                      <span className={`text-[13px] ${plan.highlight || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface-variant'}`}>
+                      <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 text-primary`} />
+                      <span className={`text-[13px] ${isHighlighted || isCurrentPlan ? 'text-on-primary-container' : 'text-on-surface-variant'}`}>
                         {feature}
                       </span>
                     </li>
@@ -183,16 +184,16 @@ function PricingContent() {
                   </div>
                 ) : (
                   <a
-                    href={plan.href}
+                    href={ctaHref}
                     className={`
                       block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors
-                      ${plan.highlight || isCurrentPlan
+                      ${isHighlighted || isCurrentPlan
                         ? 'bg-primary text-on-primary hover:bg-primary/90'
                         : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
                       }
                     `}
                   >
-                    {isTrialPlan ? 'Upgrade Now' : plan.cta}
+                    {isTrialPlan ? 'Upgrade Now' : ctaText}
                   </a>
                 )}
               </div>

@@ -182,6 +182,10 @@ export {
   // Scoring validation & report templates
   fetchQuintilePerformance,
   fetchReportTemplates,
+
+  // Pricing
+  fetchPricingSummary,
+  type PricingTier,
 } from './fetchers';
 
 // ============================================================================
