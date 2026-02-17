@@ -69,6 +69,28 @@ export class FeaturesController {
   }
 
   /**
+   * Get pricing summary for public pricing page
+   * GET /api/admin/features/pricing-summary
+   */
+  @Get('pricing-summary')
+  async getPricingSummary() {
+    this.logger.log('GET /admin/features/pricing-summary');
+
+    try {
+      const summary = await this.featuresService.getPricingSummary();
+      return {
+        success: true,
+        data: summary,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * Get full feature matrix
    * GET /api/admin/features/matrix
    */
