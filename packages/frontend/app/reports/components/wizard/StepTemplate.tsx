@@ -7,6 +7,7 @@ import { TEMPLATE_INFO, TIER_INFO } from '../../constants';
 import type { UseWizardStateReturn } from '../../hooks/useWizardState';
 import type { ReportTemplate, ReportType, SubscriptionTier } from '../../types';
 import { fetchReportTemplates } from '@/lib/data';
+import { useEntitlements } from '@/lib/entitlements';
 
 // Default templates with proper AI narrative sections (used if API returns empty)
 const DEFAULT_TEMPLATES: ReportTemplate[] = [
@@ -192,8 +193,8 @@ export const StepTemplate: React.FC<StepTemplateProps> = ({ wizardState }) => {
     return aRelevance - bRelevance;
   });
 
-  // TODO: Get from user authentication context
-  const currentTier: SubscriptionTier = 'pro';
+  const { tier, simulatedTier } = useEntitlements();
+  const currentTier: SubscriptionTier = (simulatedTier || tier || 'free') as SubscriptionTier;
   const tierOrder: SubscriptionTier[] = ['free', 'basic', 'pro', 'enterprise'];
 
   const canAccessTemplate = (template: ReportTemplate): boolean => {
