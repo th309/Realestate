@@ -29,10 +29,10 @@ export default function ReportPage() {
         fallback={
           <div className="min-h-screen bg-surface flex items-center justify-center p-6">
             <PaywallCard
+              type="feature"
+              id="reports"
               title="Market Reports"
               description="Generate AI-powered market reports with executive summaries, investment theses, and risk assessments."
-              featureType="feature"
-              featureId="reports"
             />
           </div>
         }
