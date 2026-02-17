@@ -83,46 +83,44 @@ function PricingContent() {
             const isCurrentPlan = effectiveTier === plan.slug;
             const isTrialPlan = trial?.active && trial.tier === plan.slug;
             const isHighlighted = plan.slug === 'pro';
-            const priceDisplay = plan.price_monthly === '0' || plan.price_monthly === '0.00' ? '$0' : `$${Math.round(parseFloat(plan.price_monthly || '0'))}`;
+            const rawPrice = Number(plan.price_monthly) || 0;
+            const priceDisplay = rawPrice === 0 ? '$0' : `$${Math.round(rawPrice)}`;
             const periodDisplay = priceDisplay === '$0' ? 'forever' : '/month';
             const ctaText = plan.slug === 'enterprise' ? 'Contact Sales' : plan.slug === 'pro' ? 'Start Free Trial' : 'Get Started';
             const ctaHref = plan.slug === 'enterprise' ? '/about' : '/map';
 
             // Build feature bullet list from DB features
             const featureBullets: string[] = [];
+            const has = (slug: string) => plan.features.some(f => f.slug === slug);
+            const catCount = (cat: string) => plan.features.filter(f => f.category === cat).length;
+            const metricCount = catCount('metrics');
 
-            if (plan.slug !== 'free') {
-              // For paid plans, start with "Everything in [previous plan]"
-              featureBullets.push(plan.slug === 'pro' ? 'Everything in Free' : 'Everything in Pro');
-            }
-
-            // Add geography features
-            const geoFeatures = plan.features.filter(f => f.category === 'geography');
-            if (geoFeatures.some(f => f.slug === 'geo_county')) featureBullets.push('County-level data');
-            if (geoFeatures.some(f => f.slug === 'geo_zip')) featureBullets.push('ZIP code data');
-
-            // Add key feature highlights
-            const featureFeatures = plan.features.filter(f => f.category === 'features');
-            if (featureFeatures.some(f => f.slug === 'feature_scores')) featureBullets.push('PropertyIQ Scores');
-            if (featureFeatures.some(f => f.slug === 'feature_ai_insights')) featureBullets.push('AI market analysis');
-            if (featureFeatures.some(f => f.slug === 'feature_reports')) featureBullets.push('Unlimited AI reports');
-            if (featureFeatures.some(f => f.slug === 'feature_analytics_assistant')) featureBullets.push('Full analytics suite');
-
-            // Fallback: if no specific features matched, show generic counts
-            if (featureBullets.length <= 1) {
-              if (plan.features.length > 0) {
-                featureBullets.push(`${plan.features.length} features included`);
-              }
-            }
-
-            // For free tier, add some descriptive items
-            if (plan.slug === 'free' && featureBullets.length === 0) {
+            if (plan.slug === 'free') {
               featureBullets.push('Interactive market maps');
-              featureBullets.push('National & state data');
-              featureBullets.push('Basic market trends');
-              if (plan.features.some(f => f.slug === 'preview_reports_limit')) {
-                featureBullets.push('Limited reports');
+              featureBullets.push('National & state-level data');
+              featureBullets.push(`${metricCount}+ real estate metrics`);
+              featureBullets.push('Historical trends & charts');
+              const reportLimit = plan.features.find(f => f.slug === 'preview_reports_limit');
+              if (reportLimit && typeof reportLimit.value === 'number' && reportLimit.value > 0) {
+                featureBullets.push(`${reportLimit.value} preview reports`);
               }
+            } else if (plan.slug === 'pro') {
+              featureBullets.push('Everything in Free, plus:');
+              if (has('geo_county') || has('geo_zip')) featureBullets.push('County, city & ZIP code data');
+              if (has('feature_scores')) featureBullets.push('PropertyIQ composite scores');
+              if (has('feature_ai_insights')) featureBullets.push('AI market analysis');
+              if (has('feature_reports')) featureBullets.push('Unlimited AI reports');
+              if (has('feature_export_csv')) featureBullets.push('CSV data export');
+              if (has('feature_analytics_assistant')) featureBullets.push('Analytics assistant');
+            } else if (plan.slug === 'enterprise') {
+              featureBullets.push('Everything in Pro, plus:');
+              if (has('scenario_modeling_enabled')) featureBullets.push('Scenario modeling');
+              if (has('statistical_deep_dives')) featureBullets.push('Statistical deep dives');
+              featureBullets.push('Team & brokerage features');
+              featureBullets.push('Priority support');
+            } else {
+              // Unknown tier — generic fallback
+              featureBullets.push(`${plan.features.length} features included`);
             }
 
             return (
