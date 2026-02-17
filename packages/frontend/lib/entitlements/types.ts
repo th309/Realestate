@@ -48,4 +48,15 @@ export interface EntitlementsContextValue extends EntitlementsState {
 
   // Refresh
   refresh: () => Promise<void>;
+
+  // Usage tracking (for preview limits)
+  getUsage: (featureSlug: string) => FeatureUsage | null;
+  incrementUsage: (featureSlug: string) => Promise<boolean>;
+}
+
+export interface FeatureUsage {
+  feature_slug: string;
+  usage_count: number;
+  limit: number; // -1 = unlimited
+  remaining: number; // -1 = unlimited, 0 = at limit
 }

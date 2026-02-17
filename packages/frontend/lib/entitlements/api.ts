@@ -88,3 +88,22 @@ export async function trackPaywallEvent(
     console.warn('Failed to track paywall event:', error);
   }
 }
+
+/** Fetch usage count for a feature */
+export async function fetchFeatureUsage(
+  featureSlug: string,
+  userId: string,
+): Promise<{ usage_count: number }> {
+  // TODO: Wire to real endpoint when user auth is in place
+  // For now, return 0 to not block any usage
+  return { usage_count: 0 };
+}
+
+/** Increment usage count for a feature */
+export async function incrementFeatureUsage(
+  featureSlug: string,
+  userId: string,
+): Promise<{ success: boolean; new_count: number }> {
+  // TODO: Wire to real endpoint when user auth is in place
+  return { success: true, new_count: 0 };
+}

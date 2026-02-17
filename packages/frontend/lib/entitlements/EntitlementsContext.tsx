@@ -6,7 +6,8 @@ import type {
   EntitlementsState,
   UserTier,
   ResourceType,
-  AccessInfo
+  AccessInfo,
+  FeatureUsage,
 } from './types';
 import { fetchEntitlements, trackPaywallEvent } from './api';
 import { getAllMetricIds } from '@/lib/data';
@@ -72,6 +73,8 @@ export function EntitlementsProvider({
   // Initialize from sessionStorage to persist across navigations
   const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() => getStoredSimulatedTier());
   const [simulatedAuth, setSimulatedAuthRaw] = useState<boolean | null>(() => getStoredSimulatedAuth());
+
+  const [usageCache, setUsageCache] = useState<Record<string, number>>({});
 
   // Use ref to track the latest simulatedTier for the refresh callback
   const simulatedTierRef = useRef<UserTier | null>(simulatedTier);
@@ -205,6 +208,38 @@ export function EntitlementsProvider({
     // Note: refresh will be triggered by the simulatedTier useEffect
   }, [setSimulatedTier, setSimulatedAuth]);
 
+  const getUsage = useCallback((featureSlug: string): FeatureUsage | null => {
+    // Check if there's a numeric limit for this feature in the access map
+    // Preview features are stored as feature:<slug> in the access map
+    const key = `feature:${featureSlug}`;
+    const accessInfo = state.access[key];
+    const limit = accessInfo?.limit ?? null;
+
+    if (limit === null) return null;
+    if (limit === -1) return { feature_slug: featureSlug, usage_count: 0, limit: -1, remaining: -1 };
+
+    const count = usageCache[featureSlug] || 0;
+    return {
+      feature_slug: featureSlug,
+      usage_count: count,
+      limit,
+      remaining: Math.max(0, limit - count),
+    };
+  }, [state.access, usageCache]);
+
+  const incrementUsage = useCallback(async (featureSlug: string): Promise<boolean> => {
+    const usage = getUsage(featureSlug);
+    if (!usage) return true; // No limit configured
+    if (usage.limit === -1) return true; // Unlimited
+    if (usage.remaining <= 0) return false; // At limit
+
+    setUsageCache(prev => ({
+      ...prev,
+      [featureSlug]: (prev[featureSlug] || 0) + 1,
+    }));
+    return true;
+  }, [getUsage]);
+
   const value = useMemo<EntitlementsContextValue>(() => ({
     ...state,
     canAccess,
@@ -221,6 +256,8 @@ export function EntitlementsProvider({
     setSimulatedAuth,
     resetSimulation,
     refresh,
+    getUsage,
+    incrementUsage,
   }), [
     state,
     canAccess,
@@ -237,6 +274,8 @@ export function EntitlementsProvider({
     setSimulatedAuth,
     resetSimulation,
     refresh,
+    getUsage,
+    incrementUsage,
   ]);
 
   return (
