@@ -3,6 +3,8 @@
 import React, { Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import { ReportViewer } from './ReportViewer';
+import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 
 function LoadingFallback() {
   return (
@@ -21,7 +23,22 @@ export default function ReportPage() {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <ReportViewer reportId={reportId} />
+      <EntitlementGate
+        type="feature"
+        id="reports"
+        fallback={
+          <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+            <PaywallCard
+              title="Market Reports"
+              description="Generate AI-powered market reports with executive summaries, investment theses, and risk assessments."
+              featureType="feature"
+              featureId="reports"
+            />
+          </div>
+        }
+      >
+        <ReportViewer reportId={reportId} />
+      </EntitlementGate>
     </Suspense>
   );
 }
