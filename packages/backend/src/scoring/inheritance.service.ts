@@ -73,9 +73,9 @@ export class InheritanceService {
    */
   async getGeographyChain(geographyId: string): Promise<GeographyChain | null> {
     const { data, error } = await this.supabase
-      .from('geography_inheritance')
-      .select('*')
-      .eq('geography_id', geographyId)
+      .from('geography_crosswalk')
+      .select('zip_code, county_fips, cbsa_code, state_fips')
+      .eq('zip_code', geographyId)
       .single();
 
     if (error || !data) {
@@ -84,14 +84,14 @@ export class InheritanceService {
     }
 
     return {
-      geographyId: data.geography_id,
-      geographyType: data.geography_type,
+      geographyId: data.zip_code,
+      geographyType: 'zip',
       countyFips: data.county_fips,
-      metroCbsa: data.metro_cbsa,
+      metroCbsa: data.cbsa_code,
       stateFips: data.state_fips,
-      parentCountyFips: data.parent_county_fips,
-      parentMetroCbsa: data.parent_metro_cbsa,
-      parentStateFips: data.parent_state_fips,
+      parentCountyFips: data.county_fips,
+      parentMetroCbsa: data.cbsa_code,
+      parentStateFips: data.state_fips,
     };
   }
 

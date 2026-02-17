@@ -1215,7 +1215,7 @@ export class ScoringService {
   /**
    * Backfill missing ZIP metrics from parent county Realtor data.
    * For ZIPs missing demand_score/hotness_score, looks up the parent county
-   * via geography_inheritance and copies the county's values.
+   * via geography_crosswalk and copies the county's values.
    */
   private async backfillFromCounty(
     locationsMap: Map<string, LocationMetrics>,
@@ -1243,20 +1243,20 @@ export class ScoringService {
       const from = 0;
       const to = batch.length - 1;
       const { data, error } = await this.supabase
-        .from('geography_inheritance')
-        .select('geography_id, parent_county_fips')
-        .in('geography_id', batch)
-        .order('geography_id', { ascending: true })
+        .from('geography_crosswalk')
+        .select('zip_code, county_fips')
+        .in('zip_code', batch)
+        .order('zip_code', { ascending: true })
         .range(from, to);
 
       if (error) {
-        console.warn(`Failed to fetch geography_inheritance: ${error.message}`);
+        console.warn(`Failed to fetch geography_crosswalk: ${error.message}`);
         return;
       }
       if (data) {
         for (const row of data) {
-          if (row.parent_county_fips) {
-            zipToCounty.set(row.geography_id, row.parent_county_fips);
+          if (row.county_fips) {
+            zipToCounty.set(row.zip_code, row.county_fips);
           }
         }
       }

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Home, TrendingUp, MapPin, DollarSign, ChevronRight, Plus, X, Sparkles, Info, AlertCircle, History, Clock, FileText } from 'lucide-react';
 import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
+import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
 import { Breadcrumbs } from '@/components/navigation';
 import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
 import { SearchWidget } from '@/app/map/components/SearchWidget';
@@ -500,10 +501,31 @@ interface ReportCreationPageProps {
 
 function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
   const router = useRouter();
+  const { simulatedTier, tier } = useEntitlements();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Read prefill data from map context menu (right-click → "Generate Report")
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('propertyiq-report-prefill');
+      if (raw) {
+        localStorage.removeItem('propertyiq-report-prefill');
+        const prefill = JSON.parse(raw);
+        if (prefill?.id && prefill?.name && prefill?.type) {
+          const market: Market = {
+            id: prefill.id,
+            name: prefill.name,
+            type: prefill.type,
+            state: prefill.state,
+          };
+          setMarkets((prev) => prev.length === 0 ? [market] : prev);
+        }
+      }
+    } catch { /* ignore malformed data */ }
+  }, []);
 
   const isHomebuyer = type === 'homebuyer';
   const canGenerate = markets.length > 0;
@@ -572,8 +594,9 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
       };
 
       const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
+      const effectiveTier = simulatedTier || tier;
 
-      const data = await generateReportAPI(requestBody, { userId });
+      const data = await generateReportAPI(requestBody, { userId, userTier: effectiveTier || undefined });
       router.push(`/reports/${data.report_id}`);
     } catch (err) {
       console.error('Report generation error:', err);

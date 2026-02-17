@@ -387,10 +387,15 @@ export class ReportsService {
           grm: marketMetrics.grm,
           overvalued_pct: marketMetrics.overvalued_pct,
           median_income: marketMetrics.median_income,
+          median_household_income: marketMetrics.median_household_income,
+          median_age: marketMetrics.median_age,
           population: marketMetrics.population,
           population_growth_yoy: marketMetrics.population_growth_yoy,
           unemployment_rate: marketMetrics.unemployment_rate,
           job_growth_yoy: marketMetrics.job_growth_yoy,
+          rent_to_price_ratio: marketMetrics.rent_to_price_ratio,
+          affordability_index: marketMetrics.affordability_index,
+          income_growth_yoy: marketMetrics.income_growth_yoy,
         },
         historical: historicalData,
         benchmarks: {},
@@ -1283,6 +1288,24 @@ export class ReportsService {
             metrics.population_growth_yoy = censusData.population_yoy;
           }
         }
+
+        // Get economic data (unemployment, job growth) for county
+        try {
+          const [unemploymentData, jobGrowthData] = await Promise.all([
+            this.economicService.getCountyUnemployment(),
+            this.economicService.getCountyJobGrowth(),
+          ]);
+          const countyUnemployment = unemploymentData.find(d => d.fips_code === geographyId || d.region_id === geographyId);
+          if (countyUnemployment?.value != null) {
+            metrics.unemployment_rate = countyUnemployment.value;
+          }
+          const countyJobGrowth = jobGrowthData.find(d => d.fips_code === geographyId || d.region_id === geographyId);
+          if (countyJobGrowth?.value != null) {
+            metrics.job_growth_yoy = countyJobGrowth.value;
+          }
+        } catch (econError) {
+          this.logger.warn('Failed to fetch economic data for county, continuing:', econError);
+        }
       } else if (geographyType === 'zip') {
         // Get Realtor zip data (all available fields)
         const { data: realtorData } = await client
@@ -1390,7 +1413,7 @@ export class ReportsService {
         if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
           const { data: censusData } = await client
             .from('census_zip')
-            .select('population, median_household_income, median_age, population_yoy')
+            .select('total_population, median_household_income, median_age, population_yoy')
             .eq('zcta', geographyId)
             .order('year', { ascending: false })
             .limit(1)
@@ -1399,20 +1422,59 @@ export class ReportsService {
           if (censusData) {
             metrics.median_income = censusData.median_household_income;
             metrics.median_household_income = censusData.median_household_income;
-            metrics.population = censusData.population;
+            metrics.population = censusData.total_population;
             metrics.median_age = censusData.median_age;
             metrics.population_growth_yoy = censusData.population_yoy;
           }
+        }
+
+        // Get economic data (unemployment, job growth) for ZIP via county/metro fallback
+        try {
+          const { data: crosswalk } = await client
+            .from('geography_crosswalk')
+            .select('county_fips, cbsa_code')
+            .eq('zip_code', geographyId)
+            .single();
+
+          if (crosswalk) {
+            // Try county-level economic data first
+            const [unemploymentData, jobGrowthData] = await Promise.all([
+              this.economicService.getCountyUnemployment(),
+              this.economicService.getCountyJobGrowth(),
+            ]);
+            const countyFips = crosswalk.county_fips;
+            if (countyFips) {
+              const countyUnemployment = unemploymentData.find(d => d.fips_code === countyFips || d.region_id === countyFips);
+              if (countyUnemployment?.value != null) metrics.unemployment_rate = countyUnemployment.value;
+              const countyJobGrowth = jobGrowthData.find(d => d.fips_code === countyFips || d.region_id === countyFips);
+              if (countyJobGrowth?.value != null) metrics.job_growth_yoy = countyJobGrowth.value;
+            }
+
+            // Fall back to metro if county data unavailable
+            if (metrics.unemployment_rate == null && crosswalk.cbsa_code) {
+              const [metroUnemp, metroJobs] = await Promise.all([
+                this.economicService.getMetroUnemployment(),
+                this.economicService.getMetroJobGrowth(),
+              ]);
+              const metroU = metroUnemp.find(d => d.region_id === crosswalk.cbsa_code || d.cbsa_code === crosswalk.cbsa_code);
+              if (metroU?.value != null) metrics.unemployment_rate = metroU.value;
+              const metroJ = metroJobs.find(d => d.region_id === crosswalk.cbsa_code || d.cbsa_code === crosswalk.cbsa_code);
+              if (metroJ?.value != null) metrics.job_growth_yoy = metroJ.value;
+            }
+          }
+        } catch (econError) {
+          this.logger.warn('Failed to fetch economic data for zip, continuing:', econError);
         }
       }
 
       // Create aliases for template variable names
       // Templates use different names than database columns
+      // Only set alias if source value exists, to avoid overwriting data already set above
       metrics.market_heat_index = metrics.hotness_score;
       metrics.for_sale_inventory = metrics.active_listing_count;
       metrics.days_to_pending = metrics.days_on_market;
-      metrics.median_household_income = metrics.median_income;
-      metrics.population_growth_yoy = metrics.population_yoy;
+      if (metrics.median_income != null) metrics.median_household_income = metrics.median_income;
+      if (metrics.population_yoy != null) metrics.population_growth_yoy = metrics.population_yoy;
       metrics.cap_rate_proxy = metrics.cap_rate;
       metrics.gross_rent_multiplier = metrics.grm;
       metrics.price_cut_pct = metrics.price_reduced_share;

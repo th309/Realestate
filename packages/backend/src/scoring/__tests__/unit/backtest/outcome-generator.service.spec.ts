@@ -474,7 +474,7 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('metro-123', 'metro', 'market_health', '2022-01-01');
+      await service.generateOutcomes('metro-123', 'metro', 'markethealth', '2022-01-01');
 
       expect(selectCalls).toContain('market_health_score');
     });

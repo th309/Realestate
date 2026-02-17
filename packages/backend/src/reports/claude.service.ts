@@ -464,7 +464,12 @@ When using news context:
 
     return `${basePrompt}
 ${newsEnhancement}
-${newsInstructions}`;
+${newsInstructions}
+
+IMPORTANT — AVOIDING CONTRADICTIONS:
+- For Realtor.com metrics (days on market, active listings, median listing price, inventory, pending ratio, price cuts) and Zillow metrics (home values, rent): the "Data:" section above is AUTHORITATIVE. Always use those exact values. News articles may reference different geography levels (metro vs ZIP) or older time periods for these same metrics — do NOT substitute news-sourced values for them.
+- For economic data, development projects, job openings, infrastructure investments, policy changes, and other information NOT in the Data section: news is a valid and valuable source. You may cite these freely.
+- If a news article mentions a Realtor/Zillow metric that differs from the Data section (e.g., area-wide median vs ZIP-level median), explicitly note the geographic distinction rather than presenting the news number as the local value.`;
   }
 
   /**

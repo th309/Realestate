@@ -70,26 +70,31 @@ function getNewsItems(report: ReportInstance): NewsItem[] {
 }
 
 /**
- * Get economic indicator metrics from census / current data.
+ * Keywords in news-scouted indicator names that overlap with Realtor/Zillow
+ * authoritative data. These should NOT be displayed from news since the
+ * report already shows the real values from our database, and news may
+ * reference different geographies or time periods.
+ */
+const REALTOR_ZILLOW_INDICATOR_KEYWORDS = [
+  'median home', 'median sale', 'home sale price', 'listing price',
+  'days on market', 'dom', 'inventory', 'homes listed', 'active listing',
+  'home value', 'median price', 'sale price',
+];
+
+function isRealtorZillowIndicator(name: string): boolean {
+  const lower = name.toLowerCase();
+  return REALTOR_ZILLOW_INDICATOR_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+/**
+ * Get economic indicator metrics from census / current data,
+ * supplemented by news-scouted indicators that don't overlap with
+ * authoritative Realtor/Zillow data.
  */
 function getEconomicIndicators(report: ReportInstance): EconomicIndicator[] {
   const indicators: EconomicIndicator[] = [];
 
-  // Realtime indicators (array of EconomicIndicator objects from news scouting)
-  const rtIndicators = report.populated_data?.realtime?.indicators;
-  if (Array.isArray(rtIndicators) && rtIndicators.length > 0) {
-    for (const ind of rtIndicators) {
-      if (ind && typeof ind === 'object' && ind.indicator_name) {
-        indicators.push({
-          label: ind.indicator_name,
-          value: ind.current_value ?? '—',
-        });
-      }
-    }
-    if (indicators.length > 0) return indicators.slice(0, 6);
-  }
-
-  // Census / current data fallbacks
+  // 1. Census / current data (authoritative)
   const medianIncome = getMetricWithAliases(report as any, 'median_household_income');
   if (medianIncome !== null) {
     indicators.push({
@@ -130,7 +135,22 @@ function getEconomicIndicators(report: ReportInstance): EconomicIndicator[] {
     });
   }
 
-  return indicators;
+  // 2. Supplement with news-scouted indicators, but ONLY those that don't
+  //    overlap with Realtor/Zillow authoritative metrics (which are already
+  //    displayed in dedicated report sections like Market Timing, Affordability, etc.)
+  const rtIndicators = report.populated_data?.realtime?.indicators;
+  if (Array.isArray(rtIndicators) && rtIndicators.length > 0) {
+    for (const ind of rtIndicators) {
+      if (ind && typeof ind === 'object' && ind.indicator_name && !isRealtorZillowIndicator(ind.indicator_name)) {
+        indicators.push({
+          label: ind.indicator_name,
+          value: ind.current_value ?? '—',
+        });
+      }
+    }
+  }
+
+  return indicators.slice(0, 6);
 }
 
 // ---------------------------------------------------------------------------

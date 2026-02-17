@@ -239,7 +239,26 @@
       "mcp__plugin_supabase_supabase__list_projects",
       "Bash(NEXT_LINT_DURING_BUILD=false npx next build:*)",
       "Bash(npx next dev:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(bash:*)",
+      "Bash(do powershell -Command \"Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue\")",
+      "Bash(CLAUDE_PLUGIN_ROOT=\"/c/Users/troyh/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.0\" bash:*)",
+      "mcp__plugin_supabase_supabase__apply_migration",
+      "Bash(do curl -s \"http://localhost:3001/api/zillow/$geo\")",
+      "Bash(do curl -s \"http://localhost:3001/api/census/population-growth/$geo\")",
+      "Bash(do curl -s \"http://localhost:3001/api/census/income-growth/$geo\")",
+      "mcp__plugin_playwright_playwright__browser_install",
+      "mcp__plugin_supabase_supabase__list_tables",
+      "Bash(# Kill existing backend process and restart tasklist)",
+      "Bash(# Find which node process is on port 3001 netstat -ano)",
+      "Bash(# Use Dallas metro \\(19100\\) which likely isn''t cached curl -s -X POST http://localhost:3001/api/reports/generate \\\\ -H \"\"Content-Type: application/json\"\" \\\\ -H \"\"x-user-id: 00000000-0000-0000-0000-000000000001\"\" \\\\ -H \"\"x-user-tier: pro\"\" \\\\ -d ''{ \"\"template_slug\"\": \"\"homeready\"\", \"\"primary_geography\"\": { \"\"id\"\": \"\"19100\"\", \"\"type\"\": \"\"metro\"\", \"\"name\"\": \"\"Dallas-Fort Worth-Arlington, TX\"\" }, \"\"user_type\"\": \"\"homebuyer\"\" }'')",
+      "Bash(__NEW_LINE_5852d95255f87561__ echo \"\")",
+      "Bash(__NEW_LINE_8cb0bbfb9c9b4768__ echo \"\")",
+      "Bash(# Kill and restart backend netstat -ano)",
+      "Bash(WMIC PROCESS WHERE \"CommandLine LIKE ''%nest%'' AND CommandLine LIKE ''%start%''\" GET ProcessId,CommandLine)",
+      "Bash(# Check report completion and news data sleep 10 # Get the report curl -s http://localhost:3001/api/reports/874eea9d-dc4c-4c39-9be9-5b4e3e20761a \\\\ -H \"\"x-user-id: 00000000-0000-0000-0000-000000000001\"\")",
+      "Bash(# Check the full realtime data structure curl -s http://localhost:3001/api/reports/874eea9d-dc4c-4c39-9be9-5b4e3e20761a \\\\ -H \"\"x-user-id: 00000000-0000-0000-0000-000000000001\"\")",
+      "mcp__plugin_supabase_supabase__get_logs"
     ]
   }
 }

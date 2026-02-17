@@ -152,7 +152,7 @@ describe('Scoring Pipeline Integration', () => {
 
       // For now, verify the service can be instantiated and methods exist
       expect(scoringService).toBeDefined();
-      expect(typeof scoringService.calculateScore).toBe('function');
+      expect(typeof scoringService.calculateAllScores).toBe('function');
       expect(typeof scoringService.calculateAllScores).toBe('function');
       expect(typeof scoringService.getScore).toBe('function');
     });

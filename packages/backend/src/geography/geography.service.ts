@@ -221,7 +221,11 @@ export class GeographyService implements OnModuleInit {
   }
 
   /**
-   * Search for geographies by name (primarily for official CBSA/Metro lookups)
+   * Search for geographies by name (primarily for official CBSA/Metro lookups).
+   * Results are ranked by relevance:
+   *   1. Exact match on geography_id or name
+   *   2. Name/id starts with query (prefix match)
+   *   3. Substring match (sorted by population)
    */
   async searchGeographies(
     query: string,
@@ -229,6 +233,9 @@ export class GeographyService implements OnModuleInit {
     limit: number = 15,
   ): Promise<any[]> {
     this.logger.log(`Searching geographies: "${query}" (type: ${type || 'all'})`);
+
+    // Fetch more than needed so we can re-rank by relevance
+    const fetchLimit = Math.max(limit * 3, 50);
 
     let dbQuery = this.supabase
       .from('geographies')
@@ -240,9 +247,9 @@ export class GeographyService implements OnModuleInit {
     const words = query.trim().split(/\s+/).filter(Boolean);
 
     if (words.length === 1) {
-      // Single word: match name OR name_short
+      // Single word: match name OR name_short OR geography_id
       const pattern = `%${words[0]}%`;
-      dbQuery = dbQuery.or(`name.ilike.${pattern},name_short.ilike.${pattern}`);
+      dbQuery = dbQuery.or(`name.ilike.${pattern},name_short.ilike.${pattern},geography_id.ilike.${pattern}`);
     } else {
       // Multi-word: each word must appear in the name (AND semantics)
       for (const word of words) {
@@ -250,13 +257,13 @@ export class GeographyService implements OnModuleInit {
       }
     }
 
-    dbQuery = dbQuery
-      .order('population', { ascending: false, nullsFirst: false })
-      .limit(limit);
-
     if (type) {
       dbQuery = dbQuery.eq('geography_type', type);
     }
+
+    dbQuery = dbQuery
+      .order('population', { ascending: false, nullsFirst: false })
+      .limit(fetchLimit);
 
     const { data, error } = await dbQuery;
 
@@ -265,6 +272,39 @@ export class GeographyService implements OnModuleInit {
       throw error;
     }
 
-    return data || [];
+    if (!data || data.length === 0) return [];
+
+    // Re-rank results by relevance
+    const queryLower = query.trim().toLowerCase();
+
+    const scored = data.map((row) => {
+      const name = (row.name || '').toLowerCase();
+      const nameShort = (row.name_short || '').toLowerCase();
+      const geoId = (row.geography_id || '').toLowerCase();
+
+      let relevance: number;
+
+      if (geoId === queryLower || name === queryLower || nameShort === queryLower) {
+        // Exact match — highest priority
+        relevance = 0;
+      } else if (geoId.startsWith(queryLower) || name.startsWith(queryLower) || nameShort.startsWith(queryLower)) {
+        // Prefix match
+        relevance = 1;
+      } else {
+        // Substring match
+        relevance = 2;
+      }
+
+      return { ...row, _relevance: relevance };
+    });
+
+    // Sort by relevance first, then population as tiebreaker
+    scored.sort((a, b) => {
+      if (a._relevance !== b._relevance) return a._relevance - b._relevance;
+      return (b.population || 0) - (a.population || 0);
+    });
+
+    // Strip internal field and return limited results
+    return scored.slice(0, limit).map(({ _relevance, ...row }) => row);
   }
 }
