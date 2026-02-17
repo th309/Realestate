@@ -26,6 +26,7 @@ import { EntitlementsModule } from './entitlements/entitlements.module';
 import { RedisModule } from './redis/redis.module';
 import { MarketAnalysisModule } from './market-analysis/market-analysis.module';
 import { PartnersModule } from './partners/partners.module';
+import { MarketSnapshotModule } from './market-snapshot/market-snapshot.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -57,6 +58,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     EntitlementsModule,
     MarketAnalysisModule,
     PartnersModule,
+    MarketSnapshotModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],

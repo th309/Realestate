@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -16,44 +16,19 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
-import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo, getMetricConfig } from '@/lib/data';
+import { useMarketSnapshot, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
 import { Breadcrumbs } from '@/components/navigation';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { MetricTitle } from '@/app/components/MetricTitle';
 import { useEntitlements } from '@/lib/entitlements';
 import { AIMarketAnalysis } from './AIMarketAnalysis';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface MarketDashboardProps {
   geographyId: string;
   geographyType: 'metro' | 'county' | 'zip';
   userView: 'investor' | 'homebuyer';
   stateFilter?: string;
-}
-
-interface MarketData {
-  geography: {
-    id: string;
-    name: string;
-    type: string;
-  };
-  scores: {
-    homeready: { score: number; grade: string; components?: Record<string, number> };
-    investoredge: { score: number; grade: string; components?: Record<string, number> };
-    markethealth: { score: number; grade: string };
-  };
-  metrics: {
-    zhvi?: number;
-    zhvi_yoy?: number;
-    zori?: number;
-    zori_yoy?: number;
-    cap_rate?: number;
-    grm?: number;
-    gross_yield?: number;
-    [key: string]: number | undefined;
-  };
-  lastUpdated: string;
 }
 
 // Trend direction helper
@@ -64,7 +39,7 @@ function getTrendDirection(percent: number | null): 'up' | 'down' | 'stable' {
   return 'stable';
 }
 
-// Metric card with animation - uses data from useDataCardBatch
+// Metric card with animation - uses data from useMarketSnapshot
 function MetricCard({
   metricId,
   formattedValue,
@@ -191,78 +166,29 @@ export function MarketDashboard({
   userView,
   stateFilter,
 }: MarketDashboardProps) {
-  const [data, setData] = useState<MarketData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'investor' | 'homebuyer'>(userView);
+  const queryClient = useQueryClient();
 
   // Check entitlements for geography level
   const { getAccess, trackPaywallView } = useEntitlements();
   const geoAccess = getAccess('geo', geographyType);
   const hasGeoAccess = geoAccess.level === 'full' || geoAccess.level === 'preview' || !PREMIUM_GEO_LEVELS.includes(geographyType);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
+  // Derive state filter: use URL param if available
+  // Note: metros don't use state filter - they can span state boundaries
+  const effectiveStateFilter = useMemo(() => {
+    if (geographyType === 'metro') return undefined;
+    if (stateFilter) return stateFilter;
+    if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
+    return undefined;
+  }, [stateFilter, geographyType]);
 
-      const [scoresRes, metricsRes] = await Promise.all([
-        fetch(`${API_URL}/api/scores/${geographyType}/${geographyId}`),
-        fetch(`${API_URL}/api/metrics/investment/${geographyType}/${geographyId}`),
-      ]);
-
-      if (!scoresRes.ok) throw new Error('Failed to fetch market data');
-      const scoresData = await scoresRes.json();
-
-      let investmentMetrics: Record<string, number> = {};
-      if (metricsRes.ok) {
-        const metricsData = await metricsRes.json();
-        if (metricsData.success && metricsData.data) {
-          investmentMetrics = metricsData.data;
-        }
-      }
-
-      setData({
-        geography: {
-          id: scoresData.location_id,
-          name: scoresData.location_name || `${geographyType} ${geographyId}`,
-          type: scoresData.geography,
-        },
-        scores: {
-          homeready: {
-            score: Math.round(scoresData.scores.homeready.score),
-            grade: scoresData.scores.homeready.grade,
-            components: scoresData.scores.homeready.components,
-          },
-          investoredge: {
-            score: Math.round(scoresData.scores.investoredge.score),
-            grade: scoresData.scores.investoredge.grade,
-            components: scoresData.scores.investoredge.components,
-          },
-          markethealth: {
-            score: Math.round(scoresData.scores.markethealth.score),
-            grade: scoresData.scores.markethealth.grade,
-          },
-        },
-        metrics: {
-          zhvi: scoresData.median_price,
-          cap_rate: investmentMetrics.cap_rate,
-          grm: investmentMetrics.grm,
-          gross_yield: investmentMetrics.gross_yield,
-          ...investmentMetrics,
-        },
-        lastUpdated: scoresData.score_date || new Date().toISOString(),
-      });
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  }, [geographyId, geographyType]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Single hook replaces fetchData() + useDataCardBatch() — 2 HTTP calls instead of 116
+  const { cards, scores, geography, lastUpdated, isLoading, error } = useMarketSnapshot(
+    geographyType,
+    geographyId,
+    { state: effectiveStateFilter, trendMonths: 6 },
+  );
 
   // Get metric categories for the current view (must be called before early returns)
   const categories = useMemo(() => {
@@ -270,74 +196,22 @@ export function MarketDashboard({
     return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
   }, [activeView]);
 
-  // Derive state filter: use URL param if available, otherwise extract from geography name
-  // Note: metros don't use state filter - they can span state boundaries and
-  // a mismatched state param causes data to be excluded from Zillow responses
-  const effectiveStateFilter = useMemo(() => {
-    if (geographyType === 'metro') return undefined;
-    if (stateFilter) {
-      return stateFilter;
-    }
-    if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
-    // Extract state from location name (e.g., "21701, Frederick, MD" -> "MD")
-    const name = data?.geography?.name;
-    if (!name) return undefined;
-    const parts = name.split(',');
-    if (parts.length >= 2) {
-      const lastPart = parts[parts.length - 1].trim().toUpperCase();
-      if (lastPart.length === 2) return lastPart;
-    }
-    return undefined;
-  }, [stateFilter, geographyType, data?.geography?.name]);
-
-  // Fixed set of all metrics - MUST be stable to avoid hook order issues
-  // This list never changes length - includes all metrics from both views
-  // Unsupported metrics will just return null values
-  const metricIds = useMemo(() => [
-    // Core metrics for AI insights
-    'home_value', 'home_value_yoy', 'home_value_mom', 'days_on_market', 'for_sale_inventory',
-    'inventory_yoy', 'rent_index', 'cap_rate', 'price_cut_pct',
-    // Homebuyer view metrics
-    'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
-    'new_listings_yoy', 'hotness_score', 'pending_ratio', 'sale_to_list',
-    'years_to_save', 'income_to_rent',
-    'price_increase_pct', 'new_listings', 'inventory_surplus',
-    'home_price_forecast', 'pending_listings', 'home_sales', 'home_sales_yoy',
-    'market_heat', 'supply_score', 'demand_score',
-    // Investor view metrics
-    'gross_yield', 'rent_for_houses', 'grm', 'rent_to_price_ratio',
-    'home_value_5yr', 'overvalued_pct',
-    // Shared: Area Profile
-    'population', 'population_growth', 'median_income', 'income_growth',
-    'median_age', 'homeownership_rate',
-    // Shared: Local Economy
-    'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
-    // Shared: New Construction
-    'sf_permits', 'mf_permits', 'total_permits', 'permits_yoy',
-    'sf_mf_ratio', 'permit_value_per_unit',
-    'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
-    // PropertyIQ scores
-    'homeready_score', 'investoredge_score', 'market_health_score',
-  ], []);
-
-  // Fetch metric data using the data layer hook
-  const { cards: factorsData } = useDataCardBatch(
-    metricIds,
-    geographyType as GeoLevel,
-    geographyId,
-    { trendMonths: 6, enabled: !loading && !!data, stateFilter: effectiveStateFilter }
-  );
-
-  // Apply metric fallbacks: home_value falls back to listing_price (Realtor) when ZHVI is unavailable
+  // Apply metric fallbacks: home_value falls back to listing_price when ZHVI is unavailable
   const displayData = useMemo(() => {
-    const result = { ...factorsData };
+    const result = { ...cards };
     if (!result['home_value']?.value && result['listing_price']?.value) {
       result['home_value'] = { ...result['listing_price'] };
     }
     return result;
-  }, [factorsData]);
+  }, [cards]);
 
-  if (loading) {
+  // Refresh handler
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['market-snapshot', geographyType, geographyId] });
+    queryClient.invalidateQueries({ queryKey: ['market-snapshot-trends', geographyType, geographyId] });
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <motion.div
@@ -352,7 +226,7 @@ export function MarketDashboard({
     );
   }
 
-  if (error || !data) {
+  if (error || !geography) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center max-w-md px-6">
@@ -360,9 +234,9 @@ export function MarketDashboard({
             <span className="text-3xl">⚠️</span>
           </div>
           <h2 className="text-xl font-semibold text-on-surface mb-2">Unable to Load Market Data</h2>
-          <p className="text-on-surface-variant mb-6">{error}</p>
+          <p className="text-on-surface-variant mb-6">{error?.message ?? 'Unknown error'}</p>
           <button
-            onClick={fetchData}
+            onClick={handleRefresh}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
@@ -406,7 +280,9 @@ export function MarketDashboard({
     );
   }
 
-  const primaryScore = activeView === 'investor' ? data.scores.investoredge : data.scores.homeready;
+  const primaryScore = activeView === 'investor'
+    ? scores?.investoredge
+    : scores?.homeready;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -416,7 +292,7 @@ export function MarketDashboard({
           <Breadcrumbs
             items={[
               { label: 'Markets', href: '/market' },
-              { label: data.geography.name },
+              { label: geography.name },
             ]}
             className="mb-3"
           />
@@ -431,17 +307,17 @@ export function MarketDashboard({
               <div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
-                  <h1 className="text-xl font-semibold text-on-surface">{data.geography.name}</h1>
+                  <h1 className="text-xl font-semibold text-on-surface">{geography.name}</h1>
                 </div>
                 <p className="text-sm text-on-surface-variant">
-                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {new Date(data.lastUpdated).toLocaleDateString()}
+                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {new Date(lastUpdated ?? Date.now()).toLocaleDateString()}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={fetchData}
+                onClick={handleRefresh}
                 className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
                 title="Refresh"
               >
@@ -506,7 +382,7 @@ export function MarketDashboard({
                 className="flex justify-center mb-4"
               >
                 <ScoreDisplay
-                  value={primaryScore.score}
+                  value={primaryScore?.score ?? 0}
                   size={160}
                   strokeWidth={10}
                   showGrade={true}
@@ -520,10 +396,12 @@ export function MarketDashboard({
             </motion.div>
 
             {/* Market Health Badge */}
-            <ScoreBadge
-              label="Market Health"
-              score={data.scores.markethealth.score}
-            />
+            {scores?.markethealth && (
+              <ScoreBadge
+                label="Market Health"
+                score={scores.markethealth.score}
+              />
+            )}
           </div>
 
           {/* Right Column - Details */}
@@ -564,7 +442,7 @@ export function MarketDashboard({
             <AIMarketAnalysis
               geoType={geographyType}
               geoId={geographyId}
-              marketName={data.geography.name}
+              marketName={geography.name}
               view={activeView}
               metrics={Object.fromEntries(
                 Object.entries(displayData).map(([key, card]) => [
@@ -576,8 +454,12 @@ export function MarketDashboard({
                   }
                 ])
               )}
-              scores={data.scores}
-              lastUpdated={data.lastUpdated}
+              scores={scores ? {
+                homeready: scores.homeready ?? { score: 0, grade: 'N/A' },
+                investoredge: scores.investoredge ?? { score: 0, grade: 'N/A' },
+                markethealth: scores.markethealth ?? { score: 0, grade: 'N/A' },
+              } : { homeready: { score: 0, grade: 'N/A' }, investoredge: { score: 0, grade: 'N/A' }, markethealth: { score: 0, grade: 'N/A' } }}
+              lastUpdated={lastUpdated ?? new Date().toISOString()}
             />
 
             {/* Quick Actions */}
@@ -589,7 +471,7 @@ export function MarketDashboard({
                 Generate Full Report
               </Link>
               <Link
-                href={`/graphs?geo=${geographyId}&level=${geographyType}&name=${encodeURIComponent(data.geography.name)}&metric=listing_price`}
+                href={`/graphs?geo=${geographyId}&level=${geographyType}&name=${encodeURIComponent(geography.name)}&metric=listing_price`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
                 <TrendingUp className="w-4 h-4" />

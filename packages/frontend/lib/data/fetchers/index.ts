@@ -45,5 +45,16 @@ export {
   type MarketAnalysisResult,
 } from './market-analysis';
 
+// Market snapshot (batch)
+export {
+  fetchMarketSnapshot,
+  type MarketSnapshotMetric,
+  type MarketSnapshotScoreEntry,
+  type MarketSnapshotResponse,
+} from './market-snapshot';
+
+// Batch trends (server-side)
+export { fetchBatchTrendsServer, type BatchTrendEntry } from './trend';
+
 // Reports
 export { regenerateNarratives } from './reports';

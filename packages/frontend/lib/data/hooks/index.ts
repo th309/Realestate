@@ -46,6 +46,14 @@ export {
   type UseScoreDataResult,
 } from './useScoreData';
 
+// Market snapshot (batch - replaces useDataCardBatch for Markets page)
+export {
+  useMarketSnapshot,
+  type MarketSnapshotCard,
+  type UseMarketSnapshotOptions,
+  type UseMarketSnapshotResult,
+} from './useMarketSnapshot';
+
 // Metric access (entitlements gating)
 export {
   useMetricAccess,

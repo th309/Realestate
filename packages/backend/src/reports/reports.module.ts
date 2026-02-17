@@ -18,9 +18,10 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { TimeSeriesModule } from '../timeseries/timeseries.module';
 import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { PartnersModule } from '../partners/partners.module';
+import { EconomicModule } from '../economic/economic.module';
 
 @Module({
-  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule, PartnersModule],
+  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule, PartnersModule, EconomicModule],
   providers: [ReportsService, ClaudeService, ClaudeNewsService],
   controllers: [ReportsController],
   exports: [ReportsService, ClaudeService, ClaudeNewsService],

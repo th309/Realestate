@@ -16,6 +16,7 @@ import { ClaudeNewsService } from './claude-news.service';
 import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
+import { EconomicService } from '../economic/economic.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { NARRATIVE_PROMPTS, SECTIONS_BY_REPORT_TYPE } from './narrative-prompts';
 import { ScoreComponentBreakdown } from '../scoring/scoring.types';
@@ -166,6 +167,7 @@ export class ReportsService {
     private readonly timeSeriesService: TimeSeriesService,
     private readonly entitlementsService: EntitlementsService,
     private readonly partnersService: PartnersService,
+    private readonly economicService: EconomicService,
   ) {}
 
   /**
@@ -278,82 +280,70 @@ export class ReportsService {
     const client = this.supabase.getClient();
 
     try {
-      // 1. Fetch PropertyIQ scores (with component breakdowns for report sections)
       // Map geography type to GeographyLevel (metro, county, zip)
       const geoType = dto.primary_geography.type as 'metro' | 'county' | 'zip';
-      const scores = await this.scoringService.getScore(
-        dto.primary_geography.id,
-        geoType,
-        undefined,
-        { components: true },
-      );
-
-      // 1b. Fetch market metrics for AI context (based on template requirements)
-      // Include demographics if specified in template
       const requiredMetrics = template.config?.data_requirements?.current_metrics || [];
       const demographics = template.config?.data_requirements?.demographics || [];
       const allRequiredMetrics = [...requiredMetrics, ...demographics, 'census', 'population', 'median_income'];
-      const marketMetrics = await this.fetchMarketMetrics(
-        dto.primary_geography.id,
-        geoType,
-        allRequiredMetrics,
-      );
 
-      // 1c. Fetch historical data for key metrics (last 6 months)
-      const historicalData = await this.fetchHistoricalData(
-        dto.primary_geography.id,
-        geoType,
-      );
+      // 1. Fetch all data in parallel: scores, metrics, historical, news
+      const newsTimeout = (promise: Promise<any>, ms: number) =>
+        Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('News scouting timed out')), ms))]);
 
-      // 1d. Fetch comparison geography data
-      const comparisons: Record<string, any> = {};
-      if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
-        for (const compGeo of dto.comparison_geographies) {
-          const compGeoType = compGeo.type as 'metro' | 'county' | 'zip';
-          const compMetrics = await this.fetchMarketMetrics(
-            compGeo.id,
-            compGeoType,
-            allRequiredMetrics,
-          );
-          const compHistorical = await this.fetchHistoricalData(
-            compGeo.id,
-            compGeoType,
-          );
-          const compScores = await this.scoringService.getScore(
-            compGeo.id,
-            compGeoType,
-            undefined,
-            { components: true },
-          );
-
-          comparisons[compGeo.id] = {
-            geography: compGeo,
-            current: compMetrics,
-            historical: compHistorical,
-            scores: compScores,
-          };
-        }
-      }
-
-      // 2. Scout news via Claude (with caching) - wrapped in try/catch so news
-      //    failures don't prevent report generation
-      let newsResult: any = null;
-      try {
-        newsResult = await this.claudeNewsService.getOrScoutNews(
+      const [scores, marketMetrics, historicalData, newsSettled] = await Promise.all([
+        // Scores
+        this.scoringService.getScore(
           dto.primary_geography.id,
           geoType,
-          dto.primary_geography.name,
-          dto.primary_geography.state || '',
-          {
-            includeNationalContext: true,
-            maxNewsItems: 10,
-            lookbackDays: 90,
-          },
+          undefined,
+          { components: true },
+        ),
+        // Market metrics
+        this.fetchMarketMetrics(
+          dto.primary_geography.id,
+          geoType,
+          allRequiredMetrics,
+        ),
+        // Historical data
+        this.fetchHistoricalData(
+          dto.primary_geography.id,
+          geoType,
+        ),
+        // News scouting with 30s timeout - don't block the report
+        newsTimeout(
+          this.claudeNewsService.getOrScoutNews(
+            dto.primary_geography.id,
+            geoType,
+            dto.primary_geography.name,
+            dto.primary_geography.state || '',
+            { includeNationalContext: true, maxNewsItems: 10, lookbackDays: 90 },
+          ),
+          60_000,
+        ).catch((err: any) => {
+          this.logger.warn(`News scouting failed/timed out for ${dto.primary_geography.name}: ${err?.message || err}`);
+          return null;
+        }),
+      ]);
+
+      const newsResult = newsSettled;
+
+      // Fetch comparison geography data (parallel per-geography)
+      const comparisons: Record<string, any> = {};
+      if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
+        const compResults = await Promise.all(
+          dto.comparison_geographies.map(async (compGeo) => {
+            const compGeoType = compGeo.type as 'metro' | 'county' | 'zip';
+            const [compMetrics, compHistorical, compScores] = await Promise.all([
+              this.fetchMarketMetrics(compGeo.id, compGeoType, allRequiredMetrics),
+              this.fetchHistoricalData(compGeo.id, compGeoType),
+              this.scoringService.getScore(compGeo.id, compGeoType, undefined, { components: true }),
+            ]);
+            return { id: compGeo.id, geography: compGeo, current: compMetrics, historical: compHistorical, scores: compScores };
+          }),
         );
-      } catch (newsError: any) {
-        this.logger.warn(
-          `News scouting failed for ${dto.primary_geography.name}, continuing without news: ${newsError?.message || newsError}`,
-        );
+        for (const comp of compResults) {
+          comparisons[comp.id] = { geography: comp.geography, current: comp.current, historical: comp.historical, scores: comp.scores };
+        }
       }
 
       // Get signal summary if news available
@@ -399,6 +389,8 @@ export class ReportsService {
           median_income: marketMetrics.median_income,
           population: marketMetrics.population,
           population_growth_yoy: marketMetrics.population_growth_yoy,
+          unemployment_rate: marketMetrics.unemployment_rate,
+          job_growth_yoy: marketMetrics.job_growth_yoy,
         },
         historical: historicalData,
         benchmarks: {},
@@ -542,7 +534,7 @@ export class ReportsService {
       }
 
       if (hasAiInsights && template.config.ai_config?.narrative_sections) {
-        // Format news for Claude prompt context
+        // Pass raw news data for section-specific filtering in claude.service
         const newsContext = newsResult
           ? this.claudeNewsService.formatNewsForPrompt(newsResult, {
               maxNewsItems: 5,
@@ -637,6 +629,11 @@ export class ReportsService {
             market_signal_summary: signalSummary
               ? `Overall market signal: ${signalSummary.overall.toUpperCase()} (${signalSummary.bullish_count} bullish, ${signalSummary.bearish_count} bearish signals)`
               : null,
+            // Raw news data for section-specific filtering
+            raw_news_items: newsResult?.local_news || [],
+            raw_economic_indicators: newsResult?.economic_indicators || [],
+            raw_market_signals: newsResult?.market_signals || [],
+            raw_national_context: newsResult?.national_context || null,
             // Score context for AI narratives
             homeready_context: scoreContexts?.homeready?.interpretation || null,
             homeready_comparison: scoreContexts?.homeready?.comparison || null,
@@ -1144,6 +1141,24 @@ export class ReportsService {
             metrics.median_age = censusData.median_age;
             metrics.population_growth_yoy = censusData.population_yoy;
           }
+        }
+
+        // Get economic data (unemployment, job growth) for metro
+        try {
+          const [unemploymentData, jobGrowthData] = await Promise.all([
+            this.economicService.getMetroUnemployment(),
+            this.economicService.getMetroJobGrowth(),
+          ]);
+          const metroUnemployment = unemploymentData.find(d => d.region_id === geographyId || d.cbsa_code === geographyId);
+          if (metroUnemployment?.value !== null && metroUnemployment?.value !== undefined) {
+            metrics.unemployment_rate = metroUnemployment.value;
+          }
+          const metroJobGrowth = jobGrowthData.find(d => d.region_id === geographyId || d.cbsa_code === geographyId);
+          if (metroJobGrowth?.value !== null && metroJobGrowth?.value !== undefined) {
+            metrics.job_growth_yoy = metroJobGrowth.value;
+          }
+        } catch (econError) {
+          this.logger.warn('Failed to fetch economic data for metro, continuing:', econError);
         }
       } else if (geographyType === 'county') {
         // Get Realtor county data (all available fields)

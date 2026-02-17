@@ -200,9 +200,9 @@ export default function DataPage() {
                     Metrics ({metrics.length})
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
-                    {metrics.map((name) => (
+                    {metrics.map((name, i) => (
                       <span
-                        key={name}
+                        key={`${name}-${i}`}
                         className="text-xs bg-surface-container px-2.5 py-1 rounded-full text-on-surface-variant"
                       >
                         {name}

@@ -7,8 +7,112 @@ export class TimeSeriesController {
   constructor(private readonly timeSeriesService: TimeSeriesService) {}
 
   /**
+   * Batch trend endpoint: returns trend data for multiple metrics in a single request.
+   * Metrics are passed as comma-separated query param.
+   *
+   * IMPORTANT: This route MUST be defined BEFORE the generic :metric/:geoLevel/:regionId
+   * route, otherwise NestJS matches "batch" as a metric ID.
+   *
+   * GET /api/timeseries/batch/:geoLevel/:regionId?metrics=home_value,rent_index&historyMonths=6
+   */
+  @Get('batch/:geoLevel/:regionId')
+  async getBatchTrends(
+    @Param('geoLevel') geoLevel: string,
+    @Param('regionId') regionId: string,
+    @Query('metrics') metricsParam?: string,
+    @Query('historyMonths') historyMonths?: string,
+  ) {
+    const historyMonthsNum = parseHistoryMonths(historyMonths || '6');
+    const metricIds = metricsParam ? metricsParam.split(',').filter(Boolean) : [];
+
+    if (metricIds.length === 0) {
+      return { success: true, trends: {} };
+    }
+
+    const lastPoints = (historyMonthsNum + 1) * 4;
+    const trends: Record<string, {
+      current: number | null;
+      prior: number | null;
+      percentChange: number | null;
+      direction: 'up' | 'down' | 'stable';
+    }> = {};
+
+    await Promise.all(
+      metricIds.map(async (metricId) => {
+        try {
+          const data = await this.timeSeriesService.getTimeSeries(
+            metricId,
+            geoLevel,
+            regionId,
+            undefined,
+            undefined,
+            undefined,
+            lastPoints,
+          );
+
+          if (!data || data.length < 2) {
+            trends[metricId] = {
+              current: data?.[data.length - 1]?.value ?? null,
+              prior: null,
+              percentChange: null,
+              direction: 'stable',
+            };
+            return;
+          }
+
+          const take = Math.min(historyMonthsNum + 1, data.length);
+          const slice = data.slice(-take);
+          const current = slice[slice.length - 1]?.value ?? null;
+          const prior = slice[0]?.value ?? null;
+
+          let percentChange: number | null = null;
+          if (current != null && prior != null && prior !== 0) {
+            percentChange = Number((((current - prior) / Math.abs(prior)) * 100).toFixed(1));
+          }
+
+          const direction: 'up' | 'down' | 'stable' =
+            percentChange == null ? 'stable' :
+            percentChange > 0.5 ? 'up' :
+            percentChange < -0.5 ? 'down' : 'stable';
+
+          trends[metricId] = { current, prior, percentChange, direction };
+        } catch {
+          trends[metricId] = { current: null, prior: null, percentChange: null, direction: 'stable' };
+        }
+      }),
+    );
+
+    return { success: true, trends };
+  }
+
+  /**
+   * Get available date range for a specific metric/geography combination.
+   *
+   * IMPORTANT: This route with 'dates' literal prefix MUST be before the generic
+   * :metric/:geoLevel/:regionId route.
+   */
+  @Get('dates/:metric/:geoLevel')
+  async getAvailableDates(
+    @Param('metric') metric: string,
+    @Param('geoLevel') geoLevel: string,
+  ) {
+    const dates = await this.timeSeriesService.getAvailableDates(
+      metric,
+      geoLevel,
+    );
+    return {
+      success: true,
+      metric,
+      geoLevel,
+      ...dates,
+    };
+  }
+
+  /**
    * Get historical time-series data for any metric/geography/region combination.
    * Optional historyMonths (0-6) returns last N months and adds current, prior, trend_change for real-time calculations.
+   *
+   * IMPORTANT: This generic parameterized route MUST be the LAST route in the controller.
    *
    * @param metric - Metric ID (e.g., 'listing_price', 'home_value', 'population', etc.)
    * @param geoLevel - Geography level (national, state, metro, county, city, zip)
@@ -87,25 +191,5 @@ export class TimeSeriesController {
     }
 
     return body;
-  }
-
-  /**
-   * Get available date range for a specific metric/geography combination
-   */
-  @Get('dates/:metric/:geoLevel')
-  async getAvailableDates(
-    @Param('metric') metric: string,
-    @Param('geoLevel') geoLevel: string,
-  ) {
-    const dates = await this.timeSeriesService.getAvailableDates(
-      metric,
-      geoLevel,
-    );
-    return {
-      success: true,
-      metric,
-      geoLevel,
-      ...dates,
-    };
   }
 }

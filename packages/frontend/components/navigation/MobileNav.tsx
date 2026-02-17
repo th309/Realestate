@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Map, TrendingUp, FileText, BarChart3, Database } from 'lucide-react';
+import { Home, Map, TrendingUp, FileText, BarChart3 } from 'lucide-react';
 
 interface NavItem {
   label: string;
@@ -17,7 +17,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Markets', href: '/market', icon: BarChart3 },
   { label: 'Graphs', href: '/graphs', icon: TrendingUp },
   { label: 'Reports', href: '/reports', icon: FileText },
-  { label: 'Data', href: '/data', icon: Database },
 ];
 
 interface MobileNavProps {

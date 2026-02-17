@@ -1,4 +1,5 @@
-import { Info, Users, Target, Shield } from 'lucide-react';
+import { Info, Users, Target, Shield, Database } from 'lucide-react';
+import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 
 export default function AboutPage() {
@@ -64,6 +65,28 @@ export default function AboutPage() {
               about making real estate decisions easier. Based in Austin, TX, we combine local market
               expertise with cutting-edge AI technology.
             </p>
+          </section>
+
+          {/* Data Sources */}
+          <section>
+            <h2 className="text-xl font-semibold text-on-surface mb-4 flex items-center gap-2">
+              <Database className="w-5 h-5 text-primary" />
+              Data Sources
+            </h2>
+            <p className="text-on-surface-variant leading-relaxed mb-4">
+              PropertyIQ aggregates data from trusted public and private sources including Realtor.com,
+              Zillow, the U.S. Census Bureau, FRED, BLS, and BEA. We update metrics monthly to ensure
+              you always have the latest picture.
+            </p>
+            <Link
+              href="/data"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              View all data sources
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </section>
 
           {/* CTA */}

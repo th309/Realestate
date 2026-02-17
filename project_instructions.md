@@ -19,21 +19,28 @@
     * **No Defaults:** NEVER hardcode fallback values for secrets (e.g., `process.env.KEY || 'default'`). The app MUST crash if a secret is missing.
     * **Exposure:** NEVER expose `service_role` keys to the client.
 
-### 1.3 Architecture & Modularity (The "300-Line Rule")
-* **Modular by Default:** Prefer small, single-purpose files.
-* **File Size Limit:**
-    * **Target:** Keep source files under **300 lines**.
-    * **Trigger:** If editing a file exceeds 300 lines, you MUST:
-        1.  **Analyze** logical components.
-        2.  **Propose** a refactor plan.
-        3.  **Execute** the split into `/utils/`, `/hooks/`, or sub-components.
-* **Colocation:** Keep related utils/types in the same feature folder.
-    ```text
-    src/features/UserProfile/
-    ├── UserProfile.tsx
-    ├── userProfile.utils.ts
-    └── userProfile.types.ts
-    ```
+ ### 1.3 Architecture & Modularity (File Size Limits)
+  * **Modular by Default:** Prefer small, single-purpose files.
+  * **File Size Limits (by file type):**
+
+  | File Type | Target | Hard Limit | Action at Hard Limit |
+  |-----------|--------|------------|---------------------|
+  | Logic files (hooks, utils, helpers, services, types) | Under 200 lines | **300 lines** | MUST split |
+  | React components (single responsibility, JSX-heavy) | Under 300 lines | **400 lines** | MUST split |
+  | Test files (e2e, unit) | Under 400 lines | **500 lines** | MUST split by describe block |
+
+  * **At the hard limit, you MUST:**
+      1.  **Analyze** logical components (sub-components, helpers, constants, types).
+      2.  **Propose** a refactor plan.
+      3.  **Execute** the split into `/utils/`, `/hooks/`, or sub-components.
+  * **What counts as "single responsibility":** One exported component with its local helpers. A file with 2+ exported
+  components must be split regardless of line count.
+  * **Colocation:** Keep related utils/types in the same feature folder.
+      ```text
+      src/features/UserProfile/
+      ├── UserProfile.tsx
+      ├── userProfile.utils.ts
+      └── userProfile.types.ts      ```
 
 ---
 

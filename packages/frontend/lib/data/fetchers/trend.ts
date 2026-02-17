@@ -7,6 +7,7 @@
 
 import type { GeoLevel, TrendResult, TrendDirection } from '../types';
 import { fetchTimeSeriesData } from './timeseries';
+import { fetchAPIWithParams } from './base';
 import { getMetricConfig } from '../registry-helpers';
 
 /**
@@ -121,6 +122,36 @@ export async function fetchTrendDataBatch(
   );
 
   return results;
+}
+
+/**
+ * Batch fetch trends via the server-side batch endpoint (single HTTP call).
+ * Returns percent change and direction for all metrics at once.
+ */
+export interface BatchTrendEntry {
+  current: number | null;
+  prior: number | null;
+  percentChange: number | null;
+  direction: 'up' | 'down' | 'stable';
+}
+
+export async function fetchBatchTrendsServer(
+  metricIds: string[],
+  geoLevel: GeoLevel,
+  regionId: string,
+  months: number = 6,
+): Promise<Record<string, BatchTrendEntry>> {
+  if (metricIds.length === 0) return {};
+
+  const response = await fetchAPIWithParams<{
+    success: boolean;
+    trends: Record<string, BatchTrendEntry>;
+  }>(`/api/timeseries/batch/${geoLevel}/${regionId}`, {
+    metrics: metricIds.join(','),
+    historyMonths: months,
+  });
+
+  return response.trends ?? {};
 }
 
 /**

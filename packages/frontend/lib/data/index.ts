@@ -144,6 +144,14 @@ export {
   type MarketAnalysisSection,
   type MarketAnalysisResult,
 
+  // Market snapshot (batch)
+  fetchMarketSnapshot,
+  type MarketSnapshotMetric,
+  type MarketSnapshotScoreEntry,
+  type MarketSnapshotResponse,
+  fetchBatchTrendsServer,
+  type BatchTrendEntry,
+
   // Reports
   regenerateNarratives,
 } from './fetchers';
@@ -182,6 +190,12 @@ export {
   useSingleScore,
   type UseScoreDataOptions,
   type UseScoreDataResult,
+
+  // Market snapshot (batch - replaces useDataCardBatch for Markets page)
+  useMarketSnapshot,
+  type MarketSnapshotCard,
+  type UseMarketSnapshotOptions,
+  type UseMarketSnapshotResult,
 
   // Metric access (entitlements gating)
   useMetricAccess,
