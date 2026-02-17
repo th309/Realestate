@@ -6,6 +6,10 @@
 
 import { API_URL } from './base';
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface RegenerateNarrativesRequest {
   user_inputs: Record<string, unknown>;
 }
@@ -15,13 +19,139 @@ interface RegenerateNarrativesResponse {
   ai_narrative: Record<string, string | string[]>;
 }
 
+export interface GenerateReportRequest {
+  template_slug: string;
+  user_type: string;
+  primary_geography: {
+    id: string;
+    type: string;
+    name: string;
+    state?: string;
+    center?: [number, number];
+  };
+  comparison_geographies?: {
+    id: string;
+    type: string;
+    name: string;
+    state?: string;
+    center?: [number, number];
+  }[];
+  user_inputs?: Record<string, unknown>;
+}
+
+export interface GenerateReportResponse {
+  report_id: string;
+  status: 'generating';
+}
+
+interface FetchReportOptions {
+  userId: string;
+}
+
+interface GenerateReportOptions {
+  userId: string;
+  userTier?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Fetchers
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch a single report by ID.
+ */
+export async function fetchReport<T = unknown>(
+  reportId: string,
+  options: FetchReportOptions,
+): Promise<T | null> {
+  const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
+    headers: {
+      'x-user-id': options.userId,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Failed to fetch report: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch report history for the current user.
+ */
+export async function fetchReportHistory<T = unknown>(
+  options: FetchReportOptions,
+): Promise<T[]> {
+  const response = await fetch(`${API_URL}/api/reports/history`, {
+    headers: {
+      'x-user-id': options.userId,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch reports');
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Fetch a paginated report list.
+ */
+export async function fetchReportList<T = unknown>(
+  options: FetchReportOptions & { limit?: number },
+): Promise<T[]> {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', String(options.limit));
+
+  const response = await fetch(`${API_URL}/api/reports?${params}`, {
+    headers: { 'x-user-id': options.userId },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch reports');
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/**
+ * Generate a new report.
+ */
+export async function generateReport(
+  body: GenerateReportRequest,
+  options: GenerateReportOptions,
+): Promise<GenerateReportResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-user-id': options.userId,
+  };
+  if (options.userTier) {
+    headers['x-user-tier'] = options.userTier;
+  }
+
+  const response = await fetch(`${API_URL}/api/reports/generate`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Failed to generate report: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 /**
  * Request narrative regeneration for a report based on updated user inputs.
- *
- * @param reportId - The report to regenerate narratives for
- * @param userInputs - Updated user inputs (priorities, income, etc.)
- * @param signal - Optional AbortSignal for cancellation
- * @returns The updated narrative keys and content
  */
 export async function regenerateNarratives(
   reportId: string,

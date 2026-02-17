@@ -25,31 +25,18 @@ import { BrandingProvider } from './components/BrandingProvider';
 import { PageRenderer } from './components/SectionRenderer';
 import { ReportWithTemplate } from './components/types';
 import { ConversationPanel } from './ConversationPanel';
+import { fetchReport as fetchReportAPI } from '@/lib/data';
 import '../styles/report-theme.css';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const POLL_INTERVAL = 2000;
+const USER_ID = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
 interface ReportViewerRefinedProps {
   reportId: string;
 }
 
 async function fetchReport(reportId: string): Promise<ReportWithTemplate | null> {
-  const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
-
-  const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
-    headers: {
-      'x-user-id': userId,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) return null;
-    throw new Error(`Failed to fetch report: ${response.statusText}`);
-  }
-
-  return response.json();
+  return fetchReportAPI<ReportWithTemplate>(reportId, { userId: USER_ID });
 }
 
 const GENERATION_STEPS = [

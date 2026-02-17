@@ -57,4 +57,15 @@ export {
 export { fetchBatchTrendsServer, type BatchTrendEntry } from './trend';
 
 // Reports
-export { regenerateNarratives } from './reports';
+export {
+  fetchReport,
+  fetchReportHistory,
+  fetchReportList,
+  generateReport,
+  regenerateNarratives,
+  type GenerateReportRequest,
+  type GenerateReportResponse,
+} from './reports';
+
+// Benchmarks
+export { fetchBenchmarks, type BenchmarkData } from './benchmarks';

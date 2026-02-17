@@ -19,8 +19,7 @@ import {
 import { SCORE_INFO } from '../constants';
 import type { ReportListItem, ReportStatus } from '../types';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchReportHistory } from '@/lib/data';
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; className: string }> = {
   pending: { label: 'Pending', className: 'report-badge-pending' },
@@ -47,16 +46,8 @@ export const ReportHistoryRefined: React.FC = () => {
   useEffect(() => {
     const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
-    fetch(`${API_URL}/api/reports/history`, {
-      headers: {
-        'x-user-id': userId,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch reports');
-        const data = await res.json();
-        const reportsList = Array.isArray(data) ? data : [];
+    fetchReportHistory({ userId })
+      .then((reportsList: any[]) => {
         const mappedReports: ReportListItem[] = reportsList.map((r: any) => ({
           id: r.id,
           title: r.title,

@@ -24,32 +24,19 @@ import { SectionIcon, formatSectionName } from './components/utils/sectionDispla
 import { ReportHeader } from './components/ReportHeader';
 import { ReportFooter } from './components/ReportFooter';
 import { normalizeReport } from './components/utils/normalizeReport';
-import { API_URL } from '@/lib/data/fetchers/base';
+import { fetchReport as fetchReportAPI } from '@/lib/data';
 import '../styles/report-theme.css';
 
 const POLL_INTERVAL = 2000;
+const USER_ID = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
 interface ReportViewerProps {
   reportId: string;
 }
 
 async function fetchReport(reportId: string): Promise<ReportWithTemplate | null> {
-  const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
-
-  const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
-    headers: {
-      'x-user-id': userId,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) return null;
-    throw new Error(`Failed to fetch report: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return normalizeReport(data);
+  const data = await fetchReportAPI<ReportWithTemplate>(reportId, { userId: USER_ID });
+  return data ? normalizeReport(data) : null;
 }
 
 export function ReportViewer({ reportId }: ReportViewerProps) {

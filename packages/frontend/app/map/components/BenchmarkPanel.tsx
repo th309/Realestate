@@ -11,9 +11,7 @@ import {
   DATA_DATES,
   formatDataDateForDisplay,
 } from '../config';
-
-// API URL for backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchBenchmarks as fetchBenchmarksAPI, type BenchmarkData } from '@/lib/data';
 
 interface BenchmarkPanelProps {
   selectedGeography: SelectedGeography;
@@ -29,14 +27,6 @@ interface MetricConfig {
   format: BenchmarkFormat;
   lowerIsBetter: boolean;
   category: 'homebuyer' | 'investor';
-}
-
-interface BenchmarkData {
-  location: Record<string, number | null>;
-  state: Record<string, number | null>;
-  national: Record<string, number | null>;
-  locationName: string;
-  stateName: string | null;
 }
 
 // Metric configurations
@@ -106,44 +96,32 @@ export function BenchmarkPanel({
           }
         }
 
-        const params = new URLSearchParams({
-          geoLevel,
-          regionId: selectedGeography.id,
-        });
-        if (stateId) {
-          params.append('stateId', stateId);
-        }
-
         console.log(`[BenchmarkPanel] Fetching: geoLevel=${geoLevel}, regionId=${selectedGeography.id}, stateId=${stateId}`);
-        const response = await fetch(`${API_URL}/api/realtor/benchmarks?${params}`);
-        if (response.ok) {
-          const data = await response.json();
 
-          // Calculate derived metrics: Months of Supply = inventory / pending_listings
-          // This is a normalized metric comparable across geo levels
-          const calcMonthsOfSupply = (obj: Record<string, number | null>) => {
-            const inventory = obj?.for_sale_inventory;
-            const pending = obj?.pending_listings;
-            if (inventory && pending && pending > 0) {
-              return inventory / pending;
-            }
-            return null;
-          };
+        const data = await fetchBenchmarksAPI(geoLevel, selectedGeography.id, stateId);
 
-          if (data.location) data.location.months_of_supply = calcMonthsOfSupply(data.location);
-          if (data.state) data.state.months_of_supply = calcMonthsOfSupply(data.state);
-          if (data.national) data.national.months_of_supply = calcMonthsOfSupply(data.national);
+        // Calculate derived metrics: Months of Supply = inventory / pending_listings
+        // This is a normalized metric comparable across geo levels
+        const calcMonthsOfSupply = (obj: Record<string, number | null>) => {
+          const inventory = obj?.for_sale_inventory;
+          const pending = obj?.pending_listings;
+          if (inventory && pending && pending > 0) {
+            return inventory / pending;
+          }
+          return null;
+        };
 
-          console.log('[BenchmarkPanel] API Response:', {
-            locationMetrics: Object.keys(data.location || {}).filter(k => data.location[k] !== null).length,
-            stateMetrics: Object.keys(data.state || {}).filter(k => data.state[k] !== null).length,
-            nationalMetrics: Object.keys(data.national || {}).filter(k => data.national[k] !== null).length,
-            months_of_supply: { local: data.location?.months_of_supply, state: data.state?.months_of_supply, national: data.national?.months_of_supply }
-          });
-          setBenchmarkData(data);
-        } else {
-          console.error('[BenchmarkPanel] API Error:', response.status, response.statusText);
-        }
+        if (data.location) data.location.months_of_supply = calcMonthsOfSupply(data.location);
+        if (data.state) data.state.months_of_supply = calcMonthsOfSupply(data.state);
+        if (data.national) data.national.months_of_supply = calcMonthsOfSupply(data.national);
+
+        console.log('[BenchmarkPanel] API Response:', {
+          locationMetrics: Object.keys(data.location || {}).filter(k => data.location[k] !== null).length,
+          stateMetrics: Object.keys(data.state || {}).filter(k => data.state[k] !== null).length,
+          nationalMetrics: Object.keys(data.national || {}).filter(k => data.national[k] !== null).length,
+          months_of_supply: { local: data.location?.months_of_supply, state: data.state?.months_of_supply, national: data.national?.months_of_supply }
+        });
+        setBenchmarkData(data);
       } catch (error) {
         console.error('Error fetching benchmarks:', error);
       } finally {

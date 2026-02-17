@@ -12,8 +12,7 @@ import { SearchWidget } from '@/app/map/components/SearchWidget';
 import type { SearchResult } from '@/app/map/types';
 import type { UserType, Geography, GeographyType, ReportListItem } from './types';
 import PrioritySelector from './components/PrioritySelector';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { generateReport as generateReportAPI, fetchReportList } from '@/lib/data';
 
 // ============================================================================
 // TYPES
@@ -574,21 +573,7 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
 
       const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
-      const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to generate report: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await generateReportAPI(requestBody, { userId });
       router.push(`/reports/${data.report_id}`);
     } catch (err) {
       console.error('Report generation error:', err);
@@ -741,11 +726,8 @@ function ReportHistory() {
 
   useEffect(() => {
     const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
-    fetch(`${API_BASE_URL}/api/reports?limit=10`, {
-      headers: { 'x-user-id': userId },
-    })
-      .then(res => res.json())
-      .then(data => setReports(Array.isArray(data) ? data : []))
+    fetchReportList({ userId, limit: 10 })
+      .then(data => setReports(data as ReportListItem[]))
       .catch(() => setReports([]))
       .finally(() => setLoading(false));
   }, []);

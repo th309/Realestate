@@ -153,7 +153,17 @@ export {
   type BatchTrendEntry,
 
   // Reports
+  fetchReport,
+  fetchReportHistory,
+  fetchReportList,
+  generateReport,
   regenerateNarratives,
+  type GenerateReportRequest,
+  type GenerateReportResponse,
+
+  // Benchmarks
+  fetchBenchmarks,
+  type BenchmarkData,
 } from './fetchers';
 
 // ============================================================================

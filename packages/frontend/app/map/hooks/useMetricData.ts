@@ -11,7 +11,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, API_URL, type GeoLevel, type MetricFormat } from '@/lib/data';
+import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, fetchAPI, type GeoLevel, type MetricFormat } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
 import { normalizeZipKey } from '@/lib/format/zip';
 
@@ -74,12 +74,7 @@ export function useMetricData(
             const geoPath = getGeoPathSegment(geoLevel);
             const url = config.apiEndpoint.replace('{geo}', geoPath);
 
-            const response = await fetch(`${API_URL}${url}`);
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
-
-            const rawData = await response.json();
+            const rawData = await fetchAPI<ApiResponseItem[] | ApiResponse>(url);
 
             // Normalize response format
             const normalized: ApiResponse = Array.isArray(rawData)

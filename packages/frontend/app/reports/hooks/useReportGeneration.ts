@@ -1,10 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
+import { generateReport as generateReportAPI } from '@/lib/data';
 import type { WizardState, GenerateReportRequest, GenerateReportResponse } from '../types';
-
-// Backend API URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface UseReportGenerationReturn {
   isGenerating: boolean;
@@ -61,22 +59,10 @@ export function useReportGeneration(): UseReportGenerationReturn {
       const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
       const effectiveTier = simulatedTier || tier;
-      const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-          ...(effectiveTier ? { 'x-user-tier': effectiveTier } : {}),
-        },
-        body: JSON.stringify(requestBody),
+      const data = await generateReportAPI(requestBody, {
+        userId,
+        userTier: effectiveTier || undefined,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Failed to generate report: ${response.status}`);
-      }
-
-      const data: GenerateReportResponse = await response.json();
 
       // Navigate to the report page
       router.push(`/reports/${data.report_id}`);

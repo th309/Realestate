@@ -6,8 +6,7 @@ import { M3Card } from '@/app/graphs/components/M3Card';
 import { SCORE_INFO } from '../constants';
 import type { ReportListItem, ReportStatus } from '../types';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchReportHistory } from '@/lib/data';
 
 const STATUS_STYLES: Record<ReportStatus, { label: string; color: string; bgColor: string }> = {
   pending: { label: 'Pending', color: 'text-on-surface-variant', bgColor: 'bg-surface-container' },
@@ -27,17 +26,8 @@ export const ReportHistory: React.FC = () => {
     // TODO: Replace with actual user ID from auth context
     const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
-    fetch(`${API_URL}/api/reports/history`, {
-      headers: {
-        'x-user-id': userId,
-        'Content-Type': 'application/json',
-      },
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch reports');
-        const data = await res.json();
-        // Backend returns array directly with nested template info
-        const reportsList = Array.isArray(data) ? data : [];
+    fetchReportHistory({ userId })
+      .then((reportsList: any[]) => {
         // Map to expected frontend format
         const mappedReports: ReportListItem[] = reportsList.map((r: any) => ({
           id: r.id,
