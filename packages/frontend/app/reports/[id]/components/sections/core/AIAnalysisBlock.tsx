@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Sparkles, Lock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -147,16 +149,11 @@ export function AIAnalysisBlock({
         </div>
       </div>
 
-      {/* Content paragraphs */}
-      <div className="space-y-[var(--report-space-sm)]">
-        {validParagraphs.map((paragraph, index) => (
-          <p
-            key={index}
-            className={`text-[0.9375rem] leading-relaxed ${styles.text}`}
-          >
-            {paragraph}
-          </p>
-        ))}
+      {/* Content - rendered as markdown */}
+      <div className={`prose prose-sm max-w-none ${styles.text} [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:text-[0.9375rem] [&_p]:leading-relaxed [&_p]:mb-3 [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:pl-5 [&_li]:text-[0.9375rem] [&_li]:leading-relaxed [&_li]:mb-1`}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {validParagraphs.join('\n\n')}
+        </ReactMarkdown>
       </div>
     </div>
   );

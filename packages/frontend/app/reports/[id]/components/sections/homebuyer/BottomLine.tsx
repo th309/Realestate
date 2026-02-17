@@ -55,8 +55,11 @@ function parseArrayField(value: unknown): string[] {
   }
 
   if (typeof value === 'string') {
-    const trimmed = value.trim();
+    let trimmed = value.trim();
     if (trimmed === '') return [];
+
+    // Strip markdown code fences (```json ... ```)
+    trimmed = trimmed.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 
     // Try JSON.parse in case the backend serialised an array as a string
     if (trimmed.startsWith('[')) {
@@ -68,6 +71,12 @@ function parseArrayField(value: unknown): string[] {
       } catch {
         // Not valid JSON – fall through
       }
+    }
+
+    // Try extracting numbered/bulleted list items
+    const listItems = trimmed.split(/\n/).filter(line => /^\s*(?:\d+[\.\)]\s*|[-*]\s+)/.test(line));
+    if (listItems.length >= 2) {
+      return listItems.map(item => item.replace(/^\s*(?:\d+[\.\)]\s*|[-*]\s+)/, '').trim());
     }
 
     // Treat as a single-item array

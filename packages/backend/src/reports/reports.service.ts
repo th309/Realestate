@@ -104,6 +104,7 @@ export interface MarketMetrics {
   market_heat_index?: number; // alias for hotness_score
   hotness_score?: number;
   demand_score?: number;
+  supply_score?: number;
   days_to_pending?: number;
   days_on_market?: number;
   for_sale_inventory?: number;
@@ -334,18 +335,26 @@ export class ReportsService {
         }
       }
 
-      // 2. Scout news via Claude (with caching)
-      const newsResult = await this.claudeNewsService.getOrScoutNews(
-        dto.primary_geography.id,
-        geoType,
-        dto.primary_geography.name,
-        dto.primary_geography.state || '',
-        {
-          includeNationalContext: true,
-          maxNewsItems: 10,
-          lookbackDays: 90,
-        },
-      );
+      // 2. Scout news via Claude (with caching) - wrapped in try/catch so news
+      //    failures don't prevent report generation
+      let newsResult: any = null;
+      try {
+        newsResult = await this.claudeNewsService.getOrScoutNews(
+          dto.primary_geography.id,
+          geoType,
+          dto.primary_geography.name,
+          dto.primary_geography.state || '',
+          {
+            includeNationalContext: true,
+            maxNewsItems: 10,
+            lookbackDays: 90,
+          },
+        );
+      } catch (newsError: any) {
+        this.logger.warn(
+          `News scouting failed for ${dto.primary_geography.name}, continuing without news: ${newsError?.message || newsError}`,
+        );
+      }
 
       // Get signal summary if news available
       const signalSummary = newsResult
@@ -380,12 +389,16 @@ export class ReportsService {
           inventory_yoy: marketMetrics.inventory_yoy,
           hotness_score: marketMetrics.hotness_score,
           demand_score: marketMetrics.demand_score,
+          supply_score: marketMetrics.supply_score,
+          pending_ratio: marketMetrics.pending_ratio,
+          price_reduced_share: marketMetrics.price_reduced_share,
           cap_rate: marketMetrics.cap_rate,
           gross_yield: marketMetrics.gross_yield,
           grm: marketMetrics.grm,
           overvalued_pct: marketMetrics.overvalued_pct,
           median_income: marketMetrics.median_income,
           population: marketMetrics.population,
+          population_growth_yoy: marketMetrics.population_growth_yoy,
         },
         historical: historicalData,
         benchmarks: {},
@@ -1034,6 +1047,7 @@ export class ReportsService {
             metrics.inventory_yoy = realtorData.active_listing_count_yy;
             metrics.pending_ratio = realtorData.pending_ratio;
             metrics.price_reduced_share = realtorData.price_reduced_share;
+            metrics.supply_score = realtorData.supply_score;
             metrics.hotness_score = realtorData.hotness_score;
             metrics.demand_score = realtorData.demand_score;
           }
@@ -1150,6 +1164,7 @@ export class ReportsService {
           // Additional realtor fields (same as metro)
           if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
           if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
+          if (realtorData.supply_score != null) metrics.supply_score = realtorData.supply_score;
           if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
           if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
         }
@@ -1272,6 +1287,7 @@ export class ReportsService {
           // Additional realtor fields (same as metro)
           if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
           if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
+          if (realtorData.supply_score != null) metrics.supply_score = realtorData.supply_score;
           if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
           if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
         }

@@ -216,10 +216,15 @@ export class ClaudeNewsService {
 
     // Check cache first
     if (!forceRefresh) {
-      const cached = await this.getCachedNews(geographyId, geographyType);
-      if (cached) {
-        this.logger.log(`Cache hit for ${geographyName}`);
-        return cached;
+      try {
+        const cached = await this.getCachedNews(geographyId, geographyType);
+        if (cached) {
+          this.logger.log(`Cache hit for ${geographyName}`);
+          return cached;
+        }
+      } catch (cacheError) {
+        this.logger.warn(`Cache lookup failed for ${geographyName} (table may not exist): ${cacheError?.message || cacheError}`);
+        // Continue to scout fresh data
       }
     }
 
@@ -234,9 +239,13 @@ export class ClaudeNewsService {
       scoutOptions,
     );
 
-    // Cache the result
+    // Cache the result (non-blocking, don't fail report if cache write fails)
     if (result) {
-      await this.cacheNewsResult(result);
+      try {
+        await this.cacheNewsResult(result);
+      } catch (cacheError) {
+        this.logger.warn(`Failed to cache news result for ${geographyName}: ${cacheError?.message || cacheError}`);
+      }
     }
 
     return result;
@@ -276,7 +285,7 @@ export class ClaudeNewsService {
     try {
       const response = await this.anthropicClient.messages.create({
         model: this.claudeModel,
-        max_tokens: 2048,
+        max_tokens: 4096,
         tools: [
           {
             type: 'web_search_20250305',
@@ -292,7 +301,16 @@ export class ClaudeNewsService {
         (block): block is Anthropic.TextBlock => block.type === 'text',
       );
       const text = textBlocks.map((b) => b.text).join('\n');
+
+      if (!text || text.trim().length === 0) {
+        this.logger.warn(`Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}. Content blocks: ${response.content.length} (types: ${response.content.map(b => b.type).join(', ')})`);
+      }
+
       const parsed = this.parseResponse(text);
+
+      if (!parsed.local_news?.length && !parsed.economic_indicators?.length && !parsed.market_signals?.length) {
+        this.logger.warn(`No news data parsed for ${geographyName}. Raw text length: ${text.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`);
+      }
 
       // Fetch national context separately if requested
       let nationalContext: NationalContext | null = null;
@@ -322,8 +340,14 @@ export class ClaudeNewsService {
           processing_time_ms: processingTime,
         },
       };
-    } catch (error) {
-      this.logger.error(`Failed to scout news for ${geographyName}:`, error);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to scout news for ${geographyName}: ${error?.message || error}`,
+        error?.stack,
+      );
+      if (error?.status) {
+        this.logger.error(`Anthropic API status: ${error.status}, type: ${error?.error?.type}`);
+      }
       return null;
     }
   }
@@ -369,8 +393,11 @@ Return as JSON:
       );
       const text = textBlocks.map((b) => b.text).join('\n');
       return this.parseResponse(text);
-    } catch (error) {
-      this.logger.error('Failed to fetch national context:', error);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch national context: ${error?.message || error}`,
+        error?.stack,
+      );
       return null;
     }
   }
@@ -528,7 +555,7 @@ Search and compile results for ${locationContext}:`;
     geographyType: string,
   ): Promise<NewsScoutResult | null> {
     const client = this.supabase.getClient();
-    const { data } = await client
+    const { data, error } = await client
       .from('report_news_cache')
       .select('news_data')
       .eq('geography_id', geographyId)
@@ -538,6 +565,14 @@ Search and compile results for ${locationContext}:`;
       .limit(1)
       .single();
 
+    if (error) {
+      // PGRST116 = no rows found (normal), other codes = real errors
+      if (error.code !== 'PGRST116') {
+        this.logger.warn(`Cache query error (${error.code}): ${error.message}`);
+      }
+      return null;
+    }
+
     return data?.news_data as NewsScoutResult | null;
   }
 
@@ -546,7 +581,7 @@ Search and compile results for ${locationContext}:`;
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + this.cacheTtlHours);
 
-    await client.from('report_news_cache').upsert(
+    const { error } = await client.from('report_news_cache').upsert(
       {
         geography_id: result.geography_id,
         geography_type: result.geography_type,
@@ -561,6 +596,10 @@ Search and compile results for ${locationContext}:`;
       },
       { onConflict: 'geography_id,geography_type' },
     );
+
+    if (error) {
+      this.logger.warn(`Failed to cache news (${error.code}): ${error.message}`);
+    }
   }
 
   // ---------------------------------------------------------------------------

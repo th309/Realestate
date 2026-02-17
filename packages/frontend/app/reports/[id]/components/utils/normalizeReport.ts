@@ -88,6 +88,94 @@ function addYoyAliases(report: any): void {
 }
 
 /**
+ * Map backend AI narrative keys to frontend section keys.
+ *
+ * The backend generates narratives under:
+ *   market_summary, score_analysis, risks_opportunities, next_steps
+ *
+ * The frontend section components expect:
+ *   hero_verdict, score_story, affordability_narrative,
+ *   market_timing_narrative, stability_narrative, growth_potential_narrative,
+ *   bottom_line_narrative, bottom_line_actions, bottom_line_watch
+ *
+ * This mapping runs BEFORE fallback generation so generateNarrativeFallbacks
+ * only fills in keys that are still empty after mapping.
+ */
+function mapBackendNarrativeKeys(report: any): void {
+  if (!report.ai_narrative) report.ai_narrative = {};
+  const n = report.ai_narrative;
+
+  // market_summary → hero_verdict (first sentence or ~100 chars) + keep as market_summary
+  if (n.market_summary && !n.hero_verdict) {
+    const text = String(n.market_summary);
+    // Extract first sentence (up to first period followed by space or end)
+    const sentenceMatch = text.match(/^[^.!?]*[.!?]/);
+    if (sentenceMatch && sentenceMatch[0].length <= 150) {
+      n.hero_verdict = sentenceMatch[0].trim();
+    } else {
+      // Fallback: first ~100 chars at a word boundary
+      const truncated = text.substring(0, 120);
+      const lastSpace = truncated.lastIndexOf(' ');
+      n.hero_verdict =
+        lastSpace > 60 ? truncated.substring(0, lastSpace) + '.' : truncated + '…';
+    }
+  }
+
+  // score_analysis → score_story
+  if (n.score_analysis && !n.score_story) {
+    n.score_story = n.score_analysis;
+  }
+
+  // risks_opportunities → section-specific narratives (only if not already set)
+  if (n.risks_opportunities) {
+    const ro = String(n.risks_opportunities);
+    if (!n.affordability_narrative) n.affordability_narrative = ro;
+    if (!n.market_timing_narrative) n.market_timing_narrative = ro;
+    if (!n.stability_narrative) n.stability_narrative = ro;
+    if (!n.growth_potential_narrative) n.growth_potential_narrative = ro;
+  }
+
+  // next_steps → bottom_line_narrative + try to extract action items
+  if (n.next_steps && !n.bottom_line_narrative) {
+    n.bottom_line_narrative = n.next_steps;
+  }
+  // bottom_line_actions: strip code fences and parse JSON array
+  if (n.bottom_line_actions && typeof n.bottom_line_actions === 'string') {
+    let actionsText = n.bottom_line_actions.trim()
+      .replace(/^```(?:json)?\s*\n?/i, '')
+      .replace(/\n?```\s*$/i, '')
+      .trim();
+    try {
+      const parsed = JSON.parse(actionsText);
+      if (Array.isArray(parsed)) n.bottom_line_actions = parsed;
+    } catch { /* leave as string */ }
+  }
+
+  if (n.next_steps && !n.bottom_line_actions) {
+    let text = String(n.next_steps).trim()
+      .replace(/^```(?:json)?\s*\n?/i, '')
+      .replace(/\n?```\s*$/i, '')
+      .trim();
+    // Try to parse as JSON array first (in case the model returned JSON)
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        n.bottom_line_actions = parsed;
+      }
+    } catch {
+      // Extract numbered or bulleted items (e.g. "1. Do X", "- Do Y", "• Do Z")
+      const items = text
+        .split(/\n/)
+        .map((line: string) => line.replace(/^\s*(?:\d+[.)]\s*|[-•*]\s*)/, '').trim())
+        .filter((line: string) => line.length > 10 && line.length < 200);
+      if (items.length >= 2) {
+        n.bottom_line_actions = items.slice(0, 5);
+      }
+    }
+  }
+}
+
+/**
  * Generate fallback narrative content from score context data
  * when ai_narrative is empty. Uses real data from score context.
  */
@@ -95,11 +183,8 @@ function generateNarrativeFallbacks(report: any): void {
   if (!report.ai_narrative) report.ai_narrative = {};
   const narrative = report.ai_narrative;
 
-  // Skip if any narratives already exist
-  const hasNarratives = Object.values(narrative).some(
-    (v) => v !== null && v !== undefined && v !== ''
-  );
-  if (hasNarratives) return;
+  // Fill in any keys still empty after mapBackendNarrativeKeys.
+  // Each block below guards on !narrative.<key> so existing values are preserved.
 
   const scoreType = report.user_type === 'investor' ? 'investoredge' : 'homeready';
   const scoreCtx = report.populated_data?.scores?.[scoreType]?.context;
@@ -164,6 +249,7 @@ export function normalizeReport(report: any): any {
   normalizeScoresSnapshot(report);
   backfillCurrentFromHistorical(report);
   addYoyAliases(report);
+  mapBackendNarrativeKeys(report);
   generateNarrativeFallbacks(report);
   return report;
 }
