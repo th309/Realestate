@@ -365,7 +365,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/affordability/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro'],
-    valueField: 'renter_income',
+    valueField: 'renter_income_needed',
   },
 
   affordable_home_price: {
@@ -503,12 +503,13 @@ export const METRICS: Record<string, MetricConfig> = {
   rent_to_price_ratio: {
     id: 'rent_to_price_ratio',
     title: 'Rent-to-Price Ratio',
-    format: 'percent',
+    format: 'percent_abs',
     dataSource: 'calculated',
     apiEndpoint: '/api/metrics/rent-to-price/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'rent_to_price_ratio',
+    asPercent: true,
     hasTimeSeries: true,
   },
 
@@ -778,7 +779,7 @@ export const METRICS: Record<string, MetricConfig> = {
     dataSource: 'fred',
     apiEndpoint: '/api/economic/cost-of-living/{geo}',
     keyField: 'auto',
-    supportedGeos: ['national', 'state', 'metro'],
+    supportedGeos: ['state', 'metro'],
     rangeType: 'full',
   },
 

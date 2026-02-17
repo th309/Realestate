@@ -712,6 +712,21 @@ export class RealtorController {
   // Home Sales (pending_listing_count - proxy for sales activity)
   // ============================================================================
 
+  @Get('home-sales/national')
+  async getNationalHomeSales(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData(
+      'pending_listing_count',
+      date,
+    );
+    return {
+      success: true,
+      count: data.length,
+      geography: 'National',
+      metric: 'pending_listing_count',
+      data,
+    };
+  }
+
   @Get('home-sales/states')
   async getStateHomeSales(@Query('date') date?: string) {
     const data = await this.realtorService.getStateHomeSales(date);
@@ -766,6 +781,21 @@ export class RealtorController {
   // ============================================================================
   // Home Sales YoY (pending_listing_count_yy)
   // ============================================================================
+
+  @Get('home-sales-yoy/national')
+  async getNationalHomeSalesYoy(@Query('date') date?: string) {
+    const data = await this.realtorService.getNationalData(
+      'pending_listing_count_yy',
+      date,
+    );
+    return {
+      success: true,
+      count: data.length,
+      geography: 'National',
+      metric: 'pending_listing_count_yy',
+      data,
+    };
+  }
 
   @Get('home-sales-yoy/states')
   async getStateHomeSalesYoy(@Query('date') date?: string) {

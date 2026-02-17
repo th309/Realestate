@@ -85,10 +85,13 @@ const HOMEBUYER_AFFORDABILITY: MetricCategory = {
   icon: <AttachMoneyIcon />,
   metrics: [
     metric('listing_price'),
+    metric('home_value'),
     metric('income_to_buy'),
     metric('affordable_home_price'),
     metric('price_per_sqft'),
     metric('years_to_save'),
+    metric('rent_index'),
+    metric('income_to_rent'),
     metric('home_value_yoy'),
     metric('home_value_5yr'),
   ],
@@ -104,9 +107,15 @@ const HOMEBUYER_COMPETITION: MetricCategory = {
     metric('for_sale_inventory'),
     metric('inventory_yoy'),
     metric('pending_ratio'),
+    metric('pending_listings'),
     metric('new_listings_yoy'),
+    metric('home_sales'),
+    metric('home_sales_yoy'),
     metric('hotness_score'),
+    metric('market_heat'),
     metric('sale_to_list'),
+    metric('supply_score'),
+    metric('demand_score'),
   ],
 };
 
@@ -118,6 +127,7 @@ const HOMEBUYER_PRICING: MetricCategory = {
   metrics: [
     metric('home_value_yoy'),
     metric('home_value_mom'),
+    metric('home_price_forecast'),
     metric('price_cut_pct'),
     metric('price_increase_pct'),
     metric('new_listings'),
@@ -136,6 +146,9 @@ const INVESTOR_CASHFLOW: MetricCategory = {
   icon: <WalletIcon />,
   metrics: [
     metric('cap_rate'),
+    metric('gross_yield'),
+    metric('grm'),
+    metric('rent_to_price_ratio'),
     metric('rent_index'),
     metric('rent_for_houses'),
     metric('listing_price'),
@@ -151,6 +164,7 @@ const INVESTOR_APPRECIATION: MetricCategory = {
   metrics: [
     metric('home_value_yoy'),
     metric('home_value_5yr'),
+    metric('home_price_forecast'),
     metric('home_value'),
     metric('overvalued_pct'),
   ],
@@ -166,8 +180,14 @@ const INVESTOR_DEMAND_RISK: MetricCategory = {
     metric('for_sale_inventory'),
     metric('inventory_yoy'),
     metric('pending_ratio'),
+    metric('pending_listings'),
     metric('new_listings_yoy'),
+    metric('home_sales'),
     metric('hotness_score'),
+    metric('sale_to_list'),
+    metric('market_heat'),
+    metric('supply_score'),
+    metric('demand_score'),
   ],
 };
 

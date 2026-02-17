@@ -16,9 +16,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
-import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
+import { useDataCardBatch, type GeoLevel, isMetricSupportedForGeo, getMetricConfig } from '@/lib/data';
 import { Breadcrumbs } from '@/components/navigation';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import { useEntitlements } from '@/lib/entitlements';
 import { AIMarketAnalysis } from './AIMarketAnalysis';
 
@@ -65,13 +66,13 @@ function getTrendDirection(percent: number | null): 'up' | 'down' | 'stable' {
 
 // Metric card with animation - uses data from useDataCardBatch
 function MetricCard({
-  label,
+  metricId,
   formattedValue,
   trendPercent,
   trendDirection,
   delay = 0,
 }: {
-  label: string;
+  metricId: string;
   formattedValue: string;
   trendPercent: number | null;
   trendDirection: 'up' | 'down' | 'stable';
@@ -86,7 +87,7 @@ function MetricCard({
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wide truncate">
-          {label}
+          <MetricTitle metricId={metricId} />
         </span>
         {trendPercent != null && (
           <div className={`flex items-center gap-0.5 text-xs font-medium ${
@@ -121,9 +122,6 @@ function MetricCategorySection({
   factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null; isLoading?: boolean }>;
   delay?: number;
 }) {
-  // Get metric names from config
-  const { getMetricConfig } = require('@/lib/data');
-
   return (
     <motion.div
       className="space-y-3"
@@ -140,19 +138,18 @@ function MetricCategorySection({
           {subtext && <p className="text-xs text-on-surface-variant">{subtext}</p>}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {metricIds.slice(0, 4).map((metricId, i) => {
-          const config = getMetricConfig(metricId);
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {metricIds.map((metricId, i) => {
           const datum = factorsData[metricId];
 
           return (
             <MetricCard
               key={metricId}
-              label={config?.title || metricId.replace(/_/g, ' ')}
+              metricId={metricId}
               formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '--')}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? 'stable'}
-              delay={delay + i * 0.05}
+              delay={delay + i * 0.03}
             />
           );
         })}
@@ -274,27 +271,22 @@ export function MarketDashboard({
   }, [activeView]);
 
   // Derive state filter: use URL param if available, otherwise extract from geography name
+  // Note: metros don't use state filter - they can span state boundaries and
+  // a mismatched state param causes data to be excluded from Zillow responses
   const effectiveStateFilter = useMemo(() => {
+    if (geographyType === 'metro') return undefined;
     if (stateFilter) {
-      console.log(`[MarketDashboard] Using URL stateFilter: ${stateFilter}`);
       return stateFilter;
     }
     if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
     // Extract state from location name (e.g., "21701, Frederick, MD" -> "MD")
     const name = data?.geography?.name;
-    if (!name) {
-      console.log(`[MarketDashboard] No geography name yet, stateFilter undefined`);
-      return undefined;
-    }
+    if (!name) return undefined;
     const parts = name.split(',');
     if (parts.length >= 2) {
       const lastPart = parts[parts.length - 1].trim().toUpperCase();
-      if (lastPart.length === 2) {
-        console.log(`[MarketDashboard] Extracted state from name "${name}": ${lastPart}`);
-        return lastPart;
-      }
+      if (lastPart.length === 2) return lastPart;
     }
-    console.log(`[MarketDashboard] Could not extract state from name: "${name}"`);
     return undefined;
   }, [stateFilter, geographyType, data?.geography?.name]);
 
@@ -308,15 +300,22 @@ export function MarketDashboard({
     // Homebuyer view metrics
     'listing_price', 'income_to_buy', 'affordable_home_price', 'price_per_sqft',
     'new_listings_yoy', 'hotness_score', 'pending_ratio', 'sale_to_list',
-    'years_to_save', 'homeowner_affordability', 'renter_affordability', 'income_to_rent',
+    'years_to_save', 'income_to_rent',
     'price_increase_pct', 'new_listings', 'inventory_surplus',
+    'home_price_forecast', 'pending_listings', 'home_sales', 'home_sales_yoy',
+    'market_heat', 'supply_score', 'demand_score',
     // Investor view metrics
-    'gross_yield', 'rent_for_houses', 'grm',
+    'gross_yield', 'rent_for_houses', 'grm', 'rent_to_price_ratio',
     'home_value_5yr', 'overvalued_pct',
-    // Shared metrics
-    'median_income', 'population', 'population_growth',
-    'unemployment_rate', 'job_growth', 'cost_of_living',
-    'total_permits', 'sf_permits', 'mf_permits', 'permits_yoy',
+    // Shared: Area Profile
+    'population', 'population_growth', 'median_income', 'income_growth',
+    'median_age', 'homeownership_rate',
+    // Shared: Local Economy
+    'unemployment_rate', 'job_growth', 'gdp_growth', 'cost_of_living',
+    // Shared: New Construction
+    'sf_permits', 'mf_permits', 'total_permits', 'permits_yoy',
+    'sf_mf_ratio', 'permit_value_per_unit',
+    'new_construction_sales', 'new_construction_price', 'new_construction_ppsf',
     // PropertyIQ scores
     'homeready_score', 'investoredge_score', 'market_health_score',
   ], []);
@@ -328,6 +327,15 @@ export function MarketDashboard({
     geographyId,
     { trendMonths: 6, enabled: !loading && !!data, stateFilter: effectiveStateFilter }
   );
+
+  // Apply metric fallbacks: home_value falls back to listing_price (Realtor) when ZHVI is unavailable
+  const displayData = useMemo(() => {
+    const result = { ...factorsData };
+    if (!result['home_value']?.value && result['listing_price']?.value) {
+      result['home_value'] = { ...result['listing_price'] };
+    }
+    return result;
+  }, [factorsData]);
 
   if (loading) {
     return (
@@ -526,17 +534,29 @@ export function MarketDashboard({
                 Market Metrics
               </h3>
               <div className="space-y-6">
-                {categories.slice(0, 3).map((category, catIndex) => (
-                  <MetricCategorySection
-                    key={category.id}
-                    categoryName={category.name}
-                    subtext={category.subtext}
-                    icon={category.icon}
-                    metricIds={category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? []}
-                    factorsData={factorsData}
-                    delay={catIndex * 0.15}
-                  />
-                ))}
+                {categories.map((category, catIndex) => {
+                  const supportedMetrics = category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? [];
+                  if (supportedMetrics.length === 0) return null;
+
+                  // Add divider between view-specific (first 3) and shared categories
+                  const showDivider = catIndex === 3;
+
+                  return (
+                    <React.Fragment key={category.id}>
+                      {showDivider && (
+                        <hr className="border-outline-variant/40 my-2" />
+                      )}
+                      <MetricCategorySection
+                        categoryName={category.name}
+                        subtext={category.subtext}
+                        icon={category.icon}
+                        metricIds={supportedMetrics}
+                        factorsData={displayData}
+                        delay={catIndex * 0.1}
+                      />
+                    </React.Fragment>
+                  );
+                })}
               </div>
             </div>
 
@@ -547,7 +567,7 @@ export function MarketDashboard({
               marketName={data.geography.name}
               view={activeView}
               metrics={Object.fromEntries(
-                Object.entries(factorsData).map(([key, card]) => [
+                Object.entries(displayData).map(([key, card]) => [
                   key,
                   {
                     value: card.value,

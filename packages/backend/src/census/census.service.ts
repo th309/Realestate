@@ -382,24 +382,82 @@ export class CensusService {
   }
 
   // ============================================================================
-  // Population Growth (YoY)
+  // YoY Growth Computation Helper
+  // ============================================================================
+
+  /**
+   * Compute YoY growth by comparing two consecutive years of data.
+   * Used when the database doesn't store pre-computed growth columns.
+   */
+  private async computeYoYGrowth(
+    baseMetricGetter: (year?: number) => Promise<CensusDataPoint[]>,
+    table: string,
+    year?: number,
+  ): Promise<CensusDataPoint[]> {
+    const latestYear = year || (await this.getLatestYear(table));
+    if (!latestYear) return [];
+
+    const [current, previous] = await Promise.all([
+      baseMetricGetter(latestYear),
+      baseMetricGetter(latestYear - 1),
+    ]);
+
+    const prevMap = new Map(
+      previous
+        .filter((d) => d.value != null)
+        .map((d) => [d.region_id, d.value as number]),
+    );
+
+    return current.map((d) => {
+      const prev = prevMap.get(d.region_id);
+      let growth: number | null = null;
+      if (d.value != null && prev != null && prev !== 0) {
+        growth = Number((((d.value - prev) / prev) * 100).toFixed(2));
+      }
+      return { ...d, value: growth };
+    });
+  }
+
+  // ============================================================================
+  // Population Growth (YoY) - computed from total_population
   // ============================================================================
   async getNationalPopulationGrowth(year?: number) {
-    return this.getNationalData('population_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getNationalData('total_population', y),
+      'census_national',
+      year,
+    );
   }
   async getStatePopulationGrowth(year?: number) {
-    return this.getStateData('population_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getStateData('total_population', y),
+      'census_state',
+      year,
+    );
   }
   async getMetroPopulationGrowth(year?: number) {
-    return this.getMetroData('population_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getMetroData('total_population', y),
+      'census_metro',
+      year,
+    );
   }
   async getCountyPopulationGrowth(year?: number) {
-    return this.getCountyData('population_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getCountyData('total_population', y),
+      'census_county',
+      year,
+    );
   }
   async getCityPopulationGrowth(year?: number, state?: string) {
-    return this.getCityData('population_yoy', year, state);
+    return this.computeYoYGrowth(
+      (y) => this.getCityData('total_population', y, state),
+      'census_city',
+      year,
+    );
   }
   async getZipPopulationGrowth(year?: number, state?: string) {
+    // ZIP data uses RPC that doesn't support year param - fall back to raw column
     return this.getZipData('population_yoy', year, state);
   }
 
@@ -426,24 +484,45 @@ export class CensusService {
   }
 
   // ============================================================================
-  // Income Growth (YoY)
+  // Income Growth (YoY) - computed from median_household_income
   // ============================================================================
   async getNationalIncomeGrowth(year?: number) {
-    return this.getNationalData('income_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getNationalData('median_household_income', y),
+      'census_national',
+      year,
+    );
   }
   async getStateIncomeGrowth(year?: number) {
-    return this.getStateData('income_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getStateData('median_household_income', y),
+      'census_state',
+      year,
+    );
   }
   async getMetroIncomeGrowth(year?: number) {
-    return this.getMetroData('income_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getMetroData('median_household_income', y),
+      'census_metro',
+      year,
+    );
   }
   async getCountyIncomeGrowth(year?: number) {
-    return this.getCountyData('income_yoy', year);
+    return this.computeYoYGrowth(
+      (y) => this.getCountyData('median_household_income', y),
+      'census_county',
+      year,
+    );
   }
   async getCityIncomeGrowth(year?: number, state?: string) {
-    return this.getCityData('income_yoy', year, state);
+    return this.computeYoYGrowth(
+      (y) => this.getCityData('median_household_income', y, state),
+      'census_city',
+      year,
+    );
   }
   async getZipIncomeGrowth(year?: number, state?: string) {
+    // ZIP data uses RPC that doesn't support year param - fall back to raw column
     return this.getZipData('income_yoy', year, state);
   }
 
