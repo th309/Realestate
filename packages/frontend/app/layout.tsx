@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     default: "PropertyIQ - AI-Powered Real Estate Market Intelligence Platform",
     template: "%s | PropertyIQ"
   },
-  description: "PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, neighborhood scores, rental demand data, and investment ROI projections across 384 US metro areas.",
+  description: "PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, market scores, rental demand data, and investment ROI projections across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.",
   keywords: [
     // Primary audiences
     "real estate market analysis",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     "real estate investing platform",
     "real estate agent tools",
     // Features
-    "neighborhood scores",
+    "market scores",
     "property investment ROI",
     "rental demand analysis",
     "home value trends",
@@ -99,7 +99,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "PropertyIQ - AI Real Estate Market Intelligence",
-    description: "AI-powered market analysis for homebuyers, renters, investors & agents. Neighborhood scores, ROI projections, and rental demand data.",
+    description: "AI-powered market analysis for homebuyers, renters, investors & agents. Market scores, ROI projections, and rental demand data.",
     images: ["/twitter-image.png"],
     creator: "@propertyiq"
   },

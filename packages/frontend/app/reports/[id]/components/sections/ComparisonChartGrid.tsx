@@ -4,6 +4,7 @@ import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { ReportInstance } from '../../../types';
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ca8a04', '#9333ea'];
@@ -51,9 +52,6 @@ export function ComparisonChartGrid({ report }: ComparisonChartGridProps): React
   return (
     <div className={`grid grid-cols-1 md:grid-cols-${columns} gap-4`}>
       {metricsWithData.map((metricId: string) => {
-        const title = metricId
-          .replace(/_/g, ' ')
-          .replace(/\b\w/g, (c: string) => c.toUpperCase());
         const primaryData = report.populated_data?.historical?.[metricId];
         const format = getMetricFormat(metricId);
 
@@ -61,7 +59,7 @@ export function ComparisonChartGrid({ report }: ComparisonChartGridProps): React
         if (!primaryData || !primaryData.data || primaryData.data.length === 0) {
           return (
             <div key={metricId} className="bg-surface-container rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-on-surface mb-4">{title}</h3>
+              <MetricTitle metricId={metricId} as="h3" className="text-lg font-semibold text-on-surface mb-4" />
               <div className="flex items-center justify-center gap-2 text-on-surface-variant py-8">
                 <AlertTriangle className="w-5 h-5" />
                 <span>Historical data not available</span>
@@ -118,7 +116,7 @@ export function ComparisonChartGrid({ report }: ComparisonChartGridProps): React
 
         return (
           <div key={metricId} className="bg-surface-container rounded-2xl p-6">
-            <h3 className="text-lg font-semibold text-on-surface mb-4">{title}</h3>
+            <MetricTitle metricId={metricId} as="h3" className="text-lg font-semibold text-on-surface mb-4" />
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mergedData}>

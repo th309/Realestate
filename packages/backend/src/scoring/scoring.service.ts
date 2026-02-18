@@ -522,7 +522,7 @@ export class ScoringService {
     limit: number = 10,
     periodDate?: string,
   ): Promise<Array<{ location_id: string; location_name: string; score: number; grade: string }>> {
-    const targetDate = periodDate || (await this.getLatestDate(geography));
+    const targetDate = periodDate || (await this.getLatestScoreDate(geography));
     if (!targetDate) return [];
 
     const { data } = await this.supabase

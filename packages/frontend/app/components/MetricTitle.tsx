@@ -114,8 +114,8 @@ export function MetricTitle({
 
   return (
     <>
-      <Tag className={className}>
-        {title}
+      <Tag className={`inline-flex items-center min-w-0 max-w-full ${className}`}>
+        <span className="truncate">{title}</span>
         {hasTooltip && (
           <span
             ref={iconRef}
@@ -123,7 +123,7 @@ export function MetricTitle({
             tabIndex={0}
             onClick={handleInfoClick}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleInfoClick(e as unknown as React.MouseEvent); } }}
-            className="inline-flex items-center justify-center w-3.5 h-3.5 ml-1 align-middle text-on-surface-variant/40 hover:text-on-surface-variant transition-colors duration-150 cursor-pointer"
+            className="inline-flex items-center justify-center w-3.5 h-3.5 ml-1 align-middle text-on-surface-variant/60 hover:text-on-surface-variant transition-colors duration-150 cursor-pointer shrink-0"
             aria-label={`Info about ${title}`}
           >
             <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">

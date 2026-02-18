@@ -14,6 +14,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
 import { useMarketFactorsData } from '../../hooks/useMarketFactorsData';
 import type { AllScoresResponse, ScoreType } from '../../hooks/useScoreData';
@@ -236,7 +237,14 @@ export function RightDetailPanel({
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {marketFactors.map((factor) => {
+              {marketFactors
+                .filter((factor) => {
+                  // While loading, show all factors with loading state
+                  // After loading, data layer only returns metrics with data
+                  if (factorsLoading) return true;
+                  return factorsData[factor.metricId] !== undefined;
+                })
+                .map((factor) => {
                 const datum = factorsData[factor.metricId];
 
                 return (
@@ -256,9 +264,9 @@ export function RightDetailPanel({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide block truncate">
-                        {factor.label}
-                      </span>
+                      <div className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide truncate">
+                        <MetricTitle metricId={factor.metricId} />
+                      </div>
                       <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
                         {(!datum && factorsLoading) ? '...' : (datum?.formattedValue ?? '--')}
                         {datum?.trendPercent != null && (
@@ -271,6 +279,11 @@ export function RightDetailPanel({
                   </div>
                 );
               })}
+              {!factorsLoading && marketFactors.every(f => !factorsData[f.metricId]) && (
+                <p className="col-span-2 text-xs text-on-surface-variant text-center py-3">
+                  No market factor data available for this area.
+                </p>
+              )}
             </div>
           </div>
         </div>

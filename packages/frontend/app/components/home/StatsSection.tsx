@@ -4,8 +4,8 @@ import { AnimatedCounter } from './AnimatedCounter';
 
 const STATS = [
   { value: 2400000, suffix: '+', label: 'Properties Analyzed' },
-  { value: 384, suffix: '', label: 'Metro Areas' },
-  { value: 95, suffix: '+', label: 'Data Points per Property' },
+  { value: 925, suffix: '', label: 'Metro Areas' },
+  { value: 64, suffix: '+', label: 'Data Points per Market' },
 ];
 
 export function StatsSection() {

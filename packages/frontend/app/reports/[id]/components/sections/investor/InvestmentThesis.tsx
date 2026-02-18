@@ -468,7 +468,7 @@ function InvestorScoreCredibility({
       )}
 
       <p className="text-xs" style={{ color: 'var(--report-stone-light)' }}>
-        Based on PropertyIQ backtesting across {quintileData.summary?.totalSamples ?? 384} metros,
+        Based on PropertyIQ backtesting across {quintileData.summary?.totalSamples ?? 925} metros,
         2018-2024. Past performance does not guarantee future results.
       </p>
     </div>

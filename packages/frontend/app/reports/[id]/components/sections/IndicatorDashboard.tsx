@@ -3,6 +3,7 @@
 import React from 'react';
 import { SectionProps } from '../types';
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import { Activity, AlertTriangle } from 'lucide-react';
 
 export function IndicatorDashboard({ section, report }: SectionProps): React.ReactElement {
@@ -86,7 +87,7 @@ export function IndicatorDashboard({ section, report }: SectionProps): React.Rea
 
           return (
             <div key={indicatorId} className="bg-surface rounded-xl p-4">
-              <p className="text-sm text-on-surface-variant mb-1">{config.label}</p>
+              <div className="text-sm text-on-surface-variant mb-1"><MetricTitle metricId={indicatorId} /></div>
               <p className="text-2xl font-bold text-on-surface mb-2">
                 {numericValue !== null && !isNaN(numericValue)
                   ? formatMetricValue(numericValue, format)

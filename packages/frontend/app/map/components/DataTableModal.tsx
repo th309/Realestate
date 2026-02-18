@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import type { GeoLevel, MapData } from '../types';
+import type { GeoLevel, MapData, MapDataEntry } from '../types';
 import { getValueFromEntry, getDateFromEntry } from '../types';
 import { getMetricFormat, getMetricTitle } from '../config';
 import type { MetricFormat } from '../config';
@@ -62,9 +62,13 @@ export function DataTableModal({ isOpen, onClose, mapData, selectedMetric, geoLe
         const entries = Object.entries(mapData).map(([key, entry]) => {
             const value = getValueFromEntry(entry);
             const date = getDateFromEntry(entry);
+            // Extract human-readable name from SnapshotEntry (region_name from API)
+            const name = typeof entry === 'object' && entry !== null && 'name' in entry
+                ? (entry as { name?: string }).name || key
+                : key;
             return {
                 id: key,
-                name: key,
+                name,
                 value,
                 date,
             };

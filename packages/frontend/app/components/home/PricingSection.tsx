@@ -79,29 +79,29 @@ const PRICING_TIERS = [
   {
     name: 'Free',
     price: '$0',
-    features: ['5 property lookups/month', 'Basic scores', 'Metro-level data', 'Community support'],
+    features: ['Interactive market maps', 'National & state-level data', 'Historical trends & charts', 'Preview reports'],
     cta: 'Get Started',
   },
   {
     name: 'Pro',
     price: '$29',
     period: 'mo',
-    features: ['Unlimited lookups', 'Full score breakdown', 'Neighborhood-level data', 'AI-generated reports', 'Priority support'],
+    features: ['Everything in Free, plus:', 'Metro, county, and ZIP code data', 'PropertyIQ composite scores', 'AI market analysis', 'Unlimited AI reports', 'CSV data export'],
     highlighted: true,
     cta: 'Start Free Trial',
   },
   {
-    name: 'Team',
+    name: 'Enterprise',
     price: '$99',
     period: 'mo',
-    features: ['Everything in Pro', '5 team members', 'API access', 'Custom reports', 'Dedicated support'],
+    features: ['Everything in Pro, plus:', 'Scenario modeling', 'Statistical deep dives', 'Team & brokerage features', 'Priority support'],
     cta: 'Contact Sales',
   },
 ];
 
 export function PricingSection() {
   return (
-    <section className="py-16 px-6 max-w-6xl mx-auto" id="pricing">
+    <section className="py-20 lg:py-28 px-6 max-w-6xl mx-auto" id="pricing">
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-sm font-semibold text-primary uppercase tracking-widest">Pricing</span>

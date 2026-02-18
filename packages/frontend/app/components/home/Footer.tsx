@@ -9,7 +9,7 @@ const FOOTER_NAV = {
   ],
   'Product': [
     { label: 'Features', href: '/#features' },
-    { label: 'See Demo', href: '/#demo' },
+    { label: 'Scores', href: '/scores' },
     { label: 'Pricing', href: '/pricing' },
   ],
   'Company': [

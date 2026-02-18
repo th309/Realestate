@@ -7,6 +7,7 @@
 
 import type { TimeSeriesResult, TimeSeriesFetchOptions, DateRangeResponse } from '../types';
 import { fetchAPI } from './base';
+import { getMetricConfig } from '../registry-helpers';
 
 /**
  * Fetch time series data for a specific metric, geography level, and region.
@@ -35,7 +36,29 @@ export async function fetchTimeSeriesData(
   const queryString = params.toString();
   const url = `/api/timeseries/${metricId}/${geoLevel}/${encodeURIComponent(regionId)}${queryString ? `?${queryString}` : ''}`;
 
-  return fetchAPI<TimeSeriesResult>(url);
+  const result = await fetchAPI<TimeSeriesResult>(url);
+
+  // Apply asPercent conversion to match snapshot.ts behavior.
+  // Backend returns raw fractions (e.g. 0.1185 for 11.85%); multiply by 100.
+  const config = getMetricConfig(metricId);
+  if (config?.asPercent && result.data) {
+    result.data = result.data.map(point => ({
+      ...point,
+      value: point.value * 100,
+    }));
+    if (result.current != null) result.current = result.current * 100;
+    if (result.prior != null) result.prior = result.prior * 100;
+    if (result.trend_change != null) result.trend_change = result.trend_change * 100;
+    if (result.history?.data) {
+      result.history = {
+        ...result.history,
+        data: result.history.data.map(point => ({ ...point, value: point.value * 100 })),
+        change: result.history.change * 100,
+      };
+    }
+  }
+
+  return result;
 }
 
 /**

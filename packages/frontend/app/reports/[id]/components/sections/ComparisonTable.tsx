@@ -3,6 +3,7 @@
 import React from 'react';
 import type { ReportInstance } from '../../../types';
 import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { MetricTitle } from '@/app/components/MetricTitle';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface ComparisonTableProps {
@@ -24,9 +25,6 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
     { id: report.primary_geography_id, name: report.primary_geography_name },
     ...(report.comparison_geographies || []),
   ];
-
-  const getMetricLabel = (metric: string): string =>
-    metric.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   const getValue = (geo: Geography, metric: string): number | null => {
     if (geo.id === report.primary_geography_id) {
@@ -89,7 +87,7 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
 
               return (
                 <tr key={metric} className="border-b border-outline-variant last:border-0">
-                  <td className="p-4 text-on-surface">{getMetricLabel(metric)}</td>
+                  <td className="p-4 text-on-surface"><MetricTitle metricId={metric} /></td>
                   {values.map((value, index) => (
                     <td key={index} className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">

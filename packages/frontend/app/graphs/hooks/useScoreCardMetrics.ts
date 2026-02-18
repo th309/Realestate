@@ -51,24 +51,31 @@ export function useScoreCardMetrics(
     const metricResults = useDataCardBatch(metricIds, geoLevel, regionId, true);
 
     // Transform to the indicator format expected by ScoreCard component
+    // Only include metrics that have actual data (useDataCardBatch already filters nulls)
     const indicators = useMemo((): ScoreCardIndicator[] => {
-        return metricIds.map(id => {
-            const result = metricResults[id];
-            const config = getMetricConfig(id);
-            const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        return metricIds
+            .filter(id => {
+                const result = metricResults[id];
+                // Keep while loading; drop if loaded with no data
+                return result?.loading || (result?.value != null);
+            })
+            .map(id => {
+                const result = metricResults[id];
+                const config = getMetricConfig(id);
+                const label = config?.title || id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-            return {
-                metricId: id,
-                label,
-                formattedValue: result?.formattedValue || '--',
-                trend: {
-                    currentValue: result?.value ?? null,
-                    previousValue: null, // Not tracked separately in new hook
-                    changePercent: result?.trend.changePercent ?? null,
-                    direction: result?.trend.direction ?? null,
-                },
-            };
-        });
+                return {
+                    metricId: id,
+                    label,
+                    formattedValue: result?.formattedValue || '--',
+                    trend: {
+                        currentValue: result?.value ?? null,
+                        previousValue: null, // Not tracked separately in new hook
+                        changePercent: result?.trend.changePercent ?? null,
+                        direction: result?.trend.direction ?? null,
+                    },
+                };
+            });
     }, [metricIds, metricResults]);
 
     // Check if any metrics are still loading

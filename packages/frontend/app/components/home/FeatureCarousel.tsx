@@ -20,7 +20,7 @@ const FEATURES = [
   {
     id: 'map',
     title: 'Interactive Market Maps',
-    description: 'Explore 384 metros with color-coded market data',
+    description: 'Explore 925 metros with color-coded market data',
     icon: Map,
     href: '/map',
     preview: 'map',

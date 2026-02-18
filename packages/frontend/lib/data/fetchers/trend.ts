@@ -151,7 +151,19 @@ export async function fetchBatchTrendsServer(
     historyMonths: months,
   });
 
-  return response.trends ?? {};
+  const trends = response.trends ?? {};
+
+  // Apply asPercent conversion for absolute values (current/prior).
+  // percentChange is a ratio so it's already correct.
+  for (const [metricId, entry] of Object.entries(trends)) {
+    const config = getMetricConfig(metricId);
+    if (config?.asPercent && entry) {
+      if (entry.current != null) entry.current = entry.current * 100;
+      if (entry.prior != null) entry.prior = entry.prior * 100;
+    }
+  }
+
+  return trends;
 }
 
 /**

@@ -11,7 +11,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 interface NarrativeSection {
   id: string;
@@ -36,17 +36,21 @@ interface ConversationMessage {
 @Injectable()
 export class ClaudeService {
   private readonly logger = new Logger(ClaudeService.name);
-  private claudeClient: Anthropic | null = null;
-  private readonly claudeModel = 'claude-sonnet-4-20250514';
+  private aiClient: OpenAI | null = null;
+  private readonly aiModel: string;
 
   constructor(private readonly configService: ConfigService) {
-    const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    if (anthropicKey) {
-      this.claudeClient = new Anthropic({ apiKey: anthropicKey });
-      this.logger.log('Claude initialized for analysis and narratives');
+    const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
+    this.aiModel = this.configService.get<string>('AI_MODEL') || 'deepseek-chat';
+    if (deepseekKey) {
+      this.aiClient = new OpenAI({
+        apiKey: deepseekKey,
+        baseURL: this.configService.get<string>('AI_BASE_URL') || 'https://api.deepseek.com/v1',
+      });
+      this.logger.log(`DeepSeek initialized for analysis and narratives (model: ${this.aiModel})`);
     } else {
       this.logger.warn(
-        'ANTHROPIC_API_KEY not configured - AI features limited',
+        'DEEPSEEK_API_KEY not configured - AI features limited',
       );
     }
   }
@@ -195,7 +199,7 @@ Reference specific news items that strengthen or weaken the investment case.
    * Check if service is available
    */
   isAvailable(): boolean {
-    return !!this.claudeClient;
+    return !!this.aiClient;
   }
 
   // ============================================================================
@@ -206,38 +210,38 @@ Reference specific news items that strengthen or weaken the investment case.
     prompt: string,
     maxTokens: number,
   ): Promise<string> {
-    if (!this.claudeClient) {
-      throw new Error('Claude client not initialized');
+    if (!this.aiClient) {
+      throw new Error('AI client not initialized');
     }
 
-    const response = await this.claudeClient.messages.create({
-      model: this.claudeModel,
+    const response = await this.aiClient.chat.completions.create({
+      model: this.aiModel,
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
-    return textBlock?.text || '';
+    return response.choices[0]?.message?.content || '';
   }
 
   private async generateConversation(
     systemPrompt: string,
     messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   ): Promise<string> {
-    if (!this.claudeClient) {
-      throw new Error('Claude client not initialized');
+    if (!this.aiClient) {
+      throw new Error('AI client not initialized');
     }
 
-    const response = await this.claudeClient.messages.create({
-      model: this.claudeModel,
+    const response = await this.aiClient.chat.completions.create({
+      model: this.aiModel,
       max_tokens: 1024,
-      system: systemPrompt,
-      messages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
     return (
-      textBlock?.text || 'I apologize, but I was unable to generate a response.'
+      response.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response.'
     );
   }
 
@@ -541,7 +545,7 @@ IMPORTANT: If any of the market intelligence above is relevant, incorporate it n
       user_type: 'homebuyer' | 'investor';
     },
   ): Promise<string[]> {
-    if (!this.claudeClient || !context.priority_weighted_winner) {
+    if (!this.aiClient || !context.priority_weighted_winner) {
       return [];
     }
 
@@ -599,7 +603,7 @@ Return ONLY a JSON array of 3 strings, no other text. Example format:
       news_context?: string;
     },
   ): Promise<string> {
-    if (!this.claudeClient) {
+    if (!this.aiClient) {
       return `Based on your priorities, ${context.winner_name} is your recommended market.`;
     }
 

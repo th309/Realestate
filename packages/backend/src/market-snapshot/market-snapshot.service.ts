@@ -189,7 +189,9 @@ export class MarketSnapshotService {
         // Standard metrics
         const metricId = ZILLOW_METRIC_MAP[metricName];
         if (metricId && val != null) {
-          metrics[metricId] = { value: val, date };
+          // sale_to_list is stored as a fraction (0.98 = 98%); convert to display form
+          const displayValue = metricName === 'sale_to_list' ? val * 100 : val;
+          metrics[metricId] = { value: displayValue, date };
         }
 
         // Affordability metrics (metro only)
@@ -251,10 +253,13 @@ export class MarketSnapshotService {
     // Process Calculated Metrics
     if (calcResult.status === 'fulfilled' && calcResult.value) {
       const { data } = calcResult.value;
+      // Calculated metrics stored as fractions that need *100 for display
+      const CALC_PERCENT_COLS = new Set(['rent_to_price_ratio']);
       for (const [col, metricId] of Object.entries(CALC_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          metrics[metricId] = { value: Number(raw), date: data.period_date ?? null };
+          const value = CALC_PERCENT_COLS.has(col) ? Number(raw) * 100 : Number(raw);
+          metrics[metricId] = { value, date: data.period_date ?? null };
         }
       }
       // Also set years_to_save from calculated_metrics if Zillow didn't provide it

@@ -24,7 +24,7 @@ export default function AboutPage() {
               PropertyIQ was built to democratize real estate data. We believe everyone—from first-time
               homebuyers to seasoned investors—deserves access to the same market intelligence that was
               once reserved for institutional players. Our AI-powered platform analyzes millions of data
-              points across 384 US metro areas to deliver actionable insights.
+              points across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes to deliver actionable insights.
             </p>
           </section>
 

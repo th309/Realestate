@@ -2,33 +2,35 @@ import type { Metadata } from 'next';
 import {
   HeroSection,
   StatsSection,
-  FeaturesSection,
-  DemoSection,
+  ValuePropsSection,
+  AlphaCallout,
+  GraphsShowcase,
   PricingSection,
   CTASection,
   Footer,
   JsonLd,
 } from './components/home';
 
-// Page-specific SEO metadata
 export const metadata: Metadata = {
-  title: "PropertyIQ - AI Real Estate Market Intelligence for Homebuyers, Investors & Agents",
-  description: "PropertyIQ provides AI-powered real estate analytics for homebuyers finding their perfect home, renters comparing neighborhoods, investors maximizing ROI, and agents serving clients with data-driven insights. Covers 384 US metro areas.",
+  title:
+    'PropertyIQ - AI Real Estate Market Intelligence for Homebuyers, Investors & Agents',
+  description:
+    'PropertyIQ uses machine learning to rank 925 US metros, 3,100+ counties, and 33,000+ ZIP codes and generate AI market reports. Find markets that outperform, get personalized analysis, and invest with data—not guesswork.',
   alternates: {
-    canonical: "https://propertyiq.com"
-  }
+    canonical: 'https://propertyiq.com',
+  },
 };
 
 /**
  * PropertyIQ Homepage
  *
- * Landing page optimized for:
- * - Homebuyers & renters seeking neighborhood insights
- * - Real estate investors analyzing ROI opportunities
- * - Real estate agents & brokers needing market data
- * - AI search engines via JSON-LD structured data
- *
- * Note: Header/Navigation is provided by the root layout
+ * Structure follows proven SaaS landing page patterns:
+ * 1. Hero — bold value prop + real product screenshot
+ * 2. Stats — credibility numbers
+ * 3. Value Props — 3 alternating image+text sections with real product images
+ * 4. Pricing
+ * 5. Final CTA
+ * 6. Footer
  */
 export default function HomePage() {
   return (
@@ -37,8 +39,9 @@ export default function HomePage() {
       <div className="bg-surface text-on-surface font-sans">
         <HeroSection />
         <StatsSection />
-        <FeaturesSection />
-        <DemoSection />
+        <ValuePropsSection />
+        <AlphaCallout />
+        <GraphsShowcase />
         <PricingSection />
         <CTASection />
         <Footer />

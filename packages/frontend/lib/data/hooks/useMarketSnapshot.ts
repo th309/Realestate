@@ -11,9 +11,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchMarketSnapshot, type MarketSnapshotResponse } from '../fetchers/market-snapshot';
 import { fetchBatchTrendsServer, type BatchTrendEntry } from '../fetchers/trend';
-import { getMetricConfig } from '../registry-helpers';
+import { getMetricConfig, isMetricSupportedForGeo } from '../registry-helpers';
 import { formatMetricValue } from '../format';
 import type { GeoLevel, MetricFormat } from '../types';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export interface MarketSnapshotCard {
   value: number | null;
@@ -88,19 +90,36 @@ export function useMarketSnapshot(
       const config = getMetricConfig(metricId);
       const format: MetricFormat = config?.format ?? 'number';
 
-      // Apply asPercent transformation (some metrics store decimals that need *100)
-      let value = metric.value;
-      if (value != null && config?.asPercent) {
-        value = value * 100;
+      // Backend market-snapshot endpoint returns display-ready values
+      // (Realtor percent cols, sale_to_list, rent_to_price_ratio already converted)
+      const value = metric.value;
+
+      // Skip metrics with no data — consumers only see metrics with values
+      // Warn in dev when a metric that should be supported returns null (potential bug)
+      if (value == null) {
+        if (IS_DEV && geoType && isMetricSupportedForGeo(metricId, geoType as GeoLevel)) {
+          console.warn(`[useMarketSnapshot] ${metricId} returned null for ${geoType}/${geoId} — expected data based on supportedGeos`);
+        }
+        continue;
       }
 
       const formatted = formatMetricValue(value, format);
       const trend = trends[metricId];
 
+      // For 'percent' metrics (rates of change like home_value_yoy), show
+      // percentage-point change instead of relative percent change.
+      // E.g. YoY going from 0.7% → 1.4% should show "+0.7 pp" not "+100%".
+      // For 'percent_abs' metrics (absolute rates like cap_rate, gross_yield),
+      // keep the relative percent change since pp differences are tiny.
+      let trendChange = trend?.percentChange ?? null;
+      if (format === 'percent' && trend?.current != null && trend?.prior != null) {
+        trendChange = Number((trend.current - trend.prior).toFixed(1));
+      }
+
       cards[metricId] = {
         value,
         formattedValue: formatted,
-        percentChange: trend?.percentChange ?? null,
+        percentChange: trendChange,
         direction: trend?.direction ?? null,
         isLoading: false,
         date: metric.date,

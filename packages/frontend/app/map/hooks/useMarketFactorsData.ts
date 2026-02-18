@@ -15,6 +15,7 @@ import { getMetricConfig, timeSeriesApi, type GeoLevel } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
 
 const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export interface MarketFactorDatum {
   value: number | null;
@@ -89,14 +90,12 @@ export function useMarketFactorsData(
       const raw = queries[i]?.data as { metricId: string; points: { date: string; value: number }[] } | undefined;
       const points = raw?.points ?? [];
 
+      // No data for this metric — don't include in output
+      // Warn in dev so missing data is debuggable (not silently hidden)
       if (!points.length) {
-        out[metricId] = {
-          value: null,
-          formattedValue: '--',
-          trendPercent: null,
-          trendDirection: 'stable',
-          sparklineData: [],
-        };
+        if (IS_DEV && geoLevel && regionId && queries[i]?.isFetched) {
+          console.warn(`[useMarketFactorsData] ${metricId} returned no data for ${geoLevel}/${regionId}`);
+        }
         return;
       }
 

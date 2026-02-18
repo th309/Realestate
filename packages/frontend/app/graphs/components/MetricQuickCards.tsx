@@ -65,11 +65,14 @@ function QuickCard({
   );
 
   const format = getMetricFormat(metricId);
-  const formattedValue = current != null ? formatMetricValue(current, format) : '--';
+  const formattedValue = current != null ? formatMetricValue(current, format) : null;
 
   const trendDir = trendChange != null
     ? trendChange > 0.5 ? 'up' : trendChange < -0.5 ? 'down' : 'stable'
     : null;
+
+  // Don't render card if no data available (after loading completes)
+  if (!isLoading && current == null) return null;
 
   if (compact) {
     return (
@@ -98,7 +101,7 @@ function QuickCard({
               <div className="h-4 w-10 bg-surface-container-high rounded animate-pulse" />
             ) : (
               <span className={`text-xs font-semibold ${isActive ? 'text-on-primary-container' : 'text-on-surface'}`}>
-                {formattedValue}
+                {formattedValue ?? '--'}
               </span>
             )}
             {trendDir && trendChange != null && (
@@ -138,7 +141,7 @@ function QuickCard({
             <div className="h-5 w-14 bg-surface-container-high rounded animate-pulse" />
           ) : (
             <span className={`text-base font-semibold ${isActive ? 'text-on-primary-container' : 'text-on-surface'}`}>
-              {formattedValue}
+              {formattedValue ?? '--'}
             </span>
           )}
         </div>

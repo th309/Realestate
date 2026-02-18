@@ -10,7 +10,10 @@ import type { GeoLevel, TrendResult, TrendDirection } from '../types';
 import { useSnapshotData, type UseSnapshotDataOptions } from './useSnapshotData';
 import { useTrendData } from './useTrendData';
 import { useMetricAccess } from './useMetricAccess';
+import { isMetricSupportedForGeo } from '../registry-helpers';
 import type { UserTier } from '@/lib/entitlements';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export interface UseDataCardOptions extends UseSnapshotDataOptions {
   /** Number of months for trend calculation */
@@ -137,7 +140,7 @@ export function useDataCardBatch(
   isLoading: boolean;
   hasError: boolean;
 } {
-  const cards: Record<string, UseDataCardResult> = {};
+  const allCards: Record<string, UseDataCardResult> = {};
   let anyLoading = false;
   let anyError = false;
 
@@ -145,9 +148,22 @@ export function useDataCardBatch(
   // consider restructuring to use useQueries directly.
   for (const metricId of metricIds) {
     const result = useDataCard(metricId, geoLevel, regionId, options);
-    cards[metricId] = result;
+    allCards[metricId] = result;
     if (result.isLoading) anyLoading = true;
     if (result.error) anyError = true;
+  }
+
+  // Filter out metrics with no data (value === null after loading completes)
+  // Consumers only see metrics that have actual values
+  const cards: Record<string, UseDataCardResult> = {};
+  for (const [metricId, result] of Object.entries(allCards)) {
+    if (result.isLoading) {
+      cards[metricId] = result;
+    } else if (result.value != null) {
+      cards[metricId] = result;
+    } else if (IS_DEV && isMetricSupportedForGeo(metricId, geoLevel)) {
+      console.warn(`[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`);
+    }
   }
 
   return {

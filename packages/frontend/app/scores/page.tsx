@@ -71,7 +71,7 @@ export default function ScoresPage() {
           icon={<Target className="w-5 h-5" />}
         />
         <p className="mt-4 text-on-surface-variant">
-          Validated across 1.1M+ observations &middot; 384 metros &middot; 5 years of data
+          Validated across 1.1M+ observations &middot; 925 metros &middot; 5 years of data
         </p>
       </section>
 

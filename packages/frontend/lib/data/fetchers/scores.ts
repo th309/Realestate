@@ -2,11 +2,54 @@
  * SCORE DATA FETCHER
  *
  * Fetches PropertyIQ score data for specific geographies.
- * Supports single and batch score fetching.
+ * Supports single, batch, and top-ranked score fetching.
  */
 
 import type { ScoreResponse, BatchScoreResponse } from '../types';
-import { fetchAPI } from './base';
+import { fetchAPI, fetchAPIWithParams } from './base';
+
+// ============================================================================
+// TOP MARKETS TYPES
+// ============================================================================
+
+export type TopMarketsGeo = 'metro' | 'county' | 'zip';
+export type TopMarketsScoreType = 'homeready' | 'investoredge' | 'markethealth';
+
+export interface TopMarketEntry {
+  location_id: string;
+  location_name: string;
+  score: number;
+  grade: string;
+}
+
+// ============================================================================
+// TOP MARKETS FETCHER
+// ============================================================================
+
+/**
+ * Fetch top-ranked markets by score
+ *
+ * @param geography - Geography level: metro, county, or zip
+ * @param scoreType - Score to rank by: homeready, investoredge, or markethealth
+ * @param limit - Number of results (1-100, default 10)
+ */
+export async function fetchTopMarkets(
+  geography: TopMarketsGeo,
+  scoreType: TopMarketsScoreType,
+  limit: number = 10,
+): Promise<TopMarketEntry[]> {
+  try {
+    const data = await fetchAPIWithParams<TopMarketEntry[]>('/api/scores/top', {
+      geography,
+      score_type: scoreType,
+      limit: String(limit),
+    });
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Failed to fetch top markets:', error);
+    return [];
+  }
+}
 
 /**
  * Fetch PropertyIQ score for a specific geography

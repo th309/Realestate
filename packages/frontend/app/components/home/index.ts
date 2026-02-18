@@ -1,12 +1,11 @@
-// Home page components - M3 compliant
-export { Navigation } from './Navigation';
+// Home page components
 export { HeroSection } from './HeroSection';
 export { StatsSection } from './StatsSection';
-export { FeaturesSection } from './FeaturesSection';
+export { ValuePropsSection } from './ValuePropsSection';
+export { AlphaCallout } from './AlphaCallout';
+export { GraphsShowcase } from './GraphsShowcase';
 export { PricingSection } from './PricingSection';
 export { CTASection } from './CTASection';
 export { Footer } from './Footer';
 export { AnimatedCounter } from './AnimatedCounter';
 export { JsonLd } from './JsonLd';
-export { FeatureCarousel } from './FeatureCarousel';
-export { DemoSection } from './DemoSection';

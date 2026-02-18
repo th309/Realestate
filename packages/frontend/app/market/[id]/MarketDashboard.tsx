@@ -60,12 +60,12 @@ function MetricCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-on-surface-variant uppercase tracking-wide truncate">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="text-xs font-medium text-on-surface-variant uppercase tracking-wide min-w-0">
           <MetricTitle metricId={metricId} />
-        </span>
+        </div>
         {trendPercent != null && (
-          <div className={`flex items-center gap-0.5 text-xs font-medium ${
+          <div className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${
             trendDirection === 'up' ? 'text-green-600' :
             trendDirection === 'down' ? 'text-red-600' :
             'text-on-surface-variant'
@@ -414,7 +414,9 @@ export function MarketDashboard({
               <div className="space-y-6">
                 {categories.map((category, catIndex) => {
                   const supportedMetrics = category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? [];
-                  if (supportedMetrics.length === 0) return null;
+                  // Only show metrics that have actual data (data layer filters nulls)
+                  const metricsWithData = supportedMetrics.filter(id => displayData[id] !== undefined);
+                  if (metricsWithData.length === 0) return null;
 
                   // Add divider between view-specific (first 3) and shared categories
                   const showDivider = catIndex === 3;
@@ -428,7 +430,7 @@ export function MarketDashboard({
                         categoryName={category.name}
                         subtext={category.subtext}
                         icon={category.icon}
-                        metricIds={supportedMetrics}
+                        metricIds={metricsWithData}
                         factorsData={displayData}
                         delay={catIndex * 0.1}
                       />

@@ -71,10 +71,10 @@ const softwareSchema = {
     "HomeReady Score for homebuyers",
     "InvestorEdge Score for real estate investors",
     "Rental demand analysis for landlords",
-    "Neighborhood quality metrics",
+    "Market quality metrics",
     "Interactive market heat maps",
     "AI-generated market reports",
-    "384 US metro area coverage",
+    "925 US metros, 3,100+ counties, and 33,000+ ZIP codes",
     "Census and economic data integration"
   ],
   audience: {
@@ -117,7 +117,7 @@ const faqSchema = {
       name: "What is PropertyIQ?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "PropertyIQ is an AI-powered real estate market intelligence platform that helps homebuyers, renters, real estate investors, and agents make data-driven property decisions. It provides proprietary scores like HomeReady Score and InvestorEdge Score, interactive market heat maps, and AI-generated reports covering 384 US metro areas."
+        text: "PropertyIQ is an AI-powered real estate market intelligence platform that helps homebuyers, renters, real estate investors, and agents make data-driven property decisions. It provides proprietary scores like HomeReady Score and InvestorEdge Score, interactive market heat maps, and AI-generated reports covering 925 US metros, 3,100+ counties, and 33,000+ ZIP codes."
       }
     },
     {
@@ -125,7 +125,7 @@ const faqSchema = {
       name: "How does PropertyIQ help homebuyers?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "PropertyIQ helps homebuyers with the HomeReady Score that evaluates properties based on neighborhood quality, school ratings, walkability, price appreciation potential, and affordability. It provides 3-year price trend forecasts and compares homes across key livability metrics."
+        text: "PropertyIQ helps homebuyers with the HomeReady Score that evaluates markets based on affordability, price appreciation potential, demand indicators, and market timing. It provides 3-year price trend forecasts and compares homes across key livability metrics."
       }
     },
     {
@@ -141,7 +141,7 @@ const faqSchema = {
       name: "How can real estate agents use PropertyIQ?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Real estate agents and brokers use PropertyIQ to generate professional AI-powered market reports for clients, access comprehensive neighborhood data, and provide data-backed recommendations. The Team plan includes API access for CRM integration."
+        text: "Real estate agents and brokers use PropertyIQ to generate professional AI-powered market reports for clients, access comprehensive market data, and provide data-backed recommendations. The Team plan includes API access for CRM integration."
       }
     },
     {

@@ -17,8 +17,10 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useMetricData, MetricDataPoint } from './useMetricData';
-import { getMetricConfig, type GeoLevel, type MetricFormat, timeSeriesApi } from '@/lib/data';
+import { getMetricConfig, isMetricSupportedForGeo, type GeoLevel, type MetricFormat, timeSeriesApi } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -174,17 +176,30 @@ export function useDataCardBatch(
     regionId: string,
     showTrend: boolean = false,
 ): Record<string, DataCardResult> {
-    const results: Record<string, DataCardResult> = {};
+    const allResults: Record<string, DataCardResult> = {};
 
     for (const metricId of metricIds) {
         // React Query handles deduplication automatically
         // eslint-disable-next-line react-hooks/rules-of-hooks
-        results[metricId] = useDataCard({
+        allResults[metricId] = useDataCard({
             metricId,
             geoLevel,
             regionId,
             showTrend,
         });
+    }
+
+    // Filter out metrics with no data (value === null after loading completes)
+    // Consumers only see metrics that have actual values
+    const results: Record<string, DataCardResult> = {};
+    for (const [metricId, result] of Object.entries(allResults)) {
+        if (result.loading) {
+            results[metricId] = result;
+        } else if (result.value != null) {
+            results[metricId] = result;
+        } else if (IS_DEV && isMetricSupportedForGeo(metricId, geoLevel)) {
+            console.warn(`[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`);
+        }
     }
 
     return results;
