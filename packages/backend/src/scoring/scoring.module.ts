@@ -19,6 +19,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScoringService } from './scoring.service';
 import { ScoringController } from './scoring.controller';
+import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 // Import backtest services (for performance tracking)
@@ -53,6 +54,9 @@ import { PerformanceTrackingService } from './performance-tracking.service';
   providers: [
     // Core scoring service (simplified z-score formula system)
     ScoringService,
+
+    // Score access control service
+    ScoreAccessService,
 
     // Legacy service kept for backward compatibility
     InheritanceService,
@@ -90,6 +94,7 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     ScoringService,
     InheritanceService,
     PerformanceTrackingService,
+    ScoreAccessService,
 
     // Backtest services
     OutcomeGeneratorService,

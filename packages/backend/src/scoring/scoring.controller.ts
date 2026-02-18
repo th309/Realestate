@@ -20,11 +20,13 @@ import {
   HttpException,
   HttpStatus,
   Res,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ScoringService, ScoreResult } from './scoring.service';
 import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
+import { ScoreAccessService, canAccessScoreBreakdown } from './scoring.guard';
 import { GeographyLevel, ScoreType } from './formula-weights';
 import { parseHistoryMonths } from '../common/history.constants';
 import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
@@ -35,6 +37,7 @@ export class ScoringController {
   constructor(
     private readonly scoringService: ScoringService,
     private readonly performanceTrackingService: PerformanceTrackingService,
+    private readonly scoreAccessService: ScoreAccessService,
   ) {}
 
   // ============================================================================
@@ -70,6 +73,7 @@ export class ScoringController {
     @Query('location_id') locationId: string,
     @Query('date') date?: string,
     @Query('historyMonths') historyMonths?: string,
+    @Req() request?: any,
   ): Promise<ScoreResult> {
     if (!geography) {
       throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
@@ -91,7 +95,7 @@ export class ScoringController {
       );
     }
 
-    return score;
+    return this.stripBreakdownIfNeeded(score, request);
   }
 
   /**
@@ -474,6 +478,7 @@ export class ScoringController {
     @Query('historyMonths') historyMonths?: string,
     @Query('historyYears') historyYears?: string,
     @Query('includeOutcomes') includeOutcomes?: string,
+    @Req() request?: any,
   ): Promise<ScoreResult> {
     const geoLevel = this.validateGeography(geography);
 
@@ -496,7 +501,7 @@ export class ScoringController {
         );
       }
 
-      return score;
+      return this.stripBreakdownIfNeeded(score, request);
     }
 
     // Otherwise use standard method
@@ -512,7 +517,7 @@ export class ScoringController {
       );
     }
 
-    return score;
+    return this.stripBreakdownIfNeeded(score, request);
   }
 
   /**
@@ -531,6 +536,7 @@ export class ScoringController {
     @Query('ids') ids: string,
     @Query('date') date?: string,
     @Query('historyMonths') historyMonths?: string,
+    @Req() request?: any,
   ): Promise<{ geography: string; scores: (ScoreResult | { location_id: string; error: string })[] }> {
     if (!ids) {
       throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
@@ -553,7 +559,8 @@ export class ScoringController {
       locationIds.map(async (id) => {
         try {
           const score = await this.scoringService.getScore(id, geoLevel, date, options);
-          return score || { location_id: id, error: 'Score not found' };
+          if (!score) return { location_id: id, error: 'Score not found' };
+          return this.stripBreakdownIfNeeded(score, request);
         } catch {
           return { location_id: id, error: 'Failed to retrieve score' };
         }
@@ -662,6 +669,29 @@ export class ScoringController {
     const geoLevel = this.validateGeography(geography);
     const stats = await this.scoringService.debugGetMetricStats(geoLevel, metric, date);
     return { geography, metric, stats };
+  }
+
+  // ============================================================================
+  // Access Control Helpers
+  // ============================================================================
+
+  /**
+   * Strip score component breakdowns from response for users without access.
+   * Scores (number, grade, confidence) are always visible — only `components` is gated.
+   */
+  private stripBreakdownIfNeeded(result: ScoreResult, request: any): ScoreResult {
+    const userTier = this.scoreAccessService.getUserTierFromRequest(request);
+
+    if (result.scores) {
+      for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
+        const scoreData = result.scores[scoreType];
+        if (scoreData && !canAccessScoreBreakdown(scoreType, userTier)) {
+          delete scoreData.components;
+        }
+      }
+    }
+
+    return result;
   }
 
   // ============================================================================

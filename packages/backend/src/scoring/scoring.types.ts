@@ -95,9 +95,29 @@ export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
  * Score access configuration by tier
  */
 export const SCORE_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
-  markethealth: ['free', 'basic', 'pro', 'enterprise'], // Available to all
-  homeready: ['pro', 'enterprise'], // Pro+ only
-  investoredge: ['pro', 'enterprise'], // Pro+ only
+  markethealth: ['free', 'basic', 'pro', 'enterprise'],
+  homeready: ['free', 'basic', 'pro', 'enterprise'],   // Score visible to all; breakdown gated separately
+  investoredge: ['free', 'basic', 'pro', 'enterprise'], // Score visible to all; breakdown gated separately
+};
+
+/**
+ * Controls which tiers can see score component breakdowns.
+ * Score number + gauge + grade are visible to all tiers.
+ * Breakdowns (contributing factors, component scores) are gated here.
+ */
+export const SCORE_BREAKDOWN_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
+  markethealth: ['free', 'basic', 'pro', 'enterprise'], // Breakdown visible to all
+  homeready: ['pro', 'enterprise'],                       // Breakdown Pro+ only
+  investoredge: ['pro', 'enterprise'],                    // Breakdown Pro+ only
+};
+
+/**
+ * Controls which tiers can see full component weights.
+ */
+export const SCORE_WEIGHTS_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
+  markethealth: ['pro', 'enterprise'],
+  homeready: ['enterprise'],
+  investoredge: ['enterprise'],
 };
 
 // ============================================================================

@@ -2,12 +2,14 @@
  * Scoring Access Control Guard
  *
  * Controls access to PropertyIQ scores based on user subscription tier:
- * - Market Health Index: Available to ALL tiers (free, basic, pro, enterprise)
- * - HomeReady Score: Available to PRO and ENTERPRISE tiers only
- * - InvestorEdge Score: Available to PRO and ENTERPRISE tiers only
+ * - All scores (markethealth, homeready, investoredge) are visible to ALL tiers.
+ * - Score component breakdowns are gated:
+ *   - MarketHealth breakdown: All tiers
+ *   - HomeReady breakdown: Pro+ only
+ *   - InvestorEdge breakdown: Pro+ only
  *
- * Users without the required tier get a "teaser" response with limited data
- * and an upgrade call-to-action.
+ * Users without the required tier see the score number/grade/confidence but
+ * not the component breakdown, with an upgrade call-to-action.
  */
 
 import {
@@ -22,6 +24,8 @@ import {
   ScoreAccess,
   UserTier,
   SCORE_ACCESS_CONFIG,
+  SCORE_BREAKDOWN_ACCESS_CONFIG,
+  SCORE_WEIGHTS_ACCESS_CONFIG,
 } from './scoring.types';
 
 // Decorator key for score access metadata
@@ -50,6 +54,22 @@ export function canAccessFullScore(
 }
 
 /**
+ * Check if a user can access score component breakdown
+ */
+export function canAccessScoreBreakdown(scoreType: ScoreType, userTier: UserTier): boolean {
+  const allowedTiers = SCORE_BREAKDOWN_ACCESS_CONFIG[scoreType];
+  return allowedTiers.includes(userTier);
+}
+
+/**
+ * Check if a user can access score component weights
+ */
+export function canAccessScoreWeights(scoreType: ScoreType, userTier: UserTier): boolean {
+  const allowedTiers = SCORE_WEIGHTS_ACCESS_CONFIG[scoreType];
+  return allowedTiers.includes(userTier);
+}
+
+/**
  * Get all scores with their access levels for a user
  */
 export function getScoreAccessLevels(userTier: UserTier): Record<ScoreType, ScoreAccess> {
@@ -64,15 +84,7 @@ export function getScoreAccessLevels(userTier: UserTier): Record<ScoreType, Scor
  * Get the minimum tier required for full access to a score
  */
 export function getRequiredTier(scoreType: ScoreType): UserTier {
-  switch (scoreType) {
-    case 'markethealth':
-      return 'free'; // Available to everyone
-    case 'homeready':
-    case 'investoredge':
-      return 'pro'; // Requires Pro or higher
-    default:
-      return 'pro';
-  }
+  return 'free'; // All scores visible to all tiers; breakdown gated separately
 }
 
 /**
@@ -82,7 +94,7 @@ export function shouldShowUpgradeCta(
   scoreType: ScoreType,
   userTier: UserTier,
 ): boolean {
-  return getScoreAccess(scoreType, userTier) === 'teaser';
+  return !canAccessScoreBreakdown(scoreType, userTier);
 }
 
 /**
@@ -91,11 +103,11 @@ export function shouldShowUpgradeCta(
 export function getUpgradeMessage(scoreType: ScoreType): string {
   switch (scoreType) {
     case 'homeready':
-      return 'Upgrade to Pro to unlock the HomeReady Score with affordability, market timing, and livability insights.';
+      return 'See what drives this HomeReady score — affordability, market timing, and livability factors.';
     case 'investoredge':
-      return 'Upgrade to Pro to unlock the InvestorEdge Score with cash flow, appreciation, and risk analysis.';
+      return 'See what drives this InvestorEdge score — cash flow, appreciation, and risk analysis.';
     default:
-      return 'Upgrade to Pro to unlock premium scores and insights.';
+      return 'Upgrade to see the full score breakdown.';
   }
 }
 
