@@ -104,7 +104,9 @@ export class AlertProcessorService {
       case 'below':
         return value < threshold;
       case 'crosses':
-        return true; // Simplified: any value change from threshold side
+        // TODO: Requires tracking previous metric values to detect threshold crossings.
+        // Disabled to prevent false-positive daily notifications. See #crosses-impl
+        return false;
       default:
         return false;
     }
