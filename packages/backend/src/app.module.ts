@@ -28,6 +28,7 @@ import { RedisModule } from './redis/redis.module';
 import { MarketAnalysisModule } from './market-analysis/market-analysis.module';
 import { PartnersModule } from './partners/partners.module';
 import { MarketSnapshotModule } from './market-snapshot/market-snapshot.module';
+import { BenchmarksModule } from './benchmarks/benchmarks.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -61,6 +62,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     MarketAnalysisModule,
     PartnersModule,
     MarketSnapshotModule,
+    BenchmarksModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
