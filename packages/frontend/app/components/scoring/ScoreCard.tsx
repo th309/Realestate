@@ -158,39 +158,6 @@ function CloseIcon({ className = '' }: { className?: string }) {
   );
 }
 
-/**
- * Lock overlay for teaser cards
- */
-function TeaserOverlay({ cta, onUpgrade }: { cta: UpgradeCta; onUpgrade?: () => void }) {
-  return (
-    <div className="absolute inset-0 bg-surface/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
-      <div className="text-center p-6 max-w-xs">
-        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-          <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-on-surface mb-1">{cta.headline}</h3>
-        <p className="text-sm text-on-surface-variant mb-4">{cta.description}</p>
-        <ul className="text-xs text-on-surface-variant mb-4 space-y-1">
-          {cta.features.slice(0, 3).map((feature) => (
-            <li key={feature} className="flex items-center gap-1.5">
-              <span className="text-primary">✓</span>
-              {feature}
-            </li>
-          ))}
-        </ul>
-        <button
-          onClick={onUpgrade}
-          className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors duration-200"
-        >
-          {cta.buttonText}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export const ScoreCard = memo(function ScoreCard({
   type,
   label,
