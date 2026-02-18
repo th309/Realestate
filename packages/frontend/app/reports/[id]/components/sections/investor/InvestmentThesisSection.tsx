@@ -64,6 +64,7 @@ export function InvestmentThesisSection({
 
   const narrative =
     report.ai_narrative?.investment_thesis_narrative ??
+    report.ai_narrative?.investment_analysis ??
     (report.ai_narratives as any)?.investment_thesis_narrative ??
     null;
 

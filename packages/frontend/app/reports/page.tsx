@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense, useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, TrendingUp, MapPin, DollarSign, ChevronRight, Plus, X, Sparkles, Info, AlertCircle, History, Clock, FileText } from 'lucide-react';
 import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
@@ -501,31 +501,44 @@ interface ReportCreationPageProps {
 
 function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { simulatedTier, tier } = useEntitlements();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const urlPrefillApplied = useRef(false);
 
-  // Read prefill data from map context menu (right-click → "Generate Report")
+  // Read prefill data from URL params (e.g. from "Generate Report" on market page)
+  // or from localStorage (e.g. from map context menu right-click)
   useEffect(() => {
+    if (markets.length > 0) return;
+
+    // Priority 1: URL params (mid, mname, mtype)
+    if (!urlPrefillApplied.current) {
+      const mid = searchParams.get('mid');
+      const mname = searchParams.get('mname');
+      const mtype = searchParams.get('mtype') as Market['type'] | null;
+      const mstate = searchParams.get('mstate');
+      if (mid && mname && mtype) {
+        urlPrefillApplied.current = true;
+        setMarkets([{ id: mid, name: mname, type: mtype, state: mstate || undefined }]);
+        return;
+      }
+    }
+
+    // Priority 2: localStorage prefill (map context menu)
     try {
       const raw = localStorage.getItem('propertyiq-report-prefill');
       if (raw) {
         localStorage.removeItem('propertyiq-report-prefill');
         const prefill = JSON.parse(raw);
         if (prefill?.id && prefill?.name && prefill?.type) {
-          const market: Market = {
-            id: prefill.id,
-            name: prefill.name,
-            type: prefill.type,
-            state: prefill.state,
-          };
-          setMarkets((prev) => prev.length === 0 ? [market] : prev);
+          setMarkets([{ id: prefill.id, name: prefill.name, type: prefill.type, state: prefill.state }]);
         }
       }
     } catch { /* ignore malformed data */ }
-  }, []);
+  }, [markets.length, searchParams]);
 
   const isHomebuyer = type === 'homebuyer';
   const canGenerate = markets.length > 0;
@@ -813,7 +826,11 @@ function ReportHistory() {
 // ============================================================================
 
 function ReportsContent() {
-  const [selectedType, setSelectedType] = useState<'homebuyer' | 'investor' | null>(null);
+  const searchParams = useSearchParams();
+  const urlType = searchParams.get('rtype') as 'homebuyer' | 'investor' | null;
+  const [selectedType, setSelectedType] = useState<'homebuyer' | 'investor' | null>(
+    urlType && ['homebuyer', 'investor'].includes(urlType) ? urlType : null
+  );
 
   if (selectedType) {
     return (

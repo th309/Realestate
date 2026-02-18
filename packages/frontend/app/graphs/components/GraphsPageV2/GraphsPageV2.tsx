@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
 import { useGraphsState, type TimeFrame } from '../../hooks/useGraphsState';
 import { useMyMarkets } from '../../hooks/useMyMarkets';
 import { useScatterData } from '../../hooks/useScatterData';
@@ -211,16 +212,38 @@ export function GraphsPageV2() {
     swapMarkets,
   } = graphsState;
 
+  const searchParams = useSearchParams();
   const { markets: savedMarkets, loading: marketsLoading } = useMyMarkets({ userType, maxMarkets: 6 });
   const [saveTemplateOpen, setSaveTemplateOpen] = React.useState(false);
+  const urlMarketApplied = useRef(false);
 
   // Auto-select a market if none selected, prioritizing:
+  // 0. URL params (e.g. from "View Trends" link on market detail page)
   // 1. Last geography the user viewed (maps page, reports, etc.)
   // 2. Pinned/favorite markets
   // 3. Recent markets
   // If nothing found, leave empty — user picks from search
   useEffect(() => {
     if (markets.length > 0 || marketsLoading) return;
+
+    // Priority 0: Market passed via URL params (mid, mname, mtype)
+    if (!urlMarketApplied.current) {
+      const mid = searchParams.get('mid');
+      const mname = searchParams.get('mname');
+      const mtype = searchParams.get('mtype') as 'metro' | 'county' | 'zip' | null;
+      const mstate = searchParams.get('mstate');
+      if (mid && mname && mtype && ['metro', 'county', 'zip'].includes(mtype)) {
+        urlMarketApplied.current = true;
+        addMarket({
+          id: mid,
+          name: mname,
+          type: mtype,
+          state: mstate || undefined,
+          score: null,
+        });
+        return;
+      }
+    }
 
     // Priority 1: Last geography the user viewed on the maps page
     try {
@@ -246,7 +269,7 @@ export function GraphsPageV2() {
     if (savedMarkets.length > 0) {
       addMarket(savedMarkets[0]);
     }
-  }, [markets.length, marketsLoading, savedMarkets, addMarket]);
+  }, [markets.length, marketsLoading, savedMarkets, addMarket, searchParams]);
 
   // ── Derived values ──────────────────────────────────────────────────────────
 

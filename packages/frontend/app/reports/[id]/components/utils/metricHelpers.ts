@@ -121,6 +121,22 @@ const METRIC_ALIASES: Record<string, string[]> = {
   // YoY aliases — sections look for various names
   home_value_yoy: ['zhvi_yoy', 'median_listing_price_yoy'],
   zhvi_yoy: ['home_value_yoy', 'median_listing_price_yoy'],
+  // Appreciation / growth aliases (descriptive ↔ Zillow names)
+  home_value_3y_cagr: ['zhvi_3y_cagr', 'appreciation_3yr'],
+  zhvi_3y_cagr: ['home_value_3y_cagr', 'appreciation_3yr'],
+  home_value_5y_cagr: ['zhvi_5y_cagr', 'appreciation_5yr'],
+  zhvi_5y_cagr: ['home_value_5y_cagr', 'appreciation_5yr'],
+  home_value_forecast_1yr: ['zhvf_1yr_pct', 'forecast_1yr'],
+  zhvf_1yr_pct: ['home_value_forecast_1yr', 'forecast_1yr'],
+  // Rent aliases (descriptive ↔ Zillow names)
+  median_rent: ['zori', 'rent_index', 'median_gross_rent'],
+  zori: ['median_rent', 'rent_index', 'median_gross_rent'],
+  rent_yoy: ['zori_yoy', 'rent_growth_yoy'],
+  zori_yoy: ['rent_yoy', 'rent_growth_yoy'],
+  rent_5y_cagr: ['zori_5y_cagr', 'rent_growth_5yr'],
+  zori_5y_cagr: ['rent_5y_cagr', 'rent_growth_5yr'],
+  rental_demand_index: ['zordi', 'renter_demand_index'],
+  zordi: ['rental_demand_index', 'renter_demand_index'],
   // Listing/inventory aliases
   for_sale_inventory: ['active_listing_count'],
   active_listing_count: ['for_sale_inventory'],

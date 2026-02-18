@@ -101,7 +101,7 @@ export function CashFlowDeepDive({
     report.populated_data?.historical?.median_gross_rent;
 
   // -- AI Narrative --
-  const narrative = report.ai_narrative?.cash_flow_narrative;
+  const narrative = report.ai_narrative?.cash_flow_narrative ?? report.ai_narrative?.cash_flow_analysis;
 
   // -- Personalized --
   const investmentBudget = report.user_inputs?.investment_budget;

@@ -146,7 +146,7 @@ export function RiskDeepDive({
     report.populated_data?.historical?.home_value;
 
   // -- AI Narrative --
-  const narrative = report.ai_narrative?.risk_narrative;
+  const narrative = report.ai_narrative?.risk_narrative ?? report.ai_narrative?.risks_opportunities;
 
   // -- Personalized --
   const riskTolerance = report.user_inputs?.risk_tolerance;

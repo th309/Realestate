@@ -164,9 +164,42 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'cagr_5yr',
   },
 
+  home_value_3yr: {
+    id: 'home_value_3yr',
+    title: '3-Year Growth',
+    format: 'percent',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/metrics/home-value-3yr/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'zhvi_3y_cagr',
+  },
+
   // ============================================================================
   // RENT
   // ============================================================================
+  rent_yoy: {
+    id: 'rent_yoy',
+    title: 'Rent YoY',
+    format: 'percent',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/metrics/rent-yoy/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'zori_yoy',
+  },
+
+  rent_5yr: {
+    id: 'rent_5yr',
+    title: 'Rent 5-Year Growth',
+    format: 'percent',
+    dataSource: 'realtor',
+    apiEndpoint: '/api/metrics/rent-5yr/{geo}',
+    keyField: 'auto',
+    supportedGeos: ['metro'],
+    valueField: 'zori_5y_cagr',
+  },
+
   rent_index: {
     id: 'rent_index',
     title: 'Rent Index',

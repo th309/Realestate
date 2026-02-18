@@ -17,6 +17,7 @@ import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
 import { EconomicService } from '../economic/economic.service';
+import { CalculatedMetricsService } from '../metrics/calculated-metrics.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { NARRATIVE_PROMPTS, SECTIONS_BY_REPORT_TYPE } from './narrative-prompts';
 import { ScoreComponentBreakdown } from '../scoring/scoring.types';
@@ -168,6 +169,7 @@ export class ReportsService {
     private readonly entitlementsService: EntitlementsService,
     private readonly partnersService: PartnersService,
     private readonly economicService: EconomicService,
+    private readonly calculatedMetricsService: CalculatedMetricsService,
   ) {}
 
   /**
@@ -369,11 +371,28 @@ export class ReportsService {
       // 3. Assemble report data
       const populatedData = {
         current: {
+          // Home value (Zillow names kept for template compatibility + descriptive aliases)
           zhvi: marketMetrics.zhvi,
+          home_value: marketMetrics.zhvi,
           zhvi_yoy: marketMetrics.zhvi_yoy,
+          home_value_yoy: marketMetrics.zhvi_yoy,
+          zhvi_3y_cagr: marketMetrics.zhvi_3y_cagr,
+          home_value_3y_cagr: marketMetrics.zhvi_3y_cagr,
+          zhvi_5y_cagr: marketMetrics.zhvi_5y_cagr,
+          home_value_5y_cagr: marketMetrics.zhvi_5y_cagr,
+          zhvf_1yr_pct: marketMetrics.zhvf_1yr_pct,
+          home_value_forecast_1yr: marketMetrics.zhvf_1yr_pct,
           median_listing_price: marketMetrics.median_listing_price,
           median_listing_price_yoy: marketMetrics.median_listing_price_yoy,
+          // Rent (Zillow names kept for template compatibility + descriptive aliases)
           zori: marketMetrics.zori,
+          median_rent: marketMetrics.zori,
+          zori_yoy: marketMetrics.zori_yoy,
+          rent_yoy: marketMetrics.zori_yoy,
+          zori_5y_cagr: marketMetrics.zori_5y_cagr,
+          rent_5y_cagr: marketMetrics.zori_5y_cagr,
+          zordi: marketMetrics.zordi,
+          rental_demand_index: marketMetrics.zordi,
           days_on_market: marketMetrics.days_on_market,
           active_listing_count: marketMetrics.active_listing_count,
           inventory_yoy: marketMetrics.inventory_yoy,
@@ -564,6 +583,42 @@ export class ReportsService {
             markethealth_score: scores ? Math.round(scores.scores.markethealth.score) : 'N/A',
             homeready_grade: scores?.scores.homeready.grade || 'N/A',
             investoredge_grade: scores?.scores.investoredge.grade || 'N/A',
+
+            // HomeReady component scores (e.g. {{affordability_score}}, {{affordability_status}})
+            ...(() => {
+              const ctx: Record<string, any> = {};
+              const hrComps = scores?.scores?.homeready?.components as any[] | undefined;
+              if (hrComps) {
+                for (const comp of hrComps) {
+                  ctx[`${comp.component}_score`] = Math.round(comp.score);
+                  ctx[`${comp.component}_status`] = comp.status;
+                }
+              } else {
+                for (const name of ['affordability', 'market_timing', 'stability', 'growth_potential']) {
+                  ctx[`${name}_score`] = 'N/A';
+                  ctx[`${name}_status`] = 'N/A';
+                }
+              }
+              return ctx;
+            })(),
+
+            // InvestorEdge component scores (e.g. {{cash_flow_score}}, {{cash_flow_status}})
+            ...(() => {
+              const ctx: Record<string, any> = {};
+              const ieComps = scores?.scores?.investoredge?.components as any[] | undefined;
+              if (ieComps) {
+                for (const comp of ieComps) {
+                  ctx[`${comp.component}_score`] = Math.round(comp.score);
+                  ctx[`${comp.component}_status`] = comp.status;
+                }
+              } else {
+                for (const name of ['cash_flow', 'rent_demand', 'appreciation', 'entry_point', 'risk']) {
+                  ctx[`${name}_score`] = 'N/A';
+                  ctx[`${name}_status`] = 'N/A';
+                }
+              }
+              return ctx;
+            })(),
 
             // Price metrics - templates use {{zhvi}} (currency) and {{zhvi_yoy}} (number, adds % in template)
             zhvi: this.formatCurrency(marketMetrics.zhvi),
@@ -1071,61 +1126,147 @@ export class ReportsService {
           }
         }
 
-        // Get YoY ZHVI change (compare current to 12 months ago)
-        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
+        // Get ZHVI history for YoY, 3yr CAGR, and 5yr CAGR
+        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value') || shouldFetch('appreciation')) {
           const { data: zhviHistory } = await client
             .from('zillow_metro')
             .select('value, period_date')
             .eq('cbsa_code', geographyId)
             .eq('metric_name', 'zhvi')
             .order('period_date', { ascending: false })
-            .limit(13);
+            .limit(61);
 
-          if (zhviHistory && zhviHistory.length >= 12) {
+          if (zhviHistory && zhviHistory.length >= 2) {
             const current = zhviHistory[0]?.value;
-            const yearAgo = zhviHistory[12]?.value;
-            if (current && yearAgo) {
-              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+            // YoY (12 months)
+            if (zhviHistory.length >= 12) {
+              const yearAgo = zhviHistory[12]?.value;
+              if (current && yearAgo) {
+                metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+              }
+            }
+            // 3-year CAGR (36 months)
+            if (zhviHistory.length >= 36) {
+              const threeYrAgo = zhviHistory[Math.min(36, zhviHistory.length - 1)]?.value;
+              if (current && threeYrAgo && threeYrAgo > 0) {
+                metrics.zhvi_3y_cagr = (Math.pow(current / threeYrAgo, 1 / 3) - 1) * 100;
+              }
+            }
+            // 5-year CAGR (60 months)
+            if (zhviHistory.length >= 60) {
+              const fiveYrAgo = zhviHistory[Math.min(60, zhviHistory.length - 1)]?.value;
+              if (current && fiveYrAgo && fiveYrAgo > 0) {
+                metrics.zhvi_5y_cagr = (Math.pow(current / fiveYrAgo, 1 / 5) - 1) * 100;
+              }
             }
           }
         }
 
-        // Get ZORI (rent) data from zillow_metro table
+        // Get ZORI (rent) data, YoY, and 5yr CAGR from zillow_metro table
         if (shouldFetch('zori') || shouldFetch('rent')) {
-          const { data: zoriData } = await client
+          // Fetch ZORI history (61 months for 5yr CAGR)
+          const { data: zoriHistory } = await client
             .from('zillow_metro')
-            .select('value')
+            .select('value, period_date')
             .eq('cbsa_code', geographyId)
             .eq('metric_name', 'zori')
             .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(61);
 
-          if (zoriData) {
-            metrics.zori = zoriData.value;
+          if (zoriHistory && zoriHistory.length >= 1) {
+            metrics.zori = zoriHistory[0].value;
+
+            const currentRent = zoriHistory[0].value;
+            // Rent YoY (12 months)
+            if (zoriHistory.length >= 12) {
+              const rentYearAgo = zoriHistory[Math.min(12, zoriHistory.length - 1)]?.value;
+              if (currentRent && rentYearAgo && rentYearAgo > 0) {
+                metrics.zori_yoy = ((currentRent - rentYearAgo) / rentYearAgo) * 100;
+              }
+            }
+            // Rent 5-year CAGR (60 months)
+            if (zoriHistory.length >= 60) {
+              const rentFiveYrAgo = zoriHistory[Math.min(60, zoriHistory.length - 1)]?.value;
+              if (currentRent && rentFiveYrAgo && rentFiveYrAgo > 0) {
+                metrics.zori_5y_cagr = (Math.pow(currentRent / rentFiveYrAgo, 1 / 5) - 1) * 100;
+              }
+            }
           }
-        }
 
-        // Get calculated metrics (cap rate, GRM, etc.)
-        if (shouldFetch('cap_rate') || shouldFetch('gross_yield') || shouldFetch('grm') || shouldFetch('investment')) {
-          const { data: calcMetrics } = await client
-            .from('calculated_metrics')
-            .select('*')
-            .eq('geography_id', geographyId)
-            .eq('geography_type', 'metro')
+          // If no ZORI data, try pre-computed zori_yoy metric from Zillow pipeline
+          if (metrics.zori_yoy == null) {
+            const { data: zoriYoyData } = await client
+              .from('zillow_metro')
+              .select('value')
+              .eq('cbsa_code', geographyId)
+              .eq('metric_name', 'zori_yoy')
+              .order('period_date', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (zoriYoyData?.value != null) {
+              metrics.zori_yoy = zoriYoyData.value;
+            }
+          }
+
+          // Get ZORDI (rental demand index)
+          const { data: zordiData } = await client
+            .from('zillow_metro')
+            .select('value')
+            .eq('cbsa_code', geographyId)
+            .eq('metric_name', 'zordi')
             .order('period_date', { ascending: false })
             .limit(1)
             .single();
 
+          if (zordiData?.value != null) {
+            metrics.zordi = zordiData.value;
+          }
+        }
+
+        // Get calculated metrics (cap rate, GRM, growth, rent growth) via CalculatedMetricsService
+        // The service merges latest 3 rows to handle stale/null entries
+        // Includes HUD FMR fallback for rent metrics and Realtor fallback for home value growth
+        {
+          const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'metro');
+
           if (calcMetrics) {
-            metrics.cap_rate = calcMetrics.cap_rate;
-            metrics.gross_yield = calcMetrics.gross_yield;
-            metrics.grm = calcMetrics.grm;
-            metrics.overvalued_pct = calcMetrics.overvalued_pct;
-            // Use rent_price_ratio instead of affordability_ratio
-            metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
-            metrics.affordability_index = calcMetrics.affordability_percentile;
-            metrics.gross_rent_multiplier = calcMetrics.grm;
+            metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
+            metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
+            metrics.grm = calcMetrics.grm ?? undefined;
+            metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
+            metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
+            metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
+            // Growth metrics from pipeline (with automatic fallbacks)
+            if (metrics.zhvi_5y_cagr == null && calcMetrics.home_value_5yr_cagr != null) {
+              metrics.zhvi_5y_cagr = calcMetrics.home_value_5yr_cagr;
+            }
+            if (metrics.zhvi_3y_cagr == null && calcMetrics.zhvi_3y_cagr != null) {
+              metrics.zhvi_3y_cagr = calcMetrics.zhvi_3y_cagr;
+            }
+            // Rent growth metrics (ZORI with HUD FMR fallback)
+            if (metrics.zori_yoy == null && calcMetrics.zori_yoy != null) {
+              metrics.zori_yoy = calcMetrics.zori_yoy;
+            }
+            if (metrics.zori_5y_cagr == null && calcMetrics.zori_5y_cagr != null) {
+              metrics.zori_5y_cagr = calcMetrics.zori_5y_cagr;
+            }
+          }
+        }
+
+        // Get Zillow forecast (1-year)
+        if (shouldFetch('zhvf') || shouldFetch('forecast')) {
+          const { data: forecastData } = await client
+            .from('zillow_metro')
+            .select('value')
+            .eq('cbsa_code', geographyId)
+            .eq('metric_name', 'zhvf_12m')
+            .order('period_date', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (forecastData?.value != null) {
+            metrics.zhvf_1yr_pct = forecastData.value;
           }
         }
 
@@ -1249,25 +1390,16 @@ export class ReportsService {
           }
         }
 
-        // Get calculated metrics
-        const { data: calcMetrics } = await client
-          .from('calculated_metrics')
-          .select('*')
-          .eq('geography_id', geographyId)
-          .eq('geography_type', 'county')
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
+        // Get calculated metrics via CalculatedMetricsService
+        const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'county');
 
         if (calcMetrics) {
-          metrics.cap_rate = calcMetrics.cap_rate;
-          metrics.gross_yield = calcMetrics.gross_yield;
-          metrics.affordability_ratio = calcMetrics.affordability_ratio;
-          metrics.grm = calcMetrics.grm;
-          metrics.overvalued_pct = calcMetrics.overvalued_pct;
-          metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
-          metrics.affordability_index = calcMetrics.affordability_percentile;
-          metrics.gross_rent_multiplier = calcMetrics.grm;
+          metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
+          metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
+          metrics.grm = calcMetrics.grm ?? undefined;
+          metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
+          metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
+          metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
         }
 
         // Get Census data for county (population, income, etc.)
@@ -1389,24 +1521,16 @@ export class ReportsService {
           }
         }
 
-        // Get calculated metrics
-        const { data: calcMetrics } = await client
-          .from('calculated_metrics')
-          .select('*')
-          .eq('geography_id', geographyId)
-          .eq('geography_type', 'zip')
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
+        // Get calculated metrics via CalculatedMetricsService
+        const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'zip');
 
         if (calcMetrics) {
-          metrics.cap_rate = calcMetrics.cap_rate;
-          metrics.gross_yield = calcMetrics.gross_yield;
-          metrics.grm = calcMetrics.grm;
-          metrics.overvalued_pct = calcMetrics.overvalued_pct;
-          metrics.rent_to_price_ratio = calcMetrics.rent_price_ratio;
-          metrics.affordability_index = calcMetrics.affordability_percentile;
-          metrics.gross_rent_multiplier = calcMetrics.grm;
+          metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
+          metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
+          metrics.grm = calcMetrics.grm ?? undefined;
+          metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
+          metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
+          metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
         }
 
         // Get Census data for zip (population, income, etc.)

@@ -39,6 +39,9 @@ export interface CalculatedMetricsOutput {
   investment_score: number | null;
   long_term_growth_score: number | null;
   home_value_5yr_cagr: number | null;
+  zhvi_3y_cagr: number | null;
+  zori_yoy: number | null;
+  zori_5y_cagr: number | null;
   inventory_surplus_pct: number | null;
   overvalued_pct: number | null;
 }
@@ -346,6 +349,9 @@ export class CalculatedMetricsService {
       investment_score: investmentScore,
       long_term_growth_score: longTermGrowthScore,
       home_value_5yr_cagr: homeValue5yrCagr,
+      zhvi_3y_cagr: null,
+      zori_yoy: null,
+      zori_5y_cagr: null,
       inventory_surplus_pct: inventorySurplusPct,
       overvalued_pct: overvaluedPct,
     };
@@ -410,6 +416,7 @@ export class CalculatedMetricsService {
       'cap_rate', 'gross_yield', 'rent_to_price_ratio', 'grm',
       'months_of_supply', 'absorption_rate', 'market_health_score',
       'investment_score', 'long_term_growth_score', 'home_value_5yr_cagr',
+      'zhvi_3y_cagr', 'zori_yoy', 'zori_5y_cagr',
       'inventory_surplus', 'overvalued_pct',
     ] as const;
 
@@ -434,6 +441,9 @@ export class CalculatedMetricsService {
       investment_score: merged.investment_score ?? null,
       long_term_growth_score: merged.long_term_growth_score ?? null,
       home_value_5yr_cagr: merged.home_value_5yr_cagr ?? null,
+      zhvi_3y_cagr: merged.zhvi_3y_cagr ?? null,
+      zori_yoy: merged.zori_yoy ?? null,
+      zori_5y_cagr: merged.zori_5y_cagr ?? null,
       inventory_surplus_pct: merged.inventory_surplus ?? null,
       overvalued_pct: merged.overvalued_pct ?? null,
     };
@@ -513,11 +523,23 @@ export class CalculatedMetricsService {
 
     for (const dateStr of uniqueDates) {
       const targetDate = dateStr;
+
+      // 5-year lookback
       const fiveYearsAgo = new Date(targetDate);
       fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-      const pastDateStr = fiveYearsAgo.toISOString().split('T')[0];
-      const pastDateMax = new Date(
+      const pastDate5Str = fiveYearsAgo.toISOString().split('T')[0];
+      const pastDate5Max = new Date(
         fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
+      )
+        .toISOString()
+        .split('T')[0];
+
+      // 3-year lookback
+      const threeYearsAgo = new Date(targetDate);
+      threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+      const pastDate3Str = threeYearsAgo.toISOString().split('T')[0];
+      const pastDate3Max = new Date(
+        threeYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000,
       )
         .toISOString()
         .split('T')[0];
@@ -531,21 +553,38 @@ export class CalculatedMetricsService {
 
       if (!currentData || currentData.length === 0) continue;
 
-      // Get historical data
-      const { data: pastData } = await this.supabase
+      // Get 5yr historical data
+      const { data: pastData5 } = await this.supabase
         .from('realtor_metro')
         .select('cbsa_code, median_listing_price')
-        .gte('period_date', pastDateStr)
-        .lte('period_date', pastDateMax)
+        .gte('period_date', pastDate5Str)
+        .lte('period_date', pastDate5Max)
         .not('median_listing_price', 'is', null)
         .order('period_date', { ascending: true });
 
-      // Build lookup
-      const pastByRegion: Record<string, number> = {};
-      if (pastData) {
-        for (const row of pastData) {
-          if (!pastByRegion[row.cbsa_code]) {
-            pastByRegion[row.cbsa_code] = row.median_listing_price;
+      const past5ByRegion: Record<string, number> = {};
+      if (pastData5) {
+        for (const row of pastData5) {
+          if (!past5ByRegion[row.cbsa_code]) {
+            past5ByRegion[row.cbsa_code] = row.median_listing_price;
+          }
+        }
+      }
+
+      // Get 3yr historical data
+      const { data: pastData3 } = await this.supabase
+        .from('realtor_metro')
+        .select('cbsa_code, median_listing_price')
+        .gte('period_date', pastDate3Str)
+        .lte('period_date', pastDate3Max)
+        .not('median_listing_price', 'is', null)
+        .order('period_date', { ascending: true });
+
+      const past3ByRegion: Record<string, number> = {};
+      if (pastData3) {
+        for (const row of pastData3) {
+          if (!past3ByRegion[row.cbsa_code]) {
+            past3ByRegion[row.cbsa_code] = row.median_listing_price;
           }
         }
       }
@@ -553,17 +592,26 @@ export class CalculatedMetricsService {
       let recordsToUpsert: any[] = [];
 
       for (const metro of currentData) {
-        const pastValue = pastByRegion[metro.cbsa_code];
-        if (!pastValue || pastValue === 0) continue;
+        const pastValue5 = past5ByRegion[metro.cbsa_code];
+        const pastValue3 = past3ByRegion[metro.cbsa_code];
 
-        const cagr = calculateCAGR(pastValue, metro.median_listing_price, 5);
+        // Need at least one historical value
+        if ((!pastValue5 || pastValue5 === 0) && (!pastValue3 || pastValue3 === 0)) continue;
+
+        const cagr5 = pastValue5 && pastValue5 > 0
+          ? calculateCAGR(pastValue5, metro.median_listing_price, 5)
+          : null;
+        const cagr3 = pastValue3 && pastValue3 > 0
+          ? calculateCAGR(pastValue3, metro.median_listing_price, 3)
+          : null;
 
         recordsToUpsert.push({
           geography_id: metro.cbsa_code,
           geography_type: 'metro',
           geography_name: metro.cbsa_title,
           period_date: targetDate,
-          home_value_5yr_cagr: cagr,
+          home_value_5yr_cagr: cagr5,
+          zhvi_3y_cagr: cagr3,
           calculated_at: new Date().toISOString(),
         });
 
@@ -1237,6 +1285,49 @@ export class CalculatedMetricsService {
         }
       }
 
+      // ── Fetch ZORI history for YoY and 5yr CAGR ──
+      const oneYearAgo = new Date(targetDate);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoStr = oneYearAgo.toISOString().split('T')[0];
+      const oneYearAgoMax = new Date(oneYearAgo.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const fiveYearsAgo = new Date(targetDate);
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const fiveYearsAgoStr = fiveYearsAgo.toISOString().split('T')[0];
+      const fiveYearsAgoMax = new Date(fiveYearsAgo.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // ZORI 1 year ago (for YoY)
+      const zoriPast1yr: Record<string, number> = {};
+      const { data: zori1yrData } = await this.supabase
+        .from('zillow_metro')
+        .select('cbsa_code, value')
+        .eq('metric_name', 'zori')
+        .gte('period_date', oneYearAgoStr)
+        .lte('period_date', oneYearAgoMax)
+        .not('value', 'is', null)
+        .order('period_date', { ascending: false });
+      if (zori1yrData) {
+        for (const r of zori1yrData) {
+          if (r.cbsa_code && !zoriPast1yr[r.cbsa_code]) zoriPast1yr[r.cbsa_code] = r.value;
+        }
+      }
+
+      // ZORI 5 years ago (for 5yr CAGR)
+      const zoriPast5yr: Record<string, number> = {};
+      const { data: zori5yrData } = await this.supabase
+        .from('zillow_metro')
+        .select('cbsa_code, value')
+        .eq('metric_name', 'zori')
+        .gte('period_date', fiveYearsAgoStr)
+        .lte('period_date', fiveYearsAgoMax)
+        .not('value', 'is', null)
+        .order('period_date', { ascending: false });
+      if (zori5yrData) {
+        for (const r of zori5yrData) {
+          if (r.cbsa_code && !zoriPast5yr[r.cbsa_code]) zoriPast5yr[r.cbsa_code] = r.value;
+        }
+      }
+
       // Calculate and batch upsert
       let storedInBatch = 0;
       const batchSize = 100;
@@ -1254,6 +1345,17 @@ export class CalculatedMetricsService {
         const rentToPriceRatio = this.calculateRentToPriceRatio(zori, price);
         const grm = this.calculateGRM(price, zori);
 
+        // Rent growth metrics
+        const pastRent1yr = cbsaCode ? zoriPast1yr[cbsaCode] : null;
+        const zoriYoy = pastRent1yr && pastRent1yr > 0
+          ? Math.round(((zori - pastRent1yr) / pastRent1yr) * 10000) / 100
+          : null;
+
+        const pastRent5yr = cbsaCode ? zoriPast5yr[cbsaCode] : null;
+        const zori5yCagr = pastRent5yr && pastRent5yr > 0
+          ? Math.round(calculateCAGR(pastRent5yr, zori, 5)! * 100) / 100
+          : null;
+
         recordsToUpsert.push({
           geography_id: cbsaCode,
           geography_type: 'metro',
@@ -1265,6 +1367,8 @@ export class CalculatedMetricsService {
             ? Math.round(rentToPriceRatio * 10000) / 10000
             : null,
           grm: grm ? Math.round(grm * 100) / 100 : null,
+          zori_yoy: zoriYoy,
+          zori_5y_cagr: zori5yCagr,
           calculated_at: new Date().toISOString(),
         });
 
@@ -1352,7 +1456,7 @@ export class CalculatedMetricsService {
             });
           }
 
-          // Fetch HUD FMR for the target year
+          // Fetch HUD FMR for the target year, previous year (YoY), and 5 years ago (CAGR)
           const allFips = countyRows
             .map((c) =>
               c.fips_code
@@ -1361,53 +1465,60 @@ export class CalculatedMetricsService {
             )
             .filter(Boolean) as string[];
 
-          // Paginated HUD FMR fetch
-          const fmrRows: any[] = [];
-          let fmrOff = 0;
-          while (true) {
-            const { data: page } = await this.supabase
-              .from('hud_fmr')
-              .select('fips_code, fmr_2br')
-              .eq('year', targetYear)
-              .in('fips_code', allFips)
-              .not('fmr_2br', 'is', null)
-              .range(fmrOff, fmrOff + 1999);
-            if (!page || page.length === 0) break;
-            fmrRows.push(...page);
-            if (page.length < 2000) break;
-            fmrOff += 2000;
+          const fmrYears = [targetYear, targetYear - 1, targetYear - 5];
+          const fmrByYearAndFips: Record<number, Record<string, number>> = {};
+
+          for (const fmrYear of fmrYears) {
+            fmrByYearAndFips[fmrYear] = {};
+            let fmrOff = 0;
+            while (true) {
+              const { data: page } = await this.supabase
+                .from('hud_fmr')
+                .select('fips_code, fmr_2br')
+                .eq('year', fmrYear)
+                .in('fips_code', allFips)
+                .not('fmr_2br', 'is', null)
+                .range(fmrOff, fmrOff + 1999);
+              if (!page || page.length === 0) break;
+              for (const r of page) {
+                const fips =
+                  r.fips_code && /^\d+$/.test(r.fips_code)
+                    ? String(parseInt(r.fips_code, 10)).padStart(5, '0')
+                    : r.fips_code;
+                if (fips && r.fmr_2br != null) {
+                  fmrByYearAndFips[fmrYear][fips] = r.fmr_2br;
+                }
+              }
+              if (page.length < 2000) break;
+              fmrOff += 2000;
+            }
           }
 
-          if (fmrRows.length > 0) {
-            const fmrByFips: Record<string, number> = {};
-            for (const r of fmrRows) {
-              const fips =
-                r.fips_code && /^\d+$/.test(r.fips_code)
-                  ? String(parseInt(r.fips_code, 10)).padStart(5, '0')
-                  : r.fips_code;
-              if (fips && r.fmr_2br != null) {
-                fmrByFips[fips] = r.fmr_2br;
-              }
-            }
+          const fmrByFips = fmrByYearAndFips[targetYear];
 
-            // For each metro without ZORI, compute population-weighted average FMR
-            let hudMetroUpsert: any[] = [];
-            for (const cbsa of cbsasWithZhviOnly) {
+          if (Object.keys(fmrByFips).length > 0) {
+            // Helper: compute population-weighted average FMR for a metro from county FMR data
+            const computeWeightedFmr = (cbsa: string, fmrLookup: Record<string, number>): number | null => {
               const counties = countiesByCbsa[cbsa];
-              if (!counties || counties.length === 0) continue;
-
+              if (!counties || counties.length === 0) return null;
               let totalRent = 0;
               let totalWeight = 0;
               for (const county of counties) {
-                const fmr = fmrByFips[county.fips];
+                const fmr = fmrLookup[county.fips];
                 if (fmr == null || fmr <= 0) continue;
-                const weight = county.population ?? 1; // fallback to equal weight
+                const weight = county.population ?? 1;
                 totalRent += fmr * weight;
                 totalWeight += weight;
               }
+              return totalWeight > 0 ? totalRent / totalWeight : null;
+            };
 
-              if (totalWeight === 0) continue;
-              const avgRent = totalRent / totalWeight;
+            // For each metro without ZORI, compute investment metrics + rent growth proxies
+            let hudMetroUpsert: any[] = [];
+            for (const cbsa of cbsasWithZhviOnly) {
+              const avgRent = computeWeightedFmr(cbsa, fmrByFips);
+              if (!avgRent) continue;
+
               const price = priceByCode[cbsa];
               if (!price) continue;
 
@@ -1418,6 +1529,17 @@ export class CalculatedMetricsService {
                 price,
               );
               const grm = this.calculateGRM(price, avgRent);
+
+              // HUD FMR rent growth proxies
+              const avgRentPrevYear = computeWeightedFmr(cbsa, fmrByYearAndFips[targetYear - 1]);
+              const hudZoriYoy = avgRentPrevYear && avgRentPrevYear > 0
+                ? Math.round(((avgRent - avgRentPrevYear) / avgRentPrevYear) * 10000) / 100
+                : null;
+
+              const avgRent5yrAgo = computeWeightedFmr(cbsa, fmrByYearAndFips[targetYear - 5]);
+              const hudZori5yCagr = avgRent5yrAgo && avgRent5yrAgo > 0
+                ? Math.round(calculateCAGR(avgRent5yrAgo, avgRent, 5)! * 100) / 100
+                : null;
 
               hudMetroUpsert.push({
                 geography_id: cbsa,
@@ -1432,6 +1554,8 @@ export class CalculatedMetricsService {
                   ? Math.round(rentToPriceRatio * 10000) / 10000
                   : null,
                 grm: grm ? Math.round(grm * 100) / 100 : null,
+                zori_yoy: hudZoriYoy,
+                zori_5y_cagr: hudZori5yCagr,
                 calculated_at: new Date().toISOString(),
               });
             }

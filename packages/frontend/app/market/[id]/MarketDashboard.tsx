@@ -467,13 +467,13 @@ export function MarketDashboard({
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
-                href={`/reports?geography=${geographyId}&type=${geographyType}`}
+                href={`/reports?rtype=${userView}&mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ''}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-medium rounded-full hover:bg-primary/90 transition-colors shadow-md"
               >
                 Generate Full Report
               </Link>
               <Link
-                href={`/graphs?geo=${geographyId}&level=${geographyType}&name=${encodeURIComponent(geography.name)}&metric=listing_price`}
+                href={`/graphs?mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ''}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
                 <TrendingUp className="w-4 h-4" />

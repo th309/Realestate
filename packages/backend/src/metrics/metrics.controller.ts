@@ -893,6 +893,62 @@ export class MetricsController {
   }
 
   // ============================================================================
+  // RENT GROWTH ENDPOINTS (from pre-calculated data with HUD FMR fallback)
+  // ============================================================================
+
+  /**
+   * Get rent YoY growth for metros (from calculated_metrics, includes HUD FMR proxy)
+   */
+  @Get('rent-yoy/metros')
+  async getMetroRentYoy() {
+    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_yoy' as any, 'metro');
+    return {
+      success: result.success,
+      count: result.data.length,
+      geography: 'Metro',
+      metric: 'zori_yoy',
+      source: 'pre-calculated',
+      data: result.data,
+    };
+  }
+
+  /**
+   * Get rent 5-year CAGR for metros (from calculated_metrics, includes HUD FMR proxy)
+   */
+  @Get('rent-5yr/metros')
+  async getMetroRent5yr() {
+    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_5y_cagr' as any, 'metro');
+    return {
+      success: result.success,
+      count: result.data.length,
+      geography: 'Metro',
+      metric: 'zori_5y_cagr',
+      source: 'pre-calculated',
+      data: result.data,
+    };
+  }
+
+  // ============================================================================
+  // 3-YEAR HOME VALUE GROWTH ENDPOINTS (from pre-calculated data)
+  // ============================================================================
+
+  /**
+   * Get 3-year home value CAGR for metros (from calculated_metrics, uses Realtor data)
+   */
+  @Get('home-value-3yr/metros')
+  async getMetroHomeValue3YrGrowth() {
+    const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zhvi_3y_cagr' as any, 'metro');
+    return {
+      success: result.success,
+      count: result.data.length,
+      geography: 'Metro',
+      metric: 'zhvi_3y_cagr',
+      source: 'pre-calculated',
+      data: result.data,
+    };
+  }
+
+  // ============================================================================
   // INCOME-TO-BUY ENDPOINTS (from pre-calculated data)
   // ============================================================================
 
