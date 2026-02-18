@@ -23,6 +23,8 @@ import { MetricTitle } from '@/app/components/MetricTitle';
 import { useEntitlements } from '@/lib/entitlements';
 import { AIMarketAnalysis } from './AIMarketAnalysis';
 import { useQueryClient } from '@tanstack/react-query';
+import { BenchmarkBadge } from '@/components/benchmarks';
+import { useBenchmarks, getBenchmarkForMetric } from '@/lib/benchmarks/hooks';
 
 interface MarketDashboardProps {
   geographyId: string;
@@ -45,12 +47,14 @@ function MetricCard({
   formattedValue,
   trendPercent,
   trendDirection,
+  benchmark,
   delay = 0,
 }: {
   metricId: string;
   formattedValue: string;
   trendPercent: number | null;
   trendDirection: 'up' | 'down' | 'stable';
+  benchmark?: { diff: number; direction: 'better' | 'worse' | 'similar'; parentGeoName: string } | null;
   delay?: number;
 }) {
   return (
@@ -77,6 +81,15 @@ function MetricCard({
         )}
       </div>
       <div className="text-xl font-bold text-on-surface">{formattedValue}</div>
+      {benchmark && (
+        <div className="mt-2">
+          <BenchmarkBadge
+            diff={benchmark.diff}
+            direction={benchmark.direction}
+            parentGeoName={benchmark.parentGeoName}
+          />
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -88,6 +101,8 @@ function MetricCategorySection({
   icon,
   metricIds,
   factorsData,
+  benchmarks = [],
+  hasBenchmarkAccess = false,
   delay = 0,
 }: {
   categoryName: string;
@@ -95,6 +110,8 @@ function MetricCategorySection({
   icon: React.ReactNode;
   metricIds: string[];
   factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null; isLoading?: boolean }>;
+  benchmarks?: import('@/lib/benchmarks/api').BenchmarkResult[];
+  hasBenchmarkAccess?: boolean;
   delay?: number;
 }) {
   return (
@@ -116,6 +133,10 @@ function MetricCategorySection({
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {metricIds.map((metricId, i) => {
           const datum = factorsData[metricId];
+          const benchmarkData = hasBenchmarkAccess ? getBenchmarkForMetric(benchmarks, metricId) : null;
+          const benchmarkProp = benchmarkData?.diff != null && benchmarkData?.direction && benchmarkData?.parentGeo
+            ? { diff: benchmarkData.diff, direction: benchmarkData.direction, parentGeoName: benchmarkData.parentGeo.name }
+            : null;
 
           return (
             <MetricCard
@@ -124,6 +145,7 @@ function MetricCategorySection({
               formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '--')}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? 'stable'}
+              benchmark={benchmarkProp}
               delay={delay + i * 0.03}
             />
           );
@@ -195,6 +217,21 @@ export function MarketDashboard({
     const viewMode = activeView === 'investor' ? 'investor' : 'homebuyer';
     return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
   }, [activeView]);
+
+  // Collect all displayed metric IDs for benchmarking
+  const allMetricIds = useMemo(() => {
+    return categories.flatMap(cat =>
+      (cat.metrics || [])
+        .filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel))
+        .map(m => m.id)
+    );
+  }, [categories, geographyType]);
+
+  const { benchmarks, hasAccess: hasBenchmarkAccess } = useBenchmarks(
+    geographyType,
+    geographyId,
+    allMetricIds,
+  );
 
   // Apply metric fallbacks: home_value falls back to listing_price when ZHVI is unavailable
   const displayData = useMemo(() => {
@@ -432,6 +469,8 @@ export function MarketDashboard({
                         icon={category.icon}
                         metricIds={metricsWithData}
                         factorsData={displayData}
+                        benchmarks={benchmarks}
+                        hasBenchmarkAccess={hasBenchmarkAccess}
                         delay={catIndex * 0.1}
                       />
                     </React.Fragment>
