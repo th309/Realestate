@@ -18,13 +18,21 @@ ALTER TABLE subscription_tiers ADD COLUMN IF NOT EXISTS stripe_price_monthly_id 
 ALTER TABLE subscription_tiers ADD COLUMN IF NOT EXISTS stripe_price_yearly_id VARCHAR;
 
 -- ============================================================================
--- SECTION 2: Add subscription fields to user_profiles (IF NOT EXISTS)
+-- SECTION 2: Subscription fields on user_profiles
+-- These columns already exist (from 20240101002400_create-new-schema.sql).
+-- ADD COLUMN IF NOT EXISTS is defensive — these are no-ops if columns exist.
+-- We also fix the subscription_status default from 'active' to 'none' so new
+-- users start with no subscription until they complete Stripe checkout.
 -- ============================================================================
 
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS subscription_tier VARCHAR DEFAULT 'free';
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS subscription_status VARCHAR DEFAULT 'none';
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR;
 ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR;
+
+-- Fix default: existing schema has DEFAULT 'active', but new users should
+-- start with 'none' until they have an actual Stripe subscription.
+ALTER TABLE user_profiles ALTER COLUMN subscription_status SET DEFAULT 'none';
 
 -- ============================================================================
 -- SECTION 3: New V2 feature definitions
@@ -129,6 +137,7 @@ SELECT t.id, f.id,
     WHEN 'feature_weekly_digest'      THEN 'false'::jsonb
     WHEN 'feature_benchmarking'       THEN 'false'::jsonb
     WHEN 'feature_recommendations'    THEN 'false'::jsonb
+    ELSE f.default_value
   END
 FROM subscription_tiers t, feature_definitions f
 WHERE t.slug = 'free'
@@ -155,6 +164,7 @@ SELECT t.id, f.id,
     WHEN 'feature_weekly_digest'      THEN 'true'::jsonb
     WHEN 'feature_benchmarking'       THEN 'true'::jsonb
     WHEN 'feature_recommendations'    THEN 'true'::jsonb
+    ELSE f.default_value
   END
 FROM subscription_tiers t, feature_definitions f
 WHERE t.slug = 'pro'
@@ -181,6 +191,7 @@ SELECT t.id, f.id,
     WHEN 'feature_weekly_digest'      THEN 'true'::jsonb
     WHEN 'feature_benchmarking'       THEN 'true'::jsonb
     WHEN 'feature_recommendations'    THEN 'true'::jsonb
+    ELSE f.default_value
   END
 FROM subscription_tiers t, feature_definitions f
 WHERE t.slug = 'enterprise'
