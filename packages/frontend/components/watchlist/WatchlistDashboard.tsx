@@ -3,6 +3,7 @@
 import React from 'react';
 import { MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { ScoreTrendSparkline } from './ScoreTrendSparkline';
 
 interface WatchlistItem {
   id: string;
@@ -11,6 +12,7 @@ interface WatchlistItem {
   geography_name?: string;
   added_at: string;
   score_at_add?: number;
+  scoreHistory?: number[];
 }
 
 interface WatchlistDashboardProps {
@@ -47,6 +49,9 @@ function MarketCard({ item }: { item: WatchlistItem }) {
         <div className="mt-3 flex items-center gap-2">
           <div className="text-lg font-semibold text-on-surface">{item.score_at_add}</div>
           <span className="text-xs text-on-surface-variant">score at save</span>
+          {item.scoreHistory && item.scoreHistory.length >= 2 && (
+            <ScoreTrendSparkline data={item.scoreHistory} width={48} height={20} />
+          )}
         </div>
       )}
 
