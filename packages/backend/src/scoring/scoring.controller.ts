@@ -681,17 +681,23 @@ export class ScoringController {
    */
   private stripBreakdownIfNeeded(result: ScoreResult, request: any): ScoreResult {
     const userTier = this.scoreAccessService.getUserTierFromRequest(request);
+    const needsStripping = ['homeready', 'investoredge', 'markethealth'].some(
+      (st) => result.scores?.[st]?.components && !canAccessScoreBreakdown(st as any, userTier),
+    );
 
-    if (result.scores) {
-      for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
-        const scoreData = result.scores[scoreType];
-        if (scoreData && !canAccessScoreBreakdown(scoreType, userTier)) {
-          delete scoreData.components;
-        }
+    if (!needsStripping) return result;
+
+    // Shallow-clone to avoid mutating cached service objects
+    const stripped: ScoreResult = { ...result, scores: { ...result.scores } };
+    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
+      const scoreData = stripped.scores[scoreType];
+      if (scoreData && !canAccessScoreBreakdown(scoreType, userTier)) {
+        stripped.scores[scoreType] = { ...scoreData };
+        delete stripped.scores[scoreType].components;
       }
     }
 
-    return result;
+    return stripped;
   }
 
   // ============================================================================
