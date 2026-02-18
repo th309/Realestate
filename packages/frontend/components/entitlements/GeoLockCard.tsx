@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { Lock, MapPin, TrendingUp, BarChart3 } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
+import { trackEvent } from '@/lib/analytics/tracker';
 import Link from 'next/link';
 
 interface GeoLockCardProps {
@@ -49,6 +50,7 @@ export function GeoLockCard({
 
   useEffect(() => {
     trackPaywallView('geo', geoLevel);
+    trackEvent('paywall.view', { geoLevel });
   }, [geoLevel, trackPaywallView]);
 
   return (

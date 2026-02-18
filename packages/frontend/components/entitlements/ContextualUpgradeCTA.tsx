@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
+import { trackEvent } from '@/lib/analytics/tracker';
 import Link from 'next/link';
 
 interface ContextualUpgradeCTAProps {
@@ -46,7 +47,10 @@ export function ContextualUpgradeCTA({
         <p className="text-xs text-on-surface-variant mt-0.5">{description}</p>
         <Link
           href={ctaHref}
-          onClick={() => trackUpgradeClick('feature', featureSlug)}
+          onClick={() => {
+            trackUpgradeClick('feature', featureSlug);
+            trackEvent('paywall.upgrade_click', { feature: featureSlug });
+          }}
           className="
             mt-2 inline-flex items-center gap-1
             text-sm font-medium text-primary

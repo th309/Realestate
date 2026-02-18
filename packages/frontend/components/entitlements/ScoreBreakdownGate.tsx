@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { Lock, ChevronRight } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
+import { trackEvent } from '@/lib/analytics/tracker';
 import Link from 'next/link';
 
 type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
@@ -34,6 +35,7 @@ export function ScoreBreakdownGate({
 
   useEffect(() => {
     trackPaywallView('feature', `score_breakdown_${scoreType}`);
+    trackEvent('paywall.view', { feature: 'score_breakdown', scoreType });
   }, [scoreType, trackPaywallView]);
 
   return (

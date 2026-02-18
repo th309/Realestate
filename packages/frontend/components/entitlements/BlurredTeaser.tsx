@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useEntitlements } from '@/lib/entitlements';
 import type { ResourceType } from '@/lib/entitlements';
+import { trackEvent } from '@/lib/analytics/tracker';
 import Link from 'next/link';
 
 interface BlurredTeaserProps {
@@ -28,6 +29,7 @@ export function BlurredTeaser({
 
   useEffect(() => {
     trackPaywallView(resourceType, resourceId);
+    trackEvent('paywall.view', { feature: resourceId });
   }, [resourceType, resourceId, trackPaywallView]);
 
   return (

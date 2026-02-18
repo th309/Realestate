@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Bell, X } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics/tracker';
 
 interface CreateAlertFormProps {
   metricId: string;
@@ -36,7 +37,7 @@ export function CreateAlertForm({
     if (isNaN(num)) return;
 
     setSubmitting(true);
-    await onSubmit({
+    const success = await onSubmit({
       metric_id: metricId,
       condition,
       threshold: num,
@@ -44,6 +45,9 @@ export function CreateAlertForm({
       geography_id: geographyId,
       geography_name: geographyName,
     });
+    if (success) {
+      trackEvent('feature.alert_create', { metricId, condition });
+    }
     setSubmitting(false);
     onClose();
   };

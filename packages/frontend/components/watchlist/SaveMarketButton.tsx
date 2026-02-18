@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Heart, Loader2 } from 'lucide-react';
 import { ContextualUpgradeCTA } from '@/components/entitlements';
+import { trackEvent } from '@/lib/analytics/tracker';
 
 interface SaveMarketButtonProps {
   geographyType: string;
@@ -42,6 +43,9 @@ export function SaveMarketButton({
     setLoading(true);
     try {
       await onToggle(!isSaved);
+      if (!isSaved) {
+        trackEvent('feature.market_save', { geoType: geographyType, geoId: geographyId });
+      }
     } finally {
       setLoading(false);
     }

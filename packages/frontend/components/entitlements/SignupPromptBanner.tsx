@@ -4,12 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { shouldShowSignupPrompt, dismissSignupPrompt } from '@/lib/entitlements/anonymousViews';
+import { trackEvent } from '@/lib/analytics/tracker';
 
 export function SignupPromptBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(shouldShowSignupPrompt());
+    const show = shouldShowSignupPrompt();
+    setVisible(show);
+    if (show) {
+      trackEvent('signup.banner_view');
+    }
   }, []);
 
   if (!visible) return null;
@@ -28,12 +33,14 @@ export function SignupPromptBanner() {
           <div className="flex items-center gap-3 mt-2">
             <Link
               href="/auth/signup"
+              onClick={() => trackEvent('signup.banner_click', { target: 'signup' })}
               className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
             >
               Sign up free
             </Link>
             <Link
               href="/auth/login"
+              onClick={() => trackEvent('signup.banner_click', { target: 'login' })}
               className="text-sm text-on-surface-variant hover:text-on-surface transition-colors"
             >
               Log in
