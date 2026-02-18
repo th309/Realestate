@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useInView } from './hooks/useInView';
+import { HeroSearchBar } from './HeroSearchBar';
 
 export function HeroSection() {
   const [setRef, inView] = useInView();
@@ -65,9 +66,9 @@ export function HeroSection() {
           Then we write you a personalized AI report.
         </p>
 
-        {/* CTA */}
+        {/* Search bar */}
         <div
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+          className="mb-8"
           style={{
             opacity: inView ? 1 : 0,
             transform: inView ? 'translateY(0)' : 'translateY(16px)',
@@ -75,16 +76,27 @@ export function HeroSection() {
             transitionDelay: '0.3s',
           }}
         >
-          <a
-            href="/map"
-            className="px-8 py-3.5 rounded-full text-base font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200 elevation-2"
-          >
-            Explore Markets Free
+          <HeroSearchBar />
+          <p className="text-xs text-on-surface-variant/60 mt-2">
+            Try: Miami, Austin TX, 90210, Cook County
+          </p>
+        </div>
+
+        {/* Secondary CTAs */}
+        <div
+          className="flex items-center justify-center gap-6 mb-16"
+          style={{
+            opacity: inView ? 1 : 0,
+            transform: inView ? 'translateY(0)' : 'translateY(16px)',
+            transition: 'opacity 0.7s ease, transform 0.7s ease',
+            transitionDelay: '0.35s',
+          }}
+        >
+          <a href="/map" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+            Explore the Map
           </a>
-          <a
-            href="/scores"
-            className="px-8 py-3.5 rounded-full text-base font-semibold border border-outline text-on-surface hover:bg-surface-container transition-colors duration-200"
-          >
+          <span className="text-on-surface-variant/30">|</span>
+          <a href="/scores" className="text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">
             See Our Track Record
           </a>
         </div>
