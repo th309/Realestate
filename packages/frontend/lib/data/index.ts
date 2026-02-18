@@ -93,6 +93,7 @@ export {
   getMetricDefinition,
   getDataSourceAnchor,
   METRIC_DEFINITIONS,
+  getMetricFavorableDirection,
 } from './registry-helpers';
 
 export type { MetricDefinition } from './registry-helpers';

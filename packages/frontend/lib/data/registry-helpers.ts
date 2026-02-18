@@ -157,3 +157,12 @@ export function getMetricsByDataSource(dataSource: string): MetricConfig[] {
 export function getMetricsForGeoLevel(geoLevel: GeoLevel): MetricConfig[] {
   return Object.values(METRICS).filter(m => isMetricSupportedForGeo(m.id, geoLevel));
 }
+
+/**
+ * Get the favorable direction for a metric.
+ * Returns 'neutral' for unknown metrics.
+ */
+export function getMetricFavorableDirection(metricId: string): 'higher' | 'lower' | 'neutral' {
+  const config = getMetricConfig(metricId);
+  return config?.favorableDirection ?? 'neutral';
+}

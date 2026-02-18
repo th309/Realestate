@@ -119,6 +119,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/{geo}',
     keyField: 'auto',
     supportedGeos: ['state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   home_price_forecast: {
@@ -129,6 +130,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/forecast/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro', 'zip'],
+    favorableDirection: 'higher',
   },
 
   home_value_yoy: {
@@ -140,6 +142,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   home_value_mom: {
@@ -151,6 +154,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   home_value_5yr: {
@@ -162,6 +166,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'cagr_5yr',
+    favorableDirection: 'higher',
   },
 
   home_value_3yr: {
@@ -173,6 +178,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'zhvi_3y_cagr',
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -187,6 +193,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'zori_yoy',
+    favorableDirection: 'higher',
   },
 
   rent_5yr: {
@@ -198,6 +205,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'zori_5y_cagr',
+    favorableDirection: 'higher',
   },
 
   rent_index: {
@@ -208,6 +216,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/rent/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   rent_for_houses: {
@@ -218,6 +227,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/zillow/demand/{geo}',
     keyField: 'auto',
     supportedGeos: ['metro'],
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -231,6 +241,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/inventory/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'lower',
   },
 
   inventory_yoy: {
@@ -242,6 +253,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'lower',
   },
 
   new_listings: {
@@ -252,6 +264,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/new-listings/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   pending_listings: {
@@ -262,6 +275,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/pending-listings/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   home_sales: {
@@ -272,6 +286,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/home-sales/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   home_sales_yoy: {
@@ -283,6 +298,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   pending_ratio: {
@@ -293,6 +309,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/pending-ratio/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   days_on_market: {
@@ -303,6 +320,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/dom/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'lower',
   },
 
   // ============================================================================
@@ -317,6 +335,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     rangeType: 'full',
+    favorableDirection: 'higher',
   },
 
   price_cut_pct: {
@@ -328,6 +347,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'lower',
   },
 
   sale_to_list: {
@@ -339,6 +359,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -353,6 +374,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'homeowner_affordability_percent',
+    favorableDirection: 'higher',
   },
 
   renter_affordability: {
@@ -364,6 +386,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'renter_affordability_percent',
+    favorableDirection: 'higher',
   },
 
   years_to_save: {
@@ -376,6 +399,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'years_to_save',
     hasTimeSeries: true,
+    favorableDirection: 'lower',
   },
 
   income_to_buy: {
@@ -388,6 +412,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'income_to_buy',
     hasTimeSeries: true,
+    favorableDirection: 'lower',
   },
 
   income_to_rent: {
@@ -399,6 +424,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'renter_income_needed',
+    favorableDirection: 'lower',
   },
 
   affordable_home_price: {
@@ -411,6 +437,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'affordable_home_price',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -424,6 +451,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/listing-price/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   price_per_sqft: {
@@ -434,6 +462,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/realtor/price-per-sqft/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
+    favorableDirection: 'higher',
   },
 
   price_increase_pct: {
@@ -445,6 +474,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   new_listings_yoy: {
@@ -456,6 +486,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     asPercent: true,
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -470,6 +501,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     rangeType: 'full',
+    favorableDirection: 'higher',
   },
 
   supply_score: {
@@ -481,6 +513,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     rangeType: 'full',
+    favorableDirection: 'lower',
   },
 
   demand_score: {
@@ -492,6 +525,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro', 'county', 'zip'],
     rangeType: 'full',
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -507,6 +541,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'cap_rate',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   gross_yield: {
@@ -519,6 +554,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'gross_yield',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   grm: {
@@ -531,6 +567,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'grm',
     hasTimeSeries: true,
+    favorableDirection: 'lower',
   },
 
   rent_to_price_ratio: {
@@ -544,6 +581,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'rent_to_price_ratio',
     asPercent: true,
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   investment_score: {
@@ -556,6 +594,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'investment_score',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   long_term_growth_score: {
@@ -568,6 +607,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro', 'county', 'zip'],
     valueField: 'long_term_growth_score',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   overvalued_pct: {
@@ -580,6 +620,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['metro'],
     valueField: 'overvalued_pct',
     hasTimeSeries: true,
+    favorableDirection: 'lower',
   },
 
   inventory_surplus: {
@@ -592,6 +633,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'metro', 'county', 'zip'],
     valueField: 'inventory_surplus',
     hasTimeSeries: true,
+    favorableDirection: 'lower',
   },
 
   // ============================================================================
@@ -606,6 +648,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'sales_count',
+    favorableDirection: 'higher',
   },
 
   new_construction_price: {
@@ -617,6 +660,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'median_sale_price',
+    favorableDirection: 'higher',
   },
 
   new_construction_ppsf: {
@@ -628,6 +672,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['metro'],
     valueField: 'price_per_sqft',
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -645,6 +690,7 @@ export const METRICS: Record<string, MetricConfig> = {
     scaleMin: 0,
     scaleMax: 200,
     scaleForGeos: ['county'],
+    favorableDirection: 'higher',
   },
 
   mf_permits: {
@@ -659,6 +705,7 @@ export const METRICS: Record<string, MetricConfig> = {
     scaleMin: 0,
     scaleMax: 200,
     scaleForGeos: ['county'],
+    favorableDirection: 'higher',
   },
 
   total_permits: {
@@ -673,6 +720,7 @@ export const METRICS: Record<string, MetricConfig> = {
     scaleMin: 0,
     scaleMax: 200,
     scaleForGeos: ['county'],
+    favorableDirection: 'higher',
   },
 
   permits_yoy: {
@@ -684,6 +732,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'total_units_yoy',
+    favorableDirection: 'higher',
   },
 
   sf_mf_ratio: {
@@ -696,6 +745,7 @@ export const METRICS: Record<string, MetricConfig> = {
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'sf_ratio',
     includeNullValues: true,
+    favorableDirection: 'neutral',
   },
 
   permit_value_per_unit: {
@@ -707,6 +757,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'county'],
     valueField: 'value_per_unit',
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -720,6 +771,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/population/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   population_growth: {
@@ -730,6 +782,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/population-growth/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   median_income: {
@@ -740,6 +793,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/median-income/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   income_growth: {
@@ -750,6 +804,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/income-growth/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   median_age: {
@@ -760,6 +815,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/median-age/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'neutral',
   },
 
   homeownership_rate: {
@@ -770,6 +826,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/census/homeownership-rate/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county', 'city', 'zip'],
+    favorableDirection: 'higher',
   },
 
   // ============================================================================
@@ -783,6 +840,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/economic/unemployment/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county'],
+    favorableDirection: 'lower',
   },
 
   job_growth: {
@@ -793,6 +851,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/economic/job-growth/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county'],
+    favorableDirection: 'higher',
   },
 
   gdp_growth: {
@@ -803,6 +862,7 @@ export const METRICS: Record<string, MetricConfig> = {
     apiEndpoint: '/api/economic/gdp-growth/{geo}',
     keyField: 'auto',
     supportedGeos: ['national', 'state', 'metro', 'county'],
+    favorableDirection: 'higher',
   },
 
   cost_of_living: {
@@ -814,6 +874,7 @@ export const METRICS: Record<string, MetricConfig> = {
     keyField: 'auto',
     supportedGeos: ['state', 'metro'],
     rangeType: 'full',
+    favorableDirection: 'lower',
   },
 
   // ============================================================================
@@ -830,6 +891,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'homeready_score',
     rangeType: 'full',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   investoredge_score: {
@@ -843,6 +905,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'investoredge_score',
     rangeType: 'full',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 
   market_health_score: {
@@ -856,6 +919,7 @@ export const METRICS: Record<string, MetricConfig> = {
     valueField: 'market_health_score',
     rangeType: 'full',
     hasTimeSeries: true,
+    favorableDirection: 'higher',
   },
 };
 

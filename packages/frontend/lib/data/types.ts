@@ -68,6 +68,9 @@ export interface MetricConfig {
 
   /** Whether this metric has time series data available (defaults based on dataSource) */
   hasTimeSeries?: boolean;
+
+  /** Direction in which a higher value is favorable from a real estate investing perspective */
+  favorableDirection: 'higher' | 'lower' | 'neutral';
 }
 
 // ============================================================================
