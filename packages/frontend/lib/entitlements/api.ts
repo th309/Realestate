@@ -1,6 +1,7 @@
 // packages/frontend/lib/entitlements/api.ts
 
 import type { EntitlementsState, ResourceType } from './types';
+import { getAnonymousSessionId } from './session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -74,6 +75,7 @@ export async function trackPaywallEvent(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-session-id': getAnonymousSessionId(),
       },
       credentials: 'include',
       body: JSON.stringify({
