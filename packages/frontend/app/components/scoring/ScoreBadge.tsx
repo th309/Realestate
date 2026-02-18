@@ -5,7 +5,7 @@
  * Features:
  * - Color-coded ring based on score (green/amber/red)
  * - Trend arrow indicator (up/down/stable)
- * - Lock icon for teaser access mode
+ * - Score number always visible; breakdown access gated to Pro+
  * - Click to expand to full ScoreCard
  *
  * Used for Market Health, HomeReady, and InvestorEdge scores.
@@ -112,26 +112,6 @@ function TrendArrow({ direction, change }: { direction: TrendDirection; change?:
   );
 }
 
-/**
- * Lock icon for teaser mode
- */
-function LockIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      className={`w-4 h-4 ${className}`}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-      />
-    </svg>
-  );
-}
 
 const SIZES = {
   sm: { svg: 'w-12 h-12', radius: 20, stroke: 3, text: 'text-sm', viewBox: 48, label: 'text-[10px]' },
@@ -245,9 +225,7 @@ export const ScoreBadge = memo(function ScoreBadge({
 
         {/* Center content */}
         <div className="absolute inset-0 flex items-center justify-center">
-          {isTeaser ? (
-            <LockIcon className="text-on-surface-variant" />
-          ) : isUnavailable ? (
+          {isUnavailable ? (
             <span className="text-on-surface-variant">--</span>
           ) : (
             <span className={`font-bold ${config.text} ${getScoreColor(score)}`}>
@@ -263,12 +241,12 @@ export const ScoreBadge = memo(function ScoreBadge({
           <span className={`${config.label} font-medium ${getTypeLabelColor(type)} leading-tight text-center`}>
             {label}
           </span>
-          {!isTeaser && !isUnavailable && (
+          {!isUnavailable && (
             <TrendArrow direction={trend} change={trendChange} />
           )}
           {isTeaser && (
-            <span className="text-[10px] text-purple-600 font-semibold px-1 py-0.5 bg-purple-100 rounded">
-              PRO
+            <span className="text-[10px] text-primary font-semibold px-1 py-0.5 bg-primary/10 rounded" title="Upgrade to Pro for full breakdown">
+              PRO breakdown
             </span>
           )}
           {status === 'partial' && (

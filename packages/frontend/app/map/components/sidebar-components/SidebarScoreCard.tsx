@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react';
-import { InsightsIcon, ChevronLeftIcon, ChevronRightIcon, LockIcon } from '../Icons';
+import { InsightsIcon, ChevronLeftIcon, ChevronRightIcon } from '../Icons';
 import { TrendArrow, getTrendDirection, formatTrendValue } from './TrendArrow';
 import { MarketCondition } from './MarketConditionBadge';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
@@ -80,7 +80,7 @@ export function SidebarScoreCard({
 
   const currentScore = getScoreData(activeScoreKey);
   const hasScore = currentScore?.score !== undefined && !isLoading;
-  const isLocked = config.isPro && currentScore?.access === 'teaser';
+  const isBreakdownLocked = config.isPro && currentScore?.access === 'teaser';
 
   // Navigation handlers
   const goToPrevious = () => {
@@ -103,9 +103,9 @@ export function SidebarScoreCard({
     <div
       className={`
         bg-surface-container rounded-xl p-3 mb-4 border border-outline-variant
-        ${onClick && !isLocked ? 'cursor-pointer hover:bg-surface-container-high transition-colors duration-200' : ''}
+        ${onClick ? 'cursor-pointer hover:bg-surface-container-high transition-colors duration-200' : ''}
       `}
-      onClick={!isLocked ? onClick : undefined}
+      onClick={onClick}
     >
       {/* Header with score name */}
       <div className="flex items-center justify-between mb-3">
@@ -115,7 +115,7 @@ export function SidebarScoreCard({
           </span>
           <span className="text-sm font-semibold">{config.label}</span>
           {config.isPro && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded">
+            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded" title="Upgrade to Pro for full breakdown">
               Pro
             </span>
           )}
@@ -130,17 +130,13 @@ export function SidebarScoreCard({
             <div className="w-16 h-16 flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-on-surface-variant" />
             </div>
-          ) : hasScore && !isLocked ? (
+          ) : hasScore ? (
             <ScoreDisplay
               value={currentScore.score!}
               size={64}
               strokeWidth={5}
               showLabel={false}
             />
-          ) : isLocked ? (
-            <div className="w-16 h-16 flex items-center justify-center rounded-full border-4 border-surface-container-highest bg-surface-container-high">
-              <LockIcon className="w-6 h-6 text-on-surface-variant" />
-            </div>
           ) : (
             <div className="w-16 h-16 flex items-center justify-center rounded-full border-4 border-surface-container-highest">
               <span className="text-lg text-on-surface-variant">--</span>
@@ -150,22 +146,7 @@ export function SidebarScoreCard({
 
         {/* Score Details */}
         <div className="flex-1 min-w-0">
-          {isLocked ? (
-            <div>
-              <p className="text-xs text-on-surface-variant mb-2">
-                Upgrade to Pro to unlock {config.name} insights
-              </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpgradeClick?.();
-                }}
-                className="px-3 py-1.5 text-xs font-medium bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
-          ) : hasScore ? (
+          {hasScore ? (
             <>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <span className="text-xs text-on-surface-variant">3-month change</span>
@@ -174,6 +155,17 @@ export function SidebarScoreCard({
                   value={trendValue}
                 />
               </div>
+              {isBreakdownLocked && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpgradeClick?.();
+                  }}
+                  className="mt-1 text-[11px] text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  See what drives this score →
+                </button>
+              )}
             </>
           ) : (
             <p className="text-xs text-on-surface-variant">

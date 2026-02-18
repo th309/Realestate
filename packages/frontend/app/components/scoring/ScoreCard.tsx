@@ -2,12 +2,12 @@
  * ScoreCard Component
  *
  * Full expanded view of a PropertyIQ score with component breakdown.
- * Two variants:
- * - FullScoreCard: Complete details for users with full access
- * - TeaserScoreCard: Blurred preview with upgrade CTA for locked scores
+ * Access model:
+ * - Score value, gauge, grade, trend visible to ALL users
+ * - Component breakdown section gated to Pro+ (replaced by inline upgrade CTA)
  *
  * Features:
- * - Component breakdown
+ * - Component breakdown (Pro+)
  * - Short-term sparkline history
  * - View History button for extended (3Y/5Y) history with outcomes
  * - Validation badge for scores with actual return data
@@ -221,8 +221,6 @@ export const ScoreCard = memo(function ScoreCard({
 
   return (
     <div className={`relative bg-surface-container-low rounded-xl shadow-sm border border-outline-variant overflow-hidden ${className}`}>
-      {/* Teaser overlay */}
-      {isTeaser && upgradeCta && <TeaserOverlay cta={upgradeCta} onUpgrade={onUpgradeClick} />}
 
       {/* Header */}
       <div className="p-4 border-b border-outline-variant">
@@ -279,7 +277,7 @@ export const ScoreCard = memo(function ScoreCard({
           <div className="flex items-center gap-3">
             {history && history.length > 0 && <HistorySparkline data={history} />}
             {/* View History button */}
-            {showHistoryButton && geographyType && geographyId && !isTeaser && (
+            {showHistoryButton && geographyType && geographyId && (
               <button
                 onClick={() => setShowExtendedHistory(!showExtendedHistory)}
                 className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
@@ -314,9 +312,9 @@ export const ScoreCard = memo(function ScoreCard({
         </div>
       )}
 
-      {/* Components breakdown */}
-      {components.length > 0 && (
-        <div className={`p-4 space-y-3 ${isTeaser ? 'blur-sm pointer-events-none' : ''}`}>
+      {/* Components breakdown — visible to users with breakdown access */}
+      {components.length > 0 && !isTeaser && (
+        <div className="p-4 space-y-3">
           <h4 className="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Components</h4>
           {components.map((component) => (
             <ComponentBar
@@ -331,6 +329,22 @@ export const ScoreCard = memo(function ScoreCard({
               hurtingFactors={component.hurtingFactors}
             />
           ))}
+        </div>
+      )}
+
+      {/* Upgrade CTA for breakdown access */}
+      {isTeaser && upgradeCta && (
+        <div className="p-4 border-t border-outline-variant">
+          <div className="text-center py-4">
+            <p className="text-sm font-medium text-on-surface mb-1">{upgradeCta.headline}</p>
+            <p className="text-xs text-on-surface-variant mb-3">{upgradeCta.description}</p>
+            <button
+              onClick={onUpgradeClick}
+              className="px-4 py-2 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors"
+            >
+              {upgradeCta.buttonText}
+            </button>
+          </div>
         </div>
       )}
     </div>
