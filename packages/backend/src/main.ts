@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 // Build trigger: 2026-01-28
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Manual CORS middleware — cors@2.8.5 crashes on Express 5 with Origin header
   const httpAdapter = app.getHttpAdapter();
