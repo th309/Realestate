@@ -32,6 +32,7 @@ import { BenchmarksModule } from './benchmarks/benchmarks.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { EmailModule } from './email/email.module';
+import { AnalyticsEventsModule } from './analytics-events/analytics-events.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -69,6 +70,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     AlertsModule,
     RecommendationsModule,
     EmailModule,
+    AnalyticsEventsModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
