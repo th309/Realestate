@@ -17,7 +17,7 @@ export function HeroSearchBar() {
   const handleSelectResult = (result: { id: string; name: string; type: string; state?: string; center?: [number, number] }) => {
     clearSearch();
     // Navigate to map with the selected geography + center for immediate fly-to
-    const params = new URLSearchParams({ geo: result.type, id: result.id });
+    const params = new URLSearchParams({ geo: result.type, id: result.id, name: result.name });
     if (result.center) {
       params.set('lng', String(result.center[0]));
       params.set('lat', String(result.center[1]));

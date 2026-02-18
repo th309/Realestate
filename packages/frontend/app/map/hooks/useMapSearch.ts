@@ -71,33 +71,43 @@ export function useMapSearch({
   const handleSelectSearchResult = (result: SearchResult) => {
     console.log('Search result clicked:', result);
 
+    const zoomLevel = result.type === 'state' ? 5.5 :
+      result.type === 'zip' ? 12 :
+        result.type === 'county' ? 8 :
+          result.type === 'city' ? 10 :
+            result.type === 'metro' ? 7 : 10;
+
     if (!mapRef.current) {
       console.error('Map not initialized - cannot zoom');
-    } else {
-      // Use fitBounds if bbox is available, otherwise fall back to flyTo with center
-      // IMPORTANT: BBox provides the "correct" zoom to see the whole geometry.
-      // However, for metros, we currently lack MSA-level bboxes, so we force a bird's-eye view.
-      if (result.bbox && result.type !== 'metro') {
-        console.log('Fitting to bounds:', result.bbox);
-        mapRef.current.fitBounds(
-          [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
-          { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
-        );
-      } else if (result.center) {
-        // Fallback zoom levels if no bbox available
-        const zoomLevel = result.type === 'state' ? 5.5 :
-          result.type === 'zip' ? 12 :
-            result.type === 'county' ? 8 :
-              result.type === 'city' ? 10 :
-                result.type === 'metro' ? 7 : 10;
-
-        console.log('Flying to:', result.center, 'zoom:', zoomLevel);
-        mapRef.current.flyTo({
-          center: result.center,
-          zoom: zoomLevel,
-          duration: ANIMATION_DURATIONS.MAP_FLY,
-        });
-      }
+    } else if (result.bbox && result.type !== 'metro') {
+      console.log('Fitting to bounds:', result.bbox);
+      mapRef.current.fitBounds(
+        [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
+        { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
+      );
+    } else if (result.center) {
+      console.log('Flying to:', result.center, 'zoom:', zoomLevel);
+      mapRef.current.flyTo({
+        center: result.center,
+        zoom: zoomLevel,
+        duration: ANIMATION_DURATIONS.MAP_FLY,
+      });
+    } else if (mapboxgl.accessToken) {
+      // No center available — geocode the name as fallback
+      const query = result.name.split(',')[0].split('-')[0].trim();
+      const state = result.state ? `,${result.state}` : '';
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query + state)}.json?access_token=${mapboxgl.accessToken}&limit=1&country=us`;
+      fetch(url).then(r => r.json()).then(data => {
+        const feature = data.features?.[0];
+        if (feature?.center && mapRef.current) {
+          console.log('Geocoded flyTo:', feature.center, 'zoom:', zoomLevel);
+          mapRef.current.flyTo({
+            center: feature.center as [number, number],
+            zoom: zoomLevel,
+            duration: ANIMATION_DURATIONS.MAP_FLY,
+          });
+        }
+      }).catch(() => { /* geocode failed, no zoom */ });
     }
 
     // Mark that search initiated this navigation (so geo level effect skips its zoom)

@@ -69,6 +69,7 @@ interface UseMapLayersProps {
   forecastHorizon: ForecastHorizon;
   mapData: MapData;
   mapLoaded: boolean;
+  dataLoading?: boolean;
   highlightedFeature?: SearchResult | null;
   onFeatureClick?: (geography: SelectedGeography | null) => void;
   onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void;
@@ -83,6 +84,7 @@ export function useMapLayers({
   forecastHorizon,
   mapData,
   mapLoaded,
+  dataLoading,
   highlightedFeature,
   onFeatureClick,
   onFeatureContextMenu
@@ -172,6 +174,11 @@ export function useMapLayers({
   useEffect(() => {
     if (!mapLoaded) return;
 
+    // Skip painting while data is still loading — prevents rendering GeoJSON
+    // with stale data from the previous geoLevel (which shows no colors).
+    // The effect will re-fire when dataLoading becomes false.
+    if (dataLoading) return;
+
     const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
     if (requiresState && !selectedState) {
       // Clear layers if state is required but not selected
@@ -182,7 +189,7 @@ export function useMapLayers({
     }
 
     updateMapLayers();
-  }, [geoLevel, selectedState, mapLoaded, updateMapLayers]);
+  }, [geoLevel, selectedState, mapLoaded, dataLoading, updateMapLayers]);
 
   // Effect for instant highlight update without full re-fetch if level/state didn't change
   useEffect(() => {
