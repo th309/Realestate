@@ -37,20 +37,53 @@ export class AlertProcessorService {
       return;
     }
 
-    let triggered = 0;
+    // 2. Deduplicate metric queries — group alerts by unique market/metric combo
+    const uniqueKeys = new Set<string>();
+    for (const alert of alerts) {
+      uniqueKeys.add(
+        `${alert.metric_id}:${alert.geography_type}:${alert.geography_id}`,
+      );
+    }
 
-    // 2. For each alert, fetch current metric value
+    // 3. Batch-fetch all unique metric values (one query per unique combo)
+    const metricValues = new Map<string, number | null>();
+    for (const key of uniqueKeys) {
+      const [metricId, geoType, geoId] = key.split(':');
+      try {
+        const value = await this.fetchCurrentMetricValue(
+          metricId,
+          geoType,
+          geoId,
+        );
+        metricValues.set(key, value);
+      } catch (err) {
+        this.logger.error(
+          `Failed to fetch metric ${key}: ${err instanceof Error ? err.message : err}`,
+        );
+        metricValues.set(key, null);
+      }
+    }
+
+    this.logger.log(
+      `Fetched ${metricValues.size} unique metric values for ${alerts.length} alerts`,
+    );
+
+    // 4. Evaluate each alert against the cached metric values
+    const historyInserts: {
+      alert_id: string;
+      metric_value: number;
+      notified_via: string;
+    }[] = [];
+    const triggeredIds: string[] = [];
+
     for (const alert of alerts) {
       try {
-        const currentValue = await this.fetchCurrentMetricValue(
-          alert.metric_id,
-          alert.geography_type,
-          alert.geography_id,
-        );
+        const key = `${alert.metric_id}:${alert.geography_type}:${alert.geography_id}`;
+        const currentValue = metricValues.get(key) ?? null;
 
         if (currentValue == null) continue;
 
-        // 3. Check condition
+        // Check condition
         const isTriggered = this.checkCondition(
           alert.condition,
           currentValue,
@@ -59,7 +92,7 @@ export class AlertProcessorService {
 
         if (!isTriggered) continue;
 
-        // 4. Dedup: skip if last_triggered_at is within 24 hours
+        // Dedup: skip if last_triggered_at is within 24 hours
         if (alert.last_triggered_at) {
           const lastTriggered = new Date(alert.last_triggered_at);
           const hoursSince =
@@ -67,29 +100,49 @@ export class AlertProcessorService {
           if (hoursSince < 24) continue;
         }
 
-        // 5. Insert history entry
-        await client.from('alert_history').insert({
+        // Collect for batch insert/update
+        historyInserts.push({
           alert_id: alert.id,
           metric_value: currentValue,
           notified_via: 'in-app',
         });
-
-        // 6. Update last_triggered_at
-        await client
-          .from('user_alerts')
-          .update({ last_triggered_at: new Date().toISOString() })
-          .eq('id', alert.id);
-
-        triggered++;
+        triggeredIds.push(alert.id);
       } catch (err) {
         this.logger.error(
-          `Failed to process alert ${alert.id}: ${err instanceof Error ? err.message : err}`,
+          `Failed to evaluate alert ${alert.id}: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    // 5. Batch insert alert_history entries
+    if (historyInserts.length > 0) {
+      const { error: insertError } = await client
+        .from('alert_history')
+        .insert(historyInserts);
+
+      if (insertError) {
+        this.logger.error(
+          `Failed to batch insert alert history: ${insertError.message}`,
+        );
+      }
+    }
+
+    // 6. Batch update last_triggered_at for all triggered alerts
+    if (triggeredIds.length > 0) {
+      const { error: updateError } = await client
+        .from('user_alerts')
+        .update({ last_triggered_at: new Date().toISOString() })
+        .in('id', triggeredIds);
+
+      if (updateError) {
+        this.logger.error(
+          `Failed to batch update last_triggered_at: ${updateError.message}`,
         );
       }
     }
 
     this.logger.log(
-      `Alert processing complete. ${triggered}/${alerts.length} alerts triggered.`,
+      `Alert processing complete. ${triggeredIds.length}/${alerts.length} alerts triggered.`,
     );
   }
 

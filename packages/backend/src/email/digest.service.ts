@@ -84,21 +84,40 @@ export class DigestService {
       .eq('user_id', userId)
       .limit(10);
 
-    // Fetch alerts triggered in past 7 days
-    const sevenDaysAgo = new Date(
-      Date.now() - 7 * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    const { data: alertHistory } = await this.supabase
-      .from('alert_history')
-      .select(
-        '*, alert:user_alerts(geography_name, metric_id, condition, threshold)',
-      )
-      .gte('triggered_at', sevenDaysAgo)
-      .order('triggered_at', { ascending: false })
-      .limit(10);
+    // Fetch the user's alert IDs first, then scope alert_history to them
+    const { data: userAlerts } = await this.supabase
+      .from('user_alerts')
+      .select('id')
+      .eq('user_id', userId);
 
-    // Filter to user's alerts
-    const userAlertHistory = alertHistory?.filter((h) => h.alert) || [];
+    const userAlertIds = userAlerts?.map((a) => a.id) || [];
+
+    let userAlertHistory: Array<{
+      alert?: {
+        geography_name?: string;
+        metric_id?: string;
+        condition?: string;
+        threshold?: number;
+      };
+      metric_value?: number;
+    }> = [];
+
+    if (userAlertIds.length > 0) {
+      const sevenDaysAgo = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const { data: alertHistory } = await this.supabase
+        .from('alert_history')
+        .select(
+          '*, alert:user_alerts(geography_name, metric_id, condition, threshold)',
+        )
+        .in('alert_id', userAlertIds)
+        .gte('triggered_at', sevenDaysAgo)
+        .order('triggered_at', { ascending: false })
+        .limit(10);
+
+      userAlertHistory = alertHistory?.filter((h) => h.alert) || [];
+    }
 
     return {
       watchlist: watchlist || [],
