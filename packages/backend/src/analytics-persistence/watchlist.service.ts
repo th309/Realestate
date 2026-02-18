@@ -4,8 +4,9 @@
  * CRUD operations for user's market watchlist.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EntitlementsService } from '../entitlements/entitlements.service';
 
 export interface WatchlistItem {
   id: string;
@@ -37,7 +38,10 @@ export interface UpdateWatchlistItemDto {
 export class WatchlistService {
   private readonly logger = new Logger(WatchlistService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   /**
    * Get all watchlist items for a user
@@ -114,9 +118,40 @@ export class WatchlistService {
   }
 
   /**
+   * Check if the user is within their watchlist limit
+   */
+  async checkWatchlistLimit(
+    userId: string,
+  ): Promise<{ allowed: boolean; current: number; limit: number }> {
+    const currentCount = await this.getCount(userId);
+    const entitlementsResult = await this.entitlements.checkAccess(
+      userId,
+      null,
+      ['feature:watchlist_limit'],
+    );
+    const access = entitlementsResult.access['feature:watchlist_limit'];
+
+    // -1 means unlimited, undefined means no limit configured
+    const limit = access?.limit ?? 0;
+    if (limit === -1)
+      return { allowed: true, current: currentCount, limit: -1 };
+
+    return { allowed: currentCount < limit, current: currentCount, limit };
+  }
+
+  /**
    * Add a market to the watchlist
    */
   async add(userId: string, dto: AddToWatchlistDto): Promise<WatchlistItem> {
+    // Enforce entitlement limit before inserting
+    const limitCheck = await this.checkWatchlistLimit(userId);
+    if (!limitCheck.allowed) {
+      throw new HttpException(
+        'Watchlist limit reached. Upgrade to add more markets.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     const client = this.supabase.getClient();
 
     const { data, error } = await client

@@ -46,9 +46,49 @@ export class WatchlistController {
 
     try {
       const items = await this.watchlistService.getAll(userId, folder);
+      const limitInfo = await this.watchlistService.checkWatchlistLimit(userId);
       return {
         success: true,
         data: items,
+        count: items.length,
+        limit: limitInfo.limit,
+        remaining:
+          limitInfo.limit === -1
+            ? -1
+            : Math.max(0, limitInfo.limit - items.length),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Get watchlist summary with current scores and changes
+   * GET /api/analytics/watchlist/summary?userId=xxx
+   */
+  @Get('summary')
+  async getSummary(@Query('userId') userId: string) {
+    this.logger.log(`GET /analytics/watchlist/summary for user ${userId}`);
+
+    if (!userId) {
+      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const items = await this.watchlistService.getAll(userId);
+
+      // For each item, return with placeholder score data
+      // Score enrichment can be added later when scoring service integration is needed
+      return {
+        success: true,
+        data: items.map((item) => ({
+          ...item,
+          currentScores: null,
+          scoreChanges: null,
+        })),
         count: items.length,
       };
     } catch (error) {
