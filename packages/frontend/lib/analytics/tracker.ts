@@ -11,6 +11,8 @@
  * with the sendBeacon API used during page unload.
  */
 
+import { getAnonymousSessionId } from '@/lib/entitlements/session';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const BATCH_INTERVAL = 5000; // 5 seconds
 const MAX_BATCH_SIZE = 50;
@@ -30,13 +32,7 @@ let flushTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
 
 function getSessionId(): string {
-  if (typeof window === 'undefined') return '';
-  let id = sessionStorage.getItem('piq-anon-session-id');
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem('piq-anon-session-id', id);
-  }
-  return id;
+  return getAnonymousSessionId();
 }
 
 function getPagePath(): string {

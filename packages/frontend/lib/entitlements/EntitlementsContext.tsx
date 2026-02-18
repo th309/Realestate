@@ -86,7 +86,6 @@ export function EntitlementsProvider({
 
   // Wrap setSimulatedTier to persist to sessionStorage
   const setSimulatedTier = useCallback((tier: UserTier | null) => {
-    console.log('[Entitlements] setSimulatedTier called with:', tier);
     setSimulatedTierRaw(tier);
     simulatedTierRef.current = tier;
     if (tier) {
@@ -98,7 +97,6 @@ export function EntitlementsProvider({
 
   // Wrap setSimulatedAuth to persist to sessionStorage
   const setSimulatedAuth = useCallback((auth: boolean | null) => {
-    console.log('[Entitlements] setSimulatedAuth called with:', auth);
     setSimulatedAuthRaw(auth);
     if (auth !== null) {
       sessionStorage.setItem(STORAGE_KEYS.SIMULATED_AUTH, String(auth));
@@ -132,11 +130,9 @@ export function EntitlementsProvider({
   const refresh = useCallback(async () => {
     // Use ref to get the latest simulated tier (avoids stale closure issues)
     const currentTier = simulatedTierRef.current;
-    console.log('[Entitlements] refresh() called, simulatedTier=', currentTier);
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const data = await fetchEntitlements(resources, currentTier);
-      console.log('[Entitlements] setState with tier=', data.tier, 'simulatedTier was=', currentTier);
       setState(data);
     } catch (error) {
       // Fail open: default to free tier on API failure
@@ -151,7 +147,6 @@ export function EntitlementsProvider({
 
   // Refresh when simulatedTier changes
   useEffect(() => {
-    console.log('[Entitlements] simulatedTier changed to:', simulatedTier, '- triggering refresh');
     refresh();
   }, [simulatedTier, refresh]);
 
@@ -207,7 +202,6 @@ export function EntitlementsProvider({
   }, []);
 
   const resetSimulation = useCallback(() => {
-    console.log('[Entitlements] resetSimulation called');
     setSimulatedTier(null);
     setSimulatedAuth(null);
     // Note: refresh will be triggered by the simulatedTier useEffect
