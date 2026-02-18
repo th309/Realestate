@@ -3,3 +3,7 @@ export { PaywallCard } from './PaywallCard';
 export { PaywallOverlay } from './PaywallOverlay';
 export { ScorePaywall } from './ScorePaywall';
 export { InsightsPaywall } from './InsightsPaywall';
+export { BlurredTeaser } from './BlurredTeaser';
+export { GeoLockCard } from './GeoLockCard';
+export { ScoreBreakdownGate } from './ScoreBreakdownGate';
+export { ContextualUpgradeCTA } from './ContextualUpgradeCTA';
