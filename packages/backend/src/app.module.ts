@@ -29,6 +29,7 @@ import { MarketAnalysisModule } from './market-analysis/market-analysis.module';
 import { PartnersModule } from './partners/partners.module';
 import { MarketSnapshotModule } from './market-snapshot/market-snapshot.module';
 import { BenchmarksModule } from './benchmarks/benchmarks.module';
+import { AlertsModule } from './alerts/alerts.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -63,6 +64,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     PartnersModule,
     MarketSnapshotModule,
     BenchmarksModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
