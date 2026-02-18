@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -50,6 +50,8 @@ export default function MapPage() {
   const [contextMenu, setContextMenu] = useState<{ geography: SelectedGeography; x: number; y: number } | null>(null);
   const isResizing = useRef(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlProcessedRef = useRef(false);
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -262,6 +264,42 @@ export default function MapPage() {
       }
     };
   }, []);
+
+  // Process URL search params (e.g. /map?geo=metro&id=31080&lat=33.7&lng=-84.4)
+  // This handles deep links from the hero search bar and external links
+  useEffect(() => {
+    if (!map.current || !mapLoaded || urlProcessedRef.current) return;
+
+    const geo = searchParams.get('geo') as GeoLevel | null;
+    const id = searchParams.get('id');
+    if (!geo || !id) return;
+
+    urlProcessedRef.current = true;
+
+    // Set geo level and state
+    setGeoLevel(geo);
+    const state = searchParams.get('state');
+    if (state) setSelectedState(state);
+
+    // Prevent the geo-level zoom effect from overriding our fly-to
+    searchNavigatedRef.current = true;
+
+    // Fly to coordinates if provided
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    if (lat && lng) {
+      const zoomLevel = geo === 'state' ? 5.5
+        : geo === 'metro' ? 7
+        : geo === 'county' ? 8
+        : geo === 'zip' ? 12 : 7;
+
+      map.current.flyTo({
+        center: [parseFloat(lng), parseFloat(lat)],
+        zoom: zoomLevel,
+        duration: 1200,
+      });
+    }
+  }, [mapLoaded, searchParams]);
 
   // Close context menu on map move/zoom
   useEffect(() => {

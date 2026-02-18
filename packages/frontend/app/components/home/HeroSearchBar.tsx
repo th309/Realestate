@@ -14,12 +14,18 @@ export function HeroSearchBar() {
     searchRef, handleSearch, clearSearch,
   } = useUniversalSearch({});
 
-  const handleSelectResult = (result: { id: string; name: string; type: string; state?: string }) => {
+  const handleSelectResult = (result: { id: string; name: string; type: string; state?: string; center?: [number, number] }) => {
     clearSearch();
-    // Navigate to map with the selected geography
-    const geoType = result.type;
-    const geoId = result.id;
-    router.push(`/map?geo=${geoType}&id=${geoId}`);
+    // Navigate to map with the selected geography + center for immediate fly-to
+    const params = new URLSearchParams({ geo: result.type, id: result.id });
+    if (result.center) {
+      params.set('lng', String(result.center[0]));
+      params.set('lat', String(result.center[1]));
+    }
+    if (result.state) {
+      params.set('state', result.state);
+    }
+    router.push(`/map?${params.toString()}`);
   };
 
   return (
