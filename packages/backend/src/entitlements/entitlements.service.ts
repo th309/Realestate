@@ -46,8 +46,18 @@ export class EntitlementsService {
           daysRemaining: trialInfo.daysRemaining,
           tier: trialInfo.tier,
         };
+      } else {
+        // Check subscription tier from Stripe sync
+        const { data: profile } = await this.supabase.getClient()
+          .from('user_profiles')
+          .select('subscription_tier, subscription_status')
+          .eq('id', userId)
+          .single();
+
+        if (profile?.subscription_tier && profile?.subscription_tier !== 'free' && profile.subscription_status === 'active') {
+          tier = profile.subscription_tier;
+        }
       }
-      // TODO: Check actual subscription tier when Stripe is integrated
     }
 
     // Get user features
