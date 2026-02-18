@@ -5,12 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import {
   CreditCard, Check, Sparkles, Clock, BarChart3, MapPin,
   FileText, ArrowRight, Lock, Target, TrendingUp, Shield,
-  Zap, ChevronDown,
+  Zap, ChevronDown, Loader2,
 } from 'lucide-react';
-import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
 import { fetchPricingSummary, type PricingTier } from '@/lib/data';
+import { startCheckout } from '@/lib/billing/api';
 
 export default function PricingPage() {
   return (
@@ -26,6 +26,8 @@ function PricingContent() {
 
   const [plans, setPlans] = useState<PricingTier[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   // Fetch plan data from DB
   useEffect(() => {
@@ -52,6 +54,17 @@ function PricingContent() {
   // Determine effective tier (considering trial)
   const effectiveTier = trial?.active ? trial.tier : tier;
 
+  const handleUpgrade = async (planSlug: string) => {
+    setCheckoutLoading(planSlug);
+    try {
+      const url = await startCheckout(planSlug, billingInterval);
+      window.location.href = url;
+    } catch (err) {
+      console.error('Checkout failed:', err);
+      setCheckoutLoading(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-6 py-8">
@@ -77,17 +90,34 @@ function PricingContent() {
           </div>
         )}
 
+        {/* Billing Interval Toggle */}
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <span className={`text-sm ${billingInterval === 'month' ? 'text-on-surface font-medium' : 'text-on-surface-variant'}`}>Monthly</span>
+          <button
+            onClick={() => setBillingInterval(prev => prev === 'month' ? 'year' : 'month')}
+            className={`relative w-12 h-6 rounded-full transition-colors ${billingInterval === 'year' ? 'bg-primary' : 'bg-outline-variant'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${billingInterval === 'year' ? 'translate-x-6' : ''}`} />
+          </button>
+          <span className={`text-sm ${billingInterval === 'year' ? 'text-on-surface font-medium' : 'text-on-surface-variant'}`}>
+            Yearly <span className="text-green-600 font-medium text-xs">Save 17%</span>
+          </span>
+        </div>
+
         {/* Pricing Cards */}
         <div className="mt-8 grid md:grid-cols-3 gap-4">
           {plans.map((plan) => {
             const isCurrentPlan = effectiveTier === plan.slug;
             const isTrialPlan = trial?.active && trial.tier === plan.slug;
             const isHighlighted = plan.slug === 'pro';
-            const rawPrice = Number(plan.price_monthly) || 0;
-            const priceDisplay = rawPrice === 0 ? '$0' : `$${Math.round(rawPrice)}`;
-            const periodDisplay = priceDisplay === '$0' ? 'forever' : '/month';
+            const rawMonthly = Number(plan.price_monthly) || 0;
+            const rawYearly = Number(plan.price_yearly) || 0;
+            const effectiveMonthly = billingInterval === 'year' && rawYearly > 0
+              ? Math.round(rawYearly / 12)
+              : rawMonthly;
+            const priceDisplay = effectiveMonthly === 0 ? '$0' : `$${Math.round(effectiveMonthly)}`;
+            const periodDisplay = effectiveMonthly === 0 ? 'forever' : '/month';
             const ctaText = plan.slug === 'enterprise' ? 'Contact Sales' : plan.slug === 'pro' ? 'Start Free Trial' : 'Get Started';
-            const ctaHref = plan.slug === 'enterprise' ? '/about' : '/map';
 
             // Build feature bullet list from DB features
             const featureBullets: string[] = [];
@@ -160,6 +190,11 @@ function PricingContent() {
                       {periodDisplay}
                     </span>
                   </div>
+                  {billingInterval === 'year' && rawYearly > 0 && (
+                    <p className={`text-[11px] mt-0.5 ${isHighlighted || isCurrentPlan ? 'text-on-primary-container/60' : 'text-on-surface-variant/60'}`}>
+                      ${Math.round(rawYearly)}/year billed annually
+                    </p>
+                  )}
                   <p className={`text-xs mt-1 ${isHighlighted || isCurrentPlan ? 'text-on-primary-container/80' : 'text-on-surface-variant'}`}>
                     {plan.description}
                   </p>
@@ -180,19 +215,40 @@ function PricingContent() {
                   <div className="block w-full text-center py-2 rounded-lg font-medium text-sm bg-surface-container-high text-on-surface-variant">
                     Current Plan
                   </div>
-                ) : (
+                ) : plan.slug === 'free' ? (
                   <a
-                    href={ctaHref}
+                    href="/map"
+                    className="block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+                  >
+                    Get Started
+                  </a>
+                ) : plan.slug === 'enterprise' ? (
+                  <a
+                    href="/about"
+                    className="block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors bg-surface-container-high text-on-surface hover:bg-surface-container-highest"
+                  >
+                    Contact Sales
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => handleUpgrade(plan.slug)}
+                    disabled={checkoutLoading === plan.slug}
                     className={`
                       block w-full text-center py-2 rounded-lg font-medium text-sm transition-colors
                       ${isHighlighted || isCurrentPlan
                         ? 'bg-primary text-on-primary hover:bg-primary/90'
                         : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
                       }
+                      disabled:opacity-60 disabled:cursor-not-allowed
                     `}
                   >
-                    {isTrialPlan ? 'Upgrade Now' : ctaText}
-                  </a>
+                    {checkoutLoading === plan.slug ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Redirecting...
+                      </span>
+                    ) : isTrialPlan ? 'Upgrade Now' : ctaText}
+                  </button>
                 )}
               </div>
             );
@@ -655,12 +711,22 @@ function PricingContent() {
             <p className="text-sm text-on-surface-variant mb-5">
               14-day free trial. Cancel anytime. No credit card to start.
             </p>
-            <Link
-              href="/map"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02]"
+            <button
+              onClick={() => handleUpgrade('pro')}
+              disabled={checkoutLoading === 'pro'}
+              className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Start Your Free Trial <ArrowRight className="w-4 h-4" />
-            </Link>
+              {checkoutLoading === 'pro' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Redirecting...
+                </>
+              ) : (
+                <>
+                  Start Your Free Trial <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
