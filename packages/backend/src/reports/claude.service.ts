@@ -93,8 +93,29 @@ export class ClaudeService {
           section.output_format === 'json_object'
         ) {
           try {
-            return { id: section.id, value: JSON.parse(response) };
+            // Strip markdown code fences (```json ... ```) that some models wrap around JSON
+            const cleaned = response.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+            return { id: section.id, value: JSON.parse(cleaned) };
           } catch {
+            // JSON may be truncated (token limit) - try to recover valid items from arrays
+            try {
+              const cleaned = response.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+              if (cleaned.startsWith('[')) {
+                // Find the last complete object by looking for the last '}' followed by optional comma/whitespace
+                const lastCompleteObj = cleaned.lastIndexOf('}');
+                if (lastCompleteObj > 0) {
+                  const truncated = cleaned.substring(0, lastCompleteObj + 1) + ']';
+                  const parsed = JSON.parse(truncated);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    this.logger.warn(`Recovered ${parsed.length} items from truncated JSON for ${section.id}`);
+                    return { id: section.id, value: parsed };
+                  }
+                }
+              }
+            } catch {
+              // Recovery also failed
+            }
+            this.logger.warn(`Failed to parse JSON for ${section.id}, storing as raw string`);
             return { id: section.id, value: response };
           }
         }

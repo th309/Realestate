@@ -115,7 +115,10 @@ function parseWatchItems(value: unknown): string[] {
     if (item && typeof item === 'object') {
       const obj = item as Record<string, unknown>;
       const metric = obj.metric ?? obj.name ?? '';
-      const threshold = obj.threshold ?? obj.condition ?? '';
+      const threshold = obj.watch_threshold ?? obj.threshold ?? obj.condition ?? '';
+      const direction = obj.direction ?? '';
+      const rationale = obj.rationale ?? '';
+      if (metric && threshold && rationale) return `${metric} (${direction === 'up' ? 'watch for rise above' : direction === 'down' ? 'watch for drop below' : 'threshold:'} ${threshold}): ${rationale}`;
       if (metric && threshold) return `${metric}: ${threshold}`;
       if (metric) return String(metric);
     }

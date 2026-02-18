@@ -16,8 +16,7 @@ import { ClaudeNewsService } from './claude-news.service';
 import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
-import { EconomicService } from '../economic/economic.service';
-import { CalculatedMetricsService } from '../metrics/calculated-metrics.service';
+import { MarketSnapshotService } from '../market-snapshot/market-snapshot.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { NARRATIVE_PROMPTS, SECTIONS_BY_REPORT_TYPE } from './narrative-prompts';
 import { ScoreComponentBreakdown } from '../scoring/scoring.types';
@@ -168,8 +167,7 @@ export class ReportsService {
     private readonly timeSeriesService: TimeSeriesService,
     private readonly entitlementsService: EntitlementsService,
     private readonly partnersService: PartnersService,
-    private readonly economicService: EconomicService,
-    private readonly calculatedMetricsService: CalculatedMetricsService,
+    private readonly marketSnapshotService: MarketSnapshotService,
   ) {}
 
   /**
@@ -368,7 +366,69 @@ export class ReportsService {
           )
         : null;
 
-      // 3. Assemble report data
+      // 3. Assess data coverage before assembling report
+      const dataCoverage = await (async () => {
+        const keyMetrics = [
+          { name: 'Home Value', available: marketMetrics.zhvi != null },
+          { name: 'Home Value Trend', available: marketMetrics.zhvi_yoy != null },
+          { name: 'Rent', available: marketMetrics.zori != null },
+          { name: 'Market Activity', available: marketMetrics.days_on_market != null || marketMetrics.active_listing_count != null },
+          { name: 'Unemployment', available: marketMetrics.unemployment_rate != null },
+          { name: 'Population', available: marketMetrics.population != null },
+          { name: 'Hotness Score', available: marketMetrics.hotness_score != null },
+          { name: 'Income', available: marketMetrics.median_income != null },
+        ];
+        const available = keyMetrics.filter(m => m.available).length;
+        const total = keyMetrics.length;
+        const missing = keyMetrics.filter(m => !m.available).map(m => m.name);
+        const coverage = available / total;
+        const result: Record<string, any> = {
+          available,
+          total,
+          coverage_pct: Math.round(coverage * 100),
+          is_limited: coverage < 0.75,
+          missing_categories: missing,
+        };
+
+        // For limited-data areas, look up parent MSA/CBSA so users know where to find fuller data
+        if (result.is_limited) {
+          try {
+            if (geoType === 'zip') {
+              const { data: xwalk } = await client
+                .from('geography_crosswalk')
+                .select('cbsa_code, cbsa_name, county_name, state_abbrev')
+                .eq('zip_code', dto.primary_geography.id)
+                .limit(1)
+                .single();
+              if (xwalk?.cbsa_name) {
+                result.parent_msa_name = xwalk.cbsa_name;
+                result.parent_msa_id = xwalk.cbsa_code;
+              }
+              if (xwalk?.county_name && xwalk?.state_abbrev) {
+                result.parent_county = `${xwalk.county_name}, ${xwalk.state_abbrev}`;
+              }
+            } else if (geoType === 'county') {
+              const { data: xwalk } = await client
+                .from('geography_crosswalk')
+                .select('cbsa_code, cbsa_name')
+                .eq('county_fips', dto.primary_geography.id)
+                .limit(1)
+                .single();
+              if (xwalk?.cbsa_name) {
+                result.parent_msa_name = xwalk.cbsa_name;
+                result.parent_msa_id = xwalk.cbsa_code;
+              }
+            }
+            // For metro-level, it IS the MSA - no parent to look up
+          } catch {
+            // Crosswalk lookup failed, continue without parent info
+          }
+        }
+
+        return result;
+      })();
+
+      // Assemble report data
       const populatedData = {
         current: {
           // Home value (Zillow names kept for template compatibility + descriptive aliases)
@@ -416,6 +476,7 @@ export class ReportsService {
           affordability_index: marketMetrics.affordability_index,
           income_growth_yoy: marketMetrics.income_growth_yoy,
         },
+        data_coverage: dataCoverage,
         historical: historicalData,
         benchmarks: {},
         scores: {
@@ -740,7 +801,7 @@ export class ReportsService {
           generation_completed_at: new Date().toISOString(),
           generation_time_ms: generationTime,
           data_as_of_date: new Date().toISOString().split('T')[0],
-          confidence_level: 'high',
+          confidence_level: populatedData.data_coverage?.is_limited ? 'moderate' : 'high',
         })
         .eq('id', reportId);
 
@@ -1059,11 +1120,8 @@ export class ReportsService {
   }
 
   /**
-   * Fetch market metrics for a geography to populate AI context
-   * @param geographyId - The geography ID (CBSA code, FIPS, or ZIP)
-   * @param geographyType - Type of geography
-   * @param requiredMetrics - Optional list of specific metrics to fetch (from template.config.data_requirements.current_metrics)
-   *                          If empty/undefined, fetches all available metrics
+   * Fetch market metrics using MarketSnapshotService (same data feed as market pages)
+   * then supplement with historical calculations the snapshot doesn't provide.
    */
   private async fetchMarketMetrics(
     geographyId: string,
@@ -1073,87 +1131,90 @@ export class ReportsService {
     const client = this.supabase.getClient();
     const metrics: MarketMetrics = {};
 
-    // Helper to check if a metric should be fetched
-    const shouldFetch = (metricName: string): boolean => {
-      // If no specific requirements, fetch everything
-      if (!requiredMetrics || requiredMetrics.length === 0) return true;
-      // Check if this metric or its category is required
-      return requiredMetrics.some(req =>
-        metricName.includes(req) || req.includes(metricName) || req === '*'
-      );
-    };
-
     try {
-      // Fetch based on geography type
-      if (geographyType === 'metro') {
-        // Get Realtor metro data (median price, days on market, inventory)
-        if (shouldFetch('realtor') || shouldFetch('median_listing_price') || shouldFetch('days_on_market') || shouldFetch('inventory') || shouldFetch('hotness')) {
-          const { data: realtorData } = await client
-            .from('realtor_metro')
-            .select('*')
-            .eq('cbsa_code', geographyId)
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
+      // Use MarketSnapshotService - same data feed as market pages
+      const snapshot = await this.marketSnapshotService.getSnapshot(geographyType, geographyId);
+      const sm = snapshot.metrics; // Record<string, { value, date }>
 
-          if (realtorData) {
-            metrics.median_listing_price = realtorData.median_listing_price;
-            metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
-            metrics.days_on_market = realtorData.median_days_on_market;
-            metrics.active_listing_count = realtorData.active_listing_count;
-            metrics.inventory_yoy = realtorData.active_listing_count_yy;
-            metrics.pending_ratio = realtorData.pending_ratio;
-            metrics.price_reduced_share = realtorData.price_reduced_share;
-            metrics.supply_score = realtorData.supply_score;
-            metrics.hotness_score = realtorData.hotness_score;
-            metrics.demand_score = realtorData.demand_score;
-          }
-        }
+      // Map snapshot metric IDs to MarketMetrics field names
+      const v = (id: string) => sm[id]?.value ?? undefined;
 
-        // Get Zillow ZHVI data (use cbsa_code, not region_id)
-        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
-          const { data: zhviData } = await client
-            .from('zillow_metro')
-            .select('value')
-            .eq('cbsa_code', geographyId)
-            .eq('metric_name', 'zhvi')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
+      // Price metrics
+      metrics.zhvi = v('home_value');
+      metrics.zhvi_yoy = v('home_value_yoy');
+      metrics.zhvf_1yr_pct = v('home_price_forecast');
+      metrics.median_listing_price = v('listing_price');
+      metrics.median_listing_price_yoy = v('home_value_yoy');
 
-          if (zhviData) {
-            metrics.zhvi = zhviData.value;
-          }
-        }
+      // Rent metrics
+      metrics.zori = v('rent_index');
+      metrics.zordi = v('rent_for_houses') ?? undefined;
 
-        // Get ZHVI history for YoY, 3yr CAGR, and 5yr CAGR
-        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value') || shouldFetch('appreciation')) {
+      // Market activity
+      metrics.hotness_score = v('hotness_score');
+      metrics.demand_score = v('demand_score');
+      metrics.supply_score = v('supply_score');
+      metrics.days_on_market = v('days_on_market');
+      metrics.active_listing_count = v('for_sale_inventory');
+      metrics.inventory_yoy = v('inventory_yoy');
+      metrics.pending_ratio = v('pending_ratio');
+      metrics.price_reduced_share = v('price_cut_pct');
+      metrics.sale_to_list_ratio = v('sale_to_list');
+
+      // Investment metrics
+      metrics.cap_rate = v('cap_rate');
+      metrics.gross_yield = v('gross_yield');
+      metrics.grm = v('grm');
+      metrics.overvalued_pct = v('overvalued_pct');
+      metrics.rent_to_price_ratio = v('rent_to_price_ratio');
+
+      // Census/Economic
+      metrics.population = v('population');
+      metrics.median_income = v('median_income');
+      metrics.median_household_income = v('median_income');
+      metrics.median_age = v('median_age');
+      metrics.population_growth_yoy = v('population_growth');
+      metrics.unemployment_rate = v('unemployment_rate');
+      metrics.job_growth_yoy = v('job_growth');
+      metrics.income_growth_yoy = v('income_growth');
+      metrics.homeownership_rate = v('homeownership_rate');
+
+      // 5yr appreciation from calculated metrics
+      metrics.zhvi_5y_cagr = v('home_value_5yr');
+
+      // If no ZHVI from Zillow, use median_listing_price from Realtor as substitute
+      if (metrics.zhvi == null && metrics.median_listing_price != null) {
+        metrics.zhvi = metrics.median_listing_price;
+      }
+
+      // --- Supplement with historical calculations the snapshot doesn't provide ---
+
+      // Calculate 3yr/5yr CAGR and YoY from ZHVI history
+      if (metrics.zhvi_3y_cagr == null || metrics.zori_yoy == null) {
+        const zillowTable = geographyType === 'metro' ? 'zillow_metro'
+          : geographyType === 'county' ? 'zillow_county' : 'zillow_zip';
+        const zillowIdCol = geographyType === 'metro' ? 'cbsa_code'
+          : geographyType === 'county' ? 'fips_code' : 'region_name';
+
+        // ZHVI history for 3yr CAGR
+        if (metrics.zhvi_3y_cagr == null) {
           const { data: zhviHistory } = await client
-            .from('zillow_metro')
+            .from(zillowTable)
             .select('value, period_date')
-            .eq('cbsa_code', geographyId)
+            .eq(zillowIdCol, geographyId)
             .eq('metric_name', 'zhvi')
             .order('period_date', { ascending: false })
             .limit(61);
 
-          if (zhviHistory && zhviHistory.length >= 2) {
+          if (zhviHistory && zhviHistory.length >= 1) {
             const current = zhviHistory[0]?.value;
-            // YoY (12 months)
-            if (zhviHistory.length >= 12) {
-              const yearAgo = zhviHistory[12]?.value;
-              if (current && yearAgo) {
-                metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
-              }
-            }
-            // 3-year CAGR (36 months)
             if (zhviHistory.length >= 36) {
               const threeYrAgo = zhviHistory[Math.min(36, zhviHistory.length - 1)]?.value;
               if (current && threeYrAgo && threeYrAgo > 0) {
                 metrics.zhvi_3y_cagr = (Math.pow(current / threeYrAgo, 1 / 3) - 1) * 100;
               }
             }
-            // 5-year CAGR (60 months)
-            if (zhviHistory.length >= 60) {
+            if (metrics.zhvi_5y_cagr == null && zhviHistory.length >= 60) {
               const fiveYrAgo = zhviHistory[Math.min(60, zhviHistory.length - 1)]?.value;
               if (current && fiveYrAgo && fiveYrAgo > 0) {
                 metrics.zhvi_5y_cagr = (Math.pow(current / fiveYrAgo, 1 / 5) - 1) * 100;
@@ -1162,448 +1223,127 @@ export class ReportsService {
           }
         }
 
-        // Get ZORI (rent) data, YoY, and 5yr CAGR from zillow_metro table
-        if (shouldFetch('zori') || shouldFetch('rent')) {
-          // Fetch ZORI history (61 months for 5yr CAGR)
+        // ZORI history for rent YoY
+        if (metrics.zori_yoy == null) {
           const { data: zoriHistory } = await client
-            .from('zillow_metro')
+            .from(zillowTable)
             .select('value, period_date')
-            .eq('cbsa_code', geographyId)
+            .eq(zillowIdCol, geographyId)
             .eq('metric_name', 'zori')
-            .order('period_date', { ascending: false })
-            .limit(61);
-
-          if (zoriHistory && zoriHistory.length >= 1) {
-            metrics.zori = zoriHistory[0].value;
-
-            const currentRent = zoriHistory[0].value;
-            // Rent YoY (12 months)
-            if (zoriHistory.length >= 12) {
-              const rentYearAgo = zoriHistory[Math.min(12, zoriHistory.length - 1)]?.value;
-              if (currentRent && rentYearAgo && rentYearAgo > 0) {
-                metrics.zori_yoy = ((currentRent - rentYearAgo) / rentYearAgo) * 100;
-              }
-            }
-            // Rent 5-year CAGR (60 months)
-            if (zoriHistory.length >= 60) {
-              const rentFiveYrAgo = zoriHistory[Math.min(60, zoriHistory.length - 1)]?.value;
-              if (currentRent && rentFiveYrAgo && rentFiveYrAgo > 0) {
-                metrics.zori_5y_cagr = (Math.pow(currentRent / rentFiveYrAgo, 1 / 5) - 1) * 100;
-              }
-            }
-          }
-
-          // If no ZORI data, try pre-computed zori_yoy metric from Zillow pipeline
-          if (metrics.zori_yoy == null) {
-            const { data: zoriYoyData } = await client
-              .from('zillow_metro')
-              .select('value')
-              .eq('cbsa_code', geographyId)
-              .eq('metric_name', 'zori_yoy')
-              .order('period_date', { ascending: false })
-              .limit(1)
-              .single();
-
-            if (zoriYoyData?.value != null) {
-              metrics.zori_yoy = zoriYoyData.value;
-            }
-          }
-
-          // Get ZORDI (rental demand index)
-          const { data: zordiData } = await client
-            .from('zillow_metro')
-            .select('value')
-            .eq('cbsa_code', geographyId)
-            .eq('metric_name', 'zordi')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (zordiData?.value != null) {
-            metrics.zordi = zordiData.value;
-          }
-        }
-
-        // Get calculated metrics (cap rate, GRM, growth, rent growth) via CalculatedMetricsService
-        // The service merges latest 3 rows to handle stale/null entries
-        // Includes HUD FMR fallback for rent metrics and Realtor fallback for home value growth
-        {
-          const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'metro');
-
-          if (calcMetrics) {
-            metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
-            metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
-            metrics.grm = calcMetrics.grm ?? undefined;
-            metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
-            metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
-            metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
-            // Growth metrics from pipeline (with automatic fallbacks)
-            if (metrics.zhvi_5y_cagr == null && calcMetrics.home_value_5yr_cagr != null) {
-              metrics.zhvi_5y_cagr = calcMetrics.home_value_5yr_cagr;
-            }
-            if (metrics.zhvi_3y_cagr == null && calcMetrics.zhvi_3y_cagr != null) {
-              metrics.zhvi_3y_cagr = calcMetrics.zhvi_3y_cagr;
-            }
-            // Rent growth metrics (ZORI with HUD FMR fallback)
-            if (metrics.zori_yoy == null && calcMetrics.zori_yoy != null) {
-              metrics.zori_yoy = calcMetrics.zori_yoy;
-            }
-            if (metrics.zori_5y_cagr == null && calcMetrics.zori_5y_cagr != null) {
-              metrics.zori_5y_cagr = calcMetrics.zori_5y_cagr;
-            }
-          }
-        }
-
-        // Get Zillow forecast (1-year)
-        if (shouldFetch('zhvf') || shouldFetch('forecast')) {
-          const { data: forecastData } = await client
-            .from('zillow_metro')
-            .select('value')
-            .eq('cbsa_code', geographyId)
-            .eq('metric_name', 'zhvf_12m')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (forecastData?.value != null) {
-            metrics.zhvf_1yr_pct = forecastData.value;
-          }
-        }
-
-        // Get Census data from census_metro table
-        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
-          const { data: censusData } = await client
-            .from('census_metro')
-            .select('total_population, median_household_income, median_age, population_yoy')
-            .eq('cbsa_code', geographyId)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (censusData) {
-            metrics.median_income = censusData.median_household_income;
-            metrics.median_household_income = censusData.median_household_income;
-            metrics.population = censusData.total_population;
-            metrics.median_age = censusData.median_age;
-            metrics.population_growth_yoy = censusData.population_yoy;
-          }
-        }
-
-        // Get economic data (unemployment, job growth) for metro
-        try {
-          const [unemploymentData, jobGrowthData] = await Promise.all([
-            this.economicService.getMetroUnemployment(),
-            this.economicService.getMetroJobGrowth(),
-          ]);
-          const metroUnemployment = unemploymentData.find(d => d.region_id === geographyId || d.cbsa_code === geographyId);
-          if (metroUnemployment?.value !== null && metroUnemployment?.value !== undefined) {
-            metrics.unemployment_rate = metroUnemployment.value;
-          }
-          const metroJobGrowth = jobGrowthData.find(d => d.region_id === geographyId || d.cbsa_code === geographyId);
-          if (metroJobGrowth?.value !== null && metroJobGrowth?.value !== undefined) {
-            metrics.job_growth_yoy = metroJobGrowth.value;
-          }
-        } catch (econError) {
-          this.logger.warn('Failed to fetch economic data for metro, continuing:', econError);
-        }
-      } else if (geographyType === 'county') {
-        // Get Realtor county data (all available fields)
-        const { data: realtorData } = await client
-          .from('realtor_county')
-          .select('*')
-          .eq('county_fips', geographyId)
-          .order('period_date', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (realtorData) {
-          metrics.median_listing_price = realtorData.median_listing_price;
-          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
-          metrics.days_on_market = realtorData.median_days_on_market;
-          metrics.active_listing_count = realtorData.active_listing_count;
-          metrics.inventory_yoy = realtorData.active_listing_count_yy;
-          // Additional realtor fields (same as metro)
-          if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
-          if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
-          if (realtorData.supply_score != null) metrics.supply_score = realtorData.supply_score;
-          if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
-          if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
-        }
-
-        // Get Zillow ZHVI data for county (use fips_code)
-        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
-          const { data: zhviData } = await client
-            .from('zillow_county')
-            .select('value')
-            .eq('fips_code', geographyId)
-            .eq('metric_name', 'zhvi')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (zhviData) {
-            metrics.zhvi = zhviData.value;
-          }
-        }
-
-        // Get YoY ZHVI change for county (compare current to 12 months ago)
-        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
-          const { data: zhviHistory } = await client
-            .from('zillow_county')
-            .select('value, period_date')
-            .eq('fips_code', geographyId)
-            .eq('metric_name', 'zhvi')
             .order('period_date', { ascending: false })
             .limit(13);
 
-          if (zhviHistory && zhviHistory.length >= 12) {
-            const current = zhviHistory[0]?.value;
-            const yearAgo = zhviHistory[12]?.value;
-            if (current && yearAgo) {
-              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
+          if (zoriHistory && zoriHistory.length >= 12) {
+            const currentRent = zoriHistory[0]?.value;
+            const rentYearAgo = zoriHistory[12]?.value;
+            if (currentRent && rentYearAgo && rentYearAgo > 0) {
+              metrics.zori_yoy = ((currentRent - rentYearAgo) / rentYearAgo) * 100;
             }
           }
         }
+      }
 
-        // Get ZORI (rent) data for county
-        if (shouldFetch('zori') || shouldFetch('rent')) {
-          const { data: zoriData } = await client
-            .from('zillow_county')
-            .select('value')
-            .eq('fips_code', geographyId)
-            .eq('metric_name', 'zori')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
+      // Calculate population_growth_yoy from census if snapshot didn't provide it
+      if (metrics.population_growth_yoy == null && metrics.population != null) {
+        const censusTable = geographyType === 'metro' ? 'census_metro'
+          : geographyType === 'county' ? 'census_county' : 'census_zip';
+        const censusIdCol = geographyType === 'metro' ? 'cbsa_code'
+          : geographyType === 'county' ? 'fips_code' : 'zcta';
 
-          if (zoriData) {
-            metrics.zori = zoriData.value;
+        const { data: censusRows } = await client
+          .from(censusTable)
+          .select('total_population')
+          .eq(censusIdCol, geographyId)
+          .order('year', { ascending: false })
+          .limit(2);
+
+        if (censusRows && censusRows.length >= 2) {
+          const curr = censusRows[0]?.total_population;
+          const prev = censusRows[1]?.total_population;
+          if (curr && prev && prev > 0) {
+            metrics.population_growth_yoy = ((curr - prev) / prev) * 100;
           }
         }
+      }
 
-        // If no ZHVI from Zillow, use median_listing_price from Realtor as substitute
-        if (!metrics.zhvi && metrics.median_listing_price) {
-          metrics.zhvi = metrics.median_listing_price;
-          // Calculate YoY from realtor data if we don't have Zillow YoY
-          if (!metrics.zhvi_yoy && metrics.median_listing_price_yoy != null) {
-            metrics.zhvi_yoy = metrics.median_listing_price_yoy;
-          }
-        }
+      // Use census median_gross_rent as rent proxy if still no rent data
+      if (metrics.zori == null) {
+        const censusTable = geographyType === 'metro' ? 'census_metro'
+          : geographyType === 'county' ? 'census_county' : 'census_zip';
+        const censusIdCol = geographyType === 'metro' ? 'cbsa_code'
+          : geographyType === 'county' ? 'fips_code' : 'zcta';
 
-        // Get calculated metrics via CalculatedMetricsService
-        const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'county');
-
-        if (calcMetrics) {
-          metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
-          metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
-          metrics.grm = calcMetrics.grm ?? undefined;
-          metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
-          metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
-          metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
-        }
-
-        // Get Census data for county (population, income, etc.)
-        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
-          const { data: censusData } = await client
-            .from('census_county')
-            .select('total_population, median_household_income, median_age, population_yoy')
-            .eq('fips_code', geographyId)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (censusData) {
-            metrics.median_income = censusData.median_household_income;
-            metrics.median_household_income = censusData.median_household_income;
-            metrics.population = censusData.total_population;
-            metrics.median_age = censusData.median_age;
-            metrics.population_growth_yoy = censusData.population_yoy;
-          }
-        }
-
-        // Get economic data (unemployment, job growth) for county
-        try {
-          const [unemploymentData, jobGrowthData] = await Promise.all([
-            this.economicService.getCountyUnemployment(),
-            this.economicService.getCountyJobGrowth(),
-          ]);
-          const countyUnemployment = unemploymentData.find(d => d.fips_code === geographyId || d.region_id === geographyId);
-          if (countyUnemployment?.value != null) {
-            metrics.unemployment_rate = countyUnemployment.value;
-          }
-          const countyJobGrowth = jobGrowthData.find(d => d.fips_code === geographyId || d.region_id === geographyId);
-          if (countyJobGrowth?.value != null) {
-            metrics.job_growth_yoy = countyJobGrowth.value;
-          }
-        } catch (econError) {
-          this.logger.warn('Failed to fetch economic data for county, continuing:', econError);
-        }
-      } else if (geographyType === 'zip') {
-        // Get Realtor zip data (all available fields)
-        const { data: realtorData } = await client
-          .from('realtor_zip')
-          .select('*')
-          .eq('postal_code', geographyId)
-          .order('period_date', { ascending: false })
+        const { data: censusRent } = await client
+          .from(censusTable)
+          .select('median_gross_rent')
+          .eq(censusIdCol, geographyId)
+          .order('year', { ascending: false })
           .limit(1)
           .single();
 
-        if (realtorData) {
-          metrics.median_listing_price = realtorData.median_listing_price;
-          metrics.median_listing_price_yoy = realtorData.median_listing_price_yy;
-          metrics.days_on_market = realtorData.median_days_on_market;
-          metrics.active_listing_count = realtorData.active_listing_count;
-          metrics.inventory_yoy = realtorData.active_listing_count_yy;
-          // Additional realtor fields (same as metro)
-          if (realtorData.pending_ratio != null) metrics.pending_ratio = realtorData.pending_ratio;
-          if (realtorData.price_reduced_share != null) metrics.price_reduced_share = realtorData.price_reduced_share;
-          if (realtorData.supply_score != null) metrics.supply_score = realtorData.supply_score;
-          if (realtorData.hotness_score != null) metrics.hotness_score = realtorData.hotness_score;
-          if (realtorData.demand_score != null) metrics.demand_score = realtorData.demand_score;
+        if (censusRent?.median_gross_rent != null) {
+          metrics.zori = censusRent.median_gross_rent;
         }
+      }
 
-        // Get Zillow ZHVI data for zip (use region_name which stores ZIP code)
-        if (shouldFetch('zhvi') || shouldFetch('home_value')) {
-          const { data: zhviData } = await client
-            .from('zillow_zip')
-            .select('value')
-            .eq('region_name', geographyId)
-            .eq('metric_name', 'zhvi')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (zhviData) {
-            metrics.zhvi = zhviData.value;
-          }
-        }
-
-        // Get YoY ZHVI change for zip
-        if (shouldFetch('zhvi_yoy') || shouldFetch('home_value')) {
-          const { data: zhviHistory } = await client
-            .from('zillow_zip')
-            .select('value, period_date')
-            .eq('region_name', geographyId)
-            .eq('metric_name', 'zhvi')
-            .order('period_date', { ascending: false })
-            .limit(13);
-
-          if (zhviHistory && zhviHistory.length >= 12) {
-            const current = zhviHistory[0]?.value;
-            const yearAgo = zhviHistory[12]?.value;
-            if (current && yearAgo) {
-              metrics.zhvi_yoy = ((current - yearAgo) / yearAgo) * 100;
-            }
-          }
-        }
-
-        // Get ZORI (rent) data for zip
-        if (shouldFetch('zori') || shouldFetch('rent')) {
-          const { data: zoriData } = await client
-            .from('zillow_zip')
-            .select('value')
-            .eq('region_name', geographyId)
-            .eq('metric_name', 'zori')
-            .order('period_date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (zoriData) {
-            metrics.zori = zoriData.value;
-          }
-        }
-
-        // If no ZHVI from Zillow, use median_listing_price from Realtor as substitute
-        if (!metrics.zhvi && metrics.median_listing_price) {
-          metrics.zhvi = metrics.median_listing_price;
-          if (!metrics.zhvi_yoy && metrics.median_listing_price_yoy != null) {
-            metrics.zhvi_yoy = metrics.median_listing_price_yoy;
-          }
-        }
-
-        // Get calculated metrics via CalculatedMetricsService
-        const calcMetrics = await this.calculatedMetricsService.getMetrics(geographyId, 'zip');
-
-        if (calcMetrics) {
-          metrics.cap_rate = calcMetrics.cap_rate ?? undefined;
-          metrics.gross_yield = calcMetrics.gross_yield ?? undefined;
-          metrics.grm = calcMetrics.grm ?? undefined;
-          metrics.overvalued_pct = calcMetrics.overvalued_pct ?? undefined;
-          metrics.rent_to_price_ratio = calcMetrics.rent_to_price_ratio ?? undefined;
-          metrics.gross_rent_multiplier = calcMetrics.grm ?? undefined;
-        }
-
-        // Get Census data for zip (population, income, etc.)
-        if (shouldFetch('census') || shouldFetch('median_income') || shouldFetch('population') || shouldFetch('demographics')) {
-          const { data: censusData } = await client
-            .from('census_zip')
-            .select('total_population, median_household_income, median_age, population_yoy')
-            .eq('zcta', geographyId)
-            .order('year', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (censusData) {
-            metrics.median_income = censusData.median_household_income;
-            metrics.median_household_income = censusData.median_household_income;
-            metrics.population = censusData.total_population;
-            metrics.median_age = censusData.median_age;
-            metrics.population_growth_yoy = censusData.population_yoy;
-          }
-        }
-
-        // Get economic data (unemployment, job growth) for ZIP via county/metro fallback
+      // County crosswalk fallbacks for small metros missing economic/hotness data
+      if (geographyType === 'metro' && (metrics.unemployment_rate == null || metrics.hotness_score == null)) {
         try {
-          const { data: crosswalk } = await client
+          const { data: crosswalkRows } = await client
             .from('geography_crosswalk')
-            .select('county_fips, cbsa_code')
-            .eq('zip_code', geographyId)
-            .single();
+            .select('county_fips')
+            .eq('cbsa_code', geographyId)
+            .limit(10);
 
-          if (crosswalk) {
-            // Try county-level economic data first
-            const [unemploymentData, jobGrowthData] = await Promise.all([
-              this.economicService.getCountyUnemployment(),
-              this.economicService.getCountyJobGrowth(),
-            ]);
-            const countyFips = crosswalk.county_fips;
-            if (countyFips) {
-              const countyUnemployment = unemploymentData.find(d => d.fips_code === countyFips || d.region_id === countyFips);
-              if (countyUnemployment?.value != null) metrics.unemployment_rate = countyUnemployment.value;
-              const countyJobGrowth = jobGrowthData.find(d => d.fips_code === countyFips || d.region_id === countyFips);
-              if (countyJobGrowth?.value != null) metrics.job_growth_yoy = countyJobGrowth.value;
+          const countyFipsList = [...new Set((crosswalkRows || []).map(r => r.county_fips).filter(Boolean))];
+          if (countyFipsList.length > 0) {
+            // Unemployment from county economic data
+            if (metrics.unemployment_rate == null) {
+              const { data: econRows } = await client
+                .from('economic_county')
+                .select('unemployment_rate')
+                .in('fips_code', countyFipsList)
+                .not('unemployment_rate', 'is', null)
+                .order('period_date', { ascending: false })
+                .limit(countyFipsList.length);
+
+              if (econRows && econRows.length > 0) {
+                metrics.unemployment_rate = econRows.reduce((sum, r) => sum + r.unemployment_rate, 0) / econRows.length;
+              }
             }
 
-            // Fall back to metro if county data unavailable
-            if (metrics.unemployment_rate == null && crosswalk.cbsa_code) {
-              const [metroUnemp, metroJobs] = await Promise.all([
-                this.economicService.getMetroUnemployment(),
-                this.economicService.getMetroJobGrowth(),
-              ]);
-              const metroU = metroUnemp.find(d => d.region_id === crosswalk.cbsa_code || d.cbsa_code === crosswalk.cbsa_code);
-              if (metroU?.value != null) metrics.unemployment_rate = metroU.value;
-              const metroJ = metroJobs.find(d => d.region_id === crosswalk.cbsa_code || d.cbsa_code === crosswalk.cbsa_code);
-              if (metroJ?.value != null) metrics.job_growth_yoy = metroJ.value;
+            // Hotness score from county realtor data
+            if (metrics.hotness_score == null) {
+              const { data: countyRealtor } = await client
+                .from('realtor_county')
+                .select('hotness_score, demand_score, supply_score')
+                .in('county_fips', countyFipsList)
+                .not('hotness_score', 'is', null)
+                .order('period_date', { ascending: false })
+                .limit(1)
+                .single();
+
+              if (countyRealtor?.hotness_score != null) {
+                metrics.hotness_score = countyRealtor.hotness_score;
+                if (metrics.demand_score == null) metrics.demand_score = countyRealtor.demand_score;
+                if (metrics.supply_score == null) metrics.supply_score = countyRealtor.supply_score;
+              }
             }
           }
-        } catch (econError) {
-          this.logger.warn('Failed to fetch economic data for zip, continuing:', econError);
+        } catch (err) {
+          this.logger.warn('County crosswalk fallback failed:', err);
         }
       }
 
       // Create aliases for template variable names
-      // Templates use different names than database columns
-      // Only set alias if source value exists, to avoid overwriting data already set above
       metrics.market_heat_index = metrics.hotness_score;
       metrics.for_sale_inventory = metrics.active_listing_count;
       metrics.days_to_pending = metrics.days_on_market;
-      if (metrics.median_income != null) metrics.median_household_income = metrics.median_income;
-      if (metrics.population_yoy != null) metrics.population_growth_yoy = metrics.population_yoy;
       metrics.cap_rate_proxy = metrics.cap_rate;
       metrics.gross_rent_multiplier = metrics.grm;
       metrics.price_cut_pct = metrics.price_reduced_share;
 
-      this.logger.log(`Fetched market metrics for ${geographyType} ${geographyId}: ${Object.keys(metrics).filter(k => metrics[k as keyof MarketMetrics] !== undefined).length} fields`);
+      this.logger.log(`Fetched market metrics via snapshot for ${geographyType} ${geographyId}: ${Object.keys(metrics).filter(k => metrics[k as keyof MarketMetrics] !== undefined).length} fields`);
     } catch (error) {
       this.logger.error(`Failed to fetch market metrics for ${geographyId}:`, error);
     }

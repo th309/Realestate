@@ -241,6 +241,40 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
                 </div>
               </div>
 
+              {/* Limited Data Coverage Notice */}
+              {(report.populated_data as any)?.data_coverage?.is_limited && (() => {
+                const dc = (report.populated_data as any).data_coverage;
+                return (
+                  <div
+                    className="mt-6 rounded-xl p-4 report-animate-in"
+                    style={{
+                      backgroundColor: 'rgba(234, 179, 8, 0.08)',
+                      border: '1px solid rgba(234, 179, 8, 0.2)',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-[var(--report-navy)] mb-1">
+                          Limited Data Coverage
+                        </p>
+                        <p className="text-sm text-[var(--report-stone)]">
+                          {report.primary_geography_name} is a smaller market with limited data from some sources.
+                          {' '}This report uses {dc.coverage_pct}% of our standard metrics
+                          {dc.missing_categories?.length > 0 && (
+                            <> &mdash; missing: {dc.missing_categories.join(', ')}</>
+                          )}.
+                          {' '}Some sections may use proxy data or Census estimates where primary sources are unavailable.
+                          {dc.parent_msa_name && (
+                            <> This area is part of the <strong>{dc.parent_msa_name}</strong> metro area, which has fuller data coverage.</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Table of Contents */}
               {pages.length > 1 && (
                 <nav className="mt-8 p-5 report-card report-animate-in report-animate-in-delay-1">

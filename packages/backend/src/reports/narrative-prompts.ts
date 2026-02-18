@@ -364,17 +364,18 @@ For each metric, provide:
 - "current_value": Its current value (from the data above)
 - "watch_threshold": The value that would signal action (buy signal or caution signal)
 - "direction": Whether the buyer wants to see this go "up" or "down"
-- "rationale": One sentence explaining why this metric matters for their priorities
+- "rationale": One SHORT sentence (max 20 words) explaining why this metric matters
 
-Return ONLY a JSON array of 2-3 objects. Example:
-[{"metric": "Months of Supply", "current_value": "3.2", "watch_threshold": "4.5", "direction": "up", "rationale": "Rising supply would give buyers more negotiating leverage."}]
+Return ONLY a valid JSON array of 2-3 objects, no markdown, no code fences. Keep rationale under 20 words. Example:
+[{"metric": "Months of Supply", "current_value": "3.2", "watch_threshold": "4.5", "direction": "up", "rationale": "Rising supply gives buyers more negotiating leverage."}]
 
 Rules:
+- Return ONLY the JSON array, nothing else.
+- Keep rationale to ONE short sentence (under 20 words).
 - Be factual and reference the data provided.
 - Choose metrics that align with the buyer's priorities.
-- Set realistic thresholds based on current values.
-- No speculation or fabrication.`,
-    max_tokens: 300,
+- Set realistic thresholds based on current values.`,
+    max_tokens: 500,
     output_format: 'json_array',
   },
 };
@@ -760,17 +761,18 @@ For each metric, provide:
 - "current_value": Its current value
 - "watch_threshold": The value that would signal action
 - "direction": Whether the investor wants to see this go "up" or "down"
-- "rationale": One sentence explaining why this metric matters for the investment thesis
+- "rationale": One SHORT sentence (max 20 words) explaining why this metric matters
 
-Return ONLY a JSON array of 2-3 objects. Example:
-[{"metric": "Cap Rate", "current_value": "5.2%", "watch_threshold": "4.5%", "direction": "down", "rationale": "A falling cap rate signals price compression that would reduce yield below target returns."}]
+Return ONLY a valid JSON array of 2-3 objects, no markdown, no code fences. Keep rationale under 20 words. Example:
+[{"metric": "Cap Rate", "current_value": "5.2%", "watch_threshold": "4.5%", "direction": "down", "rationale": "Falling cap rate signals price compression reducing yield below target."}]
 
 Rules:
+- Return ONLY the JSON array, nothing else.
+- Keep rationale to ONE short sentence (under 20 words).
 - Be factual and reference the data provided.
 - Choose metrics that align with the investor's priorities.
-- Set realistic thresholds based on current values and trends.
-- No speculation or fabrication.`,
-    max_tokens: 300,
+- Set realistic thresholds based on current values and trends.`,
+    max_tokens: 500,
     output_format: 'json_array',
   },
 };
