@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, MapPin, Bell, TrendingUp, Search, LogIn } from 'lucide-react';
+import { LayoutDashboard, MapPin, Bell, TrendingUp, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { WatchlistDashboard } from '@/components/watchlist';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { AlertFeed } from '@/components/alerts';
+import { MarketsToWatch } from '@/components/recommendations';
+import { useAlertHistory } from '@/lib/alerts/hooks';
+import { useMarketsToWatch } from '@/lib/recommendations/hooks';
+import { useEntitlements } from '@/lib/entitlements';
 
 export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -48,6 +53,10 @@ export default function DashboardPage() {
 
 function AuthenticatedDashboard({ userId }: { userId: string }) {
   const { items, isLoading } = useWatchlist({ userId, autoLoad: true });
+  const { entries, unreadCount, isLoading: alertsLoading, markRead } = useAlertHistory();
+  const { recommendations, isLoading: recsLoading, hasAccess: hasRecsAccess } = useMarketsToWatch();
+  const { tier } = useEntitlements();
+  const isPaid = tier === 'pro' || tier === 'enterprise';
 
   return (
     <div className="mt-8 space-y-10">
@@ -65,42 +74,52 @@ function AuthenticatedDashboard({ userId }: { userId: string }) {
         <WatchlistDashboard items={items} isLoading={isLoading} />
       </section>
 
-      {/* Alerts (Phase 8 placeholder) */}
+      {/* Alerts */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Bell className="w-4 h-4 text-on-surface-variant" />
-          <h2 className="text-base font-semibold text-on-surface">Alerts</h2>
-        </div>
-        <div className="bg-surface-container-low rounded-xl border border-outline-variant p-6 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center flex-shrink-0">
-            <Bell className="w-5 h-5 text-on-surface-variant/50" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4 text-on-surface-variant" />
+            <h2 className="text-base font-semibold text-on-surface">Alerts</h2>
+            {unreadCount > 0 && (
+              <span className="text-xs text-on-primary bg-error px-2 py-0.5 rounded-full font-medium">
+                {unreadCount}
+              </span>
+            )}
           </div>
-          <div>
-            <p className="text-sm font-medium text-on-surface-variant">Coming soon</p>
-            <p className="text-xs text-on-surface-variant/70 mt-0.5">
-              Set price and score alerts on your saved markets and get notified when conditions change.
-            </p>
-          </div>
+          {isPaid && entries.length > 0 && (
+            <Link href="/alerts" className="text-xs text-primary hover:text-primary/80">
+              View All
+            </Link>
+          )}
         </div>
+        {!isPaid ? (
+          <div className="bg-surface-container-low rounded-xl border border-outline-variant p-6 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center flex-shrink-0">
+              <Bell className="w-5 h-5 text-on-surface-variant/50" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-on-surface-variant">Pro Feature</p>
+              <p className="text-xs text-on-surface-variant/70 mt-0.5">
+                Set price and score alerts on your saved markets.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <AlertFeed entries={entries.slice(0, 5)} isLoading={alertsLoading} onMarkRead={markRead} />
+        )}
       </section>
 
-      {/* Markets to Watch (Phase 9 placeholder) */}
+      {/* Markets to Watch */}
       <section>
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-4 h-4 text-on-surface-variant" />
           <h2 className="text-base font-semibold text-on-surface">Markets to Watch</h2>
         </div>
-        <div className="bg-surface-container-low rounded-xl border border-outline-variant p-6 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="w-5 h-5 text-on-surface-variant/50" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-on-surface-variant">Coming soon</p>
-            <p className="text-xs text-on-surface-variant/70 mt-0.5">
-              Personalized market recommendations based on your preferences and saved markets.
-            </p>
-          </div>
-        </div>
+        <MarketsToWatch
+          recommendations={recommendations}
+          isLoading={recsLoading}
+          hasAccess={hasRecsAccess}
+        />
       </section>
     </div>
   );
