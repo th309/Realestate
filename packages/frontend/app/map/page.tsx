@@ -52,6 +52,7 @@ export default function MapPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlProcessedRef = useRef(false);
+  const pendingUrlFlyTo = useRef<{ center: [number, number]; zoom: number } | null>(null);
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -266,9 +267,11 @@ export default function MapPage() {
   }, []);
 
   // Process URL search params (e.g. /map?geo=metro&id=31080&lat=33.7&lng=-84.4)
-  // This handles deep links from the hero search bar and external links
+  // This handles deep links from the hero search bar and external links.
+  // We store the fly-to target in a ref and let the geo-level zoom effect consume it,
+  // because setGeoLevel triggers a re-render that would otherwise override our flyTo.
   useEffect(() => {
-    if (!map.current || !mapLoaded || urlProcessedRef.current) return;
+    if (!mapLoaded || urlProcessedRef.current) return;
 
     const geo = searchParams.get('geo') as GeoLevel | null;
     const id = searchParams.get('id');
@@ -276,15 +279,7 @@ export default function MapPage() {
 
     urlProcessedRef.current = true;
 
-    // Set geo level and state
-    setGeoLevel(geo);
-    const state = searchParams.get('state');
-    if (state) setSelectedState(state);
-
-    // Prevent the geo-level zoom effect from overriding our fly-to
-    searchNavigatedRef.current = true;
-
-    // Fly to coordinates if provided
+    // Store fly-to target for the geo-level zoom effect to consume
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     if (lat && lng) {
@@ -292,13 +287,19 @@ export default function MapPage() {
         : geo === 'metro' ? 7
         : geo === 'county' ? 8
         : geo === 'zip' ? 12 : 7;
-
-      map.current.flyTo({
+      pendingUrlFlyTo.current = {
         center: [parseFloat(lng), parseFloat(lat)],
         zoom: zoomLevel,
-        duration: 1200,
-      });
+      };
     }
+
+    // Set geo level and state — this triggers the geo-level zoom effect on re-render
+    setGeoLevel(geo);
+    const state = searchParams.get('state');
+    if (state) setSelectedState(state);
+
+    // Block the immediate geo-level zoom effect (same render)
+    searchNavigatedRef.current = true;
   }, [mapLoaded, searchParams]);
 
   // Close context menu on map move/zoom
@@ -309,9 +310,18 @@ export default function MapPage() {
     return () => { map.current?.off('movestart', close); };
   }, [mapLoaded]);
 
-  // Adjust zoom for different geo levels (skip if search already handled navigation)
+  // Adjust zoom for different geo levels (skip if search or URL already handled navigation)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
+
+    // If a URL deep link stored a pending fly-to target, execute it now
+    // (runs after the geoLevel state has settled from the URL effect)
+    if (pendingUrlFlyTo.current) {
+      const { center, zoom } = pendingUrlFlyTo.current;
+      pendingUrlFlyTo.current = null;
+      map.current.flyTo({ center, zoom, duration: 1200 });
+      return;
+    }
 
     // Skip if search just navigated (it already set the zoom via fitBounds)
     if (searchNavigatedRef.current) {
