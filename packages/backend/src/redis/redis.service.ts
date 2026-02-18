@@ -32,8 +32,20 @@ export class RedisService implements OnModuleInit {
     sets: 0,
   };
 
-  // TTL strategy by tool (in seconds)
+  // TTL strategy by domain / tool (in seconds)
   private readonly TTL_MAP: Record<string, number> = {
+    // ── Domain-level TTLs (Phase 12 targets) ──
+    metric_snapshot: 21600, // 6 hours
+    time_series: 21600, // 6 hours
+    scores: 21600, // 6 hours
+    geojson: 86400, // 24 hours
+    market_lists: 43200, // 12 hours
+    benchmarks: 21600, // 6 hours
+    entitlements: 1800, // 30 minutes (per-tier)
+    watchlist: 300, // 5 minutes
+    recommendations: 3600, // 1 hour
+
+    // ── Quinn tool-level TTLs ──
     get_rankings: 3600, // 1 hour
     analyze_data: 1800, // 30 minutes
     filter_geographies: 7200, // 2 hours
@@ -279,6 +291,53 @@ export class RedisService implements OnModuleInit {
       sets: this.stats.sets,
       hitRate: total === 0 ? 0 : (this.stats.hits / total) * 100,
     };
+  }
+
+  /**
+   * Get a raw cached value by key
+   */
+  async getByKey(key: string): Promise<any | null> {
+    if (!this.isAvailable() || !this.client) {
+      this.stats.misses++;
+      return null;
+    }
+
+    try {
+      const cached = await this.client.get(key);
+      if (cached) {
+        this.stats.hits++;
+        return JSON.parse(cached);
+      }
+      this.stats.misses++;
+      return null;
+    } catch (error) {
+      this.logger.error(`[Redis Cache] GetByKey error: ${error.message}`);
+      this.stats.misses++;
+      return null;
+    }
+  }
+
+  /**
+   * Set a raw cached value by key with a specific TTL (seconds)
+   */
+  async setByKey(key: string, value: any, ttlSeconds: number): Promise<void> {
+    if (!this.isAvailable() || !this.client) {
+      return;
+    }
+
+    try {
+      await this.client.setex(key, ttlSeconds, JSON.stringify(value));
+      this.stats.sets++;
+    } catch (error) {
+      this.logger.error(`[Redis Cache] SetByKey error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get domain-level TTL (seconds). Falls back to default if domain not found.
+   */
+  getTTL(domain: string): number {
+    return this.TTL_MAP[domain] ?? this.TTL_MAP.default;
   }
 
   /**

@@ -17,6 +17,7 @@ import {
   Post,
   Param,
   Query,
+  Header,
   HttpException,
   HttpStatus,
   Res,
@@ -63,6 +64,7 @@ export class ScoringController {
    * }
    */
   @Get()
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get PropertyIQ scores for a location' })
   @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'location_id', required: true, description: 'Location identifier (cbsa_code, fips, or zip)' })
@@ -104,6 +106,7 @@ export class ScoringController {
    * GET /api/scores/top?geography=metro&score_type=homeready&limit=10
    */
   @Get('top')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get top markets by score' })
   @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'score_type', required: true, enum: ['homeready', 'investoredge', 'markethealth'] })
@@ -135,6 +138,7 @@ export class ScoringController {
    * GET /api/scores/search?q=austin&geography=zip
    */
   @Get('search')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Search markets by name' })
   @ApiQuery({ name: 'q', required: true, description: 'Search query' })
   @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'], description: 'Filter by geography type' })
@@ -193,6 +197,7 @@ export class ScoringController {
    * plus statistics (mean, median, std_dev) and grade distribution.
    */
   @Get('distribution')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get score distribution for a geography level' })
   @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'score_type', required: false, description: 'homeready, investoredge, or markethealth. If omitted, returns all score types.' })
@@ -260,6 +265,7 @@ export class ScoringController {
    * NOTE: This route must come BEFORE @Get(':geography/:locationId') to avoid route conflicts
    */
   @Get('all/:geography')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get all scores for a geography level (paginated)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'score_type', required: true, description: 'homeready, investoredge, markethealth, or all' })
@@ -464,6 +470,7 @@ export class ScoringController {
    * - includeOutcomes: true to include actual returns and benchmark comparisons
    */
   @Get(':geography/:locationId')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get scores for a location (path format)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiParam({ name: 'locationId', description: 'Location identifier' })
@@ -526,6 +533,7 @@ export class ScoringController {
    * GET /api/scores/batch/:geography?ids=id1,id2,id3
    */
   @Get('batch/:geography')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get scores for multiple locations' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated location IDs' })
@@ -597,6 +605,7 @@ export class ScoringController {
    * }
    */
   @Get('performance')
+  @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get performance metrics for score validation' })
   @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
   @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })

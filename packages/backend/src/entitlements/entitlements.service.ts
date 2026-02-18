@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UserFeaturesService } from '../admin/features/user-features.service';
+import { RedisService } from '../redis/redis.service';
 
 export interface AccessCheck {
   level: 'full' | 'preview' | 'none';
@@ -25,6 +26,7 @@ export class EntitlementsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly userFeatures: UserFeaturesService,
+    private readonly redis: RedisService,
   ) {}
 
   async checkAccess(
@@ -35,9 +37,10 @@ export class EntitlementsService {
     // Determine effective tier
     let tier = tierOverride || 'free';
     let trial: EntitlementsResponse['trial'] = null;
+    let needsPerUserQuery = false;
 
     if (userId && !tierOverride) {
-      // Check for active trial
+      // Check for active trial (per-user, cannot be cached by tier)
       const trialInfo = await this.getActiveTrial(userId);
       if (trialInfo) {
         tier = trialInfo.tier;
@@ -46,6 +49,7 @@ export class EntitlementsService {
           daysRemaining: trialInfo.daysRemaining,
           tier: trialInfo.tier,
         };
+        needsPerUserQuery = true;
       } else {
         // Check subscription tier from Stripe sync
         const { data: profile } = await this.supabase.getClient()
@@ -60,7 +64,20 @@ export class EntitlementsService {
       }
     }
 
-    // Get user features
+    // Try tier-based cache for non-trial users (most users on the same tier get identical access)
+    const resourceKey = resources.slice().sort().join(',');
+    const cacheKey = `entitlements:tier:${tier}:${resourceKey}`;
+
+    if (!needsPerUserQuery) {
+      const cached = await this.redis.getByKey(cacheKey);
+      if (cached) {
+        this.logger.debug(`[Entitlements] Cache HIT for tier=${tier}`);
+        // Return cached access with trial=null (no trial for cached responses)
+        return { ...cached, trial };
+      }
+    }
+
+    // Get user features (tier-based for cache, user-specific for trial users)
     const resolved = await this.userFeatures.getUserFeatures(userId || '', tier);
 
     // Build access map
@@ -83,7 +100,16 @@ export class EntitlementsService {
       }
     }
 
-    return { tier, access, trial };
+    const response: EntitlementsResponse = { tier, access, trial };
+
+    // Cache tier-based response (skip for trial users since their access is temporary)
+    if (!needsPerUserQuery) {
+      const ttl = this.redis.getTTL('entitlements'); // 30 minutes
+      await this.redis.setByKey(cacheKey, { tier, access }, ttl);
+      this.logger.debug(`[Entitlements] Cached tier=${tier} (TTL: ${ttl}s)`);
+    }
+
+    return response;
   }
 
   async trackPaywallEvent(data: {

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
@@ -27,6 +27,7 @@ export class MetricsController {
    * computes from zillow_metro (long-format) ZHVI and Census median income.
    */
   @Get('overvalued/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroOvervalued(@Query('date') date?: string) {
     // Try pre-calculated data first (same pattern as cap rate)
     const preCalculated =
@@ -133,6 +134,7 @@ export class MetricsController {
    * Calculated as: (ZORI * 12 * 0.6) / ZHVI * 100
    */
   @Get('cap-rate/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroCapRate(@Query('date') date?: string) {
     // Try pre-calculated data first
     const preCalculated =
@@ -338,6 +340,7 @@ export class MetricsController {
    * Get cap rate for counties
    */
   @Get('cap-rate/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyCapRate() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap(
@@ -368,6 +371,7 @@ export class MetricsController {
    * Get cap rate for zip codes
    */
   @Get('cap-rate/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipCapRate() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap(
@@ -399,6 +403,7 @@ export class MetricsController {
   // ============================================================================
 
   @Get('renter-demand/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRenterDemand() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap(
@@ -416,6 +421,7 @@ export class MetricsController {
   }
 
   @Get('renter-demand/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyRenterDemand() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap(
@@ -433,6 +439,7 @@ export class MetricsController {
   }
 
   @Get('renter-demand/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipRenterDemand(@Query('state') state?: string) {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap(
@@ -465,6 +472,7 @@ export class MetricsController {
    * Get gross yield for metros (from pre-calculated data, with fallback)
    */
   @Get('gross-yield/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroGrossYield() {
     // Try pre-calculated data first
     const preCalculated =
@@ -487,6 +495,7 @@ export class MetricsController {
   }
 
   @Get('gross-yield/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyGrossYield() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield', 'county');
@@ -497,6 +506,7 @@ export class MetricsController {
   }
 
   @Get('gross-yield/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipGrossYield() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('gross_yield', 'zip');
@@ -510,6 +520,7 @@ export class MetricsController {
    * Get GRM (Gross Rent Multiplier) for metros
    */
   @Get('grm/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroGRM() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('grm');
@@ -532,6 +543,7 @@ export class MetricsController {
   }
 
   @Get('grm/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyGRM() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('grm', 'county');
@@ -542,6 +554,7 @@ export class MetricsController {
   }
 
   @Get('grm/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipGRM() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('grm', 'zip');
@@ -555,6 +568,7 @@ export class MetricsController {
    * Rent-to-Price Ratio endpoints
    */
   @Get('rent-to-price/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRentToPrice() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio');
@@ -565,6 +579,7 @@ export class MetricsController {
   }
 
   @Get('rent-to-price/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyRentToPrice() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio', 'county');
@@ -575,6 +590,7 @@ export class MetricsController {
   }
 
   @Get('rent-to-price/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipRentToPrice() {
     const preCalculated =
       await this.calculatedMetricsService.getInvestmentMetricsForMap('rent_to_price_ratio', 'zip');
@@ -588,6 +604,7 @@ export class MetricsController {
    * Get all investment metrics for a specific metro
    */
   @Get('investment/:geoType/:geoId')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getInvestmentMetrics(
     @Param('geoType') geoType: string,
     @Param('geoId') geoId: string,
@@ -738,6 +755,7 @@ export class MetricsController {
    * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroHomeValue5YrGrowth(@Query('date') date?: string) {
     const result = await this.calculatedMetricsService.get5YrGrowthForMap('metro');
 
@@ -767,6 +785,7 @@ export class MetricsController {
    * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/national')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getNationalHomeValue5YrGrowth(@Query('date') date?: string) {
     const result = await this.calculatedMetricsService.get5YrGrowthForMap('national');
 
@@ -796,6 +815,7 @@ export class MetricsController {
    * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/states')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getStateHomeValue5YrGrowth(@Query('date') date?: string) {
     const result = await this.calculatedMetricsService.get5YrGrowthForMap('state');
 
@@ -825,6 +845,7 @@ export class MetricsController {
    * CAGR is calculated during data ingestion by CalculatedMetricsService
    */
   @Get('home-value-5yr/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyHomeValue5YrGrowth(@Query('date') date?: string) {
     const result = await this.calculatedMetricsService.get5YrGrowthForMap('county');
 
@@ -855,6 +876,7 @@ export class MetricsController {
    * Note: State filtering should be done via the data layer or a dedicated filtered endpoint
    */
   @Get('home-value-5yr/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipHomeValue5YrGrowth(
     @Query('state') state?: string,
     @Query('date') date?: string,
@@ -900,6 +922,7 @@ export class MetricsController {
    * Get rent YoY growth for metros (from calculated_metrics, includes HUD FMR proxy)
    */
   @Get('rent-yoy/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRentYoy() {
     const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_yoy' as any, 'metro');
     return {
@@ -916,6 +939,7 @@ export class MetricsController {
    * Get rent 5-year CAGR for metros (from calculated_metrics, includes HUD FMR proxy)
    */
   @Get('rent-5yr/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroRent5yr() {
     const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zori_5y_cagr' as any, 'metro');
     return {
@@ -936,6 +960,7 @@ export class MetricsController {
    * Get 3-year home value CAGR for metros (from calculated_metrics, uses Realtor data)
    */
   @Get('home-value-3yr/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroHomeValue3YrGrowth() {
     const result = await this.calculatedMetricsService.getInvestmentMetricsForMap('zhvi_3y_cagr' as any, 'metro');
     return {
@@ -956,6 +981,7 @@ export class MetricsController {
    * Get income-to-buy for national
    */
   @Get('income-to-buy/national')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getNationalIncomeToBuy() {
     return this.getIncomeToBuyByGeo('national', 'National');
   }
@@ -965,6 +991,7 @@ export class MetricsController {
    * Returns the annual income required to afford the median-priced home
    */
   @Get('income-to-buy/states')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getStateIncomeToBuy() {
     return this.getIncomeToBuyByGeo('state', 'State');
   }
@@ -973,6 +1000,7 @@ export class MetricsController {
    * Get income-to-buy for metros
    */
   @Get('income-to-buy/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroIncomeToBuy() {
     return this.getIncomeToBuyByGeo('metro', 'Metro');
   }
@@ -981,6 +1009,7 @@ export class MetricsController {
    * Get income-to-buy for counties
    */
   @Get('income-to-buy/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyIncomeToBuy() {
     return this.getIncomeToBuyByGeo('county', 'County');
   }
@@ -989,6 +1018,7 @@ export class MetricsController {
    * Get income-to-buy for zip codes
    */
   @Get('income-to-buy/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipIncomeToBuy(@Query('state') state?: string) {
     return this.getIncomeToBuyByGeo('zip', 'ZIP', state);
   }
@@ -1098,6 +1128,7 @@ export class MetricsController {
    * Get affordable-home-price for national
    */
   @Get('affordable-home-price/national')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getNationalAffordableHomePrice() {
     return this.getAffordableHomePriceByGeo('national', 'National');
   }
@@ -1107,6 +1138,7 @@ export class MetricsController {
    * Returns the maximum home price affordable based on median household income
    */
   @Get('affordable-home-price/states')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getStateAffordableHomePrice() {
     return this.getAffordableHomePriceByGeo('state', 'State');
   }
@@ -1115,6 +1147,7 @@ export class MetricsController {
    * Get affordable-home-price for metros
    */
   @Get('affordable-home-price/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroAffordableHomePrice() {
     return this.getAffordableHomePriceByGeo('metro', 'Metro');
   }
@@ -1123,6 +1156,7 @@ export class MetricsController {
    * Get affordable-home-price for counties
    */
   @Get('affordable-home-price/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyAffordableHomePrice() {
     return this.getAffordableHomePriceByGeo('county', 'County');
   }
@@ -1131,6 +1165,7 @@ export class MetricsController {
    * Get affordable-home-price for zip codes
    */
   @Get('affordable-home-price/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipAffordableHomePrice(@Query('state') state?: string) {
     return this.getAffordableHomePriceByGeo('zip', 'ZIP', state);
   }
@@ -1239,6 +1274,7 @@ export class MetricsController {
    * Get years-to-save for national
    */
   @Get('years-to-save/national')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getNationalYearsToSave() {
     return this.getYearsToSaveByGeo('national', 'National');
   }
@@ -1248,6 +1284,7 @@ export class MetricsController {
    * Returns the number of years needed to save for a 20% down payment
    */
   @Get('years-to-save/states')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getStateYearsToSave() {
     return this.getYearsToSaveByGeo('state', 'State');
   }
@@ -1256,6 +1293,7 @@ export class MetricsController {
    * Get years-to-save for metros
    */
   @Get('years-to-save/metros')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getMetroYearsToSave() {
     return this.getYearsToSaveByGeo('metro', 'Metro');
   }
@@ -1264,6 +1302,7 @@ export class MetricsController {
    * Get years-to-save for counties
    */
   @Get('years-to-save/counties')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getCountyYearsToSave() {
     return this.getYearsToSaveByGeo('county', 'County');
   }
@@ -1272,6 +1311,7 @@ export class MetricsController {
    * Get years-to-save for zip codes
    */
   @Get('years-to-save/zips')
+  @Header('Cache-Control', 'public, max-age=21600')
   async getZipYearsToSave(@Query('state') state?: string) {
     return this.getYearsToSaveByGeo('zip', 'ZIP', state);
   }

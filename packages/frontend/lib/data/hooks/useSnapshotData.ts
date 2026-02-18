@@ -89,8 +89,8 @@ export function useSnapshotData(
     queryKey,
     queryFn: () => fetchSnapshotData(metricId, geoLevel, { state: stateFilter }),
     enabled: enabled && !!metricId && !!geoLevel && !access.gated,
-    staleTime: 2 * 60 * 60 * 1000, // 2 hours
-    gcTime: 4 * 60 * 60 * 1000, // 4 hours (garbage collection)
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
   // If metric is gated, return gated result (after hooks have been called)

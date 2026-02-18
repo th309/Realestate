@@ -55,8 +55,8 @@ export function useMarketSnapshot(
     queryKey: ['market-snapshot', geoType, geoId, state],
     queryFn: () => fetchMarketSnapshot(geoType!, geoId!, state),
     enabled: isEnabled,
-    staleTime: 2 * 60 * 60 * 1000, // 2 hours
-    gcTime: 4 * 60 * 60 * 1000, // 4 hours
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
   // Get metric IDs from snapshot response for trend query
@@ -75,8 +75,8 @@ export function useMarketSnapshot(
         trendMonths,
       ),
     enabled: isEnabled && metricIds.length > 0,
-    staleTime: 2 * 60 * 60 * 1000,
-    gcTime: 4 * 60 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes (trend data)
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
   // Build cards from snapshot + trend data

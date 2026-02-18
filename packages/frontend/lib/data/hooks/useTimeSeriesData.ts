@@ -105,8 +105,8 @@ export function useTimeSeriesData(
         historyMonths,
       }),
     enabled: enabled && !!metricId && !!geoLevel && !!regionId && !access.gated,
-    staleTime: 2 * 60 * 60 * 1000, // 2 hours
-    gcTime: 4 * 60 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
   // If metric is gated, return gated result (after hooks have been called)
