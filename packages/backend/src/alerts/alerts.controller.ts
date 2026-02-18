@@ -47,11 +47,9 @@ export class AlertsController {
         count: alerts.length,
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to list alerts: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -86,10 +84,7 @@ export class AlertsController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to create alert: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -118,10 +113,7 @@ export class AlertsController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to update alert: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -149,10 +141,7 @@ export class AlertsController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to delete alert: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -184,11 +173,9 @@ export class AlertsController {
         count: result.entries.length,
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to get alert history: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -215,10 +202,7 @@ export class AlertsController {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`Failed to mark history as read: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-      };
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

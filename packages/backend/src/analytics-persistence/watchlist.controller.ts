@@ -59,10 +59,9 @@ export class WatchlistController {
             : Math.max(0, limitInfo.limit - items.length),
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get watchlist: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -93,10 +92,9 @@ export class WatchlistController {
         count: items.length,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get watchlist summary: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -119,10 +117,9 @@ export class WatchlistController {
         data: grouped,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get grouped watchlist: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -145,10 +142,9 @@ export class WatchlistController {
         data: folders,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get folders: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -180,10 +176,9 @@ export class WatchlistController {
         inWatchlist: isInWatchlist,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to check watchlist: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -212,10 +207,9 @@ export class WatchlistController {
         data: item,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to add to watchlist: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -242,10 +236,9 @@ export class WatchlistController {
         data: item,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to update watchlist item: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -268,10 +261,9 @@ export class WatchlistController {
         deleted: true,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to remove from watchlist: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -298,10 +290,9 @@ export class WatchlistController {
         deleted: true,
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to remove by geography: ${error.message}`);
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
