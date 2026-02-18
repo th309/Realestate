@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bell, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import type { AlertHistoryEntry } from '@/lib/alerts/api';
+import type { AlertHistoryEntry } from '@/lib/data';
 
 interface AlertFeedProps {
   entries: AlertHistoryEntry[];

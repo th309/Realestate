@@ -10,7 +10,7 @@ import {
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
 import { fetchPricingSummary, type PricingTier } from '@/lib/data';
-import { startCheckout } from '@/lib/billing/api';
+import { startCheckout } from '@/lib/data';
 
 export default function PricingPage() {
   return (

@@ -72,7 +72,33 @@ export {
 } from './reports';
 
 // Benchmarks
-export { fetchBenchmarks, type BenchmarkData } from './benchmarks';
+export {
+  fetchBenchmarks,
+  fetchMetricBenchmarks,
+  type BenchmarkData,
+  type BenchmarkResult,
+} from './benchmarks';
+
+// Alerts
+export {
+  fetchAlerts,
+  createAlert,
+  updateAlert,
+  deleteAlert,
+  fetchAlertHistory,
+  markAlertRead,
+  type Alert,
+  type AlertHistoryEntry,
+} from './alerts';
+
+// Billing
+export { startCheckout, getBillingPortalUrl } from './billing';
+
+// Recommendations
+export {
+  fetchMarketsToWatch,
+  type MarketRecommendation,
+} from './recommendations';
 
 // GeoJSON
 export { getGeoJsonApiUrl } from './geojson';

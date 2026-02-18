@@ -3,6 +3,12 @@
  *
  * Batches events and sends them periodically (every 5 seconds)
  * or on page unload via navigator.sendBeacon.
+ *
+ * DATA LAYER EXEMPTION: This module is intentionally exempt from the
+ * @/lib/data data-layer rule. It performs fire-and-forget event emission
+ * (via sendBeacon / keepalive fetch), not data fetching. Routing analytics
+ * through the data layer would add unnecessary overhead and is incompatible
+ * with the sendBeacon API used during page unload.
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { fetchMarketsToWatch, type MarketRecommendation } from './api';
+import { fetchMarketsToWatch, type MarketRecommendation } from '@/lib/data';
 import { useEntitlements } from '@/lib/entitlements';
 
 export function useMarketsToWatch() {

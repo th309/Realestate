@@ -169,7 +169,9 @@ export {
 
   // Benchmarks
   fetchBenchmarks,
+  fetchMetricBenchmarks,
   type BenchmarkData,
+  type BenchmarkResult,
 
   // GeoJSON
   getGeoJsonApiUrl,
@@ -203,6 +205,24 @@ export {
   // Pricing
   fetchPricingSummary,
   type PricingTier,
+
+  // Alerts
+  fetchAlerts,
+  createAlert,
+  updateAlert,
+  deleteAlert,
+  fetchAlertHistory,
+  markAlertRead,
+  type Alert,
+  type AlertHistoryEntry,
+
+  // Billing
+  startCheckout,
+  getBillingPortalUrl,
+
+  // Recommendations
+  fetchMarketsToWatch,
+  type MarketRecommendation,
 } from './fetchers';
 
 // ============================================================================

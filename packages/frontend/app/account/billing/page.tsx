@@ -5,7 +5,7 @@ import { CreditCard, ExternalLink, Crown, Zap, FileText, Sparkles, ArrowRight } 
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
-import { getBillingPortalUrl } from '@/lib/billing/api';
+import { getBillingPortalUrl } from '@/lib/data';
 
 const TIER_INFO: Record<string, { label: string; price: string; color: string }> = {
   free: { label: 'Free', price: '$0', color: 'text-on-surface-variant' },

@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAlerts, fetchAlertHistory, createAlert, deleteAlert, updateAlert, markAlertRead } from './api';
-import type { Alert, AlertHistoryEntry } from './api';
+import {
+  fetchAlerts,
+  fetchAlertHistory,
+  createAlert,
+  deleteAlert,
+  updateAlert,
+  markAlertRead,
+} from '@/lib/data';
+import type { Alert, AlertHistoryEntry } from '@/lib/data';
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);

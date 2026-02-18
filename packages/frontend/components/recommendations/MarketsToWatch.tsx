@@ -4,7 +4,7 @@ import React from 'react';
 import { TrendingUp, ChevronRight, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { ContextualUpgradeCTA } from '@/components/entitlements';
-import type { MarketRecommendation } from '@/lib/recommendations/api';
+import type { MarketRecommendation } from '@/lib/data';
 
 interface MarketsToWatchProps {
   recommendations: MarketRecommendation[];

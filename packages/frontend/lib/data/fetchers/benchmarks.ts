@@ -1,10 +1,14 @@
 /**
  * BENCHMARK DATA FETCHERS
  *
- * API functions for realtor benchmark comparisons.
+ * API functions for realtor benchmark comparisons and metric-level benchmarks.
  */
 
-import { API_URL } from './base';
+import { fetchAPIRaw } from './base';
+
+// ---------------------------------------------------------------------------
+// Types — Realtor benchmarks (local vs state vs national)
+// ---------------------------------------------------------------------------
 
 export interface BenchmarkData {
   location: Record<string, number | null>;
@@ -13,6 +17,23 @@ export interface BenchmarkData {
   locationName: string;
   stateName: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Types — Metric-level benchmarks (per-metric comparison with parent geo)
+// ---------------------------------------------------------------------------
+
+export interface BenchmarkResult {
+  metricId: string;
+  value: number | null;
+  parentGeo: { level: string; id: string; name: string } | null;
+  parentValue: number | null;
+  diff: number | null;
+  direction: 'better' | 'worse' | 'similar' | null;
+}
+
+// ---------------------------------------------------------------------------
+// Fetchers
+// ---------------------------------------------------------------------------
 
 /**
  * Fetch benchmark comparison data (local vs state vs national).
@@ -27,10 +48,31 @@ export async function fetchBenchmarks(
     params.append('stateId', stateId);
   }
 
-  const response = await fetch(`${API_URL}/api/realtor/benchmarks?${params}`);
+  const response = await fetchAPIRaw(`/api/realtor/benchmarks?${params}`);
   if (!response.ok) {
     throw new Error(`Benchmark API error: ${response.status}`);
   }
 
   return response.json();
+}
+
+/**
+ * Fetch metric-level benchmarks for a geography (comparison with parent geo).
+ */
+export async function fetchMetricBenchmarks(
+  geoLevel: string,
+  geoId: string,
+  metricIds: string[],
+): Promise<BenchmarkResult[]> {
+  if (!metricIds.length) return [];
+
+  const metricsParam = metricIds.join(',');
+  const response = await fetchAPIRaw(
+    `/api/benchmarks/${geoLevel}/${geoId}?metrics=${metricsParam}`,
+  );
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.data || [];
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchBenchmarks, type BenchmarkResult } from './api';
+import { fetchMetricBenchmarks, type BenchmarkResult } from '@/lib/data';
 import { useEntitlements } from '@/lib/entitlements';
 
 export function useBenchmarks(
@@ -27,7 +27,7 @@ export function useBenchmarks(
     let cancelled = false;
     setIsLoading(true);
 
-    fetchBenchmarks(geoLevel, geoId, metricIds)
+    fetchMetricBenchmarks(geoLevel, geoId, metricIds)
       .then((data) => {
         if (!cancelled) setBenchmarks(data);
       })
