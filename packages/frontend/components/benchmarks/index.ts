@@ -1,0 +1,1 @@
+export { BenchmarkBadge } from './BenchmarkBadge';
