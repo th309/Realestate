@@ -13,6 +13,7 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   Logger,
   HttpException,
   HttpStatus,
@@ -31,11 +32,11 @@ export class WatchlistController {
 
   /**
    * Get all watchlist items
-   * GET /api/analytics/watchlist?userId=xxx&folder=xxx
+   * GET /api/analytics/watchlist?folder=xxx
    */
   @Get()
   async getAll(
-    @Query('userId') userId: string,
+    @Headers('x-user-id') userId: string,
     @Query('folder') folder?: string,
   ) {
     this.logger.log(`GET /analytics/watchlist for user ${userId}`);
@@ -67,10 +68,10 @@ export class WatchlistController {
 
   /**
    * Get watchlist summary with current scores and changes
-   * GET /api/analytics/watchlist/summary?userId=xxx
+   * GET /api/analytics/watchlist/summary
    */
   @Get('summary')
-  async getSummary(@Query('userId') userId: string) {
+  async getSummary(@Headers('x-user-id') userId: string) {
     this.logger.log(`GET /analytics/watchlist/summary for user ${userId}`);
 
     if (!userId) {
@@ -101,10 +102,10 @@ export class WatchlistController {
 
   /**
    * Get watchlist grouped by folder
-   * GET /api/analytics/watchlist/grouped?userId=xxx
+   * GET /api/analytics/watchlist/grouped
    */
   @Get('grouped')
-  async getGrouped(@Query('userId') userId: string) {
+  async getGrouped(@Headers('x-user-id') userId: string) {
     this.logger.log(`GET /analytics/watchlist/grouped for user ${userId}`);
 
     if (!userId) {
@@ -127,10 +128,10 @@ export class WatchlistController {
 
   /**
    * Get all folders
-   * GET /api/analytics/watchlist/folders?userId=xxx
+   * GET /api/analytics/watchlist/folders
    */
   @Get('folders')
-  async getFolders(@Query('userId') userId: string) {
+  async getFolders(@Headers('x-user-id') userId: string) {
     this.logger.log(`GET /analytics/watchlist/folders for user ${userId}`);
 
     if (!userId) {
@@ -153,11 +154,11 @@ export class WatchlistController {
 
   /**
    * Check if a market is in watchlist
-   * GET /api/analytics/watchlist/check?userId=xxx&geographyType=metro&geographyId=12420
+   * GET /api/analytics/watchlist/check?geographyType=metro&geographyId=12420
    */
   @Get('check')
   async check(
-    @Query('userId') userId: string,
+    @Headers('x-user-id') userId: string,
     @Query('geographyType') geographyType: string,
     @Query('geographyId') geographyId: string,
   ) {
@@ -191,10 +192,11 @@ export class WatchlistController {
    * POST /api/analytics/watchlist
    */
   @Post()
-  async add(@Body() body: AddToWatchlistDto & { userId: string }) {
+  async add(
+    @Headers('x-user-id') userId: string,
+    @Body() dto: AddToWatchlistDto,
+  ) {
     this.logger.log(`POST /analytics/watchlist`);
-
-    const { userId, ...dto } = body;
 
     if (!userId || !dto.geography_type || !dto.geography_id) {
       throw new HttpException(
@@ -224,11 +226,10 @@ export class WatchlistController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: UpdateWatchlistItemDto & { userId: string },
+    @Headers('x-user-id') userId: string,
+    @Body() dto: UpdateWatchlistItemDto,
   ) {
     this.logger.log(`PUT /analytics/watchlist/${id}`);
-
-    const { userId, ...dto } = body;
 
     if (!userId) {
       throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
@@ -250,10 +251,10 @@ export class WatchlistController {
 
   /**
    * Remove from watchlist
-   * DELETE /api/analytics/watchlist/:id?userId=xxx
+   * DELETE /api/analytics/watchlist/:id
    */
   @Delete(':id')
-  async remove(@Param('id') id: string, @Query('userId') userId: string) {
+  async remove(@Param('id') id: string, @Headers('x-user-id') userId: string) {
     this.logger.log(`DELETE /analytics/watchlist/${id}`);
 
     if (!userId) {
@@ -276,13 +277,13 @@ export class WatchlistController {
 
   /**
    * Remove by geography
-   * DELETE /api/analytics/watchlist/geography/:type/:id?userId=xxx
+   * DELETE /api/analytics/watchlist/geography/:type/:id
    */
   @Delete('geography/:type/:geoId')
   async removeByGeography(
     @Param('type') type: string,
     @Param('geoId') geoId: string,
-    @Query('userId') userId: string,
+    @Headers('x-user-id') userId: string,
   ) {
     this.logger.log(`DELETE /analytics/watchlist/geography/${type}/${geoId}`);
 
