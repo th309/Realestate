@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 import {
     MenuIcon, CloseIcon, PersonIcon, SettingsIcon, CreditCardIcon,
     BookIcon, HierarchyIcon, HelpIcon, LogoutIcon, HomeIcon,
@@ -22,12 +23,11 @@ const NAV_LINKS = [
 
 export function Header() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { user, loading, signOut } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-
-    // TODO: Replace with actual auth hook when available
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -77,9 +77,10 @@ export function Header() {
 
                     {/* Right Side Actions */}
                     <div className="hidden md:flex items-center gap-4">
-                        {isLoggedIn ? (
+                        {!!user ? (
                             <div className="relative">
                                 <button
+                                    data-testid="user-menu"
                                     onClick={() => setIsProfileOpen(!isProfileOpen)}
                                     onBlur={() => setTimeout(() => setIsProfileOpen(false), 200)}
                                     className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary text-on-primary shadow-md hover:shadow-lg transition-all active:scale-95"
@@ -95,19 +96,19 @@ export function Header() {
                                         }`}
                                 >
                                     <div className="p-4 border-b border-outline-variant bg-surface-container/50">
-                                        <p className="text-sm font-semibold text-on-surface">John Doe</p>
-                                        <p className="text-xs text-on-surface-variant truncate">john.doe@example.com</p>
+                                        <p className="text-sm font-semibold text-on-surface">{user?.user_metadata?.display_name || user?.email}</p>
+                                        <p className="text-xs text-on-surface-variant truncate">{user?.email}</p>
                                     </div>
                                     <div className="p-2 space-y-0.5">
                                         <DropdownItem icon={HomeIcon} label="Home" href="/" />
-                                        <DropdownItem icon={SettingsIcon} label="Settings" href="/settings" />
-                                        <DropdownItem icon={CreditCardIcon} label="Billing" href="/billing" />
+                                        <DropdownItem icon={SettingsIcon} label="Settings" href="/account" />
+                                        <DropdownItem icon={CreditCardIcon} label="Billing" href="/account?tab=subscription" />
                                         <DropdownItem icon={BookIcon} label="Data Glossary" href="/glossary" />
                                         <DropdownItem icon={HierarchyIcon} label="Manage Seats" href="/team" />
                                         <DropdownItem icon={HelpIcon} label="Help" href="/help" />
                                         <div className="my-1 h-px bg-outline-variant" />
                                         <button
-                                            onClick={() => setIsLoggedIn(false)}
+                                            onClick={async () => { await signOut(); router.push('/'); }}
                                             className="w-full flex items-center px-3 py-2 text-sm font-medium text-error rounded-lg hover:bg-error-container/30 transition-colors"
                                         >
                                             <LogoutIcon className="w-4 h-4 mr-3" />
@@ -119,13 +120,13 @@ export function Header() {
                         ) : (
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => setIsLoggedIn(true)}
+                                    onClick={() => router.push('/auth/sign-in')}
                                     className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors"
                                 >
                                     Log in
                                 </button>
                                 <button
-                                    onClick={() => setIsLoggedIn(true)}
+                                    onClick={() => router.push('/auth/sign-up')}
                                     className="px-5 py-2.5 text-sm font-medium text-on-primary bg-primary rounded-full hover:bg-primary/90 transition-all shadow-sm hover:shadow-md active:scale-95"
                                 >
                                     Get Started
@@ -162,9 +163,9 @@ export function Header() {
                             </Link>
                         ))}
                         <div className="h-px bg-outline-variant my-3" />
-                        {isLoggedIn ? (
+                        {!!user ? (
                             <button
-                                onClick={() => { setIsLoggedIn(false); setIsMenuOpen(false); }}
+                                onClick={async () => { await signOut(); setIsMenuOpen(false); router.push('/'); }}
                                 className="w-full flex items-center px-4 py-3 rounded-xl text-base font-medium text-error hover:bg-error-container/30"
                             >
                                 <LogoutIcon className="w-5 h-5 mr-3" />
@@ -173,13 +174,13 @@ export function Header() {
                         ) : (
                             <div className="space-y-3 pt-2">
                                 <button
-                                    onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
+                                    onClick={() => { router.push('/auth/sign-in'); setIsMenuOpen(false); }}
                                     className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-surface-variant border border-outline-variant hover:bg-surface-container"
                                 >
                                     Log in
                                 </button>
                                 <button
-                                    onClick={() => { setIsLoggedIn(true); setIsMenuOpen(false); }}
+                                    onClick={() => { router.push('/auth/sign-up'); setIsMenuOpen(false); }}
                                     className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-on-primary bg-primary hover:bg-primary/90 shadow-md"
                                 >
                                     Get Started
