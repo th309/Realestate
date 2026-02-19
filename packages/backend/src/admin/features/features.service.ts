@@ -6,6 +6,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { RedisService } from '../../redis/redis.service';
 
 export interface FeatureDefinition {
   id: string;
@@ -44,7 +45,10 @@ export interface FeatureMatrix {
 export class FeaturesService {
   private readonly logger = new Logger(FeaturesService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly redis: RedisService,
+  ) {}
 
   /**
    * Get all feature definitions
@@ -187,6 +191,9 @@ export class FeaturesService {
       this.logger.error(`Failed to update tier feature: ${error.message}`);
       throw new Error(error.message);
     }
+
+    // Invalidate entitlements cache for all tiers (changing one tier can affect tierRequired lookups)
+    await this.redis.deleteByPrefix('entitlements:');
 
     // Log to audit
     await this.logAudit('update_tier_feature', 'tier_feature', null, {

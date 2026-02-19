@@ -121,6 +121,10 @@ export default function MapPage() {
     { expanded: true, historyMonths: 3 }
   );
 
+  const { isMetricGated, getAccess, loading: entitlementsLoading } = useEntitlements();
+  // Don't show Pro badge while entitlements are loading (default access is 'none')
+  const isBreakdownGated = !entitlementsLoading && getAccess('feature', 'score_breakdown').level === 'none';
+
   // Map score response to sidebar format with all three scores
   const sidebarScoreData = useMemo(() => {
     if (scoresLoading) {
@@ -130,27 +134,25 @@ export default function MapPage() {
     if (!scoreResponse) return undefined;
 
     // Helper to extract score info from response
-    const extractScoreInfo = (scoreObj: any, isPro: boolean) => {
+    const extractScoreInfo = (scoreObj: any) => {
       if (!scoreObj || typeof scoreObj !== 'object' || !('score' in scoreObj)) {
         return undefined;
       }
       return {
         score: scoreObj.score ?? undefined,
         trend: scoreObj.trendChange ?? undefined, // 3-month change
-        access: (isPro && scoreObj.access === 'teaser' ? 'teaser' : 'full') as 'full' | 'teaser',
+        access: (isBreakdownGated ? 'teaser' : 'full') as 'full' | 'teaser',
       };
     };
 
     return {
-      marketHealth: extractScoreInfo(scoreResponse.marketHealth, false),
-      homeready: extractScoreInfo(scoreResponse.homeready, true),
-      investoredge: extractScoreInfo(scoreResponse.investoredge, true),
+      marketHealth: extractScoreInfo(scoreResponse.marketHealth),
+      homeready: extractScoreInfo(scoreResponse.homeready),
+      investoredge: extractScoreInfo(scoreResponse.investoredge),
       marketCondition: 'balanced' as const, // TODO: Calculate from market data
       isLoading: false,
     };
-  }, [scoreResponse, scoresLoading]);
-
-  const { isMetricGated } = useEntitlements();
+  }, [scoreResponse, scoresLoading, isBreakdownGated]);
 
   // Fallback to home_value if selected metric becomes gated (e.g., subscription expired)
   useEffect(() => {
@@ -269,6 +271,7 @@ export default function MapPage() {
   // Process URL search params (e.g. /map?geo=metro&id=31080&lat=33.7&lng=-84.4)
   // Reconstruct a SearchResult and feed it through the same handleSelectSearchResult
   // that the map's own search bar uses — same code path, same zoom behavior.
+  // Also auto-select the geography so the sidebar shows scores and metric details.
   useEffect(() => {
     if (!mapLoaded || urlProcessedRef.current) return;
 
@@ -290,7 +293,16 @@ export default function MapPage() {
       center: lat && lng ? [parseFloat(lng), parseFloat(lat)] : undefined,
       state: state || undefined,
     });
-  }, [mapLoaded, searchParams, handleSelectSearchResult]);
+
+    // Auto-select the geography so the sidebar shows scores and details
+    handleFeatureClick({
+      id,
+      name,
+      geoLevel: geo,
+      value: null,
+      stateAbbr: state || undefined,
+    });
+  }, [mapLoaded, searchParams, handleSelectSearchResult, handleFeatureClick]);
 
   // Close context menu on map move/zoom
   useEffect(() => {

@@ -122,10 +122,10 @@ export function EntitlementsProvider({
     }
   }, [setSimulatedTier]);
 
-  // Keep ref in sync with state
-  useEffect(() => {
-    simulatedTierRef.current = simulatedTier;
-  }, [simulatedTier]);
+  // Note: ref is kept in sync by setSimulatedTier() which sets both ref and state.
+  // A separate sync effect was removed because it would overwrite the ref
+  // (set by the URL param effect) with the stale state from the previous render,
+  // causing a race where the first entitlements fetch used the wrong tier.
 
   const refresh = useCallback(async () => {
     // Use ref to get the latest simulated tier (avoids stale closure issues)

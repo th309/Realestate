@@ -40,8 +40,9 @@ export function MetricItem({
   const [showPaywall, setShowPaywall] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="relative" data-testid={`metric-item-${metric.id}`}>
       <button
+        data-testid={`metric-button-${metric.id}`}
         onClick={isLocked ? () => setShowPaywall(true) : onSelect}
         className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-colors duration-200 ${
           isLocked
@@ -55,7 +56,7 @@ export function MetricItem({
           <MetricTitle metricId={metric.id} className="truncate" />
         </span>
         {isLocked && (
-          <span className="flex items-center flex-shrink-0 ml-1">
+          <span className="flex items-center flex-shrink-0 ml-1" data-testid={`metric-lock-${metric.id}`}>
             <LockIcon className="w-3.5 h-3.5 text-on-surface-variant/60" />
           </span>
         )}
@@ -84,6 +85,7 @@ export function MetricItem({
       {/* Paywall modal for locked metrics */}
       {showPaywall && typeof document !== 'undefined' && createPortal(
         <div
+          data-testid={`paywall-overlay-${metric.id}`}
           className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
           onClick={() => setShowPaywall(false)}
         >

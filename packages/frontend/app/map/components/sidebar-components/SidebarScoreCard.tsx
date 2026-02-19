@@ -2,12 +2,11 @@
  * SidebarScoreCard Component
  *
  * Displays a carousel of PropertyIQ scores at the top of the sidebar.
- * Shows three scores:
- * - Market Health Score (default, free)
- * - HomeReady Score (pro feature)
- * - InvestorEdge Score (pro feature)
+ * Shows three scores: Market Health, HomeReady, InvestorEdge.
  *
- * Uses the standardized ScoreDisplay component for consistent visualization.
+ * Access control is driven entirely by entitlements (DB tier assignments).
+ * The `access` field on each score ('full' | 'teaser') determines lock state.
+ * No hardcoded tier gating — use the admin tiers page to move scores between tiers.
  */
 
 import { useState } from 'react';
@@ -34,21 +33,18 @@ interface SidebarScoreCardProps {
   onUpgradeClick?: () => void;
 }
 
-const SCORE_CONFIG: Record<ScoreTypeKey, { name: string; label: string; isPro: boolean }> = {
+const SCORE_CONFIG: Record<ScoreTypeKey, { name: string; label: string }> = {
   marketHealth: {
     name: 'Market Health',
     label: 'Market Health Score',
-    isPro: false,
   },
   homeready: {
     name: 'HomeReady',
     label: 'HomeReady Score',
-    isPro: true,
   },
   investoredge: {
     name: 'InvestorEdge',
     label: 'InvestorEdge Score',
-    isPro: true,
   },
 };
 
@@ -80,7 +76,7 @@ export function SidebarScoreCard({
 
   const currentScore = getScoreData(activeScoreKey);
   const hasScore = currentScore?.score !== undefined && !isLoading;
-  const isBreakdownLocked = config.isPro && currentScore?.access === 'teaser';
+  const isBreakdownLocked = currentScore?.access === 'teaser';
 
   // Navigation handlers
   const goToPrevious = () => {
@@ -101,6 +97,7 @@ export function SidebarScoreCard({
 
   return (
     <div
+      data-testid="sidebar-score-card"
       className={`
         bg-surface-container rounded-xl p-3 mb-4 border border-outline-variant
         ${onClick ? 'cursor-pointer hover:bg-surface-container-high transition-colors duration-200' : ''}
@@ -113,9 +110,9 @@ export function SidebarScoreCard({
           <span className="w-5 h-5 text-on-surface-variant">
             <InsightsIcon />
           </span>
-          <span className="text-sm font-semibold">{config.label}</span>
-          {config.isPro && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded" title="Upgrade to Pro for full breakdown">
+          <span data-testid={`score-label-${activeScoreKey}`} className="text-sm font-semibold">{config.label}</span>
+          {isBreakdownLocked && (
+            <span data-testid={`score-pro-badge-${activeScoreKey}`} className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded" title="Upgrade to Pro for full breakdown">
               Pro
             </span>
           )}
@@ -157,6 +154,7 @@ export function SidebarScoreCard({
               </div>
               {isBreakdownLocked && (
                 <button
+                  data-testid={`score-upgrade-cta-${activeScoreKey}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpgradeClick?.();
@@ -194,11 +192,12 @@ export function SidebarScoreCard({
             const scoreConfig = SCORE_CONFIG[key];
             const scoreData = getScoreData(key);
             const isActive = index === activeIndex;
-            const isPro = scoreConfig.isPro && scoreData?.access === 'teaser';
+            const isLocked = scoreData?.access === 'teaser';
 
             return (
               <button
                 key={key}
+                data-testid={`score-dot-${key}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveIndex(index);
@@ -207,14 +206,14 @@ export function SidebarScoreCard({
                   relative w-2 h-2 rounded-full transition-all
                   ${isActive
                     ? 'w-6 bg-primary'
-                    : isPro
+                    : isLocked
                       ? 'bg-surface-container-highest'
                       : 'bg-outline-variant hover:bg-outline'
                   }
                 `}
                 aria-label={`View ${scoreConfig.name} score`}
               >
-                {isPro && !isActive && (
+                {isLocked && !isActive && (
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary rounded-full" />
                 )}
               </button>

@@ -45,6 +45,7 @@ export function PaywallCard({
 
   return (
     <div
+      data-testid={`paywall-card-${type}-${id}`}
       className={`
         bg-surface-container rounded-xl p-6 border border-outline-variant
         flex flex-col items-center text-center gap-4
@@ -56,7 +57,7 @@ export function PaywallCard({
       </div>
 
       <div>
-        <h3 className="text-lg font-medium text-on-surface">
+        <h3 data-testid="paywall-title" className="text-lg font-medium text-on-surface">
           {title || 'Upgrade to Unlock'}
         </h3>
         <p className="text-sm text-on-surface-variant mt-1">
@@ -65,6 +66,7 @@ export function PaywallCard({
       </div>
 
       <Link
+        data-testid="paywall-cta"
         href="/pricing"
         onClick={handleUpgradeClick}
         className="

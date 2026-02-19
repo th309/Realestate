@@ -49,7 +49,7 @@ export const WizardContainer: React.FC<WizardContainerProps> = ({ wizardState, r
 
       {/* Error Display */}
       {error && (
-        <div className="mx-6 mb-4 p-3 bg-error-container rounded-xl flex items-start gap-3">
+        <div data-testid="report-generation-error" className="mx-6 mb-4 p-3 bg-error-container rounded-xl flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm text-on-error-container">{error}</p>

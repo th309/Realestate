@@ -287,7 +287,7 @@ export function MarketDashboard({
   // Check geography access after loading data
   if (!hasGeoAccess) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
+      <div data-testid="geo-gate-wall" className="min-h-screen bg-surface flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
             <Lock className="w-8 h-8 text-primary" />

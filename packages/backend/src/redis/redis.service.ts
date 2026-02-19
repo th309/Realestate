@@ -341,6 +341,27 @@ export class RedisService implements OnModuleInit {
   }
 
   /**
+   * Delete all cache keys matching a prefix (e.g. 'entitlements:tier:free:')
+   */
+  async deleteByPrefix(prefix: string): Promise<number> {
+    if (!this.isAvailable() || !this.client) {
+      return 0;
+    }
+
+    try {
+      const keys = await this.client.keys(`${prefix}*`);
+      if (keys.length > 0) {
+        await this.client.del(...keys);
+        this.logger.log(`[Redis Cache] Deleted ${keys.length} keys with prefix "${prefix}"`);
+      }
+      return keys.length;
+    } catch (error) {
+      this.logger.error(`[Redis Cache] DeleteByPrefix error: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
    * Flush all cache entries (use with caution)
    */
   async flush(): Promise<void> {

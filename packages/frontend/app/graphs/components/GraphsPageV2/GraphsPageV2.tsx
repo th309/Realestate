@@ -130,7 +130,7 @@ function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
 
 function ProGatedMessage({ feature }: { feature: string }) {
   return (
-    <div className="w-full h-full flex items-center justify-center">
+    <div data-testid="graphs-score-gate" className="w-full h-full flex items-center justify-center">
       <div className="text-center max-w-sm">
         <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-primary/10 flex items-center justify-center">
           <svg
