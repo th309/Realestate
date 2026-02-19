@@ -1,26 +1,71 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Next.js Middleware
  *
- * Handles route protection and redirects.
+ * - Refreshes the Supabase auth session on every matched request
+ * - Redirects unauthenticated users away from protected routes
+ * - Redirects authenticated users away from auth routes
+ * - Blocks /_dev routes in production
  */
-export function middleware(request: NextRequest) {
+
+const PROTECTED_PREFIXES = ['/account', '/dashboard', '/alerts', '/reports'];
+const AUTH_ROUTES = ['/auth/sign-in', '/auth/sign-up', '/auth/forgot-password'];
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Refresh session — must call getUser() to keep cookies in sync
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { pathname } = request.nextUrl;
 
   // Block /_dev routes in production
   if (pathname.startsWith('/_dev')) {
     if (process.env.NODE_ENV === 'production') {
-      // Return 404 in production
       return NextResponse.rewrite(new URL('/not-found', request.url));
     }
   }
 
-  return NextResponse.next();
+  // Protected routes — redirect unauthenticated users to sign-in
+  const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (isProtected && !user) {
+    const signInUrl = new URL('/auth/sign-in', request.url);
+    signInUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+
+  // Auth routes — redirect authenticated users to dashboard
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route);
+  if (isAuthRoute && user) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  return supabaseResponse;
 }
 
 export const config = {
-  // Match /_dev routes
-  matcher: ['/_dev/:path*'],
+  matcher: ['/(account|dashboard|alerts|reports|auth|_dev)(.*)'],
 };
