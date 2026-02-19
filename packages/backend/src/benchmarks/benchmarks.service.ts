@@ -11,7 +11,7 @@ interface ParentGeo {
   name: string;
 }
 
-interface BenchmarkResult {
+export interface BenchmarkResult {
   metricId: string;
   value: number | null;
   parentGeo: ParentGeo | null;

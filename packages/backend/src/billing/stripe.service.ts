@@ -9,7 +9,11 @@ export class StripeService {
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    this.stripe = new Stripe(this.config.get<string>('STRIPE_SECRET_KEY', ''), {
+    const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY', '');
+    if (!stripeKey) {
+      this.logger.warn('STRIPE_SECRET_KEY not set – Stripe calls will fail at runtime');
+    }
+    this.stripe = new Stripe(stripeKey || 'sk_test_placeholder', {
       apiVersion: '2026-01-28.clover',
     });
     this.webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET', '');

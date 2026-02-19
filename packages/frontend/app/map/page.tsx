@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -29,6 +29,14 @@ import { MAPBOX_ACCESS_TOKEN } from './config';
 mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
 export default function MapPage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full bg-gray-900" />}>
+      <MapPageInner />
+    </Suspense>
+  );
+}
+
+function MapPageInner() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
