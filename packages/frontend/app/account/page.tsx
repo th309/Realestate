@@ -5,6 +5,7 @@ import { User, CreditCard, Bell, HelpCircle } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlements';
+import { ProfileTab, SubscriptionTab, ActivityTab, SupportTab } from '@/components/account';
 
 type AccountTab = 'profile' | 'subscription' | 'activity' | 'support';
 
@@ -158,18 +159,10 @@ export default function AccountPage() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 'profile' && (
-          <div className="py-8 text-center text-on-surface-variant">Profile tab content coming soon</div>
-        )}
-        {activeTab === 'subscription' && (
-          <div className="py-8 text-center text-on-surface-variant">Subscription tab content coming soon</div>
-        )}
-        {activeTab === 'activity' && (
-          <div className="py-8 text-center text-on-surface-variant">Activity tab content coming soon</div>
-        )}
-        {activeTab === 'support' && (
-          <div className="py-8 text-center text-on-surface-variant">Support tab content coming soon</div>
-        )}
+        {user && activeTab === 'profile' && <ProfileTab user={user} />}
+        {user && activeTab === 'subscription' && <SubscriptionTab user={user} />}
+        {user && activeTab === 'activity' && <ActivityTab user={user} />}
+        {user && activeTab === 'support' && <SupportTab user={user} />}
       </div>
     </div>
   );
