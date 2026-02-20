@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { User, CreditCard, Bell, HelpCircle } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
@@ -67,6 +68,14 @@ function LoadingSkeleton() {
 }
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <AccountPageContent />
+    </Suspense>
+  );
+}
+
+function AccountPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();

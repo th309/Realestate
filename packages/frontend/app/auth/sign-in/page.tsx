@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { Suspense, useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -16,6 +16,28 @@ import { useAuth } from '@/lib/auth';
 type AuthMode = 'password' | 'magic-link';
 
 export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant p-8 animate-pulse">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-12 h-12 bg-surface-container-highest rounded-xl mb-4" />
+            <div className="h-6 w-48 bg-surface-container-highest rounded" />
+          </div>
+          <div className="space-y-4">
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+            <div className="h-10 bg-surface-container-highest rounded-lg" />
+          </div>
+        </div>
+      </div>
+    }>
+      <SignInPageContent />
+    </Suspense>
+  );
+}
+
+function SignInPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') ?? '/dashboard';
