@@ -11,7 +11,7 @@
  */
 
 import { parse } from 'csv-parse/sync';
-import { parseInteger } from '../../lib';
+import { parseInteger, normalizeFipsCode } from '../../lib';
 import {
   BPS_BASE_URL,
   BPS_COUNTY_CSV_COLUMNS,
@@ -91,8 +91,8 @@ export async function fetchMonthlyCountyPermits(
 
 /** Map a single raw CSV row to a typed PermitCountyRecord. */
 function mapRawRowToCountyRecord(row: Record<string, string>): PermitCountyRecord {
-  const stateFips = row.state_fips.padStart(2, '0');
-  const countyFips = row.county_fips.padStart(3, '0');
+  const stateFips = normalizeFipsCode(row.state_fips, 2) ?? '';
+  const countyFips = normalizeFipsCode(row.county_fips, 3) ?? '';
   const surveyYear = row.survey_date.slice(0, 4);
   const surveyMonth = row.survey_date.slice(4, 6);
 
@@ -149,8 +149,9 @@ export async function fetchAllCountyPermits(
   startYear: number,
   endYear: number,
 ): Promise<PermitCountyRecord[]> {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
   const clampedEndYear = Math.min(endYear, currentYear);
 
   const allRecords: PermitCountyRecord[] = [];
@@ -194,10 +195,9 @@ export function computeYearOverYear<T extends Record<string, unknown>>(
   }
 
   for (const record of records) {
-    const currentDate = new Date(record.period_date as string);
-    const prevDate = new Date(currentDate);
-    prevDate.setFullYear(prevDate.getFullYear() - 1);
-    const prevKey = `${record[regionKeyField]}|${prevDate.toISOString().slice(0, 10)}`;
+    const dateParts = (record.period_date as string).split('-');
+    const prevYear = parseInt(dateParts[0], 10) - 1;
+    const prevKey = `${record[regionKeyField]}|${prevYear}-${dateParts[1]}-${dateParts[2]}`;
     const prevRecord = lookup.get(prevKey);
 
     if (!prevRecord) continue;
@@ -206,7 +206,7 @@ export function computeYearOverYear<T extends Record<string, unknown>>(
       const currentValue = record[sourceField] as number | null;
       const previousValue = prevRecord[sourceField] as number | null;
 
-      if (previousValue && previousValue > 0 && currentValue !== null) {
+      if (currentValue !== null && previousValue !== null && previousValue > 0) {
         const yoyPercent = ((currentValue - previousValue) / previousValue) * 100;
         (record as Record<string, unknown>)[yoyField] = Math.round(yoyPercent * 100) / 100;
       }
@@ -232,15 +232,16 @@ export function aggregateCountyToState(countyRecords: PermitCountyRecord[]): Per
     const existing = stateMap.get(key);
 
     if (!existing) {
+      // Initialize with identity fields; numeric fields are set by the loop below
       const newRecord: PermitStateRecord = {
         period_date: county.period_date,
         state_fips: county.state_fips,
         state_name: null,
-        sf_buildings: 0, sf_units: 0, sf_value: 0,
-        duplex_buildings: 0, duplex_units: 0, duplex_value: 0,
-        small_multi_buildings: 0, small_multi_units: 0, small_multi_value: 0,
-        large_multi_buildings: 0, large_multi_units: 0, large_multi_value: 0,
-        total_buildings: 0, total_units: 0, total_value: 0,
+        sf_buildings: null, sf_units: null, sf_value: null,
+        duplex_buildings: null, duplex_units: null, duplex_value: null,
+        small_multi_buildings: null, small_multi_units: null, small_multi_value: null,
+        large_multi_buildings: null, large_multi_units: null, large_multi_value: null,
+        total_buildings: null, total_units: null, total_value: null,
         sf_units_yoy: null, total_units_yoy: null,
         updated_at: updatedAt,
       };
