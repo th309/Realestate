@@ -4,6 +4,17 @@ Real estate analytics platform with React/Next.js frontend and NestJS backend.
 
 ## 1. CRITICAL BEHAVIORAL STANDARDS
 
+### 1.0 The Hermeneutic Circle (How to Approach All Changes)
+
+Approach all changes through the Hermeneutic Circle. Before touching any file or function, first develop an understanding of the whole system's architecture, intent, and interdependencies. Then examine how the specific part you're changing fits within that whole. After making a change, cycle back to re-evaluate the whole — does the system still cohere? Do assumptions elsewhere still hold? Repeat this part-to-whole interpretation loop until the change is fully integrated. Never make changes in isolation without this contextual pass.
+
+**The loop:**
+1. **Understand the whole** — Read related files, trace data flow, understand why things exist before changing them.
+2. **Examine the part** — Focus on the specific file/function, understanding its role in the system.
+3. **Make the change** — Implement with full awareness of upstream and downstream effects.
+4. **Re-evaluate the whole** — After changing, verify: Do imports still resolve? Do consumers of this code still work? Do types still align? Are assumptions in other files still valid?
+5. **Repeat** — If re-evaluation reveals breakage or drift, address it before considering the task done.
+
 ### 1.1 The "Don'ts" (Strict Constraints)
 * **NEVER** duplicate metric names/formats. `config/metrics.ts` is the **ONLY** source of truth.
 * **NEVER** hardcode color scale breakpoints; use dynamic min/max calculations.
