@@ -4,7 +4,8 @@
  * Redfin TSV files identify regions by name + type (e.g., "Phoenix, AZ" / "metro"),
  * not by standard FIPS or CBSA codes. This module resolves those region names to
  * standard geographic identifiers by querying the tiger_states, tiger_counties,
- * tiger_cbsa, and tiger_zcta lookup tables in Supabase.
+ * tiger_cbsa, and tiger_zcta lookup tables in Supabase, with a secondary
+ * fallback to the markets table for regions not found in tiger tables.
  *
  * A persistent in-memory cache (regionKey -> geoid) avoids redundant lookups
  * within a single import run. Cache keys have the format:
@@ -159,6 +160,46 @@ async function lookupZipGeoid(
 }
 
 /**
+ * Lookup geoid from the markets table as a secondary fallback.
+ *
+ * The markets table contains region_id and geoid for regions that may not
+ * appear in tiger lookup tables (e.g., Redfin-specific metro delineations).
+ * Queries by region_type and partial region_name match, optionally filtering
+ * by state_code. Returns the geoid if present, otherwise the region_id.
+ */
+async function lookupMarketsGeoid(
+  supabase: SupabaseClient,
+  regionName: string,
+  regionType: string,
+  stateCode?: string,
+): Promise<string | null> {
+  let query = supabase
+    .from('markets')
+    .select('region_id')
+    .eq('region_type', regionType)
+    .ilike('region_name', `%${regionName}%`);
+
+  if (stateCode) {
+    query = query.eq('state_code', stateCode);
+  }
+
+  const { data } = await query.limit(1).maybeSingle();
+
+  if (data?.region_id) {
+    // The markets row may carry a dedicated geoid column — prefer it over region_id
+    const { data: marketDetail } = await supabase
+      .from('markets')
+      .select('geoid')
+      .eq('region_id', data.region_id)
+      .maybeSingle();
+
+    return marketDetail?.geoid || data.region_id;
+  }
+
+  return null;
+}
+
+/**
  * Generate a deterministic fallback geoid when no lookup table match is found.
  * Format: REDFIN-{TYPE}-{SANITIZED_NAME}
  */
@@ -177,8 +218,11 @@ function generateFallbackGeoid(regionType: string, regionName: string): string {
 /**
  * Resolve a Redfin region to a standard geoid (FIPS, CBSA, ZCTA, etc.).
  *
- * Checks the in-memory cache first, then queries tiger lookup tables.
- * Falls back to a deterministic REDFIN-{TYPE}-{NAME} identifier if no match found.
+ * Resolution order:
+ *  1. In-memory cache
+ *  2. Tiger lookup tables (states, counties, CBSAs, ZCTAs)
+ *  3. Markets table (geoid or region_id)
+ *  4. Deterministic fallback: REDFIN-{TYPE}-{NAME}
  *
  * This function is safe to call repeatedly for the same region -- it will
  * return the cached result on subsequent calls.
@@ -209,9 +253,18 @@ export async function resolveRedfinGeoid(
     } else if (normalizedType === 'zip' || normalizedType === 'zipcode') {
       geoid = await lookupZipGeoid(supabase, regionName);
     }
-    // city and neighborhood have no standard lookup table -- fall through to fallback
+    // city and neighborhood have no standard lookup table -- fall through to markets fallback
   } catch {
-    // On any lookup error, fall through to fallback
+    // On any lookup error, fall through to markets fallback
+  }
+
+  // Secondary fallback: query the markets table for regions not in tiger tables
+  if (!geoid) {
+    try {
+      geoid = await lookupMarketsGeoid(supabase, regionName, normalizedType, stateCode);
+    } catch {
+      // On markets lookup error, fall through to deterministic fallback
+    }
   }
 
   const resolvedGeoid = geoid ?? generateFallbackGeoid(normalizedType, regionName);
