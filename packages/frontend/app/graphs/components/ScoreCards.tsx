@@ -289,7 +289,10 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   isAdmin = false,
 }) => {
   const { canAccess } = useEntitlements();
-  const canViewScores = canAccess('feature', 'scores');
+  const canViewHomeready = canAccess('metric', 'homeready_score');
+  const canViewInvestoredge = canAccess('metric', 'investoredge_score');
+  const canViewMarketHealth = canAccess('metric', 'market_health_score');
+  const canViewAnyScore = canViewHomeready || canViewInvestoredge || canViewMarketHealth;
   const [scores, setScores] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricSelections, setMetricSelections] = useState<MetricSelections>(loadMetricSelections);
@@ -376,7 +379,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
 
   const scoresUnavailable = geoLevel === 'state' || geoLevel === 'national';
 
-  if (!canViewScores) {
+  if (!canViewAnyScore) {
     return (
       <div className="flex flex-col gap-3">
         <ScorePaywall />
@@ -399,42 +402,48 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <ScoreCard
-        title="HomeReady Score"
-        value={homereadyScore}
-        confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics('homeready')}
-        loading={loading}
-        metricsLoading={homereadyMetricsLoading}
-        isAdmin={isAdmin}
-        selectedMetricIds={metricSelections.homeready}
-        onMetricsChange={handleMetricsChange('homeready')}
-        geoLevel={geoLevel}
-      />
-      <ScoreCard
-        title="InvestorEdge Score"
-        value={investoredgeScore}
-        confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics('investoredge')}
-        loading={loading}
-        metricsLoading={investoredgeMetricsLoading}
-        isAdmin={isAdmin}
-        selectedMetricIds={metricSelections.investoredge}
-        onMetricsChange={handleMetricsChange('investoredge')}
-        geoLevel={geoLevel}
-      />
-      <ScoreCard
-        title="Market Health Index"
-        value={marketHealthScore}
-        confidence={confidenceLabel}
-        indicators={getIndicatorsForMetrics('markethealth')}
-        loading={loading}
-        metricsLoading={markethealthMetricsLoading}
-        isAdmin={isAdmin}
-        selectedMetricIds={metricSelections.markethealth}
-        onMetricsChange={handleMetricsChange('markethealth')}
-        geoLevel={geoLevel}
-      />
+      {canViewHomeready && (
+        <ScoreCard
+          title="HomeReady Score"
+          value={homereadyScore}
+          confidence={confidenceLabel}
+          indicators={getIndicatorsForMetrics('homeready')}
+          loading={loading}
+          metricsLoading={homereadyMetricsLoading}
+          isAdmin={isAdmin}
+          selectedMetricIds={metricSelections.homeready}
+          onMetricsChange={handleMetricsChange('homeready')}
+          geoLevel={geoLevel}
+        />
+      )}
+      {canViewInvestoredge && (
+        <ScoreCard
+          title="InvestorEdge Score"
+          value={investoredgeScore}
+          confidence={confidenceLabel}
+          indicators={getIndicatorsForMetrics('investoredge')}
+          loading={loading}
+          metricsLoading={investoredgeMetricsLoading}
+          isAdmin={isAdmin}
+          selectedMetricIds={metricSelections.investoredge}
+          onMetricsChange={handleMetricsChange('investoredge')}
+          geoLevel={geoLevel}
+        />
+      )}
+      {canViewMarketHealth && (
+        <ScoreCard
+          title="Market Health Index"
+          value={marketHealthScore}
+          confidence={confidenceLabel}
+          indicators={getIndicatorsForMetrics('markethealth')}
+          loading={loading}
+          metricsLoading={markethealthMetricsLoading}
+          isAdmin={isAdmin}
+          selectedMetricIds={metricSelections.markethealth}
+          onMetricsChange={handleMetricsChange('markethealth')}
+          geoLevel={geoLevel}
+        />
+      )}
     </div>
   );
 };

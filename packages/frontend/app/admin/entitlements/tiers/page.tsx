@@ -31,6 +31,19 @@ import {
 } from 'lucide-react';
 import { fetchAPIRaw } from '@/lib/data';
 
+// Human-readable labels for feature categories
+const CATEGORY_LABELS: Record<string, string> = {
+  scores: 'PIQ Components',
+  metrics: 'Metrics',
+  geography: 'Geography',
+  preview: 'Preview Limits',
+  features: 'Features',
+};
+
+function categoryLabel(slug: string): string {
+  return CATEGORY_LABELS[slug] || slug.charAt(0).toUpperCase() + slug.slice(1);
+}
+
 // Tier styling
 const TIER_STYLES: Record<string, { bg: string; border: string; text: string; chip: string; header: string }> = {
   free: {
@@ -195,7 +208,7 @@ function TierColumn({
           {byCategory.map(([category, catFeatures]) => (
             <div key={category}>
               <h4 className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider mb-2">
-                {category}
+                {categoryLabel(category)}
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {catFeatures.map(feature => (
@@ -525,7 +538,7 @@ export default function TiersConfigurationPage() {
             className="pl-9 pr-6 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
           >
             {allCategories.map(cat => (
-              <option key={cat} value={cat}>{cat === 'all' ? 'All' : cat}</option>
+              <option key={cat} value={cat}>{cat === 'all' ? 'All' : categoryLabel(cat)}</option>
             ))}
           </select>
         </div>
@@ -592,7 +605,7 @@ export default function TiersConfigurationPage() {
                     </div>
                     {Object.entries(byCategory).sort(([a], [b]) => a.localeCompare(b)).map(([cat, catFeatures]) => (
                       <div key={cat} className="mb-2">
-                        <div className="text-[10px] uppercase tracking-wider text-on-surface-variant/50 mb-1">{cat}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-on-surface-variant/50 mb-1">{categoryLabel(cat)}</div>
                         <div className="flex flex-wrap gap-1">
                           {catFeatures.map(f => (
                             <span

@@ -137,7 +137,7 @@ function PricingContent() {
             } else if (plan.slug === 'pro') {
               featureBullets.push('Everything in Free, plus:');
               if (has('geo_county') || has('geo_zip')) featureBullets.push('Metro, county, and ZIP code data');
-              if (has('feature_scores')) featureBullets.push('PropertyIQ composite scores');
+              if (has('metric_homeready_score') || has('metric_investoredge_score') || has('metric_market_health_score')) featureBullets.push('PropertyIQ composite scores');
               if (has('feature_ai_insights')) featureBullets.push('AI market analysis');
               if (has('feature_reports')) featureBullets.push('Unlimited AI reports');
               if (has('feature_export_csv')) featureBullets.push('CSV data export');

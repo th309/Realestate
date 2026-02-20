@@ -30,8 +30,9 @@ export interface UseTopMarketsResult {
 
 export function useTopMarkets(options: UseTopMarketsOptions): UseTopMarketsResult {
   const { geography, scoreType, limit = 10, enabled = true } = options;
-  const { getAccess } = useEntitlements();
-  const scoresGated = getAccess('feature', 'scores').level === 'none';
+  const { isMetricGated } = useEntitlements();
+  // Scores are fully gated only if all three score metrics are gated
+  const scoresGated = isMetricGated('homeready_score') && isMetricGated('investoredge_score') && isMetricGated('market_health_score');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['top-markets', geography, scoreType, limit],

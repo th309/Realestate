@@ -33,11 +33,11 @@ const ACCESS_COLORS: Record<string, string> = {
 };
 
 const ADMIN_LINKS = [
-  { label: 'Overview', href: '/dev/admin/entitlements', icon: LayoutDashboard },
-  { label: 'Tiers', href: '/dev/admin/entitlements/tiers', icon: Layers },
-  { label: 'Users', href: '/dev/admin/entitlements/users', icon: Users },
-  { label: 'Trial', href: '/dev/admin/entitlements/trial', icon: Clock },
-  { label: 'Analytics', href: '/dev/admin/entitlements/analytics', icon: BarChart3 },
+  { label: 'Overview', href: '/admin/entitlements', icon: LayoutDashboard },
+  { label: 'Tiers', href: '/admin/entitlements/tiers', icon: Layers },
+  { label: 'Users', href: '/admin/entitlements/users', icon: Users },
+  { label: 'Trial', href: '/admin/entitlements/trial', icon: Clock },
+  { label: 'Analytics', href: '/admin/entitlements/analytics', icon: BarChart3 },
 ];
 
 function useDevToolbarActive(): boolean {
@@ -309,7 +309,7 @@ export function DevToolbar() {
 
         {/* Admin Link */}
         <Link
-          href="/dev/admin/entitlements"
+          href="/admin/entitlements"
           className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
           title="Admin Panel"
         >

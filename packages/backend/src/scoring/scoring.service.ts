@@ -198,7 +198,9 @@ export class ScoringService {
     const historyMonths = Math.min(Math.max(0, rawMonths), SCORE_HISTORY_MONTHS_MAX);
     if (historyMonths <= 0) return result;
 
-    const dates = await this.getScoreDates(geography, historyMonths + 1);
+    // Use location-filtered query: getScoreDates (geography-wide) fetches too few rows
+    // to find multiple distinct dates when thousands of rows exist per date.
+    const dates = await this.getScoreDatesForLocation(locationId, geography, (historyMonths + 1) * 3);
     if (!dates.length || dates[0] !== targetDate) {
       if (historyMonths > 0) {
         console.debug(

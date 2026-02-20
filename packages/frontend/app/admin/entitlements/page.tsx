@@ -228,10 +228,10 @@ export default function EntitlementsOverviewPage() {
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Configure Tiers', href: '/dev/admin/entitlements/tiers', desc: 'Manage feature access by tier' },
-          { label: 'View Analytics', href: '/dev/admin/entitlements/analytics', desc: 'Detailed conversion metrics' },
-          { label: 'Manage Users', href: '/dev/admin/entitlements/users', desc: 'User overrides and trials' },
-          { label: 'Trial Settings', href: '/dev/admin/entitlements/trial', desc: 'Configure trial periods' },
+          { label: 'Configure Tiers', href: '/admin/entitlements/tiers', desc: 'Manage feature access by tier' },
+          { label: 'View Analytics', href: '/admin/entitlements/analytics', desc: 'Detailed conversion metrics' },
+          { label: 'Manage Users', href: '/admin/entitlements/users', desc: 'User overrides and trials' },
+          { label: 'Trial Settings', href: '/admin/entitlements/trial', desc: 'Configure trial periods' },
         ].map((link) => (
           <a
             key={link.href}

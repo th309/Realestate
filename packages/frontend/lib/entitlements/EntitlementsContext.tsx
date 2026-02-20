@@ -51,8 +51,8 @@ const EntitlementsContext = createContext<EntitlementsContextValue | null>(null)
 // Geography levels and features to check
 const GEO_LEVELS = ['national', 'state', 'metro', 'county', 'city', 'zip', 'tract'];
 const FEATURES = [
-  'analytics_assistant', 'export_csv', 'reports', 'ai_insights', 'scores',
-  'score_breakdown', 'score_history', 'score_weights',
+  'analytics_assistant', 'export_csv', 'reports', 'ai_insights',
+  'score_breakdown',
   'reports_monthly', 'ai_analysis_monthly', 'history_months',
   'weekly_digest', 'benchmarking', 'recommendations',
 ];

@@ -5,7 +5,7 @@
  * Features:
  * - Color-coded ring based on score (green/amber/red)
  * - Trend arrow indicator (up/down/stable)
- * - Score number always visible; breakdown access gated to Pro+
+ * - Score number always visible; breakdown access gated by entitlements tier
  * - Click to expand to full ScoreCard
  *
  * Used for Market Health, HomeReady, and InvestorEdge scores.
@@ -15,6 +15,7 @@
 
 import { memo } from 'react';
 import { MARKET_THRESHOLDS } from './ScoreDisplay';
+import { useEntitlements } from '@/lib/entitlements';
 
 export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
 export type ScoreAccess = 'full' | 'teaser';
@@ -156,6 +157,9 @@ export const ScoreBadge = memo(function ScoreBadge({
   showLabel = true,
   className = '',
 }: ScoreBadgeProps) {
+  const { getTierRequired } = useEntitlements();
+  const breakdownTierRequired = getTierRequired('feature', 'score_breakdown');
+
   const config = SIZES[size];
   const circumference = 2 * Math.PI * config.radius;
   const progress = score !== null ? (score / 100) * circumference : 0;
@@ -244,9 +248,9 @@ export const ScoreBadge = memo(function ScoreBadge({
           {!isUnavailable && (
             <TrendArrow direction={trend} change={trendChange} />
           )}
-          {isTeaser && (
-            <span className="text-[10px] text-primary font-semibold px-1 py-0.5 bg-primary/10 rounded" title="Upgrade to Pro for full breakdown">
-              PRO breakdown
+          {isTeaser && breakdownTierRequired && (
+            <span className="text-[10px] text-primary font-semibold px-1 py-0.5 bg-primary/10 rounded" title={`Upgrade to ${breakdownTierRequired.charAt(0).toUpperCase() + breakdownTierRequired.slice(1)} for full breakdown`}>
+              {breakdownTierRequired.toUpperCase()} breakdown
             </span>
           )}
           {status === 'partial' && (

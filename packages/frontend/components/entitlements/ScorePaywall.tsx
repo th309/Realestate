@@ -53,7 +53,7 @@ export function ScorePaywall({ className = '', compact = false }: ScorePaywallPr
   }, [simulatedAuth]);
 
   const handleClick = () => {
-    trackUpgradeClick('feature', 'scores');
+    trackUpgradeClick('metric', 'homeready_score');
   };
 
   if (compact) {

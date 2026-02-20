@@ -16,33 +16,33 @@ import {
 const NAV_ITEMS = [
   {
     label: 'Overview',
-    href: '/dev/admin/entitlements',
+    href: '/admin/entitlements',
     icon: LayoutDashboard,
   },
   {
     label: 'Configure',
     items: [
-      { label: 'Tiers', href: '/dev/admin/entitlements/tiers', icon: Layers },
-      { label: 'Trial', href: '/dev/admin/entitlements/trial', icon: Clock },
-      { label: 'Users', href: '/dev/admin/entitlements/users', icon: Users },
+      { label: 'Tiers', href: '/admin/entitlements/tiers', icon: Layers },
+      { label: 'Trial', href: '/admin/entitlements/trial', icon: Clock },
+      { label: 'Users', href: '/admin/entitlements/users', icon: Users },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { label: 'Analytics', href: '/dev/admin/entitlements/analytics', icon: BarChart3 },
+      { label: 'Analytics', href: '/admin/entitlements/analytics', icon: BarChart3 },
     ],
   },
   {
     label: 'Automate',
     items: [
-      { label: 'Rules', href: '/dev/admin/entitlements/automations', icon: Zap },
+      { label: 'Rules', href: '/admin/entitlements/automations', icon: Zap },
     ],
   },
   {
     label: 'Learn',
     items: [
-      { label: 'Playbook', href: '/dev/admin/entitlements/playbook', icon: BookOpen },
+      { label: 'Playbook', href: '/admin/entitlements/playbook', icon: BookOpen },
     ],
   },
 ];
