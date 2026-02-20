@@ -166,10 +166,9 @@ function MapPageInner() {
   );
 
   const { isMetricGated, getAccess, loading: entitlementsLoading } = useEntitlements();
-  // Don't show Pro badge while entitlements are loading (default access is 'none')
-  const isBreakdownGated = !entitlementsLoading && getAccess('feature', 'score_breakdown').level === 'none';
 
   // Map score response to sidebar format with all three scores
+  // Gating info flows from entitlements through props — no hardcoded tier checks
   const sidebarScoreData = useMemo(() => {
     if (scoresLoading) {
       return { isLoading: true };
@@ -177,26 +176,32 @@ function MapPageInner() {
 
     if (!scoreResponse) return undefined;
 
-    // Helper to extract score info from response
-    const extractScoreInfo = (scoreObj: any) => {
+    const isBreakdownGated = !entitlementsLoading && getAccess('feature', 'score_breakdown').level === 'none';
+
+    // Helper to extract score info from response, with entitlements-driven gating
+    const extractScoreInfo = (scoreObj: any, metricId: string) => {
       if (!scoreObj || typeof scoreObj !== 'object' || !('score' in scoreObj)) {
         return undefined;
       }
+      const scoreMetricAccess = getAccess('metric', metricId);
+      const gated = !entitlementsLoading && scoreMetricAccess.level === 'none';
       return {
-        score: scoreObj.score ?? undefined,
-        trend: scoreObj.trendChange ?? undefined, // 3-month change
+        score: gated ? undefined : (scoreObj.score ?? undefined),
+        trend: gated ? undefined : (scoreObj.trendChange ?? undefined),
         access: (isBreakdownGated ? 'teaser' : 'full') as 'full' | 'teaser',
+        gated,
+        tierRequired: gated ? scoreMetricAccess.tierRequired : undefined,
       };
     };
 
     return {
-      marketHealth: extractScoreInfo(scoreResponse.marketHealth),
-      homeready: extractScoreInfo(scoreResponse.homeready),
-      investoredge: extractScoreInfo(scoreResponse.investoredge),
+      marketHealth: extractScoreInfo(scoreResponse.marketHealth, 'market_health_score'),
+      homeready: extractScoreInfo(scoreResponse.homeready, 'homeready_score'),
+      investoredge: extractScoreInfo(scoreResponse.investoredge, 'investoredge_score'),
       marketCondition: 'balanced' as const, // TODO: Calculate from market data
       isLoading: false,
     };
-  }, [scoreResponse, scoresLoading, isBreakdownGated]);
+  }, [scoreResponse, scoresLoading, entitlementsLoading, getAccess]);
 
   // Fallback to home_value if selected metric becomes gated (e.g., subscription expired)
   useEffect(() => {
@@ -339,7 +344,7 @@ function MapPageInner() {
     handleSelectSearchResult({
       id,
       name,
-      type: geo,
+      type: geo as SearchResult['type'],
       center: lat && lng ? [parseFloat(lng), parseFloat(lat)] : undefined,
       state: state || undefined,
     });

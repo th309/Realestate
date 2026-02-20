@@ -8,8 +8,14 @@
 import { useQuery } from '@tanstack/react-query';
 import type { GeoLevel, ScoreResponse, SingleScoreResult, ScoreType } from '../types';
 import { fetchScore, fetchScoreExpanded } from '../fetchers';
-import { useEntitlements } from '@/lib/entitlements';
-import type { UserTier } from '@/lib/entitlements';
+import { useEntitlements, type UserTier } from '@/lib/entitlements';
+
+/** Metric IDs for each score type — used for entitlements lookups */
+const SCORE_METRIC_IDS: Record<string, string> = {
+  homeready: 'homeready_score',
+  investoredge: 'investoredge_score',
+  markethealth: 'market_health_score',
+};
 
 export interface UseScoreDataOptions {
   /** Skip the query */
@@ -18,6 +24,13 @@ export interface UseScoreDataOptions {
   expanded?: boolean;
   /** Request history data (0-6 months) */
   historyMonths?: number;
+}
+
+export interface ScoreGatingInfo {
+  /** Whether this score metric is gated */
+  gated: boolean;
+  /** Tier required to unlock this score */
+  tierRequired?: UserTier;
 }
 
 export interface UseScoreDataResult {
@@ -33,10 +46,10 @@ export interface UseScoreDataResult {
   error: Error | null;
   /** Refetch function */
   refetch: () => void;
-  /** Whether scores are gated by entitlements */
-  gated: boolean;
-  /** Tier required to unlock */
-  tierRequired?: UserTier;
+  /** Whether the score_breakdown feature is gated */
+  isBreakdownGated: boolean;
+  /** Per-score gating info driven by entitlements */
+  gating: Record<ScoreType, ScoreGatingInfo>;
 }
 
 /**
@@ -58,9 +71,7 @@ export function useScoreData(
   options: UseScoreDataOptions = {}
 ): UseScoreDataResult {
   const { enabled = true, expanded = false, historyMonths = 0 } = options;
-  const { getAccess } = useEntitlements();
-  const scoresAccess = getAccess('feature', 'scores');
-  const isGated = scoresAccess.level === 'none';
+  const { getAccess, loading: entitlementsLoading } = useEntitlements();
 
   const queryKey = ['scores', geoLevel, regionId, expanded, historyMonths].filter(
     (v) => v !== null && v !== undefined
@@ -82,25 +93,22 @@ export function useScoreData(
       }
       return fetchScore(geoLevel, regionId);
     },
-    // Disable query when gated or when caller disables it
-    enabled: enabled && !isGated && !!geoLevel && !!regionId,
+    enabled: enabled && !!geoLevel && !!regionId,
     staleTime: 5 * 60 * 1000, // 5 minutes - scores can change more frequently
     gcTime: 30 * 60 * 1000,
   });
 
-  if (isGated) {
+  // Build per-score gating info from entitlements
+  const buildGating = (scoreType: ScoreType): ScoreGatingInfo => {
+    if (entitlementsLoading) return { gated: false };
+    const access = getAccess('metric', SCORE_METRIC_IDS[scoreType] || scoreType);
     return {
-      data: null,
-      homeready: null,
-      investoredge: null,
-      markethealth: null,
-      isLoading: false,
-      error: null,
-      refetch: () => {},
-      gated: true,
-      tierRequired: scoresAccess.tierRequired ?? undefined,
+      gated: access.level === 'none',
+      tierRequired: access.tierRequired as UserTier | undefined,
     };
-  }
+  };
+
+  const isBreakdownGated = !entitlementsLoading && getAccess('feature', 'score_breakdown').level === 'none';
 
   return {
     data: data ?? null,
@@ -110,7 +118,12 @@ export function useScoreData(
     isLoading,
     error: error as Error | null,
     refetch,
-    gated: false,
+    isBreakdownGated,
+    gating: {
+      homeready: buildGating('homeready'),
+      investoredge: buildGating('investoredge'),
+      markethealth: buildGating('markethealth'),
+    },
   };
 }
 

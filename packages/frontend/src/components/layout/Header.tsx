@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useEntitlements } from '@/lib/entitlements';
 import {
     MenuIcon, CloseIcon, PersonIcon, SettingsIcon, CreditCardIcon,
     BookIcon, HierarchyIcon, HelpIcon, LogoutIcon, HomeIcon,
@@ -25,6 +26,7 @@ export function Header() {
     const pathname = usePathname();
     const router = useRouter();
     const { user, loading, signOut } = useAuth();
+    const { tier } = useEntitlements();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -103,8 +105,10 @@ export function Header() {
                                         <DropdownItem icon={HomeIcon} label="Home" href="/" />
                                         <DropdownItem icon={SettingsIcon} label="Settings" href="/account" />
                                         <DropdownItem icon={CreditCardIcon} label="Billing" href="/account?tab=subscription" />
-                                        <DropdownItem icon={BookIcon} label="Data Glossary" href="/glossary" />
-                                        <DropdownItem icon={HierarchyIcon} label="Manage Seats" href="/team" />
+                                        <DropdownItem icon={BookIcon} label="Data Glossary" href="/data" />
+                                        {tier === 'enterprise' && (
+                                            <DropdownItem icon={HierarchyIcon} label="Manage Seats" href="/team" />
+                                        )}
                                         <DropdownItem icon={HelpIcon} label="Help" href="/help" />
                                         <div className="my-1 h-px bg-outline-variant" />
                                         <button

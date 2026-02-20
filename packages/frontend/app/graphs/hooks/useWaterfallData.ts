@@ -397,10 +397,10 @@ export function useWaterfallData(
       const error = scoreData.error;
 
       if (loading || error) {
-        return { ...empty, isLoading: loading, error, proGated: scoreData.gated };
+        return { ...empty, isLoading: loading, error, proGated: scoreData.gating[scoreType].gated };
       }
 
-      if (scoreData.gated) {
+      if (scoreData.gating[scoreType].gated) {
         return { ...empty, proGated: true };
       }
 
@@ -542,7 +542,7 @@ export function useWaterfallData(
     // Score
     scoreData.isLoading,
     scoreData.error,
-    scoreData.gated,
+    scoreData.gating,
     scoreData.data,
     scoreData.homeready,
     scoreData.investoredge,

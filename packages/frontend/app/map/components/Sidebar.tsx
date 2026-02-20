@@ -9,6 +9,8 @@ interface ScoreInfo {
   score?: number;
   trend?: number; // Change from 3 months ago
   access: 'full' | 'teaser';
+  gated?: boolean;
+  tierRequired?: string;
 }
 
 interface ScoreData {

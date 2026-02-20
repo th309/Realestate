@@ -44,6 +44,7 @@ export {
   useSingleScore,
   type UseScoreDataOptions,
   type UseScoreDataResult,
+  type ScoreGatingInfo,
 } from './useScoreData';
 
 // Market snapshot (batch - replaces useDataCardBatch for Markets page)

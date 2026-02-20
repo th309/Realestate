@@ -22,6 +22,10 @@ interface ScoreInfo {
   score?: number;
   trend?: number; // Change from 3 months ago (e.g., +2.5 or -1.3)
   access: 'full' | 'teaser';
+  /** Whether this score metric is gated by entitlements */
+  gated?: boolean;
+  /** Tier required to unlock (e.g. 'pro', 'enterprise') */
+  tierRequired?: string;
 }
 
 interface SidebarScoreCardProps {
@@ -111,9 +115,9 @@ export function SidebarScoreCard({
             <InsightsIcon />
           </span>
           <span data-testid={`score-label-${activeScoreKey}`} className="text-sm font-semibold">{config.label}</span>
-          {isBreakdownLocked && (
-            <span data-testid={`score-pro-badge-${activeScoreKey}`} className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded" title="Upgrade to Pro for full breakdown">
-              Pro
+          {currentScore?.gated && currentScore.tierRequired && (
+            <span data-testid={`score-pro-badge-${activeScoreKey}`} className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded">
+              {currentScore.tierRequired}
             </span>
           )}
         </div>
