@@ -228,6 +228,10 @@ export {
   fetchEmailPreferences,
   updateEmailPreferences,
   type EmailPreferences,
+
+  // Support
+  submitSupportTicket,
+  type SupportTicket,
 } from './fetchers';
 
 // ============================================================================

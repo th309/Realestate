@@ -142,3 +142,6 @@ export {
   updateEmailPreferences,
   type EmailPreferences,
 } from './email-preferences';
+
+// Support
+export { submitSupportTicket, type SupportTicket } from './support';
