@@ -17,7 +17,10 @@ const BLS_MAX_YEAR_SPAN = 20;
 
 function getBlsApiKey(): string | null {
   const key = process.env.BLS_API_KEY;
-  if (!key || key.includes('your_') || key.length <= 10) return null;
+  if (!key) {
+    console.warn('  WARNING: BLS_API_KEY not set — using unauthenticated API (lower rate limits)');
+    return null;
+  }
   return key;
 }
 

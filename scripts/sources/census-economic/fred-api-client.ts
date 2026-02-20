@@ -50,7 +50,9 @@ async function fetchFredSeries(
   try {
     const response = await axios.get(`${FRED_BASE_URL}/series/observations`, { params, timeout: 30000 });
     return response.data?.observations || [];
-  } catch {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`  FRED series ${seriesId} fetch error: ${message}`);
     return [];
   }
 }
@@ -151,12 +153,13 @@ export async function fetchFredNationalEmployment(startYear: number): Promise<Re
   const observations = await fetchFredSeries('PAYEMS', `${startYear}-01-01`);
   return observations
     .filter(obs => obs.value !== '.')
-    .map(obs => ({
-      period_date: obs.date,
-      total_nonfarm_employment: parseNumeric(obs.value) !== null
-        ? parseNumeric(obs.value)! * 1000
-        : null,
-    }));
+    .map(obs => {
+      const rawEmployment = parseNumeric(obs.value);
+      return {
+        period_date: obs.date,
+        total_nonfarm_employment: rawEmployment !== null ? rawEmployment * 1000 : null,
+      };
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -196,14 +199,13 @@ export async function fetchFredStateEmployment(startYear: number): Promise<Recor
     const observations = await fetchFredSeries(seriesId, startDate);
     for (const obs of observations) {
       if (obs.value !== '.') {
+        const rawEmployment = parseNumeric(obs.value);
         allRecords.push({
           period_date: obs.date,
           state_fips: fips,
           state_name: STATE_FIPS_TO_NAME[fips] || '',
           state_abbrev: STATE_FIPS_TO_ABBREV[fips] || '',
-          total_nonfarm_employment: parseNumeric(obs.value) !== null
-            ? parseNumeric(obs.value)! * 1000
-            : null,
+          total_nonfarm_employment: rawEmployment !== null ? rawEmployment * 1000 : null,
         });
       }
     }
@@ -248,12 +250,11 @@ export async function fetchFredMetroEmployment(startYear: number): Promise<Recor
     const observations = await fetchFredSeries(seriesId, startDate);
     for (const obs of observations) {
       if (obs.value !== '.') {
+        const rawEmployment = parseNumeric(obs.value);
         allRecords.push({
           period_date: obs.date,
           cbsa_code: cbsa,
-          total_nonfarm_employment: parseNumeric(obs.value) !== null
-            ? parseNumeric(obs.value)! * 1000
-            : null,
+          total_nonfarm_employment: rawEmployment !== null ? rawEmployment * 1000 : null,
         });
       }
     }

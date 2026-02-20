@@ -181,8 +181,10 @@ export async function fetchBeaCountyGdp(): Promise<Record<string, unknown>[]> {
 }
 
 /**
- * Returns the list of unique county FIPS codes present in the GDP results.
- * Used by the BLS client to know which counties to fetch unemployment for.
+ * @deprecated Derive county FIPS from fetchBeaCountyGdp() results instead
+ * to avoid a redundant API call. Example:
+ *   const countyGdp = await fetchBeaCountyGdp();
+ *   const fipsList = [...new Set(countyGdp.map(r => String(r.fips_code)).filter(Boolean))];
  */
 export async function fetchBeaCountyFipsList(): Promise<string[]> {
   const result = await fetchBeaRegional('CAGDP1', '1', 'COUNTY');

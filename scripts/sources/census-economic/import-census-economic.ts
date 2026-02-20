@@ -31,7 +31,7 @@ import {
 import {
   fetchBeaStateGdp, fetchBeaStateRealGdp, fetchBeaStateRpp,
   fetchBeaMetroGdp, fetchBeaMetroRpp,
-  fetchBeaCountyGdp, fetchBeaCountyFipsList,
+  fetchBeaCountyGdp,
 } from './bea-api-client';
 import {
   fetchFredNationalUnemployment, fetchFredNationalEmployment,
@@ -133,6 +133,7 @@ async function importAllEconomicData(): Promise<{ inserted: number; failed: numb
   totalFailed += natResult.failed;
 
   // State: FRED unemployment + employment + BEA GDP + real GDP + RPP
+  // Source is 'census' (the Census/Economic umbrella) because data merges FRED + BEA
   const stateAll = [
     ...await fetchFredStateUnemployment(fredStartYear),
     ...await fetchFredStateEmployment(fredStartYear),
@@ -141,7 +142,7 @@ async function importAllEconomicData(): Promise<{ inserted: number; failed: numb
     ...await fetchBeaStateRpp(),
   ];
   const stateResult = await upsertWithLogging({
-    source: 'fred', tableName: ECONOMIC_TABLES.state.tableName,
+    source: 'census', tableName: ECONOMIC_TABLES.state.tableName,
     conflictKeys: ECONOMIC_TABLES.state.conflictKeys,
     datasetId: 'economic-state', records: mergeByKey(stateAll, 'period_date', 'state_fips'),
   });
@@ -149,6 +150,7 @@ async function importAllEconomicData(): Promise<{ inserted: number; failed: numb
   totalFailed += stateResult.failed;
 
   // Metro: FRED unemployment + employment + BEA GDP + RPP
+  // Source is 'census' (the Census/Economic umbrella) because data merges FRED + BEA
   const metroAll = [
     ...await fetchFredMetroUnemployment(fredStartYear),
     ...await fetchFredMetroEmployment(fredStartYear),
@@ -156,7 +158,7 @@ async function importAllEconomicData(): Promise<{ inserted: number; failed: numb
     ...await fetchBeaMetroRpp(),
   ];
   const metroResult = await upsertWithLogging({
-    source: 'fred', tableName: ECONOMIC_TABLES.metro.tableName,
+    source: 'census', tableName: ECONOMIC_TABLES.metro.tableName,
     conflictKeys: ECONOMIC_TABLES.metro.conflictKeys,
     datasetId: 'economic-metro', records: mergeByKey(metroAll, 'period_date', 'cbsa_code'),
   });
@@ -164,12 +166,13 @@ async function importAllEconomicData(): Promise<{ inserted: number; failed: numb
   totalFailed += metroResult.failed;
 
   // County: BEA GDP + BLS unemployment
+  // Source is 'census' (the Census/Economic umbrella) because data merges BEA + BLS
   const countyGdp = await fetchBeaCountyGdp();
-  const countyFipsList = await fetchBeaCountyFipsList();
+  const countyFipsList = [...new Set(countyGdp.map(r => String(r.fips_code)).filter(Boolean))];
   console.log(`  Found ${countyFipsList.length} counties from BEA GDP for BLS fetch`);
   const countyUnemployment = await fetchBlsCountyUnemployment(countyFipsList, fredStartYear);
   const countyResult = await upsertWithLogging({
-    source: 'fred', tableName: ECONOMIC_TABLES.county.tableName,
+    source: 'census', tableName: ECONOMIC_TABLES.county.tableName,
     conflictKeys: ECONOMIC_TABLES.county.conflictKeys,
     datasetId: 'economic-county',
     records: mergeByKey([...countyGdp, ...countyUnemployment], 'period_date', 'fips_code'),
