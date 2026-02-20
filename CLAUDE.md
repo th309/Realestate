@@ -419,66 +419,44 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 
 ---
 
-## 7. SCORE DISPLAY (Standardized Components)
+## 7. SCORE & CONFIDENCE DISPLAY (Standardized Components)
 
 **CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized score components. Do NOT create custom score visualizations.
 
-**Two Components Available:**
+**All components:** `app/components/scoring/`
 
 | Component | Use Case | Data Source |
 |-----------|----------|-------------|
-| `ScoreWidget` | **Preferred** - Auto-fetches data | Uses `useScoreData` internally |
-| `ScoreDisplay` | When you already have the score value | Passed as prop |
+| `ScoreWidget` | **Preferred** - Auto-fetches score + confidence | Uses `useScoreData` internally |
+| `ScoreDisplay` | Presentation-only score ring | Score value passed as prop |
+| `ScoreBadge` | Compact score with trend arrow | Score + trend passed as props |
+| `ScoreCard` | Expanded view with breakdown, history, validation | Full score data as props |
+| `ConfidenceDisplay` | Confidence star rating + percentage | Confidence data as props |
+| `ScoreHistoryChart` | 3Y/5Y score trend with returns overlay | Fetches from API |
+| `ComponentBar` | Score component breakdown bar | Component data as props |
 
-### ScoreWidget (Connected Component)
-**Component:** `app/components/scoring/ScoreWidget.tsx`
+### Two Concepts: Score (Number) and Confidence (Letter)
 
-Fetches score and confidence from the data binding layer automatically:
-```typescript
-import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
+The system has two distinct measurements:
 
-<ScoreWidget
-  geographyType="metro"
-  geographyId="31080"
-  scoreType="homeready"
-  showConfidence  // Optional: shows confidence badge
-/>
-```
+1. **Score (0-100 number):** How good a market is for a given strategy. Displayed as a number inside a color-gradient ring, with a letter grade (A+ to F) and a descriptor label (EXCELLENT to VERY POOR).
 
-**ScoreWidget Props:**
+2. **Confidence (A/B/C/F letter grade):** How much we trust the score, based on data quality. Displayed as a star rating (1-5 stars) with percentage and color-coded badge.
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `geographyType` | GeographyType | required | state, metro, county, etc. |
-| `geographyId` | string | required | FIPS code, CBSA code, etc. |
-| `scoreType` | ScoreType | required | homeready, investoredge, market_health |
-| `showConfidence` | boolean | false | Show confidence badge (HIGH/MED/LOW) |
-| `size` | number | 100 | Component size in pixels |
-| `showGrade` | boolean | true | Show letter grade badge |
-| `showLabel` | boolean | true | Show descriptor label |
+These are independent — a market can have a high score with low confidence (good on paper but insufficient data) or a low score with high confidence (reliably bad).
 
-### ScoreDisplay (Presentation Component)
-**Component:** `app/components/scoring/ScoreDisplay.tsx`
+### Score Display
 
-Use when you already have score data (e.g., from a parent component):
-```typescript
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-
-<ScoreDisplay value={85} size={100} />
-```
+**Component:** `ScoreDisplay` (`app/components/scoring/ScoreDisplay.tsx`)
 
 **Visual Spec:**
-* **Ring:** SVG circular progress with HSL gradient (red→green based on 0-100 score)
+* **Ring:** SVG circular progress with HSL gradient (red at 0 → green at 100)
+* **Tick marks:** At 33% and 66% positions (market threshold indicators)
 * **Score Number:** Bold, centered in ring
-* **Letter Grade Badge:** A+ to F with color-coded background:
-  - A grades: `bg-green-500`
-  - B grades: `bg-emerald-500`
-  - C grades: `bg-yellow-500`
-  - D grades: `bg-orange-500`
-  - F grade: `bg-red-500`
-* **Label:** Uppercase descriptor (EXCELLENT, GREAT, GOOD, FAIR, AVERAGE, BELOW AVG, POOR, VERY POOR)
+* **Letter Grade Badge:** A+ to F with color-coded background
+* **Label:** Uppercase descriptor
 
-**Grade Thresholds:**
+**Score → Grade Thresholds:**
 
 | Score | Grade |
 |-------|-------|
@@ -496,7 +474,7 @@ import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 | 60-62 | D- |
 | <60 | F |
 
-**Label Thresholds:**
+**Score → Label Thresholds:**
 
 | Score | Label |
 |-------|-------|
@@ -509,8 +487,118 @@ import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 | 20-39 | POOR |
 | <20 | VERY POOR |
 
-**Exported Utilities:** The component exports helper functions for use in other contexts:
+**Grade Badge Colors:**
+* A grades: `bg-green-500`
+* B grades: `bg-emerald-500`
+* C grades: `bg-yellow-500`
+* D grades: `bg-orange-500`
+* F grade: `bg-red-500`
+
+**Exported Utilities:**
 - `getScoreColor(value)` - Returns HSL color string
 - `getLetterGrade(score)` - Returns letter grade string
 - `getGradeColor(grade)` - Returns `{ bg, text }` Tailwind classes
 - `getScoreLabel(score)` - Returns descriptor string
+- `MARKET_THRESHOLDS` - `{ sellersMax: 33, balancedMax: 66 }` for tick marks
+
+### Confidence Display
+
+**Component:** `ConfidenceDisplay` (`app/components/scoring/ConfidenceDisplay.tsx`)
+
+Confidence uses a **letter grade system (A/B/C/F)** — NOT "HIGH/MED/LOW".
+
+**Confidence Level Thresholds:**
+
+| Level | Range | Color | Meaning |
+|-------|-------|-------|---------|
+| A | 80-100% | Emerald (green) | Excellent data coverage and freshness |
+| B | 65-79% | Amber | Good data, minor gaps |
+| C | 45-64% | Rose | Fair data, notable gaps — shows warning |
+| F | 0-44% | Red | Insufficient data — shows warning |
+
+**Star Rating (visual indicator):**
+
+| Percentage | Stars |
+|------------|-------|
+| 90%+ | 5 stars |
+| 80-89% | 4 stars |
+| 70-79% | 3 stars |
+| 55-69% | 2 stars |
+| <55% | 1 star |
+
+**Props:**
+```typescript
+interface ConfidenceDisplayProps {
+  level: 'a' | 'b' | 'c' | 'f';       // Letter grade
+  percentage: number;                   // 0-100
+  metricsAvailable: number;             // How many metrics had data
+  metricsTotal: number;                 // Total metrics needed
+  freshnessInDays: number;              // Age of newest data
+  warning?: string;                     // Shown for C/F levels
+  size?: 'sm' | 'md';
+  showDetails?: boolean;                // Show percentage + warning icon
+}
+```
+
+**Backend Confidence Formula** (calculated in `confidence-calculator.service.ts`):
+```
+Confidence = (R² × 0.5) + (Sample Size Score × 0.3) + (Recency Score × 0.2)
+```
+
+### ScoreWidget (Connected Component)
+
+**Component:** `app/components/scoring/ScoreWidget.tsx`
+
+Auto-fetches score + confidence from the data layer:
+```typescript
+import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
+
+<ScoreWidget
+  geographyType="metro"
+  geographyId="31080"
+  scoreType="homeready"
+  showConfidence  // Shows confidence letter badge (A/B/C/F)
+/>
+```
+
+### ScoreBadge (Compact Display)
+
+**Component:** `app/components/scoring/ScoreBadge.tsx`
+
+Compact score ring with trend arrow, used in dashboards and lists:
+```typescript
+import { ScoreBadge } from '@/app/components/scoring';
+
+<ScoreBadge
+  type="market_health"
+  label="Market Health"
+  score={72}
+  trend="up"
+  trendChange={3.2}
+  access="full"        // 'full' | 'teaser' (gated breakdown)
+  status="complete"    // 'complete' | 'partial' | 'unavailable'
+  size="md"            // 'sm' | 'md' | 'lg'
+/>
+```
+
+### ScoreCard (Expanded View)
+
+**Component:** `app/components/scoring/ScoreCard.tsx`
+
+Full expanded view with component breakdown, sparkline history, confidence, and validation:
+- **Header:** ScoreBadge + label + validation badge + data completeness
+- **History:** Sparkline + "View History" button for extended chart
+- **Confidence:** Inline `ConfidenceDisplay` with star rating
+- **Components:** Breakdown bars (gated to Pro+ via entitlements)
+- **Upgrade CTA:** Shown when `access === 'teaser'`
+
+### ScoreHistoryChart (Extended Trends)
+
+**Component:** `app/components/scoring/ScoreHistoryChart.tsx`
+
+3Y/5Y score trend with actual returns overlay (dual Y-axis):
+- Left axis: Score (0-100)
+- Right axis: Returns (%)
+- Lines: Score, Actual Return, State Benchmark (dashed)
+- Toggle between 3Y and 5Y views
+- Validation badge when 3Y+ of return data exists
