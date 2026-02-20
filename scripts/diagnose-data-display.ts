@@ -6,7 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = 'https://pysflbhpqnwoczyuaaif.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5c2ZsYmhwbnF3b2N6eXVhYWlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTM3MzUsImV4cCI6MjA3ODE4OTczNX0.txaMHdCFyL_X1fi3-_gzcaMENjxGFHASGsBS_RnCLWc';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || (() => { throw new Error('SUPABASE_ANON_KEY is required'); })();
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

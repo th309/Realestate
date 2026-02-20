@@ -103,7 +103,7 @@ async function testSingleZip() {
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   console.log('   Creating Supabase client with URL:', supabaseUrl);
-  console.log('   Using service key:', supabaseKey?.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6') ? 'anon' : 'service');
+  console.log('   Using key type:', supabaseKey?.startsWith('sb_secret_') ? 'service (new format)' : supabaseKey?.startsWith('sb_publishable_') ? 'anon (new format)' : 'legacy JWT');
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 

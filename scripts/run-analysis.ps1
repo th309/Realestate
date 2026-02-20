@@ -1,4 +1,4 @@
 $env:NEXT_PUBLIC_SUPABASE_URL = "https://pysflbhpnqwoczyuaaif.supabase.co"
-$env:SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5c2ZsYmhwbnF3b2N6eXVhYWlmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjYxMzczNSwiZXhwIjoyMDc4MTg5NzM1fQ.8KBZl3TrOXaA4czqaRd65KC_MXr4hI3jTnQdr_l7d3I"
+$env:SUPABASE_SERVICE_KEY = $env:SUPABASE_SERVICE_KEY
 
 npx tsx scripts/run-backtest-analysis.ts $args
