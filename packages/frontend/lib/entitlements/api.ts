@@ -40,7 +40,7 @@ export async function fetchEntitlements(
     // Network error (backend unreachable) — fail open with free tier defaults
     console.warn('[Entitlements] Backend unreachable, defaulting to free tier');
     return {
-      tier: (tierOverride as any) || 'free',
+      tier: 'free',
       access: {},
       trial: null,
       loading: false,
@@ -51,7 +51,7 @@ export async function fetchEntitlements(
   if (!response.ok) {
     console.warn('[Entitlements] API returned', response.status, '- defaulting to free tier');
     return {
-      tier: (tierOverride as any) || 'free',
+      tier: 'free',
       access: {},
       trial: null,
       loading: false,

@@ -124,10 +124,21 @@ export function EntitlementsProvider({
     }
   }, [setSimulatedTier]);
 
-  // Note: ref is kept in sync by setSimulatedTier() which sets both ref and state.
-  // A separate sync effect was removed because it would overwrite the ref
-  // (set by the URL param effect) with the stale state from the previous render,
-  // causing a race where the first entitlements fetch used the wrong tier.
+  // Clear simulated tier when the authenticated user changes.
+  // This prevents stale dev-tools overrides from leaking across sign-in/sign-out cycles
+  // (sessionStorage persists within the same tab even after re-authentication).
+  const prevUserIdRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const currentUserId = user?.id ?? null;
+    // Only clear on actual user transitions (not initial mount)
+    if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== currentUserId) {
+      if (simulatedTierRef.current) {
+        setSimulatedTier(null);
+        setSimulatedAuth(null);
+      }
+    }
+    prevUserIdRef.current = currentUserId ?? undefined;
+  }, [user?.id, setSimulatedTier, setSimulatedAuth]);
 
   // Track user ID in ref to avoid stale closures
   const userIdRef = useRef<string | null>(user?.id ?? null);
