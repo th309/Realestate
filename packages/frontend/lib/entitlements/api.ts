@@ -8,6 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 export async function fetchEntitlements(
   resources: string[],
   tierOverride?: string | null,
+  userId?: string | null,
 ): Promise<EntitlementsState> {
   const params = new URLSearchParams();
   if (resources.length > 0) {
@@ -21,12 +22,17 @@ export async function fetchEntitlements(
 
   const url = `${API_URL}/api/entitlements/check?${params}`;
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (userId) {
+    headers['x-user-id'] = userId;
+  }
+
   let response: Response;
   try {
     response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       credentials: 'include',
       cache: 'no-store',
     });

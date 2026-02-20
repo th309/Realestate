@@ -88,37 +88,13 @@ export interface ScoreWithComponents {
 // Access Control Types
 // ============================================================================
 
+/**
+ * Score access is driven entirely by the entitlements database (tier_features table).
+ * Use the admin tiers page to change which tiers can access scores, breakdowns, and weights.
+ * See scoring.guard.ts ScoreAccessService for the DB-driven access checks.
+ */
 export type ScoreAccess = 'full' | 'teaser';
 export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
-
-/**
- * Score access configuration by tier
- */
-export const SCORE_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
-  markethealth: ['free', 'basic', 'pro', 'enterprise'],
-  homeready: ['free', 'basic', 'pro', 'enterprise'],   // Score visible to all; breakdown gated separately
-  investoredge: ['free', 'basic', 'pro', 'enterprise'], // Score visible to all; breakdown gated separately
-};
-
-/**
- * Controls which tiers can see score component breakdowns.
- * Score number + gauge + grade are visible to all tiers.
- * Breakdowns (contributing factors, component scores) are gated here.
- */
-export const SCORE_BREAKDOWN_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
-  markethealth: ['free', 'basic', 'pro', 'enterprise'], // Breakdown visible to all
-  homeready: ['pro', 'enterprise'],                       // Breakdown Pro+ only
-  investoredge: ['pro', 'enterprise'],                    // Breakdown Pro+ only
-};
-
-/**
- * Controls which tiers can see full component weights.
- */
-export const SCORE_WEIGHTS_ACCESS_CONFIG: Record<import('./formula-weights').ScoreType, UserTier[]> = {
-  markethealth: ['pro', 'enterprise'],
-  homeready: ['enterprise'],
-  investoredge: ['enterprise'],
-};
 
 // ============================================================================
 // Core Types (moved here to avoid circular dependencies)

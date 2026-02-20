@@ -10,6 +10,7 @@ import type {
   FeatureUsage,
 } from './types';
 import { fetchEntitlements, trackPaywallEvent } from './api';
+import { useAuth } from '@/lib/auth';
 import { getAllMetricIds } from '@/lib/data';
 
 const defaultState: EntitlementsState = {
@@ -74,6 +75,7 @@ export function EntitlementsProvider({
   children,
   initialResources,
 }: EntitlementsProviderProps) {
+  const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState<EntitlementsState>(defaultState);
   // Initialize from sessionStorage to persist across navigations
   const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() => getStoredSimulatedTier());
@@ -127,12 +129,17 @@ export function EntitlementsProvider({
   // (set by the URL param effect) with the stale state from the previous render,
   // causing a race where the first entitlements fetch used the wrong tier.
 
+  // Track user ID in ref to avoid stale closures
+  const userIdRef = useRef<string | null>(user?.id ?? null);
+  userIdRef.current = user?.id ?? null;
+
   const refresh = useCallback(async () => {
     // Use ref to get the latest simulated tier (avoids stale closure issues)
     const currentTier = simulatedTierRef.current;
+    const currentUserId = userIdRef.current;
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const data = await fetchEntitlements(resources, currentTier);
+      const data = await fetchEntitlements(resources, currentTier, currentUserId);
       setState(data);
     } catch (error) {
       // Fail open: default to free tier on API failure
@@ -145,10 +152,12 @@ export function EntitlementsProvider({
     }
   }, [resources]); // Remove simulatedTier from deps - we use the ref instead
 
-  // Refresh when simulatedTier changes
+  // Refresh when simulatedTier or user changes, but only after auth resolves
   useEffect(() => {
-    refresh();
-  }, [simulatedTier, refresh]);
+    if (!authLoading) {
+      refresh();
+    }
+  }, [simulatedTier, user?.id, authLoading, refresh]);
 
   const canAccess = useCallback((type: ResourceType, id: string): boolean => {
     const key = `${type}:${id}`;

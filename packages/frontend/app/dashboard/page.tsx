@@ -47,7 +47,7 @@ function AuthenticatedDashboard({ userId }: { userId: string }) {
   const { entries, unreadCount, isLoading: alertsLoading, markRead } = useAlertHistory();
   const { recommendations, isLoading: recsLoading, hasAccess: hasRecsAccess } = useMarketsToWatch();
   const { tier } = useEntitlements();
-  const isPaid = tier === 'pro' || tier === 'enterprise';
+  const isPaid = tier === 'pro' || tier === 'enterprise' || tier === 'admin';
 
   return (
     <div className="mt-8 space-y-10">

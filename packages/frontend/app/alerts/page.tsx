@@ -11,7 +11,7 @@ export default function AlertsPage() {
   const { alerts, isLoading, remove, update } = useAlerts();
   const { entries, unreadCount, isLoading: historyLoading, markRead } = useAlertHistory();
   const { tier } = useEntitlements();
-  const isPaid = tier === 'pro' || tier === 'enterprise';
+  const isPaid = tier === 'pro' || tier === 'enterprise' || tier === 'admin';
 
   return (
     <div className="min-h-screen bg-surface">

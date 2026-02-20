@@ -159,10 +159,26 @@ export default function AccountPage() {
         </div>
 
         {/* Tab content */}
-        {user && activeTab === 'profile' && <ProfileTab user={user} />}
-        {user && activeTab === 'subscription' && <SubscriptionTab user={user} />}
-        {user && activeTab === 'activity' && <ActivityTab user={user} />}
-        {user && activeTab === 'support' && <SupportTab user={user} />}
+        {(() => {
+          // In dev, create a mock user if no real session exists (for visual testing)
+          const effectiveUser = user ?? (process.env.NODE_ENV !== 'production' ? {
+            id: 'dev-mock-user',
+            email: 'dev@propertyiq.com',
+            created_at: '2025-06-01T00:00:00Z',
+            user_metadata: { display_name: 'Dev User' },
+            app_metadata: {},
+            aud: 'authenticated',
+          } as any : null);
+          if (!effectiveUser) return null;
+          return (
+            <>
+              {activeTab === 'profile' && <ProfileTab user={effectiveUser} />}
+              {activeTab === 'subscription' && <SubscriptionTab user={effectiveUser} />}
+              {activeTab === 'activity' && <ActivityTab user={effectiveUser} />}
+              {activeTab === 'support' && <SupportTab user={effectiveUser} />}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

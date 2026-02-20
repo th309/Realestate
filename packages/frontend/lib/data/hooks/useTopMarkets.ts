@@ -13,6 +13,7 @@ import {
   type TopMarketsScoreType,
   type TopMarketEntry,
 } from '../fetchers/scores';
+import { useEntitlements } from '@/lib/entitlements';
 
 export interface UseTopMarketsOptions {
   geography: TopMarketsGeo;
@@ -29,11 +30,13 @@ export interface UseTopMarketsResult {
 
 export function useTopMarkets(options: UseTopMarketsOptions): UseTopMarketsResult {
   const { geography, scoreType, limit = 10, enabled = true } = options;
+  const { getAccess } = useEntitlements();
+  const scoresGated = getAccess('feature', 'scores').level === 'none';
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['top-markets', geography, scoreType, limit],
     queryFn: () => fetchTopMarkets(geography, scoreType, limit),
-    enabled,
+    enabled: enabled && !scoresGated,
     staleTime: 1000 * 60 * 30, // 30 minutes
     gcTime: 1000 * 60 * 60,    // 1 hour
   });

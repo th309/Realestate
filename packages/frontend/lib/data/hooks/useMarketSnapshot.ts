@@ -14,6 +14,7 @@ import { fetchBatchTrendsServer, type BatchTrendEntry } from '../fetchers/trend'
 import { getMetricConfig, isMetricSupportedForGeo } from '../registry-helpers';
 import { formatMetricValue } from '../format';
 import type { GeoLevel, MetricFormat } from '../types';
+import { useEntitlements } from '@/lib/entitlements';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
 
@@ -79,7 +80,8 @@ export function useMarketSnapshot(
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
-  // Build cards from snapshot + trend data
+  // Build cards from snapshot + trend data, filtering out gated metrics
+  const { isMetricGated } = useEntitlements();
   const cards: Record<string, MarketSnapshotCard> = {};
 
   if (snapshotQuery.data) {
@@ -87,6 +89,9 @@ export function useMarketSnapshot(
     const trends = trendQuery.data ?? {};
 
     for (const [metricId, metric] of Object.entries(metrics)) {
+      // Skip metrics the user doesn't have access to
+      if (isMetricGated(metricId)) continue;
+
       const config = getMetricConfig(metricId);
       const format: MetricFormat = config?.format ?? 'number';
 

@@ -21,6 +21,7 @@ import { ScoringService } from './scoring.service';
 import { ScoringController } from './scoring.controller';
 import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
+import { FeaturesModule } from '../admin/features/features.module';
 
 // Import backtest services (for performance tracking)
 import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
@@ -50,7 +51,7 @@ import { InheritanceService } from './inheritance.service';
 import { PerformanceTrackingService } from './performance-tracking.service';
 
 @Module({
-  imports: [SupabaseModule, ConfigModule],
+  imports: [SupabaseModule, ConfigModule, FeaturesModule],
   providers: [
     // Core scoring service (simplified z-score formula system)
     ScoringService,

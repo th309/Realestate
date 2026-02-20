@@ -50,8 +50,15 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected routes — redirect unauthenticated users to sign-in
+  // Allow bypass in dev mode with ?bypass_auth=true param or cookie for visual testing
+  const bypassParam = request.nextUrl.searchParams.has('bypass_auth');
+  const bypassCookie = request.cookies.get('bypass_auth')?.value === 'true';
+  const bypassAuth = process.env.NODE_ENV !== 'production' && (bypassParam || bypassCookie);
+  if (bypassParam && !bypassCookie) {
+    supabaseResponse.cookies.set('bypass_auth', 'true', { path: '/', maxAge: 3600 });
+  }
   const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  if (isProtected && !user) {
+  if (isProtected && !user && !bypassAuth) {
     const signInUrl = new URL('/auth/sign-in', request.url);
     signInUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(signInUrl);

@@ -9,6 +9,7 @@ import { useQuery, useQueries } from '@tanstack/react-query';
 import type { GeoLevel, TrendResult, TrendDirection } from '../types';
 import { fetchTrendData, fetchTrendDataBatch } from '../fetchers';
 import { useMetricAccess } from './useMetricAccess';
+import { useEntitlements } from '@/lib/entitlements';
 import type { UserTier } from '@/lib/entitlements';
 
 export interface UseTrendDataOptions {
@@ -143,12 +144,13 @@ export function useTrendDataBatch(
   hasError: boolean;
 } {
   const { months = 12, enabled = true } = options;
+  const { isMetricGated } = useEntitlements();
 
   const queries = useQueries({
     queries: metricIds.map((metricId) => ({
       queryKey: ['trend', metricId, geoLevel, regionId, months],
       queryFn: () => fetchTrendData(metricId, geoLevel, regionId, months),
-      enabled: enabled && !!geoLevel && !!regionId,
+      enabled: enabled && !!geoLevel && !!regionId && !isMetricGated(metricId),
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 30 * 60 * 1000, // 30 minutes
     })),

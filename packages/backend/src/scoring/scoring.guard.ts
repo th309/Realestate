@@ -1,15 +1,15 @@
 /**
  * Scoring Access Control Guard
  *
- * Controls access to PropertyIQ scores based on user subscription tier:
- * - All scores (markethealth, homeready, investoredge) are visible to ALL tiers.
- * - Score component breakdowns are gated:
- *   - MarketHealth breakdown: All tiers
- *   - HomeReady breakdown: Pro+ only
- *   - InvestorEdge breakdown: Pro+ only
+ * Controls access to PropertyIQ scores based on user subscription tier.
+ * All access decisions are driven by the entitlements database (tier_features table).
+ * No hardcoded tier arrays — use the admin tiers page to change access.
  *
- * Users without the required tier see the score number/grade/confidence but
- * not the component breakdown, with an upgrade call-to-action.
+ * DB features checked:
+ * - feature_scores: Can the user see scores at all?
+ * - feature_score_breakdown: Can the user see component breakdowns?
+ * - feature_score_weights: Can the user see component weights?
+ * - feature_score_history: Can the user see score history?
  */
 
 import {
@@ -17,16 +17,14 @@ import {
   CanActivate,
   ExecutionContext,
   SetMetadata,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import {
-  ScoreType,
-  ScoreAccess,
-  UserTier,
-  SCORE_ACCESS_CONFIG,
-  SCORE_BREAKDOWN_ACCESS_CONFIG,
-  SCORE_WEIGHTS_ACCESS_CONFIG,
-} from './scoring.types';
+import type { ScoreType } from './scoring.types';
+import { UserFeaturesService } from '../admin/features/user-features.service';
+
+export type ScoreAccess = 'full' | 'teaser';
+export type UserTier = 'free' | 'basic' | 'pro' | 'enterprise';
 
 // Decorator key for score access metadata
 export const SCORE_ACCESS_KEY = 'scoreAccess';
@@ -34,68 +32,6 @@ export const SCORE_ACCESS_KEY = 'scoreAccess';
 // Decorator to specify required score access
 export const RequireScoreAccess = (...scoreTypes: ScoreType[]) =>
   SetMetadata(SCORE_ACCESS_KEY, scoreTypes);
-
-/**
- * Determine what level of access a user has for a specific score type
- */
-export function getScoreAccess(scoreType: ScoreType, userTier: UserTier): ScoreAccess {
-  const allowedTiers = SCORE_ACCESS_CONFIG[scoreType];
-  return allowedTiers.includes(userTier) ? 'full' : 'teaser';
-}
-
-/**
- * Check if a user can access the full score details
- */
-export function canAccessFullScore(
-  scoreType: ScoreType,
-  userTier: UserTier,
-): boolean {
-  return getScoreAccess(scoreType, userTier) === 'full';
-}
-
-/**
- * Check if a user can access score component breakdown
- */
-export function canAccessScoreBreakdown(scoreType: ScoreType, userTier: UserTier): boolean {
-  const allowedTiers = SCORE_BREAKDOWN_ACCESS_CONFIG[scoreType];
-  return allowedTiers.includes(userTier);
-}
-
-/**
- * Check if a user can access score component weights
- */
-export function canAccessScoreWeights(scoreType: ScoreType, userTier: UserTier): boolean {
-  const allowedTiers = SCORE_WEIGHTS_ACCESS_CONFIG[scoreType];
-  return allowedTiers.includes(userTier);
-}
-
-/**
- * Get all scores with their access levels for a user
- */
-export function getScoreAccessLevels(userTier: UserTier): Record<ScoreType, ScoreAccess> {
-  return {
-    markethealth: getScoreAccess('markethealth', userTier),
-    homeready: getScoreAccess('homeready', userTier),
-    investoredge: getScoreAccess('investoredge', userTier),
-  };
-}
-
-/**
- * Get the minimum tier required for full access to a score
- */
-export function getRequiredTier(scoreType: ScoreType): UserTier {
-  return 'free'; // All scores visible to all tiers; breakdown gated separately
-}
-
-/**
- * Check if user should see upgrade CTA for a score
- */
-export function shouldShowUpgradeCta(
-  scoreType: ScoreType,
-  userTier: UserTier,
-): boolean {
-  return !canAccessScoreBreakdown(scoreType, userTier);
-}
 
 /**
  * Get upgrade message for locked scores
@@ -112,36 +48,63 @@ export function getUpgradeMessage(scoreType: ScoreType): string {
 }
 
 /**
- * Service for managing score access control
+ * Service for managing score access control.
+ * All access checks read from the entitlements DB via UserFeaturesService.
  */
 @Injectable()
 export class ScoreAccessService {
+  private readonly logger = new Logger(ScoreAccessService.name);
+
+  constructor(private readonly userFeatures: UserFeaturesService) {}
+
   /**
-   * Get access level for a score type based on user tier
+   * Check if a user's tier can access score component breakdowns.
+   * Reads `feature_score_breakdown` from the DB.
    */
-  getAccess(scoreType: ScoreType, userTier: UserTier): ScoreAccess {
-    return getScoreAccess(scoreType, userTier);
+  async canAccessBreakdown(userTier: UserTier): Promise<boolean> {
+    const resolved = await this.userFeatures.getUserFeatures('', userTier);
+    return resolved.features['feature_score_breakdown'] === true;
   }
 
   /**
-   * Check if user has full access to a score
+   * Check if a user's tier can access score component weights.
+   * Reads `feature_score_weights` from the DB.
    */
-  hasFullAccess(scoreType: ScoreType, userTier: UserTier): boolean {
-    return canAccessFullScore(scoreType, userTier);
+  async canAccessWeights(userTier: UserTier): Promise<boolean> {
+    const resolved = await this.userFeatures.getUserFeatures('', userTier);
+    return resolved.features['feature_score_weights'] === true;
   }
 
   /**
-   * Get access levels for all scores
+   * Check if a user's tier can access score history.
+   * Reads `feature_score_history` from the DB.
    */
-  getAllAccessLevels(userTier: UserTier): Record<ScoreType, ScoreAccess> {
-    return getScoreAccessLevels(userTier);
+  async canAccessHistory(userTier: UserTier): Promise<boolean> {
+    const resolved = await this.userFeatures.getUserFeatures('', userTier);
+    return resolved.features['feature_score_history'] === true;
+  }
+
+  /**
+   * Check if a user's tier can access scores at all.
+   * Reads `feature_scores` from the DB.
+   */
+  async canAccessScores(userTier: UserTier): Promise<boolean> {
+    const resolved = await this.userFeatures.getUserFeatures('', userTier);
+    return resolved.features['feature_scores'] === true;
+  }
+
+  /**
+   * Get access level for scores: 'full' if breakdown is available, 'teaser' otherwise.
+   */
+  async getAccess(userTier: UserTier): Promise<ScoreAccess> {
+    const canBreakdown = await this.canAccessBreakdown(userTier);
+    return canBreakdown ? 'full' : 'teaser';
   }
 
   /**
    * Determine user tier from request headers or user object
    */
   getUserTierFromRequest(request: any): UserTier {
-    // Check for user tier in various locations
     // 1. From authenticated user object
     if (request.user?.tier) {
       return this.validateTier(request.user.tier);
@@ -170,26 +133,6 @@ export class ScoreAccessService {
     const normalizedTier = tier.toLowerCase() as UserTier;
     return validTiers.includes(normalizedTier) ? normalizedTier : 'free';
   }
-
-  /**
-   * Get scores that require upgrade for a user
-   */
-  getLockedScores(userTier: UserTier): ScoreType[] {
-    const accessLevels = this.getAllAccessLevels(userTier);
-    return (Object.entries(accessLevels) as [ScoreType, ScoreAccess][])
-      .filter(([, access]) => access === 'teaser')
-      .map(([type]) => type);
-  }
-
-  /**
-   * Get scores that user has full access to
-   */
-  getUnlockedScores(userTier: UserTier): ScoreType[] {
-    const accessLevels = this.getAllAccessLevels(userTier);
-    return (Object.entries(accessLevels) as [ScoreType, ScoreAccess][])
-      .filter(([, access]) => access === 'full')
-      .map(([type]) => type);
-  }
 }
 
 /**
@@ -204,49 +147,7 @@ export class ScoreAccessGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // Get required score types from decorator
-    const requiredScoreTypes = this.reflector.get<ScoreType[]>(
-      SCORE_ACCESS_KEY,
-      context.getHandler(),
-    );
-
-    // If no specific score types required, allow access
-    if (!requiredScoreTypes || requiredScoreTypes.length === 0) {
-      return true;
-    }
-
-    // Get user tier from request
-    const request = context.switchToHttp().getRequest();
-    const userTier = this.scoreAccessService.getUserTierFromRequest(request);
-
-    // Check if user has full access to any required score type
-    // Note: This guard allows access but the controller should still
-    // return teaser data for users without full access
-    return true; // Always allow - access level is handled in response
+    // Always allow — access level is handled in response (strip breakdown if needed)
+    return true;
   }
-}
-
-/**
- * Decorator to inject score access level into request
- */
-export function InjectScoreAccess() {
-  return (target: any, key: string, descriptor: PropertyDescriptor) => {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = async function (...args: any[]) {
-      const request = args.find(
-        (arg) => arg && typeof arg === 'object' && 'headers' in arg,
-      );
-
-      if (request && this.scoreAccessService) {
-        const userTier = this.scoreAccessService.getUserTierFromRequest(request);
-        request.scoreAccessLevels = getScoreAccessLevels(userTier);
-        request.userTier = userTier;
-      }
-
-      return originalMethod.apply(this, args);
-    };
-
-    return descriptor;
-  };
 }

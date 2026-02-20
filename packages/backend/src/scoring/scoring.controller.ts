@@ -27,7 +27,7 @@ import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ScoringService, ScoreResult } from './scoring.service';
 import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
-import { ScoreAccessService, canAccessScoreBreakdown } from './scoring.guard';
+import { ScoreAccessService } from './scoring.guard';
 import { GeographyLevel, ScoreType } from './formula-weights';
 import { parseHistoryMonths } from '../common/history.constants';
 import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
@@ -97,7 +97,7 @@ export class ScoringController {
       );
     }
 
-    return this.stripBreakdownIfNeeded(score, request);
+    return await this.stripBreakdownIfNeeded(score, request);
   }
 
   /**
@@ -508,7 +508,7 @@ export class ScoringController {
         );
       }
 
-      return this.stripBreakdownIfNeeded(score, request);
+      return await this.stripBreakdownIfNeeded(score, request);
     }
 
     // Otherwise use standard method
@@ -524,7 +524,7 @@ export class ScoringController {
       );
     }
 
-    return this.stripBreakdownIfNeeded(score, request);
+    return await this.stripBreakdownIfNeeded(score, request);
   }
 
   /**
@@ -568,7 +568,7 @@ export class ScoringController {
         try {
           const score = await this.scoringService.getScore(id, geoLevel, date, options);
           if (!score) return { location_id: id, error: 'Score not found' };
-          return this.stripBreakdownIfNeeded(score, request);
+          return await this.stripBreakdownIfNeeded(score, request);
         } catch {
           return { location_id: id, error: 'Failed to retrieve score' };
         }
@@ -688,19 +688,23 @@ export class ScoringController {
    * Strip score component breakdowns from response for users without access.
    * Scores (number, grade, confidence) are always visible — only `components` is gated.
    */
-  private stripBreakdownIfNeeded(result: ScoreResult, request: any): ScoreResult {
+  private async stripBreakdownIfNeeded(result: ScoreResult, request: any): Promise<ScoreResult> {
     const userTier = this.scoreAccessService.getUserTierFromRequest(request);
-    const needsStripping = ['homeready', 'investoredge', 'markethealth'].some(
-      (st) => result.scores?.[st]?.components && !canAccessScoreBreakdown(st as any, userTier),
-    );
+    const canBreakdown = await this.scoreAccessService.canAccessBreakdown(userTier);
 
-    if (!needsStripping) return result;
+    if (canBreakdown) return result;
+
+    // User can't see breakdowns — strip components from all score types
+    const hasComponents = ['homeready', 'investoredge', 'markethealth'].some(
+      (st) => result.scores?.[st]?.components,
+    );
+    if (!hasComponents) return result;
 
     // Shallow-clone to avoid mutating cached service objects
     const stripped: ScoreResult = { ...result, scores: { ...result.scores } };
     for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
       const scoreData = stripped.scores[scoreType];
-      if (scoreData && !canAccessScoreBreakdown(scoreType, userTier)) {
+      if (scoreData?.components) {
         stripped.scores[scoreType] = { ...scoreData };
         delete stripped.scores[scoreType].components;
       }

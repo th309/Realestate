@@ -184,6 +184,10 @@ function UsageMeters({ tier, getUsage, watchlistCount, alertCount }: UsageMeters
   const watchlistLimit = WATCHLIST_LIMITS[tier];
   const alertLimit = ALERT_LIMITS[tier];
 
+  // For admin/enterprise with unlimited access, getUsage may return null (no limit configured).
+  // Treat null as unlimited (-1) for paid tiers, 0 for free.
+  const unlimitedFallback = tier === 'admin' || tier === 'enterprise' ? -1 : 0;
+
   const meters: {
     label: string;
     icon: React.ReactNode;
@@ -194,13 +198,13 @@ function UsageMeters({ tier, getUsage, watchlistCount, alertCount }: UsageMeters
       label: 'Reports This Month',
       icon: <FileText className="w-4 h-4" />,
       count: reportUsage?.usage_count ?? 0,
-      limit: reportUsage?.limit ?? 0,
+      limit: reportUsage?.limit ?? unlimitedFallback,
     },
     {
       label: 'AI Analyses',
       icon: <Sparkles className="w-4 h-4" />,
       count: aiUsage?.usage_count ?? 0,
-      limit: aiUsage?.limit ?? 0,
+      limit: aiUsage?.limit ?? unlimitedFallback,
     },
     {
       label: 'Saved Markets',
@@ -280,7 +284,8 @@ function PlanComparison({ activeTier }: { activeTier: UserTier }) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PLAN_FEATURES.map((plan) => {
           const isCurrent = plan.tier === activeTier;
-          const isUpgrade =
+          // Admin tier is above all plans — never show Upgrade
+          const isUpgrade = activeTier !== 'admin' &&
             ['free', 'pro', 'enterprise'].indexOf(plan.tier) >
             ['free', 'pro', 'enterprise'].indexOf(activeTier);
 
@@ -350,7 +355,7 @@ function ActionsSection({ tier }: { tier: UserTier }) {
     }
   }, []);
 
-  const isPaid = tier === 'pro' || tier === 'enterprise';
+  const isPaid = tier === 'pro' || tier === 'enterprise' || tier === 'admin';
 
   return (
     <section>
