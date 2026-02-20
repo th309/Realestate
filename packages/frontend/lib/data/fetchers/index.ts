@@ -135,3 +135,10 @@ export {
 
 // Pricing (admin features)
 export { fetchPricingSummary, type PricingTier } from './pricing';
+
+// Email preferences
+export {
+  fetchEmailPreferences,
+  updateEmailPreferences,
+  type EmailPreferences,
+} from './email-preferences';

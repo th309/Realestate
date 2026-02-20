@@ -223,6 +223,11 @@ export {
   // Recommendations
   fetchMarketsToWatch,
   type MarketRecommendation,
+
+  // Email preferences
+  fetchEmailPreferences,
+  updateEmailPreferences,
+  type EmailPreferences,
 } from './fetchers';
 
 // ============================================================================
