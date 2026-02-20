@@ -3,7 +3,6 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  Crown,
   FileText,
   Sparkles,
   MapPin,
@@ -11,6 +10,11 @@ import {
   Check,
   ExternalLink,
   Loader2,
+  Home,
+  Warehouse,
+  Building2,
+  Shield,
+  ArrowUpRight,
 } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
 import type { UserTier } from '@/lib/entitlements';
@@ -130,6 +134,20 @@ export function SubscriptionTab({ user }: SubscriptionTabProps) {
 
 // --- Current Plan Card --------------------------------------------------------
 
+const TIER_ICONS: Record<UserTier, React.ReactNode> = {
+  free: <Home className="w-5 h-5 text-on-surface-variant" />,
+  pro: <Warehouse className="w-5 h-5 text-primary" />,
+  enterprise: <Building2 className="w-5 h-5 text-tertiary" />,
+  admin: <Shield className="w-5 h-5 text-error" />,
+};
+
+const TIER_ICON_BG: Record<UserTier, string> = {
+  free: 'bg-on-surface/10',
+  pro: 'bg-primary/10',
+  enterprise: 'bg-tertiary/10',
+  admin: 'bg-error/10',
+};
+
 function CurrentPlanCard({
   tier,
   trial,
@@ -144,8 +162,8 @@ function CurrentPlanCard({
       <h3 className="text-sm font-semibold text-on-surface mb-4">Current Plan</h3>
       <div className="bg-surface-container rounded-xl border border-outline-variant p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Crown className="w-5 h-5 text-primary" />
+          <div className={`w-10 h-10 rounded-full ${TIER_ICON_BG[tier] || TIER_ICON_BG.free} flex items-center justify-center`}>
+            {TIER_ICONS[tier] || TIER_ICONS.free}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -384,7 +402,7 @@ function ActionsSection({ tier }: { tier: UserTier }) {
           href="/pricing"
           className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          <Crown className="w-4 h-4" />
+          <ArrowUpRight className="w-4 h-4" />
           Upgrade to Pro
         </Link>
       )}

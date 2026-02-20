@@ -85,13 +85,13 @@ function AuthenticatedDashboard({ userId }: { userId: string }) {
         </div>
         {!isPaid ? (
           <div className="bg-surface-container-low rounded-xl border border-outline-variant p-6 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center flex-shrink-0">
-              <Bell className="w-5 h-5 text-on-surface-variant/50" />
-            </div>
+            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide uppercase flex-shrink-0">
+              Pro
+            </span>
             <div>
-              <p className="text-sm font-medium text-on-surface-variant">Pro Feature</p>
+              <p className="text-sm font-medium text-on-surface-variant">Set alerts on your saved markets</p>
               <p className="text-xs text-on-surface-variant/70 mt-0.5">
-                Set price and score alerts on your saved markets.
+                Get notified when prices or scores change.
               </p>
             </div>
           </div>

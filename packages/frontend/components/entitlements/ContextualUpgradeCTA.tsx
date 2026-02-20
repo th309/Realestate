@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Sparkles } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlements';
 import { trackEvent } from '@/lib/analytics/tracker';
 import Link from 'next/link';
@@ -39,8 +38,12 @@ export function ContextualUpgradeCTA({
         ${className}
       `}
     >
-      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-        {icon || <Sparkles className="w-4 h-4 text-primary" />}
+      <div className="flex-shrink-0">
+        {icon || (
+          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold tracking-wide uppercase">
+            Pro
+          </span>
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-on-surface">{title}</p>

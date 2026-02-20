@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import {
   Search,
   User,
-  Crown,
+  Home,
+  Warehouse,
+  Building2,
   Shield,
   Plus,
   Trash2,
@@ -108,9 +110,9 @@ function TierBadge({ tier }: { tier: string }) {
   };
 
   const icons: Record<string, React.ReactNode> = {
-    free: <User className="w-3 h-3" />,
-    pro: <Crown className="w-3 h-3" />,
-    enterprise: <Shield className="w-3 h-3" />,
+    free: <Home className="w-3 h-3" />,
+    pro: <Warehouse className="w-3 h-3" />,
+    enterprise: <Building2 className="w-3 h-3" />,
     admin: <Shield className="w-3 h-3" />,
   };
 

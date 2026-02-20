@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
 import { useEntitlements, ResourceType, UserTier } from '@/lib/entitlements';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -52,9 +51,9 @@ export function PaywallCard({
         ${className}
       `}
     >
-      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-        <Lock className="w-6 h-6 text-primary" />
-      </div>
+      <span className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-primary/10 text-primary text-xs font-bold tracking-wide uppercase">
+        {TIER_LABELS[tierRequired as UserTier] || 'Pro'}
+      </span>
 
       <div>
         <h3 data-testid="paywall-title" className="text-lg font-medium text-on-surface">
