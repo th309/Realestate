@@ -31,6 +31,13 @@ export interface ZillowDatasetConfig {
   url: string;
   /** Human-readable description for logging. */
   description: string;
+  /**
+   * When true, zero values are treated as real data and inserted.
+   * When false (default), zero values are skipped because Zillow uses zero
+   * to represent missing data in inventory, sales count, and similar datasets.
+   * Only set to true for metrics where zero is a meaningful value (e.g. market_heat).
+   */
+  allowZeroValues?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,12 +140,14 @@ const daysToPendingDatasets = createMultiGeoDatasets(
 );
 
 // Market Heat Index (metro only -- state/county/zip do not have this metric)
+// allowZeroValues: true because the market heat index legitimately equals zero
+// for a perfectly balanced market, unlike inventory/sales where zero means no data.
 const marketHeatDatasets = createMultiGeoDatasets(
   'market-heat', 'market_temp_index', 'market_heat',
   'market_temp_index_uc_sfrcondo_month',
   'Market Heat Index (SFR+Condo)',
   ['metro'],
-);
+).map((d) => ({ ...d, allowZeroValues: true }));
 
 // New Construction - Sales Count
 const newConSalesDatasets = createMultiGeoDatasets(

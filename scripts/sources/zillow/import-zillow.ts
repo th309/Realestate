@@ -110,6 +110,7 @@ async function importSingleDataset(
     // Step 2: Transpose wide-to-long
     const { records, rowsSkipped } = transposeAllRows(
       loadResult.rows, dataset.metricName, dataset.geography,
+      { allowZeroValues: dataset.allowZeroValues },
     );
     result.rowsSkippedByMapping = rowsSkipped;
     console.log(`  Transposed: ${loadResult.rowCount} rows -> ${records.length} records (${rowsSkipped} rows skipped)`);

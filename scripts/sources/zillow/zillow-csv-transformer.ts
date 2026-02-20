@@ -116,16 +116,30 @@ function normalizeRegionName(regionName: string, geography: ZillowGeography): st
 // ---------------------------------------------------------------------------
 
 /**
+ * Options for controlling transposition behavior per dataset.
+ */
+export interface TransposeOptions {
+  /**
+   * When true, zero values are treated as real data and included in output.
+   * When false (default), zero values are skipped because Zillow uses zero
+   * as a sentinel for missing data in many datasets (inventory, sales count, etc.).
+   */
+  allowZeroValues?: boolean;
+}
+
+/**
  * Transpose a single Zillow WIDE-format CSV row into multiple long-format DB records.
  *
  * For a row with 300 date columns, this returns up to 300 records
- * (one per date column that has a valid numeric value).
+ * (one per date column that has a valid, non-zero numeric value unless
+ * allowZeroValues is explicitly enabled for the dataset).
  */
 export function transposeWideRow(
   row: Record<string, string>,
   metricName: string,
   geography: ZillowGeography,
   dateColumns: string[],
+  options: TransposeOptions = {},
 ): Record<string, unknown>[] {
   const regionId = parseInt(row.RegionID, 10);
   if (isNaN(regionId)) return [];
@@ -142,6 +156,7 @@ export function transposeWideRow(
   for (const dateCol of dateColumns) {
     const value = parseNumeric(row[dateCol]);
     if (value === null) continue;
+    if (value === 0 && !options.allowZeroValues) continue;
 
     records.push({
       region_id: regionId,
@@ -175,6 +190,7 @@ export function transposeAllRows(
   rows: Record<string, string>[],
   metricName: string,
   geography: ZillowGeography,
+  options: TransposeOptions = {},
 ): { records: Record<string, unknown>[]; rowsProcessed: number; rowsSkipped: number } {
   if (rows.length === 0) {
     return { records: [], rowsProcessed: 0, rowsSkipped: 0 };
@@ -187,7 +203,7 @@ export function transposeAllRows(
   let rowsSkipped = 0;
 
   for (const row of rows) {
-    const transposed = transposeWideRow(row, metricName, geography, dateColumns);
+    const transposed = transposeWideRow(row, metricName, geography, dateColumns, options);
     if (transposed.length === 0) {
       rowsSkipped++;
     } else {

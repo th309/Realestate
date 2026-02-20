@@ -15,6 +15,7 @@ import type { ZillowGeography } from './zillow-dataset-configs';
 export { ALL_ZILLOW_DATASETS, getDatasetsByGeography, getDatasetsByMetric } from './zillow-dataset-configs';
 export type { ZillowDatasetConfig, ZillowGeography } from './zillow-dataset-configs';
 export { transposeAllRows } from './zillow-csv-transformer';
+export type { TransposeOptions } from './zillow-csv-transformer';
 
 // ---------------------------------------------------------------------------
 // Table configuration per geography level
