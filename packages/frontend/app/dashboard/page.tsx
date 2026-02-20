@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { LayoutDashboard, MapPin, Bell, TrendingUp, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { WatchlistDashboard } from '@/components/watchlist';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth';
 import { AlertFeed } from '@/components/alerts';
 import { MarketsToWatch } from '@/components/recommendations';
 import { useAlertHistory } from '@/lib/alerts/hooks';
@@ -14,16 +13,8 @@ import { useMarketsToWatch } from '@/lib/recommendations/hooks';
 import { useEntitlements } from '@/lib/entitlements';
 
 export default function DashboardPage() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserId(user?.id ?? null);
-      setAuthLoading(false);
-    });
-  }, []);
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
 
   return (
     <div className="min-h-screen bg-surface">
