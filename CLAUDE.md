@@ -40,19 +40,24 @@ Real estate analytics platform with React/Next.js frontend and NestJS backend.
 
 ### 1.4 Naming Convention (Human-Readable Names)
 
-**All names MUST be descriptive and self-explanatory.** Every file, folder, branch, plan, agent task, audit, service, variable, and output you create should immediately tell a human what it is and what it does. Random, generic, or auto-generated names are never acceptable.
+**Every name you create MUST be descriptive and self-explanatory.** This applies to EVERYTHING — files, folders, branches, variables, functions, classes, constants, plan files, agent tasks, audit outputs, screenshots, migrations, services, modules, test descriptions, worktrees, commit messages, PR titles, database columns, environment variables, config keys, and anything else that gets a name. No exceptions. Random, generic, or auto-generated names are never acceptable.
 
-**Rules:**
-* **Files & folders:** Name by purpose, not by type alone. `scoring-engine.ts` not `utils2.ts`. `timeseries-region-filter.ts` not `helper.ts`.
-* **Git branches:** `feat/report-share-buttons` not `feature-1` or `dev-branch`.
-* **Plan files:** `plan-add-stripe-webhook-handling.md` not `plan.md` or `plan-001.md`.
-* **Agent tasks:** Description should summarize the goal. "Add auth guard to billing controller" not "Update file".
-* **Audit/review outputs:** `audit-rls-policies-missing.txt` not `output.txt`.
-* **Screenshots & artifacts:** `report-ai-narrative-clean.png` not `screenshot-3.png`.
-* **Test describes:** `describe('ScoreWidget renders grade badge for each threshold')` not `describe('test 1')`.
-* **Migration names:** `add_user_watchlist_table` not `migration_20260220`.
+**The rule:** If someone sees the name 6 months from now with no other context, they should immediately understand what it is and what it does. If not, rename it.
 
-**The test:** If someone sees the name 6 months from now with no other context, can they understand what it is? If not, rename it.
+**Examples of good vs. bad naming:**
+
+| Context | Bad | Good |
+|---------|-----|------|
+| File | `utils2.ts`, `helper.ts` | `scoring-engine.ts`, `timeseries-region-filter.ts` |
+| Branch | `feature-1`, `dev-branch` | `feat/report-share-buttons` |
+| Plan | `plan.md`, `plan-001.md` | `plan-add-stripe-webhook-handling.md` |
+| Agent task | "Update file" | "Add auth guard to billing controller" |
+| Output | `output.txt` | `audit-rls-policies-missing.txt` |
+| Screenshot | `screenshot-3.png` | `report-ai-narrative-clean.png` |
+| Test | `describe('test 1')` | `describe('ScoreWidget renders grade badge for each threshold')` |
+| Migration | `migration_20260220` | `add_user_watchlist_table` |
+| Variable | `d`, `tmp`, `val` | `regionScores`, `filteredMetrics` |
+| Function | `process()`, `handle()` | `calculatePercentileRange()`, `formatCurrencyValue()` |
 
 ### 1.5 Parallel Agents & Agent Teams
 
