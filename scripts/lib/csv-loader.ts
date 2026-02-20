@@ -23,7 +23,7 @@ const USER_AGENT = 'PropertyIQ-DataPipeline/1.0';
  * Download file content from a remote URL.
  * Returns the raw data as a Buffer.
  */
-async function downloadFromUrl(url: string): Promise<Buffer> {
+export async function downloadFromUrl(url: string): Promise<Buffer> {
   console.log(`  Downloading from: ${url.substring(0, 80)}...`);
 
   const response = await axios.get(url, {

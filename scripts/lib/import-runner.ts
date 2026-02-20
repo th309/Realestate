@@ -54,7 +54,10 @@ async function importSingleGeography(
   try {
     console.log(`\n--- Importing ${sourceConfig.source} / ${geoConfig.id} -> ${geoConfig.tableName} ---`);
 
-    // Step 1: Load data file
+    // Step 1: Start ingestion log immediately so the DB shows 'running' during download
+    await logger.start(0);
+
+    // Step 2: Load data file
     const loadResult = await loadDataFile({
       url: geoConfig.downloadUrl,
       localPath: geoConfig.localPath,
@@ -69,7 +72,7 @@ async function importSingleGeography(
       return result;
     }
 
-    // Step 2: Map columns (filter out nulls = skipped rows)
+    // Step 3: Map columns (filter out nulls = skipped rows)
     const mappedRecords: Record<string, unknown>[] = [];
     for (const row of loadResult.rows) {
       const mapped = geoConfig.columnMap(row);
@@ -89,8 +92,8 @@ async function importSingleGeography(
       return result;
     }
 
-    // Step 3: Start ingestion log
-    await logger.start(mappedRecords.length);
+    // Report the final record count now that mapping is complete
+    await logger.updateProgress(0, 0);
 
     // Step 4: Batch upsert
     const upsertResult = await batchUpsert(supabase, mappedRecords, {
