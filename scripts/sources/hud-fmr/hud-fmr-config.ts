@@ -9,6 +9,8 @@
  * Schedule: Published annually (Sept/Oct) for the next federal fiscal year.
  */
 
+import { parseNumeric, normalizeFipsCode } from '../../lib';
+
 // ---------------------------------------------------------------------------
 // HUD FMR download URL patterns
 // ---------------------------------------------------------------------------
@@ -101,7 +103,6 @@ export const STATE_FIPS_TO_NAME: Record<string, string> = {
 
 /** Shape of the database record written to hud_fmr. */
 export interface HudFmrRecord {
-  [key: string]: string | number | null;
   year: number;
   fips_code: string;
   county_name: string;
@@ -133,7 +134,8 @@ export function mapFmrRow(
 
   // Extract 5-digit county FIPS from 10-digit HUD format
   const fipsRaw = String(row.fips).padStart(10, '0');
-  const fips5 = fipsRaw.slice(0, 5);
+  const fips5 = normalizeFipsCode(fipsRaw.slice(0, 5), 5);
+  if (!fips5) return null;
   const stateFips = fips5.slice(0, 2);
 
   // Extract metro CBSA code from hud_area_code (format: METRO33860M33860)
@@ -143,16 +145,6 @@ export function mapFmrRow(
     if (match) metroCode = match[1];
   }
 
-  // Parse FMR values — the XLSX library may return them as numbers or strings
-  const parseFmrValue = (val: unknown): number | null => {
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') {
-      const parsed = parseFloat(val);
-      return isNaN(parsed) ? null : parsed;
-    }
-    return null;
-  };
-
   return {
     year: fiscalYear,
     fips_code: fips5,
@@ -161,10 +153,10 @@ export function mapFmrRow(
     state_name: STATE_FIPS_TO_NAME[stateFips] || row.stusps || '',
     metro_code: metroCode,
     metro_name: row.metro === '1' ? (row.hud_area_name || null) : null,
-    fmr_0br: parseFmrValue(row.fmr_0),
-    fmr_1br: parseFmrValue(row.fmr_1),
-    fmr_2br: parseFmrValue(row.fmr_2),
-    fmr_3br: parseFmrValue(row.fmr_3),
-    fmr_4br: parseFmrValue(row.fmr_4),
+    fmr_0br: parseNumeric(row.fmr_0),
+    fmr_1br: parseNumeric(row.fmr_1),
+    fmr_2br: parseNumeric(row.fmr_2),
+    fmr_3br: parseNumeric(row.fmr_3),
+    fmr_4br: parseNumeric(row.fmr_4),
   };
 }

@@ -155,8 +155,16 @@ async function main(): Promise<void> {
     if (useLocalFile) {
       const localPath = buildFmrLocalPath(targetFY);
       console.log(`Loading local file: data/${localPath}`);
-      const loadResult = await loadDataFile({ localPath, format: 'xlsx' });
-      rawRows = loadResult.rows;
+      try {
+        const loadResult = await loadDataFile({ localPath, format: 'xlsx' });
+        rawRows = loadResult.rows;
+      } catch (err) {
+        throw new Error(
+          `Failed to load local file at data/${localPath}. ` +
+          `Ensure the file exists or run without --local to download from HUD. ` +
+          `Original error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     } else {
       console.log(`Downloading FY${targetFY} FMR data from HUD...`);
       let buffer = await downloadFmrWithFallback(targetFY);
@@ -195,7 +203,7 @@ async function main(): Promise<void> {
 
     // Step 3: Batch upsert
     console.log(`\nUpserting ${records.length} records into ${HUD_FMR_TABLE}...`);
-    const upsertResult: BatchUpsertResult = await batchUpsert(supabase, records, {
+    const upsertResult: BatchUpsertResult = await batchUpsert(supabase, records as unknown as Record<string, unknown>[], {
       tableName: HUD_FMR_TABLE,
       conflictKeys: HUD_FMR_CONFLICT_KEYS,
       batchSize: HUD_FMR_BATCH_SIZE,
@@ -238,7 +246,7 @@ async function main(): Promise<void> {
       : geoResult.status === 'partial' ? 'partial' : 'failed',
     totalInserted: geoResult.recordsInserted,
     totalFailed: geoResult.recordsFailed,
-    totalDurationMs: Date.now() - overallStart,
+    totalDurationMs: geoResult.durationMs,
   };
 
   printSummaryBanner(sourceResult);
