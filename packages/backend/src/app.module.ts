@@ -33,6 +33,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { EmailModule } from './email/email.module';
 import { AnalyticsEventsModule } from './analytics-events/analytics-events.module';
+import { SupportModule } from './support/support.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -71,6 +72,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     RecommendationsModule,
     EmailModule,
     AnalyticsEventsModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
