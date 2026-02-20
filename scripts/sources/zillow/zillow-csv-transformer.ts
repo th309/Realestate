@@ -8,8 +8,8 @@
  * This transformer transposes each row into multiple long-format records:
  *   { region_id, region_name, state_code, period_date, metric_name, value }
  *
- * Geography-specific fields (cbsa_code, fips_code) are added by the
- * region extractor functions in zillow-region-extractors.ts.
+ * Geography-specific fields (cbsa_code, fips_code) are extracted by the
+ * region extractor functions defined inline in this file.
  */
 
 import { parseNumeric, normalizeZipCode, normalizeFipsCode } from '../../lib';
@@ -77,7 +77,11 @@ function buildCountyFipsCode(row: Record<string, string>): string | null {
   const countyFips = row.MunicipalCodeFIPS;
   if (!stateFips || !countyFips) return null;
 
-  return normalizeFipsCode(stateFips, 2) + normalizeFipsCode(countyFips, 3);
+  const normalizedState = normalizeFipsCode(stateFips, 2);
+  const normalizedCounty = normalizeFipsCode(countyFips, 3);
+  if (!normalizedState || !normalizedCounty) return null;
+
+  return normalizedState + normalizedCounty;
 }
 
 /**
