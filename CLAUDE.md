@@ -437,11 +437,13 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 
 ### Two Concepts: Score (Number) and Confidence (Letter)
 
-The system has two distinct measurements:
+The system has two distinct measurements displayed together in the score widget:
 
-1. **Score (0-100 number):** How good a market is for a given strategy. Displayed as a number inside a color-gradient ring, with a letter grade (A+ to F) and a descriptor label (EXCELLENT to VERY POOR).
+1. **Score (0-100 number):** How good a market is for a given strategy. Displayed as a **number** inside a color-gradient ring, with a descriptor label (EXCELLENT to VERY POOR).
 
-2. **Confidence (A/B/C/F letter grade):** How much we trust the score, based on data quality. Displayed as a star rating (1-5 stars) with percentage and color-coded badge.
+2. **Confidence (A/B/C/F letter):** How much we trust that score, based on data quality. Displayed as the **letter badge** on the score widget.
+
+**CRITICAL:** The letter badge (A/B/C/F) shown in the ScoreWidget represents **confidence**, NOT a grade derived from the score number. A score of 78 with a "B" badge means "score is 78, and we have B-level confidence in that number." Do NOT confuse this with academic-style grading of the score itself.
 
 These are independent — a market can have a high score with low confidence (good on paper but insufficient data) or a low score with high confidence (reliably bad).
 
@@ -449,14 +451,16 @@ These are independent — a market can have a high score with low confidence (go
 
 **Component:** `ScoreDisplay` (`app/components/scoring/ScoreDisplay.tsx`)
 
+The base presentation component. Note: `ScoreDisplay` has internal `getLetterGrade()` and `showGrade` props that derive a letter from the score value — these are **internal utilities** and should not be confused with the confidence letter. When used inside `ScoreWidget`, the confidence letter badge (from the data layer) takes precedence as the displayed letter.
+
 **Visual Spec:**
 * **Ring:** SVG circular progress with HSL gradient (red at 0 → green at 100)
 * **Tick marks:** At 33% and 66% positions (market threshold indicators)
 * **Score Number:** Bold, centered in ring
-* **Letter Grade Badge:** A+ to F with color-coded background
-* **Label:** Uppercase descriptor
+* **Letter Badge:** Confidence level (A/B/C/F) — comes from data layer, NOT from the score number
+* **Label:** Uppercase descriptor (EXCELLENT, GOOD, etc.) — derived from the score number
 
-**Score → Grade Thresholds:**
+**Score → Grade Utility Thresholds** (internal `getLetterGrade()` — NOT the displayed confidence letter):
 
 | Score | Grade |
 |-------|-------|
@@ -549,7 +553,7 @@ Confidence = (R² × 0.5) + (Sample Size Score × 0.3) + (Recency Score × 0.2)
 
 **Component:** `app/components/scoring/ScoreWidget.tsx`
 
-Auto-fetches score + confidence from the data layer:
+Auto-fetches score + confidence from the data layer. The number shown is the score; the letter badge is the confidence level:
 ```typescript
 import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
 
@@ -557,8 +561,9 @@ import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
   geographyType="metro"
   geographyId="31080"
   scoreType="homeready"
-  showConfidence  // Shows confidence letter badge (A/B/C/F)
+  showConfidence  // Shows confidence letter badge (A/B/C/F) — this is data quality, not score grade
 />
+// Result: "82" (score) with "A" badge (confidence in that score)
 ```
 
 ### ScoreBadge (Compact Display)
