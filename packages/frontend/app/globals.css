@@ -254,3 +254,22 @@ body {
 .animate-indeterminate-progress {
   animation: indeterminate-progress 2s ease-in-out infinite;
 }
+
+/* ── Print: hide site chrome on all pages ────────────────────────────── */
+@media print {
+  /* Hide navigation bar, site footer, and dev toolbar globally */
+  body > header,
+  body > footer,
+  [data-testid="dev-toolbar"] {
+    display: none !important;
+  }
+
+  /* Reset flex layout so print flow is natural */
+  body {
+    display: block !important;
+  }
+  body > main {
+    display: block !important;
+    min-height: 0 !important;
+  }
+}

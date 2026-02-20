@@ -20,7 +20,6 @@ export function ReportFooter({ report }: ReportFooterProps) {
         <p className="text-xs text-[var(--report-stone-light)]">
           Report generated on {new Date(report.created_at).toLocaleDateString()} ·
           Data as of {report.data_as_of_date}
-          {report.ai_model_used && ` · AI Model: ${report.ai_model_used}`}
         </p>
       </div>
     </footer>

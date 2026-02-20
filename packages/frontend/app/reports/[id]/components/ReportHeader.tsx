@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Share2, MessageSquare, Printer, Check, Link2 } from 'lucide-react';
+import { ArrowLeft, Share2, MessageSquare, Printer, Check, Link2, Loader2 } from 'lucide-react';
 import { ReportWithTemplate } from './types';
 import { PDFExportButton } from '../export/PDFExport';
 import { ReportTemplateType } from './templates';
+import { createReportShareLink } from '@/lib/data';
 
 interface TemplateSectionRef {
   id: string;
@@ -28,30 +29,36 @@ export function ReportHeader({
 }: ReportHeaderProps) {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const handleCopyLink = useCallback(async () => {
+    if (sharing) return;
+    setSharing(true);
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      // If the report already has a share token, reuse it; otherwise create one
+      let token = report.share_token;
+      if (!token) {
+        token = await createReportShareLink(report.id, report.user_id);
+      }
+      const shareUrl = `${window.location.origin}/shared/report/${token}`;
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
         setShowShareMenu(false);
       }, 1500);
     } catch {
-      // Fallback for older browsers
-      const input = document.createElement('input');
-      input.value = window.location.href;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
+      // Fallback: copy the current page URL
+      await navigator.clipboard.writeText(window.location.href).catch(() => {});
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
         setShowShareMenu(false);
       }, 1500);
+    } finally {
+      setSharing(false);
     }
-  }, []);
+  }, [report.id, report.user_id, report.share_token, sharing]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -91,10 +98,11 @@ export function ReportHeader({
                   <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg shadow-lg border border-[rgba(27,46,74,0.1)] py-1 min-w-[180px]">
                     <button
                       onClick={handleCopyLink}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] transition-colors"
+                      disabled={sharing}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] transition-colors disabled:opacity-50"
                     >
-                      {copied ? <Check className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4" />}
-                      {copied ? 'Copied!' : 'Copy link'}
+                      {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : copied ? <Check className="w-4 h-4 text-green-600" /> : <Link2 className="w-4 h-4" />}
+                      {sharing ? 'Creating link...' : copied ? 'Copied!' : 'Copy share link'}
                     </button>
                   </div>
                 </>

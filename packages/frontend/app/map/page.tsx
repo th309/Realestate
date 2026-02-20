@@ -40,14 +40,34 @@ function MapPageInner() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlProcessedRef = useRef(false);
+  const isInitialRender = useRef(true);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [geoLevel, setGeoLevel] = useState<GeoLevel>('state');
-  const [selectedState, setSelectedState] = useState<string>('');
-  const [selectedMetric, setSelectedMetric] = useState('home_value');
-  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>('12m');
-  const [rentIndexType, setRentIndexType] = useState<RentIndexType>('all');
-  const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>('all');
+
+  // Core state — initialized from URL params so browser back-button restores previous view
+  const [geoLevel, setGeoLevel] = useState<GeoLevel>(() => {
+    return (searchParams.get('level') as GeoLevel) || 'state';
+  });
+  const [selectedState, setSelectedState] = useState<string>(() => {
+    return searchParams.get('st') || '';
+  });
+  const [selectedMetric, setSelectedMetric] = useState(() => {
+    return searchParams.get('metric') || 'home_value';
+  });
+  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>(() => {
+    return (searchParams.get('fh') as ForecastHorizon) || '12m';
+  });
+  const [rentIndexType, setRentIndexType] = useState<RentIndexType>(() => {
+    return (searchParams.get('ri') as RentIndexType) || 'all';
+  });
+  const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>(() => {
+    return (searchParams.get('rd') as RenterDemandType) || 'all';
+  });
+
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
@@ -57,9 +77,6 @@ function MapPageInner() {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ geography: SelectedGeography; x: number; y: number } | null>(null);
   const isResizing = useRef(false);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const urlProcessedRef = useRef(false);
 
   // Load view mode from localStorage on mount
   useEffect(() => {
@@ -74,6 +91,25 @@ function MapPageInner() {
     setViewMode(mode);
     localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
   }, []);
+
+  // Sync core state to URL so the browser back button restores previous view.
+  // Uses replaceState to update the current history entry without creating new ones.
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+    const params = new URLSearchParams();
+    if (geoLevel !== 'state') params.set('level', geoLevel);
+    if (selectedMetric !== 'home_value') params.set('metric', selectedMetric);
+    if (selectedState) params.set('st', selectedState);
+    if (forecastHorizon !== '12m') params.set('fh', forecastHorizon);
+    if (rentIndexType !== 'all') params.set('ri', rentIndexType);
+    if (renterDemandType !== 'all') params.set('rd', renterDemandType);
+    const paramStr = params.toString();
+    const newUrl = paramStr ? `${pathname}?${paramStr}` : pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [geoLevel, selectedMetric, selectedState, forecastHorizon, rentIndexType, renterDemandType, pathname]);
 
   // Compute metric categories based on view mode
   const metricCategories = useMemo(() => getMetricCategories(viewMode), [viewMode]);

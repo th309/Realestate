@@ -130,9 +130,6 @@ function ReportMetadataSection({ section, report }: SectionProps) {
       {report.data_as_of_date && (
         <span>Data as of: {report.data_as_of_date}</span>
       )}
-      {report.ai_model_used && (
-        <span>AI Model: {report.ai_model_used}</span>
-      )}
     </div>
   );
 }

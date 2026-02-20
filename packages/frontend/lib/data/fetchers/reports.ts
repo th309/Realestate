@@ -151,6 +151,50 @@ export async function generateReport(
 }
 
 /**
+ * Fetch a shared report by its public share token (no auth required).
+ */
+export async function fetchSharedReport<T = unknown>(
+  token: string,
+): Promise<T | null> {
+  const response = await fetch(`${API_URL}/api/reports/shared/${encodeURIComponent(token)}`);
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Shared report not found or expired`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Create a share link for a report. Returns the share token.
+ */
+export async function createReportShareLink(
+  reportId: string,
+  userId: string,
+  options?: { accessLevel?: 'view' | 'download'; expiresInDays?: number },
+): Promise<string> {
+  const response = await fetch(`${API_URL}/api/reports/${reportId}/share`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-id': userId,
+    },
+    body: JSON.stringify({
+      access_level: options?.accessLevel || 'view',
+      expires_in_days: options?.expiresInDays,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create share link: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.share_token;
+}
+
+/**
  * Request narrative regeneration for a report based on updated user inputs.
  */
 export async function regenerateNarratives(

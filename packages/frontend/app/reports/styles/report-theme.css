@@ -559,86 +559,201 @@
    ======================================== */
 
 @media print {
-  /* Base */
+  /* ── Page Setup ─────────────────────────────────────────────────────── */
+  @page {
+    size: letter;
+    margin: 0.6in 0.7in 0.8in 0.7in; /* top right bottom left */
+  }
+
+  /* ── Base ────────────────────────────────────────────────────────────── */
   .report-page {
-    background: white;
-    font-size: 11pt;
-    line-height: 1.5;
-  }
-
-  /* Remove shadows and simplify borders */
-  .report-card, .report-card-elevated, .report-section {
-    box-shadow: none;
-    border: 1px solid #e5e5e5;
-    break-inside: avoid;
-  }
-
-  /* Page breaks */
-  .report-page-break {
-    break-before: page;
-  }
-  .report-page-break-after {
-    break-after: page;
-  }
-  .report-no-break {
-    break-inside: avoid;
-  }
-
-  /* Hide screen-only elements */
-  .report-no-print {
-    display: none !important;
-  }
-
-  /* Show print-only elements */
-  .report-print-only {
-    display: block !important;
-  }
-
-  /* Flatten gradients */
-  [class*="bg-gradient"] {
     background: white !important;
+    font-size: 10.5pt;
+    line-height: 1.55;
   }
 
-  /* Print-optimized colors */
+  /* Print-optimized palette */
   .report-page {
     --report-navy: #1b2e4a;
-    --report-cream: #f8f6f1;
+    --report-cream: #f6f5f2;
+    --report-cream-dark: #eeece8;
     --report-stone: #6b7280;
+    --report-stone-light: #8a847e;
   }
 
-  /* Animations off */
+  /* Preserve background colors on badges, score rings, etc. */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Kill animations */
   .report-animate-in {
     opacity: 1 !important;
     transform: none !important;
     animation: none !important;
   }
 
-  /* Section spacing for print */
-  section[id] {
-    margin-bottom: 24pt;
+  /* ── Visibility ──────────────────────────────────────────────────────── */
+  .report-no-print {
+    display: none !important;
+  }
+  .report-print-only {
+    display: block !important;
+  }
+
+  /* Hide interactive-only elements: conversation panel, personalization, etc. */
+  .report-page button:not(.report-print-only *),
+  .report-page [role="dialog"] {
+    display: none !important;
+  }
+
+  /* ── Layout Overrides ────────────────────────────────────────────────── */
+
+  /* Remove max-width constraints so content fills the print area */
+  .report-page .max-w-4xl,
+  .report-page .max-w-6xl {
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* ── Cards & Sections ────────────────────────────────────────────────── */
+  .report-card,
+  .report-card-elevated,
+  .report-card-subtle {
+    box-shadow: none !important;
+    border: 1px solid #ddd;
     break-inside: avoid;
   }
 
-  /* Score rings: ensure SVG prints */
-  svg {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
+  .report-section {
+    box-shadow: none !important;
+    border: 1px solid #ddd;
+    padding: 16pt 20pt;
+    border-radius: 6pt;
   }
 
-  /* Footer on every page */
-  .report-print-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 8pt;
-    color: #9ca3af;
-    padding: 8pt 0;
-    border-top: 0.5pt solid #e5e5e5;
+  /* Remove hover effects */
+  .report-card:hover,
+  .report-card-elevated:hover {
+    box-shadow: none !important;
+    transform: none !important;
+    border-color: #ddd;
   }
 
-  /* Cover page */
+  /* ── Page Break Strategy ─────────────────────────────────────────────── *
+   *
+   *  Philosophy: let content FLOW naturally across pages. Only force a
+   *  page break before major thematic shifts (deep-dives). Shorter
+   *  transitional sections (score-story, bottom-line, etc.) should NOT
+   *  force a new page — they fill remaining space on the current page.
+   *
+   *  NEVER pair break-after:page + break-before:page on adjacent sections
+   *  — that creates a blank page between them.
+   */
+
+  /* Top-level sections — allow natural flow */
+  section[id] {
+    margin-bottom: 16pt;
+    break-inside: auto;
+    break-after: auto;
+  }
+
+  /* Only heavyweight deep-dive sections start on a new page */
+  section[id="affordability-deep-dive"],
+  section[id="market-timing-deep-dive"],
+  section[id="stability-deep-dive"],
+  section[id="growth-potential-deep-dive"],
+  section[id="cash-flow"],
+  section[id="rent-demand"],
+  section[id="appreciation"],
+  section[id="entry-point"],
+  section[id="risk"],
+  section[id="pro-forma"],
+  section[id="head-to-head"],
+  section[id="component-showdown"] {
+    break-before: page;
+  }
+
+  /* Hero sections: keep together, no break-after (next section flows naturally) */
+  section[id="hero"],
+  section[id="investor-hero"],
+  section[id="comparison-hero"],
+  section[id="client-overview"] {
+    break-inside: avoid;
+  }
+  section[id="hero"] [class*="bg-gradient"],
+  section[id="investor-hero"] [class*="bg-gradient"],
+  section[id="comparison-hero"] [class*="bg-gradient"],
+  section[id="client-overview"] [class*="bg-gradient"] {
+    background: var(--report-cream) !important;
+  }
+
+  /* Explicit break utilities */
+  .report-page-break       { break-before: page; }
+  .report-page-break-after { break-after: page; }
+  .report-no-break         { break-inside: avoid; }
+
+  /* ── Atomic elements — avoid breaking inside ─────────────────────────── *
+   *
+   *  Only protect truly small, self-contained elements. Grids and large
+   *  containers MUST be allowed to break — otherwise a 60% tall grid gets
+   *  pushed to the next page, leaving a 60%-blank page behind it.
+   */
+
+  /* Individual metric tiles (small cards inside grids) */
+  .report-section .grid > div {
+    break-inside: avoid;
+  }
+
+  /* Cards — small, self-contained */
+  .report-card,
+  .report-card-elevated,
+  .report-card-subtle {
+    break-inside: avoid;
+  }
+
+  /* AI analysis blocks, personalized insights */
+  .report-section .space-y-4 > div,
+  .report-section .space-y-6 > div,
+  .report-section .space-y-8 > div {
+    break-inside: avoid;
+    margin-top: 8pt;
+  }
+
+  /* Score badges, trend sparklines — inline elements */
+  .report-section svg,
+  .report-section canvas {
+    break-inside: avoid;
+  }
+
+  /* Tables — keep together only if short; large tables will overflow anyway */
+  table {
+    break-inside: auto;
+  }
+  /* Small tables (e.g., summary rows) stay together */
+  table:has(tr:nth-child(-n+6):last-child) {
+    break-inside: avoid;
+  }
+
+  /* Section headers — never orphan a header at the bottom of a page */
+  .report-section-header {
+    break-after: avoid;
+  }
+  h2, h3, h4 {
+    break-after: avoid;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ── Cover Page ──────────────────────────────────────────────────────── */
   .report-print-cover {
     display: flex !important;
     flex-direction: column;
@@ -649,9 +764,40 @@
     text-align: center;
   }
 
-  /* TOC */
+  /* ── Table of Contents ───────────────────────────────────────────────── */
   .report-print-toc {
     break-after: page;
+  }
+
+  /* ── Running Footer ──────────────────────────────────────────────────── */
+  .report-print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 7.5pt;
+    color: #9ca3af;
+    padding: 6pt 0;
+    border-top: 0.5pt solid #e5e5e5;
+  }
+
+  /* ── Flatten Gradients ───────────────────────────────────────────────── */
+  [class*="bg-gradient"] {
+    background: white !important;
+  }
+
+  /* ── Links: show URL in parentheses ──────────────────────────────────── */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #9ca3af;
+    word-break: break-all;
+  }
+  /* Don't expand internal links */
+  a[href^="/"]::after,
+  a[href^="#"]::after {
+    content: none;
   }
 }
 
