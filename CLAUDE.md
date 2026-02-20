@@ -38,6 +38,58 @@ Real estate analytics platform with React/Next.js frontend and NestJS backend.
 * **What counts as "single responsibility":** One exported component with its local helpers. A file with 2+ exported components must be split regardless of line count.
 * **Colocation:** Keep related utils/types in the same feature folder.
 
+### 1.4 Naming Convention (Human-Readable Names)
+
+**All names MUST be descriptive and self-explanatory.** Every file, folder, branch, plan, agent task, audit, service, variable, and output you create should immediately tell a human what it is and what it does. Random, generic, or auto-generated names are never acceptable.
+
+**Rules:**
+* **Files & folders:** Name by purpose, not by type alone. `scoring-engine.ts` not `utils2.ts`. `timeseries-region-filter.ts` not `helper.ts`.
+* **Git branches:** `feat/report-share-buttons` not `feature-1` or `dev-branch`.
+* **Plan files:** `plan-add-stripe-webhook-handling.md` not `plan.md` or `plan-001.md`.
+* **Agent tasks:** Description should summarize the goal. "Add auth guard to billing controller" not "Update file".
+* **Audit/review outputs:** `audit-rls-policies-missing.txt` not `output.txt`.
+* **Screenshots & artifacts:** `report-ai-narrative-clean.png` not `screenshot-3.png`.
+* **Test describes:** `describe('ScoreWidget renders grade badge for each threshold')` not `describe('test 1')`.
+* **Migration names:** `add_user_watchlist_table` not `migration_20260220`.
+
+**The test:** If someone sees the name 6 months from now with no other context, can they understand what it is? If not, rename it.
+
+### 1.5 Parallel Agents & Agent Teams
+
+**Default to parallelism.** When a task involves 2+ independent subtasks, dispatch them as parallel agents rather than working sequentially. This applies to implementation, research, and testing.
+
+**When to use parallel agents:**
+* **Multi-file implementations** — e.g., frontend component + backend endpoint + tests can each be a separate agent.
+* **Research & exploration** — searching across packages, reading multiple files, or investigating independent questions.
+* **Cross-package changes** — frontend and backend changes that don't depend on each other.
+* **Bulk operations** — updating multiple similar files (e.g., adding auth guards to several controllers, updating imports across modules).
+* **Test + lint + build** — run verification steps concurrently after implementation.
+
+**How to structure agent teams:**
+1. **Identify independent work streams.** If task B doesn't need output from task A, they're independent.
+2. **Launch all independent agents in a single message** using multiple Task tool calls.
+3. **Use sequential agents only when there's a true data dependency** — e.g., "generate types" must finish before "use types in component."
+4. **Assign clear, scoped prompts** — each agent should know exactly what files to touch and what constraints to follow (reference this CLAUDE.md).
+5. **Aggregate results** — after agents complete, synthesize their outputs and handle any cross-cutting concerns.
+
+**Agent type selection:**
+| Task | Agent Type |
+|------|-----------|
+| File search / codebase exploration | `Explore` |
+| Implementation planning | `Plan` |
+| Running commands (build, test, git) | `Bash` |
+| Multi-step coding or research | `general-purpose` |
+| Code review after major step | `superpowers:code-reviewer` |
+
+**Example — Adding a new API endpoint with frontend integration:**
+```
+Agent 1 (general-purpose): Create NestJS controller + service + DTO in packages/backend
+Agent 2 (general-purpose): Create fetcher + hook + types in packages/frontend/lib/data
+Agent 3 (general-purpose): Write unit tests for the backend service
+→ All three launch in parallel
+→ After completion: Agent 4 wires up the frontend component using the new hook
+```
+
 ---
 
 ## 2. PROJECT ARCHITECTURE & STACK
