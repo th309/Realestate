@@ -3,25 +3,25 @@
  *
  * Analysis view panel that slides in from the right when a region is clicked.
  * Layout:
- * - Switchable Score Gauge (Main)
- * - Dynamic Side Score Cards (Secondary scores)
+ * - Market Snapshot (key stats)
+ * - Quick Actions (save, details, report)
  * - Insight Carousel (AI insights)
- * - Market Factors grid (Real-time data with sparklines)
+ * - Market Factors grid (trend data with sparklines)
  */
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
 import { MetricTitle } from '@/app/components/MetricTitle';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
 import { useMarketFactorsData } from '../../hooks/useMarketFactorsData';
 import type { AllScoresResponse, ScoreType } from '../../hooks/useScoreData';
-import { ScoreGaugeCard } from './ScoreGaugeCard';
-import { SideScoreCard } from './SideScoreCard';
 import { InsightCarousel } from './InsightCarousel';
 import { MetricSelectorModal } from './MetricSelectorModal';
+import { MarketSnapshot } from './MarketSnapshot';
+import { QuickActions } from './QuickActions';
 
 interface RightDetailPanelProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ interface RightDetailPanelProps {
   viewMode: ViewMode;
   geography: SelectedGeography | null;
   geoLevel: GeoLevel;
-  /** Score data from data binding layer (useScoreData) - passed from map page */
+  /** Score data passed through from page for InsightCarousel only */
   scoreData?: AllScoresResponse | null;
   scoresLoading?: boolean;
 }
@@ -40,10 +40,10 @@ interface MarketFactor {
   metricId: string;
 }
 
-// Default market factors: chosen so each has ample data at metro, county, and zip (see metric-availability.ts)
+// Default market factors: all free-tier metrics with good coverage across geo levels
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
   { id: 'appreciation', label: 'Home Value YoY', metricId: 'home_value_yoy' },
-  { id: 'yield', label: 'Yield Potential', metricId: 'cap_rate' },
+  { id: 'dom', label: 'Days on Market', metricId: 'days_on_market' },
   { id: 'demand', label: 'Demand', metricId: 'pending_ratio' },
   { id: 'inventory', label: 'Inventory Change', metricId: 'inventory_yoy' },
 ];
@@ -67,12 +67,7 @@ export function RightDetailPanel({
   geography,
   geoLevel,
   scoreData: scoreDataProp,
-  scoresLoading = false,
 }: RightDetailPanelProps) {
-  const [selectedScoreType, setSelectedScoreType] = useState<ScoreType>(
-    viewMode === 'investor' ? 'investoredge' : 'homeready'
-  );
-
   const [marketFactors, setMarketFactors] = useState<MarketFactor[]>(loadMarketFactors);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -84,27 +79,6 @@ export function RightDetailPanel({
     { months: 6, enabled: isOpen && !!geography }
   );
 
-  // Sync selected score with viewMode when it changes externally
-  useEffect(() => {
-    setSelectedScoreType(viewMode === 'investor' ? 'investoredge' : 'homeready');
-  }, [viewMode]);
-
-  // Determine which scores go where
-  const scoreLayout = useMemo(() => {
-    const types: ScoreType[] = ['investoredge', 'homeready', 'market_health'];
-    const otherTypes = types.filter(t => t !== selectedScoreType);
-
-    // Logic: Top right should always be investoredge or homeready if possible
-    let side1 = otherTypes[0];
-    let side2 = otherTypes[1];
-
-    if (side2 === 'investoredge' || side2 === 'homeready') {
-      [side1, side2] = [side2, side1];
-    }
-
-    return { main: selectedScoreType, side1, side2 };
-  }, [selectedScoreType]);
-
   // Handle saving market factors from modal
   const handleSaveFactors = (factors: MarketFactor[]) => {
     setMarketFactors(factors);
@@ -113,6 +87,7 @@ export function RightDetailPanel({
     }
   };
 
+  // Extract score values for InsightCarousel
   const getScoreValue = (type: ScoreType) => {
     if (!scoreDataProp) return null;
     const key = type === 'market_health' ? 'marketHealth' : type;
@@ -121,29 +96,6 @@ export function RightDetailPanel({
       return (scoreObj as any).score as number ?? null;
     }
     return null;
-  };
-
-  const getScoreTrend = (type: ScoreType) => {
-    if (!scoreDataProp) return null;
-    const key = type === 'market_health' ? 'marketHealth' : type;
-    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
-    if (typeof scoreObj === 'object' && scoreObj !== null && 'trendChange' in scoreObj) {
-      return (scoreObj as any).trendChange as number ?? null;
-    }
-    return null;
-  };
-
-  const getConfidenceLevel = (type: ScoreType): 'high' | 'medium' | 'low' | 'insufficient' => {
-    if (!scoreDataProp) return 'medium';
-    const key = type === 'market_health' ? 'marketHealth' : type;
-    const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
-    if (typeof scoreObj === 'object' && scoreObj !== null && 'confidence' in scoreObj) {
-      const conf = (scoreObj as any).confidence;
-      if (conf && typeof conf.level === 'string') {
-        return conf.level as 'high' | 'medium' | 'low' | 'insufficient';
-      }
-    }
-    return 'medium';
   };
 
   if (!isOpen || !geography) return null;
@@ -178,42 +130,24 @@ export function RightDetailPanel({
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto overflow-x-hidden">
-          {/* Main Scoring Section */}
-          <div className="flex gap-3 items-stretch h-[360px]">
-            <ScoreGaugeCard
-              type={scoreLayout.main}
-              score={getScoreValue(scoreLayout.main)}
-              confidenceLevel={getConfidenceLevel(scoreLayout.main)}
-              trend={getScoreTrend(scoreLayout.main)}
-              loading={scoresLoading}
-            />
+          {/* Market Snapshot */}
+          <MarketSnapshot
+            geoLevel={geoLevel}
+            geographyId={geography.id}
+            isOpen={isOpen}
+          />
 
-            <div className="w-[230px] flex flex-col gap-3">
-              <SideScoreCard
-                type={scoreLayout.side1}
-                score={getScoreValue(scoreLayout.side1)}
-                trend={getScoreTrend(scoreLayout.side1)}
-                onClick={() => setSelectedScoreType(scoreLayout.side1)}
-                className="flex-1"
-              />
-              <SideScoreCard
-                type={scoreLayout.side2}
-                score={getScoreValue(scoreLayout.side2)}
-                trend={getScoreTrend(scoreLayout.side2)}
-                onClick={() => setSelectedScoreType(scoreLayout.side2)}
-                className="flex-1"
-              />
+          {/* Quick Actions */}
+          <QuickActions geography={geography} geoLevel={geoLevel} />
 
-              <InsightCarousel
-                geographyName={geography.name}
-                investorScore={getScoreValue('investoredge')}
-                homeReadyScore={getScoreValue('homeready')}
-                marketHealthScore={getScoreValue('market_health')}
-                viewMode={viewMode === 'investor' ? 'investor' : 'homebuyer'}
-                className="flex-[2]"
-              />
-            </div>
-          </div>
+          {/* AI Insight */}
+          <InsightCarousel
+            geographyName={geography.name}
+            investorScore={getScoreValue('investoredge')}
+            homeReadyScore={getScoreValue('homeready')}
+            marketHealthScore={getScoreValue('market_health')}
+            viewMode={viewMode === 'investor' ? 'investor' : 'homebuyer'}
+          />
 
           {/* Market Factors Section */}
           <div
@@ -239,8 +173,6 @@ export function RightDetailPanel({
             <div className="grid grid-cols-2 gap-2">
               {marketFactors
                 .filter((factor) => {
-                  // While loading, show all factors with loading state
-                  // After loading, data layer only returns metrics with data
                   if (factorsLoading) return true;
                   return factorsData[factor.metricId] !== undefined;
                 })
