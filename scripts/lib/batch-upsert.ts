@@ -17,6 +17,7 @@ const PAUSE_BETWEEN_BATCHES_MS = 200;
 /** Substrings in error messages that indicate a transient connection problem. */
 const CONNECTION_ERROR_PATTERNS = [
   'fetch', 'network', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'socket',
+  'timeout', 'canceling statement',
 ];
 
 /**

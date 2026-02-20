@@ -40,7 +40,15 @@ import type { ColumnMapFn } from '../../lib';
 
 const args = process.argv.slice(2);
 const useHistory = args.includes('--history');
-const geoFilter = args.includes('--geo') ? args[args.indexOf('--geo') + 1] : null;
+
+// Support both --geo metro and --geo=metro formats
+function parseArgValue(flag: string): string | null {
+  const eqArg = args.find((a) => a.startsWith(`${flag}=`));
+  if (eqArg) return eqArg.split('=')[1];
+  const idx = args.indexOf(flag);
+  return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
+}
+const geoFilter = parseArgValue('--geo');
 
 const VALID_GEOS = ['national', 'state', 'metro', 'county', 'zip'];
 if (geoFilter && !VALID_GEOS.includes(geoFilter)) {
@@ -196,11 +204,12 @@ async function importMergeGeography(spec: MergeGeographySpec): Promise<ImportGeo
       return latest === null || dateStr > latest ? dateStr : latest;
     }, null);
 
-    // Batch upsert merged records
+    // Batch upsert merged records (use smaller batches for zip to avoid statement timeouts)
+    const batchSize = spec.id === 'zip' ? 2000 : 5000;
     const upsertResult: BatchUpsertResult = await batchUpsert(supabase, mergedRecords, {
       tableName: spec.tableName,
       conflictKeys: [...spec.conflictKeys],
-      batchSize: 5000,
+      batchSize,
     });
 
     await logger.complete({

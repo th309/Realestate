@@ -36,15 +36,15 @@ export const REALTOR_URLS = {
   },
   metro: {
     core: `${S3_BASE}/Core/RDC_Inventory_Core_Metrics_Metro.csv`,
-    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_Metro.csv`,
+    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_Metro_History.csv`,
   },
   county: {
     core: `${S3_BASE}/Core/RDC_Inventory_Core_Metrics_County.csv`,
-    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_County.csv`,
+    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_County_History.csv`,
   },
   zip: {
     core: `${S3_BASE}/Core/RDC_Inventory_Core_Metrics_Zip.csv`,
-    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_Zip.csv`,
+    hotness: `${S3_BASE}/Hotness/RDC_Inventory_Hotness_Metrics_Zip_History.csv`,
   },
 } as const;
 

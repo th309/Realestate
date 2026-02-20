@@ -28,10 +28,17 @@ import { clearGeoidCache } from './redfin-geoid-lookup';
 // ---------------------------------------------------------------------------
 
 const args = process.argv.slice(2);
-const geoFlagIndex = args.indexOf('--geo');
-const geoFilter = geoFlagIndex >= 0 ? args[geoFlagIndex + 1] : null;
-const limitFlagIndex = args.indexOf('--limit');
-const rowLimit = limitFlagIndex >= 0 ? parseInt(args[limitFlagIndex + 1], 10) : undefined;
+
+/** Parse a CLI flag value supporting both --flag value and --flag=value formats. */
+function parseArgValue(flag: string): string | null {
+  const eqArg = args.find((a) => a.startsWith(`${flag}=`));
+  if (eqArg) return eqArg.split('=')[1];
+  const idx = args.indexOf(flag);
+  return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : null;
+}
+
+const geoFilter = parseArgValue('--geo');
+const rowLimit = parseArgValue('--limit') ? parseInt(parseArgValue('--limit')!, 10) : undefined;
 
 function getGeographiesToImport(): string[] {
   if (!geoFilter || geoFilter === 'default') return DEFAULT_IMPORT_GEOS;

@@ -31,7 +31,11 @@ import type { ZillowDatasetConfig, ZillowGeography } from './zillow-config';
 // ---------------------------------------------------------------------------
 
 const cliArgs = process.argv.slice(2);
+
+/** Parse a CLI flag value supporting both --flag value and --flag=value formats. */
 function getArgValue(flag: string): string | null {
+  const eqArg = cliArgs.find((a) => a.startsWith(`${flag}=`));
+  if (eqArg) return eqArg.split('=')[1];
   const idx = cliArgs.indexOf(flag);
   return idx !== -1 && idx + 1 < cliArgs.length ? cliArgs[idx + 1] : null;
 }
