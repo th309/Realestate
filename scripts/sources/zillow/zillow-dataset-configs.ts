@@ -98,10 +98,12 @@ const zhviDatasets = createMultiGeoDatasets(
 );
 
 // Rentals (ZORI) - Observed rent index, smoothed
+// Zillow publishes ZORI for metro, county, and zip only (not state)
 const zoriDatasets = createMultiGeoDatasets(
   'zori', 'zori', 'zori',
   'zori_uc_sfrcondomfr_sm_sa_month',
   'ZORI All Homes (SFR+Condo+MFR)',
+  ['metro', 'county', 'zip'],
 );
 
 // For-Sale Inventory
@@ -118,11 +120,12 @@ const newListingsDatasets = createMultiGeoDatasets(
   'New Listings (SFR+Condo)',
 );
 
-// Sales Count
+// Sales Count — Zillow only publishes at metro level
 const salesCountDatasets = createMultiGeoDatasets(
   'sales-count', 'sales_count_now', 'sales_count',
   'sales_count_now_uc_sfrcondo_month',
   'Sales Count (SFR+Condo)',
+  ['metro'],
 );
 
 // Median Sale Price
