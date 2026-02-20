@@ -1,11 +1,14 @@
 /**
  * Pipeline Runs Service
  *
- * Retrieves recent ETL pipeline runs from the data_ingestion_log table.
+ * Retrieves recent ETL pipeline runs from the data_ingestion_log table,
+ * records pipeline status reports from import scripts, and triggers
+ * pipeline runs via GitHub Actions workflow dispatch.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import type { PipelineStatusDto } from './dto/pipeline-status.dto';
 
 export interface PipelineRun {
   id: string;
@@ -42,6 +45,7 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   hud_fmr: 'HUD FMR',
   permits: 'Building Permits',
   building_permits: 'Building Permits',
+  redfin: 'Redfin',
 };
 
 @Injectable()
@@ -103,13 +107,113 @@ export class PipelineRunsService {
     }
   }
 
+  /**
+   * Record a pipeline status report from import-reporter.ts.
+   *
+   * Inserts one row per geography in the data_ingestion_log table,
+   * matching the schema used by the IngestionLogger in scripts/.
+   */
+  async recordPipelineStatus(
+    report: PipelineStatusDto,
+  ): Promise<{ recorded: number; errors: string[] }> {
+    const client = this.supabase.getClient();
+    const completedAt = report.timestamp || new Date().toISOString();
+    const insertErrors: string[] = [];
+    let recordedCount = 0;
+
+    for (const geo of report.geographies) {
+      try {
+        const { error } = await client.from('data_ingestion_log').insert({
+          source: report.source,
+          table_name: geo.table,
+          status: geo.status,
+          records_processed: geo.inserted + geo.failed,
+          records_success: geo.inserted,
+          records_error: geo.failed,
+          started_at: completedAt,
+          completed_at: completedAt,
+          duration_ms: report.durationMs,
+        });
+
+        if (error) {
+          const errorMsg = `Failed to insert log for ${geo.id}/${geo.table}: ${error.message}`;
+          this.logger.warn(errorMsg);
+          insertErrors.push(errorMsg);
+        } else {
+          recordedCount++;
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        const errorMsg = `Exception inserting log for ${geo.id}/${geo.table}: ${message}`;
+        this.logger.error(errorMsg);
+        insertErrors.push(errorMsg);
+      }
+    }
+
+    this.logger.log(
+      `Pipeline status recorded for ${report.source}: ${recordedCount}/${report.geographies.length} geographies`,
+    );
+
+    return { recorded: recordedCount, errors: insertErrors };
+  }
+
+  /**
+   * Trigger a pipeline run via GitHub Actions workflow dispatch.
+   *
+   * Requires GITHUB_TOKEN and GITHUB_REPO (owner/repo format) env vars.
+   * Returns an error message if env vars are not configured (does not crash).
+   */
   async triggerPipeline(pipelineName: string): Promise<{ success: boolean; message: string }> {
-    // TODO: Implement actual pipeline triggering via job queue
-    this.logger.log(`Pipeline trigger requested: ${pipelineName}`);
-    return {
-      success: true,
-      message: `Pipeline ${pipelineName} trigger queued`,
-    };
+    const githubToken = process.env.GITHUB_TOKEN;
+    const githubRepo = process.env.GITHUB_REPO;
+
+    if (!githubToken || !githubRepo) {
+      this.logger.warn(
+        `Pipeline trigger for ${pipelineName} skipped: GITHUB_TOKEN or GITHUB_REPO not configured`,
+      );
+      return {
+        success: false,
+        message: 'GitHub token or repo not configured — cannot dispatch workflow',
+      };
+    }
+
+    const [owner, repoName] = githubRepo.split('/');
+    if (!owner || !repoName) {
+      return {
+        success: false,
+        message: 'GITHUB_REPO must be in "owner/repo" format',
+      };
+    }
+
+    const workflowUrl = `https://api.github.com/repos/${owner}/${repoName}/actions/workflows/data-pipeline-cycle.yml/dispatches`;
+
+    try {
+      const response = await fetch(workflowUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { sources: pipelineName },
+        }),
+      });
+
+      if (response.ok || response.status === 204) {
+        this.logger.log(`Pipeline ${pipelineName} triggered via GitHub Actions`);
+        return { success: true, message: `Pipeline ${pipelineName} triggered` };
+      }
+
+      const statusText = `GitHub API returned ${response.status}: ${response.statusText}`;
+      this.logger.warn(`Pipeline trigger failed: ${statusText}`);
+      return { success: false, message: statusText };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Pipeline trigger error: ${message}`);
+      return { success: false, message: `GitHub API request failed: ${message}` };
+    }
   }
 
   private mapStatus(dbStatus: string): PipelineRun['status'] {
@@ -123,5 +227,4 @@ export class PipelineRunsService {
     };
     return statusMap[dbStatus?.toLowerCase()] || 'failed';
   }
-
 }

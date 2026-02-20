@@ -9,3 +9,4 @@ export { DataSourcesHealthService } from './data-sources-health.service';
 export { PipelineRunsService } from './pipeline-runs.service';
 export { DataAlertsService } from './data-alerts.service';
 export { METRIC_DEFINITIONS, getUniqueTables, getMetricsByTable } from './metric-definitions';
+export { PipelineStatusDto, PipelineGeographyResultDto } from './dto/pipeline-status.dto';

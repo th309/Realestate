@@ -7,12 +7,25 @@
  * - GET /api/health/data-sources - Check data source availability
  * - GET /api/health/pipeline-runs - Get recent pipeline runs
  * - GET /api/health/data-alerts - Get active alerts
+ * - POST /api/health/pipeline-status - Accept pipeline status reports (API key protected)
  * - POST /api/health/data-alerts/:id/acknowledge - Acknowledge an alert
  * - POST /api/health/data-alerts/:id/resolve - Resolve an alert
  * - POST /api/pipelines/:name/trigger - Trigger a pipeline manually
  */
 
-import { Controller, Get, Post, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Body,
+  HttpCode,
+  Inject,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
@@ -20,6 +33,8 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
+import { PipelineApiKeyGuard } from '../common/guards/pipeline-api-key.guard';
+import { PipelineStatusDto } from './dto/pipeline-status.dto';
 
 @ApiTags('health')
 @Controller('api/health')
@@ -77,6 +92,17 @@ export class HealthController {
   async getPipelineRuns(@Query('hours') hours?: string) {
     const hoursNum = hours ? parseInt(hours, 10) : 72;
     return this.pipelineRuns.getRecentRuns(hoursNum);
+  }
+
+  @Post('pipeline-status')
+  @HttpCode(200)
+  @UseGuards(PipelineApiKeyGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({ summary: 'Accept pipeline status report from import scripts' })
+  @ApiResponse({ status: 200, description: 'Pipeline status recorded' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing pipeline API key' })
+  async reportPipelineStatus(@Body() statusReport: PipelineStatusDto) {
+    return this.pipelineRuns.recordPipelineStatus(statusReport);
   }
 
   @Get('data-alerts')
