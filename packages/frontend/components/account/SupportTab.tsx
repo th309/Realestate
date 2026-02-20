@@ -34,7 +34,7 @@ export function SupportTab({ user }: SupportTabProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid || issueType === '') return;
+    if (!isValid || !issueType) return;
 
     setSubmitting(true);
     setError(null);
