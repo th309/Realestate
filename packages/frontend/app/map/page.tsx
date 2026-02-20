@@ -263,9 +263,15 @@ function MapPageInner() {
     });
 
     map.current.on('load', () => setMapLoaded(true));
-    map.current.on('error', (e) => {
-      console.error('Map error:', e);
-      setMapError('Map failed to load');
+    map.current.on('error', (e: mapboxgl.ErrorEvent & { error?: { message?: string; status?: number } }) => {
+      const msg = e.error?.message || 'Unknown map error';
+      // Tile/source errors are transient — only set fatal error if the map never loaded
+      if (!map.current?.loaded()) {
+        console.error('[Map] fatal load error:', msg);
+        setMapError('Map failed to load');
+      } else {
+        console.warn('[Map] non-fatal error:', msg);
+      }
     });
 
     return () => {
