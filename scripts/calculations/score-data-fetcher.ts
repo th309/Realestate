@@ -42,16 +42,15 @@ export const SCORE_GEO_CONFIGS: ScoreGeoConfig[] = [
     nameColumn: 'county_name',
     priceColumn: 'median_listing_price',
   },
-  // ZIP data not yet available - uncomment when ready
-  // {
-  //   geoLevel: 'zip',
-  //   realtorTable: 'realtor_zip',
-  //   censusTable: null,
-  //   economicTable: null,
-  //   idColumn: 'postal_code',
-  //   nameColumn: 'postal_code',
-  //   priceColumn: 'median_listing_price',
-  // },
+  {
+    geoLevel: 'zip',
+    realtorTable: 'realtor_zip',
+    censusTable: null,
+    economicTable: null,
+    idColumn: 'postal_code',
+    nameColumn: 'postal_code',
+    priceColumn: 'median_listing_price',
+  },
 ];
 
 // ---------------------------------------------------------------------------
