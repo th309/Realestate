@@ -21,6 +21,7 @@ import { join } from 'path';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { parse as parseSync } from 'csv-parse/sync';
+import { logIngestionDetail } from './utils/log-ingestion-detail';
 
 const STATUS_FILE = join(__dirname, '../zillow-import-status.txt');
 
@@ -558,7 +559,8 @@ async function loadCbsaCrosswalk(supabase: SupabaseClient): Promise<void> {
 
 async function processDataset(
   supabase: SupabaseClient,
-  dataset: DatasetConfig
+  dataset: DatasetConfig,
+  runId?: string,
 ): Promise<void> {
   const status = datasetStatuses.get(dataset.id)!;
   status.status = 'downloading';
@@ -577,6 +579,9 @@ async function processDataset(
     status.errorMessage = downloadResult.error;
     status.endTime = Date.now();
     console.log(`  FAILED: ${downloadResult.error}`);
+    if (runId) {
+      await logIngestionDetail(supabase, runId, getMetricName(dataset.datasetType), dataset.geography, 'failed', 0, 0, Date.now() - status.startTime!, downloadResult.error);
+    }
     return;
   }
 
@@ -592,11 +597,17 @@ async function processDataset(
 
     const duration = formatDuration(status.endTime - status.startTime!);
     console.log(`  COMPLETED: ${importResult.recordsInserted.toLocaleString()} records (${duration})`);
+    if (runId) {
+      await logIngestionDetail(supabase, runId, getMetricName(dataset.datasetType), dataset.geography, 'success', importResult.recordsInserted, importResult.errors, status.endTime! - status.startTime!);
+    }
   } catch (error: any) {
     status.status = 'failed';
     status.errorMessage = error.message;
     status.endTime = Date.now();
     console.log(`  FAILED: ${error.message}`);
+    if (runId) {
+      await logIngestionDetail(supabase, runId, getMetricName(dataset.datasetType), dataset.geography, 'failed', 0, 0, Date.now() - (status.startTime || Date.now()), error.message);
+    }
   }
 }
 
@@ -613,6 +624,18 @@ async function main() {
 
   importStartTime = Date.now();
   const supabase = createSupabaseClient();
+
+  // Create parent ingestion log row
+  const { data: logRow } = await supabase
+    .from('data_ingestion_log')
+    .insert({
+      source: 'zillow',
+      status: 'running',
+      started_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single();
+  const runId = logRow?.id;
 
   // Load dataset configuration
   let ZILLOW_DATASETS: DatasetConfig[];
@@ -670,7 +693,7 @@ async function main() {
 
   // Process each dataset
   for (const dataset of sortedDatasets) {
-    await processDataset(supabase, dataset);
+    await processDataset(supabase, dataset, runId);
     currentDatasetIndex++;
 
     // Small delay between datasets
@@ -686,6 +709,25 @@ async function main() {
 
   // Get final table counts
   await getTableCounts(supabase);
+
+  // Update parent log row
+  if (runId) {
+    const statuses = Array.from(datasetStatuses.values());
+    const completed = statuses.filter(s => s.status === 'completed');
+    const failed = statuses.filter(s => s.status === 'failed');
+    const totalRecords = completed.reduce((sum, s) => sum + s.recordsInserted, 0);
+
+    await supabase
+      .from('data_ingestion_log')
+      .update({
+        status: failed.length === 0 ? 'success' : 'partial',
+        completed_at: new Date().toISOString(),
+        records_success: totalRecords,
+        records_error: failed.length,
+        duration_ms: Date.now() - importStartTime,
+      })
+      .eq('id', runId);
+  }
 
   // Print final report
   console.log('\n\n');

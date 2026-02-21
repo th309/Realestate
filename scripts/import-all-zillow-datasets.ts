@@ -15,6 +15,8 @@ import type { ImportResult, DatasetConfig } from './zillow-all-import/types';
 import { createZillowImportClient, getTableName } from './zillow-all-import/db-client';
 import { downloadDataset } from './zillow-all-import/download';
 import { importCSV } from './zillow-all-import/csv-processor';
+import { logIngestionDetail } from './utils/log-ingestion-detail';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 const DATA_DIR = join(__dirname, '../data/zillow');
 if (!existsSync(DATA_DIR)) {
@@ -41,9 +43,10 @@ try {
 /**
  * Process a single dataset
  */
-async function processDataset(supabase: any, dataset: DatasetConfig): Promise<ImportResult> {
+async function processDataset(supabase: any, dataset: DatasetConfig, runId?: string): Promise<ImportResult> {
   console.log(`\n📊 Processing: ${dataset.id}`);
   console.log(`   Description: ${dataset.description}`);
+  const startMs = Date.now();
 
   // Determine metric name from dataset type
   let metricName = dataset.datasetType;
@@ -58,6 +61,9 @@ async function processDataset(supabase: any, dataset: DatasetConfig): Promise<Im
   // Download
   const downloadResult = await downloadDataset(dataset);
   if (!downloadResult.success) {
+    if (runId) {
+      await logIngestionDetail(supabase, runId, metricName, dataset.geography, 'failed', 0, 0, 0, downloadResult.error);
+    }
     return {
       datasetId: dataset.id,
       success: false,
@@ -73,6 +79,10 @@ async function processDataset(supabase: any, dataset: DatasetConfig): Promise<Im
   const importResult = await importCSV(supabase, downloadResult.csvContent!, metricName, dataset);
 
   console.log(`  ✅ Imported: ${importResult.marketsCreated} markets, ${importResult.timeSeriesInserted} time series records`);
+  if (runId) {
+    const durationMs = Date.now() - startMs;
+    await logIngestionDetail(supabase, runId, metricName, dataset.geography, importResult.errors === 0 ? 'success' : 'failed', importResult.timeSeriesInserted, importResult.errors, durationMs, importResult.errors > 0 ? `${importResult.errors} errors` : undefined);
+  }
 
   return {
     datasetId: dataset.id,
@@ -152,6 +162,18 @@ async function main() {
 
   const supabase = createZillowImportClient();
 
+  // Create parent ingestion log row
+  const { data: logRow } = await supabase
+    .from('data_ingestion_log')
+    .insert({
+      source: 'zillow',
+      status: 'running',
+      started_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single();
+  const runId = logRow?.id;
+
   // Sort by estimated size (smallest first): state < metro < county < city < zip
   const getSizePriority = (id: string): number => {
     if (id.includes('-us-')) return 0;      // US aggregate (tiny)
@@ -183,7 +205,7 @@ async function main() {
     console.log(`\n[${index + 1}/${datasetsToProcess.length}]`);
 
     try {
-      const result = await processDataset(supabase, dataset);
+      const result = await processDataset(supabase, dataset, runId);
       results.push(result);
 
       // Add delay between datasets to avoid rate limiting
@@ -202,6 +224,24 @@ async function main() {
         errorMessage: error.message
       });
     }
+  }
+
+  // Update parent log row
+  if (runId) {
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+    const totalRecords = results.reduce((sum, r) => sum + r.timeSeriesInserted, 0);
+
+    await supabase
+      .from('data_ingestion_log')
+      .update({
+        status: failed.length === 0 ? 'success' : 'partial',
+        completed_at: new Date().toISOString(),
+        records_success: totalRecords,
+        records_error: failed.length,
+        duration_ms: Date.now() - startTime,
+      })
+      .eq('id', runId);
   }
 
   const allSuccess = printSummary(results, startTime);
