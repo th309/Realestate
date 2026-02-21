@@ -21,6 +21,7 @@ Approach all changes through the Hermeneutic Circle. Before touching any file or
 * **NEVER** create separate API methods for each metric; always use the unified `fetchMetricData`.
 * **NEVER** format values manually; use `formatValue()` or `formatTooltipValue()` from utils.
 * **NEVER** hardcode zoom levels; use `GEO_ZOOM_LEVELS` from `config/metrics.ts`.
+* **NEVER** write ad-hoc metric fallback logic in backend services. All metric source fallbacks and geography inheritance MUST go through `MetricResolutionService`. See **Section 3.1**.
 
 ### 1.2 Security & Data Protection (Strict)
 * **Authentication & Authorization:**
@@ -154,6 +155,7 @@ packages/
       entitlements/   # Entitlements system (tier gating)
   backend/            # NestJS API (port 3001)
     src/
+      metric-resolution/  # Centralized metric fallback & geo inheritance
       metrics/        # Metric endpoints
       scoring/        # PropertyIQ scores
       markets/        # Market data
@@ -257,6 +259,82 @@ const { options } = useAllMetricOptions(geoLevel);
 - Auto-filtering by geography support
 - Consistent formatting via `formatValue()`
 - Trend calculation (3-month comparison)
+
+### 3.1 BACKEND METRIC RESOLUTION - CRITICAL
+
+**ALL backend metric fallback logic MUST go through `MetricResolutionService`.**
+
+**Module:** `packages/backend/src/metric-resolution/`
+
+When a backend service needs a metric value (e.g., `home_value`, `rent_index`, `unemployment_rate`) and the primary data source might be missing, it MUST NOT write its own if/else fallback chain. Instead, it calls `MetricResolutionService`, which consults the centralized `fallback-registry.ts` — the **single source of truth** for which data sources to try and in what order.
+
+```typescript
+// CORRECT - Use MetricResolutionService
+const resolved = await this.metricResolution.resolveMetricBatch(
+  ['home_value', 'rent_index', 'unemployment_rate'],
+  geoLevel, geoId,
+);
+const homeValue = resolved.home_value.value; // Resolved via ZHVI → Census ACS → Realtor
+
+// WRONG - Never write ad-hoc fallback chains
+if (zhviValue == null) {
+  // try Census...
+  if (censusValue == null) {
+    // try Realtor...
+  }
+}
+```
+
+**Why this matters:**
+- Every consumer gets the same answer for the same geography — no more bugs where one page shows data and another doesn't
+- Adding or changing a fallback source is a one-line change in `fallback-registry.ts`, not a hunt across 4+ files
+- Geography inheritance (ZIP → County → Metro → State) is handled automatically via `GeographyChainService`
+- Source provenance is tracked: `ResolvedMetric` tells you which source provided the value and whether it was inherited
+
+**The module provides:**
+
+| Method | Use Case |
+|--------|----------|
+| `resolveMetric(metricId, geoLevel, geoId)` | Single metric for one geography |
+| `resolveMetricBatch(metricIds, geoLevel, geoId)` | Multiple metrics for one geography (market snapshots, reports) |
+| `resolveMetricForAllGeos(metricId, geoLevel)` | One metric across all geographies at a level (scoring batch) |
+
+**`ResolvedMetric` return type:**
+```typescript
+interface ResolvedMetric {
+  value: number | null;
+  date: string | null;
+  source: string;            // Which data source provided the value
+  sourceGeoId: string | null;
+  sourceGeoLevel: string | null;
+  isInherited: boolean;      // Was this inherited from a parent geography?
+  isFallback: boolean;       // Was this from a non-primary source?
+}
+```
+
+**Key files:**
+
+| File | Purpose |
+|------|---------|
+| `fallback-registry.ts` | **THE** source of truth for all metric fallback chains |
+| `source-fetcher.service.ts` | DB table/column routing per (source, geoLevel) |
+| `geography-chain.service.ts` | Geography parent chain with LRU cache |
+| `metric-resolution.service.ts` | Public API (the 3 methods above) |
+
+**Adding a new metric fallback:**
+1. Add the entry to `FALLBACK_REGISTRY` in `fallback-registry.ts`
+2. If the source table doesn't exist in `source-fetcher.service.ts`, add its route
+3. Done — all consumers automatically get the new fallback
+
+**Adding a new data source:**
+1. Add the source type to `DataSource` in `metric-resolution.types.ts`
+2. Add the fetch logic in `source-fetcher.service.ts`
+3. Reference it in the relevant `FALLBACK_REGISTRY` entries
+
+**Geography inheritance** (for metrics like `unemployment_rate` where ZIP data may be missing):
+- Set `supportsGeoInheritance: true` in the registry entry
+- `GeographyChainService` walks up: ZIP → County → Metro → State → National
+- Uses `geography_crosswalk` table with LRU-cached lookups
 
 ---
 
