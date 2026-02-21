@@ -31,6 +31,34 @@ export interface PipelineRunsResponse {
   };
 }
 
+export interface RunDetail {
+  metricName: string;
+  geography: string;
+  status: 'success' | 'failed' | 'skipped';
+  recordsInserted: number;
+  recordsFailed: number;
+  recordsDelta: number;
+  periodsAdded: string[];
+  latestDataDate: string | null;
+  freshnessDays: number;
+  coveragePct: number;
+  coverageDelta: number;
+  durationMs: number;
+  errorMessage: string | null;
+}
+
+export interface RunDetailsResponse {
+  runId: string;
+  pipelineName: string;
+  details: RunDetail[];
+  summary: {
+    totalMetrics: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+  };
+}
+
 const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   zillow: 'Zillow',
   realtor: 'Realtor',
@@ -101,6 +129,58 @@ export class PipelineRunsService {
         summary: { total: 0, successful: 0, failed: 0, running: 0 },
       };
     }
+  }
+
+  async getRunDetails(runId: string): Promise<RunDetailsResponse> {
+    const client = this.supabase.getClient();
+
+    // Get parent run for pipeline name
+    const { data: run } = await client
+      .from('data_ingestion_log')
+      .select('source')
+      .eq('id', runId)
+      .single();
+
+    // Get detail rows
+    const { data, error } = await client
+      .from('data_ingestion_details')
+      .select('*')
+      .eq('run_id', runId)
+      .order('status', { ascending: true })
+      .order('metric_name', { ascending: true })
+      .order('geography', { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch run details: ${error.message}`);
+    }
+
+    const details: RunDetail[] = (data || []).map((row) => ({
+      metricName: row.metric_name,
+      geography: row.geography,
+      status: row.status,
+      recordsInserted: row.records_inserted || 0,
+      recordsFailed: row.records_failed || 0,
+      recordsDelta: row.records_delta || 0,
+      periodsAdded: row.periods_added || [],
+      latestDataDate: row.latest_data_date,
+      freshnessDays: row.freshness_days || 0,
+      coveragePct: parseFloat(row.coverage_pct) || 0,
+      coverageDelta: parseFloat(row.coverage_delta) || 0,
+      durationMs: row.duration_ms || 0,
+      errorMessage: row.error_message,
+    }));
+
+    return {
+      runId,
+      pipelineName: run?.source || 'unknown',
+      details,
+      summary: {
+        totalMetrics: details.length,
+        succeeded: details.filter((d) => d.status === 'success').length,
+        failed: details.filter((d) => d.status === 'failed').length,
+        skipped: details.filter((d) => d.status === 'skipped').length,
+      },
+    };
   }
 
   async triggerPipeline(pipelineName: string): Promise<{ success: boolean; message: string }> {

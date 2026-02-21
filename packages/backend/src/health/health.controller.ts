@@ -79,6 +79,13 @@ export class HealthController {
     return this.pipelineRuns.getRecentRuns(hoursNum);
   }
 
+  @Get('pipeline-runs/:runId/details')
+  @ApiOperation({ summary: 'Get per-metric details for a pipeline run' })
+  @ApiResponse({ status: 200, description: 'Per-metric breakdown of a pipeline run' })
+  async getPipelineRunDetails(@Param('runId') runId: string) {
+    return this.pipelineRuns.getRunDetails(runId);
+  }
+
   @Get('data-alerts')
   @ApiOperation({ summary: 'Get data alerts' })
   @ApiQuery({ name: 'status', required: false, description: 'Filter by status' })
