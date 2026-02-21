@@ -9,17 +9,20 @@ export class StripeService {
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
+    const stripeKey = this.readEnvValue(['STRIPE_SECRET_KEY', 'STRIPE_API_KEY']);
     if (!stripeKey) {
-      this.logger.warn('STRIPE_SECRET_KEY not set - Stripe billing features are disabled');
+      this.logger.warn(
+        'Stripe key not set (checked STRIPE_SECRET_KEY, STRIPE_API_KEY) - Stripe billing features are disabled',
+      );
       this.stripe = null;
     } else {
+      this.logger.log(`Stripe key detected (${this.maskedKeyInfo(stripeKey)})`);
       this.stripe = new Stripe(stripeKey, {
         apiVersion: '2026-01-28.clover',
       });
     }
 
-    const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
+    const webhookSecret = this.readEnvValue(['STRIPE_WEBHOOK_SECRET']);
     if (!webhookSecret) {
       this.logger.warn('STRIPE_WEBHOOK_SECRET not set – webhook verification will fail');
     }
@@ -33,6 +36,33 @@ export class StripeService {
       );
     }
     return this.stripe;
+  }
+
+  private readEnvValue(names: string[]): string | undefined {
+    for (const name of names) {
+      const fromConfig = this.config.get<string>(name);
+      const fromProcess = process.env[name];
+      const raw = fromConfig ?? fromProcess;
+      if (!raw) continue;
+
+      const cleaned = raw.trim().replace(/^['"]|['"]$/g, '');
+      if (!cleaned) continue;
+
+      if (cleaned !== raw) {
+        this.logger.warn(`Normalized ${name} value by trimming whitespace/quotes`);
+      } else {
+        this.logger.log(`Loaded ${name} from environment`);
+      }
+
+      return cleaned;
+    }
+
+    return undefined;
+  }
+
+  private maskedKeyInfo(value: string): string {
+    const prefix = value.slice(0, 7);
+    return `prefix=${prefix}..., len=${value.length}`;
   }
 
   async getOrCreateCustomer(userId: string, email: string): Promise<string> {
