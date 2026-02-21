@@ -444,12 +444,12 @@ async function backfillFromCounty(
   // 2. Bulk-fetch ZIP→county mappings via GeographyChainService (centralized)
   //    Falls back to direct geography_crosswalk query if service not available.
   let zipToCounty: Map<string, string>;
+  const pageSize = 1000;
 
   if (geoChainService) {
     zipToCounty = await geoChainService.getZipToCountyMap(missingZips);
   } else {
     zipToCounty = new Map<string, string>();
-    const pageSize = 1000;
     for (let i = 0; i < missingZips.length; i += pageSize) {
       const batch = missingZips.slice(i, i + pageSize);
       const { data, error } = await supabase
