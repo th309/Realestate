@@ -1,21 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 @Injectable()
 export class StripeService {
-  private readonly stripe: Stripe;
+  private readonly stripe: Stripe | null;
   private readonly logger = new Logger(StripeService.name);
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
     const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (!stripeKey) {
-      throw new Error('STRIPE_SECRET_KEY environment variable is required');
+      this.logger.warn('STRIPE_SECRET_KEY not set - Stripe billing features are disabled');
+      this.stripe = null;
+    } else {
+      this.stripe = new Stripe(stripeKey, {
+        apiVersion: '2026-01-28.clover',
+      });
     }
-    this.stripe = new Stripe(stripeKey, {
-      apiVersion: '2026-01-28.clover',
-    });
+
     const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
     if (!webhookSecret) {
       this.logger.warn('STRIPE_WEBHOOK_SECRET not set – webhook verification will fail');
@@ -23,9 +26,20 @@ export class StripeService {
     this.webhookSecret = webhookSecret || '';
   }
 
+  private getStripeClient(): Stripe {
+    if (!this.stripe) {
+      throw new ServiceUnavailableException(
+        'Billing is temporarily unavailable: Stripe is not configured on the backend.',
+      );
+    }
+    return this.stripe;
+  }
+
   async getOrCreateCustomer(userId: string, email: string): Promise<string> {
+    const stripe = this.getStripeClient();
+
     // Search for existing customer by metadata
-    const existing = await this.stripe.customers.search({
+    const existing = await stripe.customers.search({
       query: `metadata['user_id']:'${userId}'`,
     });
 
@@ -33,7 +47,7 @@ export class StripeService {
       return existing.data[0].id;
     }
 
-    const customer = await this.stripe.customers.create({
+    const customer = await stripe.customers.create({
       email,
       metadata: { user_id: userId },
     });
@@ -48,7 +62,8 @@ export class StripeService {
     cancelUrl: string;
     metadata?: Record<string, string>;
   }): Promise<string> {
-    const session = await this.stripe.checkout.sessions.create({
+    const stripe = this.getStripeClient();
+    const session = await stripe.checkout.sessions.create({
       customer: params.customerId,
       mode: 'subscription',
       line_items: [{ price: params.priceId, quantity: 1 }],
@@ -62,7 +77,8 @@ export class StripeService {
   }
 
   async createBillingPortalSession(customerId: string, returnUrl: string): Promise<string> {
-    const session = await this.stripe.billingPortal.sessions.create({
+    const stripe = this.getStripeClient();
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
@@ -71,11 +87,13 @@ export class StripeService {
   }
 
   constructWebhookEvent(body: Buffer, signature: string): Stripe.Event {
-    return this.stripe.webhooks.constructEvent(body, signature, this.webhookSecret);
+    const stripe = this.getStripeClient();
+    return stripe.webhooks.constructEvent(body, signature, this.webhookSecret);
   }
 
   async getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
-    return this.stripe.subscriptions.retrieve(subscriptionId);
+    const stripe = this.getStripeClient();
+    return stripe.subscriptions.retrieve(subscriptionId);
   }
 
   async createPrice(
@@ -83,7 +101,8 @@ export class StripeService {
     unitAmount: number,
     interval: 'month' | 'year',
   ): Promise<Stripe.Price> {
-    return this.stripe.prices.create({
+    const stripe = this.getStripeClient();
+    return stripe.prices.create({
       product: productId,
       unit_amount: unitAmount,
       currency: 'usd',
@@ -92,6 +111,7 @@ export class StripeService {
   }
 
   async archivePrice(priceId: string): Promise<void> {
-    await this.stripe.prices.update(priceId, { active: false });
+    const stripe = this.getStripeClient();
+    await stripe.prices.update(priceId, { active: false });
   }
 }
