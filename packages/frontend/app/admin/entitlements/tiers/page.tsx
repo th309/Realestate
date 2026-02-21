@@ -30,6 +30,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { fetchAPIRaw } from '@/lib/data';
+import TierPricingEditor from './TierPricingEditor';
 
 // Human-readable labels for feature categories
 const CATEGORY_LABELS: Record<string, string> = {
@@ -479,6 +480,8 @@ export default function TiersConfigurationPage() {
 
   return (
     <div className="max-w-6xl">
+      <TierPricingEditor />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

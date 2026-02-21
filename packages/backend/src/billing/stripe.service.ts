@@ -77,4 +77,21 @@ export class StripeService {
   async getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
     return this.stripe.subscriptions.retrieve(subscriptionId);
   }
+
+  async createPrice(
+    productId: string,
+    unitAmount: number,
+    interval: 'month' | 'year',
+  ): Promise<Stripe.Price> {
+    return this.stripe.prices.create({
+      product: productId,
+      unit_amount: unitAmount,
+      currency: 'usd',
+      recurring: { interval },
+    });
+  }
+
+  async archivePrice(priceId: string): Promise<void> {
+    await this.stripe.prices.update(priceId, { active: false });
+  }
 }
