@@ -21,7 +21,7 @@ interface TierPricingUpdate {
   price_yearly?: number;
 }
 
-@Controller('api/admin/tiers')
+@Controller('api/admin/tier-pricing')
 export class TierPricingController {
   private readonly logger = new Logger(TierPricingController.name);
 
@@ -31,10 +31,10 @@ export class TierPricingController {
   ) {}
 
   /**
-   * GET /api/admin/tiers/pricing
+   * GET /api/admin/tier-pricing
    * Returns all tiers with their pricing and Stripe IDs.
    */
-  @Get('pricing')
+  @Get()
   async getTierPricing() {
     const client = this.supabase.getClient();
 
@@ -53,11 +53,11 @@ export class TierPricingController {
   }
 
   /**
-   * PUT /api/admin/tiers/:slug/pricing
+   * PUT /api/admin/tier-pricing/:slug
    * Updates pricing for a tier. If the price amount changes, creates a new
    * Stripe price (Stripe prices are immutable) and archives the old one.
    */
-  @Put(':slug/pricing')
+  @Put(':slug')
   async updateTierPricing(
     @Param('slug') slug: string,
     @Body() body: TierPricingUpdate,

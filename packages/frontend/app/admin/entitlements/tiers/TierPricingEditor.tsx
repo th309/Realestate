@@ -32,7 +32,7 @@ export default function TierPricingEditor() {
   const fetchPricing = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetchAPIRaw('/api/admin/tiers/pricing');
+      const res = await fetchAPIRaw('/api/admin/tier-pricing');
       const result = await res.json();
       if (result.success) {
         setTiers(result.data);
@@ -65,7 +65,7 @@ export default function TierPricingEditor() {
     setError(null);
 
     try {
-      const res = await fetchAPIRaw(`/api/admin/tiers/${slug}/pricing`, {
+      const res = await fetchAPIRaw(`/api/admin/tier-pricing/${slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
