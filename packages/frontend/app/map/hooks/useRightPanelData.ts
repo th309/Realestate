@@ -37,7 +37,7 @@ interface RightPanelData {
     direction: TrendDirection;
     value: string;
   };
-  confidence?: 'A' | 'B' | 'C' | 'D';
+  confidence?: 'a' | 'b' | 'c' | 'f';
   scoreInterpretation?: string;
   // Contextual data
   pricing?: PricingData;
@@ -79,11 +79,11 @@ function getTrend(change: number, threshold = 0.5): TrendDirection {
 /**
  * Get confidence level based on data completeness
  */
-function getConfidenceLevel(completeness: number): 'A' | 'B' | 'C' | 'D' {
-  if (completeness >= 90) return 'A';
-  if (completeness >= 70) return 'B';
-  if (completeness >= 50) return 'C';
-  return 'D';
+function getConfidenceLevel(completeness: number): 'a' | 'b' | 'c' | 'f' {
+  if (completeness >= 90) return 'a';
+  if (completeness >= 70) return 'b';
+  if (completeness >= 50) return 'c';
+  return 'f';
 }
 
 /**

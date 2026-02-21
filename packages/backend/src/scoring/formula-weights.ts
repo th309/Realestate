@@ -193,12 +193,13 @@ export const SAMPLE_SIZE_SCORES: Record<GeographyLevel, number> = {
 
 /**
  * Confidence level thresholds.
+ * Mapped to letter grades: A (excellent data), B (good), C (fair), F (insufficient).
  */
 export const CONFIDENCE_LEVELS = {
-  HIGH: { min: 80, max: 100 },
-  MEDIUM: { min: 65, max: 79 },
-  LOW: { min: 45, max: 64 },
-  INSUFFICIENT: { min: 0, max: 44 },
+  A: { min: 80, max: 100 },
+  B: { min: 65, max: 79 },
+  C: { min: 45, max: 64 },
+  F: { min: 0, max: 44 },
 } as const;
 
 export type ConfidenceLevel = keyof typeof CONFIDENCE_LEVELS;
@@ -226,13 +227,13 @@ export function scoreToGrade(score: number): string {
 }
 
 /**
- * Helper function to determine confidence level from a confidence score.
+ * Helper function to determine confidence letter grade from a confidence score.
  */
 export function getConfidenceLevel(confidenceScore: number): ConfidenceLevel {
-  if (confidenceScore >= CONFIDENCE_LEVELS.HIGH.min) return 'HIGH';
-  if (confidenceScore >= CONFIDENCE_LEVELS.MEDIUM.min) return 'MEDIUM';
-  if (confidenceScore >= CONFIDENCE_LEVELS.LOW.min) return 'LOW';
-  return 'INSUFFICIENT';
+  if (confidenceScore >= CONFIDENCE_LEVELS.A.min) return 'A';
+  if (confidenceScore >= CONFIDENCE_LEVELS.B.min) return 'B';
+  if (confidenceScore >= CONFIDENCE_LEVELS.C.min) return 'C';
+  return 'F';
 }
 
 /**

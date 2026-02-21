@@ -12,9 +12,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { SearchResult } from '@/app/map/types';
-
-// Inline env var for client-side usage — NEXT_PUBLIC_ vars are replaced at build time
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { fetchGeographySearch } from '@/lib/data';
 
 /**
  * Parse the primary state abbreviation from a geography name.
@@ -83,28 +81,13 @@ export function useUniversalSearch({
 
         try {
             // Single backend call — geographies table has all types
-            const params = new URLSearchParams({
-                query,
-                limit: '15',
+            const geographies = await fetchGeographySearch(query, {
+                type: filterByGeoLevel,
+                limit: 15,
+                signal: controller.signal,
             });
-            if (filterByGeoLevel) {
-                params.set('type', filterByGeoLevel);
-            }
-
-            const response = await fetch(
-                `${API_URL}/api/geography/search?${params.toString()}`,
-                { signal: controller.signal }
-            );
 
             clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                console.warn(`[Search] Backend error: ${response.status} ${response.statusText}`);
-                setSearchResults([]);
-                return;
-            }
-
-            const geographies: any[] = await response.json();
 
             // Map backend results to SearchResult shape
             const results: SearchResult[] = geographies.map((geo) => ({

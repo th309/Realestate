@@ -7,6 +7,7 @@ import { Home, TrendingUp, MapPin, DollarSign, ChevronRight, Plus, X, Sparkles, 
 import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
 import { PaywallCard } from '@/components/entitlements/PaywallCard';
 import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
+import { useAuth } from '@/lib/auth';
 import { Breadcrumbs } from '@/components/navigation';
 import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
 import { SearchWidget } from '@/app/map/components/SearchWidget';
@@ -502,6 +503,7 @@ interface ReportCreationPageProps {
 function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const { simulatedTier, tier } = useEntitlements();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -606,7 +608,12 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
         user_inputs: Object.keys(userInputs).length > 0 ? userInputs : undefined,
       };
 
-      const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
+      const userId = user?.id;
+      if (!userId) {
+        setError('You must be signed in to generate a report.');
+        setIsGenerating(false);
+        return;
+      }
       const effectiveTier = simulatedTier || tier;
 
       const data = await generateReportAPI(requestBody, { userId, userTier: effectiveTier || undefined });
@@ -756,12 +763,14 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
 // ============================================================================
 
 function ReportHistory() {
+  const { user } = useAuth();
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
+    const userId = user?.id;
+    if (!userId) { setLoading(false); return; }
     fetchReportList({ userId, limit: 10 })
       .then(data => setReports(data as ReportListItem[]))
       .catch(() => setReports([]))

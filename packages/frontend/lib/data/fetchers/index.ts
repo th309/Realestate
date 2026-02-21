@@ -105,8 +105,10 @@ export {
 // GeoJSON
 export { getGeoJsonApiUrl } from './geojson';
 
-// Market search lists
+// Market search lists & geography search
 export {
+  fetchGeographySearch,
+  type GeographySearchResult,
   fetchMetrosList,
   fetchCountiesList,
   fetchZipsList,

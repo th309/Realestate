@@ -28,7 +28,7 @@ interface SingleScoreResult {
   score: number;
   grade: string;
   confidence: number;
-  confidence_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence_level: 'A' | 'B' | 'C' | 'F';
 }
 
 interface ApiScoreResult {
@@ -51,7 +51,7 @@ interface DisplayScore {
   score: number;
   grade: string;
   confidence: number;
-  confidenceLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidenceLevel: 'A' | 'B' | 'C' | 'F';
 }
 
 const SCORE_LABELS: Record<string, string> = {
@@ -292,9 +292,9 @@ export function ScoreCardsTab({ geography }: ScoreCardsTabProps) {
               <MetricTitle metricId={SCORE_TYPE_TO_METRIC_ID[score.type]} className="text-sm font-medium text-on-surface-variant" />
               <span
                 className={`text-xs px-2 py-0.5 rounded-full ${
-                  score.confidenceLevel === 'HIGH'
+                  score.confidenceLevel === 'A'
                     ? 'bg-green-100 text-green-800'
-                    : score.confidenceLevel === 'MEDIUM'
+                    : score.confidenceLevel === 'B'
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-red-100 text-red-800'
                 }`}
@@ -369,9 +369,9 @@ function ExpandedScoreView({
           <span className="text-sm font-medium text-on-surface">Confidence Level</span>
           <div className="flex items-center gap-2">
             <span className={`text-sm px-2 py-1 rounded ${
-              score.confidenceLevel === 'HIGH'
+              score.confidenceLevel === 'A'
                 ? 'bg-green-100 text-green-800'
-                : score.confidenceLevel === 'MEDIUM'
+                : score.confidenceLevel === 'B'
                   ? 'bg-amber-100 text-amber-800'
                   : 'bg-red-100 text-red-800'
             }`}>

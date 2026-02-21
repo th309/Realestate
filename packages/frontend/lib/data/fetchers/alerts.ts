@@ -5,6 +5,7 @@
  */
 
 import { fetchAPIRaw } from './base';
+import { getAuthHeaders } from './auth-headers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +43,8 @@ export interface AlertHistoryEntry {
  * Fetch all alerts for the current user.
  */
 export async function fetchAlerts(): Promise<Alert[]> {
-  const res = await fetchAPIRaw('/api/alerts');
+  const authHeaders = await getAuthHeaders();
+  const res = await fetchAPIRaw('/api/alerts', { headers: authHeaders });
   if (!res.ok) return [];
   const data = await res.json();
   return data.data || data || [];
@@ -54,9 +56,10 @@ export async function fetchAlerts(): Promise<Alert[]> {
 export async function createAlert(
   alert: Omit<Alert, 'id' | 'last_triggered_at' | 'created_at' | 'is_active'>,
 ): Promise<Alert | null> {
+  const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw('/api/alerts', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(alert),
   });
   if (!res.ok) return null;
@@ -71,9 +74,10 @@ export async function updateAlert(
   id: string,
   updates: Partial<Pick<Alert, 'threshold' | 'condition' | 'is_active'>>,
 ): Promise<boolean> {
+  const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
   return res.ok;
@@ -83,8 +87,10 @@ export async function updateAlert(
  * Delete an alert.
  */
 export async function deleteAlert(id: string): Promise<boolean> {
+  const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/${id}`, {
     method: 'DELETE',
+    headers: authHeaders,
   });
   return res.ok;
 }
@@ -96,7 +102,8 @@ export async function fetchAlertHistory(): Promise<{
   entries: AlertHistoryEntry[];
   unreadCount: number;
 }> {
-  const res = await fetchAPIRaw('/api/alerts/history');
+  const authHeaders = await getAuthHeaders();
+  const res = await fetchAPIRaw('/api/alerts/history', { headers: authHeaders });
   if (!res.ok) return { entries: [], unreadCount: 0 };
   const data = await res.json();
   return { entries: data.data || [], unreadCount: data.unreadCount || 0 };
@@ -106,8 +113,10 @@ export async function fetchAlertHistory(): Promise<{
  * Mark an alert history entry as read.
  */
 export async function markAlertRead(historyId: string): Promise<boolean> {
+  const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw(`/api/alerts/history/${historyId}/read`, {
     method: 'PATCH',
+    headers: authHeaders,
   });
   return res.ok;
 }

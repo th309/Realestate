@@ -9,14 +9,18 @@ export class StripeService {
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY', '');
+    const stripeKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (!stripeKey) {
-      this.logger.warn('STRIPE_SECRET_KEY not set – Stripe calls will fail at runtime');
+      throw new Error('STRIPE_SECRET_KEY environment variable is required');
     }
-    this.stripe = new Stripe(stripeKey || 'sk_test_placeholder', {
+    this.stripe = new Stripe(stripeKey, {
       apiVersion: '2026-01-28.clover',
     });
-    this.webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET', '');
+    const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      this.logger.warn('STRIPE_WEBHOOK_SECRET not set – webhook verification will fail');
+    }
+    this.webhookSecret = webhookSecret || '';
   }
 
   async getOrCreateCustomer(userId: string, email: string): Promise<string> {

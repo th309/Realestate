@@ -12,12 +12,15 @@ import { useState, useEffect, Fragment } from 'react';
 import { fetchAPIRaw } from '@/lib/data';
 import {
   PipelineRun,
+  AvailablePipeline,
   AVAILABLE_PIPELINES,
+  PipelineFilterParams,
   formatDuration,
   formatRunDate,
 } from './pipelineRuns.types';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { PipelineRunDetails } from './PipelineRunDetails';
+import { PipelineTriggerDialog } from './PipelineTriggerDialog';
 
 interface DataSourceHealth {
   displayName: string;
@@ -38,6 +41,7 @@ export function PipelineRunsTab() {
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [triggerDialogPipeline, setTriggerDialogPipeline] = useState<AvailablePipeline | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -75,16 +79,26 @@ export function PipelineRunsTab() {
 
   const fetchPipelineRuns = fetchData;
 
-  const handleTriggerPipeline = async (pipelineName: string) => {
+  const handlePipelineButtonClick = (pipeline: AvailablePipeline) => {
+    if (pipeline.filters && pipeline.filters.length > 0) {
+      setTriggerDialogPipeline(pipeline);
+    } else {
+      handleTriggerPipeline(pipeline.name, {});
+    }
+  };
+
+  const handleTriggerPipeline = async (pipelineName: string, filters: PipelineFilterParams) => {
     setTriggering(pipelineName);
+    setTriggerDialogPipeline(null);
     try {
       const response = await fetchAPIRaw(`/api/pipelines/${pipelineName}/trigger`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filters }),
       });
 
       if (response.ok) {
-        // Refresh the runs list
         await fetchPipelineRuns();
       }
     } catch (error) {
@@ -104,7 +118,7 @@ export function PipelineRunsTab() {
           {AVAILABLE_PIPELINES.map((pipeline) => (
             <button
               key={pipeline.name}
-              onClick={() => handleTriggerPipeline(pipeline.name)}
+              onClick={() => handlePipelineButtonClick(pipeline)}
               disabled={triggering !== null}
               className="px-3 py-1.5 text-sm font-medium rounded-lg bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50"
             >
@@ -265,6 +279,15 @@ export function PipelineRunsTab() {
           </table>
         )}
       </div>
+      {/* Trigger Dialog */}
+      {triggerDialogPipeline && (
+        <PipelineTriggerDialog
+          pipeline={triggerDialogPipeline}
+          onClose={() => setTriggerDialogPipeline(null)}
+          onTrigger={handleTriggerPipeline}
+          triggering={triggering !== null}
+        />
+      )}
     </div>
   );
 }

@@ -375,7 +375,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   const homereadyScore = scores?.scores?.homeready?.score ?? 0;
   const investoredgeScore = scores?.scores?.investoredge?.score ?? 0;
   const marketHealthScore = scores?.scores?.markethealth?.score ?? 0;
-  const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'MEDIUM';
+  const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'B';
 
   const scoresUnavailable = geoLevel === 'state' || geoLevel === 'national';
 

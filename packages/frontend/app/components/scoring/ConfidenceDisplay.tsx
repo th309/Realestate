@@ -13,7 +13,7 @@
 
 import { memo, useState, useRef, useEffect } from 'react';
 
-type ConfidenceLevel = 'high' | 'medium' | 'low';
+type ConfidenceLevel = 'a' | 'b' | 'c' | 'f';
 
 interface ConfidenceDisplayProps {
   level: ConfidenceLevel;
@@ -48,26 +48,33 @@ function getConfidenceColor(level: ConfidenceLevel): {
   border: string;
 } {
   switch (level) {
-    case 'high':
+    case 'a':
       return {
         text: 'text-emerald-600',
         star: 'text-emerald-400',
         bg: 'bg-emerald-50',
         border: 'border-emerald-200',
       };
-    case 'medium':
+    case 'b':
       return {
         text: 'text-amber-600',
         star: 'text-amber-400',
         bg: 'bg-amber-50',
         border: 'border-amber-200',
       };
-    case 'low':
+    case 'c':
       return {
         text: 'text-rose-600',
         star: 'text-rose-400',
         bg: 'bg-rose-50',
         border: 'border-rose-200',
+      };
+    case 'f':
+      return {
+        text: 'text-red-700',
+        star: 'text-red-500',
+        bg: 'bg-red-50',
+        border: 'border-red-200',
       };
     default:
       return {
@@ -162,7 +169,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
   const tooltipContent = (
     <div className="space-y-1">
       <div className="font-medium">
-        {level.charAt(0).toUpperCase() + level.slice(1)} Confidence ({percentage}%)
+        Grade {level.toUpperCase()} Confidence ({percentage}%)
       </div>
       <div className="text-gray-300 text-xs">
         <div>{metricsAvailable} of {metricsTotal} metrics available</div>
@@ -206,7 +213,7 @@ export const ConfidenceDisplay = memo(function ConfidenceDisplay({
           <span className={`${isSmall ? 'text-xs' : 'text-sm'} font-medium ${colors.text}`}>
             {percentage}%
           </span>
-          {level === 'low' && warning && (
+          {(level === 'c' || level === 'f') && warning && (
             <WarningIcon className={`${colors.text} ${isSmall ? 'w-3 h-3' : 'w-4 h-4'}`} />
           )}
         </>

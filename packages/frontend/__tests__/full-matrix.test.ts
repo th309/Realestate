@@ -17,7 +17,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-ee4d.up.railway.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL; if (!API_URL) throw new Error('NEXT_PUBLIC_API_URL env var required for tests');
 const API_TIMEOUT = 30000;
 
 // ALL time series metrics from registry (68 total, ~60 with time series)

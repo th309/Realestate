@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { normalizeZipKey } from '../common/zip';
 import {
   normalizeStateRegionId,
@@ -128,6 +129,7 @@ export class MarketSnapshotService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly scoringService: ScoringService,
+    private readonly metricResolution: MetricResolutionService,
   ) {}
 
   async getSnapshot(geoType: GeoType, geoId: string, state?: string): Promise<MarketSnapshotResponse> {
@@ -202,26 +204,23 @@ export class MarketSnapshotService {
       }
     }
 
-    // Fallback: home_sales from Realtor pending_listing_count (the canonical source for ZIP-level home sales)
-    if (!metrics['home_sales'] && realtorResult.status === 'fulfilled' && realtorResult.value) {
-      const plc = realtorResult.value.data.pending_listing_count;
-      if (plc != null) {
-        metrics['home_sales'] = {
-          value: Number(plc),
-          date: realtorResult.value.data.period_date ?? realtorResult.value.date ?? null,
-        };
-      }
-    }
-
-    // Fallback: rent_index from HUD FMR when Zillow ZORI is unavailable
-    if (!metrics['rent_index'] && geoType === 'zip') {
+    // Fallbacks via centralized MetricResolutionService (source of truth: fallback-registry.ts)
+    // home_sales: Zillow sales_count -> Realtor pending_listing_count
+    // rent_index: Zillow ZORI -> HUD FMR (ZIP only) -> Census median_gross_rent
+    const fallbackMetrics = ['home_sales', 'rent_index'].filter(m => !metrics[m]);
+    if (fallbackMetrics.length > 0) {
       try {
-        const fmrResult = await this.fetchHudFmrForZip(geoId);
-        if (fmrResult) {
-          metrics['rent_index'] = fmrResult;
+        const resolved = await this.metricResolution.resolveMetricBatch(
+          fallbackMetrics, geoType as any, geoId,
+        );
+        for (const metricId of fallbackMetrics) {
+          const r = resolved[metricId];
+          if (r?.value != null) {
+            metrics[metricId] = { value: r.value, date: r.date };
+          }
         }
       } catch (e) {
-        this.logger.warn(`HUD FMR fallback failed for ZIP ${geoId}: ${e}`);
+        this.logger.warn(`MetricResolution fallback failed for ${geoType}/${geoId}: ${e}`);
       }
     }
 
@@ -557,45 +556,6 @@ export class MarketSnapshotService {
       this.logger.warn(`Failed to fetch scores for ${geoType}/${geoId}: ${e}`);
       return null;
     }
-  }
-
-  /**
-   * HUD Fair Market Rent fallback for ZIP codes missing ZORI data.
-   * Looks up the county FIPS for the ZIP via the geographies table,
-   * then fetches the 2BR FMR from hud_fmr — same logic as ZillowService.getZipRent().
-   */
-  private async fetchHudFmrForZip(zipCode: string): Promise<MarketSnapshotMetric | null> {
-    // Step 1: Get county FIPS from geographies table
-    const { data: geo } = await this.supabase
-      .from('geographies')
-      .select('fips_code')
-      .eq('geography_id', zipCode)
-      .eq('geography_type', 'zip')
-      .limit(1)
-      .single();
-
-    const geoRow = geo as Record<string, any> | null;
-    if (!geoRow?.fips_code) return null;
-
-    const countyFips = String(geoRow.fips_code).padStart(5, '0');
-
-    // Step 2: Get latest HUD FMR for that county
-    const { data: fmr } = await this.supabase
-      .from('hud_fmr')
-      .select('fmr_2br, year')
-      .eq('fips_code', countyFips)
-      .not('fmr_2br', 'is', null)
-      .order('year', { ascending: false })
-      .limit(1)
-      .single();
-
-    const fmrRow = fmr as Record<string, any> | null;
-    if (!fmrRow?.fmr_2br) return null;
-
-    return {
-      value: Number(fmrRow.fmr_2br),
-      date: fmrRow.year ? `${fmrRow.year}-01-01` : null,
-    };
   }
 
   // ============================================================================

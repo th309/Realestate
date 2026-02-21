@@ -2,6 +2,7 @@
 
 import type { EntitlementsState, ResourceType } from './types';
 import { getAnonymousSessionId } from './session';
+import { getAuthHeaders } from '@/lib/data/fetchers/auth-headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -22,7 +23,9 @@ export async function fetchEntitlements(
 
   const url = `${API_URL}/api/entitlements/check?${params}`;
 
+  const authHeaders = await getAuthHeaders();
   const headers: Record<string, string> = {
+    ...authHeaders,
     'Content-Type': 'application/json',
   };
   if (userId) {

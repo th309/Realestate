@@ -290,7 +290,7 @@ export function ScoreHistoryChart({
               type="monotone"
               dataKey="score"
               name="Score"
-              stroke="#6366f1"
+              stroke="var(--color-indigo-500, #6366f1)"
               strokeWidth={2}
               dot={false}
               connectNulls
@@ -302,7 +302,7 @@ export function ScoreHistoryChart({
                 type="monotone"
                 dataKey="actualReturn"
                 name="Actual Return"
-                stroke="#10b981"
+                stroke="var(--color-emerald-500, #10b981)"
                 strokeWidth={2}
                 dot={false}
                 connectNulls
@@ -315,7 +315,7 @@ export function ScoreHistoryChart({
                 type="monotone"
                 dataKey="benchmarkReturn"
                 name="State Benchmark"
-                stroke="#f59e0b"
+                stroke="var(--color-amber-500, #f59e0b)"
                 strokeWidth={1.5}
                 strokeDasharray="5 5"
                 dot={false}

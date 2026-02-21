@@ -3,6 +3,7 @@
 import type { GeoLevel, ForecastHorizon, MapData } from '../types';
 import {
   COLOR_SCALE,
+  NO_DATA_COLOR,
   getMetricFormat,
   calculateValueRange,
   formatValue,
@@ -172,7 +173,7 @@ function NoDataIndicator({ dataDate }: { dataDate: string }) {
   return (
     <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
       <div className="flex items-center gap-1.5 md:gap-2">
-        <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: 'rgba(200, 200, 200, 0.5)' }} />
+        <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: NO_DATA_COLOR }} />
         <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
       </div>
       <div className="text-[9px] md:text-[10px] text-outline mt-1.5">as of {dataDate}</div>

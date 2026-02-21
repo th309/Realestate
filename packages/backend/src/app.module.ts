@@ -34,6 +34,7 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
 import { EmailModule } from './email/email.module';
 import { AnalyticsEventsModule } from './analytics-events/analytics-events.module';
 import { SupportModule } from './support/support.module';
+import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -73,6 +74,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     EmailModule,
     AnalyticsEventsModule,
     SupportModule,
+    MetricResolutionModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],

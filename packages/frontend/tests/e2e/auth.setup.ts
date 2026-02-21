@@ -17,19 +17,28 @@ const freeUserAuthFile = path.join(__dirname, '../fixtures/.auth/free-user.json'
 const proUserAuthFile = path.join(__dirname, '../fixtures/.auth/pro-user.json');
 const adminUserAuthFile = path.join(__dirname, '../fixtures/.auth/admin-user.json');
 
-// Test user credentials (should be configured via env vars in real setup)
+// Test user credentials - MUST be configured via env vars
+// Set TEST_FREE_USER_EMAIL, TEST_FREE_USER_PASSWORD, etc. in .env.local or CI
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}. Set it in .env.local for E2E tests.`);
+  }
+  return value;
+}
+
 const TEST_USERS = {
   free: {
-    email: process.env.TEST_FREE_USER_EMAIL || 'free@test.propertyiq.com',
-    password: process.env.TEST_FREE_USER_PASSWORD || 'TestPassword123!',
+    email: requireEnv('TEST_FREE_USER_EMAIL'),
+    password: requireEnv('TEST_FREE_USER_PASSWORD'),
   },
   pro: {
-    email: process.env.TEST_PRO_USER_EMAIL || 'pro@test.propertyiq.com',
-    password: process.env.TEST_PRO_USER_PASSWORD || 'TestPassword123!',
+    email: requireEnv('TEST_PRO_USER_EMAIL'),
+    password: requireEnv('TEST_PRO_USER_PASSWORD'),
   },
   admin: {
-    email: process.env.TEST_ADMIN_USER_EMAIL || 'admin@test.propertyiq.com',
-    password: process.env.TEST_ADMIN_USER_PASSWORD || 'TestPassword123!',
+    email: requireEnv('TEST_ADMIN_USER_EMAIL'),
+    password: requireEnv('TEST_ADMIN_USER_PASSWORD'),
   },
 };
 

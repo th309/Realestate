@@ -20,6 +20,7 @@ import { SCORE_INFO } from '../constants';
 import type { ReportListItem, ReportStatus } from '../types';
 import Link from 'next/link';
 import { fetchReportHistory } from '@/lib/data';
+import { useAuth } from '@/lib/auth';
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; className: string }> = {
   pending: { label: 'Pending', className: 'report-badge-pending' },
@@ -38,13 +39,15 @@ const GEO_TYPE_LABELS: Record<string, string> = {
 };
 
 export const ReportHistoryRefined: React.FC = () => {
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
+    const userId = user?.id;
+    if (!userId) { setLoading(false); return; }
 
     fetchReportHistory({ userId })
       .then((reportsList: any[]) => {

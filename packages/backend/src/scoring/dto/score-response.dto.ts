@@ -115,8 +115,8 @@ export class ScoreHistoryDto {
 // ============================================================================
 
 export class ConfidenceDto {
-  @ApiProperty({ description: 'Confidence level', enum: ['high', 'medium', 'low'] })
-  level: 'high' | 'medium' | 'low';
+  @ApiProperty({ description: 'Confidence letter grade', enum: ['A', 'B', 'C', 'F'] })
+  level: 'A' | 'B' | 'C' | 'F';
 
   @ApiProperty({ description: 'Confidence percentage (0-100)' })
   percentage: number;

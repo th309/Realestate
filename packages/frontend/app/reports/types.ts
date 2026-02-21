@@ -372,7 +372,7 @@ export interface ReportInstance {
   status: ReportStatus;
   error_message: string | null;
   data_as_of_date: string | null;
-  confidence_level: 'high' | 'medium' | 'low' | null;
+  confidence_level: 'a' | 'b' | 'c' | 'f' | null;
   generation_time_ms: number | null;
 
   // Sharing

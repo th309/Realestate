@@ -654,15 +654,19 @@ async function main() {
     process.exit(1);
   }
 
-  // Support --filter flag to run a subset of datasets
+  // Support multiple --filter flags to run a subset of datasets
+  // e.g. --filter=zhvi --filter=state → only ZHVI datasets for state geography
   const args = process.argv.slice(2);
-  const filterArg = args.find(arg => arg.startsWith('--filter='));
-  const filter = filterArg ? filterArg.split('=')[1] : null;
+  const filterValues = args
+    .filter(arg => arg.startsWith('--filter='))
+    .map(arg => arg.split('=')[1]);
 
   let datasetsToRun = ZILLOW_DATASETS;
-  if (filter) {
-    datasetsToRun = ZILLOW_DATASETS.filter(d => d.id.includes(filter) || d.geography === filter);
-    console.log(`Filtering datasets by: "${filter}" (${datasetsToRun.length} matched)`);
+  if (filterValues.length > 0) {
+    datasetsToRun = ZILLOW_DATASETS.filter(d =>
+      filterValues.every(f => d.id.includes(f) || d.geography === f || d.datasetType === f),
+    );
+    console.log(`Filtering datasets by: [${filterValues.join(', ')}] (${datasetsToRun.length} matched)`);
   }
 
   totalDatasets = datasetsToRun.length;
@@ -681,7 +685,7 @@ async function main() {
   }
 
   // Only truncate tables on full clean ingest (no filter)
-  if (!filter) {
+  if (filterValues.length === 0) {
     await truncateAllTables(supabase);
   } else {
     console.log('Skipping table truncation (filtered run)');

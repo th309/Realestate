@@ -1,7 +1,19 @@
-import { Controller, Post, Get, Body, Headers, Req, RawBodyRequest, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Req,
+  RawBodyRequest,
+  BadRequestException,
+  Logger,
+  UseGuards,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import { BillingService } from './billing.service';
 import { StripeService } from './stripe.service';
-import { Request } from 'express';
 
 @Controller('api/billing')
 export class BillingController {
@@ -12,15 +24,12 @@ export class BillingController {
     private readonly stripeService: StripeService,
   ) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('checkout')
   async createCheckoutSession(
     @Body() body: { tier: string; interval: 'month' | 'year'; returnContext?: string },
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
   ) {
-    if (!userId) {
-      throw new BadRequestException('Authentication required');
-    }
-
     if (!body.tier || !['pro', 'enterprise'].includes(body.tier)) {
       throw new BadRequestException('Invalid tier');
     }
@@ -39,6 +48,7 @@ export class BillingController {
     return { checkoutUrl };
   }
 
+  /** Stripe webhook — no auth guard (verified by Stripe signature) */
   @Post('webhook')
   async handleWebhook(
     @Req() req: RawBodyRequest<Request>,
@@ -65,14 +75,9 @@ export class BillingController {
     return { received: true };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('portal')
-  async getBillingPortal(
-    @Headers('x-user-id') userId: string,
-  ) {
-    if (!userId) {
-      throw new BadRequestException('Authentication required');
-    }
-
+  async getBillingPortal(@AuthUserId() userId: string) {
     const portalUrl = await this.billingService.getBillingPortalUrl(userId);
     return { portalUrl };
   }

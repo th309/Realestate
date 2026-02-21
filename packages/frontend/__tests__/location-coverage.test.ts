@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
 // Railway backend URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-ee4d.up.railway.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL; if (!API_URL) throw new Error('NEXT_PUBLIC_API_URL env var required for tests');
 
 // Test timeout for API calls
 const API_TIMEOUT = 20000;

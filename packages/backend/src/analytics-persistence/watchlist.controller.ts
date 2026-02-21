@@ -2,6 +2,7 @@
  * Watchlist Controller
  *
  * REST endpoints for market watchlist.
+ * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
  */
 
 import {
@@ -13,17 +14,20 @@ import {
   Body,
   Param,
   Query,
-  Headers,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import {
   WatchlistService,
   AddToWatchlistDto,
   UpdateWatchlistItemDto,
 } from './watchlist.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('analytics/watchlist')
 export class WatchlistController {
   private readonly logger = new Logger(WatchlistController.name);
@@ -36,14 +40,10 @@ export class WatchlistController {
    */
   @Get()
   async getAll(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Query('folder') folder?: string,
   ) {
     this.logger.log(`GET /analytics/watchlist for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const items = await this.watchlistService.getAll(userId, folder);
@@ -70,18 +70,12 @@ export class WatchlistController {
    * GET /api/analytics/watchlist/summary
    */
   @Get('summary')
-  async getSummary(@Headers('x-user-id') userId: string) {
+  async getSummary(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/watchlist/summary for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const items = await this.watchlistService.getAll(userId);
 
-      // For each item, return with placeholder score data
-      // Score enrichment can be added later when scoring service integration is needed
       return {
         success: true,
         data: items.map((item) => ({
@@ -103,12 +97,8 @@ export class WatchlistController {
    * GET /api/analytics/watchlist/grouped
    */
   @Get('grouped')
-  async getGrouped(@Headers('x-user-id') userId: string) {
+  async getGrouped(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/watchlist/grouped for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const grouped = await this.watchlistService.getGroupedByFolder(userId);
@@ -128,12 +118,8 @@ export class WatchlistController {
    * GET /api/analytics/watchlist/folders
    */
   @Get('folders')
-  async getFolders(@Headers('x-user-id') userId: string) {
+  async getFolders(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/watchlist/folders for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const folders = await this.watchlistService.getFolders(userId);
@@ -154,13 +140,13 @@ export class WatchlistController {
    */
   @Get('check')
   async check(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Query('geographyType') geographyType: string,
     @Query('geographyId') geographyId: string,
   ) {
-    if (!userId || !geographyType || !geographyId) {
+    if (!geographyType || !geographyId) {
       throw new HttpException(
-        'userId, geographyType, and geographyId are required',
+        'geographyType and geographyId are required',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -188,14 +174,14 @@ export class WatchlistController {
    */
   @Post()
   async add(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Body() dto: AddToWatchlistDto,
   ) {
     this.logger.log(`POST /analytics/watchlist`);
 
-    if (!userId || !dto.geography_type || !dto.geography_id) {
+    if (!dto.geography_type || !dto.geography_id) {
       throw new HttpException(
-        'userId, geography_type, and geography_id are required',
+        'geography_type and geography_id are required',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -220,14 +206,10 @@ export class WatchlistController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Body() dto: UpdateWatchlistItemDto,
   ) {
     this.logger.log(`PUT /analytics/watchlist/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const item = await this.watchlistService.update(userId, id, dto);
@@ -247,12 +229,8 @@ export class WatchlistController {
    * DELETE /api/analytics/watchlist/:id
    */
   @Delete(':id')
-  async remove(@Param('id') id: string, @Headers('x-user-id') userId: string) {
+  async remove(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`DELETE /analytics/watchlist/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.watchlistService.remove(userId, id);
@@ -275,13 +253,9 @@ export class WatchlistController {
   async removeByGeography(
     @Param('type') type: string,
     @Param('geoId') geoId: string,
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
   ) {
     this.logger.log(`DELETE /analytics/watchlist/geography/${type}/${geoId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.watchlistService.removeByGeography(userId, type, geoId);

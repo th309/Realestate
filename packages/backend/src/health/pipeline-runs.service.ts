@@ -5,6 +5,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { spawn } from 'child_process';
+import * as path from 'path';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface PipelineRun {
@@ -184,13 +186,153 @@ export class PipelineRunsService {
     };
   }
 
-  async triggerPipeline(pipelineName: string): Promise<{ success: boolean; message: string }> {
-    // TODO: Implement actual pipeline triggering via job queue
-    this.logger.log(`Pipeline trigger requested: ${pipelineName}`);
+  async triggerPipeline(
+    pipelineName: string,
+    filters?: Record<string, string[]>,
+  ): Promise<{ success: boolean; message: string }> {
+    this.logger.log(`Pipeline trigger requested: ${pipelineName}, filters: ${JSON.stringify(filters)}`);
+
+    const commands = this.buildPipelineCommands(pipelineName, filters);
+    if (commands.length === 0) {
+      return { success: false, message: `Unknown pipeline: ${pipelineName}` };
+    }
+
+    const filterSummary = filters
+      ? Object.entries(filters).map(([k, v]) => `${k}=${v.join(',')}`).join('; ')
+      : 'all';
+
+    // Spawn scripts in background — each script creates its own ingestion log entry
+    this.spawnScriptsInBackground(commands, pipelineName);
+
     return {
       success: true,
-      message: `Pipeline ${pipelineName} trigger queued`,
+      message: `Pipeline ${pipelineName} triggered (${filterSummary})`,
     };
+  }
+
+  private buildPipelineCommands(
+    pipelineName: string,
+    filters?: Record<string, string[]>,
+  ): { script: string; args: string[] }[] {
+    const scriptsRoot = path.resolve(__dirname, '..', '..', '..', '..', 'scripts');
+
+    switch (pipelineName) {
+      case 'zillow': {
+        const args: string[] = [];
+        for (const m of filters?.metric || []) args.push(`--filter=${m}`);
+        for (const g of filters?.geography || []) args.push(`--filter=${g}`);
+        return [{ script: path.join(scriptsRoot, 'ingest-all-zillow-clean.ts'), args }];
+      }
+
+      case 'realtor': {
+        const geos = filters?.geography?.length
+          ? filters.geography
+          : ['national', 'state', 'metro', 'county', 'zip'];
+        return geos.map((g) => ({
+          script: path.join(scriptsRoot, `import-realtor-${g}.ts`),
+          args: [],
+        }));
+      }
+
+      case 'redfin': {
+        const args = filters?.geography?.length === 1
+          ? [`--geo=${filters.geography[0]}`]
+          : [];
+        return [{ script: path.join(scriptsRoot, 'redfin-sales-import', 'import-redfin-sales.ts'), args }];
+      }
+
+      case 'census_acs': {
+        const args = filters?.geography?.length === 1
+          ? [`--geo=${filters.geography[0]}`]
+          : [];
+        return [{ script: path.join(scriptsRoot, 'import-census-data.ts'), args }];
+      }
+
+      case 'bls':
+      case 'fred': {
+        const args = filters?.geography?.length === 1
+          ? [`--geo=${filters.geography[0]}`]
+          : [];
+        return [{ script: path.join(scriptsRoot, 'import-economic-data.ts'), args }];
+      }
+
+      case 'hud_fmr':
+        return [{ script: path.join(scriptsRoot, 'import-hud-fmr.ts'), args: [] }];
+
+      case 'building_permits': {
+        const args = filters?.geography?.length === 1
+          ? [`--geo=${filters.geography[0]}`]
+          : [];
+        return [{ script: path.join(scriptsRoot, 'import-building-permits.ts'), args }];
+      }
+
+      default:
+        return [];
+    }
+  }
+
+  private async spawnScriptsInBackground(
+    commands: { script: string; args: string[] }[],
+    pipelineName: string,
+  ): Promise<void> {
+    for (const cmd of commands) {
+      try {
+        const result = await this.spawnScript(cmd.script, cmd.args);
+        if (result.exitCode === 0) {
+          this.logger.log(`Script completed for ${pipelineName}: ${cmd.script}`);
+        } else {
+          this.logger.error(
+            `Script exited with code ${result.exitCode} for ${pipelineName}: ${result.stderr.slice(-500)}`,
+          );
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Script spawn failed for ${pipelineName}: ${msg}`);
+      }
+    }
+  }
+
+  private spawnScript(
+    scriptPath: string,
+    args: string[],
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    return new Promise((resolve, reject) => {
+      this.logger.log(`Spawning: npx tsx ${scriptPath} ${args.join(' ')}`);
+
+      const child = spawn('npx', ['tsx', scriptPath, ...args], {
+        cwd: path.resolve(__dirname, '..', '..', '..', '..'),
+        env: { ...process.env },
+        shell: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (data: Buffer) => {
+        const text = data.toString();
+        stdout += text;
+        // Log last line for progress visibility
+        const lines = text.trim().split('\n');
+        if (lines.length > 0) {
+          this.logger.debug(`[stdout] ${lines[lines.length - 1].slice(0, 200)}`);
+        }
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        const text = data.toString();
+        stderr += text;
+        this.logger.warn(`[stderr] ${text.slice(0, 200)}`);
+      });
+
+      child.on('error', (err) => {
+        reject(err);
+      });
+
+      child.on('close', (code) => {
+        resolve({ exitCode: code ?? 1, stdout, stderr });
+      });
+    });
   }
 
   private mapStatus(dbStatus: string): PipelineRun['status'] {

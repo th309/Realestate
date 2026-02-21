@@ -38,7 +38,7 @@ function buildReport(
     status: 'ready',
     error_message: null,
     data_as_of_date: '2026-02-01',
-    confidence_level: 'high',
+    confidence_level: 'a',
     generation_time_ms: 1200,
     share_token: null,
     share_access_level: 'view',

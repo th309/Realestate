@@ -329,9 +329,9 @@ export function FormulaEditorTab() {
               className={`
                 px-2 py-0.5 rounded text-sm font-medium
                 ${
-                  confidenceData.confidenceLevel === 'high'
+                  confidenceData.confidenceLevel === 'A'
                     ? 'bg-green-100 text-green-800'
-                    : confidenceData.confidenceLevel === 'medium'
+                    : confidenceData.confidenceLevel === 'B'
                     ? 'bg-yellow-100 text-yellow-800'
                     : 'bg-red-100 text-red-800'
                 }

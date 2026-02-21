@@ -20,7 +20,28 @@ export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
 export type GeographyType = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip' | 'tract';
 export type ScoreAccess = 'full' | 'teaser';
 export type TrendDirection = 'up' | 'down' | 'stable';
-export type ConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
+export type ConfidenceLevel = 'a' | 'b' | 'c' | 'f';
+
+/**
+ * Normalize confidence level from backend to lowercase letter grade.
+ * Handles both new format (A/B/C/F) and legacy format (HIGH/MEDIUM/LOW/INSUFFICIENT)
+ * for backward compatibility with existing DB rows until scores are recalculated.
+ */
+const LEGACY_CONFIDENCE_MAP: Record<string, ConfidenceLevel> = {
+  high: 'a',
+  medium: 'b',
+  low: 'c',
+  insufficient: 'f',
+};
+
+function normalizeConfidenceLevel(raw: string | null | undefined): ConfidenceLevel {
+  if (!raw) return 'b';
+  const lower = raw.toLowerCase();
+  // New format: already a/b/c/f
+  if (lower === 'a' || lower === 'b' || lower === 'c' || lower === 'f') return lower;
+  // Legacy format: high/medium/low/insufficient
+  return LEGACY_CONFIDENCE_MAP[lower] ?? 'b';
+}
 
 export interface MetricDetail {
   name: string;
@@ -232,7 +253,7 @@ export function useScoreData(
           score: null,
           status: 'unavailable',
           label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
-          confidence: { level: 'insufficient', percentage: 0 }
+          confidence: { level: 'f', percentage: 0 }
         };
 
         // Leave trendChange undefined when API didn't send it (e.g. only one score_date in DB) so UI shows "--" not "0.0 pts"
@@ -257,7 +278,7 @@ export function useScoreData(
           status: 'complete',
           periodDate: rawResult.score_date || '',
           confidence: {
-            level: (data.confidence_level || 'medium').toLowerCase(),
+            level: normalizeConfidenceLevel(data.confidence_level),
             percentage: data.confidence != null ? Number(data.confidence) : 0,
             metricsAvailable: 0,
             metricsTotal: 0,

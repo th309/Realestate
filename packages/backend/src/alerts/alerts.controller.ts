@@ -2,7 +2,7 @@
  * Alerts Controller
  *
  * REST endpoints for user metric alerts (user_alerts / alert_history).
- * User ID is extracted from the x-user-id header.
+ * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
  */
 
 import {
@@ -14,13 +14,16 @@ import {
   Body,
   Param,
   Query,
-  Headers,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import { AlertsService, CreateAlertDto, UpdateAlertDto } from './alerts.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('alerts')
 export class AlertsController {
   private readonly logger = new Logger(AlertsController.name);
@@ -32,12 +35,8 @@ export class AlertsController {
    * GET /api/alerts
    */
   @Get()
-  async listAlerts(@Headers('x-user-id') userId: string) {
+  async listAlerts(@AuthUserId() userId: string) {
     this.logger.log(`GET /alerts for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const alerts = await this.alertsService.listAlerts(userId);
@@ -59,14 +58,10 @@ export class AlertsController {
    */
   @Post()
   async createAlert(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Body() dto: CreateAlertDto,
   ) {
     this.logger.log('POST /alerts');
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     if (!dto.geography_type || !dto.geography_id || !dto.metric_id || !dto.condition || dto.threshold == null) {
       throw new HttpException(
@@ -94,15 +89,11 @@ export class AlertsController {
    */
   @Patch(':id')
   async updateAlert(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Param('id') alertId: string,
     @Body() dto: UpdateAlertDto,
   ) {
     this.logger.log(`PATCH /alerts/${alertId}`);
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const alert = await this.alertsService.updateAlert(userId, alertId, dto);
@@ -123,14 +114,10 @@ export class AlertsController {
    */
   @Delete(':id')
   async deleteAlert(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Param('id') alertId: string,
   ) {
     this.logger.log(`DELETE /alerts/${alertId}`);
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.alertsService.deleteAlert(userId, alertId);
@@ -151,15 +138,11 @@ export class AlertsController {
    */
   @Get('history')
   async getHistory(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
     this.logger.log(`GET /alerts/history for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const result = await this.alertsService.getHistory(userId, {
@@ -185,14 +168,10 @@ export class AlertsController {
    */
   @Patch('history/:id/read')
   async markRead(
-    @Headers('x-user-id') userId: string,
+    @AuthUserId() userId: string,
     @Param('id') historyId: string,
   ) {
     this.logger.log(`PATCH /alerts/history/${historyId}/read`);
-
-    if (!userId) {
-      throw new HttpException('x-user-id header is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.alertsService.markRead(userId, historyId);

@@ -25,21 +25,23 @@ import { ReportHeader } from './components/ReportHeader';
 import { ReportFooter } from './components/ReportFooter';
 import { normalizeReport } from './components/utils/normalizeReport';
 import { fetchReport as fetchReportAPI } from '@/lib/data';
+import { useAuth } from '@/lib/auth';
 import '../styles/report-theme.css';
 
 const POLL_INTERVAL = 2000;
-const USER_ID = '4003d650-6a5e-4419-98d5-cf5374e1885d';
 
 interface ReportViewerProps {
   reportId: string;
 }
 
-async function fetchReport(reportId: string): Promise<ReportWithTemplate | null> {
-  const data = await fetchReportAPI<ReportWithTemplate>(reportId, { userId: USER_ID });
+async function fetchReport(reportId: string, userId: string): Promise<ReportWithTemplate | null> {
+  const data = await fetchReportAPI<ReportWithTemplate>(reportId, { userId });
   return data ? normalizeReport(data) : null;
 }
 
 export function ReportViewer({ reportId }: ReportViewerProps) {
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
   const [report, setReport] = useState<ReportWithTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
 
   const pollReport = useCallback(async () => {
     try {
-      const data = await fetchReport(reportId);
+      const data = await fetchReport(reportId, userId);
       if (data) {
         setReport(data);
         if (data.status === 'generating') {
@@ -92,7 +94,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
     let pollTimer: NodeJS.Timeout | null = null;
 
     const startPolling = async () => {
-      const data = await fetchReport(reportId);
+      const data = await fetchReport(reportId, userId);
       setLoading(false);
 
       if (data) {

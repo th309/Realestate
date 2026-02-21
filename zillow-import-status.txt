@@ -1,79 +1,30 @@
 ================================================================================
-ZILLOW IMPORT STATUS - 2026-01-22T11:19:40.147Z
-Elapsed: 38m 28s
+ZILLOW IMPORT STATUS - 2026-02-21T13:10:18.460Z
+Elapsed: 0s
 ================================================================================
 
 --- TABLE STATUS ---
 Table Name                Row Count
 -----------------------------------
-zillow_state                 15,684
-zillow_metro              2,289,554
-zillow_county               769,699
-zillow_city               4,937,356
-zillow_zip                6,566,193
+zillow_state                      0
+zillow_metro                      0
+zillow_county                     0
+zillow_city                       0
+zillow_zip                        0
 -----------------------------------
-TOTAL                    14,578,486
+TOTAL                             0
 
 --- DATASET STATUS SUMMARY ---
-Pending:     0
+Pending:     1
 Downloading: 0
-Importing:   1
-Completed:   37
+Importing:   0
+Completed:   0
 Failed:      0
-Progress:    37/38 (97%)
-
-Currently processing: zori-zip-all-homes-sm
-  Status: importing
-  Records: 230,000
-  Duration: 1m 8s
-
---- RECENTLY COMPLETED ---
-  zhvf-zip-growth: 60,440 records (34s)
-  zhvi-zip-all-homes-sm-sa: 6,275,753 records (14m 1s)
-  zori-city-all-homes-sm: 193,470 records (31s)
-  zhvi-city-all-homes-sm-sa: 4,743,886 records (12m 51s)
-  new-construction-price-per-sqft-metro: 15,523 records (3s)
+Progress:    0/1 (0%)
 
 --- ALL DATASETS ---
-[OK] zhvi-metro-all-homes-sm-sa: 229,974 records
-[OK] zhvi-state-all-homes-sm-sa: 15,684 records
-[OK] zhvi-county-all-homes-sm-sa: 684,530 records
-[OK] zhvi-city-all-homes-sm-sa: 4,743,886 records
-[OK] zhvi-zip-all-homes-sm-sa: 6,275,753 records
-[OK] zhvi-us-all-homes-sm-sa: 229,974 records
-[OK] zori-us-all-homes-sm: 48,090 records
-[OK] zori-metro-all-homes-sm: 48,090 records
-[OK] zori-metro-all-homes-sm-sa: 48,080 records
-[OK] zori-county-all-homes-sm: 85,169 records
-[OK] zori-city-all-homes-sm: 193,470 records
-[OK] inventory-metro-all-homes-sm-month: 86,041 records
-[OK] inventory-metro-all-homes-sm-week: 379,405 records
-[OK] sales-count-metro-nowcast: 20,200 records
-[OK] sales-price-median-metro-nowcast: 126,322 records
-[OK] days-pending-metro-sm-month: 45,654 records
-[OK] market-heat-index-metro: 86,746 records
-[OK] new-construction-sales-count-metro: 29,586 records
-[OK] new-construction-sale-price-metro: 16,119 records
-[OK] affordability-homeowner-income-metro: 65,326 records
-[OK] affordability-renter-income-metro: 40,624 records
-[OK] affordability-home-price-metro: 65,326 records
-[OK] affordability-years-to-save-metro: 65,326 records
-[OK] affordability-homeowner-percent-metro: 65,326 records
-[OK] affordability-renter-percent-metro: 40,624 records
-[OK] zhvf-metro-growth: 2,685 records
-[OK] zhvf-zip-growth: 60,440 records
-[OK] zordi-metro: 46,575 records
-[>>>] zori-zip-all-homes-sm: 230,000 records
-[OK] new-listings-metro-sm-month: 83,044 records
-[OK] pending-listings-metro-sm-month: 69,574 records
-[OK] median-list-price-metro-sm-month: 85,139 records
-[OK] sale-to-list-metro-sm-month: 41,362 records
-[OK] days-to-close-metro-sm-month: 41,270 records
-[OK] price-cut-share-metro-sm-month: 85,586 records
-[OK] price-cut-amt-metro-sm-month: 40,681 records
-[OK] price-cut-pct-metro-sm-month: 41,282 records
-[OK] new-construction-price-per-sqft-metro: 15,523 records
+[  ] zhvi-state: 0 records
 
 ================================================================================
-Last updated: 6:19:40 AM
+Last updated: 8:10:18 AM
 (This file updates every 60 seconds)

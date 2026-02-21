@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
+import { useAuth } from '@/lib/auth';
 import { generateReport as generateReportAPI } from '@/lib/data';
 import type { WizardState, GenerateReportRequest, GenerateReportResponse } from '../types';
 
@@ -13,6 +14,7 @@ export interface UseReportGenerationReturn {
 
 export function useReportGeneration(): UseReportGenerationReturn {
   const router = useRouter();
+  const { user } = useAuth();
   const { simulatedTier, tier } = useEntitlements();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,8 +57,12 @@ export function useReportGeneration(): UseReportGenerationReturn {
         user_inputs: Object.keys(userInputs).length > 0 ? userInputs : undefined,
       };
 
-      // TODO: Get actual user ID from auth context
-      const userId = '4003d650-6a5e-4419-98d5-cf5374e1885d';
+      const userId = user?.id;
+      if (!userId) {
+        setError('You must be signed in to generate a report.');
+        setIsGenerating(false);
+        return;
+      }
 
       const effectiveTier = simulatedTier || tier;
       const data = await generateReportAPI(requestBody, {
@@ -71,7 +77,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
       setError(err instanceof Error ? err.message : 'Failed to generate report');
       setIsGenerating(false);
     }
-  }, [router, simulatedTier, tier]);
+  }, [router, user, simulatedTier, tier]);
 
   const clearError = useCallback(() => {
     setError(null);

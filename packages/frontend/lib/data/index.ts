@@ -108,6 +108,11 @@ export {
 } from './format';
 
 // ============================================================================
+// AUTH
+// ============================================================================
+export { getAuthHeaders } from './fetchers/auth-headers';
+
+// ============================================================================
 // FETCHERS
 // ============================================================================
 export {
@@ -178,7 +183,9 @@ export {
   // GeoJSON
   getGeoJsonApiUrl,
 
-  // Market search lists
+  // Market search lists & geography search
+  fetchGeographySearch,
+  type GeographySearchResult,
   fetchMetrosList,
   fetchCountiesList,
   fetchZipsList,

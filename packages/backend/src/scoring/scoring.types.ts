@@ -23,8 +23,6 @@ export type {
 export {
   FORMULA_WEIGHTS,
   GRADE_THRESHOLDS,
-  MODEL_CORRELATIONS,
-  SAMPLE_SIZE_SCORES,
   CONFIDENCE_LEVELS,
   ALERT_THRESHOLDS,
   FORMULA_VERSION,
@@ -211,7 +209,7 @@ export interface PropertyIQScore {
   investoredgeTrendChange: number;
 
   // Confidence
-  confidenceLevel: 'high' | 'medium' | 'low';
+  confidenceLevel: 'A' | 'B' | 'C' | 'F';
   metricsAvailable: number;
   metricsTotal: number;
   dataFreshnessDays: number;

@@ -20,9 +20,10 @@ import { EntitlementsModule } from '../entitlements/entitlements.module';
 import { PartnersModule } from '../partners/partners.module';
 import { EconomicModule } from '../economic/economic.module';
 import { MarketSnapshotModule } from '../market-snapshot/market-snapshot.module';
+import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 
 @Module({
-  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule, PartnersModule, EconomicModule, MarketSnapshotModule],
+  imports: [SupabaseModule, ScoringModule, MetricsModule, TimeSeriesModule, EntitlementsModule, PartnersModule, EconomicModule, MarketSnapshotModule, MetricResolutionModule],
   providers: [ReportsService, ClaudeService, ClaudeNewsService],
   controllers: [ReportsController],
   exports: [ReportsService, ClaudeService, ClaudeNewsService],

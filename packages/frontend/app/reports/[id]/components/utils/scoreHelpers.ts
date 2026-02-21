@@ -45,12 +45,12 @@ export function getScoreLabel(score: number): string {
 
 /** Determine confidence level from report data or component coverage. */
 export function deriveConfidence(
-  reportConfidence: 'high' | 'medium' | 'low' | null,
+  reportConfidence: 'a' | 'b' | 'c' | 'f' | null,
   components?: ScoreComponentBreakdown[],
-): 'HIGH' | 'MEDIUM' | 'LOW' | null {
+): 'A' | 'B' | 'C' | 'F' | null {
   // Prefer the explicit report-level confidence
   if (reportConfidence) {
-    return reportConfidence.toUpperCase() as 'HIGH' | 'MEDIUM' | 'LOW';
+    return reportConfidence.toUpperCase() as 'A' | 'B' | 'C' | 'F';
   }
 
   // Fall back to deriving from component data coverage
@@ -60,9 +60,9 @@ export function deriveConfidence(
     components.reduce((sum, c) => sum + (c.contributing_metrics?.length ?? 0), 0) /
     components.length;
 
-  if (avgMetrics >= 3) return 'HIGH';
-  if (avgMetrics >= 2) return 'MEDIUM';
-  return 'LOW';
+  if (avgMetrics >= 3) return 'A';
+  if (avgMetrics >= 2) return 'B';
+  return 'C';
 }
 
 // ---------------------------------------------------------------------------

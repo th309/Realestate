@@ -20,6 +20,7 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
+import { TriggerPipelineDto } from './dto/trigger-pipeline.dto';
 
 @ApiTags('health')
 @Controller('api/health')
@@ -127,9 +128,12 @@ export class PipelinesController {
 
   @Post(':name/trigger')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Trigger a pipeline manually' })
+  @ApiOperation({ summary: 'Trigger a pipeline manually with optional filters' })
   @ApiResponse({ status: 200, description: 'Pipeline trigger queued' })
-  async triggerPipeline(@Param('name') name: string) {
-    return this.pipelineRuns.triggerPipeline(name);
+  async triggerPipeline(
+    @Param('name') name: string,
+    @Body() body?: TriggerPipelineDto,
+  ) {
+    return this.pipelineRuns.triggerPipeline(name, body?.filters);
   }
 }

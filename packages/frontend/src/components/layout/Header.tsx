@@ -110,6 +110,9 @@ export function Header() {
                                             <DropdownItem icon={HierarchyIcon} label="Manage Seats" href="/team" />
                                         )}
                                         <DropdownItem icon={HelpIcon} label="Help" href="/help" />
+                                        {tier === 'admin' && (
+                                            <DropdownItem icon={SettingsIcon} label="Admin Dashboard" href="/admin" />
+                                        )}
                                         <div className="my-1 h-px bg-outline-variant" />
                                         <button
                                             onClick={async () => { await signOut(); router.push('/'); }}

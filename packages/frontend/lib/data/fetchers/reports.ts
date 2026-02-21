@@ -5,6 +5,7 @@
  */
 
 import { API_URL } from './base';
+import { getAuthHeaders } from './auth-headers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,8 +65,10 @@ export async function fetchReport<T = unknown>(
   reportId: string,
   options: FetchReportOptions,
 ): Promise<T | null> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
     headers: {
+      ...authHeaders,
       'x-user-id': options.userId,
       'Content-Type': 'application/json',
     },
@@ -85,8 +88,10 @@ export async function fetchReport<T = unknown>(
 export async function fetchReportHistory<T = unknown>(
   options: FetchReportOptions,
 ): Promise<T[]> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(`${API_URL}/api/reports/history`, {
     headers: {
+      ...authHeaders,
       'x-user-id': options.userId,
       'Content-Type': 'application/json',
     },
@@ -106,11 +111,12 @@ export async function fetchReportHistory<T = unknown>(
 export async function fetchReportList<T = unknown>(
   options: FetchReportOptions & { limit?: number },
 ): Promise<T[]> {
+  const authHeaders = await getAuthHeaders();
   const params = new URLSearchParams();
   if (options.limit) params.set('limit', String(options.limit));
 
   const response = await fetch(`${API_URL}/api/reports?${params}`, {
-    headers: { 'x-user-id': options.userId },
+    headers: { ...authHeaders, 'x-user-id': options.userId },
   });
 
   if (!response.ok) {
@@ -128,7 +134,9 @@ export async function generateReport(
   body: GenerateReportRequest,
   options: GenerateReportOptions,
 ): Promise<GenerateReportResponse> {
+  const authHeaders = await getAuthHeaders();
   const headers: Record<string, string> = {
+    ...authHeaders,
     'Content-Type': 'application/json',
     'x-user-id': options.userId,
   };
@@ -174,9 +182,11 @@ export async function createReportShareLink(
   userId: string,
   options?: { accessLevel?: 'view' | 'download'; expiresInDays?: number },
 ): Promise<string> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(`${API_URL}/api/reports/${reportId}/share`, {
     method: 'POST',
     headers: {
+      ...authHeaders,
       'Content-Type': 'application/json',
       'x-user-id': userId,
     },
@@ -202,9 +212,10 @@ export async function regenerateNarratives(
   userInputs: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<RegenerateNarrativesResponse> {
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(`${API_URL}/api/reports/${reportId}/regenerate-narratives`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_inputs: userInputs } satisfies RegenerateNarrativesRequest),
     signal,
   });

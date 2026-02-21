@@ -32,13 +32,15 @@ function getScoreColorClass(score: number): string {
 }
 
 /** Confidence badge color mapping */
-function getConfidenceColors(level: 'HIGH' | 'MEDIUM' | 'LOW'): { bg: string; text: string } {
+function getConfidenceColors(level: 'A' | 'B' | 'C' | 'F'): { bg: string; text: string } {
   switch (level) {
-    case 'HIGH':
+    case 'A':
       return { bg: 'var(--report-success-bg)', text: 'var(--report-success)' };
-    case 'MEDIUM':
+    case 'B':
       return { bg: 'var(--report-warning-bg)', text: 'var(--report-warning)' };
-    case 'LOW':
+    case 'C':
+      return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
+    case 'F':
       return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
   }
 }

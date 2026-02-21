@@ -78,10 +78,10 @@ const SCORE_CONFIG: Record<ScoreType, {
 };
 
 const CONFIDENCE_LABELS: Record<string, { label: string; color: string }> = {
-  high: { label: 'High Confidence', color: 'bg-green-500' },
-  medium: { label: 'Medium Confidence', color: 'bg-amber-500' },
-  low: { label: 'Low Confidence', color: 'bg-orange-500' },
-  insufficient: { label: 'Insufficient Data', color: 'bg-red-500' },
+  a: { label: 'High Confidence', color: 'bg-green-500' },
+  b: { label: 'Medium Confidence', color: 'bg-amber-500' },
+  c: { label: 'Low Confidence', color: 'bg-orange-500' },
+  f: { label: 'Insufficient Data', color: 'bg-red-500' },
 };
 
 function getScoreGrade(score: number): { grade: string; label: string; color: string } {
@@ -144,8 +144,8 @@ export const ScoreVisualization: React.FC<ScoreVisualizationProps> = ({
   // Get score data for the selected type
   const scoreData = scores?.scores?.[config.apiKey];
   const score = scoreData?.score ?? 0;
-  const confidenceLevel = (scoreData?.confidence_level?.toLowerCase() ?? 'medium') as keyof typeof CONFIDENCE_LABELS;
-  const confidence = CONFIDENCE_LABELS[confidenceLevel] || CONFIDENCE_LABELS.medium;
+  const confidenceLevel = (scoreData?.confidence_level?.toLowerCase() ?? 'b') as keyof typeof CONFIDENCE_LABELS;
+  const confidence = CONFIDENCE_LABELS[confidenceLevel] || CONFIDENCE_LABELS.b;
   // Note: trend_3m may come from expanded score API with historyMonths option
   const trend = (scoreData as any)?.trend_3m ?? null;
   const grade = getScoreGrade(score);

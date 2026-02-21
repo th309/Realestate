@@ -1,4 +1,5 @@
 import { fetchAPIRaw } from './base';
+import { getAuthHeaders } from './auth-headers';
 
 export interface SupportTicket {
   issue_type: 'bug' | 'feature_request' | 'billing' | 'general';
@@ -7,9 +8,10 @@ export interface SupportTicket {
 }
 
 export async function submitSupportTicket(ticket: SupportTicket): Promise<void> {
+  const authHeaders = await getAuthHeaders();
   const res = await fetchAPIRaw('/api/support/tickets', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify(ticket),
   });
   if (!res.ok) {

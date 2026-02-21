@@ -219,11 +219,11 @@ export const ScoreBadge = memo(function ScoreBadge({
           {/* Tick marks at 33% and 66% (not rotated, calculated from top) */}
           <line
             x1={tick33.x1} y1={tick33.y1} x2={tick33.x2} y2={tick33.y2}
-            stroke="#6b7280" strokeWidth={tickWidth} strokeLinecap="round"
+            stroke="var(--color-gray-500, #6b7280)" strokeWidth={tickWidth} strokeLinecap="round"
           />
           <line
             x1={tick66.x1} y1={tick66.y1} x2={tick66.x2} y2={tick66.y2}
-            stroke="#6b7280" strokeWidth={tickWidth} strokeLinecap="round"
+            stroke="var(--color-gray-500, #6b7280)" strokeWidth={tickWidth} strokeLinecap="round"
           />
         </svg>
 

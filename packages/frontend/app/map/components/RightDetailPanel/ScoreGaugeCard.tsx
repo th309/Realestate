@@ -29,20 +29,20 @@ const SCORE_LABELS: Record<ScoreType, { title: string; desc: string }> = {
 };
 
 const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> = {
-    high: { bg: 'bg-green-500', text: 'text-white' },
-    medium: { bg: 'bg-amber-500', text: 'text-white' },
-    low: { bg: 'bg-orange-500', text: 'text-white' },
-    insufficient: { bg: 'bg-red-500', text: 'text-white' }
+    a: { bg: 'bg-green-500', text: 'text-white' },
+    b: { bg: 'bg-amber-500', text: 'text-white' },
+    c: { bg: 'bg-orange-500', text: 'text-white' },
+    f: { bg: 'bg-red-500', text: 'text-white' }
 };
 
 const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-    high: 'HIGH',
-    medium: 'MED',
-    low: 'LOW',
-    insufficient: 'N/A'
+    a: 'HIGH',
+    b: 'MED',
+    c: 'LOW',
+    f: 'N/A'
 };
 
-export function ScoreGaugeCard({ type, score, confidenceLevel = 'medium', trend, trendUnit = 'points', loading = false }: ScoreGaugeCardProps) {
+export function ScoreGaugeCard({ type, score, confidenceLevel = 'b', trend, trendUnit = 'points', loading = false }: ScoreGaugeCardProps) {
     const config = SCORE_LABELS[type];
     const currentScore = score ?? 0;
     const confColors = CONFIDENCE_COLORS[confidenceLevel];

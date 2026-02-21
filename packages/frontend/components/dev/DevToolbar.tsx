@@ -54,8 +54,8 @@ function useDevToolbarActive(): boolean {
 
     const params = new URLSearchParams(window.location.search);
     const key = params.get('devtools');
-    const expectedKey = process.env.NEXT_PUBLIC_DEVTOOLS_KEY || 'dev';
-    if (key === expectedKey) {
+    const expectedKey = process.env.NEXT_PUBLIC_DEVTOOLS_KEY;
+    if (expectedKey && key === expectedKey) {
       sessionStorage.setItem('devtools-active', 'true');
       setActive(true);
     }

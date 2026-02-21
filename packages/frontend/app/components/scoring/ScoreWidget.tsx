@@ -34,17 +34,17 @@ export interface ScoreWidgetProps extends Omit<ScoreDisplayProps, 'value'> {
 }
 
 const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> = {
-  high: { bg: 'bg-green-500', text: 'text-white' },
-  medium: { bg: 'bg-amber-500', text: 'text-white' },
-  low: { bg: 'bg-orange-500', text: 'text-white' },
-  insufficient: { bg: 'bg-red-500', text: 'text-white' },
+  a: { bg: 'bg-green-500', text: 'text-white' },
+  b: { bg: 'bg-amber-500', text: 'text-white' },
+  c: { bg: 'bg-orange-500', text: 'text-white' },
+  f: { bg: 'bg-red-500', text: 'text-white' },
 };
 
 const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-  high: 'HIGH',
-  medium: 'MED',
-  low: 'LOW',
-  insufficient: 'N/A',
+  a: 'A',
+  b: 'B',
+  c: 'C',
+  f: 'F',
 };
 
 /**
@@ -92,7 +92,7 @@ export function ScoreWidget({
     if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
       const score = (scoreObj as any).score as number | null;
       const confidence = (scoreObj as any).confidence?.level as ConfidenceLevel | undefined;
-      return { score, confidence: confidence ?? 'medium' };
+      return { score, confidence: confidence ?? 'b' };
     }
 
     return { score: null, confidence: null };

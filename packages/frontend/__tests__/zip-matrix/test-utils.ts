@@ -7,7 +7,7 @@ import { join } from 'path';
 import type { MetricConfig, ResultStatus, StateResults, ZipResults, MetricSummary } from './types';
 import { ZIP_METRICS, METRO_ONLY_METRICS } from './metrics';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-production-ee4d.up.railway.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL; if (!API_URL) throw new Error('NEXT_PUBLIC_API_URL env var required for tests');
 const API_TIMEOUT = 30000;
 const RESULTS_DIR = join(__dirname, 'results');
 

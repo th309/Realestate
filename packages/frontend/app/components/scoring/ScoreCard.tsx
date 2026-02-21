@@ -52,7 +52,7 @@ interface ComponentDetail {
 }
 
 interface ConfidenceInfo {
-  level: 'high' | 'medium' | 'low';
+  level: 'a' | 'b' | 'c' | 'f';
   percentage: number;
   metricsAvailable: number;
   metricsTotal: number;
@@ -128,7 +128,11 @@ function HistorySparkline({ data, className = '' }: { data: HistoryPoint[]; clas
   const lastScore = scores[scores.length - 1];
   const firstScore = scores[0];
   const isUp = lastScore > firstScore;
-  const strokeColor = isUp ? '#10b981' : lastScore < firstScore ? '#f43f5e' : '#6b7280';
+  const strokeColor = isUp
+    ? 'var(--color-emerald-500, #10b981)'
+    : lastScore < firstScore
+      ? 'var(--color-rose-500, #f43f5e)'
+      : 'var(--color-gray-500, #6b7280)';
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

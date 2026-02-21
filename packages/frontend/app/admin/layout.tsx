@@ -1,9 +1,4 @@
-/**
- * Admin Layout
- *
- * Provides a clean layout for admin pages without the main site header/footer.
- * Admin pages have their own navigation and UI.
- */
+import { AdminCommandSidebar } from './components/AdminCommandSidebar';
 
 export default function AdminLayout({
   children,
@@ -11,8 +6,9 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-surface">
-      {children}
+    <div className="flex min-h-screen bg-surface">
+      <AdminCommandSidebar />
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }

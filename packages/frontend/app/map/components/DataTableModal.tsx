@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import type { GeoLevel, MapData, MapDataEntry } from '../types';
 import { getValueFromEntry, getDateFromEntry } from '../types';
 import { getMetricFormat, getMetricTitle } from '../config';
-import type { MetricFormat } from '../config';
+import { formatMetricValue } from '@/lib/data';
 
 interface DataTableModalProps {
     isOpen: boolean;
@@ -15,34 +15,9 @@ interface DataTableModalProps {
     forecastHorizon?: string;
 }
 
-// Format value based on metric format type
-function formatValue(value: number | null, format: MetricFormat): string {
-    if (value === null || value === undefined) return '—';
-
-    switch (format) {
-        case 'currency':
-            return value >= 1000000
-                ? `$${(value / 1000000).toFixed(1)}M`
-                : value >= 1000
-                    ? `$${(value / 1000).toFixed(0)}K`
-                    : `$${Math.round(value).toLocaleString()}`;
-        case 'percent':
-        case 'percent_abs':
-            return `${value.toFixed(1)}%`;
-        case 'number':
-            return value >= 1000
-                ? `${(value / 1000).toFixed(1)}K`
-                : Math.round(value).toLocaleString();
-        case 'days':
-            return `${Math.round(value)} days`;
-        case 'index':
-            return value.toFixed(0);
-        case 'index_1dec':
-            return value.toFixed(1);
-        default:
-            return value.toLocaleString();
-    }
-}
+// Use centralized formatMetricValue from lib/data
+const formatValue = (value: number | null, format: string): string =>
+    formatMetricValue(value, format as any);
 
 // Sort type
 type SortDirection = 'asc' | 'desc';
