@@ -37,6 +37,14 @@ const DATA_PROVIDERS: DataProvider[] = [
     updateFrequency: 'Monthly',
   },
   {
+    id: 'redfin',
+    name: 'Redfin',
+    description:
+      'Redfin is a technology-powered real estate brokerage that publishes weekly housing market data through their Data Center. Their market tracker provides median sale price, homes sold, pending sales, new listings, inventory, days on market, sale-to-list ratio, and price drop metrics across national, state, metro, county, city, ZIP code, and neighborhood levels.',
+    url: 'https://www.redfin.com/news/data-center/',
+    updateFrequency: 'Weekly',
+  },
+  {
     id: 'census',
     name: 'U.S. Census Bureau',
     description:

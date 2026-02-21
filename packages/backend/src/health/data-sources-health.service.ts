@@ -85,6 +85,8 @@ const DATA_SOURCES: SourceConfig[] = [
   { sourceName: 'hud_api', displayName: 'HUD FMR', sourceType: 'api', tableName: 'hud_fmr', dateColumn: 'year', expectedFreshnessDays: 438 },
   // Building Permits - Monthly data from Census
   { sourceName: 'permits_census', displayName: 'Building Permits', sourceType: 'api', tableName: 'permits_county', dateColumn: 'period_date', expectedFreshnessDays: 36 },
+  // Redfin - Weekly sales data from S3, check ZIP level (most granular)
+  { sourceName: 'redfin_s3', displayName: 'Redfin', sourceType: 's3', tableName: 'redfin_zip', dateColumn: 'period_end', expectedFreshnessDays: 14 },
 ];
 
 @Injectable()

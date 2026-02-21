@@ -27,7 +27,7 @@ export type MetricFormat = 'currency' | 'percent' | 'percent_abs' | 'number' | '
 /**
  * Data source types - identifies which backend system provides the data
  */
-export type DataSource = 'zillow' | 'realtor' | 'calculated' | 'census' | 'fred' | 'propertyiq';
+export type DataSource = 'zillow' | 'realtor' | 'redfin' | 'calculated' | 'census' | 'fred' | 'propertyiq';
 
 /**
  * Metric configuration interface - defines how to fetch and display a metric
@@ -196,7 +196,7 @@ export type ScoreType = 'homeready' | 'investoredge' | 'markethealth';
 /**
  * Confidence level for a score
  */
-export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'INSUFFICIENT';
+export type ConfidenceLevel = 'A' | 'B' | 'C' | 'F';
 
 /**
  * Status label for a score component based on its normalized score.

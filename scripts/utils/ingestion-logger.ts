@@ -23,7 +23,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
-export type IngestionSource = 'zillow' | 'realtor' | 'census' | 'bls' | 'fred' | 'hud' | 'permits';
+export type IngestionSource = 'zillow' | 'realtor' | 'redfin' | 'census' | 'bls' | 'fred' | 'hud' | 'permits';
 export type IngestionStatus = 'running' | 'success' | 'partial' | 'failed';
 
 export interface IngestionLogParams {

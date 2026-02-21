@@ -31,6 +31,7 @@ export const AVAILABLE_PIPELINES: AvailablePipeline[] = [
   { name: 'fred', label: 'FRED' },
   { name: 'hud_fmr', label: 'HUD FMR' },
   { name: 'building_permits', label: 'Building Permits' },
+  { name: 'redfin', label: 'Redfin' },
 ];
 
 export function getStatusBadgeClasses(status: string): string {

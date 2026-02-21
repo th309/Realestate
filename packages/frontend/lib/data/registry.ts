@@ -49,6 +49,7 @@ export const GEOJSON_SOURCES: Record<string, string> = {
 export const DATA_DATES: Record<DataSource, string> = {
   zillow: '2025-11-30',
   realtor: '2025-12-01',
+  redfin: '2025-12-01',
   census: '2024',
   calculated: '2025-12-01',
   fred: '2025-09-01',
@@ -66,6 +67,7 @@ export const DATA_DATES: Record<DataSource, string> = {
 export const DATA_SOURCE_ANCHORS: Record<DataSource, string> = {
   zillow: 'zillow',
   realtor: 'realtor-com',
+  redfin: 'redfin',
   census: 'census',
   calculated: 'propertyiq',
   fred: 'fred',

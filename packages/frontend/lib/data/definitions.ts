@@ -819,6 +819,7 @@ export const DATA_SOURCE_ANCHORS: Record<string, string> = {
   'Bureau of Economic Analysis (BEA)': 'bea',
   'Bureau of Economic Analysis (BEA) Regional Price Parities': 'bea',
   'FRED': 'fred',
+  'Redfin': 'redfin',
   'Calculated': 'propertyiq',
   'Calculated from Zillow ZORI (rent) and Zillow ZHVI (home value)': 'propertyiq',
   'Calculated from Zillow ZORI (rent), HUD FMR (county fallback), Census ACS (rent fallback), and Zillow ZHVI (home value)': 'propertyiq',

@@ -70,6 +70,7 @@ const PIPELINE_DISPLAY_NAMES: Record<string, string> = {
   hud_fmr: 'HUD FMR',
   permits: 'Building Permits',
   building_permits: 'Building Permits',
+  redfin: 'Redfin',
 };
 
 @Injectable()
