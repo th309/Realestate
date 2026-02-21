@@ -46,8 +46,12 @@ import { upsertWithLogging, mergeByKey } from './census-economic-upsert';
 // ---------------------------------------------------------------------------
 
 const args = process.argv.slice(2);
-const importCensus = args.length === 0 || args.includes('--census');
-const importEconomic = args.length === 0 || args.includes('--economic');
+const hasCensusFlag = args.includes('--census');
+const hasEconomicFlag = args.includes('--economic');
+// If neither --census nor --economic is specified, import both by default.
+// This prevents unrelated flags (e.g. --quick) from accidentally disabling imports.
+const importCensus = hasCensusFlag || !hasEconomicFlag;
+const importEconomic = hasEconomicFlag || !hasCensusFlag;
 const quickMode = args.includes('--quick');
 
 const censusYears = quickMode ? CENSUS_YEARS_QUICK : CENSUS_YEARS_FULL;

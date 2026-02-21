@@ -51,7 +51,15 @@ export function getTableNameForYear(year: number): string {
 }
 
 /** Conflict keys are the same for all redfin_metrics tables. */
-export const REDFIN_CONFLICT_KEYS = ['geoid', 'metric_date'];
+export const REDFIN_CONFLICT_KEYS = ['geoid', 'metric_date', 'property_type'];
+
+/**
+ * Property type to import. Redfin TSV files contain rows for multiple
+ * property types (All Residential, Single Family, Condo, Townhouse, etc.)
+ * per (region, date). We only import "All Residential" which is the aggregate
+ * and most useful for our analytics. Rows with other property types are skipped.
+ */
+export const REDFIN_PROPERTY_TYPE_FILTER = 'All Residential';
 
 // ---------------------------------------------------------------------------
 // TSV metadata columns (skipped during metric extraction)

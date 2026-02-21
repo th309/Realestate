@@ -57,6 +57,37 @@ const SOURCE: IngestionSource = 'permits';
 const BATCH_SIZE = 5000;
 
 // ---------------------------------------------------------------------------
+// Deduplication
+// ---------------------------------------------------------------------------
+
+/**
+ * Remove duplicate records that share the same conflict key values.
+ *
+ * Census BPS county CSV files sometimes contain multiple rows for the
+ * same (fips_code, period_date) — e.g., counties that span regional
+ * boundaries or revision entries. PostgreSQL's ON CONFLICT DO UPDATE
+ * cannot affect the same row twice in a single batch, so we must
+ * deduplicate before upserting.
+ *
+ * Uses a Map keyed by the pipe-delimited conflict key values. When
+ * duplicates exist the last record wins (later entries in the source
+ * data are typically revisions / more complete).
+ */
+function deduplicateByConflictKeys(
+  records: Record<string, unknown>[],
+  conflictKeys: string[],
+): Record<string, unknown>[] {
+  const seen = new Map<string, Record<string, unknown>>();
+
+  for (const record of records) {
+    const key = conflictKeys.map(k => String(record[k] ?? '')).join('|');
+    seen.set(key, record);
+  }
+
+  return Array.from(seen.values());
+}
+
+// ---------------------------------------------------------------------------
 // Upsert helper with ingestion logging
 // ---------------------------------------------------------------------------
 
@@ -174,16 +205,32 @@ async function main(): Promise<void> {
   const stateRecords: PermitStateRecord[] = aggregateCountyToState(countyRecords);
   console.log(`  Generated ${stateRecords.length} state records`);
 
-  // Step 4: Upsert each geography
+  // Step 4: Deduplicate before upserting
+  // Census BPS files can contain duplicate rows for the same county +
+  // month (e.g., counties spanning regional boundaries, or revision
+  // entries). PostgreSQL's ON CONFLICT DO UPDATE cannot affect the same
+  // row twice in a single batch, so we collapse duplicates here.
   const geoResults: ImportGeographyResult[] = [];
 
   if (!geoFilter || geoFilter === 'county') {
-    const countyResult = await upsertPermitsWithLogging('county', countyRecords);
+    const countyConflictKeys = PERMITS_TABLES.county.conflictKeys;
+    const dedupedCounty = deduplicateByConflictKeys(countyRecords, countyConflictKeys);
+    const duplicatesRemoved = countyRecords.length - dedupedCounty.length;
+    if (duplicatesRemoved > 0) {
+      console.log(`\nStep 4: Removed ${duplicatesRemoved} duplicate county records (${countyRecords.length} → ${dedupedCounty.length})`);
+    }
+    const countyResult = await upsertPermitsWithLogging('county', dedupedCounty);
     geoResults.push(countyResult);
   }
 
   if (!geoFilter || geoFilter === 'state') {
-    const stateResult = await upsertPermitsWithLogging('state', stateRecords);
+    const stateConflictKeys = PERMITS_TABLES.state.conflictKeys;
+    const dedupedState = deduplicateByConflictKeys(stateRecords, stateConflictKeys);
+    const stateDuplicatesRemoved = stateRecords.length - dedupedState.length;
+    if (stateDuplicatesRemoved > 0) {
+      console.log(`\nStep 4: Removed ${stateDuplicatesRemoved} duplicate state records (${stateRecords.length} → ${dedupedState.length})`);
+    }
+    const stateResult = await upsertPermitsWithLogging('state', dedupedState);
     geoResults.push(stateResult);
   }
 

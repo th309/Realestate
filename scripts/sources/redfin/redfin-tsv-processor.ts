@@ -21,6 +21,7 @@ import { createIngestionLogger } from '../../utils/ingestion-logger';
 import {
   REDFIN_S3_URLS,
   REDFIN_CONFLICT_KEYS,
+  REDFIN_PROPERTY_TYPE_FILTER,
   getTableNameForYear,
   STREAMING_CHUNK_SIZE,
   UPSERT_BATCH_SIZE,
@@ -211,11 +212,19 @@ export async function importRedfinGeography(
 
     let currentChunk: RedfinMappedRecord[] = [];
 
+    let propertyTypeSkipped = 0;
+
     for (let rowIndex = 1; rowIndex < allRows.length; rowIndex++) {
       if (rowLimit && rowIndex > rowLimit) break;
 
       const mapped = mapTsvRowToRecord(allRows[rowIndex], headers, metricColumns);
       if (mapped) {
+        // Filter by property type: only import "All Residential" rows
+        if (mapped.metadata.propertyType && mapped.metadata.propertyType !== REDFIN_PROPERTY_TYPE_FILTER) {
+          propertyTypeSkipped++;
+          result.rowsSkippedByMapping++;
+          continue;
+        }
         currentChunk.push(mapped);
         if (!result.latestPeriodDate || mapped.metadata.periodEnd > result.latestPeriodDate) {
           result.latestPeriodDate = mapped.metadata.periodEnd;
@@ -239,6 +248,9 @@ export async function importRedfinGeography(
     }
 
     result.totalRowsLoaded = Math.min(allRows.length - 1, rowLimit ?? Infinity);
+    if (propertyTypeSkipped > 0) {
+      console.log(`  Filtered out ${propertyTypeSkipped.toLocaleString()} rows with non-"${REDFIN_PROPERTY_TYPE_FILTER}" property type`);
+    }
 
     // Flush remaining chunk
     if (currentChunk.length > 0) {

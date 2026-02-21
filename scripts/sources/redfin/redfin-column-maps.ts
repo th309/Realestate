@@ -46,6 +46,7 @@ export interface RedfinParsedRowMetadata {
   regionType: string;
   stateCode: string | undefined;
   city: string | undefined;
+  propertyType: string | undefined;
 }
 
 /** A fully parsed record ready for geoid assignment and DB upsert. */
@@ -142,6 +143,7 @@ export function mapTsvRowToRecord(
   const regionTypeIdx = findHeaderIndex(headers, 'REGION_TYPE');
   const stateCodeIdx = findHeaderIndex(headers, 'STATE_CODE');
   const cityIdx = findHeaderIndex(headers, 'CITY');
+  const propertyTypeIdx = findHeaderIndex(headers, 'PROPERTY_TYPE');
 
   const periodEnd = cleanCellValue(rowValues[periodEndIdx]);
   const periodBegin = cleanCellValue(rowValues[periodBeginIdx]);
@@ -154,10 +156,12 @@ export function mapTsvRowToRecord(
 
   const stateCode = stateCodeIdx >= 0 ? cleanCellValue(rowValues[stateCodeIdx]) || undefined : undefined;
   const city = cityIdx >= 0 ? cleanCellValue(rowValues[cityIdx]) || undefined : undefined;
+  const propertyType = propertyTypeIdx >= 0 ? cleanCellValue(rowValues[propertyTypeIdx]) || undefined : undefined;
 
   // Build the database record with metric values
   const dbRecord: Record<string, unknown> = {
     metric_date: metricDate,
+    property_type: propertyType || 'All Residential',
   };
 
   let hasAnyMetric = false;
@@ -203,6 +207,7 @@ export function mapTsvRowToRecord(
       regionType,
       stateCode,
       city,
+      propertyType,
     },
     dbRecord,
   };
