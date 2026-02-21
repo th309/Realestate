@@ -626,16 +626,23 @@ async function main() {
   const supabase = createSupabaseClient();
 
   // Create parent ingestion log row
-  const { data: logRow } = await supabase
+  const { data: logRow, error: logError } = await supabase
     .from('data_ingestion_log')
     .insert({
       source: 'zillow',
+      table_name: 'zillow_*',
       status: 'running',
       started_at: new Date().toISOString(),
     })
     .select('id')
     .single();
+  if (logError) {
+    console.warn(`Warning: Could not create ingestion log row: ${logError.message}`);
+  }
   const runId = logRow?.id;
+  if (runId) {
+    console.log(`Ingestion run ID: ${runId}`);
+  }
 
   // Load dataset configuration
   let ZILLOW_DATASETS: DatasetConfig[];
@@ -647,12 +654,23 @@ async function main() {
     process.exit(1);
   }
 
-  totalDatasets = ZILLOW_DATASETS.length;
+  // Support --filter flag to run a subset of datasets
+  const args = process.argv.slice(2);
+  const filterArg = args.find(arg => arg.startsWith('--filter='));
+  const filter = filterArg ? filterArg.split('=')[1] : null;
+
+  let datasetsToRun = ZILLOW_DATASETS;
+  if (filter) {
+    datasetsToRun = ZILLOW_DATASETS.filter(d => d.id.includes(filter) || d.geography === filter);
+    console.log(`Filtering datasets by: "${filter}" (${datasetsToRun.length} matched)`);
+  }
+
+  totalDatasets = datasetsToRun.length;
   console.log(`Total datasets to import: ${totalDatasets}`);
   console.log(`Target tables: ${TARGET_TABLES.join(', ')}`);
 
   // Initialize dataset statuses
-  for (const dataset of ZILLOW_DATASETS) {
+  for (const dataset of datasetsToRun) {
     datasetStatuses.set(dataset.id, {
       id: dataset.id,
       description: dataset.description,
@@ -662,8 +680,12 @@ async function main() {
     });
   }
 
-  // Truncate all tables for clean ingest
-  await truncateAllTables(supabase);
+  // Only truncate tables on full clean ingest (no filter)
+  if (!filter) {
+    await truncateAllTables(supabase);
+  } else {
+    console.log('Skipping table truncation (filtered run)');
+  }
 
   // Load CBSA crosswalk for metro data
   await loadCbsaCrosswalk(supabase);
@@ -687,7 +709,7 @@ async function main() {
     return 3;
   };
 
-  const sortedDatasets = [...ZILLOW_DATASETS].sort(
+  const sortedDatasets = [...datasetsToRun].sort(
     (a, b) => getSizePriority(a.id) - getSizePriority(b.id)
   );
 

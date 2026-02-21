@@ -92,7 +92,7 @@ export function PipelineRunDetails({ runId }: { runId: string }) {
     return <div className="p-4 text-sm text-on-surface-variant animate-pulse">Loading details...</div>;
   }
 
-  if (!data || data.details.length === 0) {
+  if (!data || !data.details || data.details.length === 0) {
     return <div className="p-4 text-sm text-on-surface-variant">No per-metric details recorded for this run.</div>;
   }
 

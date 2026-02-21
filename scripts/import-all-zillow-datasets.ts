@@ -163,16 +163,23 @@ async function main() {
   const supabase = createZillowImportClient();
 
   // Create parent ingestion log row
-  const { data: logRow } = await supabase
+  const { data: logRow, error: logError } = await supabase
     .from('data_ingestion_log')
     .insert({
       source: 'zillow',
+      table_name: 'zillow_*',
       status: 'running',
       started_at: new Date().toISOString(),
     })
     .select('id')
     .single();
+  if (logError) {
+    console.warn(`Warning: Could not create ingestion log row: ${logError.message}`);
+  }
   const runId = logRow?.id;
+  if (runId) {
+    console.log(`Ingestion run ID: ${runId}`);
+  }
 
   // Sort by estimated size (smallest first): state < metro < county < city < zip
   const getSizePriority = (id: string): number => {

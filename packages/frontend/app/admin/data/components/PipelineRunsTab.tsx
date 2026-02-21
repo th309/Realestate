@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { fetchAPIRaw } from '@/lib/data';
 import {
   PipelineRun,
@@ -211,9 +211,8 @@ export function PipelineRunsTab() {
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {runs.map((run) => (
-                <>
+                <Fragment key={run.id}>
                   <tr
-                    key={run.id}
                     onClick={() => setExpandedRunId(expandedRunId === run.id ? null : run.id)}
                     className="cursor-pointer hover:bg-surface-container-low transition-colors"
                   >
@@ -260,7 +259,7 @@ export function PipelineRunsTab() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
