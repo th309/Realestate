@@ -1,7 +1,7 @@
 /**
  * Pricing data fetcher
  *
- * Fetches tier and feature data for the pricing page from the admin features API.
+ * Fetches tier and feature data for the pricing page from the public pricing API.
  */
 
 import { fetchAPIRaw } from './base';
@@ -24,7 +24,7 @@ export interface PricingTier {
 }
 
 export async function fetchPricingSummary(): Promise<{ tiers: PricingTier[] }> {
-  const response = await fetchAPIRaw('/api/admin/features/pricing-summary');
+  const response = await fetchAPIRaw('/api/pricing/tiers');
   const result = await response.json();
   if (!result.success) throw new Error(result.error || 'Failed to fetch pricing summary');
   return result.data;
