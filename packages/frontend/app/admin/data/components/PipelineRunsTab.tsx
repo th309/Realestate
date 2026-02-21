@@ -17,6 +17,7 @@ import {
   formatRunDate,
 } from './pipelineRuns.types';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
+import { PipelineRunDetails } from './PipelineRunDetails';
 
 interface DataSourceHealth {
   displayName: string;
@@ -36,6 +37,7 @@ export function PipelineRunsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -209,36 +211,56 @@ export function PipelineRunsTab() {
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {runs.map((run) => (
-                <tr key={run.id}>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="font-medium text-on-surface">{run.displayName}</div>
-                    <div className="text-xs text-on-surface-variant">{run.pipelineName}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
-                    {formatRunDate(run.startedAt)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
-                    {formatDuration(run.durationMs)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-on-surface">
-                      {run.recordsInserted.toLocaleString()} inserted
-                    </div>
-                    {run.recordsFailed > 0 && (
-                      <div className="text-xs text-red-600">
-                        {run.recordsFailed.toLocaleString()} failed
+                <>
+                  <tr
+                    key={run.id}
+                    onClick={() => setExpandedRunId(expandedRunId === run.id ? null : run.id)}
+                    className="cursor-pointer hover:bg-surface-container-low transition-colors"
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs transition-transform ${expandedRunId === run.id ? 'rotate-90' : ''}`}>
+                          ▶
+                        </span>
+                        <div>
+                          <div className="font-medium text-on-surface">{run.displayName}</div>
+                          <div className="text-xs text-on-surface-variant">{run.pipelineName}</div>
+                        </div>
                       </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <PipelineStatusBadge status={run.status} />
-                    {run.errorMessage && (
-                      <div className="text-xs text-red-600 mt-1 max-w-xs truncate">
-                        {run.errorMessage}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
+                      {formatRunDate(run.startedAt)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-on-surface-variant">
+                      {formatDuration(run.durationMs)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-on-surface">
+                        {run.recordsInserted.toLocaleString()} inserted
                       </div>
-                    )}
-                  </td>
-                </tr>
+                      {run.recordsFailed > 0 && (
+                        <div className="text-xs text-red-600">
+                          {run.recordsFailed.toLocaleString()} failed
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <PipelineStatusBadge status={run.status} />
+                      {run.errorMessage && (
+                        <div className="text-xs text-red-600 mt-1 max-w-xs truncate">
+                          {run.errorMessage}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedRunId === run.id && (
+                    <tr key={`${run.id}-details`}>
+                      <td colSpan={5} className="p-0">
+                        <PipelineRunDetails runId={run.id} />
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>
