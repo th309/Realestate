@@ -136,9 +136,10 @@ Agent 3 (general-purpose): Write unit tests for the backend service
 **Pattern:** Modular monolith with clear frontend/backend separation.
 
 **Deployment Targets (STRICT):**
-* **Frontend:** Vercel (Production/Staging).
-* **Backend:** Railway (Production/Staging).
-* **Infrastructure Rule:** Code changes to `.env` files affect **LOCAL ONLY**. Production/Staging variables must be updated in the respective cloud dashboards (Vercel/Railway). **NEVER** assume a local `.env` change enables a feature in production.
+* **Frontend:** Railway (Production/Staging) — `propertyiq.up.railway.app`
+* **Backend:** Railway (Production/Staging) — `backend-production-ee4d.up.railway.app`
+* **Analytics:** Railway (Production/Staging) — `analytics-production-af35.up.railway.app`
+* **Infrastructure Rule:** Code changes to `.env` files affect **LOCAL ONLY**. Production/Staging variables must be updated in the Railway cloud dashboard. **NEVER** assume a local `.env` change enables a feature in production.
 
 ### 2.4 Project Structure
 
@@ -441,7 +442,7 @@ const data = await queryMarketIndicatorLatest(supabase, table, geography);
 
 ### 6.1 Core Authority
 * **Source of Truth:** All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
-* **Strict Adherence:** Do NOT mix "Vercel/Geist" aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
+* **Strict Adherence:** Do NOT mix generic/Geist aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
 
 ### 6.2 Visual Foundation (Tailwind Implementation)
 
