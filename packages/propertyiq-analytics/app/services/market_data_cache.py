@@ -6,7 +6,7 @@ Parquet only (fast). Weekly job at 4am EST does incremental refresh from
 Supabase; writes use temp-then-rename so reads always see a consistent file.
 
 - Time-series tables: incremental fetch (period_date > max in Parquet), then
-  trim to retention (24 months default; PropertyIQ scores = 10 years).
+  trim to retention (24 months for all tables including PropertyIQ scores).
 - Full-table: zillow_metro_crosswalk only; full replace on refresh.
 """
 
@@ -26,8 +26,8 @@ DATE_COLUMN = "period_date"
 
 # Default retention for time-series (months). Override per-table below.
 RECENT_MONTHS = 24
-# PropertyIQ scores: keep 10 years in Parquet.
-PROPERTYIQ_RETENTION_MONTHS = 120
+# PropertyIQ scores: keep 2 years in Parquet (same as other tables to avoid OOM).
+PROPERTYIQ_RETENTION_MONTHS = 24
 RETENTION_MONTHS_BY_TABLE: Dict[str, int] = {
     "propertyiq_scores": PROPERTYIQ_RETENTION_MONTHS,
     "propertyiq_scores_history": PROPERTYIQ_RETENTION_MONTHS,
@@ -42,7 +42,7 @@ TABLES_TO_PRELOAD = [
     "calculated_metrics",
     "economic_metro", "economic_county", "economic_state", "economic_national",
     "hud_fmr",
-    "permits_state", "permits_metro", "permits_county",
+    "permits_state", "permits_county",
     "propertyiq_scores", "propertyiq_scores_history",
 ]
 
@@ -56,7 +56,7 @@ TIME_SERIES_TABLES = {
     "calculated_metrics",
     "economic_metro", "economic_county", "economic_state", "economic_national",
     "hud_fmr",
-    "permits_state", "permits_metro", "permits_county",
+    "permits_state", "permits_county",
     "propertyiq_scores", "propertyiq_scores_history",
 }
 
