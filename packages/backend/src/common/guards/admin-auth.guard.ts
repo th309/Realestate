@@ -48,7 +48,7 @@ export class AdminGuard implements CanActivate {
     const { data: adminRow, error } = await supabase
       .from('admin_users')
       .select('role')
-      .eq('user_id', userId)
+      .eq('id', userId)
       .single();
 
     if (error || !adminRow) {
