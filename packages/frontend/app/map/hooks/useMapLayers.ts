@@ -255,24 +255,17 @@ function removeExistingLayers(map: mapboxgl.Map): void {
 }
 
 function getGeojsonUrl(geoLevel: GeoLevel, selectedState: string): string | null {
-  // Prefer static files (served from /public, no backend or DB hit).
-  // Fall back to backend API for layers without static files.
-  if (geoLevel === 'metro') {
-    return '/geojson/cbsa_2023.json';
-  }
+  // Prefer static files (served from /public, no backend or DB hit)
+  // This bypasses the DB entirely and leverages Next.js edge caching.
+  if (geoLevel === 'national') return '/geojson/national.json';
+  if (geoLevel === 'state') return '/geojson/states.json';
+  if (geoLevel === 'metro') return '/geojson/metros.json';
+  if (geoLevel === 'county' && !selectedState) return '/geojson/counties.json';
 
-  // These layers use the backend API (cached 24h in-memory).
-  // Run `npx tsx scripts/generate-static-geojson.ts` to create static
-  // versions, then swap the URLs here.
-  if (geoLevel === 'national') {
-    return getGeoJsonApiUrl(GEOJSON_SOURCES.national);
-  } else if (geoLevel === 'state') {
-    return getGeoJsonApiUrl(GEOJSON_SOURCES.state);
-  } else if (geoLevel === 'county') {
-    if (selectedState) {
-      return getGeoJsonApiUrl(`${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`);
-    }
-    return getGeoJsonApiUrl(GEOJSON_SOURCES.county);
+  // These layers remain on the backend API (cached 24h in-memory)
+  // because generating a nationwide static file for every single zip code/city is too large.
+  if (geoLevel === 'county' && selectedState) {
+    return getGeoJsonApiUrl(`${GEOJSON_SOURCES.county}/${selectedState.toUpperCase()}`);
   } else if (geoLevel === 'city' && selectedState) {
     return getGeoJsonApiUrl(`${GEOJSON_SOURCES.city}/${selectedState.toUpperCase()}`);
   } else if (geoLevel === 'zip' && selectedState) {
