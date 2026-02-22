@@ -14,8 +14,8 @@ export function useDataFreshness(): UseDataFreshnessResult {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['data-freshness'],
     queryFn: fetchDataFreshness,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 24 * 60 * 60 * 1000, // 24h — freshness only changes when pipelines run
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   return {

@@ -25,9 +25,18 @@ export interface DataFreshnessResponse {
 export class DataFreshnessService {
   private readonly logger = new Logger(DataFreshnessService.name);
 
+  // Cache freshness results for 24 hours — data only changes when pipelines run
+  private cachedResponse: DataFreshnessResponse | null = null;
+  private cachedAt = 0;
+  private static readonly CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
   constructor(private readonly supabase: SupabaseService) {}
 
-  async getFreshness(): Promise<DataFreshnessResponse> {
+  async getFreshness(forceRefresh = false): Promise<DataFreshnessResponse> {
+    const now = Date.now();
+    if (!forceRefresh && this.cachedResponse && now - this.cachedAt < DataFreshnessService.CACHE_TTL_MS) {
+      return this.cachedResponse;
+    }
     const tableProbeConfigs: TableProbeConfig[] = [
       // Zillow
       { tableName: 'zillow_state', dateColumn: 'period_date' },
@@ -136,7 +145,7 @@ export class DataFreshnessService {
       economic_cost_of_living: this.pickMostRecent(Object.values(economicMetricDates.rpp_all_items)),
     };
 
-    return {
+    this.cachedResponse = {
       generatedAt: new Date().toISOString(),
       tableDates,
       sourceDates,
@@ -146,6 +155,10 @@ export class DataFreshnessService {
       },
       economicMetricDates,
     };
+    this.cachedAt = Date.now();
+    this.logger.log('Freshness cache refreshed');
+
+    return this.cachedResponse;
   }
 
   private async getZillowDatesByGeo(
