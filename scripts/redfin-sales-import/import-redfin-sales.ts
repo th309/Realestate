@@ -22,6 +22,22 @@ import { loadEnv, createSupabaseAdminClient, testConnection, upsertBatch, BATCH_
 import type { RedfinS3Dataset, RedfinGeoLevel, ImportResult, RedfinSalesRecord } from './types';
 import { REDFIN_S3_DATASETS } from './types';
 
+const MAX_AUTO_BATCH_SIZE = 5000;
+const GEO_BATCH_SIZES: Record<RedfinGeoLevel, number> = {
+  national: 5000,
+  state: 5000,
+  metro: 3000,
+  county: 2000,
+  city: 2000,
+  zip: 1000,
+  neighborhood: 1000,
+};
+
+function getAutoBatchSize(geoLevel: RedfinGeoLevel): number {
+  const preferred = GEO_BATCH_SIZES[geoLevel] ?? BATCH_SIZE;
+  return Math.max(1, Math.min(preferred, MAX_AUTO_BATCH_SIZE));
+}
+
 // ---------------------------------------------------------------------------
 // Single dataset import (in-memory mode for small files)
 // ---------------------------------------------------------------------------
@@ -30,6 +46,7 @@ async function importDatasetInMemory(
   supabase: SupabaseClient,
   dataset: RedfinS3Dataset,
   rowLimit?: number,
+  batchSize: number = BATCH_SIZE,
 ): Promise<ImportResult> {
   const startTime = Date.now();
   const result: ImportResult = {
@@ -59,12 +76,12 @@ async function importDatasetInMemory(
       return result;
     }
 
-    const totalBatches = Math.ceil(records.length / BATCH_SIZE);
+    const totalBatches = Math.ceil(records.length / batchSize);
     console.log(`    Upserting ${records.length} records in ${totalBatches} batches into ${dataset.tableName}...`);
 
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const batch = records.slice(i, i + BATCH_SIZE);
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      const batchNum = Math.floor(i / batchSize) + 1;
       const batchResult = await upsertBatch(supabase, dataset.tableName, batch, batchNum, totalBatches);
       result.inserted += batchResult.inserted;
       result.errors += batchResult.errors;
@@ -86,6 +103,7 @@ async function importDatasetStreaming(
   supabase: SupabaseClient,
   dataset: RedfinS3Dataset,
   rowLimit?: number,
+  batchSize: number = BATCH_SIZE,
 ): Promise<ImportResult> {
   const startTime = Date.now();
   const result: ImportResult = {
@@ -106,12 +124,12 @@ async function importDatasetStreaming(
 
     // Phase 2: Stream-parse from disk and upsert each batch immediately
     // Never holds more than BATCH_SIZE records in memory at a time
-    console.log(`    Stream-parsing from disk + upserting (batch size: ${BATCH_SIZE})...`);
+    console.log(`    Stream-parsing from disk + upserting (batch size: ${batchSize})...`);
 
     let batchNum = 0;
     let limitReached = false;
 
-    for await (const { batch, rawCount, filteredCount } of parseTsvStream(stream, dataset.geoLevel, BATCH_SIZE)) {
+    for await (const { batch, rawCount, filteredCount } of parseTsvStream(stream, dataset.geoLevel, batchSize)) {
       batchNum++;
       result.totalRows = filteredCount;
 
@@ -154,10 +172,13 @@ async function importDataset(
   dataset: RedfinS3Dataset,
   rowLimit?: number,
 ): Promise<ImportResult> {
+  const batchSize = getAutoBatchSize(dataset.geoLevel);
+  console.log(`    Auto batch size selected: ${batchSize} (cap: ${MAX_AUTO_BATCH_SIZE})`);
+
   if (needsStreaming(dataset.geoLevel)) {
-    return importDatasetStreaming(supabase, dataset, rowLimit);
+    return importDatasetStreaming(supabase, dataset, rowLimit, batchSize);
   }
-  return importDatasetInMemory(supabase, dataset, rowLimit);
+  return importDatasetInMemory(supabase, dataset, rowLimit, batchSize);
 }
 
 // ---------------------------------------------------------------------------
@@ -189,6 +210,9 @@ function parseCliArgs(): CliOptions {
         process.exit(1);
       }
       options.rowLimit = value;
+    } else if (arg.startsWith('--batch=')) {
+      console.error('Manual --batch override is disabled. This importer auto-selects batch sizes (max 5000) per geography.');
+      process.exit(1);
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 Redfin S3 Market Tracker Sales Import
@@ -228,7 +252,6 @@ async function main(): Promise<void> {
   if (options.rowLimit) {
     console.log(`  Row limit: ${options.rowLimit}`);
   }
-
   // 2. Create Supabase client
   const supabase = createSupabaseAdminClient();
 

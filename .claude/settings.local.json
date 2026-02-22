@@ -310,7 +310,9 @@
       "Bash(stripe:*)",
       "Bash(scoop --version 2>&1 || winget --version 2>&1 || choco --version 2>&1)",
       "Bash(git:*)",
-      "Bash(sleep 2:*)"
+      "Bash(sleep 2:*)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) # The structure is [{type, text}] where text contains the JSON inner = json.loads\\(data[0][''text''].split\\(''boundaries.\\\\n\\\\n''\\)[1].split\\(''\\\\n</untrusted''\\)[0]\\) lints = inner.get\\(''lints'', inner\\) if isinstance\\(inner, dict\\) else inner # Count by name from collections import Counter counts = Counter\\(\\) for lint in lints: if isinstance\\(lint, dict\\) and ''name'' in lint: counts[lint[''name'']] += 1 for name, count in sorted\\(counts.items\\(\\)\\): print\\(f''{name}: {count}''\\) \")",
+      "Bash(openssl rand:*)"
     ]
   }
 }

@@ -106,10 +106,13 @@ export const UPSERT_CONFLICT_COLUMNS: Record<string, string> = {
 // Batch upsert with retry
 // ---------------------------------------------------------------------------
 
-const BATCH_SIZE = 5000;
-const MAX_RETRIES = 3;
+const BATCH_SIZE = 1000; // Reduced from 5000 to prevent Supabase resource exhaustion
+const MAX_RETRIES = 5;
 
 export { BATCH_SIZE };
+
+// Add a helper for delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function upsertBatch(
   supabase: SupabaseClient,
@@ -153,9 +156,14 @@ export async function upsertBatch(
 
       // Log progress periodically
       const totalLabel = totalBatches > 0 ? `/${totalBatches}` : '';
-      if (batchNum === 1 || batchNum % 20 === 0 || batchNum === totalBatches) {
+      const streamingMode = totalBatches < 0;
+      const logEvery = streamingMode ? 5 : 20;
+      if (batchNum === 1 || batchNum % logEvery === 0 || batchNum === totalBatches) {
         console.log(`    Upserted batch ${batchNum}${totalLabel} into ${tableName} (${batch.length} records)`);
       }
+
+      // Add a small delay between batches to allow the Small Supabase instance CPU/RAM to recover
+      await delay(200);
 
       return { inserted: batch.length, errors: 0 };
     } catch (error: any) {

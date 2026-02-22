@@ -34,6 +34,20 @@ function unquote(val: string | undefined | null): string | null {
   return val.replace(/^"|"$/g, '').trim() || null;
 }
 
+/** Normalize Redfin ZIP region strings like "Zip Code: 02129" to "02129". */
+function normalizeZipCode(val: string | undefined | null): string | null {
+  const text = unquote(val);
+  if (!text) return null;
+
+  const prefixedMatch = text.match(/Zip\s+Code:\s*([0-9]{5})(?:-[0-9]{4})?$/i);
+  if (prefixedMatch) return prefixedMatch[1];
+
+  const plainMatch = text.match(/^([0-9]{5})(?:-[0-9]{4})?$/);
+  if (plainMatch) return plainMatch[1];
+
+  return text;
+}
+
 /**
  * State abbreviation to FIPS code mapping.
  * Used to populate state_fips at import time.
@@ -100,7 +114,7 @@ function rowToRecord(row: RedfinTsvRow, geoLevel: RedfinGeoLevel): RedfinSalesRe
       record.state_code = stateCode;
       break;
     case 'zip':
-      record.zip_code = unquote(row.REGION);
+      record.zip_code = normalizeZipCode(row.REGION);
       record.state_code = stateCode;
       break;
     case 'neighborhood':
@@ -163,6 +177,7 @@ export async function* parseTsvStream(
   let batch: RedfinSalesRecord[] = [];
   let rawCount = 0;
   let filteredCount = 0;
+  const progressEvery = geoLevel === 'zip' ? 100_000 : 500_000;
 
   for await (const row of parser) {
     rawCount++;
@@ -178,7 +193,7 @@ export async function* parseTsvStream(
     }
 
     // Log progress every 500K raw rows
-    if (rawCount % 500_000 === 0) {
+    if (rawCount % progressEvery === 0) {
       console.log(`    Parsed ${rawCount.toLocaleString()} raw rows so far (${filteredCount.toLocaleString()} kept)...`);
     }
   }
