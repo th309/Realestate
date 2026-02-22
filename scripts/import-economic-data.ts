@@ -30,6 +30,30 @@ import {
 import type { ImportResult } from './census-economic-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 import { createIngestionLogger, IngestionSource } from './utils/ingestion-logger';
+import { logIngestionDetail, EXPECTED_REGIONS } from './utils/log-ingestion-detail';
+import { computeWideFormatMetricStats } from './utils/compute-wide-format-metric-stats';
+
+// Metric columns present in all economic geography levels
+const ECONOMIC_METRICS_BASE = [
+  'unemployment_rate', 'unemployment_rate_yoy',
+  'total_nonfarm_employment', 'employment_yoy',
+  'gdp_millions', 'real_gdp_millions', 'gdp_yoy',
+];
+
+// RPP metrics only available at state and metro levels
+const ECONOMIC_METRICS_RPP = [
+  'rpp_all_items', 'rpp_goods', 'rpp_housing', 'rpp_utilities', 'rpp_other_services',
+];
+
+/** Return the geo ID field name for a given economic geography level */
+function getEconomicGeoField(geoId: string): string | null {
+  switch (geoId) {
+    case 'state': return 'state_fips';
+    case 'metro': return 'cbsa_code';
+    case 'county': return 'fips_code';
+    default: return null; // national
+  }
+}
 
 // Use process.cwd() for compatibility with both CommonJS and ES modules
 const DATA_DIR = join(process.cwd(), 'data/economic');
@@ -116,10 +140,13 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
       return null;
     }
 
-    // Start ingestion log
-    await logger.start(records.length);
+    // Start ingestion log and capture run ID for detail logging
+    const runId = await logger.start(records.length);
+    const importStart = Date.now();
 
     const result = await config.importer(supabase, records);
+
+    const importDurationMs = Date.now() - importStart;
 
     // Complete ingestion log
     await logger.complete({
@@ -128,6 +155,35 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
       recordsError: result.errors,
       errors: result.errors > 0 ? [`${result.errors} records failed`] : []
     });
+
+    // Log per-metric details for the admin pipeline details view
+    if (runId && result.success) {
+      const metricColumns = (config.id === 'state' || config.id === 'metro')
+        ? [...ECONOMIC_METRICS_BASE, ...ECONOMIC_METRICS_RPP]
+        : ECONOMIC_METRICS_BASE;
+
+      const geoField = getEconomicGeoField(config.id);
+      const perMetricStats = computeWideFormatMetricStats(records, metricColumns, 'period_date', geoField);
+      const tableName = `economic_${config.id}`;
+      const expectedRegions = EXPECTED_REGIONS[config.id] || 0;
+
+      for (const [metricName, stats] of perMetricStats) {
+        if (stats.count === 0) continue;
+
+        const coveragePct = expectedRegions
+          ? Math.min(100, (stats.regionCount / expectedRegions) * 100)
+          : 0;
+
+        await logIngestionDetail(
+          supabase, runId, metricName, config.id,
+          'success', stats.count, 0, importDurationMs,
+          undefined,
+          { tableName, latestDataDate: stats.latestDate ?? undefined, coveragePct },
+        );
+      }
+
+      console.log(`  Logged per-metric details for ${perMetricStats.size} metrics`);
+    }
 
     return result;
   } catch (error: any) {

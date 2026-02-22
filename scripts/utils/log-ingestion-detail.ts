@@ -5,13 +5,20 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
-const EXPECTED_REGIONS: Record<string, number> = {
+export const EXPECTED_REGIONS: Record<string, number> = {
+  national: 1,
   state: 51,
   metro: 900,
   county: 3200,
   city: 20000,
   zip: 28000,
 };
+
+export interface IngestionDetailOptions {
+  tableName?: string;
+  latestDataDate?: string;
+  coveragePct?: number;
+}
 
 export async function logIngestionDetail(
   supabase: SupabaseClient,
@@ -23,44 +30,52 @@ export async function logIngestionDetail(
   recordsFailed: number,
   durationMs: number,
   errorMessage?: string,
+  options?: IngestionDetailOptions,
 ): Promise<void> {
-  let latestDataDate: string | null = null;
+  let latestDataDate: string | null = options?.latestDataDate ?? null;
   let freshnessDays = 0;
-  let coveragePct = 0;
+  let coveragePct = options?.coveragePct ?? 0;
   let recordsDelta = 0;
   let coverageDelta = 0;
 
-  const tableName = `zillow_${geography}`;
+  const tableName = options?.tableName ?? `zillow_${geography}`;
+  const hasPrecomputedStats = options?.latestDataDate !== undefined && options?.coveragePct !== undefined;
 
   if (status === 'success') {
     try {
-      // Get latest date for this metric
-      const { data: latestRow } = await supabase
-        .from(tableName)
-        .select('period_date')
-        .eq('metric_name', metricName)
-        .order('period_date', { ascending: false })
-        .limit(1)
-        .single();
+      if (!hasPrecomputedStats) {
+        // Query freshness/coverage from DB (long-format tables like zillow_*)
+        const { data: latestRow } = await supabase
+          .from(tableName)
+          .select('period_date')
+          .eq('metric_name', metricName)
+          .order('period_date', { ascending: false })
+          .limit(1)
+          .single();
 
-      if (latestRow) {
-        latestDataDate = latestRow.period_date;
-        freshnessDays = Math.floor(
-          (Date.now() - new Date(latestRow.period_date).getTime()) / (1000 * 60 * 60 * 24),
-        );
+        if (latestRow) {
+          latestDataDate = latestRow.period_date;
+        }
+
+        // Get region count for coverage
+        const { count: regionCount } = await supabase
+          .from(tableName)
+          .select('region_id', { count: 'exact', head: true })
+          .eq('metric_name', metricName)
+          .eq('period_date', latestDataDate || '');
+
+        const expectedRegions = EXPECTED_REGIONS[geography] || 0;
+        coveragePct = expectedRegions
+          ? Math.min(100, ((regionCount || 0) / expectedRegions) * 100)
+          : 0;
       }
 
-      // Get region count for coverage
-      const { count: regionCount } = await supabase
-        .from(tableName)
-        .select('region_id', { count: 'exact', head: true })
-        .eq('metric_name', metricName)
-        .eq('period_date', latestDataDate || '');
-
-      const expectedRegions = EXPECTED_REGIONS[geography] || 0;
-      coveragePct = expectedRegions
-        ? Math.min(100, ((regionCount || 0) / expectedRegions) * 100)
-        : 0;
+      // Compute freshness from latestDataDate
+      if (latestDataDate) {
+        freshnessDays = Math.floor(
+          (Date.now() - new Date(latestDataDate).getTime()) / (1000 * 60 * 60 * 24),
+        );
+      }
 
       // Compare to previous run for deltas
       const { data: prevDetail } = await supabase

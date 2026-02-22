@@ -33,6 +33,43 @@ import {
 import type { ImportResult } from './census-economic-import/types';
 import { refreshCalculatedMetrics } from './utils/refresh-calculated-metrics';
 import { createIngestionLogger } from './utils/ingestion-logger';
+import { logIngestionDetail, EXPECTED_REGIONS } from './utils/log-ingestion-detail';
+import { computeWideFormatMetricStats } from './utils/compute-wide-format-metric-stats';
+
+// Core ACS demographic/housing metrics (all geography levels)
+const CENSUS_METRICS_BASE = [
+  'total_population', 'population_yoy', 'median_age',
+  'median_household_income', 'income_yoy', 'per_capita_income',
+  'total_housing_units', 'owner_occupied_units', 'renter_occupied_units',
+  'homeownership_rate', 'median_home_value', 'median_gross_rent',
+  'rent_as_pct_of_income',
+];
+
+// County Business Patterns metrics (national, state, county, zip)
+const CENSUS_METRICS_CBP = [
+  'total_employment', 'total_establishments', 'annual_payroll',
+];
+
+/** Return the geo ID field name for a given census geography level */
+function getCensusGeoField(geoId: string): string | null {
+  switch (geoId) {
+    case 'state': return 'state_fips';
+    case 'metro': return 'cbsa_code';
+    case 'county': return 'fips_code';
+    case 'city': return 'place_fips';
+    case 'zip': return 'zcta';
+    default: return null; // national
+  }
+}
+
+/** Return which metric columns apply for a given census geography level */
+function getCensusMetricColumns(geoId: string): string[] {
+  // CBP metrics are available for national, state, county, zip — NOT metro or city
+  if (geoId === 'metro' || geoId === 'city') {
+    return CENSUS_METRICS_BASE;
+  }
+  return [...CENSUS_METRICS_BASE, ...CENSUS_METRICS_CBP];
+}
 
 // Use process.cwd() for compatibility with both CommonJS and ES modules
 const DATA_DIR = join(process.cwd(), 'data/economic');
@@ -130,10 +167,13 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
       return null;
     }
 
-    // Start ingestion log
-    await logger.start(records.length);
+    // Start ingestion log and capture run ID for detail logging
+    const runId = await logger.start(records.length);
+    const importStart = Date.now();
 
     const result = await config.importer(supabase, records);
+
+    const importDurationMs = Date.now() - importStart;
 
     // Complete ingestion log
     await logger.complete({
@@ -142,6 +182,32 @@ async function importDataset(supabase: any, config: DatasetConfig): Promise<Impo
       recordsError: result.errors,
       errors: result.errors > 0 ? [`${result.errors} records failed`] : []
     });
+
+    // Log per-metric details for the admin pipeline details view
+    if (runId && result.success) {
+      const metricColumns = getCensusMetricColumns(config.id);
+      const geoField = getCensusGeoField(config.id);
+      const perMetricStats = computeWideFormatMetricStats(records, metricColumns, 'year', geoField);
+      const tableName = `census_${config.id}`;
+      const expectedRegions = EXPECTED_REGIONS[config.id] || 0;
+
+      for (const [metricName, stats] of perMetricStats) {
+        if (stats.count === 0) continue;
+
+        const coveragePct = expectedRegions
+          ? Math.min(100, (stats.regionCount / expectedRegions) * 100)
+          : 0;
+
+        await logIngestionDetail(
+          supabase, runId, metricName, config.id,
+          'success', stats.count, 0, importDurationMs,
+          undefined,
+          { tableName, latestDataDate: stats.latestDate ?? undefined, coveragePct },
+        );
+      }
+
+      console.log(`  Logged per-metric details for ${perMetricStats.size} metrics`);
+    }
 
     return result;
   } catch (error: any) {
