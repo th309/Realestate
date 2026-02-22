@@ -9,7 +9,7 @@ import { normalizeZipKey } from '@/lib/format/zip';
 import type { GeoLevel, SnapshotData, SnapshotEntry, SnapshotFetchOptions, ApiResponseItem } from '../types';
 import { METRICS } from '../registry';
 import { getKeyFieldForGeo, getGeoPathSegment, getMetricConfig } from '../registry-helpers';
-import { API_URL } from './base';
+import { API_URL, fetchWithRetry } from './base';
 
 interface ApiResponse {
   success: boolean;
@@ -100,7 +100,7 @@ export async function fetchSnapshotData(
   try {
     const fullUrl = `${API_URL}${url}`;
     console.log(`[Snapshot] Fetching ${metricId} at ${geoLevel}: ${fullUrl}`);
-    const response = await fetch(fullUrl);
+    const response = await fetchWithRetry(fullUrl);
     if (!response.ok) {
       console.error(`[Snapshot] API error for ${metricId} at ${geoLevel}: ${response.status} - ${fullUrl}`);
       return {};
@@ -193,7 +193,7 @@ async function fetchPropertyIQScoreData(
       pageParams.append('page_size', pageSize.toString());
 
       const pageUrl = `${baseUrl}?${pageParams.toString()}`;
-      const response = await fetch(`${API_URL}${pageUrl}`);
+      const response = await fetchWithRetry(`${API_URL}${pageUrl}`);
 
       if (!response.ok) {
         console.error(`API error for ${metricId} page ${page}: ${response.status}`);

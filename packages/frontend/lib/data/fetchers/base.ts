@@ -65,6 +65,49 @@ export async function fetchAPIWithParams<T>(
 }
 
 /**
+ * Fetch with automatic retry for transient 5xx errors.
+ * Includes auth headers and exponential backoff.
+ * Returns the Response object for callers that need custom response handling.
+ */
+export async function fetchWithRetry(
+  url: string,
+  maxRetries = 2,
+): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: { ...authHeaders },
+      });
+
+      // Only retry on 5xx server errors
+      if (response.status >= 500 && attempt < maxRetries) {
+        const delay = 500 * Math.pow(2, attempt); // 500ms, 1000ms
+        console.warn(`[fetchWithRetry] ${response.status} from ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      if (attempt < maxRetries) {
+        const delay = 500 * Math.pow(2, attempt);
+        console.warn(`[fetchWithRetry] Network error for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+    }
+  }
+
+  throw lastError ?? new Error(`Failed to fetch ${url} after ${maxRetries + 1} attempts`);
+}
+
+/**
  * Raw fetch wrapper — returns the Response object for callers that need
  * custom error handling (e.g. admin pages that inspect status codes or
  * parse error bodies differently).

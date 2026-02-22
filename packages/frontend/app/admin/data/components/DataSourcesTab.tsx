@@ -72,10 +72,10 @@ export function DataSourcesTab() {
 
   /**
    * Get freshness badge with gradient colors:
-   * - Green: <50% of expected threshold (very fresh)
-   * - Yellow: 50-90% of threshold (approaching)
-   * - Orange: 90-100% of threshold (due soon)
-   * - Red: >100% of threshold (overdue/stale)
+   * - Green: <=125% of expected threshold (Fresh)
+   * - Yellow: 125-150% of threshold (OK)
+   * - Orange: 150-175% of threshold (Overdue)
+   * - Red: >=175% of threshold (Stale)
    */
   const getFreshnessBadge = (daysSince: number | null, expectedDays: number) => {
     if (daysSince === null) {
@@ -86,15 +86,15 @@ export function DataSourcesTab() {
     let colorClass: string;
     let label: string;
 
-    if (ratio < 0.5) {
+    if (ratio <= 1.25) {
       colorClass = 'text-green-600';
       label = 'Fresh';
-    } else if (ratio < 0.9) {
+    } else if (ratio <= 1.5) {
       colorClass = 'text-amber-500';
       label = 'OK';
-    } else if (ratio < 1.0) {
+    } else if (ratio <= 1.75) {
       colorClass = 'text-orange-500';
-      label = 'Due Soon';
+      label = 'Overdue';
     } else {
       colorClass = 'text-red-600';
       label = 'Stale';
