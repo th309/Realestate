@@ -304,7 +304,13 @@
       "Bash(cd /d/projects/rei-platform && NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=county 2>&1)",
       "Bash(echo killed:*)",
       "Bash(MSYS_NO_PATHCONV=1 tasklist:*)",
-      "Bash(cd /d/projects/rei-platform && NODE_OPTIONS=\"--max-old-space-size=16384\" npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=city 2>&1)"
+      "Bash(cd /d/projects/rei-platform && NODE_OPTIONS=\"--max-old-space-size=16384\" npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=city 2>&1)",
+      "Bash(chmod +x:*)",
+      "Bash(rm:*)",
+      "Bash(stripe:*)",
+      "Bash(scoop --version 2>&1 || winget --version 2>&1 || choco --version 2>&1)",
+      "Bash(git:*)",
+      "Bash(sleep 2:*)"
     ]
   }
 }

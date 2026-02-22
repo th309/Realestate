@@ -17,6 +17,36 @@ interface ApiResponse {
   data: ApiResponseItem[];
 }
 
+function extractProvenance(item: ApiResponseItem): Pick<
+  SnapshotEntry,
+  'source' | 'sourceGeoId' | 'sourceGeoLevel' | 'isInherited' | 'isFallback'
+> {
+  const sourceGeoId = typeof item.sourceGeoId === 'string'
+    ? item.sourceGeoId
+    : typeof item.source_geo_id === 'string'
+      ? item.source_geo_id
+      : null;
+  const sourceGeoLevel = item.sourceGeoLevel ?? item.source_geo_level ?? null;
+  const isInherited = typeof item.isInherited === 'boolean'
+    ? item.isInherited
+    : typeof item.is_inherited === 'boolean'
+      ? item.is_inherited
+      : false;
+  const isFallback = typeof item.isFallback === 'boolean'
+    ? item.isFallback
+    : typeof item.is_fallback === 'boolean'
+      ? item.is_fallback
+      : false;
+
+  return {
+    source: item.source ?? null,
+    sourceGeoId,
+    sourceGeoLevel,
+    isInherited,
+    isFallback,
+  };
+}
+
 /**
  * Fetch snapshot (current) data for a given metric and geography level.
  *
@@ -279,7 +309,7 @@ function transformResponse(
 
     if (value == null) {
       if (config.includeNullValues) {
-        result[key] = { value: null, date: item.date };
+        result[key] = { value: null, date: item.date, ...extractProvenance(item) };
       }
       return;
     }
@@ -294,6 +324,7 @@ function transformResponse(
       value: finalValue,
       date: item.date,
       name: item.region_name || key, // Include human-readable name
+      ...extractProvenance(item),
     };
   });
 

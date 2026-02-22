@@ -14,10 +14,9 @@
 import { useState, useCallback, memo } from 'react';
 import { Settings, Check, X, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
 import { getMetricCategories } from '../../config/metric-categories';
-import { getMetricConfig, type GeoLevel } from '../../config/metrics';
-import { formatValue, getMetricFormat } from '../../utils/metricUtils';
 import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
 import { MetricTitle } from '@/app/components/MetricTitle';
+import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
 import type { ViewMode } from '../../types';
 
 export interface TrendData {
@@ -33,9 +32,25 @@ interface SubScoreDisplayProps {
   trend: TrendData;
   loading?: boolean;
   metricId?: string;
+  source?: string | null;
+  sourceGeoId?: string | null;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited?: boolean;
+  isFallback?: boolean;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading, metricId }) => {
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({
+  label,
+  formattedValue,
+  trend,
+  loading,
+  metricId,
+  source,
+  sourceGeoId,
+  sourceGeoLevel,
+  isInherited,
+  isFallback,
+}) => {
   const getTrendIcon = () => {
     if (trend.direction === 'up') return <TrendingUp className="w-2.5 h-2.5" />;
     if (trend.direction === 'down') return <TrendingDown className="w-2.5 h-2.5" />;
@@ -55,16 +70,48 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
     return `${sign}${trend.changePercent.toFixed(1)}%`;
   };
 
+  const inheritedLevel =
+    isInherited && sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(sourceGeoLevel)
+      ? (sourceGeoLevel as 'county' | 'metro' | 'state' | 'national')
+      : null;
+  const sourceLabel = source
+    ? source.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
+
   return (
     <div className="flex flex-col items-center flex-1 min-w-0">
       <span className="text-[9px] text-on-surface-variant mb-0.5 truncate max-w-full" title={label}>
-        {metricId ? <MetricTitle metricId={metricId} /> : label}
+        {metricId ? (
+          <MetricTitle
+            metricId={metricId}
+            resolvedMetric={{
+              source: source ?? null,
+              sourceGeoLevel: sourceGeoLevel ?? null,
+              sourceGeoId: sourceGeoId ?? null,
+              isInherited: !!isInherited,
+              isFallback: !!isFallback,
+            }}
+          />
+        ) : label}
       </span>
       {loading ? (
         <Loader2 className="w-3 h-3 animate-spin text-on-surface-variant" />
       ) : (
         <>
           <span className="text-xs font-semibold text-on-surface">{formattedValue}</span>
+          {(isFallback || inheritedLevel) && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {isFallback && (
+                <span
+                  className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[8px] font-medium text-amber-700"
+                  title={sourceLabel ? `Resolved from fallback source: ${sourceLabel}` : 'Resolved from fallback source'}
+                >
+                  Fallback
+                </span>
+              )}
+              {inheritedLevel && <InheritedBadge sourceType={inheritedLevel} />}
+            </div>
+          )}
           {trend.direction && (
             <div className={`flex items-center gap-0.5 ${getTrendColor()}`}>
               {getTrendIcon()}
@@ -191,6 +238,11 @@ export interface MetricIndicator {
   metricId: string;
   label: string;
   formattedValue: string;
+  source: string | null;
+  sourceGeoId: string | null;
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited: boolean;
+  isFallback: boolean;
   trend: TrendData;
 }
 
@@ -293,6 +345,11 @@ export const CompactScoreCard = memo(function CompactScoreCard({
                 label={ind.label}
                 metricId={ind.metricId}
                 formattedValue={ind.formattedValue}
+                source={ind.source}
+                sourceGeoId={ind.sourceGeoId}
+                sourceGeoLevel={ind.sourceGeoLevel}
+                isInherited={ind.isInherited}
+                isFallback={ind.isFallback}
                 trend={ind.trend}
                 loading={metricsLoading}
               />

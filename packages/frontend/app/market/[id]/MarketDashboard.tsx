@@ -20,6 +20,7 @@ import { useMarketSnapshot, type GeoLevel, isMetricSupportedForGeo } from '@/lib
 import { Breadcrumbs } from '@/components/navigation';
 import { getMetricCategories } from '@/app/map/config/metric-categories';
 import { MetricTitle } from '@/app/components/MetricTitle';
+import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
 import { useEntitlements } from '@/lib/entitlements';
 import { AIMarketAnalysis } from './AIMarketAnalysis';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,20 +34,16 @@ interface MarketDashboardProps {
   stateFilter?: string;
 }
 
-// Trend direction helper
-function getTrendDirection(percent: number | null): 'up' | 'down' | 'stable' {
-  if (percent == null) return 'stable';
-  if (percent > 0.5) return 'up';
-  if (percent < -0.5) return 'down';
-  return 'stable';
-}
-
 // Metric card with animation - uses data from useMarketSnapshot
 function MetricCard({
   metricId,
   formattedValue,
   trendPercent,
   trendDirection,
+  source,
+  sourceGeoLevel,
+  isInherited,
+  isFallback,
   benchmark,
   delay = 0,
 }: {
@@ -54,9 +51,21 @@ function MetricCard({
   formattedValue: string;
   trendPercent: number | null;
   trendDirection: 'up' | 'down' | 'stable';
+  source?: string;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited?: boolean;
+  isFallback?: boolean;
   benchmark?: { diff: number; direction: 'better' | 'worse' | 'similar'; parentGeoName: string } | null;
   delay?: number;
 }) {
+  const inheritedLevel =
+    isInherited && sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(sourceGeoLevel)
+      ? (sourceGeoLevel as 'county' | 'metro' | 'state' | 'national')
+      : null;
+  const sourceLabel = source
+    ? source.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
+
   return (
     <motion.div
       className="bg-surface-container rounded-xl p-4 border border-outline-variant/30 hover:shadow-md hover:border-outline-variant/50 transition-all"
@@ -66,7 +75,15 @@ function MetricCard({
     >
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="text-xs font-medium text-on-surface-variant uppercase tracking-wide min-w-0">
-          <MetricTitle metricId={metricId} />
+          <MetricTitle
+            metricId={metricId}
+            resolvedMetric={{
+              source: source ?? null,
+              sourceGeoLevel: sourceGeoLevel ?? null,
+              isInherited: !!isInherited,
+              isFallback: !!isFallback,
+            }}
+          />
         </div>
         {trendPercent != null && (
           <div className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${
@@ -80,6 +97,19 @@ function MetricCard({
           </div>
         )}
       </div>
+      {(isFallback || inheritedLevel) && (
+        <div className="flex items-center gap-1 mb-2">
+          {isFallback && (
+            <span
+              className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+              title={sourceLabel ? `Resolved from fallback source: ${sourceLabel}` : 'Resolved from fallback source'}
+            >
+              Fallback
+            </span>
+          )}
+          {inheritedLevel && <InheritedBadge sourceType={inheritedLevel} />}
+        </div>
+      )}
       <div className="text-xl font-bold text-on-surface">{formattedValue}</div>
       {benchmark && (
         <div className="mt-2">
@@ -109,7 +139,16 @@ function MetricCategorySection({
   subtext?: string;
   icon: React.ReactNode;
   metricIds: string[];
-  factorsData: Record<string, { formattedValue: string; percentChange: number | null; direction: 'up' | 'down' | 'stable' | null; isLoading?: boolean }>;
+  factorsData: Record<string, {
+    formattedValue: string;
+    percentChange: number | null;
+    direction: 'up' | 'down' | 'stable' | null;
+    source?: string;
+    sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+    isInherited?: boolean;
+    isFallback?: boolean;
+    isLoading?: boolean;
+  }>;
   benchmarks?: import('@/lib/benchmarks/api').BenchmarkResult[];
   hasBenchmarkAccess?: boolean;
   delay?: number;
@@ -145,6 +184,10 @@ function MetricCategorySection({
               formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '--')}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? 'stable'}
+              source={datum?.source}
+              sourceGeoLevel={datum?.sourceGeoLevel}
+              isInherited={datum?.isInherited}
+              isFallback={datum?.isFallback}
               benchmark={benchmarkProp}
               delay={delay + i * 0.03}
             />
@@ -192,7 +235,7 @@ export function MarketDashboard({
   const queryClient = useQueryClient();
 
   // Check entitlements for geography level
-  const { getAccess, trackPaywallView } = useEntitlements();
+  const { getAccess } = useEntitlements();
   const geoAccess = getAccess('geo', geographyType);
   const hasGeoAccess = geoAccess.level === 'full' || geoAccess.level === 'preview' || !PREMIUM_GEO_LEVELS.includes(geographyType);
 
@@ -241,6 +284,13 @@ export function MarketDashboard({
     }
     return result;
   }, [cards]);
+
+  const updatedDateLabel = useMemo(() => {
+    if (!lastUpdated) return 'Unknown';
+    const parsed = new Date(lastUpdated);
+    if (Number.isNaN(parsed.getTime())) return 'Unknown';
+    return parsed.toLocaleDateString();
+  }, [lastUpdated]);
 
   // Refresh handler
   const handleRefresh = () => {
@@ -347,7 +397,7 @@ export function MarketDashboard({
                   <h1 className="text-xl font-semibold text-on-surface">{geography.name}</h1>
                 </div>
                 <p className="text-sm text-on-surface-variant">
-                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {new Date(lastUpdated ?? Date.now()).toLocaleDateString()}
+                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {updatedDateLabel}
                 </p>
               </div>
             </div>

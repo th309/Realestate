@@ -11,11 +11,32 @@ import {
   formatDataDateForDisplay,
 } from '@/lib/data';
 
+interface ResolvedMetricContext {
+  source?: string | null;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoId?: string | null;
+  isInherited?: boolean;
+  isFallback?: boolean;
+  date?: string | null;
+}
+
 interface MetricTitleProps {
   metricId: string;
   className?: string;
   as?: 'span' | 'h3' | 'h4' | 'div';
   showTooltip?: boolean;
+  resolvedMetric?: ResolvedMetricContext;
+}
+
+function toDisplaySource(source: string): string {
+  return source
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function toDisplayGeoLevel(level: NonNullable<ResolvedMetricContext['sourceGeoLevel']>): string {
+  if (level === 'national') return 'National';
+  return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
 // Global singleton: only one tooltip at a time
@@ -26,6 +47,7 @@ export function MetricTitle({
   className = '',
   as: Tag = 'span',
   showTooltip = true,
+  resolvedMetric,
 }: MetricTitleProps) {
   const metricDef = getMetricDefinition(metricId);
   const title = metricDef?.name || getMetricTitle(metricId) || metricId;
@@ -37,9 +59,6 @@ export function MetricTitle({
 
   const closeTooltip = useCallback(() => {
     setIsOpen(false);
-    if (globalCloseTooltip === closeTooltip) {
-      globalCloseTooltip = null;
-    }
   }, []);
 
   const calculatePosition = useCallback(() => {
@@ -108,9 +127,17 @@ export function MetricTitle({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, closeTooltip]);
 
+  useEffect(() => {
+    if (!isOpen && globalCloseTooltip === closeTooltip) {
+      globalCloseTooltip = null;
+    }
+  }, [isOpen, closeTooltip]);
+
   const hasTooltip = showTooltip && !!metricDef;
   const dataSourceAnchor = metricDef ? getDataSourceAnchor(metricId) : undefined;
   const dataDate = formatDataDateForDisplay(getMetricDataDate(metricId));
+  const resolvedSource = resolvedMetric?.source ? toDisplaySource(resolvedMetric.source) : null;
+  const resolvedDate = formatDataDateForDisplay(resolvedMetric?.date ?? '');
 
   return (
     <>
@@ -165,9 +192,25 @@ export function MetricTitle({
           )}
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-on-surface-variant border-t border-outline-variant pt-2 mt-2">
-            <span><span className="font-medium">Source:</span> {metricDef.dataSource}</span>
+            <span><span className="font-medium">Primary source:</span> {metricDef.dataSource}</span>
             <span><span className="font-medium">Updates:</span> {metricDef.updateFrequency}</span>
             <span><span className="font-medium">As of:</span> {dataDate}</span>
+            {resolvedSource && (
+              <span>
+                <span className="font-medium">Current source:</span>{' '}
+                {resolvedSource}
+                {resolvedMetric?.isFallback ? ' (fallback)' : ''}
+              </span>
+            )}
+            {resolvedMetric?.isInherited && resolvedMetric.sourceGeoLevel && (
+              <span>
+                <span className="font-medium">Inherited from:</span>{' '}
+                {toDisplayGeoLevel(resolvedMetric.sourceGeoLevel)}
+              </span>
+            )}
+            {resolvedDate && (
+              <span><span className="font-medium">Metric date:</span> {resolvedDate}</span>
+            )}
           </div>
 
           {metricDef.notes && (

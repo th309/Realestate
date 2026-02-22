@@ -130,7 +130,7 @@ export async function upsertBatch(
         .from(tableName)
         .upsert(batch, {
           onConflict: conflictColumns,
-          ignoreDuplicates: false,
+          ignoreDuplicates: true,
         });
 
       if (error) {

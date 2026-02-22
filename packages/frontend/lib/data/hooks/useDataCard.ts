@@ -29,6 +29,16 @@ export interface UseDataCardResult {
   formattedValue: string;
   /** Data date */
   date: string | undefined;
+  /** Resolved source/provider */
+  source: string | null;
+  /** Source geography ID used for resolution */
+  sourceGeoId: string | null;
+  /** Source geography level used for resolution */
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  /** Was value inherited from parent geography */
+  isInherited: boolean;
+  /** Was value resolved via fallback source */
+  isFallback: boolean;
   /** Trend result */
   trend: TrendResult | null;
   /** Percent change over trend period */
@@ -111,6 +121,11 @@ export function useDataCard(
     value: snapshot.value,
     formattedValue: snapshot.formattedValue,
     date: snapshot.date,
+    source: snapshot.source,
+    sourceGeoId: snapshot.sourceGeoId,
+    sourceGeoLevel: snapshot.sourceGeoLevel,
+    isInherited: snapshot.isInherited,
+    isFallback: snapshot.isFallback,
     trend: trend.trend,
     percentChange: trend.percentChange,
     direction: trend.direction,

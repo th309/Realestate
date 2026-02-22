@@ -23,36 +23,41 @@ Systematic browser-driven QA for PropertyIQ. This skill **self-discovers** what 
 ## Prerequisites
 
 - Playwright MCP tools available
-- Backend running on `localhost:3001`
-- Beta tester token (see Setup below)
+- Git + npm available in terminal
+- Working repo env files at `packages/backend/.env.local` and `packages/frontend/.env.local`
 - Admin account for Phase 8
 
 ---
 
-## Setup: Isolated Test Instance
+## Session Bootstrap (Required, No User Intervention)
 
-**Prefer running a dedicated frontend for testing** so the developer's active instance isn't disrupted by Playwright navigation.
+If the user says "run betatest skill" (or equivalent), do this first and do not ask them to start services manually:
 
-Next.js cannot run two `dev` instances from the same directory (lock file conflict). Use one of these approaches:
-
-### Option A — Separate distDir (Recommended)
-
-```bash
-cd packages/frontend && NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002
+1. Resolve repo root via `git rev-parse --show-toplevel`.
+2. Run `scripts/bootstrap-worktree.ps1` (path relative to this skill directory):
+```powershell
+powershell -ExecutionPolicy Bypass -File "<skill_dir>/scripts/bootstrap-worktree.ps1" -RepoRoot "<repo_root>"
 ```
+3. Use the returned JSON values for this session:
+   - `WORKTREE_ROOT=.claude/worktrees/beta-test`
+   - `TEST_PORT=3002`
+   - `API_PORT=3003`
+   - `TESTER_ID`
+   - `TESTER_TOKEN`
+4. Retry bootstrap once automatically on failure.
+5. Only ask the user for help if bootstrap still fails after the retry.
 
-Uses a separate `.next-test` build directory, avoiding the dev lock conflict. First compile takes ~30s, then works like normal dev mode. Shares the same backend (3001) and database.
+## Setup: Isolated Test Instance (Default)
 
-### Option B — Use existing :3000
+All testing in this skill runs against an isolated worktree instance:
 
-If the developer isn't actively working, test against `localhost:3000` directly.
+- Frontend: `http://localhost:3002`
+- Backend: `http://localhost:3003`
+- Worktree path: `.claude/worktrees/beta-test`
+- Frontend dev command: `NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002`
+- Backend dev command: `PORT=3003 npm run start:dev`
 
-**Set the test port as a variable at the start of each session:**
-```
-TEST_PORT=3002  # or 3000 if using Option C
-```
-
-**All browser navigation in this skill uses `localhost:${TEST_PORT}`.**
+Manual startup commands are fallback-only if the bootstrap script is unavailable.
 
 ### Tier Simulation
 

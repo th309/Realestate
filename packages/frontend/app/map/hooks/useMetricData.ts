@@ -11,7 +11,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { METRICS, getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, fetchAPI, type GeoLevel, type MetricFormat } from '@/lib/data';
+import { getMetricConfig, getGeoPathSegment, getKeyFieldForGeo, fetchAPI, type GeoLevel, type MetricFormat } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
 import { normalizeZipKey } from '@/lib/format/zip';
 
@@ -24,6 +24,11 @@ export interface MetricDataPoint {
     date?: string;
     regionId: string;
     regionName?: string;
+    source?: string | null;
+    sourceGeoId?: string | null;
+    sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+    isInherited?: boolean;
+    isFallback?: boolean;
 }
 
 export interface MetricDataResult {
@@ -40,6 +45,15 @@ interface ApiResponseItem {
     region_name?: string;
     value?: number;
     date?: string;
+    source?: string;
+    sourceGeoId?: string;
+    source_geo_id?: string;
+    sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national';
+    source_geo_level?: 'metro' | 'county' | 'zip' | 'state' | 'national';
+    isInherited?: boolean;
+    is_inherited?: boolean;
+    isFallback?: boolean;
+    is_fallback?: boolean;
     cbsa_code?: string;
     county_fips?: string;
     postal_code?: string;
@@ -164,6 +178,19 @@ function transformResponse(
             date: item.date,
             regionId: key,
             regionName: item.region_name,
+            source: item.source ?? null,
+            sourceGeoId: (item.sourceGeoId ?? item.source_geo_id ?? null) as string | null,
+            sourceGeoLevel: (item.sourceGeoLevel ?? item.source_geo_level ?? null) as MetricDataPoint['sourceGeoLevel'],
+            isInherited: typeof item.isInherited === 'boolean'
+                ? item.isInherited
+                : typeof item.is_inherited === 'boolean'
+                    ? item.is_inherited
+                    : false,
+            isFallback: typeof item.isFallback === 'boolean'
+                ? item.isFallback
+                : typeof item.is_fallback === 'boolean'
+                    ? item.is_fallback
+                    : false,
         };
     });
 

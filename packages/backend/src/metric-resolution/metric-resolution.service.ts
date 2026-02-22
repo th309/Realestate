@@ -39,7 +39,7 @@ export class MetricResolutionService {
   constructor(
     private readonly sourceFetcher: SourceFetcherService,
     private readonly geoChain: GeographyChainService,
-  ) {}
+  ) { }
 
   /**
    * Resolve a single metric for a single geography.
@@ -152,7 +152,14 @@ export class MetricResolutionService {
           );
 
           if (fetched && fetched.value != null) {
-            const value = source.transform ? source.transform(fetched.value) : fetched.value;
+            let value = source.transform ? source.transform(fetched.value) : fetched.value;
+
+            // Apply sanity limits if defined
+            if (chain.sanityLimits) {
+              const { min, max } = chain.sanityLimits;
+              if (min !== undefined && value < min) value = min;
+              if (max !== undefined && value > max) value = max;
+            }
 
             return {
               value,

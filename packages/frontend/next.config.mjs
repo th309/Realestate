@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
 const nextConfig = {
+  // Allow parallel dev instances (e.g., beta testing on port 3002)
+  // Usage: NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   output: 'standalone',
   // Generate unique build ID to bust cache
   generateBuildId: async () => {

@@ -10,6 +10,11 @@ import { fetchAPIWithParams } from './base';
 export interface MarketSnapshotMetric {
   value: number | null;
   date: string | null;
+  source: string;
+  sourceGeoId: string | null;
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited: boolean;
+  isFallback: boolean;
 }
 
 export interface MarketSnapshotScoreEntry {

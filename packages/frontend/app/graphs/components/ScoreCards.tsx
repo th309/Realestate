@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { fetchScore, type GeoLevel, type ScoreResponse, getMetricConfig } from '@/lib/data';
+import { fetchScore, type GeoLevel, type ScoreResponse } from '@/lib/data';
 import { M3Card } from './M3Card';
 import { Loader2, TrendingUp, TrendingDown, Minus, Settings } from 'lucide-react';
 import { useScoreCardMetrics } from '../hooks/useScoreCardMetrics';
@@ -10,6 +10,7 @@ import { MetricSelector } from '@/app/map/components/MetricSelector';
 import { useEntitlements } from '@/lib/entitlements';
 import { ScorePaywall } from '@/components/entitlements';
 import { MetricTitle } from '@/app/components/MetricTitle';
+import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
 
 interface ScoreCardsProps {
   geoLevel: GeoLevel;
@@ -30,9 +31,25 @@ interface SubScoreDisplayProps {
   trend: TrendData;
   loading?: boolean;
   metricId?: string;
+  source?: string | null;
+  sourceGeoId?: string | null;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited?: boolean;
+  isFallback?: boolean;
 }
 
-const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue, trend, loading, metricId }) => {
+const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({
+  label,
+  formattedValue,
+  trend,
+  loading,
+  metricId,
+  source,
+  sourceGeoId,
+  sourceGeoLevel,
+  isInherited,
+  isFallback,
+}) => {
   const getTrendIcon = () => {
     if (trend.direction === 'up') return <TrendingUp className="w-3 h-3" />;
     if (trend.direction === 'down') return <TrendingDown className="w-3 h-3" />;
@@ -52,16 +69,48 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({ label, formattedValue
     return `${sign}${trend.changePercent.toFixed(1)}%`;
   };
 
+  const inheritedLevel =
+    isInherited && sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(sourceGeoLevel)
+      ? (sourceGeoLevel as 'county' | 'metro' | 'state' | 'national')
+      : null;
+  const sourceLabel = source
+    ? source.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : null;
+
   return (
     <div className="flex flex-col items-center flex-1 min-w-0">
       <span className="text-[11px] text-on-surface-variant mb-1 truncate max-w-full" title={label}>
-        {metricId ? <MetricTitle metricId={metricId} /> : label}
+        {metricId ? (
+          <MetricTitle
+            metricId={metricId}
+            resolvedMetric={{
+              source: source ?? null,
+              sourceGeoLevel: sourceGeoLevel ?? null,
+              sourceGeoId: sourceGeoId ?? null,
+              isInherited: !!isInherited,
+              isFallback: !!isFallback,
+            }}
+          />
+        ) : label}
       </span>
       {loading ? (
         <Loader2 className="w-4 h-4 animate-spin text-on-surface-variant" />
       ) : (
         <>
           <span className="text-sm font-semibold text-on-surface">{formattedValue}</span>
+          {(isFallback || inheritedLevel) && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {isFallback && (
+                <span
+                  className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[9px] font-medium text-amber-700"
+                  title={sourceLabel ? `Resolved from fallback source: ${sourceLabel}` : 'Resolved from fallback source'}
+                >
+                  Fallback
+                </span>
+              )}
+              {inheritedLevel && <InheritedBadge sourceType={inheritedLevel} />}
+            </div>
+          )}
           {trend.direction && (
             <div className={`flex items-center gap-0.5 mt-0.5 ${getTrendColor()}`}>
               {getTrendIcon()}
@@ -79,6 +128,11 @@ interface MetricIndicator {
   metricId: string;
   label: string;
   formattedValue: string;
+  source: string | null;
+  sourceGeoId: string | null;
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited: boolean;
+  isFallback: boolean;
   trend: TrendData;
 }
 
@@ -175,6 +229,11 @@ const ScoreCard: React.FC<ScoreCardProps> = ({
                   label={ind.label}
                   metricId={ind.metricId}
                   formattedValue={ind.formattedValue}
+                  source={ind.source}
+                  sourceGeoId={ind.sourceGeoId}
+                  sourceGeoLevel={ind.sourceGeoLevel}
+                  isInherited={ind.isInherited}
+                  isFallback={ind.isFallback}
                   trend={ind.trend}
                   loading={metricsLoading}
                 />
@@ -232,57 +291,6 @@ function saveMetricSelections(selections: MetricSelections) {
   }
 }
 
-// Calculate trend from time series data
-function calculateTrend(data: { date: string; value: number }[]): TrendData {
-  if (!data || data.length < 2) {
-    return { currentValue: data?.[0]?.value ?? null, previousValue: null, changePercent: null, direction: null };
-  }
-
-  // Sort by date descending (most recent first)
-  const sorted = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const currentValue = sorted[0].value;
-
-  // Find value from approximately 3 months ago
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-  // Find the closest data point to 3 months ago
-  let previousValue: number | null = null;
-  let closestDiff = Infinity;
-
-  for (const point of sorted) {
-    const pointDate = new Date(point.date);
-    const diff = Math.abs(pointDate.getTime() - threeMonthsAgo.getTime());
-    if (diff < closestDiff && pointDate < new Date(sorted[0].date)) {
-      closestDiff = diff;
-      previousValue = point.value;
-    }
-  }
-
-  // If no previous value found, use the oldest available
-  if (previousValue === null && sorted.length > 1) {
-    previousValue = sorted[sorted.length - 1].value;
-  }
-
-  if (previousValue === null || previousValue === 0) {
-    return { currentValue, previousValue, changePercent: null, direction: null };
-  }
-
-  const changePercent = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
-
-  let direction: 'up' | 'down' | 'flat';
-  if (Math.abs(changePercent) < 1) {
-    direction = 'flat';
-  } else if (changePercent > 0) {
-    direction = 'up';
-  } else {
-    direction = 'down';
-  }
-
-  return { currentValue, previousValue, changePercent, direction };
-}
-
 export const ScoreCards: React.FC<ScoreCardsProps> = ({
   geoLevel,
   selectedArea,
@@ -322,12 +330,8 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   // Fetch scores
   useEffect(() => {
     let isMounted = true;
-
-    if (!selectedArea || geoLevel === 'state' || geoLevel === 'national') {
-      setScores(null);
-      setLoading(false);
-      return;
-    }
+    const shouldFetchScores = !!selectedArea && geoLevel !== 'state' && geoLevel !== 'national';
+    if (!shouldFetchScores) return () => { isMounted = false; };
 
     async function fetchScores() {
       try {
@@ -360,6 +364,11 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
       metricId: ind.metricId,
       label: ind.label,
       formattedValue: ind.formattedValue,
+      source: ind.source,
+      sourceGeoId: ind.sourceGeoId,
+      sourceGeoLevel: ind.sourceGeoLevel,
+      isInherited: ind.isInherited,
+      isFallback: ind.isFallback,
       trend: ind.trend,
     }));
   }, [homereadyMetrics, investoredgeMetrics, markethealthMetrics]);
@@ -372,10 +381,13 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
   }, [metricSelections]);
 
   // Score values
-  const homereadyScore = scores?.scores?.homeready?.score ?? 0;
-  const investoredgeScore = scores?.scores?.investoredge?.score ?? 0;
-  const marketHealthScore = scores?.scores?.markethealth?.score ?? 0;
-  const confidenceLabel = scores?.scores?.homeready?.confidence_level ?? 'B';
+  const shouldFetchScores = !!selectedArea && geoLevel !== 'state' && geoLevel !== 'national';
+  const displayScores = shouldFetchScores ? scores : null;
+  const effectiveLoading = shouldFetchScores ? loading : false;
+  const homereadyScore = displayScores?.scores?.homeready?.score ?? 0;
+  const investoredgeScore = displayScores?.scores?.investoredge?.score ?? 0;
+  const marketHealthScore = displayScores?.scores?.markethealth?.score ?? 0;
+  const confidenceLabel = displayScores?.scores?.homeready?.confidence_level ?? 'B';
 
   const scoresUnavailable = geoLevel === 'state' || geoLevel === 'national';
 
@@ -408,7 +420,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
           value={homereadyScore}
           confidence={confidenceLabel}
           indicators={getIndicatorsForMetrics('homeready')}
-          loading={loading}
+          loading={effectiveLoading}
           metricsLoading={homereadyMetricsLoading}
           isAdmin={isAdmin}
           selectedMetricIds={metricSelections.homeready}
@@ -422,7 +434,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
           value={investoredgeScore}
           confidence={confidenceLabel}
           indicators={getIndicatorsForMetrics('investoredge')}
-          loading={loading}
+          loading={effectiveLoading}
           metricsLoading={investoredgeMetricsLoading}
           isAdmin={isAdmin}
           selectedMetricIds={metricSelections.investoredge}
@@ -436,7 +448,7 @@ export const ScoreCards: React.FC<ScoreCardsProps> = ({
           value={marketHealthScore}
           confidence={confidenceLabel}
           indicators={getIndicatorsForMetrics('markethealth')}
-          loading={loading}
+          loading={effectiveLoading}
           metricsLoading={markethealthMetricsLoading}
           isAdmin={isAdmin}
           selectedMetricIds={metricSelections.markethealth}

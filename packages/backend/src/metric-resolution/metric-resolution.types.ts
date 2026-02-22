@@ -45,6 +45,8 @@ export interface MetricFallbackChain {
   sources: FallbackSource[];
   /** Whether to walk up the geography chain (ZIP->County->Metro->State->National) when all sources miss */
   supportsGeoInheritance: boolean;
+  /** Optional limits to cap outlier values (e.g. { min: -100, max: 1000 }) */
+  sanityLimits?: { min?: number; max?: number };
 }
 
 /**

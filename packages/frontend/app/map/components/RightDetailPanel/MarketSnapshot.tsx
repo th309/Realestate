@@ -2,6 +2,8 @@
 
 import type { GeoLevel } from '../../types';
 import { useMarketFactorsData } from '../../hooks/useMarketFactorsData';
+import { MetricTitle } from '@/app/components/MetricTitle';
+import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
 
 interface MarketSnapshotProps {
   geoLevel: GeoLevel;
@@ -10,13 +12,6 @@ interface MarketSnapshotProps {
 }
 
 const SNAPSHOT_METRICS = ['home_value', 'days_on_market', 'for_sale_inventory', 'home_sales'];
-
-const SNAPSHOT_LABELS: Record<string, string> = {
-  home_value: 'Median Home Value',
-  days_on_market: 'Days on Market',
-  for_sale_inventory: 'Active Listings',
-  home_sales: 'Home Sales',
-};
 
 export function MarketSnapshot({ geoLevel, geographyId, isOpen }: MarketSnapshotProps) {
   const { data, loading } = useMarketFactorsData(
@@ -38,11 +33,32 @@ export function MarketSnapshot({ geoLevel, geographyId, isOpen }: MarketSnapshot
               className="bg-surface rounded-xl p-3 border border-outline-variant"
             >
               <p className="text-[10px] text-on-surface-variant uppercase tracking-wide font-medium">
-                {SNAPSHOT_LABELS[metricId]}
+                <MetricTitle
+                  metricId={metricId}
+                  resolvedMetric={{
+                    source: datum?.source ?? null,
+                    sourceGeoLevel: datum?.sourceGeoLevel ?? null,
+                    sourceGeoId: datum?.sourceGeoId ?? null,
+                    isInherited: datum?.isInherited ?? false,
+                    isFallback: datum?.isFallback ?? false,
+                  }}
+                />
               </p>
               <p className="text-lg font-bold text-on-surface mt-1">
                 {loading ? '...' : (datum?.formattedValue ?? '--')}
               </p>
+              {(datum?.isFallback || (datum?.isInherited && datum?.sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(datum.sourceGeoLevel))) && (
+                <div className="flex items-center gap-1 mt-1">
+                  {datum?.isFallback && (
+                    <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[8px] font-medium text-amber-700">
+                      Fallback
+                    </span>
+                  )}
+                  {datum?.isInherited && datum?.sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(datum.sourceGeoLevel) && (
+                    <InheritedBadge sourceType={datum.sourceGeoLevel as 'county' | 'metro' | 'state' | 'national'} />
+                  )}
+                </div>
+              )}
               {datum?.trendPercent != null && (
                 <span
                   className={`text-[10px] font-medium ${

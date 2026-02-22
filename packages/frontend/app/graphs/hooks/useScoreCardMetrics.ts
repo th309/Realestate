@@ -15,13 +15,18 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useDataCardBatch, DataCardResult } from '@/app/map/hooks/useDataCard';
+import { useDataCardBatch } from '@/app/map/hooks/useDataCard';
 import { getMetricConfig, type GeoLevel } from '@/lib/data';
 
 export interface ScoreCardIndicator {
     metricId: string;
     label: string;
     formattedValue: string;
+    source: string | null;
+    sourceGeoId: string | null;
+    sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+    isInherited: boolean;
+    isFallback: boolean;
     trend: {
         currentValue: number | null;
         previousValue: number | null;
@@ -68,6 +73,11 @@ export function useScoreCardMetrics(
                     metricId: id,
                     label,
                     formattedValue: result?.formattedValue || '--',
+                    source: result?.source ?? null,
+                    sourceGeoId: result?.sourceGeoId ?? null,
+                    sourceGeoLevel: result?.sourceGeoLevel ?? null,
+                    isInherited: result?.isInherited ?? false,
+                    isFallback: result?.isFallback ?? false,
                     trend: {
                         currentValue: result?.value ?? null,
                         previousValue: null, // Not tracked separately in new hook

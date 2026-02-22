@@ -35,6 +35,16 @@ export interface UseSnapshotDataResult {
   formattedValue: string;
   /** Data date if available */
   date: string | undefined;
+  /** Resolved source/provider for this value */
+  source: string | null;
+  /** Geography ID where value was resolved */
+  sourceGeoId: string | null;
+  /** Geography level where value was resolved */
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  /** Whether value is inherited from parent geography */
+  isInherited: boolean;
+  /** Whether value came from fallback source */
+  isFallback: boolean;
   /** Loading state */
   isLoading: boolean;
   /** Error state */
@@ -101,6 +111,11 @@ export function useSnapshotData(
       value: null,
       formattedValue: '--',
       date: undefined,
+      source: null,
+      sourceGeoId: null,
+      sourceGeoLevel: null,
+      isInherited: false,
+      isFallback: false,
       isLoading: false,
       error: null,
       refetch: () => {},
@@ -116,6 +131,11 @@ export function useSnapshotData(
   // Extract numeric value
   let value: number | null = null;
   let date: string | undefined;
+  let source: string | null = null;
+  let sourceGeoId: string | null = null;
+  let sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null = null;
+  let isInherited = false;
+  let isFallback = false;
 
   if (entry !== null) {
     if (typeof entry === 'number') {
@@ -123,6 +143,11 @@ export function useSnapshotData(
     } else if (entry && typeof entry === 'object') {
       value = entry.value;
       date = entry.date;
+      source = entry.source ?? null;
+      sourceGeoId = entry.sourceGeoId ?? null;
+      sourceGeoLevel = entry.sourceGeoLevel ?? null;
+      isInherited = entry.isInherited ?? false;
+      isFallback = entry.isFallback ?? false;
     }
   }
 
@@ -138,6 +163,11 @@ export function useSnapshotData(
     value,
     formattedValue,
     date,
+    source,
+    sourceGeoId,
+    sourceGeoLevel,
+    isInherited,
+    isFallback,
     isLoading,
     error: error as Error | null,
     refetch,

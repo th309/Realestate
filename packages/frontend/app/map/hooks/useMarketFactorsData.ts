@@ -10,8 +10,7 @@
 'use client';
 
 import { useQueries } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { getMetricConfig, timeSeriesApi, type GeoLevel } from '@/lib/data';
+import { getMetricConfig, timeSeriesApi, type GeoLevel, useMarketSnapshot } from '@/lib/data';
 import { formatValue } from '@/app/map/utils/metricUtils';
 
 const CACHE_TIME = 2 * 60 * 60 * 1000; // 2 hours
@@ -25,6 +24,11 @@ export interface MarketFactorDatum {
   /** 'up' | 'down' | 'stable' for icons */
   trendDirection: 'up' | 'down' | 'stable';
   sparklineData: number[];
+  source?: string | null;
+  sourceGeoId?: string | null;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited?: boolean;
+  isFallback?: boolean;
 }
 
 export interface UseMarketFactorsDataOptions {
@@ -47,7 +51,18 @@ export function useMarketFactorsData(
   error: string | null;
 } {
   const { enabled = true, months = 3 } = options;
-  const stableMetricIds = useMemo(() => [...metricIds], [metricIds.join(',')]);
+  const stableMetricIds = metricIds;
+  const provenanceGeoLevel = (geoLevel === 'metro' || geoLevel === 'county' || geoLevel === 'zip' || geoLevel === 'state')
+    ? geoLevel
+    : undefined;
+  const { cards: provenanceCards } = useMarketSnapshot(
+    provenanceGeoLevel,
+    provenanceGeoLevel ? (regionId ?? undefined) : undefined,
+    {
+      enabled: enabled && !!regionId && !!provenanceGeoLevel,
+      includeTrends: false,
+    },
+  );
 
   const queries = useQueries({
     queries: stableMetricIds.map((metricId) => ({
@@ -80,57 +95,55 @@ export function useMarketFactorsData(
   const firstError = queries.find((q) => q.error)?.error;
   const error = firstError ? (firstError instanceof Error ? firstError.message : 'Failed to load') : null;
 
-  const dataKey = queries
-    .map((q) => (q.data ? `${(q.data as { metricId?: string }).metricId}:${(q.data as { points?: unknown[] }).points?.length ?? 0}` : ''))
-    .join('|');
-  const data = useMemo((): Record<string, MarketFactorDatum> => {
-    const out: Record<string, MarketFactorDatum> = {};
-    stableMetricIds.forEach((metricId, i) => {
-      const config = getMetricConfig(metricId);
-      const raw = queries[i]?.data as { metricId: string; points: { date: string; value: number }[] } | undefined;
-      const points = raw?.points ?? [];
+  const data: Record<string, MarketFactorDatum> = {};
+  stableMetricIds.forEach((metricId, i) => {
+    const config = getMetricConfig(metricId);
+    const raw = queries[i]?.data as { metricId: string; points: { date: string; value: number }[] } | undefined;
+    const points = raw?.points ?? [];
 
-      // No data for this metric — don't include in output
-      // Warn in dev so missing data is debuggable (not silently hidden)
-      if (!points.length) {
-        if (IS_DEV && geoLevel && regionId && queries[i]?.isFetched) {
-          console.warn(`[useMarketFactorsData] ${metricId} returned no data for ${geoLevel}/${regionId}`);
-        }
-        return;
+    // No data for this metric — don't include in output
+    // Warn in dev so missing data is debuggable (not silently hidden)
+    if (!points.length) {
+      if (IS_DEV && geoLevel && regionId && queries[i]?.isFetched) {
+        console.warn(`[useMarketFactorsData] ${metricId} returned no data for ${geoLevel}/${regionId}`);
       }
+      return;
+    }
 
-      const sorted = [...points].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const currentValue = sorted[sorted.length - 1]?.value ?? null;
-      const firstValue = sorted[0]?.value;
-      const sparklineData = sorted.map((d) => d.value);
+    const sorted = [...points].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const currentValue = sorted[sorted.length - 1]?.value ?? null;
+    const firstValue = sorted[0]?.value;
+    const sparklineData = sorted.map((d) => d.value);
 
-      let trendPercent: number | null = null;
-      if (firstValue != null && firstValue !== 0 && currentValue != null) {
-        trendPercent = ((currentValue - firstValue) / Math.abs(firstValue)) * 100;
-        // Cap extreme trend percentages to ±99% for better UX
-        // Large swings happen with small base values (e.g., YoY metrics going from 0.1% to 0.5%)
-        // Showing +400% is technically correct but not useful to users
-        if (Math.abs(trendPercent) > 99) {
-          trendPercent = Math.sign(trendPercent) * 99;
-        }
+    let trendPercent: number | null = null;
+    if (firstValue != null && firstValue !== 0 && currentValue != null) {
+      trendPercent = ((currentValue - firstValue) / Math.abs(firstValue)) * 100;
+      // Cap extreme trend percentages to ±99% for better UX
+      // Large swings happen with small base values (e.g., YoY metrics going from 0.1% to 0.5%)
+      // Showing +400% is technically correct but not useful to users
+      if (Math.abs(trendPercent) > 99) {
+        trendPercent = Math.sign(trendPercent) * 99;
       }
-      const trendDirection: 'up' | 'down' | 'stable' =
-        trendPercent == null ? 'stable' : trendPercent > 0.5 ? 'up' : trendPercent < -0.5 ? 'down' : 'stable';
+    }
+    const trendDirection: 'up' | 'down' | 'stable' =
+      trendPercent == null ? 'stable' : trendPercent > 0.5 ? 'up' : trendPercent < -0.5 ? 'down' : 'stable';
 
-      const format = config?.format ?? 'number';
-      const formattedValue = currentValue != null ? formatValue(currentValue, format) : '--';
+    const format = config?.format ?? 'number';
+    const formattedValue = currentValue != null ? formatValue(currentValue, format) : '--';
 
-      out[metricId] = {
-        value: currentValue,
-        formattedValue,
-        trendPercent,
-        trendDirection,
-        sparklineData,
-      };
-    });
-
-    return out;
-  }, [dataKey, stableMetricIds]);
+    data[metricId] = {
+      value: currentValue,
+      formattedValue,
+      trendPercent,
+      trendDirection,
+      sparklineData,
+      source: provenanceCards[metricId]?.source ?? null,
+      sourceGeoId: provenanceCards[metricId]?.sourceGeoId ?? null,
+      sourceGeoLevel: provenanceCards[metricId]?.sourceGeoLevel ?? null,
+      isInherited: provenanceCards[metricId]?.isInherited ?? false,
+      isFallback: provenanceCards[metricId]?.isFallback ?? false,
+    };
+  });
 
   return { data, loading, error };
 }

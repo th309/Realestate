@@ -85,6 +85,16 @@ export interface SnapshotEntry {
   date?: string;
   /** Human-readable name for the region (e.g., "Chicago-Naperville-Elgin" instead of "16980") */
   name?: string;
+  /** Resolved source/provider for this value, when backend includes provenance */
+  source?: string | null;
+  /** Geography ID where value was resolved (can differ when inherited) */
+  sourceGeoId?: string | null;
+  /** Geography level where value was resolved */
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  /** True when value came from parent geography */
+  isInherited?: boolean;
+  /** True when value came from non-primary source in fallback chain */
+  isFallback?: boolean;
 }
 
 /**
@@ -294,6 +304,15 @@ export interface ApiResponseItem {
   region_name?: string;
   value?: number;
   date?: string;
+  source?: string;
+  sourceGeoId?: string;
+  source_geo_id?: string;
+  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national';
+  source_geo_level?: 'metro' | 'county' | 'zip' | 'state' | 'national';
+  isInherited?: boolean;
+  is_inherited?: boolean;
+  isFallback?: boolean;
+  is_fallback?: boolean;
   cbsa_code?: string;
   county_fips?: string;
   fips_code?: string;

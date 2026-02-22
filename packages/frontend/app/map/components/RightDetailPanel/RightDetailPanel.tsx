@@ -15,6 +15,7 @@ import { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { TrendUpSmallIcon, TrendDownSmallIcon, TrendFlatIcon } from '../Icons';
 import { MetricTitle } from '@/app/components/MetricTitle';
+import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
 import type { ViewMode, SelectedGeography, GeoLevel } from '../../types';
 import { useMarketFactorsData } from '../../hooks/useMarketFactorsData';
 import type { AllScoresResponse, ScoreType } from '../../hooks/useScoreData';
@@ -39,6 +40,8 @@ interface MarketFactor {
   label: string;
   metricId: string;
 }
+
+type ScoreCardLike = { score?: number | null };
 
 // Default market factors: all free-tier metrics with good coverage across geo levels
 const DEFAULT_MARKET_FACTORS: MarketFactor[] = [
@@ -93,7 +96,8 @@ export function RightDetailPanel({
     const key = type === 'market_health' ? 'marketHealth' : type;
     const scoreObj = scoreDataProp[key as keyof typeof scoreDataProp];
     if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
-      return (scoreObj as any).score as number ?? null;
+      const value = (scoreObj as ScoreCardLike).score;
+      return typeof value === 'number' ? value : null;
     }
     return null;
   };
@@ -197,7 +201,16 @@ export function RightDetailPanel({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-[9px] font-medium text-on-surface-variant uppercase tracking-wide truncate">
-                        <MetricTitle metricId={factor.metricId} />
+                        <MetricTitle
+                          metricId={factor.metricId}
+                          resolvedMetric={{
+                            source: datum?.source ?? null,
+                            sourceGeoLevel: datum?.sourceGeoLevel ?? null,
+                            sourceGeoId: datum?.sourceGeoId ?? null,
+                            isInherited: datum?.isInherited ?? false,
+                            isFallback: datum?.isFallback ?? false,
+                          }}
+                        />
                       </div>
                       <p className="text-xs font-bold text-on-surface mt-0.5 truncate">
                         {(!datum && factorsLoading) ? '...' : (datum?.formattedValue ?? '--')}
@@ -207,6 +220,18 @@ export function RightDetailPanel({
                           </span>
                         )}
                       </p>
+                      {(datum?.isFallback || (datum?.isInherited && datum?.sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(datum.sourceGeoLevel))) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          {datum?.isFallback && (
+                            <span className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[8px] font-medium text-amber-700">
+                              Fallback
+                            </span>
+                          )}
+                          {datum?.isInherited && datum?.sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(datum.sourceGeoLevel) && (
+                            <InheritedBadge sourceType={datum.sourceGeoLevel as 'county' | 'metro' | 'state' | 'national'} />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

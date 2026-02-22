@@ -16,9 +16,8 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useMetricData, MetricDataPoint } from './useMetricData';
-import { getMetricConfig, isMetricSupportedForGeo, type GeoLevel, type MetricFormat, timeSeriesApi } from '@/lib/data';
-import { formatValue } from '@/app/map/utils/metricUtils';
+import { useMetricData } from './useMetricData';
+import { getMetricConfig, isMetricSupportedForGeo, type GeoLevel, type MetricFormat, timeSeriesApi, useMarketSnapshot } from '@/lib/data';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
 
@@ -36,6 +35,11 @@ export interface DataCardResult {
     format: MetricFormat;
     trend: TrendData;
     date: string | undefined;
+    source: string | null;
+    sourceGeoId: string | null;
+    sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+    isInherited: boolean;
+    isFallback: boolean;
     loading: boolean;
     error: Error | null;
 }
@@ -49,6 +53,9 @@ export interface UseDataCardOptions {
 
 export function useDataCard(options: UseDataCardOptions): DataCardResult {
     const { metricId, geoLevel, regionId, showTrend = false } = options;
+    const provenanceGeoLevel = (geoLevel === 'metro' || geoLevel === 'county' || geoLevel === 'zip' || geoLevel === 'state')
+      ? geoLevel
+      : undefined;
 
     // Get current value using the core hook
     const {
@@ -58,6 +65,17 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
         formattedValue,
         format,
     } = useMetricData(metricId, geoLevel, regionId);
+
+    // Pull lineage metadata from market-snapshot API for single-region cards.
+    // This endpoint consistently includes fallback/inheritance provenance.
+    const { cards: provenanceCards } = useMarketSnapshot(
+      provenanceGeoLevel,
+      provenanceGeoLevel ? regionId : undefined,
+      {
+        enabled: !!regionId && !!provenanceGeoLevel,
+        includeTrends: false,
+      },
+    );
 
     // Fetch time series for trend if enabled
     const { data: trendData, isLoading: trendLoading } = useQuery({
@@ -154,7 +172,14 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
         }
 
         return { direction, changePercent, label };
-    }, [showTrend, trendData]);
+    }, [metricId, showTrend, trendData]);
+
+    const provenance = provenanceCards[metricId];
+    const source = provenance?.source ?? currentData?.source ?? null;
+    const sourceGeoId = provenance?.sourceGeoId ?? currentData?.sourceGeoId ?? null;
+    const sourceGeoLevel = provenance?.sourceGeoLevel ?? currentData?.sourceGeoLevel ?? null;
+    const isInherited = provenance?.isInherited ?? currentData?.isInherited ?? false;
+    const isFallback = provenance?.isFallback ?? currentData?.isFallback ?? false;
 
     return {
         value: currentData?.value ?? null,
@@ -162,6 +187,11 @@ export function useDataCard(options: UseDataCardOptions): DataCardResult {
         format,
         trend,
         date: currentData?.date,
+        source,
+        sourceGeoId,
+        sourceGeoLevel,
+        isInherited,
+        isFallback,
         loading: dataLoading || (showTrend && trendLoading),
         error: dataError,
     };

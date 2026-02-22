@@ -13,6 +13,11 @@ import {
 export interface MarketSnapshotMetric {
   value: number | null;
   date: string | null;
+  source: string;
+  sourceGeoId: string | null;
+  sourceGeoLevel: GeoType | 'national' | null;
+  isInherited: boolean;
+  isFallback: boolean;
 }
 
 export interface MarketSnapshotResponse {
@@ -136,6 +141,20 @@ export class MarketSnapshotService {
     const metrics: Record<string, MarketSnapshotMetric> = {};
     let geographyName = `${geoType} ${geoId}`;
     let lastUpdated = new Date().toISOString();
+    const toMetric = (
+      value: number,
+      date: string | null | undefined,
+      source: string,
+      overrides?: Partial<Pick<MarketSnapshotMetric, 'sourceGeoId' | 'sourceGeoLevel' | 'isInherited' | 'isFallback'>>,
+    ): MarketSnapshotMetric => ({
+      value,
+      date: date ?? null,
+      source,
+      sourceGeoId: overrides?.sourceGeoId ?? geoId,
+      sourceGeoLevel: overrides?.sourceGeoLevel ?? geoType,
+      isInherited: overrides?.isInherited ?? false,
+      isFallback: overrides?.isFallback ?? false,
+    });
 
     // Run all data source queries in parallel
     const [realtorResult, zillowResult, censusResult, economicResult, calcResult, permitsResult, scoresResult] =
@@ -167,15 +186,16 @@ export class MarketSnapshotService {
         const raw = data[col];
         if (raw != null) {
           const value = REALTOR_PERCENT_COLS.has(col) ? Number(raw) * 100 : Number(raw);
-          metrics[metricId] = { value, date: data.period_date ?? date ?? null };
+          metrics[metricId] = toMetric(value, data.period_date ?? date ?? null, 'realtor');
         }
       }
       // home_sales_yoy from Realtor
       if (data.pending_listing_count_yy != null) {
-        metrics['home_sales_yoy'] = {
-          value: Number(data.pending_listing_count_yy) * 100,
-          date: data.period_date ?? date ?? null,
-        };
+        metrics['home_sales_yoy'] = toMetric(
+          Number(data.pending_listing_count_yy) * 100,
+          data.period_date ?? date ?? null,
+          'realtor',
+        );
       }
     }
 
@@ -193,13 +213,13 @@ export class MarketSnapshotService {
         if (metricId && val != null) {
           // sale_to_list is stored as a fraction (0.98 = 98%); convert to display form
           const displayValue = metricName === 'sale_to_list' ? val * 100 : val;
-          metrics[metricId] = { value: displayValue, date };
+          metrics[metricId] = toMetric(displayValue, date, 'zillow');
         }
 
         // Affordability metrics (metro only)
         const affordId = ZILLOW_AFFORD_MAP[metricName];
         if (affordId && val != null) {
-          metrics[affordId] = { value: val, date };
+          metrics[affordId] = toMetric(val, date, 'zillow');
         }
       }
     }
@@ -216,7 +236,12 @@ export class MarketSnapshotService {
         for (const metricId of fallbackMetrics) {
           const r = resolved[metricId];
           if (r?.value != null) {
-            metrics[metricId] = { value: r.value, date: r.date };
+            metrics[metricId] = toMetric(r.value, r.date, r.source, {
+              sourceGeoId: r.sourceGeoId,
+              sourceGeoLevel: r.sourceGeoLevel,
+              isInherited: r.isInherited,
+              isFallback: r.isFallback,
+            });
           }
         }
       } catch (e) {
@@ -232,7 +257,7 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(CENSUS_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null && Number(raw) !== -666666666) {
-          metrics[metricId] = { value: Number(raw), date: year };
+          metrics[metricId] = toMetric(Number(raw), year, 'census');
         }
       }
     }
@@ -244,7 +269,7 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(ECONOMIC_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          metrics[metricId] = { value: Number(raw), date: data.period_date ?? null };
+          metrics[metricId] = toMetric(Number(raw), data.period_date ?? null, 'economic');
         }
       }
     }
@@ -258,12 +283,12 @@ export class MarketSnapshotService {
         const raw = data[col];
         if (raw != null) {
           const value = CALC_PERCENT_COLS.has(col) ? Number(raw) * 100 : Number(raw);
-          metrics[metricId] = { value, date: data.period_date ?? null };
+          metrics[metricId] = toMetric(value, data.period_date ?? null, 'calculated');
         }
       }
       // Also set years_to_save from calculated_metrics if Zillow didn't provide it
       if (data.years_to_save != null && !metrics['years_to_save']) {
-        metrics['years_to_save'] = { value: Number(data.years_to_save), date: data.period_date ?? null };
+        metrics['years_to_save'] = toMetric(Number(data.years_to_save), data.period_date ?? null, 'calculated');
       }
     }
 
@@ -273,18 +298,18 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(PERMITS_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          metrics[metricId] = { value: Number(raw), date: data.period_date ?? null };
+          metrics[metricId] = toMetric(Number(raw), data.period_date ?? null, 'permits');
         }
       }
       // Derived: sf_mf_ratio and permit_value_per_unit
       const sf = Number(data.sf_units) || 0;
       const total = Number(data.total_units) || 0;
       if (total > 0) {
-        metrics['sf_mf_ratio'] = { value: (sf / total) * 100, date: data.period_date ?? null };
+        metrics['sf_mf_ratio'] = toMetric((sf / total) * 100, data.period_date ?? null, 'permits');
       }
       const totalValue = Number(data.total_value) || 0;
       if (total > 0 && totalValue > 0) {
-        metrics['permit_value_per_unit'] = { value: totalValue / total, date: data.period_date ?? null };
+        metrics['permit_value_per_unit'] = toMetric(totalValue / total, data.period_date ?? null, 'permits');
       }
     }
 
@@ -317,13 +342,13 @@ export class MarketSnapshotService {
 
       // Also add score values as metrics for data card display
       if (s.scores?.homeready) {
-        metrics['homeready_score'] = { value: Math.round(s.scores.homeready.score), date: s.score_date ?? null };
+        metrics['homeready_score'] = toMetric(Math.round(s.scores.homeready.score), s.score_date ?? null, 'propertyiq');
       }
       if (s.scores?.investoredge) {
-        metrics['investoredge_score'] = { value: Math.round(s.scores.investoredge.score), date: s.score_date ?? null };
+        metrics['investoredge_score'] = toMetric(Math.round(s.scores.investoredge.score), s.score_date ?? null, 'propertyiq');
       }
       if (s.scores?.markethealth) {
-        metrics['market_health_score'] = { value: Math.round(s.scores.markethealth.score), date: s.score_date ?? null };
+        metrics['market_health_score'] = toMetric(Math.round(s.scores.markethealth.score), s.score_date ?? null, 'propertyiq');
       }
     }
 

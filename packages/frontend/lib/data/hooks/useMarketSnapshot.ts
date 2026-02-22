@@ -25,11 +25,17 @@ export interface MarketSnapshotCard {
   direction: 'up' | 'down' | 'stable' | null;
   isLoading: boolean;
   date: string | null;
+  source: string;
+  sourceGeoId: string | null;
+  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  isInherited: boolean;
+  isFallback: boolean;
 }
 
 export interface UseMarketSnapshotOptions {
   state?: string;
   trendMonths?: number;
+  includeTrends?: boolean;
   enabled?: boolean;
 }
 
@@ -47,7 +53,7 @@ export function useMarketSnapshot(
   geoId: string | undefined,
   options: UseMarketSnapshotOptions = {},
 ): UseMarketSnapshotResult {
-  const { state, trendMonths = 6, enabled = true } = options;
+  const { state, trendMonths = 6, includeTrends = true, enabled = true } = options;
 
   const isEnabled = enabled && !!geoType && !!geoId;
 
@@ -75,7 +81,7 @@ export function useMarketSnapshot(
         geoId!,
         trendMonths,
       ),
-    enabled: isEnabled && metricIds.length > 0,
+    enabled: includeTrends && isEnabled && metricIds.length > 0,
     staleTime: 10 * 60 * 1000, // 10 minutes (trend data)
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
@@ -128,6 +134,11 @@ export function useMarketSnapshot(
         direction: trend?.direction ?? null,
         isLoading: false,
         date: metric.date,
+        source: metric.source,
+        sourceGeoId: metric.sourceGeoId,
+        sourceGeoLevel: metric.sourceGeoLevel,
+        isInherited: metric.isInherited,
+        isFallback: metric.isFallback,
       };
     }
   }

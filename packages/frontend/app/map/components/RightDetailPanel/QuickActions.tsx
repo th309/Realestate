@@ -39,6 +39,8 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
     router.push(`/market/${geography.id}?${params.toString()}`);
   };
 
+  const { getAccess } = useEntitlements(); // Added entitlement hook
+
   const handleGenerateReport = () => {
     try {
       localStorage.setItem(
@@ -50,10 +52,15 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
           state: geography.stateAbbr,
         }),
       );
-    } catch {
-      /* ignore */
+    } catch { /* ignore */ }
+
+    // Check if user has full report access
+    const reportAccess = getAccess('feature', 'reports');
+    if (reportAccess.level === 'full') {
+      router.push('/reports');
+    } else {
+      router.push('/reports/sample');
     }
-    router.push('/reports');
   };
 
   const btnBase =
@@ -64,11 +71,10 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       <button
         onClick={handleToggleWatchlist}
         disabled={!user?.id}
-        className={`${btnBase} ${
-          isSaved
+        className={`${btnBase} ${isSaved
             ? 'bg-primary/10 text-primary border border-primary/30'
             : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
-        } disabled:opacity-40 disabled:cursor-not-allowed`}
+          } disabled:opacity-40 disabled:cursor-not-allowed`}
         title={!user?.id ? 'Sign in to save markets' : isSaved ? 'Remove from watchlist' : 'Save to watchlist'}
       >
         <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
