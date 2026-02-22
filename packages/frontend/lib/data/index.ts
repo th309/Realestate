@@ -165,6 +165,7 @@ export {
 
   // Reports
   fetchReport,
+  fetchSampleReport,
   fetchSharedReport,
   createReportShareLink,
   fetchReportHistory,

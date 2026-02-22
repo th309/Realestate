@@ -24,7 +24,7 @@ import { SectionIcon, formatSectionName } from './components/utils/sectionDispla
 import { ReportHeader } from './components/ReportHeader';
 import { ReportFooter } from './components/ReportFooter';
 import { normalizeReport } from './components/utils/normalizeReport';
-import { fetchReport as fetchReportAPI } from '@/lib/data';
+import { fetchReport as fetchReportAPI, fetchSampleReport } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import '../styles/report-theme.css';
 
@@ -32,14 +32,17 @@ const POLL_INTERVAL = 2000;
 
 interface ReportViewerProps {
   reportId: string;
+  isSample?: boolean;
 }
 
-async function fetchReport(reportId: string, userId: string): Promise<ReportWithTemplate | null> {
-  const data = await fetchReportAPI<ReportWithTemplate>(reportId, { userId });
+async function fetchReportById(reportId: string, userId: string, isSample?: boolean): Promise<ReportWithTemplate | null> {
+  const data = isSample
+    ? await fetchSampleReport<ReportWithTemplate>()
+    : await fetchReportAPI<ReportWithTemplate>(reportId, { userId });
   return data ? normalizeReport(data) : null;
 }
 
-export function ReportViewer({ reportId }: ReportViewerProps) {
+export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   const { user } = useAuth();
   const userId = user?.id ?? '';
   const [report, setReport] = useState<ReportWithTemplate | null>(null);
@@ -74,7 +77,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
 
   const pollReport = useCallback(async () => {
     try {
-      const data = await fetchReport(reportId, userId);
+      const data = await fetchReportById(reportId, userId, isSample);
       if (data) {
         setReport(data);
         if (data.status === 'generating') {
@@ -94,7 +97,7 @@ export function ReportViewer({ reportId }: ReportViewerProps) {
     let pollTimer: NodeJS.Timeout | null = null;
 
     const startPolling = async () => {
-      const data = await fetchReport(reportId, userId);
+      const data = await fetchReportById(reportId, userId, isSample);
       setLoading(false);
 
       if (data) {

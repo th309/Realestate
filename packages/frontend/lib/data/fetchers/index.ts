@@ -63,6 +63,7 @@ export { fetchBatchTrendsServer, type BatchTrendEntry } from './trend';
 // Reports
 export {
   fetchReport,
+  fetchSampleReport,
   fetchSharedReport,
   createReportShareLink,
   fetchReportHistory,

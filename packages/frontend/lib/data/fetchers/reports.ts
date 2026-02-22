@@ -159,6 +159,20 @@ export async function generateReport(
 }
 
 /**
+ * Fetch the sample report (public — no auth required).
+ */
+export async function fetchSampleReport<T = unknown>(): Promise<T | null> {
+  const response = await fetch(`${API_URL}/api/reports/sample`);
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error('Failed to fetch sample report');
+  }
+
+  return response.json();
+}
+
+/**
  * Fetch a shared report by its public share token (no auth required).
  */
 export async function fetchSharedReport<T = unknown>(

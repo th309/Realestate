@@ -75,7 +75,7 @@ export default function SampleReportPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <SampleBanner />
-      <ReportViewer reportId={SAMPLE_REPORT_ID} />
+      <ReportViewer reportId={SAMPLE_REPORT_ID} isSample />
     </Suspense>
   );
 }

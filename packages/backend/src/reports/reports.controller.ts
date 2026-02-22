@@ -59,6 +59,21 @@ export class ReportsController {
   }
 
   /**
+   * Get the sample report (public — no auth required)
+   *
+   * GET /reports/sample
+   */
+  @Get('sample')
+  async getSampleReport() {
+    const SAMPLE_REPORT_ID = 'f4b04e7c-34cc-4e38-bdac-541fff06de1e';
+    const report = await this.reportsService.getReport(SAMPLE_REPORT_ID);
+    if (!report) {
+      throw new HttpException('Sample report not found', HttpStatus.NOT_FOUND);
+    }
+    return report;
+  }
+
+  /**
    * Get a shared report (public)
    *
    * GET /reports/shared/:token
