@@ -101,7 +101,7 @@ function QuickCard({
               <div className="h-4 w-10 bg-surface-container-high rounded animate-pulse" />
             ) : (
               <span className={`text-xs font-semibold ${isActive ? 'text-on-primary-container' : 'text-on-surface'}`}>
-                {formattedValue ?? '--'}
+                {formattedValue ?? '\u2014'}
               </span>
             )}
             {trendDir && trendChange != null && (
@@ -141,7 +141,7 @@ function QuickCard({
             <div className="h-5 w-14 bg-surface-container-high rounded animate-pulse" />
           ) : (
             <span className={`text-base font-semibold ${isActive ? 'text-on-primary-container' : 'text-on-surface'}`}>
-              {formattedValue ?? '--'}
+              {formattedValue ?? '\u2014'}
             </span>
           )}
         </div>

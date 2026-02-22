@@ -79,7 +79,7 @@ export function Header() {
 
                     {/* Right Side Actions */}
                     <div className="hidden md:flex items-center gap-4">
-                        {!!user ? (
+                        {loading ? null : !!user ? (
                             <div className="relative">
                                 <button
                                     data-testid="user-menu"
@@ -170,7 +170,7 @@ export function Header() {
                             </Link>
                         ))}
                         <div className="h-px bg-outline-variant my-3" />
-                        {!!user ? (
+                        {loading ? null : !!user ? (
                             <button
                                 onClick={async () => { await signOut(); setIsMenuOpen(false); router.push('/'); }}
                                 className="w-full flex items-center px-4 py-3 rounded-xl text-base font-medium text-error hover:bg-error-container/30"

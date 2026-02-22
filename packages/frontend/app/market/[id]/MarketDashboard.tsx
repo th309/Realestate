@@ -181,7 +181,7 @@ function MetricCategorySection({
             <MetricCard
               key={metricId}
               metricId={metricId}
-              formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '--')}
+              formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '\u2014')}
               trendPercent={datum?.percentChange ?? null}
               trendDirection={datum?.direction ?? 'stable'}
               source={datum?.source}

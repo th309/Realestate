@@ -16,9 +16,12 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { TrialService } from './trial.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/trial')
 export class TrialController {
   private readonly logger = new Logger(TrialController.name);

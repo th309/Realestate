@@ -169,7 +169,7 @@ export function ScoreCredibility({ section, report }: SectionProps) {
 
                 {/* Return value */}
                 <p className={`text-lg font-bold ${isHighlighted ? 'text-primary' : 'text-on-surface'}`}>
-                  {quintile.avgReturn3y !== null ? `+${quintile.avgReturn3y.toFixed(0)}%` : '--'}
+                  {quintile.avgReturn3y !== null ? `+${quintile.avgReturn3y.toFixed(0)}%` : '\u2014'}
                 </p>
 
                 {/* Score range */}

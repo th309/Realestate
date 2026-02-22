@@ -129,7 +129,7 @@ export function useMarketFactorsData(
       trendPercent == null ? 'stable' : trendPercent > 0.5 ? 'up' : trendPercent < -0.5 ? 'down' : 'stable';
 
     const format = config?.format ?? 'number';
-    const formattedValue = currentValue != null ? formatValue(currentValue, format) : '--';
+    const formattedValue = currentValue != null ? formatValue(currentValue, format) : '\u2014';
 
     data[metricId] = {
       value: currentValue,

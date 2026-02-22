@@ -271,7 +271,7 @@ export function useScoreData(
           type,
           label: type === 'market_health' ? 'Market Health' : type === 'homeready' ? 'HomeReady' : 'InvestorEdge',
           score: data.score != null ? Number(data.score) : null,
-          grade: data.grade || '--',
+          grade: data.grade || '\u2014',
           trend: trendDir,
           trendChange,
           access: 'full',

@@ -13,6 +13,13 @@ export function useInView(threshold = 0.1) {
   useEffect(() => {
     if (!ref) return;
 
+    // Fallback: if IntersectionObserver is not available (SSR or legacy browser),
+    // treat the element as always in view so animated values still display.
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setInView(true);

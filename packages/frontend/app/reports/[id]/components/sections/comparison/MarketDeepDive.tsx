@@ -263,7 +263,7 @@ export function MarketDeepDive({ section, report }: SectionProps) {
 }
 
 function formatValue(value: number | null | undefined, format: string): string {
-  if (value === null || value === undefined) return '--';
+  if (value === null || value === undefined) return '\u2014';
 
   switch (format) {
     case 'currency':

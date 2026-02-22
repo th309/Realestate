@@ -90,7 +90,7 @@ export function WinnerBadges({ section, report }: SectionProps) {
               <Icon className="w-6 h-6 mx-auto mb-2 text-primary" />
               <p className="text-sm text-on-surface-variant mb-1">{cat.label}</p>
               <p className="font-semibold text-on-surface text-sm truncate">
-                {cat.winner ?? '--'}
+                {cat.winner ?? '\u2014'}
               </p>
             </div>
           );

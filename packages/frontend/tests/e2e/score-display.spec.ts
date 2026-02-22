@@ -116,12 +116,12 @@ test.describe('Score Badge Display', () => {
     await expect(investoredgeBadge).toHaveClass(new RegExp(`bg-${expectedColor}|text-${expectedColor}`));
   });
 
-  test('score badge shows "--" for unavailable scores', async ({ page }) => {
+  test('score badge shows em-dash for unavailable scores', async ({ page }) => {
     await mockScoreAPI(page, MOCK_PARTIAL_SCORE_RESPONSE);
     await selectGeography(page, 'zip', '99501');
 
     const homereadyBadge = page.getByTestId('score-badge-homeready');
-    await expect(homereadyBadge).toContainText('--');
+    await expect(homereadyBadge).toContainText('\u2014');
   });
 
   test('score badge shows gray color for unavailable scores', async ({ page }) => {

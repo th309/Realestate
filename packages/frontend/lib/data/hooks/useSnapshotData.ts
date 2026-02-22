@@ -109,7 +109,7 @@ export function useSnapshotData(
       allData: {},
       entry: null,
       value: null,
-      formattedValue: '--',
+      formattedValue: '\u2014',
       date: undefined,
       source: null,
       sourceGeoId: null,

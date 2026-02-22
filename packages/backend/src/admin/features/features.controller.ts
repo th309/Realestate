@@ -14,9 +14,12 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { FeaturesService } from './features.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/features')
 export class FeaturesController {
   private readonly logger = new Logger(FeaturesController.name);

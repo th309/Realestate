@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Heart, ExternalLink, FileText } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useEntitlements } from '@/lib/entitlements';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
 import type { SelectedGeography, GeoLevel } from '../../types';
 

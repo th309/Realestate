@@ -12,15 +12,18 @@ import {
   Param,
   Logger,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { StripeService } from '../../billing/stripe.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
 interface TierPricingUpdate {
   price_monthly?: number;
   price_yearly?: number;
 }
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/tier-pricing')
 export class TierPricingController {
   private readonly logger = new Logger(TierPricingController.name);

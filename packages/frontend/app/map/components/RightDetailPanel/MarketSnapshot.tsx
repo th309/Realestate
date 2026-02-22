@@ -45,7 +45,7 @@ export function MarketSnapshot({ geoLevel, geographyId, isOpen }: MarketSnapshot
                 />
               </p>
               <p className="text-lg font-bold text-on-surface mt-1">
-                {loading ? '...' : (datum?.formattedValue ?? '--')}
+                {loading ? '...' : (datum?.formattedValue ?? '\u2014')}
               </p>
               {(datum?.isFallback || (datum?.isInherited && datum?.sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(datum.sourceGeoLevel))) && (
                 <div className="flex items-center gap-1 mt-1">

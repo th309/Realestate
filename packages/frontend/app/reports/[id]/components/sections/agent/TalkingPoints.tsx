@@ -59,7 +59,7 @@ function getMetricWithFallbacks(
  * Format a metric value for display in talking points
  */
 function formatStat(metricId: string, value: number | null): string {
-  if (value === null) return '--';
+  if (value === null) return '\u2014';
   const format = getMetricFormat(metricId);
   return formatMetricValue(value, format);
 }

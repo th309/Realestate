@@ -97,7 +97,7 @@ export function SidebarScoreCard({
     : 'flat';
   const trendValue = currentScore?.trend !== undefined
     ? formatTrendValue(currentScore.trend, 'points')
-    : '--';
+    : '\u2014';
 
   return (
     <div

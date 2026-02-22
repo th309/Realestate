@@ -70,7 +70,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ wizardState }) => {
           <div className="flex items-center gap-4">
             <div className={`w-20 h-20 rounded-full ${heroScore.bgClass}/20 flex items-center justify-center`}>
               <span className={`text-2xl font-bold ${heroScore.color}`}>
-                {primaryGeography ? '--' : '?'}
+                {primaryGeography ? '\u2014' : '?'}
               </span>
             </div>
             <div className="flex-1">

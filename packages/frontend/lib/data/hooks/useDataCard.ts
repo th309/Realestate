@@ -168,21 +168,19 @@ export function useDataCardBatch(
     if (result.error) anyError = true;
   }
 
-  // Filter out metrics with no data (value === null after loading completes)
-  // Consumers only see metrics that have actual values
-  const cards: Record<string, UseDataCardResult> = {};
-  for (const [metricId, result] of Object.entries(allCards)) {
-    if (result.isLoading) {
-      cards[metricId] = result;
-    } else if (result.value != null) {
-      cards[metricId] = result;
-    } else if (IS_DEV && isMetricSupportedForGeo(metricId, geoLevel)) {
-      console.warn(`[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`);
+  // Keep all entries (including nulls) so the UI can render "unavailable" placeholders.
+  // Previously nulls were silently dropped, causing cards to disappear instead of
+  // showing a clear "no data" state.
+  if (IS_DEV) {
+    for (const [metricId, result] of Object.entries(allCards)) {
+      if (!result.isLoading && result.value == null && isMetricSupportedForGeo(metricId, geoLevel)) {
+        console.warn(`[useDataCardBatch] ${metricId} returned null for ${geoLevel}/${regionId} — expected data based on supportedGeos`);
+      }
     }
   }
 
   return {
-    cards,
+    cards: allCards,
     isLoading: anyLoading,
     hasError: anyError,
   };

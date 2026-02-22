@@ -15,9 +15,12 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { TiersService, CreateTierDto, UpdateTierDto } from './tiers.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/tiers')
 export class TiersController {
   private readonly logger = new Logger(TiersController.name);

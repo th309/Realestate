@@ -37,17 +37,17 @@ interface Props {
 }
 
 function formatPercent(value: number | null | undefined, decimals = 1): string {
-  if (value == null) return '--';
+  if (value == null) return '\u2014';
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
 function formatNumber(value: number | null | undefined, decimals = 1): string {
-  if (value == null) return '--';
+  if (value == null) return '\u2014';
   return value.toFixed(decimals);
 }
 
 function formatReturnPercent(value: number | null | undefined): string {
-  if (value == null) return '--';
+  if (value == null) return '\u2014';
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
 }
@@ -156,7 +156,7 @@ export function ValidationSummaryCards({ scoreType, geography }: Props) {
     },
     {
       label: 'Data Range',
-      value: `${summary.dataRange.startDate?.slice(0, 7) || '--'} to ${summary.dataRange.endDate?.slice(0, 7) || '--'}`,
+      value: `${summary.dataRange.startDate?.slice(0, 7) || '\u2014'} to ${summary.dataRange.endDate?.slice(0, 7) || '\u2014'}`,
       description: 'Score dates with outcomes',
       color: 'text-on-surface',
       small: true,

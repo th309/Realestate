@@ -92,7 +92,7 @@ export function ComparisonTable({ report }: ComparisonTableProps) {
                     <td key={index} className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <span className={`font-medium ${index === winner ? 'text-green-600' : 'text-on-surface'}`}>
-                          {value != null ? formatMetricValue(value, getMetricFormat(metric)) : '--'}
+                          {value != null ? formatMetricValue(value, getMetricFormat(metric)) : '\u2014'}
                         </span>
                         {index === winner && <CheckCircle className="w-4 h-4 text-green-600" />}
                       </div>

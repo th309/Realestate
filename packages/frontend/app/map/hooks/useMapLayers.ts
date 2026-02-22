@@ -679,9 +679,22 @@ function setupInteractions(
     const name = props.name || props.displayName || props.NAME || 'Unknown';
     const value = props.value ?? null;
 
-    // Get state abbreviation if available
-    const stateFips = props.STATEFP || (typeof id === 'string' && id.length >= 2 ? id.substring(0, 2) : '');
-    const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
+    // Get state abbreviation if available.
+    // For metros, CBSA codes do NOT start with state FIPS, so id.substring(0, 2)
+    // gives a wrong result. Instead, extract the state from the metro name
+    // (e.g., "Phoenix-Mesa-Chandler, AZ" → "AZ").
+    let stateAbbr = props.stateAbbr || '';
+    if (!stateAbbr && props.STATEFP) {
+      stateAbbr = FIPS_TO_STATE[props.STATEFP] || '';
+    }
+    if (!stateAbbr && geoLevel !== 'metro' && typeof id === 'string' && id.length >= 2) {
+      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || '';
+    }
+    if (!stateAbbr && name) {
+      // Extract state abbreviation from name like "Phoenix-Mesa, AZ" or "Name, NY-NJ-PA"
+      const commaMatch = name.match(/,\s*([A-Z]{2})(?:[- ]|$)/);
+      if (commaMatch) stateAbbr = commaMatch[1];
+    }
 
     onFeatureClick({
       id: String(id),
@@ -721,8 +734,19 @@ function setupInteractions(
 
     const name = props.name || props.displayName || props.NAME || 'Unknown';
     const value = props.value ?? null;
-    const stateFips = props.STATEFP || (typeof id === 'string' && id.length >= 2 ? id.substring(0, 2) : '');
-    const stateAbbr = FIPS_TO_STATE[stateFips] || props.stateAbbr || '';
+
+    // Same state abbreviation logic as left-click handler above
+    let stateAbbr = props.stateAbbr || '';
+    if (!stateAbbr && props.STATEFP) {
+      stateAbbr = FIPS_TO_STATE[props.STATEFP] || '';
+    }
+    if (!stateAbbr && geoLevel !== 'metro' && typeof id === 'string' && id.length >= 2) {
+      stateAbbr = FIPS_TO_STATE[id.substring(0, 2)] || '';
+    }
+    if (!stateAbbr && name) {
+      const commaMatch = name.match(/,\s*([A-Z]{2})(?:[- ]|$)/);
+      if (commaMatch) stateAbbr = commaMatch[1];
+    }
 
     onFeatureContextMenu({
       geography: { id: String(id), name, geoLevel, value, stateAbbr },

@@ -16,13 +16,16 @@ import {
   Logger,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   GrandfatheringService,
   CreateGrandfatherDto,
   GrandfatherPolicy,
 } from './grandfathering.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/grandfathering')
 export class GrandfatheringController {
   private readonly logger = new Logger(GrandfatheringController.name);

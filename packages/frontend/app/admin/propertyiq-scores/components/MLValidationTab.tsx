@@ -255,7 +255,7 @@ export function MLValidationTab() {
   };
 
   const formatMetricValue = (value: number | null, isPercent = false): string => {
-    if (value === null) return '--';
+    if (value === null) return '\u2014';
     return isPercent ? `${(value * 100).toFixed(1)}%` : value.toFixed(4);
   };
 
@@ -500,7 +500,7 @@ function PerformanceComparison({ result }: { result: MLValidationResult }) {
             {metrics.map((m) => {
               const gap = (m.ml || 0) - (m.formula || 0);
               const formatValue = (v: number | null) => {
-                if (v === null) return '--';
+                if (v === null) return '\u2014';
                 return m.format === 'percent' ? `${(v * 100).toFixed(1)}%` : v.toFixed(4);
               };
               return (
@@ -567,10 +567,10 @@ function FeatureImportanceTable({
                   {(fi.importance * 100).toFixed(1)}%
                 </td>
                 <td className="py-2 text-right font-mono text-on-surface">
-                  {fi.currentWeight !== null ? `${(fi.currentWeight * 100).toFixed(1)}%` : '--'}
+                  {fi.currentWeight !== null ? `${(fi.currentWeight * 100).toFixed(1)}%` : '\u2014'}
                 </td>
                 <td className="py-2 text-on-surface-variant capitalize">
-                  {fi.component?.replace('_', ' ') || '--'}
+                  {fi.component?.replace('_', ' ') || '\u2014'}
                 </td>
                 <td className="py-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[fi.status]}`}>

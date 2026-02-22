@@ -9,9 +9,12 @@ import {
   Body,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

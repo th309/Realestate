@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * - Blocks /_dev routes in production
  */
 
-const PROTECTED_PREFIXES = ['/account', '/dashboard', '/alerts', '/reports'];
+const PROTECTED_PREFIXES = ['/account', '/dashboard', '/alerts', '/reports', '/admin'];
 const AUTH_ROUTES = ['/auth/sign-in', '/auth/sign-up', '/auth/forgot-password'];
 
 export async function middleware(request: NextRequest) {
@@ -64,6 +64,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
+  // Admin routes — require admin or super_admin role
+  if (pathname.startsWith('/admin') && user) {
+    const { data: adminRow } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!adminRow || !['admin', 'super_admin'].includes(adminRow.role)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
   // Auth routes — redirect authenticated users to dashboard
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route);
   if (isAuthRoute && user) {
@@ -74,5 +87,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/(account|dashboard|alerts|reports|auth|_dev)(.*)'],
+  matcher: ['/(account|dashboard|alerts|reports|admin|auth|_dev)(.*)'],
 };

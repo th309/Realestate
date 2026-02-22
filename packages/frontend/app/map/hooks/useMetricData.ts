@@ -109,7 +109,7 @@ export function useMetricData(
     const format = config?.format || 'currency';
     const formattedValue = regionData
         ? formatValue(regionData.value, format)
-        : '--';
+        : '\u2014';
 
     return {
         data: regionData,

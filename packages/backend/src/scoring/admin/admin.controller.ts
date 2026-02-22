@@ -33,7 +33,9 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
 import {
   FormulaVersionService,
@@ -85,6 +87,7 @@ interface CompleteTestDto {
   adoptTreatment: boolean;
 }
 
+@UseGuards(AdminGuard)
 @Controller('api/admin')
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);

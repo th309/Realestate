@@ -70,6 +70,7 @@ function SignInPageContent() {
       setError(authError.message);
       setLoading(false);
     } else {
+      router.refresh();
       router.push(redirectTo);
     }
   };

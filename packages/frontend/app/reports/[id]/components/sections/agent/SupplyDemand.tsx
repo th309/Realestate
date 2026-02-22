@@ -546,7 +546,7 @@ export function SupplyDemand({
                       >
                         {trend
                           ? `${trend.changePct >= 0 ? '+' : ''}${trend.changePct.toFixed(1)}%`
-                          : '--'}
+                          : '\u2014'}
                       </td>
                       <td
                         style={{
@@ -555,7 +555,7 @@ export function SupplyDemand({
                           color: 'var(--report-stone)',
                         }}
                       >
-                        {trend ? interpretation : '--'}
+                        {trend ? interpretation : '\u2014'}
                       </td>
                     </tr>
                   );

@@ -9,9 +9,12 @@ import {
   Get,
   Query,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { PaywallAnalyticsService } from './paywall-analytics.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/analytics')
 export class PaywallAnalyticsController {
   private readonly logger = new Logger(PaywallAnalyticsController.name);

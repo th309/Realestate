@@ -233,7 +233,7 @@ export function useRightPanelData(
         {
           id: 'appreciation',
           label: 'Appreciation',
-          value: score ? (score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low') + ` (${Math.round(60 + Math.random() * 35)}/100)` : '--',
+          value: score ? (score >= 70 ? 'High' : score >= 40 ? 'Medium' : 'Low') + ` (${Math.round(60 + Math.random() * 35)}/100)` : '\u2014',
           icon: 'trending_up'
         },
         {
@@ -245,13 +245,13 @@ export function useRightPanelData(
         {
           id: 'risk',
           label: 'Risk Level',
-          value: score ? (score >= 60 ? 'Low Risk' : score >= 40 ? 'Moderate' : 'Higher Risk') : '--',
+          value: score ? (score >= 60 ? 'Low Risk' : score >= 40 ? 'Moderate' : 'Higher Risk') : '\u2014',
           icon: 'verified'
         },
         {
           id: 'demand',
           label: 'Demand',
-          value: score ? (score >= 70 ? 'Very Strong' : score >= 50 ? 'Strong' : score >= 30 ? 'Moderate' : 'Weak') : '--',
+          value: score ? (score >= 70 ? 'Very Strong' : score >= 50 ? 'Strong' : score >= 30 ? 'Moderate' : 'Weak') : '\u2014',
           icon: 'groups'
         }
       ];

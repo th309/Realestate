@@ -72,7 +72,7 @@ export function useScoreCardMetrics(
                 return {
                     metricId: id,
                     label,
-                    formattedValue: result?.formattedValue || '--',
+                    formattedValue: result?.formattedValue || '\u2014',
                     source: result?.source ?? null,
                     sourceGeoId: result?.sourceGeoId ?? null,
                     sourceGeoLevel: result?.sourceGeoLevel ?? null,

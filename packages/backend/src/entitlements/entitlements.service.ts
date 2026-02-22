@@ -58,7 +58,8 @@ export class EntitlementsService {
           .eq('id', userId)
           .single();
 
-        if (profile?.subscription_tier && profile?.subscription_tier !== 'free' && profile.subscription_status === 'active') {
+        if (profile?.subscription_tier && profile.subscription_tier !== 'free' &&
+            (profile.subscription_status === 'active' || !profile.subscription_status)) {
           tier = profile.subscription_tier;
         }
       }
