@@ -22,6 +22,9 @@ import { DataIngestionModule } from './data-ingestion/data-ingestion.module';
 import { AnalyticsChatModule } from './analytics-chat/analytics-chat.module';
 import { AnalyticsPersistenceModule } from './analytics-persistence/analytics-persistence.module';
 import { FeaturesModule } from './admin/features/features.module';
+import { UsersModule as AdminUsersModule } from './admin/users/users.module';
+import { AnalyticsModule as AdminAnalyticsModule } from './admin/analytics/analytics.module';
+import { TrialModule } from './admin/trial/trial.module';
 import { EntitlementsModule } from './entitlements/entitlements.module';
 import { BillingModule } from './billing/billing.module';
 import { RedisModule } from './redis/redis.module';
@@ -64,6 +67,9 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     AnalyticsChatModule,
     AnalyticsPersistenceModule,
     FeaturesModule,
+    AdminUsersModule,
+    AdminAnalyticsModule,
+    TrialModule,
     EntitlementsModule,
     BillingModule,
     MarketAnalysisModule,

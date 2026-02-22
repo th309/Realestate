@@ -2,7 +2,10 @@
  * BASE FETCHER UTILITIES
  *
  * Core fetching infrastructure used by all data fetchers.
+ * Automatically includes Supabase JWT auth headers when available.
  */
+
+import { getAuthHeaders } from './auth-headers';
 
 /**
  * API base URL - uses environment variable or falls back to localhost for development
@@ -14,9 +17,11 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001
  */
 export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const url = `${API_URL}${endpoint}`;
+  const authHeaders = await getAuthHeaders();
   try {
     const response = await fetch(url, {
       credentials: 'include',
+      headers: { ...authHeaders },
     });
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
@@ -48,8 +53,10 @@ export async function fetchAPIWithParams<T>(
     });
   }
 
+  const authHeaders = await getAuthHeaders();
   const response = await fetch(url.toString(), {
     credentials: 'include',
+    headers: { ...authHeaders },
   });
   if (!response.ok) {
     throw new Error(`API error: ${response.status}`);
@@ -69,8 +76,13 @@ export async function fetchAPIRaw(
   init?: RequestInit,
 ): Promise<Response> {
   const url = `${API_URL}${endpoint}`;
+  const authHeaders = await getAuthHeaders();
   return fetch(url, {
     credentials: 'include',
     ...init,
+    headers: {
+      ...authHeaders,
+      ...init?.headers,
+    },
   });
 }
