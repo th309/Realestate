@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { Suspense, useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Building2,
   Mail,
@@ -32,7 +33,17 @@ function allRequirementsMet(password: string): boolean {
 }
 
 export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpContent />
+    </Suspense>
+  );
+}
+
+function SignUpContent() {
   const { signUp, signInWithOAuth } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,7 +85,7 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await signInWithOAuth(provider);
+    const { error: authError } = await signInWithOAuth(provider, redirectTo);
 
     if (authError) {
       setError(authError.message);
@@ -118,7 +129,7 @@ export default function SignUpPage() {
               Click the link to confirm your account.
             </p>
             <Link
-              href="/auth/sign-in"
+              href={redirectTo !== '/dashboard' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
               className="text-sm text-primary hover:text-primary/80 font-medium"
             >
               Back to sign in
@@ -320,7 +331,7 @@ export default function SignUpPage() {
             <p className="mt-8 text-center text-sm text-on-surface-variant">
               Already have an account?{' '}
               <Link
-                href="/auth/sign-in"
+                href={redirectTo !== '/dashboard' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign in

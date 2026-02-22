@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CreditCard, Check, Sparkles, Clock, BarChart3, MapPin,
   FileText, ArrowRight, Lock, Target, TrendingUp, Shield,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { useEntitlements } from '@/lib/entitlements';
+import { useAuth } from '@/lib/auth';
 import { fetchPricingSummary, type PricingTier } from '@/lib/data';
 import { startCheckout } from '@/lib/data';
 
@@ -22,12 +23,38 @@ export default function PricingPage() {
 
 function PricingContent() {
   const { tier, trial, loading, refresh } = useEntitlements();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [plans, setPlans] = useState<PricingTier[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  // Auto-trigger checkout when returning from sign-in with a stored intent
+  const autoCheckoutTriggered = useRef(false);
+  useEffect(() => {
+    if (autoCheckoutTriggered.current || authLoading) return;
+    const stored = sessionStorage.getItem('checkoutIntent');
+    if (stored && user) {
+      autoCheckoutTriggered.current = true;
+      sessionStorage.removeItem('checkoutIntent');
+      try {
+        const { tier: checkoutTier, interval } = JSON.parse(stored);
+        setBillingInterval(interval);
+        setCheckoutLoading(checkoutTier);
+        startCheckout(checkoutTier, interval)
+          .then(url => { window.location.href = url; })
+          .catch(err => {
+            console.error('Auto-checkout failed:', err);
+            setCheckoutLoading(null);
+          });
+      } catch {
+        // Malformed storage — ignore
+      }
+    }
+  }, [user, authLoading]);
 
   // Fetch plan data from DB
   useEffect(() => {
@@ -55,6 +82,16 @@ function PricingContent() {
   const effectiveTier = trial?.active ? trial.tier : tier;
 
   const handleUpgrade = async (planSlug: string) => {
+    // If not authenticated, save checkout intent and redirect to sign-in
+    if (!user) {
+      sessionStorage.setItem('checkoutIntent', JSON.stringify({
+        tier: planSlug,
+        interval: billingInterval,
+      }));
+      router.push(`/auth/sign-in?redirect=${encodeURIComponent('/pricing')}`);
+      return;
+    }
+
     setCheckoutLoading(planSlug);
     try {
       const url = await startCheckout(planSlug, billingInterval);

@@ -95,7 +95,7 @@ function SignInPageContent() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await signInWithOAuth(provider);
+    const { error: authError } = await signInWithOAuth(provider, redirectTo);
 
     if (authError) {
       setError(authError.message);
@@ -329,7 +329,7 @@ function SignInPageContent() {
             <p className="mt-8 text-center text-sm text-on-surface-variant">
               Don&apos;t have an account?{' '}
               <Link
-                href="/auth/sign-up"
+                href={redirectTo !== '/dashboard' ? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-up'}
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign up

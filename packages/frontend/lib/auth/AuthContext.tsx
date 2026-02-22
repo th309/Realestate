@@ -11,7 +11,7 @@ interface AuthContextValue {
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
-  signInWithOAuth: (provider: 'google' | 'apple' | 'github') => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: 'google' | 'apple' | 'github', redirectPath?: string) => Promise<{ error: AuthError | null }>;
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
@@ -36,11 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, []);
 
-  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple' | 'github') => {
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple' | 'github', redirectPath?: string) => {
     const supabase = createSupabaseBrowserClient();
+    const callbackUrl = redirectPath && redirectPath !== '/dashboard'
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`
+      : `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl },
     });
     return { error };
   }, []);
