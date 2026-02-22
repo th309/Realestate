@@ -119,19 +119,18 @@ export async function importNationalRecords(
       period_date: record.period_date.toISOString().split('T')[0]
     }));
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('realtor_national')
       .upsert(formattedBatch, {
         onConflict: 'period_date',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  ❌ Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     // Progress update every 500 records
@@ -233,19 +232,18 @@ export async function importStateRecords(
       period_date: record.period_date.toISOString().split('T')[0]
     }));
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('realtor_state')
       .upsert(formattedBatch, {
         onConflict: 'period_date,state_id',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  ❌ Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     // Progress update every 1000 records
@@ -401,19 +399,18 @@ export async function importMetroRecords(
       period_date: record.period_date.toISOString().split('T')[0]
     }));
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('realtor_metro')
       .upsert(formattedBatch, {
         onConflict: 'period_date,cbsa_code',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  ❌ Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     if ((i + batchSize) % 5000 === 0 || i + batchSize >= records.length) {
@@ -570,19 +567,18 @@ export async function importCountyRecords(
       period_date: record.period_date.toISOString().split('T')[0]
     }));
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('realtor_county')
       .upsert(formattedBatch, {
         onConflict: 'period_date,county_fips',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  ❌ Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     if ((i + batchSize) % 10000 === 0 || i + batchSize >= records.length) {
@@ -738,19 +734,18 @@ export async function importZipRecords(
       period_date: record.period_date.toISOString().split('T')[0]
     }));
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('realtor_zip')
       .upsert(formattedBatch, {
         onConflict: 'period_date,postal_code',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  ❌ Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     if ((i + batchSize) % 50000 === 0 || i + batchSize >= records.length) {

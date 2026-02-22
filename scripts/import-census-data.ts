@@ -7,10 +7,9 @@
  *   # Import all geographies
  *   npx tsx scripts/import-census-data.ts
  *
- *   # Import specific geography
+ *   # Import specific geography (supports multiple)
  *   npx tsx scripts/import-census-data.ts --geo=state
- *   npx tsx scripts/import-census-data.ts --geo=metro
- *   npx tsx scripts/import-census-data.ts --geo=county
+ *   npx tsx scripts/import-census-data.ts --geo=state --geo=metro
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -227,11 +226,19 @@ async function main() {
   const startTime = Date.now();
   const args = process.argv.slice(2);
 
-  // Parse --geo argument
-  let geoFilter: string | null = null;
+  // Parse --geo arguments (supports multiple: --geo=state --geo=metro)
+  const geoFilters: string[] = [];
+  let batchSize: number = 1000;
+
+  const noRefresh = args.includes('--no-refresh');
+
   for (const arg of args) {
     if (arg.startsWith('--geo=')) {
-      geoFilter = arg.split('=')[1].toLowerCase();
+      geoFilters.push(arg.split('=')[1].toLowerCase());
+    }
+    if (arg.startsWith('--batch=')) {
+      const val = parseInt(arg.split('=')[1]);
+      if (!isNaN(val)) batchSize = val;
     }
   }
 
@@ -239,8 +246,9 @@ async function main() {
   console.log('='.repeat(60));
   console.log(`Date: ${new Date().toISOString()}`);
   console.log(`Data directory: ${DATA_DIR}`);
-  if (geoFilter) {
-    console.log(`Geography filter: ${geoFilter}`);
+  console.log(`Batch size: ${batchSize}`);
+  if (geoFilters.length > 0) {
+    console.log(`Geography filter: ${geoFilters.join(', ')}`);
   }
 
   // Check if data directory exists
@@ -253,13 +261,13 @@ async function main() {
   // Create database client
   const supabase = createImportClient();
 
-  // Filter datasets if geo specified
-  const datasetsToImport = geoFilter
-    ? DATASETS.filter(d => d.id === geoFilter)
+  // Filter datasets if geo(s) specified
+  const datasetsToImport = geoFilters.length > 0
+    ? DATASETS.filter(d => geoFilters.includes(d.id))
     : DATASETS;
 
   if (datasetsToImport.length === 0) {
-    console.error(`\nUnknown geography: ${geoFilter}`);
+    console.error(`\nUnknown geography: ${geoFilters.join(', ')}`);
     console.error('Valid options: national, state, metro, county, city, zip');
     process.exit(1);
   }
@@ -299,7 +307,7 @@ async function main() {
   }
 
   // Refresh calculated metrics after successful import
-  if (totalRecords > 0) {
+  if (totalRecords > 0 && !noRefresh) {
     await refreshCalculatedMetrics(supabase);
   }
 

@@ -44,13 +44,12 @@ async function upsertBatchWithRetry(
 ): Promise<{ inserted: number; errors: number }> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from(table)
         .upsert(batch, {
           onConflict,
           ignoreDuplicates: false
-        })
-        .select();
+        });
 
       if (error) {
         if (attempt < maxRetries) {
@@ -65,7 +64,7 @@ async function upsertBatchWithRetry(
 
       // Small delay between successful batches to avoid overwhelming Supabase
       if (delayMs > 0) await sleep(delayMs);
-      return { inserted: data?.length || 0, errors: 0 };
+      return { inserted: batch.length, errors: 0 };
     } catch (err: any) {
       if (attempt < maxRetries) {
         const backoff = delayMs * Math.pow(2, attempt + 1);
@@ -306,27 +305,27 @@ export function parseCensusZipCSV(csvContent: string): CensusZipRecord[] {
   return records.map((row: any) => {
     const raw = row.zcta ?? row.zip_code ?? '';
     return {
-    year: parseInt(row.year),
-    zcta: raw ? normalizeZipKey(String(raw)) : '',
-    state_fips: row.state_fips || null,
-    state_name: row.state_name || null,
-    total_population: parseInteger(row.total_population),
-    population_yoy: parseNumeric(row.population_yoy),
-    median_age: parseNumeric(row.median_age),
-    median_household_income: parseInteger(row.median_household_income),
-    income_yoy: parseNumeric(row.income_yoy),
-    per_capita_income: parseInteger(row.per_capita_income),
-    total_housing_units: parseInteger(row.total_housing_units),
-    owner_occupied_units: parseInteger(row.owner_occupied_units),
-    renter_occupied_units: parseInteger(row.renter_occupied_units),
-    homeownership_rate: parseNumeric(row.homeownership_rate),
-    median_home_value: parseInteger(row.median_home_value),
-    median_gross_rent: parseInteger(row.median_gross_rent),
-    rent_as_pct_of_income: parseNumeric(row.rent_as_pct_of_income),
-    total_employment: parseInteger(row.total_employment),
-    total_establishments: parseInteger(row.total_establishments),
-    annual_payroll: parseBigInt(row.annual_payroll)
-  };
+      year: parseInt(row.year),
+      zcta: raw ? normalizeZipKey(String(raw)) : '',
+      state_fips: row.state_fips || null,
+      state_name: row.state_name || null,
+      total_population: parseInteger(row.total_population),
+      population_yoy: parseNumeric(row.population_yoy),
+      median_age: parseNumeric(row.median_age),
+      median_household_income: parseInteger(row.median_household_income),
+      income_yoy: parseNumeric(row.income_yoy),
+      per_capita_income: parseInteger(row.per_capita_income),
+      total_housing_units: parseInteger(row.total_housing_units),
+      owner_occupied_units: parseInteger(row.owner_occupied_units),
+      renter_occupied_units: parseInteger(row.renter_occupied_units),
+      homeownership_rate: parseNumeric(row.homeownership_rate),
+      median_home_value: parseInteger(row.median_home_value),
+      median_gross_rent: parseInteger(row.median_gross_rent),
+      rent_as_pct_of_income: parseNumeric(row.rent_as_pct_of_income),
+      total_employment: parseInteger(row.total_employment),
+      total_establishments: parseInteger(row.total_establishments),
+      annual_payroll: parseBigInt(row.annual_payroll)
+    };
   });
 }
 
@@ -468,19 +467,18 @@ export async function importCensusNationalRecords(
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('census_national')
       .upsert(batch, {
         onConflict: 'year',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
   }
 
@@ -509,19 +507,18 @@ export async function importCensusStateRecords(
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('census_state')
       .upsert(batch, {
         onConflict: 'year,state_fips',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
     if ((i + batchSize) % 500 === 0 || i + batchSize >= records.length) {
@@ -696,19 +693,18 @@ export async function importEconomicNationalRecords(
   for (let i = 0; i < formattedRecords.length; i += batchSize) {
     const batch = formattedRecords.slice(i, i + batchSize);
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('economic_national')
       .upsert(batch, {
         onConflict: 'period_date',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
   }
 
@@ -743,23 +739,22 @@ export async function importEconomicStateRecords(
   for (let i = 0; i < formattedRecords.length; i += batchSize) {
     const batch = formattedRecords.slice(i, i + batchSize);
 
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('economic_state')
       .upsert(batch, {
         onConflict: 'period_date,state_fips',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
       console.error(`  Batch error: ${error.message}`);
       errors += batch.length;
     } else {
-      recordsInserted += data?.length || 0;
+      recordsInserted += batch.length;
     }
 
-    if ((i + batchSize) % 1000 === 0 || i + batchSize >= formattedRecords.length) {
-      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records`);
+    if ((i + batchSize) % batchSize === 0 || i + batchSize >= formattedRecords.length) {
+      console.log(`  Progress: ${Math.min(i + batchSize, formattedRecords.length)}/${formattedRecords.length} records (${recordsInserted} inserted, ${errors} errors)`);
     }
   }
 

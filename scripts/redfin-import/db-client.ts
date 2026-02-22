@@ -111,14 +111,14 @@ export async function insertRecordsBatch(
       const { error } = await supabase
         .from(tableName)
         .upsert(records, {
-          onConflict: 'geoid,metric_date',
+          onConflict: 'geoid,metric_date,property_type',
           ignoreDuplicates: false
         })
 
       if (error) {
         const isConnectionError = error.message?.includes('fetch') ||
-                                error.message?.includes('network') ||
-                                error.message?.includes('ECONNREFUSED')
+          error.message?.includes('network') ||
+          error.message?.includes('ECONNREFUSED')
 
         if (isConnectionError && retries > 1) {
           retries--

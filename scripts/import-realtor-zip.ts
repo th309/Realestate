@@ -22,7 +22,24 @@ import { normalizeZipKey } from './utils/zip';
 
 const DATA_DIR = join(__dirname, '../data/realtor');
 const DATASET_CONFIG = REALTOR_DATASETS.find(d => d.id === 'realtor-zip')!;
-const BATCH_SIZE = 500;
+let BATCH_SIZE = 500;
+let LIMIT: number | null = null;
+
+// Parse args
+const args = process.argv.slice(2);
+const batchArg = args.find(a => a.startsWith('--batch='));
+if (batchArg) {
+  const val = parseInt(batchArg.split('=')[1]);
+  if (!isNaN(val) && val > 0) BATCH_SIZE = val;
+}
+
+const limitArg = args.find(a => a.startsWith('--limit='));
+if (limitArg) {
+  const val = parseInt(limitArg.split('=')[1]);
+  if (!isNaN(val) && val > 0) LIMIT = val;
+}
+
+const noRefresh = args.includes('--no-refresh');
 
 function parseYYYYMM(yyyymm: string): Date {
   const year = parseInt(yyyymm.substring(0, 4));
@@ -114,18 +131,17 @@ async function processBatch(supabase: any, records: any[]): Promise<{ inserted: 
     period_date: record.period_date.toISOString().split('T')[0]
   }));
 
-  const { error, data } = await supabase
+  const { error } = await supabase
     .from('realtor_zip')
     .upsert(formattedBatch, {
       onConflict: 'period_date,postal_code',
       ignoreDuplicates: false
-    })
-    .select();
+    });
 
   if (error) {
     return { inserted: 0, errors: records.length };
   }
-  return { inserted: data?.length || 0, errors: 0 };
+  return { inserted: records.length, errors: 0 };
 }
 
 async function streamImportZipCore(
@@ -140,6 +156,7 @@ async function streamImportZipCore(
     let batch: any[] = [];
     let totalRead = 0;
     let skipped = 0;
+    let limitReached = false;
 
     const parser = parse({
       columns: true,
@@ -148,57 +165,56 @@ async function streamImportZipCore(
     });
 
     const fileStream = createReadStream(coreFilePath);
+    fileStream.pipe(parser);
 
-    parser.on('data', async (row) => {
-      // Skip records before the since date filter
-      if (sinceDate && row.month_date_yyyymm < sinceDate) {
-        skipped++;
-        return;
-      }
+    (async () => {
+      try {
+        for await (const row of parser) {
+          if (LIMIT && totalRead >= LIMIT) {
+            console.log(`\n  🛑 Limit reached (${LIMIT} records). Stopping...`);
+            break;
+          }
 
-      const record = parseRow(row, hotnessMap);
-      batch.push(record);
-      totalRead++;
+          // Skip records before the since date filter
+          if (sinceDate && row.month_date_yyyymm < sinceDate) {
+            skipped++;
+            continue;
+          }
 
-      if (batch.length >= BATCH_SIZE) {
-        // Pause stream while processing batch
-        parser.pause();
-        fileStream.pause();
+          const record = parseRow(row, hotnessMap);
+          batch.push(record);
+          totalRead++;
 
-        const batchToProcess = [...batch];
-        batch = [];
+          if (batch.length >= BATCH_SIZE) {
+            const batchToProcess = [...batch];
+            batch = [];
 
-        const result = await processBatch(supabase, batchToProcess);
-        recordsInserted += result.inserted;
-        errors += result.errors;
+            const result = await processBatch(supabase, batchToProcess);
+            recordsInserted += result.inserted;
+            errors += result.errors;
 
-        if (totalRead % 50000 === 0) {
-          console.log(`  📊 Progress: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted`);
+            if (totalRead % 10000 === 0) {
+              process.stdout.write(`\r  📊 Progress: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted`);
+            }
+          }
         }
 
-        // Resume stream
-        parser.resume();
-        fileStream.resume();
+        // Process remaining batch
+        if (batch.length > 0) {
+          const result = await processBatch(supabase, batch);
+          recordsInserted += result.inserted;
+          errors += result.errors;
+        }
+
+        console.log(`\n  📊 Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted${skipped > 0 ? `, ${skipped.toLocaleString()} skipped (before filter)` : ''}`);
+
+        fileStream.destroy();
+        resolve({ recordsInserted, errors });
+      } catch (err) {
+        fileStream.destroy();
+        reject(err);
       }
-    });
-
-    parser.on('end', async () => {
-      // Process remaining batch
-      if (batch.length > 0) {
-        const result = await processBatch(supabase, batch);
-        recordsInserted += result.inserted;
-        errors += result.errors;
-      }
-
-      console.log(`  📊 Final: ${totalRead.toLocaleString()} read, ${recordsInserted.toLocaleString()} inserted${skipped > 0 ? `, ${skipped.toLocaleString()} skipped (before filter)` : ''}`);
-      resolve({ recordsInserted, errors });
-    });
-
-    parser.on('error', (err) => {
-      reject(err);
-    });
-
-    fileStream.pipe(parser);
+    })();
   });
 }
 
@@ -337,7 +353,7 @@ async function main() {
 
     if (result.errors === 0) {
       // Refresh calculated metrics after successful import
-      if (result.recordsInserted > 0) {
+      if (result.recordsInserted > 0 && !noRefresh) {
         await refreshCalculatedMetrics(supabase);
       }
       console.log('✅ IMPORT COMPLETED SUCCESSFULLY');

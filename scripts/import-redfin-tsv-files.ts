@@ -16,11 +16,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ParsedRow, MetricColumn, ImportOptions, RedfinMetricsRecord } from './redfin-import/types'
 import { createSupabaseAdminClient, testConnection, insertRecordsBatch } from './redfin-import/db-client'
 import { identifyMetricColumns, parseDataRow } from './redfin-import/parser'
-import { getOrCreateGeoid } from './redfin-import/geoid-lookup'
+import { preloadGeoidCache, resolveGeoidFromCache } from './redfin-import/geoid-lookup'
 import { convertToRedfinMetricsFormat, assignGeoids, filterValidRecords, groupByTable } from './redfin-import/data-transformer'
 
 /**
- * Process a chunk of parsed rows and insert into database
+ * Process a chunk of parsed rows and insert into database.
+ * Uses in-memory geoid cache for instant lookups (no DB roundtrips).
  */
 async function processChunk(
   chunk: ParsedRow[],
@@ -30,64 +31,40 @@ async function processChunk(
 ): Promise<void> {
   if (chunk.length === 0) return
 
-  console.log(`\n  🔄 Processing chunk of ${chunk.length} rows...`)
-
   try {
-    // Get geoids for unique regions in this chunk
+    // Resolve geoids for unique regions using in-memory cache
     const uniqueRegions = new Set(chunk.map(r => `${r.regionType}|${r.stateCode || ''}|${r.region}`))
-    console.log(`  📍 Looking up ${uniqueRegions.size} unique regions...`)
 
-    let geoidLookups = 0
-    let geoidErrors = 0
-
+    let newLookups = 0
     for (const regionKey of uniqueRegions) {
       if (!regionMap.has(regionKey)) {
         const [regionType, stateCode, regionName] = regionKey.split('|')
-        const row = chunk.find(r => r.region === regionName && r.regionType === regionType && (r.stateCode || '') === stateCode)
-        if (row) {
-          try {
-            const geoid = await getOrCreateGeoid(supabase, regionName, regionType, stateCode || undefined, row.city)
-            regionMap.set(regionKey, geoid)
-            geoidLookups++
-          } catch (error: any) {
-            const sanitized = regionName.replace(/[^a-zA-Z0-9]/g, '-').toUpperCase().substring(0, 30)
-            const fallbackGeoid = `REDFIN-${regionType.toUpperCase()}-${sanitized}`
-            regionMap.set(regionKey, fallbackGeoid)
-            geoidLookups++
-            geoidErrors++
-          }
-        }
+        const geoid = resolveGeoidFromCache(regionName, regionType, stateCode || undefined)
+        regionMap.set(regionKey, geoid)
+        newLookups++
       }
     }
-    console.log(`  📍 Geoid lookup: ${geoidLookups} lookups${geoidErrors > 0 ? `, ${geoidErrors} errors (using fallback)` : ''}`)
 
     // Convert to redfin_metrics format
     const records = convertToRedfinMetricsFormat(chunk)
-    console.log(`  📊 Converted ${records.length} records to redfin_metrics format`)
 
     // Assign geoids
     const recordsWithGeoids = assignGeoids(records, regionMap)
 
     // Filter valid records
     const validRecords = filterValidRecords(recordsWithGeoids)
-    console.log(`  ✅ Filtered to ${validRecords.length} valid records (from ${recordsWithGeoids.length} total)`)
 
-    if (validRecords.length === 0) {
-      console.warn(`  ⚠️  Chunk had ${recordsWithGeoids.length} records but none had valid metrics`)
-      return
-    }
+    if (validRecords.length === 0) return
 
     // Group by table and insert
     const recordsByTable = groupByTable(validRecords)
-    console.log(`  💾 Grouped into ${recordsByTable.size} table(s)`)
 
     // Insert into each table
     for (const [tableName, tableRecords] of recordsByTable.entries()) {
       if (tableRecords.length === 0) continue
 
-      console.log(`  💾 Inserting ${tableRecords.length} records into ${tableName}...`)
-
-      const batchSize = 1000
+      // Use smaller batch size for the main redfin_metrics table (10M+ rows causes statement timeouts)
+      const batchSize = tableName === 'redfin_metrics' ? 300 : 1000
       const totalBatches = Math.ceil(tableRecords.length / batchSize)
 
       for (let i = 0; i < tableRecords.length; i += batchSize) {
@@ -101,7 +78,6 @@ async function processChunk(
     }
 
     stats.totalProcessed += chunk.length
-    process.stdout.write(`\r  Processed ${stats.totalProcessed.toLocaleString()} rows, inserted ${stats.totalInserted.toLocaleString()} records${stats.totalErrors > 0 ? `, ${stats.totalErrors} errors` : ''}...`)
   } catch (error: any) {
     console.error(`  ❌ Error processing chunk: ${error.message}`)
     stats.totalErrors++
@@ -135,8 +111,11 @@ async function importTSVFileStreaming(
     relax_column_count: true
   })
 
-  const stream = createReadStream(filePath, { encoding: 'utf-8', highWaterMark: 64 * 1024 })
+  const stream = createReadStream(filePath, { encoding: 'utf-8', highWaterMark: 256 * 1024 })
   const regionMap = new Map<string, string>()
+
+  // Pre-load all geoid reference tables into memory before streaming
+  await preloadGeoidCache(supabase)
 
   stream.pipe(parser)
 
@@ -178,9 +157,9 @@ async function importTSVFileStreaming(
       }
       rowCount++
 
-      // Log progress every 10000 rows
-      if (rowCount > 0 && rowCount % 10000 === 0) {
-        process.stdout.write(`\r  Read ${rowCount.toLocaleString()} rows, processed ${stats.totalProcessed.toLocaleString()}...`)
+      // Log progress every 50000 rows
+      if (rowCount > 0 && rowCount % 50000 === 0) {
+        process.stdout.write(`\r  📊 Progress: ${rowCount.toLocaleString()} read, ${stats.totalProcessed.toLocaleString()} processed, ${stats.totalInserted.toLocaleString()} inserted${stats.totalErrors > 0 ? `, ${stats.totalErrors} errors` : ''}...`)
       }
     }
 
@@ -237,12 +216,27 @@ async function main() {
 
   let filesToImport: string[] = []
   let limitRows: number | undefined = undefined
+  let batchSize: number = 5000
 
   // Check for --limit flag
   const limitIndex = args.indexOf('--limit')
   if (limitIndex >= 0 && args[limitIndex + 1]) {
     limitRows = parseInt(args[limitIndex + 1])
     args.splice(limitIndex, 2)
+  }
+
+  // Check for --batch flag
+  const batchIndex = args.indexOf('--batch')
+  if (batchIndex >= 0 && args[batchIndex + 1]) {
+    batchSize = parseInt(args[batchIndex + 1])
+    args.splice(batchIndex, 2)
+  } else {
+    // Also support --batch=1000 format
+    const batchArg = args.find(a => a.startsWith('--batch='));
+    if (batchArg) {
+      const val = parseInt(batchArg.split('=')[1]);
+      if (!isNaN(val)) batchSize = val;
+    }
   }
 
   if (args.length > 0) {
@@ -262,6 +256,7 @@ async function main() {
   }
 
   console.log(`\n📦 Importing ${filesToImport.length} Redfin TSV file(s)`)
+  console.log(`   Batch size: ${batchSize}`)
   console.log('='.repeat(60))
 
   for (const [index, filePath] of filesToImport.entries()) {
@@ -273,7 +268,7 @@ async function main() {
     }
 
     try {
-      await importTSVFile(filePath, { limitRows })
+      await importTSVFile(filePath, { limitRows, chunkSize: batchSize })
     } catch (error: any) {
       console.error(`  ❌ Error: ${error.message}`)
     }

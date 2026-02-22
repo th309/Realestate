@@ -26,6 +26,7 @@ async function main() {
   const startTime = Date.now();
   const args = process.argv.slice(2);
   const useHistory = args.includes('--history');
+  const noRefresh = args.includes('--no-refresh');
 
   console.log('🏠 Realtor.com County Data Import');
   console.log('='.repeat(60));
@@ -108,7 +109,7 @@ async function main() {
 
     if (result.success) {
       // Refresh calculated metrics after successful import
-      if (result.recordsInserted > 0) {
+      if (result.recordsInserted > 0 && !noRefresh) {
         await refreshCalculatedMetrics(supabase);
       }
       console.log('✅ IMPORT COMPLETED SUCCESSFULLY');

@@ -13,7 +13,8 @@ export function convertToRedfinMetricsFormat(rows: ParsedRow[]): RedfinMetricsRe
   rows.forEach(row => {
     const record: RedfinMetricsRecord = {
       geoid: '', // Will be filled later
-      metric_date: row.periodEnd || row.periodBegin
+      metric_date: row.periodEnd || row.periodBegin,
+      property_type: row.propertyType || 'All Residential'
     }
 
     // Map metrics to redfin_metrics column names
@@ -115,8 +116,8 @@ export function groupByTable(records: RedfinMetricsRecord[]): Map<string, Redfin
 
       const year = date.getFullYear()
       const tableName = year === 2024 ? 'redfin_metrics_2024'
-                      : year === 2025 ? 'redfin_metrics_2025'
-                      : 'redfin_metrics'
+        : year === 2025 ? 'redfin_metrics_2025'
+          : 'redfin_metrics'
 
       if (!recordsByTable.has(tableName)) {
         recordsByTable.set(tableName, [])

@@ -7,9 +7,9 @@
  *   # Import all geographies
  *   npx tsx scripts/import-building-permits.ts
  *
- *   # Import specific geography
+ *   # Import specific geography (supports multiple)
  *   npx tsx scripts/import-building-permits.ts --geo=county
- *   npx tsx scripts/import-building-permits.ts --geo=state
+ *   npx tsx scripts/import-building-permits.ts --geo=county --geo=state
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -278,11 +278,11 @@ async function main() {
   const startTime = Date.now();
   const args = process.argv.slice(2);
 
-  // Parse --geo argument
-  let geoFilter: string | null = null;
+  // Parse --geo arguments (supports multiple: --geo=county --geo=state)
+  const geoFilters: string[] = [];
   for (const arg of args) {
     if (arg.startsWith('--geo=')) {
-      geoFilter = arg.split('=')[1].toLowerCase();
+      geoFilters.push(arg.split('=')[1].toLowerCase());
     }
   }
 
@@ -290,8 +290,8 @@ async function main() {
   console.log('='.repeat(60));
   console.log(`Date: ${new Date().toISOString()}`);
   console.log(`Data directory: ${DATA_DIR}`);
-  if (geoFilter) {
-    console.log(`Geography filter: ${geoFilter}`);
+  if (geoFilters.length > 0) {
+    console.log(`Geography filter: ${geoFilters.join(', ')}`);
   }
 
   // Check if data directory exists
@@ -309,7 +309,7 @@ async function main() {
   // Import each dataset
   for (const config of DATASETS) {
     // Skip if geography filter doesn't match
-    if (geoFilter && config.id !== geoFilter) {
+    if (geoFilters.length > 0 && !geoFilters.includes(config.id)) {
       continue;
     }
 

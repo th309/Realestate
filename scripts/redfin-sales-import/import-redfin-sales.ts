@@ -11,6 +11,7 @@
  * Usage:
  *   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts
  *   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=metro
+ *   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=metro --geo=county
  *   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=zip --limit=1000
  */
 
@@ -164,23 +165,23 @@ async function importDataset(
 // ---------------------------------------------------------------------------
 
 interface CliOptions {
-  geoFilter?: RedfinGeoLevel;
+  geoFilters: RedfinGeoLevel[];
   rowLimit?: number;
 }
 
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2);
-  const options: CliOptions = {};
+  const options: CliOptions = { geoFilters: [] };
+  const validLevels: RedfinGeoLevel[] = ['national', 'state', 'metro', 'county', 'city', 'zip', 'neighborhood'];
 
   for (const arg of args) {
     if (arg.startsWith('--geo=')) {
       const value = arg.split('=')[1] as RedfinGeoLevel;
-      const validLevels: RedfinGeoLevel[] = ['national', 'state', 'metro', 'county', 'city', 'zip', 'neighborhood'];
       if (!validLevels.includes(value)) {
         console.error(`Invalid --geo value: ${value}. Valid options: ${validLevels.join(', ')}`);
         process.exit(1);
       }
-      options.geoFilter = value;
+      options.geoFilters.push(value);
     } else if (arg.startsWith('--limit=')) {
       const value = parseInt(arg.split('=')[1], 10);
       if (isNaN(value) || value <= 0) {
@@ -196,7 +197,7 @@ Usage:
   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts [options]
 
 Options:
-  --geo=<level>    Import only one geography level
+  --geo=<level>    Import specific geography level(s) (supports multiple)
                    Valid: national, state, metro, county, city, zip, neighborhood
   --limit=<N>      Limit rows per dataset (for testing)
   --help, -h       Show this help message
@@ -221,8 +222,8 @@ async function main(): Promise<void> {
   loadEnv();
   const options = parseCliArgs();
 
-  if (options.geoFilter) {
-    console.log(`  Geo filter: ${options.geoFilter}`);
+  if (options.geoFilters.length > 0) {
+    console.log(`  Geo filter: ${options.geoFilters.join(', ')}`);
   }
   if (options.rowLimit) {
     console.log(`  Row limit: ${options.rowLimit}`);
@@ -240,8 +241,8 @@ async function main(): Promise<void> {
 
   // 4. Determine which datasets to import
   let datasets = REDFIN_S3_DATASETS;
-  if (options.geoFilter) {
-    datasets = datasets.filter(d => d.geoLevel === options.geoFilter);
+  if (options.geoFilters.length > 0) {
+    datasets = datasets.filter(d => options.geoFilters.includes(d.geoLevel));
   }
 
   console.log(`\n  Importing ${datasets.length} dataset(s)\n`);

@@ -225,34 +225,23 @@ export class PipelineRunsService {
       }
 
       case 'realtor': {
-        const geos = filters?.geography?.length
-          ? filters.geography
-          : ['national', 'state', 'metro', 'county', 'zip'];
-        return geos.map((g) => ({
-          script: path.join(scriptsRoot, `import-realtor-${g}.ts`),
-          args: [],
-        }));
+        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
+        return [{ script: path.join(scriptsRoot, 'import-realtor-data.ts'), args }];
       }
 
       case 'redfin': {
-        const args = filters?.geography?.length === 1
-          ? [`--geo=${filters.geography[0]}`]
-          : [];
+        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
         return [{ script: path.join(scriptsRoot, 'redfin-sales-import', 'import-redfin-sales.ts'), args }];
       }
 
       case 'census_acs': {
-        const args = filters?.geography?.length === 1
-          ? [`--geo=${filters.geography[0]}`]
-          : [];
+        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
         return [{ script: path.join(scriptsRoot, 'import-census-data.ts'), args }];
       }
 
       case 'bls':
       case 'fred': {
-        const args = filters?.geography?.length === 1
-          ? [`--geo=${filters.geography[0]}`]
-          : [];
+        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
         return [{ script: path.join(scriptsRoot, 'import-economic-data.ts'), args }];
       }
 
@@ -260,9 +249,7 @@ export class PipelineRunsService {
         return [{ script: path.join(scriptsRoot, 'import-hud-fmr.ts'), args: [] }];
 
       case 'building_permits': {
-        const args = filters?.geography?.length === 1
-          ? [`--geo=${filters.geography[0]}`]
-          : [];
+        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
         return [{ script: path.join(scriptsRoot, 'import-building-permits.ts'), args }];
       }
 

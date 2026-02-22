@@ -26,6 +26,7 @@ async function main() {
   const startTime = Date.now();
   const args = process.argv.slice(2);
   const useHistory = args.includes('--history');
+  const noRefresh = args.includes('--no-refresh');
 
   console.log('🏠 Realtor.com Metro Data Import');
   console.log('='.repeat(60));
@@ -110,7 +111,9 @@ async function main() {
       console.log('✅ IMPORT COMPLETED SUCCESSFULLY');
 
       // Refresh calculated metrics after import
-      await refreshCalculatedMetrics(supabase);
+      if (!noRefresh) {
+        await refreshCalculatedMetrics(supabase);
+      }
     } else {
       console.log('❌ IMPORT COMPLETED WITH ERRORS');
       process.exit(1);

@@ -24,7 +24,6 @@ dotenv.config({ path: '.env.local' });
 
 const DATA_DIR = join(__dirname, '../data/hud');
 const FMR_FILE = 'FY25_FMRs.xlsx';
-const BATCH_SIZE = 100;
 const FISCAL_YEAR = 2025;
 
 interface HudFmrRecord {
@@ -120,8 +119,9 @@ function parseHudFmrExcel(filePath: string): HudFmrRecord[] {
 }
 
 async function importHudFmrRecords(
-  supabase: ReturnType<typeof createClient>,
-  records: HudFmrRecord[]
+  supabase: any,
+  records: HudFmrRecord[],
+  batchSize: number = 100
 ): Promise<ImportResult> {
   const result: ImportResult = {
     processed: records.length,
@@ -129,29 +129,28 @@ async function importHudFmrRecords(
     errors: []
   };
 
-  console.log(`  Importing ${records.length} HUD FMR records in batches of ${BATCH_SIZE}...`);
+  console.log(`  Importing ${records.length} HUD FMR records in batches of ${batchSize}...`);
 
-  for (let i = 0; i < records.length; i += BATCH_SIZE) {
-    const batch = records.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('hud_fmr')
       .upsert(batch, {
         onConflict: 'year,fips_code',
         ignoreDuplicates: false
-      })
-      .select();
+      });
 
     if (error) {
-      result.errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`);
-      console.error(`  Error in batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error.message);
+      result.errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
+      console.error(`  Error in batch ${Math.floor(i / batchSize) + 1}:`, error.message);
     } else {
-      result.inserted += data?.length || 0;
+      result.inserted += batch.length;
     }
 
     // Progress indicator
-    if ((i + BATCH_SIZE) % 500 === 0 || i + BATCH_SIZE >= records.length) {
-      console.log(`    Processed ${Math.min(i + BATCH_SIZE, records.length)}/${records.length} records...`);
+    if ((i + batchSize) % 500 === 0 || i + batchSize >= records.length) {
+      console.log(`    Processed ${Math.min(i + batchSize, records.length)}/${records.length} records...`);
     }
   }
 
@@ -159,8 +158,18 @@ async function importHudFmrRecords(
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  let batchSize = 100;
+
+  const batchArg = args.find(a => a.startsWith('--batch='));
+  if (batchArg) {
+    const val = parseInt(batchArg.split('=')[1]);
+    if (!isNaN(val)) batchSize = val;
+  }
+
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('         IMPORT HUD FAIR MARKET RENT DATA');
+  console.log(`         Batch size: ${batchSize}`);
   console.log('═══════════════════════════════════════════════════════════════\n');
 
   // Create Supabase client
@@ -197,7 +206,7 @@ async function main() {
 
     // Import records
     console.log('\n📊 Importing HUD FMR data...');
-    const result = await importHudFmrRecords(supabase, records);
+    const result = await importHudFmrRecords(supabase, records, batchSize);
 
     // Complete ingestion log
     await logger.complete({
