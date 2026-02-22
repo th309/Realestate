@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
     const { data: adminRow } = await supabase
       .from('admin_users')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (!adminRow || !['admin', 'super_admin'].includes(adminRow.role)) {
