@@ -11,6 +11,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  */
 
 const PROTECTED_PREFIXES = ['/account', '/dashboard', '/alerts', '/reports', '/admin'];
+const PUBLIC_PATHS = ['/reports/sample', '/reports/shared'];
 const AUTH_ROUTES = ['/auth/sign-in', '/auth/sign-up', '/auth/forgot-password'];
 
 export async function middleware(request: NextRequest) {
@@ -57,7 +58,11 @@ export async function middleware(request: NextRequest) {
   if (bypassParam && !bypassCookie) {
     supabaseResponse.cookies.set('bypass_auth', 'true', { path: '/', maxAge: 3600 });
   }
-  const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+  const isProtectedPath = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isPublicPath = PUBLIC_PATHS.some((publicPath) => pathname.startsWith(publicPath));
+  const isProtected = isProtectedPath && !isPublicPath;
+
   if (isProtected && !user && !bypassAuth) {
     const signInUrl = new URL('/auth/sign-in', request.url);
     signInUrl.searchParams.set('redirect', pathname);

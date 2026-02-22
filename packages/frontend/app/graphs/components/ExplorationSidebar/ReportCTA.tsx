@@ -14,8 +14,8 @@ interface ReportCTAProps {
  * ReportCTA - Call to action to generate a full comparison report
  */
 export function ReportCTA({ primaryMarket, comparisonMarket }: ReportCTAProps) {
-  // Build report wizard URL with pre-filled markets
-  const reportUrl = `/reports/new?template=comparison&primary=${encodeURIComponent(primaryMarket.id)}&compare=${encodeURIComponent(comparisonMarket.id)}`;
+  // Build report wizard URL with pre-filled markets (or route to sample if anonymous/unpaid)
+  const reportUrl = `/reports/sample`;
 
   return (
     <Link

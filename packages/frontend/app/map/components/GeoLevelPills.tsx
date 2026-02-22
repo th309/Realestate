@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Lock } from 'lucide-react';
 import type { GeoLevel } from '../types';
 import { US_STATES } from '../types';
@@ -124,8 +125,8 @@ export function GeoLevelPills({
       )}
 
       {/* Paywall Modal */}
-      {showPaywall && (
-        <div className="fixed inset-0 bg-on-surface/40 z-50 flex items-center justify-center p-4">
+      {showPaywall && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-on-surface/40 z-[9999] flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
             <div className="p-1">
               <PaywallCard
@@ -144,7 +145,8 @@ export function GeoLevelPills({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

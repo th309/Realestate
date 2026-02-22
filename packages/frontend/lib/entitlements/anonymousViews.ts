@@ -29,11 +29,11 @@ export function recordAnonymousMarketView(marketId: string): number {
   return views.length;
 }
 
-/** Whether the signup prompt should be shown (>= 3 unique market views, not dismissed) */
+/** Whether the signup prompt should be shown (>= 5 unique market views, not dismissed) */
 export function shouldShowSignupPrompt(): boolean {
   if (typeof window === 'undefined') return false;
   if (sessionStorage.getItem(SIGNUP_PROMPT_DISMISSED_KEY)) return false;
-  return getAnonymousMarketViews().length >= 3;
+  return getAnonymousMarketViews().length >= 5;
 }
 
 /** Dismiss the signup prompt for the remainder of this session */
