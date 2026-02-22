@@ -43,14 +43,34 @@ export function getScoreLabel(score: number): string {
 // Confidence helpers
 // ---------------------------------------------------------------------------
 
+/** Map legacy confidence strings (e.g. 'high') to letter grades. */
+const CONFIDENCE_ALIAS: Record<string, 'A' | 'B' | 'C' | 'F'> = {
+  high: 'A',
+  good: 'B',
+  medium: 'B',
+  fair: 'C',
+  low: 'C',
+  poor: 'F',
+  a: 'A',
+  b: 'B',
+  c: 'C',
+  f: 'F',
+};
+
+const VALID_CONFIDENCE = new Set<string>(['A', 'B', 'C', 'F']);
+
 /** Determine confidence level from report data or component coverage. */
 export function deriveConfidence(
-  reportConfidence: 'a' | 'b' | 'c' | 'f' | null,
+  reportConfidence: string | null,
   components?: ScoreComponentBreakdown[],
 ): 'A' | 'B' | 'C' | 'F' | null {
   // Prefer the explicit report-level confidence
   if (reportConfidence) {
-    return reportConfidence.toUpperCase() as 'A' | 'B' | 'C' | 'F';
+    const mapped = CONFIDENCE_ALIAS[reportConfidence.toLowerCase()];
+    if (mapped) return mapped;
+    const upper = reportConfidence.toUpperCase();
+    if (VALID_CONFIDENCE.has(upper)) return upper as 'A' | 'B' | 'C' | 'F';
+    return null; // Unrecognized value — skip rather than crash
   }
 
   // Fall back to deriving from component data coverage

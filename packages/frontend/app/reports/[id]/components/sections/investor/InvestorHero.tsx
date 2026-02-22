@@ -42,6 +42,8 @@ function getConfidenceColors(level: 'A' | 'B' | 'C' | 'F'): { bg: string; text: 
       return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
     case 'F':
       return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
+    default:
+      return { bg: 'var(--report-warning-bg)', text: 'var(--report-warning)' };
   }
 }
 
