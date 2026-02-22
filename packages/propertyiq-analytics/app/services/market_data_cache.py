@@ -158,6 +158,13 @@ class MarketDataCache:
         try:
             df = self._read_parquet(table_name)
             if df is not None and len(df) > 0:
+                # Trim stale Parquet files to current retention on load
+                if table_name in TIME_SERIES_TABLES:
+                    before = len(df)
+                    df = self._trim_to_retention(df, _get_retention_months(table_name))
+                    if len(df) < before:
+                        logger.info(f"MarketDataCache: trimmed {table_name} from {before} to {len(df)} rows")
+                        self._write_parquet_atomic(table_name, df)
                 self._cache[table_name] = df
                 self._loaded_at[table_name] = datetime.utcnow().isoformat()
                 logger.info(f"MarketDataCache: loaded {table_name} from Parquet ({len(df)} rows)")
