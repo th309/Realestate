@@ -61,6 +61,14 @@ export {
   type MetricAccessResult,
 } from './useMetricAccess';
 
+// Data freshness / "as of" dates
+export {
+  useDataFreshness,
+  useMetricFreshness,
+  type UseDataFreshnessResult,
+  type UseMetricFreshnessResult,
+} from './useDataFreshness';
+
 // Top markets (rankings)
 export {
   useTopMarkets,

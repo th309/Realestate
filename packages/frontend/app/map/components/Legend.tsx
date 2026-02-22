@@ -8,8 +8,8 @@ import {
   calculateValueRange,
   formatValue,
 } from '../utils';
-import { getMetricDataDate, formatDataDateForDisplay } from '../config';
 import { MetricTitle } from '@/app/components/MetricTitle';
+import { useMetricFreshness } from '@/lib/data/hooks';
 
 interface LegendProps {
   selectedMetric: string;
@@ -34,8 +34,7 @@ export function Legend({
   const minLabel = formatValue(min, metricFormat, 'min', selectedMetric);
   const maxLabel = formatValue(max, metricFormat, 'max', selectedMetric) + (maxLabelSuffix ?? '');
 
-  // Get "as of" date from central config
-  const dataDate = formatDataDateForDisplay(getMetricDataDate(selectedMetric));
+  const { formattedDate: dataDate } = useMetricFreshness(selectedMetric, geoLevel);
 
   // Check if single value (e.g., national level with only 1 data point)
   const isSingleValue = min === max || Math.abs(max - min) < 0.001;
@@ -45,7 +44,7 @@ export function Legend({
     const singleValueLabel = formatValue(min, metricFormat, 'min', selectedMetric);
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-2">
           <div className="w-6 md:w-8 h-4 md:h-5 rounded" style={{ backgroundColor: COLOR_SCALE[3] }} />
           <span className="text-xs md:text-sm text-on-surface-variant">{singleValueLabel}</span>
@@ -59,7 +58,7 @@ export function Legend({
   if (metricFormat === 'percent') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -78,7 +77,7 @@ export function Legend({
   if (metricFormat === 'percent_abs') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -97,7 +96,7 @@ export function Legend({
   if (metricFormat === 'index') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -116,7 +115,7 @@ export function Legend({
   if (metricFormat === 'number') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -135,7 +134,7 @@ export function Legend({
   if (metricFormat === 'days') {
     return (
       <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
             <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -154,7 +153,7 @@ export function Legend({
 
   return (
     <div className="absolute bottom-16 left-3 md:bottom-20 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} /></div>
+      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
       <div className="flex items-center gap-0.5 md:gap-1">
         {COLOR_SCALE.map((color, i) => (
           <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
@@ -176,7 +175,9 @@ function NoDataIndicator({ dataDate }: { dataDate: string }) {
         <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: NO_DATA_COLOR }} />
         <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
       </div>
-      <div className="text-[9px] md:text-[10px] text-outline mt-1.5">as of {dataDate}</div>
+      <div className="text-[9px] md:text-[10px] text-outline mt-1.5">
+        {dataDate ? `as of ${dataDate}` : 'as of —'}
+      </div>
     </div>
   );
 }

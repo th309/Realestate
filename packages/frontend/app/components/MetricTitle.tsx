@@ -4,12 +4,13 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
+  type GeoLevel,
   getMetricDefinition,
   getDataSourceAnchor,
   getMetricTitle,
-  getMetricDataDate,
   formatDataDateForDisplay,
 } from '@/lib/data';
+import { useMetricFreshness } from '@/lib/data/hooks';
 
 interface ResolvedMetricContext {
   source?: string | null;
@@ -25,6 +26,7 @@ interface MetricTitleProps {
   className?: string;
   as?: 'span' | 'h3' | 'h4' | 'div';
   showTooltip?: boolean;
+  geoLevel?: GeoLevel;
   resolvedMetric?: ResolvedMetricContext;
 }
 
@@ -47,6 +49,7 @@ export function MetricTitle({
   className = '',
   as: Tag = 'span',
   showTooltip = true,
+  geoLevel,
   resolvedMetric,
 }: MetricTitleProps) {
   const metricDef = getMetricDefinition(metricId);
@@ -135,9 +138,10 @@ export function MetricTitle({
 
   const hasTooltip = showTooltip && !!metricDef;
   const dataSourceAnchor = metricDef ? getDataSourceAnchor(metricId) : undefined;
-  const dataDate = formatDataDateForDisplay(getMetricDataDate(metricId));
+  const { formattedDate: freshnessDate } = useMetricFreshness(metricId, geoLevel);
   const resolvedSource = resolvedMetric?.source ? toDisplaySource(resolvedMetric.source) : null;
   const resolvedDate = formatDataDateForDisplay(resolvedMetric?.date ?? '');
+  const dataDate = freshnessDate || resolvedDate;
 
   return (
     <>
@@ -194,7 +198,7 @@ export function MetricTitle({
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-on-surface-variant border-t border-outline-variant pt-2 mt-2">
             <span><span className="font-medium">Primary source:</span> {metricDef.dataSource}</span>
             <span><span className="font-medium">Updates:</span> {metricDef.updateFrequency}</span>
-            <span><span className="font-medium">As of:</span> {dataDate}</span>
+            <span><span className="font-medium">As of:</span> {dataDate || '\u2014'}</span>
             {resolvedSource && (
               <span>
                 <span className="font-medium">Current source:</span>{' '}

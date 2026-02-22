@@ -11,6 +11,7 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
+import { DataFreshnessService } from './data-freshness.service';
 import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
@@ -21,12 +22,14 @@ import { SupabaseModule } from '../supabase/supabase.module';
     DataSourcesHealthService,
     PipelineRunsService,
     DataAlertsService,
+    DataFreshnessService,
   ],
   exports: [
     DataCardsHealthService,
     DataSourcesHealthService,
     PipelineRunsService,
     DataAlertsService,
+    DataFreshnessService,
   ],
 })
 export class HealthModule {}

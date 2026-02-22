@@ -8,10 +8,9 @@ import {
   VIEW_MODE_COLORS,
   getBenchmarkGradient,
   getComparisonColor,
-  DATA_DATES,
-  formatDataDateForDisplay,
 } from '../config';
 import { fetchBenchmarks as fetchBenchmarksAPI, type BenchmarkData } from '@/lib/data';
+import { useMetricFreshness } from '@/lib/data/hooks';
 
 interface BenchmarkPanelProps {
   selectedGeography: SelectedGeography;
@@ -52,6 +51,7 @@ export function BenchmarkPanel({
   geoLevel,
   onClose
 }: BenchmarkPanelProps) {
+  const { formattedDate: benchmarkDataDate } = useMetricFreshness('listing_price', geoLevel);
   const [animateIn, setAnimateIn] = useState(false);
   const [activeTab, setActiveTab] = useState<'homebuyer' | 'investor'>('homebuyer');
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
@@ -297,7 +297,7 @@ export function BenchmarkPanel({
 
               {/* Footer with source and data date */}
               <div className="mt-3 pt-2 border-t border-outline-variant text-[10px] text-on-surface-variant">
-                Source: Realtor.com · as of {formatDataDateForDisplay(DATA_DATES.realtor)}
+                Source: Realtor.com{benchmarkDataDate ? ` · as of ${benchmarkDataDate}` : ''}
               </div>
             </>
           ) : (

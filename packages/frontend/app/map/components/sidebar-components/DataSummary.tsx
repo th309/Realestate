@@ -1,7 +1,7 @@
 'use client';
 
 import type { GeoLevel } from '../../types';
-import { getMetricDataDate, formatDataDateForDisplay } from '../../config';
+import { useMetricFreshness } from '@/lib/data/hooks';
 
 interface DataSummaryProps {
   recordCount: number;
@@ -17,14 +17,13 @@ export function DataSummary({ recordCount, geoLevel, selectedState, selectedMetr
     : geoLevel === 'zip' ? 'ZIP codes'
     : 'areas';
 
-  // Get "as of" date from central config
-  const dataDate = formatDataDateForDisplay(getMetricDataDate(selectedMetric));
+  const { formattedDate: dataDate } = useMetricFreshness(selectedMetric, geoLevel);
 
   return (
     <div className="mb-4 p-3 bg-surface-container-low rounded-lg">
       <div className="text-sm text-on-surface-variant">
         Showing <span className="font-medium text-on-surface">{recordCount.toLocaleString()}</span> {areaLabel}
-        <span className="text-outline ml-1">· as of {dataDate}</span>
+        {dataDate && <span className="text-outline ml-1">· as of {dataDate}</span>}
       </div>
       {geoLevel === 'county' && (
         <div className="mt-2 pt-2 border-t border-outline-variant text-xs text-on-surface-variant">

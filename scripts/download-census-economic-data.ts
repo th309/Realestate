@@ -36,10 +36,10 @@ if (!existsSync(OUTPUT_DIR)) {
   mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-// Census ACS 5-Year data available years (2009-2023)
-// Note: 2024 ACS data typically releases December 2025
-const CENSUS_YEARS_FULL = [2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010];
-const CENSUS_YEARS_QUICK = [2023, 2022]; // For YoY calculation
+// Census ACS 5-Year data available years (2009-2024)
+// 2020-2024 ACS 5-year was released January 29, 2026.
+const CENSUS_YEARS_FULL = [2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010];
+const CENSUS_YEARS_QUICK = [2024, 2023, 2022]; // Include latest+prior for YoY derivation
 
 function saveCSV(filename: string, data: any[], headers?: string[]): void {
   if (data.length === 0) {

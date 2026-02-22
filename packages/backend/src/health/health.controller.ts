@@ -20,6 +20,7 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
+import { DataFreshnessService } from './data-freshness.service';
 import { TriggerPipelineDto } from './dto/trigger-pipeline.dto';
 
 @ApiTags('health')
@@ -31,6 +32,7 @@ export class HealthController {
     private readonly dataSourcesHealth: DataSourcesHealthService,
     private readonly pipelineRuns: PipelineRunsService,
     private readonly dataAlerts: DataAlertsService,
+    private readonly dataFreshness: DataFreshnessService,
   ) {}
 
   @Get()
@@ -69,6 +71,13 @@ export class HealthController {
   @ApiResponse({ status: 200, description: 'Health check results for all data sources' })
   async checkDataSources() {
     return this.dataSourcesHealth.checkAllSources();
+  }
+
+  @Get('data-freshness')
+  @ApiOperation({ summary: 'Get canonical data freshness dates for UI display' })
+  @ApiResponse({ status: 200, description: 'Freshness dates by source, table, and metric family' })
+  async getDataFreshness() {
+    return this.dataFreshness.getFreshness();
   }
 
   @Get('pipeline-runs')

@@ -2,7 +2,8 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getMetricDefinition, METRIC_DEFINITIONS } from '@/app/map/data/metricDefinitions';
-import { METRICS, DATA_DATES, getMetricDataDate, formatDataDateForDisplay } from '@/lib/data';
+import { METRICS } from '@/lib/data';
+import { MetricFreshnessDate } from '@/app/components/MetricFreshnessDate';
 
 interface MetricPageProps {
   params: Promise<{ metricId: string }>;
@@ -79,7 +80,6 @@ export default async function MetricDetailPage({ params }: MetricPageProps) {
   }
 
   const supportedGeos = getSupportedGeos(metricId);
-  const dataAsOf = formatDataDateForDisplay(getMetricDataDate(metricId));
   const sourceUrl = metricDef.sourceUrl || getDefaultSourceUrl(metricDef.dataSource);
   const relatedMetrics = metricDef.relatedMetrics
     ?.map(id => getMetricDefinition(id))
@@ -120,7 +120,7 @@ export default async function MetricDetailPage({ params }: MetricPageProps) {
               Updates: {metricDef.updateFrequency}
             </span>
             <span className="inline-flex items-center px-2 py-1 bg-surface-container rounded-full">
-              Data as of: {dataAsOf}
+              Data as of: <MetricFreshnessDate metricId={metricId} />
             </span>
           </div>
         </header>
@@ -191,7 +191,7 @@ export default async function MetricDetailPage({ params }: MetricPageProps) {
               </p>
               <p className="text-on-surface-variant">
                 <span className="font-medium text-on-surface">Data As Of:</span>{' '}
-                {dataAsOf}
+                <MetricFreshnessDate metricId={metricId} />
               </p>
             </div>
           </section>

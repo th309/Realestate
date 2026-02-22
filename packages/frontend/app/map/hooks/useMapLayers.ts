@@ -13,7 +13,7 @@ import {
   formatTooltipValue,
   type MetricFormat,
 } from '../utils';
-import { getMetricDataDate, formatDataDateForDisplay } from '../config/metrics';
+import { useMetricFreshness } from '@/lib/data/hooks';
 import { normalizeZipKey } from '@/lib/format/zip';
 import { getGeoJsonApiUrl } from '@/lib/data';
 
@@ -89,6 +89,7 @@ export function useMapLayers({
   onFeatureClick,
   onFeatureContextMenu
 }: UseMapLayersProps) {
+  const { formattedDate: selectedMetricFreshnessDate } = useMetricFreshness(selectedMetric, geoLevel);
   // Store current geoLevel in ref for click handler
   const geoLevelRef = useRef(geoLevel);
   const updateIdRef = useRef(0);
@@ -164,11 +165,20 @@ export function useMapLayers({
       addMapLayers(map.current!, geoLevel, metricFormat, minVal, maxVal, labelPointsGeojson, highlightedFeature);
 
       // Setup hover and click interactions
-      setupInteractions(map.current!, popup, metricFormat, forecastHorizon, geoLevelRef, selectedMetric, onFeatureClick, onFeatureContextMenu);
+      setupInteractions(
+        map.current!,
+        popup,
+        metricFormat,
+        forecastHorizon,
+        geoLevelRef,
+        selectedMetricFreshnessDate,
+        onFeatureClick,
+        onFeatureContextMenu,
+      );
     } catch (err) {
       console.error('Error loading GeoJSON:', err);
     }
-  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, forecastHorizon, map, popup, highlightedFeature, onFeatureClick, onFeatureContextMenu]);
+  }, [geoLevel, mapData, mapLoaded, selectedState, selectedMetric, selectedMetricFreshnessDate, forecastHorizon, map, popup, highlightedFeature, onFeatureClick, onFeatureContextMenu]);
 
   // Effect to trigger logic when core dependencies change
   useEffect(() => {
@@ -604,7 +614,7 @@ function setupInteractions(
   metricFormat: MetricFormat,
   forecastHorizon: ForecastHorizon,
   geoLevelRef: React.MutableRefObject<GeoLevel>,
-  selectedMetric: string,
+  selectedMetricFreshnessDate: string,
   onFeatureClick?: (geography: SelectedGeography | null) => void,
   onFeatureContextMenu?: (info: { geography: SelectedGeography; x: number; y: number }) => void
 ): void {
@@ -631,9 +641,7 @@ function setupInteractions(
       // Use centralized formatting functions
       const { displayValue, valueColor } = formatTooltipValue(value, metricFormat);
 
-      // Get "as of" date from central config (consistent across all maps/geographies)
-      const configDate = getMetricDataDate(selectedMetric);
-      const asOfText = `as of ${formatDataDateForDisplay(configDate)}`;
+      const asOfText = selectedMetricFreshnessDate ? `as of ${selectedMetricFreshnessDate}` : '';
 
       // M3-compliant tooltip styling using CSS custom properties
       popup.current
@@ -648,7 +656,7 @@ function setupInteractions(
           ">
             <div style="font-weight: 500; font-size: 14px; color: var(--md-on-surface, #1d1b20); line-height: 20px;">${name}</div>
             <div style="font-size: 22px; font-weight: 600; color: ${valueColor}; margin: 4px 0;">${displayValue}</div>
-            <div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>
+            ${asOfText ? `<div style="font-size: 11px; color: var(--md-outline, #79747e); margin-top: 4px;">${asOfText}</div>` : ''}
           </div>
         `)
         .addTo(map);

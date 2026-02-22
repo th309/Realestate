@@ -105,6 +105,9 @@ export {
 // GeoJSON
 export { getGeoJsonApiUrl } from './geojson';
 
+// Data freshness (canonical "as of" dates for UI)
+export { fetchDataFreshness, type DataFreshnessResponse } from './freshness';
+
 // Market search lists & geography search
 export {
   fetchGeographySearch,
