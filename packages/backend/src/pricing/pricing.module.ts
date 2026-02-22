@@ -8,9 +8,10 @@
 import { Module } from '@nestjs/common';
 import { PricingController } from './pricing.controller';
 import { FeaturesModule } from '../admin/features/features.module';
+import { TrialModule } from '../admin/trial/trial.module';
 
 @Module({
-  imports: [FeaturesModule],
+  imports: [FeaturesModule, TrialModule],
   controllers: [PricingController],
 })
 export class PricingModule {}

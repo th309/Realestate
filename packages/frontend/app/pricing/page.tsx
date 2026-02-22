@@ -28,6 +28,7 @@ function PricingContent() {
   const searchParams = useSearchParams();
 
   const [plans, setPlans] = useState<PricingTier[]>([]);
+  const [trialInfo, setTrialInfo] = useState<{ is_enabled: boolean; duration_days: number; trial_tier: string } | null>(null);
   const [plansLoading, setPlansLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('month');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
@@ -59,7 +60,10 @@ function PricingContent() {
   // Fetch plan data from DB
   useEffect(() => {
     fetchPricingSummary()
-      .then(data => setPlans(data.tiers))
+      .then(data => {
+        setPlans(data.tiers);
+        if (data.trial) setTrialInfo(data.trial);
+      })
       .catch(err => {
         console.warn('Pricing fetch failed, using fallback:', err.message);
         setPlans([
@@ -293,10 +297,12 @@ function PricingContent() {
         </div>
 
         {/* Trial note */}
-        <p className="mt-5 text-center text-xs text-on-surface-variant">
-          14-day free trial on all paid plans. No credit card required.
-          {' '}<a href="/about" className="text-primary hover:underline">Questions?</a>
-        </p>
+        {trialInfo?.is_enabled && (
+          <p className="mt-5 text-center text-xs text-on-surface-variant">
+            {trialInfo.duration_days}-day free trial on all paid plans. No credit card required.
+            {' '}<a href="/about" className="text-primary hover:underline">Questions?</a>
+          </p>
+        )}
 
         {/* Scroll hint */}
         <div className="mt-8 flex flex-col items-center gap-1 text-on-surface-variant/50">
@@ -746,7 +752,7 @@ function PricingContent() {
               Less than a dollar a day for an institutional-grade edge.
             </p>
             <p className="text-sm text-on-surface-variant mb-5">
-              14-day free trial. Cancel anytime. No credit card to start.
+              {trialInfo?.is_enabled ? `${trialInfo.duration_days}-day free trial. ` : ''}Cancel anytime. No credit card to start.
             </p>
             <button
               onClick={() => handleUpgrade('pro')}

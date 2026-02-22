@@ -91,6 +91,7 @@ export class StripeService {
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
+    trialPeriodDays?: number;
   }): Promise<string> {
     const stripe = this.getStripeClient();
     const session = await stripe.checkout.sessions.create({
@@ -101,6 +102,7 @@ export class StripeService {
       cancel_url: params.cancelUrl,
       metadata: params.metadata,
       allow_promotion_codes: true,
+      ...(params.trialPeriodDays ? { subscription_data: { trial_period_days: params.trialPeriodDays } } : {}),
     });
 
     return session.url!;

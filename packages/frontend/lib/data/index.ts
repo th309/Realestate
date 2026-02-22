@@ -214,6 +214,8 @@ export {
   // Pricing
   fetchPricingSummary,
   type PricingTier,
+  type TrialInfo,
+  type PricingSummary,
 
   // Alerts
   fetchAlerts,

@@ -138,7 +138,7 @@ export {
 } from './scoring';
 
 // Pricing (admin features)
-export { fetchPricingSummary, type PricingTier } from './pricing';
+export { fetchPricingSummary, type PricingTier, type TrialInfo, type PricingSummary } from './pricing';
 
 // Email preferences
 export {

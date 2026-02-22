@@ -23,7 +23,18 @@ export interface PricingTier {
   features: PricingFeature[];
 }
 
-export async function fetchPricingSummary(): Promise<{ tiers: PricingTier[] }> {
+export interface TrialInfo {
+  is_enabled: boolean;
+  duration_days: number;
+  trial_tier: string;
+}
+
+export interface PricingSummary {
+  tiers: PricingTier[];
+  trial: TrialInfo | null;
+}
+
+export async function fetchPricingSummary(): Promise<PricingSummary> {
   const response = await fetchAPIRaw('/api/pricing/tiers');
   const result = await response.json();
   if (!result.success) throw new Error(result.error || 'Failed to fetch pricing summary');

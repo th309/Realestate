@@ -61,6 +61,17 @@ export class BillingService {
       throw new BadRequestException(`No Stripe price configured for tier: ${tier} (${interval})`);
     }
 
+    // Check if trial is enabled
+    let trialDays: number | undefined;
+    const { data: trialConfig } = await client
+      .from('trial_config')
+      .select('is_enabled, duration_days')
+      .single();
+
+    if (trialConfig?.is_enabled && trialConfig.duration_days > 0) {
+      trialDays = trialConfig.duration_days;
+    }
+
     // Build success/cancel URLs
     const returnParam = returnContext ? `&returnContext=${encodeURIComponent(returnContext)}` : '';
     const successUrl = `${this.frontendUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
@@ -72,6 +83,7 @@ export class BillingService {
       successUrl,
       cancelUrl,
       metadata: { user_id: userId, tier, interval },
+      trialPeriodDays: trialDays,
     });
   }
 
