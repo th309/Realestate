@@ -64,6 +64,11 @@ export class SourceFetcherService {
       return this.fetchCalculatedMetric(column, geoLevel, geoId);
     }
 
+    // Redfin uses wide-format tables with property_type filter and period_end date
+    if (source === 'redfin') {
+      return this.fetchRedfinMetric(column, geoLevel, geoId);
+    }
+
     // Standard wide-format tables (realtor, census, economic, permits)
     return this.fetchWideTableMetric(source, column, geoLevel, geoId);
   }
@@ -217,6 +222,42 @@ export class SourceFetcherService {
     };
   }
 
+  /**
+   * Fetch from Redfin wide-format tables (redfin_*).
+   * These have one column per metric, use period_end as date column,
+   * and require filtering by property_type = 'All Residential'.
+   */
+  private async fetchRedfinMetric(
+    column: string,
+    geoLevel: GeoLevel,
+    geoId: string,
+  ): Promise<FetchedValue | null> {
+    const route = this.getRedfinRoute(geoLevel);
+    if (!route) return null;
+
+    const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'redfin');
+
+    const { data, error } = await this.supabase
+      .from(route.table)
+      .select(`${column}, ${route.dateColumn}`)
+      .eq(route.idColumn, normalizedId)
+      .eq('property_type', 'All Residential')
+      .order(route.dateColumn, { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) return null;
+    const row = data as Record<string, any>;
+    const rawValue = row[column];
+
+    if (rawValue == null) return null;
+
+    return {
+      value: Number(rawValue),
+      date: row[route.dateColumn] ? String(row[route.dateColumn]) : null,
+    };
+  }
+
   // ==========================================================================
   // Table Routing
   // ==========================================================================
@@ -294,6 +335,23 @@ export class SourceFetcherService {
     }
   }
 
+  private getRedfinRoute(geoLevel: GeoLevel): TableRoute | null {
+    switch (geoLevel) {
+      case 'national':
+        return { table: 'redfin_national', idColumn: 'region_name', dateColumn: 'period_end' };
+      case 'state':
+        return { table: 'redfin_state', idColumn: 'state_code', dateColumn: 'period_end' };
+      case 'metro':
+        return { table: 'redfin_metro', idColumn: 'cbsa_code', dateColumn: 'period_end' };
+      case 'county':
+        return { table: 'redfin_county', idColumn: 'fips_code', dateColumn: 'period_end' };
+      case 'zip':
+        return { table: 'redfin_zip', idColumn: 'zip_code', dateColumn: 'period_end' };
+      default:
+        return null;
+    }
+  }
+
   private getPermitsRoute(geoLevel: GeoLevel): TableRoute | null {
     switch (geoLevel) {
       case 'county':
@@ -327,7 +385,7 @@ export class SourceFetcherService {
         if (source === 'calculated') {
           return normalizeStateToCode(geoId);
         }
-        // Realtor uses state_id (2-letter), Zillow uses state_code (2-letter)
+        // Realtor uses state_id (2-letter), Zillow/Redfin use state_code (2-letter)
         return normalizeStateToCode(geoId);
       default:
         return geoId;

@@ -32,8 +32,9 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'home_value',
     sources: [
       { source: 'zillow', column: 'zhvi' },
-      { source: 'census', column: 'median_home_value' },
+      { source: 'redfin', column: 'median_sale_price' },
       { source: 'realtor', column: 'median_listing_price' },
+      { source: 'census', column: 'median_home_value' },
     ],
     supportsGeoInheritance: false,
   },
@@ -42,6 +43,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'listing_price',
     sources: [
       { source: 'realtor', column: 'median_listing_price' },
+      { source: 'redfin', column: 'median_list_price' },
     ],
     supportsGeoInheritance: false,
   },
@@ -82,6 +84,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'price_per_sqft',
     sources: [
       { source: 'realtor', column: 'median_listing_price_per_square_foot' },
+      { source: 'redfin', column: 'median_ppsf' },
     ],
     supportsGeoInheritance: false,
   },
@@ -114,6 +117,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'home_sales',
     sources: [
       { source: 'zillow', column: 'sales_count' },
+      { source: 'redfin', column: 'homes_sold' },
       { source: 'realtor', column: 'pending_listing_count' },
     ],
     supportsGeoInheritance: false,
@@ -131,6 +135,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'sale_to_list',
     sources: [
       { source: 'zillow', column: 'sale_to_list', transform: toPercent },
+      { source: 'redfin', column: 'avg_sale_to_list' },
     ],
     supportsGeoInheritance: false,
   },
@@ -177,6 +182,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'for_sale_inventory',
     sources: [
       { source: 'realtor', column: 'active_listing_count' },
+      { source: 'redfin', column: 'inventory' },
     ],
     supportsGeoInheritance: false,
   },
@@ -193,6 +199,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'days_on_market',
     sources: [
       { source: 'realtor', column: 'median_days_on_market' },
+      { source: 'redfin', column: 'median_dom' },
     ],
     supportsGeoInheritance: false,
   },
@@ -201,6 +208,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'new_listings',
     sources: [
       { source: 'realtor', column: 'new_listing_count' },
+      { source: 'redfin', column: 'new_listings' },
     ],
     supportsGeoInheritance: false,
   },
@@ -217,6 +225,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'pending_listings',
     sources: [
       { source: 'realtor', column: 'pending_listing_count' },
+      { source: 'redfin', column: 'pending_sales' },
     ],
     supportsGeoInheritance: false,
   },
@@ -233,6 +242,7 @@ export const FALLBACK_REGISTRY: Record<string, MetricFallbackChain> = {
     metricId: 'price_cut_pct',
     sources: [
       { source: 'realtor', column: 'price_reduced_share', transform: toPercent },
+      { source: 'redfin', column: 'price_drops' },
     ],
     supportsGeoInheritance: false,
   },

@@ -13,6 +13,7 @@ export type GeoLevel = 'zip' | 'county' | 'metro' | 'state' | 'national';
 export type DataSource =
   | 'zillow'
   | 'realtor'
+  | 'redfin'
   | 'census'
   | 'economic'
   | 'calculated'

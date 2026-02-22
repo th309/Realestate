@@ -87,6 +87,8 @@ function pickSourceFallback(metricId: string, data: DataFreshnessResponse): stri
       return data.sourceDates.propertyiq ?? data.tableDates.propertyiq_scores ?? null;
     case 'calculated':
       return data.sourceDates.calculated ?? data.tableDates.calculated_metrics ?? null;
+    case 'redfin':
+      return data.sourceDates.redfin ?? data.tableDates.redfin_metro ?? null;
     default:
       return data.sourceDates[config.dataSource] ?? null;
   }
@@ -143,6 +145,10 @@ export function resolveMetricFreshnessDate(
     return pickTableDateForMetric(metricId, data, 'realtor', geoLevel) ?? data.sourceDates.realtor ?? null;
   }
 
+  if (endpoint.startsWith('/api/redfin/')) {
+    return pickTableDateForMetric(metricId, data, 'redfin', geoLevel) ?? data.sourceDates.redfin ?? null;
+  }
+
   if (endpoint.startsWith('/api/scores/')) {
     return data.tableDates.propertyiq_scores ?? data.sourceDates.propertyiq ?? null;
   }
@@ -150,6 +156,7 @@ export function resolveMetricFreshnessDate(
   if (endpoint.startsWith('/api/metrics/')) {
     if (config.dataSource === 'calculated') return data.tableDates.calculated_metrics ?? data.sourceDates.calculated ?? null;
     if (config.dataSource === 'realtor') return data.sourceDates.realtor ?? null;
+    if (config.dataSource === 'redfin') return data.sourceDates.redfin ?? data.tableDates.redfin_metro ?? null;
     if (config.dataSource === 'zillow') return data.sourceDates.zillow ?? null;
     if (config.dataSource === 'census') return data.sourceDates.census ?? null;
     if (config.dataSource === 'fred') return data.sourceDates.economic ?? null;

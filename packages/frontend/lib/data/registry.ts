@@ -942,6 +942,7 @@ export function metricHasTimeSeries(metricId: string): boolean {
   switch (config.dataSource) {
     case 'zillow':
     case 'realtor':
+    case 'redfin':
     case 'census':
     case 'fred':
     case 'calculated':
