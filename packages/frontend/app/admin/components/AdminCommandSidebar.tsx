@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Shield,
   MessageSquare,
+  BrainCircuit,
   ArrowLeft,
   Menu,
   X,
@@ -37,6 +38,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Scores', href: '/admin/propertyiq-scores', icon: Target },
       { label: 'ML Ops', href: '/admin/ml-workflow', icon: Cpu },
       { label: 'Validation', href: '/admin/score-validation', icon: CheckCircle2 },
+      { label: 'Intelligence', href: '/admin/intelligence', icon: BrainCircuit },
     ],
   },
   {

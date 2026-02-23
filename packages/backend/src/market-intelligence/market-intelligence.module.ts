@@ -20,6 +20,7 @@ import { NewsIngestionService } from './news-ingestion.service';
 import { GeoTaggerService } from './geo-tagger.service';
 import { RankingsCacheService } from './rankings-cache.service';
 import { MarketIntelligenceCronService } from './market-intelligence-cron.service';
+import { MarketIntelligenceController } from './market-intelligence.controller';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MarketIntelligenceCronService } from './market-intelligence-cron.servic
     MetricResolutionModule,
     AppConfigModule,
   ],
+  controllers: [MarketIntelligenceController],
   providers: [
     BriefingGeneratorService,
     NewsIngestionService,
