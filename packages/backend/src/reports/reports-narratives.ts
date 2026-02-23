@@ -117,6 +117,7 @@ export function buildNarrativeContext(
   scores: any,
   dto: GenerateReportDto,
   newsContext?: string,
+  briefingContext?: any,
 ): Record<string, any> {
   const context: Record<string, any> = {};
 
@@ -467,7 +468,42 @@ export function buildNarrativeContext(
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Market Intelligence Briefing (optional enhancement)
+  // When a briefing exists, inject stance/risk/news so AI narratives align
+  // with the intelligence assessment. When absent, all keys stay undefined
+  // and conditional prompt blocks are skipped — no degradation.
+  // -------------------------------------------------------------------------
+  if (briefingContext) {
+    context.market_stance = briefingContext.market_stance;
+    context.stance_description = formatStanceForNarrative(briefingContext.market_stance);
+    context.risk_flags_text = (briefingContext.risk_flags || [])
+      .map((f: any) => f.detail || f.description || f.flag)
+      .filter(Boolean)
+      .join('; ');
+    context.briefing_narrative = briefingContext.narrative_summary || '';
+    context.briefing_news = (briefingContext.news_snapshot || [])
+      .map((n: any) => `${n.headline} (${n.source_name})`)
+      .filter(Boolean)
+      .join('; ');
+  }
+
   return context;
+}
+
+/**
+ * Convert a market stance enum value into a human-readable description
+ * suitable for inclusion in AI narrative prompts.
+ */
+function formatStanceForNarrative(stance: string): string {
+  const stanceDescriptions: Record<string, string> = {
+    strong_bullish: 'strongly bullish — the data overwhelmingly favors this market',
+    weak_bullish: 'cautiously bullish — more positive signals than negative',
+    neutral: 'neutral — mixed signals with no clear directional trend',
+    weak_bearish: 'cautiously bearish — more warning signs than positive signals',
+    strong_bearish: 'strongly bearish — significant risk factors present',
+  };
+  return stanceDescriptions[stance] || 'neutral';
 }
 
 // ============================================================================
@@ -504,9 +540,10 @@ export async function generateSectionNarratives(
   dto: GenerateReportDto,
   newsContext?: string,
   sectionFilter?: string[],
+  briefingContext?: any,
 ): Promise<Record<string, string | string[] | object>> {
   // 1. Build the context object from all available data
-  const context = buildNarrativeContext(reportData, scores, dto, newsContext);
+  const context = buildNarrativeContext(reportData, scores, dto, newsContext, briefingContext);
 
   // 2. Determine which sections to generate
   let sectionIds: string[];
