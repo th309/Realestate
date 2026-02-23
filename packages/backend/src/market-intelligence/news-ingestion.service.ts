@@ -41,10 +41,13 @@ interface NewsArticle {
 const DEFAULT_RSS_FEEDS: Array<{ url: string; name: string }> = [
   // National industry news
   { url: 'https://www.housingwire.com/feed/', name: 'HousingWire' },
-  { url: 'https://www.nar.realtor/blogs.rss', name: 'NAR' },
-  { url: 'https://zillow.mediaroom.com/rss', name: 'Zillow' },
   { url: 'https://www.mortgagenewsdaily.com/rss/news', name: 'Mortgage News Daily' },
   { url: 'https://www.cnbc.com/id/10000115/device/rss/rss.html', name: 'CNBC Real Estate' },
+  // Zillow housing research (mediaroom press releases)
+  { url: 'https://zillow.mediaroom.com/press-releases?pagetemplate=rss&category=816', name: 'Zillow Research' },
+  { url: 'https://zillow.mediaroom.com/press-releases?pagetemplate=rss', name: 'Zillow Press' },
+  // NAR via Google News (nar.realtor decommissioned their RSS feeds)
+  { url: 'https://news.google.com/rss/search?q=National+Association+of+Realtors+housing+market&hl=en-US&gl=US&ceid=US:en', name: 'NAR (Google News)' },
   // Market data & analysis
   { url: 'https://www.redfin.com/news/feed/', name: 'Redfin' },
   { url: 'https://www.realtor.com/news/feed/', name: 'Realtor.com' },
@@ -85,26 +88,37 @@ export class NewsIngestionService {
     const articles = [...nationalArticles, ...localArticles];
     if (articles.length === 0) return result;
 
-    // 4. Deduplicate against existing URLs in the database
-    const urls = articles.map(a => a.url).filter(Boolean);
-    const existingUrls = await this.findExistingUrls(urls);
+    // 4. Deduplicate against existing URLs AND headlines in the database
+    //    (batched to avoid Supabase .in() query size limits)
+    const existingUrls = await this.findExistingUrlsBatched(articles);
+    const existingHeadlines = await this.findExistingHeadlines(articles);
 
     // 5. Also deduplicate within the current batch (Google News may return
     //    the same article for multiple geographies)
     const seenUrls = new Set<string>();
+    const seenHeadlines = new Set<string>();
 
-    // 6. Process each article
+    // 6. Process each article — dedup BEFORE expensive LLM classification
     for (const article of articles) {
       if (!article.url || !article.title) {
         result.errors++;
         continue;
       }
 
-      if (existingUrls.has(article.url) || seenUrls.has(article.url)) {
+      const normalizedHeadline = article.title.trim().toLowerCase();
+
+      // Skip if URL or headline already exists in DB or current batch
+      if (
+        existingUrls.has(article.url) ||
+        seenUrls.has(article.url) ||
+        existingHeadlines.has(normalizedHeadline) ||
+        seenHeadlines.has(normalizedHeadline)
+      ) {
         result.skipped++;
         continue;
       }
       seenUrls.add(article.url);
+      seenHeadlines.add(normalizedHeadline);
 
       try {
         await this.processAndStoreArticle(article);
@@ -215,19 +229,57 @@ export class NewsIngestionService {
 
   // -- Deduplication --------------------------------------------------------
 
-  /** Find which of the given URLs already exist in market_news */
-  private async findExistingUrls(urls: string[]): Promise<Set<string>> {
+  /**
+   * Batched URL dedup — queries in chunks of 200 to stay within
+   * Supabase/PostgREST query size limits.
+   */
+  private async findExistingUrlsBatched(articles: NewsArticle[]): Promise<Set<string>> {
+    const urls = [...new Set(articles.map(a => a.url).filter(Boolean))];
+    const existing = new Set<string>();
+    const client = this.supabase.getClient();
+    const CHUNK_SIZE = 200;
+
+    for (let i = 0; i < urls.length; i += CHUNK_SIZE) {
+      try {
+        const chunk = urls.slice(i, i + CHUNK_SIZE);
+        const { data, error } = await client
+          .from('market_news')
+          .select('url')
+          .in('url', chunk);
+        if (!error && data) {
+          data.forEach((row: { url: string }) => existing.add(row.url));
+        }
+      } catch (err) {
+        this.logger.warn(`URL dedup batch failed: ${err.message}`);
+      }
+    }
+
+    this.logger.log(`URL dedup: ${existing.size} of ${urls.length} unique URLs already in DB`);
+    return existing;
+  }
+
+  /**
+   * Headline dedup — catches the same article from different sources
+   * (e.g., Google News redirect URL vs direct CNBC URL).
+   * Only checks recent articles (last 7 days) to limit query size.
+   */
+  private async findExistingHeadlines(articles: NewsArticle[]): Promise<Set<string>> {
     try {
       const client = this.supabase.getClient();
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
       const { data, error } = await client
         .from('market_news')
-        .select('url')
-        .in('url', urls);
+        .select('headline')
+        .gte('published_at', sevenDaysAgo);
 
       if (error || !data) return new Set();
-      return new Set(data.map((row: { url: string }) => row.url));
+      const headlines = new Set(
+        data.map((row: { headline: string }) => row.headline.trim().toLowerCase()),
+      );
+      this.logger.log(`Headline dedup: ${headlines.size} existing headlines loaded`);
+      return headlines;
     } catch (err) {
-      this.logger.warn(`Dedup query failed: ${err.message}`);
+      this.logger.warn(`Headline dedup failed: ${err.message}`);
       return new Set();
     }
   }
@@ -268,23 +320,26 @@ export class NewsIngestionService {
     const classification = await classifyArticle(headline, description, this.appConfig);
 
     const client = this.supabase.getClient();
-    const { error } = await client.from('market_news').insert({
-      url: article.url,
-      headline,
-      source_name: sourceName,
-      published_at: article.publishedAt,
-      summary: classification.summary,
-      tags: classification.tags,
-      sentiment: classification.sentiment,
-      geography_ids: geographyIds,
-      geography_type: geoType,
-      geo_tag_confidence: geoConfidence,
-      raw_description: description,
-      ingested_at: new Date().toISOString(),
-    });
+    const { error } = await client.from('market_news').upsert(
+      {
+        url: article.url,
+        headline,
+        source_name: sourceName,
+        published_at: article.publishedAt,
+        summary: classification.summary,
+        tags: classification.tags,
+        sentiment: classification.sentiment,
+        geography_ids: geographyIds,
+        geography_type: geoType,
+        geo_tag_confidence: geoConfidence,
+        raw_description: description,
+        ingested_at: new Date().toISOString(),
+      },
+      { onConflict: 'url', ignoreDuplicates: true },
+    );
 
     if (error) {
-      throw new Error(`Supabase insert failed: ${error.message}`);
+      throw new Error(`Supabase upsert failed: ${error.message}`);
     }
   }
 }
