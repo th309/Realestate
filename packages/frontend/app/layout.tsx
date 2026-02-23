@@ -38,7 +38,7 @@ const dmSans = DM_Sans({
 
 // SEO: Comprehensive metadata for all pages
 export const metadata: Metadata = {
-  metadataBase: new URL('https://propertyiq.com'),
+  metadataBase: new URL('https://www.propertyiq.app'),
   title: {
     default: "PropertyIQ - AI-Powered Real Estate Market Intelligence Platform",
     template: "%s | PropertyIQ"
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://propertyiq.com",
+    url: "https://www.propertyiq.app",
     siteName: "PropertyIQ",
     title: "PropertyIQ - AI-Powered Real Estate Market Intelligence",
     description: "Make smarter real estate decisions with AI-powered market analysis for homebuyers, renters, investors, and real estate professionals.",
@@ -104,7 +104,7 @@ export const metadata: Metadata = {
     creator: "@propertyiq"
   },
   alternates: {
-    canonical: "https://propertyiq.com"
+    canonical: "https://www.propertyiq.app"
   },
   category: "Real Estate Technology"
 };
@@ -118,6 +118,8 @@ export const viewport: Viewport = {
   initialScale: 1
 };
 
+const showComingSoon = process.env.NEXT_PUBLIC_SHOW_COMING_SOON === 'true';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -130,6 +132,20 @@ export default function RootLayout({
       >
         <Providers>
           <Header />
+          {showComingSoon && (
+            <div className="bg-primary/10 border-b border-primary/20 px-4 py-2.5 text-center">
+              <p className="text-sm font-medium text-on-surface">
+                <span className="inline-flex items-center gap-2">
+                  <span className="bg-primary text-on-primary text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    Coming Soon
+                  </span>
+                  <span className="text-on-surface-variant">
+                    PropertyIQ is launching shortly. Stay tuned!
+                  </span>
+                </span>
+              </p>
+            </div>
+          )}
           <main className="flex-1 min-h-0 flex flex-col">
             {children}
           </main>
