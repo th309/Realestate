@@ -1,14 +1,6 @@
 /**
- * Local News Fetcher
- *
  * Fetches location-specific real estate news from Google News RSS.
- * Google News RSS is free, requires no API key, and supports search queries.
- *
- * URL format:
- *   https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en
- *
- * Designed for batch processing: fetches news for many geographies in
- * configurable batches with delays to respect rate limits.
+ * Processes geographies in configurable batches with rate-limit delays.
  */
 
 import { Logger } from '@nestjs/common';
@@ -38,33 +30,17 @@ export interface LocalNewsArticle {
   sourceGeographyName: string;
 }
 
-/**
- * Build a Google News RSS search URL for a geography.
- *
- * Strategy by geography type:
- *
- * **Metros** — use CBSA city names to cast a wide net. Strips the state
- *   suffix and replaces dashes with spaces so Google treats each city as
- *   a keyword. Examples:
- *     "Dallas-Fort Worth-Arlington, TX" → "Dallas Fort Worth Arlington TX real estate market"
- *     "New York-Newark-Jersey City, NY-NJ" → "New York Newark Jersey City NY real estate market"
- *
- * **Counties** — use `name_short` + `state_code` for precise local results.
- *     "Los Angeles County, CA" → "Los Angeles County CA real estate market"
- */
+/** Build a Google News RSS search URL for a geography. */
 function buildGoogleNewsUrl(geo: GeographyTarget): string {
   let searchName: string;
   let state: string;
 
   if (geo.geography_type === 'metro') {
-    // Use CBSA name: "Dallas-Fort Worth-Arlington, TX" → cities + state
     const cbsa = geo.cbsa_name || geo.name;
     const [cityPart, statePart] = cbsa.split(',').map(s => s.trim());
     searchName = cityPart.replace(/-/g, ' ');
-    // Take first state only for multi-state metros ("NY-NJ" → "NY")
     state = (statePart || '').split('-')[0].trim();
   } else {
-    // Counties: use short name + state_code
     searchName = geo.name_short || geo.name.split(',')[0].trim();
     state = geo.state_code || '';
   }
@@ -73,22 +49,11 @@ function buildGoogleNewsUrl(geo: GeographyTarget): string {
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 }
 
-/** Sleep helper for batch delays */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Fetch local real estate news for a list of geographies.
- *
- * Processes in batches with configurable size and delay.
- * Each geography gets 1 Google News RSS query returning ~5-10 recent articles.
- *
- * @param geographies - List of metros/counties to fetch news for
- * @param batchSize - How many geographies to fetch in parallel per batch
- * @param batchDelayMs - Delay between batches to avoid rate limiting
- * @param maxArticlesPerGeo - Max articles to keep per geography (prevents flooding)
- */
+/** Fetch local real estate news for a list of geographies in batches. */
 export async function fetchLocalNews(
   geographies: GeographyTarget[],
   batchSize = 10,
@@ -138,7 +103,6 @@ export async function fetchLocalNews(
       }
     }
 
-    // Delay between batches (skip after last batch)
     if (i + batchSize < geographies.length) {
       await sleep(batchDelayMs);
     }
@@ -152,10 +116,7 @@ export async function fetchLocalNews(
   return allArticles;
 }
 
-/**
- * Load target geographies (metros + counties) from the database,
- * sorted by population descending so we prioritize the largest markets.
- */
+/** Load target geographies (metros + counties) sorted by population descending. */
 export async function loadTargetGeographies(
   client: SupabaseClient,
   maxMetros: number,

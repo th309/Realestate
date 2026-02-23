@@ -1,8 +1,6 @@
 /**
- * Briefing Generator Service
- *
- * Generates a complete market briefing for a single geography. Called by the
- * cron job (Task 8) for batch generation and by on-demand generation (Task 14).
+ * Generates a complete market briefing for a single geography.
+ * Called by the cron job for batch generation and by on-demand requests.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -42,36 +40,25 @@ export class BriefingGeneratorService {
   ): Promise<MarketBriefing> {
     const startTime = Date.now();
 
-    // 1. Resolve all briefing metrics + fetch news in parallel
     const [resolvedMetrics, newsSnapshot] = await Promise.all([
       this.resolveMetricsSafe(geographyType, geographyId),
       this.fetchRecentNews(geographyId),
     ]);
 
-    // 2. Build metrics snapshot
     const metricsSnapshot = buildMetricsSnapshot(resolvedMetrics);
-
-    // 3. Compute market stance (deterministic) — includes news sentiment signals
     const stanceInput = extractStanceMetrics(resolvedMetrics, newsSnapshot);
     const stanceResult = computeMarketStance(stanceInput, nationalBenchmarks);
-
-    // 4. Compute risk flags (deterministic)
     const riskInput = extractRiskMetrics(resolvedMetrics);
     const riskFlags = computeRiskFlags(riskInput, nationalBenchmarks, null);
 
-    // 6. Generate narrative via LLM
     const metricsCount = Object.values(metricsSnapshot).filter(m => m.value !== null).length;
     const narrative = await this.generateNarrative(
       geographyName, stanceResult.stance, stanceResult.signals,
       riskFlags, metricsSnapshot, newsSnapshot, metricsCount,
     );
-
-    // 7. Generate suggested questions via LLM
     const suggestedQuestions = await this.generateSuggestedQuestions(
       geographyName, stanceResult.stance,
     );
-
-    // 8. Build and store briefing
     const generationTimeMs = Date.now() - startTime;
     const briefing: MarketBriefing = {
       id: '',
@@ -102,13 +89,7 @@ export class BriefingGeneratorService {
     return briefing;
   }
 
-  /**
-   * Lightweight on-demand briefing generation, triggered when Quinn's briefing
-   * lookup returns null for a market. This is fire-and-forget — it generates
-   * the briefing so it's ready for the next request.
-   *
-   * Skips generation if a latest briefing already exists for the geography.
-   */
+  /** On-demand briefing generation. Skips if a latest briefing already exists. */
   async generateBriefingOnDemand(
     geographyId: string,
     geographyType: 'metro' | 'county',
@@ -139,8 +120,6 @@ export class BriefingGeneratorService {
     }
   }
 
-  // -- Metric Resolution (resilient) ----------------------------------------
-
   private async resolveMetricsSafe(
     geoLevel: 'metro' | 'county',
     geoId: string,
@@ -154,8 +133,6 @@ export class BriefingGeneratorService {
       return {};
     }
   }
-
-  // -- News Fetching --------------------------------------------------------
 
   private async fetchRecentNews(geographyId: string): Promise<NewsItem[]> {
     try {
@@ -179,8 +156,6 @@ export class BriefingGeneratorService {
       return [];
     }
   }
-
-  // -- LLM Narrative --------------------------------------------------------
 
   private async generateNarrative(
     geographyName: string, stance: string, signals: StanceSignal[],
@@ -245,8 +220,6 @@ export class BriefingGeneratorService {
     if (!content) throw new Error('LLM returned empty response');
     return content;
   }
-
-  // -- Database Storage -----------------------------------------------------
 
   private async storeBriefing(briefing: MarketBriefing): Promise<string> {
     try {

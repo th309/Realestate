@@ -31,21 +31,21 @@ export function SystemHealthPanel({ stats, loading, error }: SystemHealthPanelPr
 
   const triggerPipeline = useCallback(async (pipeline: PipelineId) => {
     setRunStates((prev) => ({ ...prev, [pipeline]: 'running' }));
+
+    let result: RunState = 'done';
     try {
       const res = await fetchAPIRaw(`/api/admin/intelligence/trigger/${pipeline}`, {
         method: 'POST',
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setRunStates((prev) => ({ ...prev, [pipeline]: 'done' }));
-      setTimeout(() => {
-        setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
-      }, 3000);
     } catch {
-      setRunStates((prev) => ({ ...prev, [pipeline]: 'error' }));
-      setTimeout(() => {
-        setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
-      }, 3000);
+      result = 'error';
     }
+
+    setRunStates((prev) => ({ ...prev, [pipeline]: result }));
+    setTimeout(() => {
+      setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
+    }, 3000);
   }, []);
   return (
     <div className="bg-surface-container-low border border-outline-variant rounded-xl">
@@ -158,6 +158,13 @@ function HealthRow({
   );
 }
 
+const TRIGGER_BUTTON_STYLES: Record<RunState, string> = {
+  idle: 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer',
+  running: 'bg-surface-container-high text-on-surface-variant cursor-wait',
+  done: 'bg-green-100 text-green-700',
+  error: 'bg-red-100 text-red-700',
+};
+
 function TriggerButton({
   pipeline,
   state,
@@ -167,41 +174,39 @@ function TriggerButton({
   state: RunState;
   onTrigger: (pipeline: PipelineId) => void;
 }) {
-  const isRunning = state === 'running';
-
   return (
     <button
       onClick={() => onTrigger(pipeline)}
-      disabled={isRunning}
-      className={`
-        ml-2 px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors
-        ${state === 'done'
-          ? 'bg-green-100 text-green-700'
-          : state === 'error'
-            ? 'bg-red-100 text-red-700'
-            : isRunning
-              ? 'bg-surface-container-high text-on-surface-variant cursor-wait'
-              : 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'}
-      `}
+      disabled={state === 'running'}
+      className={`ml-2 px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors ${TRIGGER_BUTTON_STYLES[state]}`}
       title={`Manually trigger ${pipeline} pipeline`}
     >
-      {state === 'done' ? (
-        'Started'
-      ) : state === 'error' ? (
-        'Failed'
-      ) : isRunning ? (
+      <TriggerButtonContent state={state} />
+    </button>
+  );
+}
+
+function TriggerButtonContent({ state }: { state: RunState }) {
+  switch (state) {
+    case 'done':
+      return <>Started</>;
+    case 'error':
+      return <>Failed</>;
+    case 'running':
+      return (
         <span className="flex items-center gap-1">
           <Loader2 className="w-3 h-3 animate-spin" />
           Running
         </span>
-      ) : (
+      );
+    default:
+      return (
         <span className="flex items-center gap-1">
           <Play className="w-3 h-3" />
           Run
         </span>
-      )}
-    </button>
-  );
+      );
+  }
 }
 
 // ---------------------------------------------------------------------------

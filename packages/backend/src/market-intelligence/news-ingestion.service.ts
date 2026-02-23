@@ -1,14 +1,8 @@
 /**
  * News Ingestion Service
  *
- * Two-tier ingestion pipeline:
- * 1. National feeds (HousingWire, NAR, Zillow, etc.) — general market news
- * 2. Local feeds (Google News RSS per metro/county) — location-specific news
- *
- * No API key required — uses publicly available RSS feeds.
- *
- * Designed for resilience: individual article failures are counted as errors
- * but never crash the pipeline. LLM failures fall back to sensible defaults.
+ * Two-tier pipeline: national RSS feeds + local Google News RSS per geography.
+ * No API key required. Individual article failures never crash the pipeline.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -35,6 +29,8 @@ interface NewsArticle {
   url: string;
   source: { name: string } | null;
   publishedAt: string;
+  /** Pre-tagged geography from local news fetch (bypasses geo-tagger) */
+  preTaggedGeo?: { id: string; type: string; name: string };
 }
 
 /** Free RSS feeds for real estate news — no API key needed */
@@ -66,39 +62,22 @@ export class NewsIngestionService {
     private readonly briefingGenerator: BriefingGeneratorService,
   ) {}
 
-  /**
-   * Ingest the latest real estate news articles.
-   *
-   * Two-tier pipeline:
-   * 1. National RSS feeds — general market news (HousingWire, CNBC, etc.)
-   * 2. Local Google News RSS — per-metro and per-county real estate news
-   *
-   * Returns counts of ingested, skipped (duplicate), and errored articles.
-   */
+  /** Ingest latest news from national RSS feeds + local Google News. */
   async ingestLatestNews(): Promise<IngestionResult> {
     const result: IngestionResult = { ingested: 0, skipped: 0, errors: 0 };
 
-    // 1. Fetch national articles from curated RSS feeds
-    const nationalArticles = await this.fetchFromRssFeeds();
+    const [nationalArticles, localArticles] = await Promise.all([
+      this.fetchFromRssFeeds(),
+      this.fetchLocalArticles(),
+    ]);
 
-    // 2. Fetch local articles from Google News RSS per geography
-    const localArticles = await this.fetchLocalArticles();
-
-    // 3. Merge both streams into a unified article list
     const articles = [...nationalArticles, ...localArticles];
     if (articles.length === 0) return result;
 
-    // 4. Deduplicate against existing URLs AND headlines in the database
-    //    (batched to avoid Supabase .in() query size limits)
     const existingUrls = await this.findExistingUrlsBatched(articles);
     const existingHeadlines = await this.findExistingHeadlines(articles);
-
-    // 5. Also deduplicate within the current batch (Google News may return
-    //    the same article for multiple geographies)
     const seenUrls = new Set<string>();
     const seenHeadlines = new Set<string>();
-
-    // 6. Process each article — dedup BEFORE expensive LLM classification
     for (const article of articles) {
       if (!article.url || !article.title) {
         result.errors++;
@@ -141,12 +120,7 @@ export class NewsIngestionService {
     return result;
   }
 
-  // -- Local News Fetch (Google News RSS per geography) ---------------------
-
-  /**
-   * Fetch local real estate news for top metros and counties.
-   * Reads batch settings from AppConfigService, delegates to local-news-fetcher.
-   */
+  /** Fetch local real estate news for top metros and counties. */
   private async fetchLocalArticles(): Promise<NewsArticle[]> {
     try {
       const [maxMetros, maxCounties, batchSize, batchDelay] = await Promise.all([
@@ -169,26 +143,23 @@ export class NewsIngestionService {
 
       const localArticles = await fetchLocalNews(geographies, batchSize, batchDelay);
 
-      // Convert LocalNewsArticle → NewsArticle with pre-set geography info
       return localArticles.map((la) => ({
         title: la.title,
         description: la.description,
         url: la.url,
         source: { name: 'Google News' },
         publishedAt: la.publishedAt,
-        _preTaggedGeo: {
+        preTaggedGeo: {
           id: la.sourceGeographyId,
           type: la.sourceGeographyType,
           name: la.sourceGeographyName,
         },
-      } as NewsArticle & { _preTaggedGeo: { id: string; type: string; name: string } }));
+      }));
     } catch (err: any) {
       this.logger.warn(`Local news fetch failed: ${err.message}`);
       return [];
     }
   }
-
-  // -- RSS Feed Fetch -------------------------------------------------------
 
   /** Fetch articles from all configured RSS feeds in parallel */
   private async fetchFromRssFeeds(): Promise<NewsArticle[]> {
@@ -227,12 +198,7 @@ export class NewsIngestionService {
     return allArticles;
   }
 
-  // -- Deduplication --------------------------------------------------------
-
-  /**
-   * Batched URL dedup — queries in chunks of 200 to stay within
-   * Supabase/PostgREST query size limits.
-   */
+  /** Batched URL dedup — queries in chunks of 200 to stay within Supabase query limits. */
   private async findExistingUrlsBatched(articles: NewsArticle[]): Promise<Set<string>> {
     const urls = [...new Set(articles.map(a => a.url).filter(Boolean))];
     const existing = new Set<string>();
@@ -258,11 +224,7 @@ export class NewsIngestionService {
     return existing;
   }
 
-  /**
-   * Headline dedup — catches the same article from different sources
-   * (e.g., Google News redirect URL vs direct CNBC URL).
-   * Only checks recent articles (last 7 days) to limit query size.
-   */
+  /** Headline dedup — catches the same article from different sources (last 7 days). */
   private async findExistingHeadlines(articles: NewsArticle[]): Promise<Set<string>> {
     try {
       const client = this.supabase.getClient();
@@ -284,30 +246,21 @@ export class NewsIngestionService {
     }
   }
 
-  // -- Article Processing ---------------------------------------------------
-
   /** Geo-tag, classify via LLM, and insert a single article */
   private async processAndStoreArticle(article: NewsArticle): Promise<void> {
     const headline = article.title ?? '';
     const description = article.description ?? '';
     const sourceName = article.source?.name ?? 'Unknown';
 
-    // Check if article was pre-tagged from local news fetch
-    const preTagged = (article as any)._preTaggedGeo as
-      | { id: string; type: string; name: string }
-      | undefined;
-
     let geographyIds: string[];
     let geoType: string | null;
     let geoConfidence: number;
 
-    if (preTagged) {
-      // Local article — geography is already known from the search query
-      geographyIds = [preTagged.id];
-      geoType = preTagged.type;
+    if (article.preTaggedGeo) {
+      geographyIds = [article.preTaggedGeo.id];
+      geoType = article.preTaggedGeo.type;
       geoConfidence = 1.0;
     } else {
-      // National article — run geo-tagger to detect location
       const geoTags = await this.geoTagger.tagArticle(headline, description);
       geographyIds = geoTags.map(t => t.geography_id);
       geoType = geographyIds.length > 0 ? 'metro' : null;

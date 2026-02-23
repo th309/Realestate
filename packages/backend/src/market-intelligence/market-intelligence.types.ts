@@ -1,18 +1,13 @@
 /**
- * Market Intelligence Types
- *
- * Shared type definitions for the market intelligence layer:
- * briefings, news, rankings, and metric constants.
+ * Shared type definitions for market intelligence: briefings, news, rankings.
  */
 
 import type { MarketStance, StanceSignal } from './engines/market-stance.engine';
 import type { RiskFlag } from './engines/risk-flags.engine';
 
-// Re-export engine types for convenience
 export type { MarketStance, StanceSignal } from './engines/market-stance.engine';
 export type { RiskFlag } from './engines/risk-flags.engine';
 
-/** Snapshot of a single metric value within a briefing */
 export interface MetricSnapshot {
   value: number | null;
   formatted: string;
@@ -23,7 +18,6 @@ export interface MetricSnapshot {
   is_inherited: boolean;
 }
 
-/** Snapshot of a score within a briefing */
 export interface ScoreSnapshot {
   score: number;
   confidence: string; // A | B | C | F
@@ -31,7 +25,6 @@ export interface ScoreSnapshot {
   change_30d: number;
 }
 
-/** A news article associated with a market */
 export interface NewsItem {
   headline: string;
   source_name: string;
@@ -41,7 +34,6 @@ export interface NewsItem {
   sentiment: 'positive' | 'negative' | 'neutral';
 }
 
-/** A complete market briefing — the core intelligence document */
 export interface MarketBriefing {
   id: string;
   geography_id: string;
@@ -65,7 +57,6 @@ export interface MarketBriefing {
   generation_time_ms?: number;
 }
 
-/** A market news article stored in the database */
 export interface MarketNewsRecord {
   id: string;
   url: string;
@@ -82,7 +73,6 @@ export interface MarketNewsRecord {
   ingested_at: string;
 }
 
-/** A cached ranking entry */
 export interface RankingEntry {
   geography_id: string;
   geography_name: string;
@@ -91,7 +81,6 @@ export interface RankingEntry {
   rank: number;
 }
 
-/** A rankings cache record from the database */
 export interface RankingsCacheRecord {
   id: string;
   metric_id: string;
@@ -103,21 +92,18 @@ export interface RankingsCacheRecord {
   rankings: RankingEntry[];
 }
 
-/** National benchmark values used by stance and risk engines */
 export interface NationalBenchmarks {
   vacancy_rate: number;
   appreciation_yoy: number;
   unemployment_rate: number;
 }
 
-/** Default national benchmarks used when live data is unavailable */
 export const DEFAULT_NATIONAL_BENCHMARKS: NationalBenchmarks = {
   vacancy_rate: 6.4,
   appreciation_yoy: 3.5,
   unemployment_rate: 3.7,
 };
 
-/** Metrics needed for briefing generation */
 export const BRIEFING_METRIC_IDS = [
   'home_value',
   'appreciation_yoy',
@@ -136,7 +122,6 @@ export const BRIEFING_METRIC_IDS = [
   'price_to_income',
 ] as const;
 
-/** Metrics pre-computed for rankings cache */
 export const RANKINGS_METRIC_IDS = [
   'home_value',
   'appreciation_yoy',

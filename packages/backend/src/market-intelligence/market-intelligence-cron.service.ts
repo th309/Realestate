@@ -1,14 +1,7 @@
 /**
- * Market Intelligence Cron Service
- *
- * Scheduled jobs for batch processing market intelligence data:
- *
- * 1. Weekly briefings (Sunday 2am) -- Generate briefings for top metros/counties
- * 2. Daily news ingestion (6am)    -- Fetch and classify real estate news
- * 3. Weekly rankings (Sunday 3am)  -- Refresh pre-computed rankings cache
- *
- * Each job checks its AppConfig toggle before executing. Errors within
- * individual markets or articles never crash the overall job.
+ * Scheduled jobs for market intelligence: weekly briefings (Sun 2am),
+ * daily news ingestion (6am), and weekly rankings refresh (Sun 3am).
+ * Each job checks its AppConfig toggle before executing.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -41,15 +34,7 @@ export class MarketIntelligenceCronService {
     private readonly supabase: SupabaseService,
   ) {}
 
-  /**
-   * Weekly: Sunday 2am -- Generate market briefings for all tracked geographies.
-   *
-   * Pipeline:
-   * 1. Fetch national benchmarks via MetricResolutionService
-   * 2. Query top metros + counties from geographies table
-   * 3. Generate briefings in batches with per-market error handling
-   * 4. Log summary
-   */
+  /** Weekly: Sunday 2am -- Generate market briefings for all tracked geographies. */
   @Cron('0 2 * * 0')
   async handleWeeklyBriefings(): Promise<void> {
     const enabled = await this.appConfig.getBool('BRIEFING_GENERATION_ENABLED', false);
@@ -64,10 +49,7 @@ export class MarketIntelligenceCronService {
     let failed = 0;
 
     try {
-      // 1. Fetch national benchmarks
       const benchmarks = await this.fetchNationalBenchmarks();
-
-      // 2. Fetch target geographies (top metros + counties by population)
       const geographies = await this.fetchTargetGeographies();
       if (geographies.length === 0) {
         this.logger.warn('No geographies found for briefing generation');
@@ -76,7 +58,6 @@ export class MarketIntelligenceCronService {
 
       this.logger.log(`Generating briefings for ${geographies.length} geographies`);
 
-      // 3. Process in batches to avoid overwhelming the LLM API
       const batchSize = await this.appConfig.getNumber('QUINN_BRIEFING_BATCH_SIZE', 10);
       const batchDelay = await this.appConfig.getNumber('QUINN_BRIEFING_BATCH_DELAY_MS', 2000);
 
@@ -102,7 +83,6 @@ export class MarketIntelligenceCronService {
           }
         }
 
-        // Brief pause between batches to respect rate limits
         if (i + batchSize < geographies.length) {
           await this.sleep(batchDelay);
         }
@@ -163,14 +143,7 @@ export class MarketIntelligenceCronService {
     }
   }
 
-  // ==========================================================================
-  // Private: National Benchmarks
-  // ==========================================================================
-
-  /**
-   * Fetch national-level benchmarks via MetricResolutionService.
-   * Falls back to hardcoded defaults if resolution fails.
-   */
+  /** Fetch national benchmarks; falls back to hardcoded defaults on failure. */
   private async fetchNationalBenchmarks(): Promise<NationalBenchmarks> {
     try {
       const resolved = await this.metricResolution.resolveMetricBatch(
@@ -192,21 +165,13 @@ export class MarketIntelligenceCronService {
     }
   }
 
-  // ==========================================================================
-  // Private: Geography Fetching
-  // ==========================================================================
-
-  /**
-   * Fetch target geographies for briefing generation.
-   * Returns up to 900 metros + 500 counties, ordered by population descending.
-   */
+  /** Fetch target geographies (up to 900 metros + 500 counties) by population. */
   private async fetchTargetGeographies(): Promise<GeographyRow[]> {
     try {
       const client = this.supabase.getClient();
       const maxMetros = await this.appConfig.getNumber('QUINN_MAX_METROS', 900);
       const maxCounties = await this.appConfig.getNumber('QUINN_MAX_COUNTIES', 500);
 
-      // Fetch metros
       const { data: metros, error: metroError } = await client
         .from('geographies')
         .select('geography_id, name, geography_type')
@@ -218,7 +183,6 @@ export class MarketIntelligenceCronService {
         this.logger.warn(`Failed to fetch metros: ${metroError.message}`);
       }
 
-      // Fetch counties
       const { data: counties, error: countyError } = await client
         .from('geographies')
         .select('geography_id, name, geography_type')
@@ -230,23 +194,16 @@ export class MarketIntelligenceCronService {
         this.logger.warn(`Failed to fetch counties: ${countyError.message}`);
       }
 
-      const allGeos: GeographyRow[] = [
+      return [
         ...((metros ?? []) as GeographyRow[]),
         ...((counties ?? []) as GeographyRow[]),
       ];
-
-      return allGeos;
     } catch (error: any) {
       this.logger.error(`Failed to fetch target geographies: ${error.message}`);
       return [];
     }
   }
 
-  // ==========================================================================
-  // Private: Utilities
-  // ==========================================================================
-
-  /** Sleep for the given number of milliseconds */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

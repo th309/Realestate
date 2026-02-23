@@ -1,9 +1,6 @@
 /**
- * Market Intelligence Admin Controller
- *
- * Provides admin-only endpoints for monitoring the health and coverage
- * of the market intelligence subsystem (briefings, news, rankings),
- * plus manual triggers for each cron job.
+ * Admin endpoints for monitoring market intelligence health/coverage
+ * and manual triggers for each cron job.
  */
 
 import { Controller, Get, Post, Logger, UseGuards } from '@nestjs/common';
@@ -33,15 +30,9 @@ export class MarketIntelligenceController {
     private readonly cronService: MarketIntelligenceCronService,
   ) {}
 
-  /**
-   * GET /api/admin/intelligence/stats
-   *
-   * Returns aggregate health metrics for the market intelligence system:
-   * briefing coverage, news volume, ranking freshness, and Quinn availability.
-   */
+  /** Returns aggregate health metrics: briefing coverage, news volume, ranking freshness. */
   @Get('stats')
   async getStats(): Promise<IntelligenceStats> {
-    this.logger.log('GET /api/admin/intelligence/stats');
     const client = this.supabase.getClient();
 
     // Run independent queries in parallel for performance
@@ -122,14 +113,7 @@ export class MarketIntelligenceController {
     };
   }
 
-  // ===========================================================================
-  // Manual Cron Triggers
-  // ===========================================================================
-
-  /**
-   * POST /api/admin/intelligence/trigger/briefings
-   * Manually trigger the weekly briefing generation pipeline.
-   */
+  /** Manually trigger the weekly briefing generation pipeline. */
   @Post('trigger/briefings')
   async triggerBriefings(): Promise<{ success: true; message: string }> {
     this.logger.log('Manual trigger: weekly briefings');
@@ -140,10 +124,7 @@ export class MarketIntelligenceController {
     return { success: true, message: 'Briefing generation started' };
   }
 
-  /**
-   * POST /api/admin/intelligence/trigger/news
-   * Manually trigger the daily news ingestion pipeline.
-   */
+  /** Manually trigger the daily news ingestion pipeline. */
   @Post('trigger/news')
   async triggerNewsIngestion(): Promise<{ success: true; message: string }> {
     this.logger.log('Manual trigger: news ingestion');
@@ -153,10 +134,7 @@ export class MarketIntelligenceController {
     return { success: true, message: 'News ingestion started' };
   }
 
-  /**
-   * POST /api/admin/intelligence/trigger/rankings
-   * Manually trigger the weekly rankings cache refresh.
-   */
+  /** Manually trigger the weekly rankings cache refresh. */
   @Post('trigger/rankings')
   async triggerRankings(): Promise<{ success: true; message: string }> {
     this.logger.log('Manual trigger: rankings cache refresh');

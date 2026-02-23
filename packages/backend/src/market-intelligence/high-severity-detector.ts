@@ -1,10 +1,6 @@
 /**
- * High-Severity Market Detection
- *
- * Scans recent negative-sentiment news for keywords that indicate
- * high-severity events (disasters, layoffs, crises, etc.). Markets
- * with 2+ such articles in the last 24 hours get flagged for
- * emergency briefing refresh.
+ * Scans recent negative-sentiment news for high-severity events.
+ * Markets with 2+ such articles in 24 hours get emergency briefing refresh.
  */
 
 import { Logger } from '@nestjs/common';
@@ -14,7 +10,6 @@ import { DEFAULT_NATIONAL_BENCHMARKS } from './market-intelligence.types';
 
 const logger = new Logger('HighSeverityDetector');
 
-/** Regex matching keywords that indicate a high-severity event for a market */
 const HIGH_SEVERITY_PATTERN =
   /disaster|layoffs?|closure|bankruptcy|flood|hurricane|fire|crash|collapse|crisis/i;
 
@@ -24,10 +19,7 @@ interface HighSeverityMarket {
   geography_name: string;
 }
 
-/**
- * Query `market_news` for markets with 2+ negative-sentiment, high-severity
- * articles in the last 24 hours.
- */
+/** Find markets with 2+ negative high-severity articles in the last 24 hours. */
 export async function detectHighSeverityMarkets(
   supabase: SupabaseService,
 ): Promise<HighSeverityMarket[]> {
@@ -62,11 +54,7 @@ export async function detectHighSeverityMarkets(
     }));
 }
 
-/**
- * Detect high-severity markets and trigger an emergency briefing refresh
- * for each one. Fire-and-forget per market so individual failures don't
- * block the others.
- */
+/** Detect high-severity markets and trigger emergency briefing refresh for each. */
 export async function triggerHighSeverityBriefingRefresh(
   supabase: SupabaseService,
   briefingGenerator: BriefingGeneratorService,

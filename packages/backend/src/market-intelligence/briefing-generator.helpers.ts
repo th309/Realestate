@@ -1,23 +1,12 @@
 /**
- * Briefing Generator Helpers
- *
- * Pure helper functions extracted from BriefingGeneratorService to keep the
- * service under 300 lines. These handle metric snapshot building, stance/risk
- * metric extraction, freshness calculation, and narrative prompt formatting.
+ * Pure helper functions for BriefingGeneratorService: metric snapshot building,
+ * stance/risk metric extraction, freshness calculation, and prompt formatting.
  */
 
 import { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
-import { MetricSnapshot } from './market-intelligence.types';
-import {
-  StanceMetrics,
-  StanceSignal,
-} from './engines/market-stance.engine';
-import { NewsItem } from './market-intelligence.types';
+import { MetricSnapshot, NewsItem } from './market-intelligence.types';
+import { StanceMetrics, StanceSignal } from './engines/market-stance.engine';
 import { RiskMetrics, RiskFlag } from './engines/risk-flags.engine';
-
-// ---------------------------------------------------------------------------
-// Metric formatting
-// ---------------------------------------------------------------------------
 
 const FORMAT_RULES: Record<string, (v: number) => string> = {
   home_value: (v) => `$${(v / 1000).toFixed(0)}K`,
@@ -60,10 +49,6 @@ export function formatMetricForSnapshot(
   return value.toFixed(2);
 }
 
-// ---------------------------------------------------------------------------
-// Metric snapshot building
-// ---------------------------------------------------------------------------
-
 /** Convert a resolved metric batch to a Record<string, MetricSnapshot> */
 export function buildMetricsSnapshot(
   resolved: Record<string, ResolvedMetric>,
@@ -74,8 +59,8 @@ export function buildMetricsSnapshot(
     snapshot[metricId] = {
       value: metric.value,
       formatted: formatMetricForSnapshot(metricId, metric.value),
-      mom_change: null, // MoM change requires historical data; not available in batch resolution
-      yoy_change: null, // YoY change requires historical data; not available in batch resolution
+      mom_change: null,
+      yoy_change: null,
       date: metric.date,
       source: metric.source,
       is_inherited: metric.isInherited,
@@ -85,14 +70,7 @@ export function buildMetricsSnapshot(
   return snapshot;
 }
 
-// ---------------------------------------------------------------------------
-// Stance metric extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Extract the metrics + news sentiment needed for market stance computation.
- * Maps resolved metrics and news articles to the StanceMetrics shape.
- */
+/** Extract metrics + news sentiment needed for market stance computation. */
 export function extractStanceMetrics(
   resolved: Record<string, ResolvedMetric>,
   newsItems: NewsItem[] = [],
@@ -104,8 +82,8 @@ export function extractStanceMetrics(
     appreciation_yoy: resolved.appreciation_yoy?.value ?? null,
     population_growth: resolved.population_growth?.value ?? null,
     vacancy_rate: resolved.vacancy_rate?.value ?? null,
-    dom_yoy_change: null, // DOM YoY change requires time-series; not in batch
-    homeready_score: null, // TODO: Wire up scoring service
+    dom_yoy_change: null,
+    homeready_score: null,
     unemployment_rate: resolved.unemployment_rate?.value ?? null,
     cap_rate: resolved.cap_rate?.value ?? null,
     positive_news_count: positiveCount,
@@ -113,14 +91,7 @@ export function extractStanceMetrics(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Risk metric extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Extract the 8 metrics needed for risk flag computation.
- * Maps resolved metrics to the RiskMetrics shape.
- */
+/** Extract metrics needed for risk flag computation. */
 export function extractRiskMetrics(
   resolved: Record<string, ResolvedMetric>,
 ): RiskMetrics {
@@ -129,16 +100,12 @@ export function extractRiskMetrics(
     appreciation_yoy: resolved.appreciation_yoy?.value ?? null,
     vacancy_rate: resolved.vacancy_rate?.value ?? null,
     unemployment_rate: resolved.unemployment_rate?.value ?? null,
-    inventory_yoy_change: null, // Inventory YoY change requires time-series
-    dom_yoy_change: null, // DOM YoY change requires time-series
+    inventory_yoy_change: null,
+    dom_yoy_change: null,
     price_to_income: resolved.price_to_income?.value ?? null,
     rent_growth_yoy: resolved.rent_growth_yoy?.value ?? null,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Freshness calculation
-// ---------------------------------------------------------------------------
 
 /** Calculate data freshness: age in days of the newest metric date */
 export function calculateFreshness(
@@ -161,10 +128,6 @@ export function calculateFreshness(
   const diffMs = now.getTime() - newestDate.getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
-
-// ---------------------------------------------------------------------------
-// Narrative prompt formatting
-// ---------------------------------------------------------------------------
 
 /** Format stance signals for prompt inclusion */
 function formatSignals(signals: StanceSignal[]): string {

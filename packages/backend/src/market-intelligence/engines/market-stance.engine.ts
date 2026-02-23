@@ -12,10 +12,6 @@
 
 import { NationalBenchmarks } from '../market-intelligence.types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export type MarketStance =
   | 'strong_bullish'
   | 'weak_bullish'
@@ -61,10 +57,6 @@ export interface StanceMetrics {
   /** Number of negative-sentiment news articles for this geography */
   negative_news_count: number;
 }
-
-// ---------------------------------------------------------------------------
-// Signal evaluation rules
-// ---------------------------------------------------------------------------
 
 interface SignalRule {
   /** Machine-readable signal name */
@@ -200,61 +192,30 @@ const SIGNAL_RULES: SignalRule[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Stance determination
-// ---------------------------------------------------------------------------
+function signalStrength(count: number): number {
+  if (count >= 4) return 2;
+  if (count >= 2) return 1;
+  return 0;
+}
 
-/**
- * Determines the market stance from signal counts.
- *
- * Rules:
- * - 4+ bullish signals  -> strong_bullish
- * - 2-3 bullish signals -> weak_bullish
- * - 4+ bearish signals  -> strong_bearish
- * - 2-3 bearish signals -> weak_bearish
- * - Otherwise           -> neutral
- *
- * When both bullish and bearish counts qualify for a stance,
- * the side with more signals wins. If tied, neutral.
- */
 function determineStance(
   bullishCount: number,
   bearishCount: number,
 ): MarketStance {
-  const bullishStrength = bullishCount >= 4 ? 2 : bullishCount >= 2 ? 1 : 0;
-  const bearishStrength = bearishCount >= 4 ? 2 : bearishCount >= 2 ? 1 : 0;
+  const bullish = signalStrength(bullishCount);
+  const bearish = signalStrength(bearishCount);
 
-  if (bullishStrength === 0 && bearishStrength === 0) {
-    return 'neutral';
+  if (bullish === 0 && bearish === 0) return 'neutral';
+  if (bullish === bearish) return 'neutral';
+
+  if (bullish > bearish) {
+    return bullish >= 2 ? 'strong_bullish' : 'weak_bullish';
   }
 
-  if (bullishStrength > bearishStrength) {
-    return bullishStrength >= 2 ? 'strong_bullish' : 'weak_bullish';
-  }
-
-  if (bearishStrength > bullishStrength) {
-    return bearishStrength >= 2 ? 'strong_bearish' : 'weak_bearish';
-  }
-
-  // Equal non-zero strength on both sides -> neutral
-  return 'neutral';
+  return bearish >= 2 ? 'strong_bearish' : 'weak_bearish';
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Computes a market stance from metric values, news sentiment, and national
- * benchmarks.
- *
- * This is a pure, deterministic function with no side effects.
- * Null metric values are skipped (they produce no signal).
- *
- * @param metrics - The market's current metric values + news counts (nulls allowed)
- * @param nationalBenchmarks - National averages used as comparison baselines
- * @returns StanceResult with the stance, signals list, and signal counts
- */
+/** Compute a market stance from metric values and national benchmarks. Pure and deterministic. */
 export function computeMarketStance(
   metrics: StanceMetrics,
   nationalBenchmarks: NationalBenchmarks,
@@ -263,11 +224,7 @@ export function computeMarketStance(
 
   for (const rule of SIGNAL_RULES) {
     const metricValue = metrics[rule.metricKey];
-
-    // Skip null/undefined metrics -- they produce no signal
-    if (metricValue === null || metricValue === undefined) {
-      continue;
-    }
+    if (metricValue == null) continue;
 
     if (rule.evaluate(metricValue, nationalBenchmarks)) {
       signals.push({

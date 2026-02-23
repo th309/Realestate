@@ -2,17 +2,17 @@
 
 /**
  * QuinnFloatingButton Component
- * 
+ *
  * A floating button that appears in the bottom-right corner of every page.
  * When clicked, it opens the Quinn AI assistant chat panel.
- * 
- * Design: Material Design 3 compliant per project_instructions.md §5
+ *
+ * Design: Material Design 3 compliant per project_instructions.md
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useQuinnUser, generateConversationId } from './useQuinnUser';
 import { QuinnRichData } from './QuinnRichData';
-import { STARTER_PROMPTS, parseFollowUpSuggestions } from './quinnChatHelpers';
+import { STARTER_PROMPTS, parseChatApiResponse, classifyErrorMessage } from './quinnChatHelpers';
 import type { QuinnStructuredData } from './QuinnStructuredData.types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -26,16 +26,16 @@ interface Message {
 }
 
 /** Material Symbol icon component */
-function MaterialIcon({ name, className = '', filled = false }: { 
-  name: string; 
+function MaterialIcon({ name, className = '', filled = false }: {
+  name: string;
   className?: string;
   filled?: boolean;
 }) {
   return (
-    <span 
+    <span
       className={`material-symbols-outlined ${className}`}
-      style={{ 
-        fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24` 
+      style={{
+        fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' 24`
       }}
     >
       {name}
@@ -51,11 +51,9 @@ export function QuinnFloatingButton() {
   const [showTooltip, setShowTooltip] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
-  // Get user ID (authenticated or anonymous)
+
   const { userId, isLoading: isUserLoading } = useQuinnUser();
-  
-  // Generate conversation ID tied to user - stable for this chat session
+
   const conversationId = useMemo(() => {
     if (!userId) return '';
     return generateConversationId(userId);
@@ -63,10 +61,10 @@ export function QuinnFloatingButton() {
 
   // Show tooltip briefly on mount
   useEffect(() => {
-    const timer = setTimeout(() => setShowTooltip(true), 2000);
+    const showTimer = setTimeout(() => setShowTooltip(true), 2000);
     const hideTimer = setTimeout(() => setShowTooltip(false), 7000);
     return () => {
-      clearTimeout(timer);
+      clearTimeout(showTimer);
       clearTimeout(hideTimer);
     };
   }, []);
@@ -79,163 +77,73 @@ export function QuinnFloatingButton() {
   // Auto-resize textarea up to 10 lines (~200px), then scroll
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (textarea) {
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto';
-      // Set height to scrollHeight, capped at max (10 lines ≈ 200px)
-      const maxHeight = 200;
-      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
-    }
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const maxHeight = 200;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
   }, [input]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || !conversationId) {
-      console.warn('[Quinn Client] sendMessage blocked:', { hasText: !!text.trim(), hasConversationId: !!conversationId });
-      return;
-    }
-
-    const requestId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    console.log(`[Quinn Client ${requestId}] === SEND MESSAGE START ===`);
-    console.log(`[Quinn Client ${requestId}] Message:`, text.slice(0, 100));
-    console.log(`[Quinn Client ${requestId}] ConversationId:`, conversationId);
+    if (!text.trim() || !conversationId) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: text,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    const startTime = Date.now();
-    
     try {
-      const apiUrl = `/api/analytics/chat/${conversationId}`;
-      console.log(`[Quinn Client ${requestId}] Fetching:`, apiUrl);
-
-      // Get Supabase session token for auth
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        } else {
-          // Anonymous user — pass user ID for dev auth bypass
-          headers['x-user-id'] = userId;
-        }
-      } catch {
-        headers['x-user-id'] = userId;
-      }
-
-      const response = await fetch(apiUrl, {
+      const headers = await buildAuthHeaders(userId);
+      const response = await fetch(`/api/analytics/chat/${conversationId}`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          message: text
-        })
+        body: JSON.stringify({ message: text }),
       });
 
-      const duration = Date.now() - startTime;
-      console.log(`[Quinn Client ${requestId}] Response received in ${duration}ms`);
-      console.log(`[Quinn Client ${requestId}] Status:`, response.status, response.statusText);
-
       const responseText = await response.text();
-      console.log(`[Quinn Client ${requestId}] Response length:`, responseText.length);
-      console.log(`[Quinn Client ${requestId}] Response preview:`, responseText.slice(0, 300));
-
-      let data;
+      let data: Record<string, unknown>;
       try {
         data = JSON.parse(responseText);
-      } catch (parseErr) {
-        console.error(`[Quinn Client ${requestId}] JSON parse failed:`, parseErr);
-        console.error(`[Quinn Client ${requestId}] Raw response:`, responseText);
+      } catch {
         throw new Error(`Invalid JSON response: ${responseText.slice(0, 100)}`);
       }
 
-      console.log(`[Quinn Client ${requestId}] Parsed data:`, {
-        success: data.success,
-        hasResponse: !!data.response,
-        hasError: !!data.error,
-        debug: data.debug,
-        toolsUsed: data.toolsUsed,
-      });
-
       if (!response.ok) {
-        console.error(`[Quinn Client ${requestId}] HTTP error:`, response.status, data.error || data.message);
-        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+        throw new Error((data.error ?? data.message ?? `HTTP ${response.status}`) as string);
       }
-
       if (data.success === false) {
-        console.error(`[Quinn Client ${requestId}] Backend returned success=false:`, data.error);
-        throw new Error(data.error || 'Backend processing failed');
+        throw new Error((data.error as string) || 'Backend processing failed');
       }
 
-      let content = typeof data.response === 'string' ? data.response.trim() : '';
-      if (!content && data.message) content = String(data.message).trim();
-      const structured = data.structuredData as QuinnStructuredData | undefined;
-      const hasRichData = structured && (
-        structured.rankings?.items?.length ||
-        structured.comparison?.metrics?.length ||
-        structured.chart?.data?.length ||
-        structured.table?.rows?.length
-      );
-      if (hasRichData) {
-        const intro = content.split(/\n\n/)[0]?.trim();
-        if (intro) content = intro;
-      } else if (!content && structured?.rankings?.items?.length) {
-        const r = structured.rankings;
-        const label = r.direction === 'bottom' ? 'Bottom' : 'Top';
-        content = `Here are the ${label.toLowerCase()} markets.`;
-      }
-      if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
-
-      // Extract follow-up suggestions from the response text
-      const { cleanText, followUps } = parseFollowUpSuggestions(content);
+      const parsed = parseChatApiResponse(data);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: cleanText,
+        content: parsed.content,
         timestamp: new Date().toISOString(),
-        ...(structured && (structured.rankings || structured.comparison || structured.chart || structured.table) ? { structuredData: structured } : {}),
-        ...(followUps.length > 0 ? { followUps } : {}),
+        ...(parsed.structuredData ? { structuredData: parsed.structuredData } : {}),
+        ...(parsed.followUps.length > 0 ? { followUps: parsed.followUps } : {}),
       };
 
-      console.log(`[Quinn Client ${requestId}] === SUCCESS === Response length:`, assistantMessage.content.length);
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      const duration = Date.now() - startTime;
-      const err = error as Error;
-      
-      console.error(`[Quinn Client ${requestId}] === FAILED after ${duration}ms ===`);
-      console.error(`[Quinn Client ${requestId}] Error:`, err.name, err.message);
-      console.error(`[Quinn Client ${requestId}] Stack:`, err.stack);
-      
-      // Show more helpful error message based on error type
-      let userErrorMessage = 'Sorry, I encountered an error. Please try again.';
-      if (err.message.includes('fetch') || err.message.includes('network')) {
-        userErrorMessage = 'Unable to reach the server. Please check your connection and try again.';
-      } else if (err.message.includes('timeout')) {
-        userErrorMessage = 'The request timed out. Please try again.';
-      } else if (err.message.includes('503') || err.message.includes('unavailable')) {
-        userErrorMessage = 'The AI service is temporarily unavailable. Please try again in a moment.';
-      }
-      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: userErrorMessage,
-        timestamp: new Date().toISOString()
+        content: classifyErrorMessage(error as Error),
+        timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, userId]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -273,140 +181,33 @@ export function QuinnFloatingButton() {
           aria-label="Open Quinn AI Assistant"
         >
           <span className="text-2xl font-bold group-hover:scale-110 transition-transform duration-200">Q</span>
-          {/* Online Status Indicator */}
           <span className={`absolute top-0 right-0 w-4 h-4 rounded-full border-2 border-surface ${isUserLoading ? 'bg-amber-500' : 'bg-emerald-500'}`} />
         </button>
       </div>
 
       {/* Modal Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:justify-end p-0 sm:p-6"
           onClick={() => setIsOpen(false)}
         >
-          {/* Chat Panel - M3 Dialog radius */}
-          <div 
+          {/* Chat Panel */}
+          <div
             onClick={(e) => e.stopPropagation()}
             className="w-full sm:w-[420px] h-[85vh] sm:h-[640px] sm:max-h-[80vh] bg-surface rounded-t-[28px] sm:rounded-[28px] elevation-5 flex flex-col overflow-hidden animate-slideIn"
           >
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-outline-variant bg-surface-container flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
-                    <span className="text-lg font-bold">Q</span>
-                  </div>
-                  {/* Online indicator */}
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface" />
-                </div>
-                <div>
-                  <h3 className="text-on-surface font-semibold text-base leading-tight">Quinn</h3>
-                  <p className="text-on-surface-variant text-[11px] uppercase tracking-wider font-medium mt-0.5">
-                    Your Property Expert
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <button
-                  className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
-                  aria-label="More options"
-                >
-                  <MaterialIcon name="more_vert" className="text-xl" />
-                </button>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
-                  aria-label="Close"
-                >
-                  <MaterialIcon name="close" className="text-xl" />
-                </button>
-              </div>
-            </div>
+            <ChatHeader onClose={() => setIsOpen(false)} />
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-5 bg-surface-container-low">
               {messages.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
-                    <span className="text-3xl font-bold">Q</span>
-                  </div>
-                  <p className="text-on-surface-variant text-sm leading-relaxed mb-5 max-w-[320px] mx-auto">
-                    I&apos;m Quinn, your real estate market analyst. I track 900+ metros and 3,000+ counties with weekly intelligence briefings.
-                  </p>
-                  <p className="text-on-surface text-sm font-medium mb-3">
-                    Try asking me something:
-                  </p>
-                  <div className="space-y-2">
-                    {STARTER_PROMPTS.map((prompt, i) => (
-                      <button
-                        key={i}
-                        onClick={() => sendMessage(prompt.text)}
-                        className="flex items-center gap-3 w-full text-left px-4 py-3 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface hover:border-primary hover:bg-primary-container/10 transition-colors duration-200"
-                      >
-                        <MaterialIcon name={prompt.icon} className="text-lg text-on-surface-variant" />
-                        {prompt.text}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <EmptyState onSend={sendMessage} />
               ) : (
                 <div className="space-y-4">
                   {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex items-start gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {msg.role === 'assistant' && (
-                        <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
-                          <span className="text-sm font-bold">Q</span>
-                        </div>
-                      )}
-                      <div className={`flex flex-col gap-2 ${msg.role === 'assistant' && msg.structuredData ? 'max-w-[360px]' : ''}`}>
-                        <div
-                          className={`${msg.role === 'user' ? 'max-w-[280px]' : 'max-w-[360px]'} px-4 py-3 text-sm leading-relaxed ${
-                            msg.role === 'user'
-                              ? 'bg-primary text-on-primary rounded-[20px] rounded-br-sm'
-                              : 'bg-surface-container-high text-on-surface rounded-[20px] rounded-bl-sm'
-                          }`}
-                        >
-                          {msg.content}
-                        </div>
-                        {msg.role === 'assistant' && msg.structuredData && (
-                          <QuinnRichData data={msg.structuredData} />
-                        )}
-                        {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {msg.followUps.map((question, i) => (
-                              <button
-                                key={i}
-                                onClick={() => sendMessage(question)}
-                                className="text-xs px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200"
-                              >
-                                {question}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {msg.role === 'user' && (
-                          <span className="text-[10px] text-on-surface-variant text-right">Delivered</span>
-                        )}
-                      </div>
-                    </div>
+                    <ChatBubble key={msg.id} message={msg} onFollowUp={sendMessage} />
                   ))}
-                  {loading && (
-                    <div className="flex items-start gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
-                        <span className="text-sm font-bold">Q</span>
-                      </div>
-                      <div className="bg-surface-container-high px-4 py-3 rounded-[20px] rounded-bl-sm">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce" />
-                          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce [animation-delay:0.2s]" />
-                          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce [animation-delay:0.4s]" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {loading && <TypingIndicator />}
                   <div ref={messagesEndRef} />
                 </div>
               )}
@@ -414,7 +215,6 @@ export function QuinnFloatingButton() {
 
             {/* Input Area */}
             <div className="p-4 border-t border-outline-variant bg-surface-container">
-              {/* Input Field */}
               <div className="flex items-end gap-3 bg-surface-container-high px-4 py-3 rounded-2xl border border-outline-variant focus-within:border-primary transition-colors">
                 <textarea
                   ref={textareaRef}
@@ -436,8 +236,6 @@ export function QuinnFloatingButton() {
                   <MaterialIcon name="send" className="text-lg" />
                 </button>
               </div>
-              
-              {/* Disclaimer */}
               <p className="mt-2 text-center text-[10px] text-on-surface-variant">
                 Quinn can make mistakes. Verify important data.
               </p>
@@ -447,4 +245,155 @@ export function QuinnFloatingButton() {
       )}
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function ChatHeader({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="px-5 py-4 border-b border-outline-variant bg-surface-container flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+            <span className="text-lg font-bold">Q</span>
+          </div>
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-surface" />
+        </div>
+        <div>
+          <h3 className="text-on-surface font-semibold text-base leading-tight">Quinn</h3>
+          <p className="text-on-surface-variant text-[11px] uppercase tracking-wider font-medium mt-0.5">
+            Your Property Expert
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <button
+          className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
+          aria-label="More options"
+        >
+          <MaterialIcon name="more_vert" className="text-xl" />
+        </button>
+        <button
+          onClick={onClose}
+          className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-full transition-colors"
+          aria-label="Close"
+        >
+          <MaterialIcon name="close" className="text-xl" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ onSend }: { onSend: (text: string) => void }) {
+  return (
+    <div className="text-center py-8">
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+        <span className="text-3xl font-bold">Q</span>
+      </div>
+      <p className="text-on-surface-variant text-sm leading-relaxed mb-5 max-w-[320px] mx-auto">
+        I&apos;m Quinn, your real estate market analyst. I track 900+ metros and 3,000+ counties with weekly intelligence briefings.
+      </p>
+      <p className="text-on-surface text-sm font-medium mb-3">
+        Try asking me something:
+      </p>
+      <div className="space-y-2">
+        {STARTER_PROMPTS.map((prompt, i) => (
+          <button
+            key={i}
+            onClick={() => onSend(prompt.text)}
+            className="flex items-center gap-3 w-full text-left px-4 py-3 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface hover:border-primary hover:bg-primary-container/10 transition-colors duration-200"
+          >
+            <MaterialIcon name={prompt.icon} className="text-lg text-on-surface-variant" />
+            {prompt.text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatBubble({ message, onFollowUp }: { message: Message; onFollowUp: (text: string) => void }) {
+  const isUser = message.role === 'user';
+
+  return (
+    <div className={`flex items-start gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && (
+        <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
+          <span className="text-sm font-bold">Q</span>
+        </div>
+      )}
+      <div className={`flex flex-col gap-2 ${!isUser && message.structuredData ? 'max-w-[360px]' : ''}`}>
+        <div
+          className={`px-4 py-3 text-sm leading-relaxed ${
+            isUser
+              ? 'max-w-[280px] bg-primary text-on-primary rounded-[20px] rounded-br-sm'
+              : 'max-w-[360px] bg-surface-container-high text-on-surface rounded-[20px] rounded-bl-sm'
+          }`}
+        >
+          {message.content}
+        </div>
+        {!isUser && message.structuredData && (
+          <QuinnRichData data={message.structuredData} />
+        )}
+        {!isUser && message.followUps && message.followUps.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-1">
+            {message.followUps.map((question, i) => (
+              <button
+                key={i}
+                onClick={() => onFollowUp(question)}
+                className="text-xs px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        )}
+        {isUser && (
+          <span className="text-[10px] text-on-surface-variant text-right">Delivered</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
+        <span className="text-sm font-bold">Q</span>
+      </div>
+      <div className="bg-surface-container-high px-4 py-3 rounded-[20px] rounded-bl-sm">
+        <div className="flex gap-1">
+          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce" />
+          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce [animation-delay:0.2s]" />
+          <span className="w-2 h-2 bg-on-surface-variant rounded-full animate-bounce [animation-delay:0.4s]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function buildAuthHeaders(userId: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  try {
+    const supabase = createSupabaseBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+      return headers;
+    }
+  } catch {
+    // Fall through to anonymous header
+  }
+
+  headers['x-user-id'] = userId;
+  return headers;
 }

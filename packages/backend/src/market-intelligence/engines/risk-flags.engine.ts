@@ -10,10 +10,6 @@
 
 import { NationalBenchmarks } from '../market-intelligence.types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface RiskFlag {
   /** Machine-readable flag name (e.g. 'population_decline', 'high_vacancy') */
   flag: string;
@@ -55,10 +51,6 @@ export interface GeoData {
   flood_risk?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Metric-based risk rules (declarative rule table)
-// ---------------------------------------------------------------------------
-
 interface MetricRiskRule {
   /** Machine-readable flag name */
   flagName: string;
@@ -74,9 +66,6 @@ interface MetricRiskRule {
   describeDetail: (value: number, benchmarks: NationalBenchmarks) => string;
 }
 
-/**
- * Formats a number to 1 decimal place for detail strings.
- */
 function formatToOneDecimal(value: number): string {
   return value.toFixed(1);
 }
@@ -161,10 +150,6 @@ const METRIC_RISK_RULES: MetricRiskRule[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Geography-based risk rules (declarative rule table)
-// ---------------------------------------------------------------------------
-
 interface GeoRiskRule {
   /** Machine-readable flag name */
   flagName: string;
@@ -197,23 +182,7 @@ const GEO_RISK_RULES: GeoRiskRule[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Computes risk flags for a market from metric values, national benchmarks,
- * and optional geography data.
- *
- * This is a pure, deterministic function with no side effects.
- * Null/undefined metric values are skipped (they produce no flag).
- * GeoData can be null — geography-based flags are simply skipped.
- *
- * @param metrics - The market's current metric values (all optional, nulls allowed)
- * @param nationalBenchmarks - National averages used as comparison baselines
- * @param geoData - Optional geography risk data (coastal, fire, flood)
- * @returns Array of RiskFlag objects, empty if no thresholds are breached
- */
+/** Compute risk flags from metric values and benchmarks. Pure and deterministic. */
 export function computeRiskFlags(
   metrics: RiskMetrics,
   nationalBenchmarks: NationalBenchmarks,
@@ -221,14 +190,9 @@ export function computeRiskFlags(
 ): RiskFlag[] {
   const flags: RiskFlag[] = [];
 
-  // Evaluate metric-based rules
   for (const rule of METRIC_RISK_RULES) {
     const metricValue = metrics[rule.metricKey];
-
-    // Skip null/undefined metrics — they produce no flag
-    if (metricValue === null || metricValue === undefined) {
-      continue;
-    }
+    if (metricValue == null) continue;
 
     if (rule.evaluate(metricValue, nationalBenchmarks)) {
       flags.push({
@@ -241,7 +205,6 @@ export function computeRiskFlags(
     }
   }
 
-  // Evaluate geography-based rules (only if geoData is provided)
   if (geoData != null) {
     for (const rule of GEO_RISK_RULES) {
       if (geoData[rule.geoKey] === true) {

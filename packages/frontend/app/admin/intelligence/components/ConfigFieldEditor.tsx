@@ -8,8 +8,9 @@
 
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Eye, EyeOff, Check } from 'lucide-react';
+import { useDebouncedCommit } from '../hooks/useDebouncedCommit';
 import type { ConfigEntry } from '../hooks/useIntelligenceConfig';
 
 interface ConfigFieldEditorProps {
@@ -45,24 +46,37 @@ export function ConfigFieldEditor({ entry, onSave, isSaved }: ConfigFieldEditorP
 
       {/* Input control */}
       <div className="shrink-0">
-        {fieldType === 'toggle' && (
-          <ToggleField entry={entry} onSave={onSave} />
-        )}
-        {fieldType === 'text' && (
-          <TextField entry={entry} onSave={onSave} />
-        )}
-        {fieldType === 'password' && (
-          <PasswordField entry={entry} onSave={onSave} />
-        )}
-        {fieldType === 'select' && (
-          <SelectField entry={entry} onSave={onSave} />
-        )}
-        {fieldType === 'number' && (
-          <NumberField entry={entry} onSave={onSave} />
-        )}
+        <FieldInput fieldType={fieldType} entry={entry} onSave={onSave} />
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Field type router
+// ---------------------------------------------------------------------------
+
+function FieldInput({
+  fieldType,
+  entry,
+  onSave,
+}: {
+  fieldType: string;
+  entry: ConfigEntry;
+  onSave: (key: string, value: string) => Promise<void>;
+}) {
+  switch (fieldType) {
+    case 'toggle':
+      return <ToggleField entry={entry} onSave={onSave} />;
+    case 'password':
+      return <PasswordField entry={entry} onSave={onSave} />;
+    case 'select':
+      return <SelectField entry={entry} onSave={onSave} />;
+    case 'number':
+      return <DebouncedInput type="number" entry={entry} onSave={onSave} extraClassName="font-mono" />;
+    default:
+      return <DebouncedInput type="text" entry={entry} onSave={onSave} />;
+  }
 }
 
 /** Formats a config key like "BRIEFING_GENERATION_ENABLED" into "Briefing Generation" */
@@ -75,6 +89,17 @@ function formatLabel(key: string): string {
     .replace(/\bUrl\b/g, 'URL')
     .replace(/\bLlm\b/g, 'LLM');
 }
+
+// ---------------------------------------------------------------------------
+// Shared text input class
+// ---------------------------------------------------------------------------
+
+const INPUT_CLASS = `
+  w-64 px-3 py-1.5 text-sm rounded-lg
+  bg-surface-container border border-outline-variant
+  text-on-surface placeholder:text-on-surface-variant
+  focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+`;
 
 // ---------------------------------------------------------------------------
 // Toggle (boolean)
@@ -90,14 +115,14 @@ function ToggleField({
   const isOn = entry.value === 'true' || entry.value === '1';
   const [saving, setSaving] = useState(false);
 
-  const handleToggle = async () => {
+  async function handleToggle(): Promise<void> {
     setSaving(true);
     try {
       await onSave(entry.key, isOn ? 'false' : 'true');
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
     <button
@@ -126,70 +151,34 @@ function ToggleField({
 }
 
 // ---------------------------------------------------------------------------
-// Text input
+// Debounced text/number input (shared between text and number fields)
 // ---------------------------------------------------------------------------
 
-function TextField({
+function DebouncedInput({
+  type,
   entry,
   onSave,
+  extraClassName = '',
 }: {
+  type: 'text' | 'number';
   entry: ConfigEntry;
   onSave: (key: string, value: string) => Promise<void>;
+  extraClassName?: string;
 }) {
-  const [localValue, setLocalValue] = useState(entry.value);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    setLocalValue(entry.value);
-  }, [entry.value]);
-
-  const commitValue = useCallback(
-    (value: string) => {
-      if (value !== entry.value) {
-        onSave(entry.key, value);
-      }
-    },
-    [entry.key, entry.value, onSave],
-  );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => commitValue(newValue), 800);
-  };
-
-  const handleBlur = () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    commitValue(localValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      commitValue(localValue);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, []);
+  const { localValue, handleChange, handleBlur, handleKeyDown } = useDebouncedCommit({
+    entryKey: entry.key,
+    entryValue: entry.value,
+    onSave,
+  });
 
   return (
     <input
-      type="text"
+      type={type}
       value={localValue}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="
-        w-64 px-3 py-1.5 text-sm rounded-lg
-        bg-surface-container border border-outline-variant
-        text-on-surface placeholder:text-on-surface-variant
-        focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
-      "
+      className={`${INPUT_CLASS} ${extraClassName}`}
     />
   );
 }
@@ -205,47 +194,12 @@ function PasswordField({
   entry: ConfigEntry;
   onSave: (key: string, value: string) => Promise<void>;
 }) {
-  const [localValue, setLocalValue] = useState(entry.value);
   const [visible, setVisible] = useState(false);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    setLocalValue(entry.value);
-  }, [entry.value]);
-
-  const commitValue = useCallback(
-    (value: string) => {
-      if (value !== entry.value) {
-        onSave(entry.key, value);
-      }
-    },
-    [entry.key, entry.value, onSave],
-  );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => commitValue(newValue), 800);
-  };
-
-  const handleBlur = () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    commitValue(localValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      commitValue(localValue);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, []);
+  const { localValue, handleChange, handleBlur, handleKeyDown } = useDebouncedCommit({
+    entryKey: entry.key,
+    entryValue: entry.value,
+    onSave,
+  });
 
   return (
     <div className="relative w-64">
@@ -255,13 +209,7 @@ function PasswordField({
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="
-          w-full px-3 py-1.5 pr-10 text-sm rounded-lg
-          bg-surface-container border border-outline-variant
-          text-on-surface placeholder:text-on-surface-variant
-          focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
-          font-mono
-        "
+        className={`${INPUT_CLASS} pr-10 font-mono`}
       />
       <button
         type="button"
@@ -290,20 +238,15 @@ function SelectField({
     ? (entry.field_options.options as string[])
     : [];
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>): void {
     onSave(entry.key, e.target.value);
-  };
+  }
 
   return (
     <select
       value={entry.value}
       onChange={handleChange}
-      className="
-        w-64 px-3 py-1.5 text-sm rounded-lg
-        bg-surface-container border border-outline-variant
-        text-on-surface
-        focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
-      "
+      className={INPUT_CLASS}
     >
       {options.length > 0 ? (
         options.map((opt) => (
@@ -315,75 +258,5 @@ function SelectField({
         <option value={entry.value}>{entry.value}</option>
       )}
     </select>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Number input
-// ---------------------------------------------------------------------------
-
-function NumberField({
-  entry,
-  onSave,
-}: {
-  entry: ConfigEntry;
-  onSave: (key: string, value: string) => Promise<void>;
-}) {
-  const [localValue, setLocalValue] = useState(entry.value);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    setLocalValue(entry.value);
-  }, [entry.value]);
-
-  const commitValue = useCallback(
-    (value: string) => {
-      if (value !== entry.value) {
-        onSave(entry.key, value);
-      }
-    },
-    [entry.key, entry.value, onSave],
-  );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setLocalValue(newValue);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => commitValue(newValue), 800);
-  };
-
-  const handleBlur = () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    commitValue(localValue);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      commitValue(localValue);
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, []);
-
-  return (
-    <input
-      type="number"
-      value={localValue}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      onKeyDown={handleKeyDown}
-      className="
-        w-64 px-3 py-1.5 text-sm rounded-lg
-        bg-surface-container border border-outline-variant
-        text-on-surface
-        focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
-        font-mono
-      "
-    />
   );
 }

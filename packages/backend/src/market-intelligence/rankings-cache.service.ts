@@ -1,9 +1,6 @@
 /**
- * Rankings Cache Service
- *
- * Pre-computes top/bottom 10 rankings for each metric across geography levels
- * and stores them in the `rankings_cache` table. Rankings are refreshed
- * periodically by the cron job and served from cache for fast reads.
+ * Pre-computes top/bottom 10 rankings for each metric across geography levels.
+ * Rankings are refreshed periodically by the cron job and served from cache.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -85,16 +82,10 @@ export class RankingsCacheService {
     metricId: string,
     geoType: RankingsGeoLevel,
   ): Promise<void> {
-    // 1. Fetch all values via MetricResolutionService
-    const resolvedMap = await this.metricResolution.resolveMetricForAllGeos(
-      metricId,
-      geoType,
-    );
+    const resolvedMap = await this.metricResolution.resolveMetricForAllGeos(metricId, geoType);
 
-    // 2. Collect region IDs with non-null values
     const regionIds: string[] = [];
     const valuesByRegion = new Map<string, number>();
-
     for (const [regionId, resolved] of resolvedMap.entries()) {
       if (resolved.value != null) {
         regionIds.push(regionId);
@@ -102,31 +93,26 @@ export class RankingsCacheService {
       }
     }
 
-    // 3. Look up geography names in bulk
     const nameMap = await this.fetchGeographyNames(regionIds, geoType);
 
-    // 4. Build ranking entries
-    const validEntries: RankingEntry[] = regionIds.map((regionId) => ({
+    const entries: RankingEntry[] = regionIds.map((regionId) => ({
       geography_id: regionId,
       geography_name: nameMap.get(regionId) || regionId,
       value: valuesByRegion.get(regionId)!,
       formatted: this.formatValue(valuesByRegion.get(regionId)!, metricId),
-      rank: 0, // assigned after sorting
+      rank: 0,
     }));
 
-    // 5. Top 10 (highest values, descending)
-    const topSorted = [...validEntries].sort((a, b) => b.value - a.value);
-    const top10 = topSorted
+    const top10 = [...entries]
+      .sort((a, b) => b.value - a.value)
       .slice(0, 10)
-      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+      .map((entry, i) => ({ ...entry, rank: i + 1 }));
 
-    // 6. Bottom 10 (lowest values, ascending)
-    const bottomSorted = [...validEntries].sort((a, b) => a.value - b.value);
-    const bottom10 = bottomSorted
+    const bottom10 = [...entries]
+      .sort((a, b) => a.value - b.value)
       .slice(0, 10)
-      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+      .map((entry, i) => ({ ...entry, rank: i + 1 }));
 
-    // 7. Store both directions
     await this.storeRanking(metricId, geoType, 'top', top10);
     await this.storeRanking(metricId, geoType, 'bottom', bottom10);
   }
@@ -153,14 +139,7 @@ export class RankingsCacheService {
     return data?.rankings ?? null;
   }
 
-  // ==========================================================================
-  // Private: Storage
-  // ==========================================================================
-
-  /**
-   * Store a ranking in the database.
-   * Marks previous is_latest=true entries as false before inserting.
-   */
+  /** Store a ranking, marking previous entries as not latest. */
   private async storeRanking(
     metricId: string,
     geoType: string,
@@ -191,14 +170,7 @@ export class RankingsCacheService {
     });
   }
 
-  // ==========================================================================
-  // Private: Geography Name Lookup
-  // ==========================================================================
-
-  /**
-   * Fetch geography names in bulk from the geographies table.
-   * Returns a Map of geography_id -> name.
-   */
+  /** Fetch geography names in bulk. Returns a Map of geography_id -> name. */
   private async fetchGeographyNames(
     regionIds: string[],
     geoType: string,
@@ -227,32 +199,13 @@ export class RankingsCacheService {
     return nameMap;
   }
 
-  // ==========================================================================
-  // Private: Value Formatting
-  // ==========================================================================
-
-  /**
-   * Format a numeric value for display based on the metric type.
-   * Uses simple formatting rules — currency, percent, days, ratio, or plain number.
-   */
+  /** Format a numeric value for display based on the metric type. */
   private formatValue(value: number, metricId: string): string {
-    if (CURRENCY_METRICS.has(metricId)) {
-      return '$' + Math.round(value).toLocaleString('en-US');
-    }
+    if (CURRENCY_METRICS.has(metricId)) return '$' + Math.round(value).toLocaleString('en-US');
+    if (PERCENT_METRICS.has(metricId)) return `${parseFloat(value.toFixed(2))}%`;
+    if (DAYS_METRICS.has(metricId)) return `${Math.round(value)} days`;
+    if (RATIO_METRICS.has(metricId)) return `${parseFloat(value.toFixed(1))}x`;
 
-    if (PERCENT_METRICS.has(metricId)) {
-      return `${parseFloat(value.toFixed(2))}%`;
-    }
-
-    if (DAYS_METRICS.has(metricId)) {
-      return `${Math.round(value)} days`;
-    }
-
-    if (RATIO_METRICS.has(metricId)) {
-      return `${parseFloat(value.toFixed(1))}x`;
-    }
-
-    // Default: plain number with commas
     return Number.isInteger(value)
       ? value.toLocaleString('en-US')
       : parseFloat(value.toFixed(2)).toLocaleString('en-US');

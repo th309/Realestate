@@ -1,11 +1,6 @@
 /**
- * News Article Classification Helpers
- *
  * Standalone functions for classifying real estate news articles via LLM.
- * Extracted from NewsIngestionService to keep the service under the 300-line limit.
- *
- * All functions are pure or take explicit dependencies (AppConfigService)
- * rather than relying on class state.
+ * Pure functions with explicit dependencies (AppConfigService).
  */
 
 import OpenAI from 'openai';
@@ -20,11 +15,7 @@ export interface ArticleClassification {
 
 const LLM_TIMEOUT_MS = 15_000;
 
-/**
- * Classify an article via LLM. Falls back to defaults on failure.
- * This is the main entry point — callers should use this rather than
- * calling the individual helpers directly.
- */
+/** Classify an article via LLM. Falls back to defaults on failure. */
 export async function classifyArticle(
   headline: string,
   description: string,
@@ -37,8 +28,7 @@ export async function classifyArticle(
   }
 }
 
-/** Call DeepSeek LLM to classify article content */
-export async function callLlmForClassification(
+async function callLlmForClassification(
   headline: string,
   description: string,
   appConfig: AppConfigService,
@@ -72,8 +62,7 @@ export async function callLlmForClassification(
   return parseLlmClassification(content, headline);
 }
 
-/** Build the LLM prompt for article classification */
-export function buildClassificationPrompt(headline: string, description: string): string {
+function buildClassificationPrompt(headline: string, description: string): string {
   return `Classify this real estate news article.
 
 Headline: ${headline}
@@ -88,7 +77,7 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 /** Parse the LLM JSON response, falling back gracefully */
-export function parseLlmClassification(
+function parseLlmClassification(
   raw: string, headline: string,
 ): ArticleClassification {
   try {
@@ -108,8 +97,7 @@ export function parseLlmClassification(
   }
 }
 
-/** Fallback classification when LLM is unavailable */
-export function buildFallbackClassification(headline: string): ArticleClassification {
+function buildFallbackClassification(headline: string): ArticleClassification {
   return {
     summary: headline,
     tags: [],

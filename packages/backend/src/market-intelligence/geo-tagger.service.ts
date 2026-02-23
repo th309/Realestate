@@ -1,9 +1,6 @@
 /**
- * Geo-Tagger Service
- *
- * Matches article text (headline + description) against a curated list of
- * metro names and common abbreviations to produce geography tags. Metro names
- * are lazy-loaded from Supabase on first use and cached in memory.
+ * Matches article text against metro names and abbreviations to produce
+ * geography tags. Metro names are lazy-loaded from Supabase and cached.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -28,11 +25,7 @@ interface MetroEntry {
 const HEADLINE_CONFIDENCE = 0.95;
 const DESCRIPTION_CONFIDENCE = 0.75;
 
-/**
- * Common metro abbreviations and colloquial names mapped to the official
- * metro name prefix they should match. The value must be a substring of
- * the official `geography_name` stored in the database.
- */
+/** Metro abbreviations and colloquial names mapped to official metro name fragments. */
 const METRO_ABBREVIATIONS: Record<string, string> = {
   'nyc': 'new york',
   'dfw': 'dallas-fort worth',
@@ -68,10 +61,7 @@ export class GeoTaggerService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  /**
-   * Tag an article's headline and description against known metro areas.
-   * Returns all matches sorted by confidence descending.
-   */
+  /** Tag an article against known metro areas. Returns matches sorted by confidence. */
   async tagArticle(headline: string, description: string): Promise<GeoTagResult[]> {
     const entries = await this.getMetroEntries();
 
@@ -106,10 +96,7 @@ export class GeoTaggerService {
     return results;
   }
 
-  /**
-   * Lazy-load metro entries from Supabase on first call, then serve from
-   * in-memory cache. Falls back to a hardcoded list if the DB query fails.
-   */
+  /** Lazy-load metro entries from Supabase; falls back to hardcoded list. */
   private async getMetroEntries(): Promise<MetroEntry[]> {
     if (this.metroEntries) return this.metroEntries;
 
@@ -142,12 +129,7 @@ export class GeoTaggerService {
     return this.metroEntries!;
   }
 
-  /**
-   * Build a MetroEntry with search patterns derived from the official name.
-   * e.g. "Dallas-Fort Worth-Arlington, TX" generates patterns for:
-   *   "dallas-fort worth-arlington, tx", "dallas-fort worth", "dallas"
-   * Short terms (<=3 chars) use word-boundary matching to avoid false positives.
-   */
+  /** Build a MetroEntry with search patterns derived from the official name. */
   private buildMetroEntry(id: string, name: string): MetroEntry {
     const terms: string[] = [name.toLowerCase()];
 
@@ -184,10 +166,7 @@ export class GeoTaggerService {
     }
   }
 
-  /**
-   * Build a regex pattern from a search term. Short terms (<=3 chars) use
-   * word-boundary matching to prevent false positives like "la" in "layoffs".
-   */
+  /** Build regex from a search term. Short terms (<=3 chars) use word-boundary matching. */
   private buildSearchPattern(term: string): RegExp {
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (term.length <= 3) {
@@ -196,10 +175,7 @@ export class GeoTaggerService {
     return new RegExp(escaped, 'i');
   }
 
-  /**
-   * Hardcoded top ~50 US metro areas for when the geographies table
-   * is unavailable. TODO: Replace with full DB-driven list.
-   */
+  /** Hardcoded top ~50 US metro areas as fallback when the geographies table is unavailable. */
   private buildFallbackEntries(): MetroEntry[] {
     const fallbackMetros: Array<[string, string]> = [
       ['35620', 'New York-Newark-Jersey City, NY-NJ-PA'],
