@@ -13,7 +13,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { RankingsCacheService } from '../market-intelligence/rankings-cache.service';
 import { BriefingGeneratorService } from '../market-intelligence/briefing-generator.service';
 import { MarketBriefing } from '../market-intelligence/market-intelligence.types';
-export { ChatMessage, StructuredData } from './analytics-chat.types';
+export type { ChatMessage, StructuredData } from './analytics-chat.types';
 import { ConversationState, StructuredData } from './analytics-chat.types';
 import { getQueryIntent, getMaxIterations, getRelevantTools } from './analytics-chat-query-router';
 import { buildUserProfilePrompt, buildDynamicContext } from './analytics-chat-prompt-builders';

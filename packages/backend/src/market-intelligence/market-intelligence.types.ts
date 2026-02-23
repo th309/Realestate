@@ -5,12 +5,12 @@
  * briefings, news, rankings, and metric constants.
  */
 
-import { MarketStance, StanceSignal } from './engines/market-stance.engine';
-import { RiskFlag } from './engines/risk-flags.engine';
+import type { MarketStance, StanceSignal } from './engines/market-stance.engine';
+import type { RiskFlag } from './engines/risk-flags.engine';
 
 // Re-export engine types for convenience
-export { MarketStance, StanceSignal } from './engines/market-stance.engine';
-export { RiskFlag } from './engines/risk-flags.engine';
+export type { MarketStance, StanceSignal } from './engines/market-stance.engine';
+export type { RiskFlag } from './engines/risk-flags.engine';
 
 /** Snapshot of a single metric value within a briefing */
 export interface MetricSnapshot {

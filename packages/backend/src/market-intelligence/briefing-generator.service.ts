@@ -52,17 +52,11 @@ export class BriefingGeneratorService {
 
     // 3. Compute market stance (deterministic)
     const stanceInput = extractStanceMetrics(resolvedMetrics);
-    const stanceResult = computeMarketStance(stanceInput, {
-      vacancy_rate: nationalBenchmarks.vacancy_rate,
-      appreciation_yoy: nationalBenchmarks.appreciation_yoy,
-    });
+    const stanceResult = computeMarketStance(stanceInput, nationalBenchmarks);
 
     // 4. Compute risk flags (deterministic)
     const riskInput = extractRiskMetrics(resolvedMetrics);
-    const riskFlags = computeRiskFlags(riskInput, {
-      vacancy_rate: nationalBenchmarks.vacancy_rate,
-      unemployment_rate: nationalBenchmarks.unemployment_rate,
-    }, null);
+    const riskFlags = computeRiskFlags(riskInput, nationalBenchmarks, null);
 
     // 5. Fetch recent news
     const newsSnapshot = await this.fetchRecentNews(geographyId);
