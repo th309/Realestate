@@ -67,9 +67,10 @@ export function useMapSearch({
   const searchNavigatedRef = useRef(false);
 
 
-  // Handle search result selection
-  const handleSelectSearchResult = (result: SearchResult) => {
-    console.log('Search result clicked:', result);
+  // Handle search result selection — wrapped in useCallback so the URL-processing
+  // effect in map/page.tsx has a stable dependency and doesn't re-fire every render.
+  const handleSelectSearchResult = useCallback((result: SearchResult) => {
+    console.log('Search result selected:', result);
 
     const zoomLevel = result.type === 'state' ? 5.5 :
       result.type === 'zip' ? 12 :
@@ -80,13 +81,11 @@ export function useMapSearch({
     if (!mapRef.current) {
       console.error('Map not initialized - cannot zoom');
     } else if (result.bbox && result.type !== 'metro') {
-      console.log('Fitting to bounds:', result.bbox);
       mapRef.current.fitBounds(
         [[result.bbox[0], result.bbox[1]], [result.bbox[2], result.bbox[3]]],
         { padding: MAP_PADDING.FLY_TO, duration: ANIMATION_DURATIONS.MAP_FLY }
       );
     } else if (result.center) {
-      console.log('Flying to:', result.center, 'zoom:', zoomLevel);
       mapRef.current.flyTo({
         center: result.center,
         zoom: zoomLevel,
@@ -100,7 +99,6 @@ export function useMapSearch({
       fetch(url).then(r => r.json()).then(data => {
         const feature = data.features?.[0];
         if (feature?.center && mapRef.current) {
-          console.log('Geocoded flyTo:', feature.center, 'zoom:', zoomLevel);
           mapRef.current.flyTo({
             center: feature.center as [number, number],
             zoom: zoomLevel,
@@ -127,7 +125,6 @@ export function useMapSearch({
     });
 
     // Update geo level and state based on result type
-    // Universal logic: The search result determines the mode.
     if (result.type === 'state') {
       onGeoLevelChange('state');
     } else if (result.type === 'zip' && result.state) {
@@ -142,14 +139,12 @@ export function useMapSearch({
         onGeoLevelChange('city');
         onStateChange(result.state);
       } else {
-        // Fallback to city anyway if state missing, backend might still match
         onGeoLevelChange('city');
       }
     }
 
-    // Clear search
     clearSearch();
-  };
+  }, [mapRef, onHighlightFeature, onGeoLevelChange, onStateChange, clearSearch]);
 
   return {
     searchQuery,

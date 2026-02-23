@@ -21,6 +21,25 @@ interface WatchlistDashboardProps {
   className?: string;
 }
 
+/** Extract state abbreviation from a geography name like "Salt Lake City, UT" or "Cook County, IL-IN" */
+function parseStateFromName(name?: string): string | undefined {
+  if (!name) return undefined;
+  const match = name.match(/,\s*([A-Z]{2})(?:-[A-Z]{2})*\s*$/);
+  return match?.[1];
+}
+
+/** Build the /map URL with query params matching the HeroSearchBar pattern. */
+function buildMapUrl(item: WatchlistItem): string {
+  const params = new URLSearchParams({
+    geo: item.geography_type,
+    id: item.geography_id,
+  });
+  if (item.geography_name) params.set('name', item.geography_name);
+  const state = parseStateFromName(item.geography_name);
+  if (state) params.set('state', state);
+  return `/map?${params.toString()}`;
+}
+
 function MarketCard({ item }: { item: WatchlistItem }) {
   const geoLabel = item.geography_type === 'metro' ? 'Metro'
     : item.geography_type === 'county' ? 'County'
@@ -29,8 +48,8 @@ function MarketCard({ item }: { item: WatchlistItem }) {
 
   return (
     <Link
-      href={`/map?geo=${item.geography_type}&id=${item.geography_id}`}
-      className="block bg-surface-container-low rounded-xl border border-outline-variant p-4 hover:bg-surface-container hover:shadow-sm transition-all group"
+      href={buildMapUrl(item)}
+      className="block bg-surface-container-low rounded-xl border border-outline-variant p-4 hover:bg-surface-container hover:shadow-sm transition-all group cursor-pointer"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-2 min-w-0">

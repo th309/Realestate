@@ -42,8 +42,32 @@ function MapPageInner() {
   const popup = useRef<mapboxgl.Popup | null>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const urlProcessedRef = useRef(false);
+  const urlProcessedRef = useRef<string | null>(null);
   const isInitialRender = useRef(true);
+
+  // Capture navigation params (geo, id, name, lat, lng, state) in a ref during
+  // render — BEFORE any effects run.  This makes them immune to the URL sync
+  // effect's replaceState which strips unknown params (especially under React
+  // Strict Mode where the double-invocation defeats the isInitialRender guard).
+  const pendingNavRef = useRef<{
+    geo: string; id: string; name: string;
+    lat?: string; lng?: string; state?: string;
+  } | null | undefined>(undefined);
+  if (pendingNavRef.current === undefined) {
+    const geo = searchParams.get('geo');
+    const id = searchParams.get('id');
+    if (geo && id) {
+      pendingNavRef.current = {
+        geo, id,
+        name: searchParams.get('name') || id,
+        lat: searchParams.get('lat') || undefined,
+        lng: searchParams.get('lng') || undefined,
+        state: searchParams.get('state') || undefined,
+      };
+    } else {
+      pendingNavRef.current = null;
+    }
+  }
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -323,41 +347,35 @@ function MapPageInner() {
     };
   }, []);
 
-  // Process URL search params (e.g. /map?geo=metro&id=31080&lat=33.7&lng=-84.4)
-  // Reconstruct a SearchResult and feed it through the same handleSelectSearchResult
-  // that the map's own search bar uses — same code path, same zoom behavior.
-  // Also auto-select the geography so the sidebar shows scores and metric details.
+  // Process navigation params captured in pendingNavRef (e.g. /map?geo=metro&id=31080).
+  // Reads from the ref (populated during render) rather than searchParams to avoid
+  // the URL sync effect's replaceState stripping these one-time navigation params.
   useEffect(() => {
-    if (!mapLoaded || urlProcessedRef.current) return;
+    if (!mapLoaded) return;
 
-    const geo = searchParams.get('geo') as GeoLevel | null;
-    const id = searchParams.get('id');
-    if (!geo || !id) return;
+    const nav = pendingNavRef.current;
+    if (!nav) return;
 
-    urlProcessedRef.current = true;
-
-    const lat = searchParams.get('lat');
-    const lng = searchParams.get('lng');
-    const state = searchParams.get('state');
-    const name = searchParams.get('name') || id;
+    // Consume — prevent re-processing on subsequent renders
+    pendingNavRef.current = null;
 
     handleSelectSearchResult({
-      id,
-      name,
-      type: geo as SearchResult['type'],
-      center: lat && lng ? [parseFloat(lng), parseFloat(lat)] : undefined,
-      state: state || undefined,
+      id: nav.id,
+      name: nav.name,
+      type: nav.geo as SearchResult['type'],
+      center: nav.lat && nav.lng ? [parseFloat(nav.lng), parseFloat(nav.lat)] : undefined,
+      state: nav.state,
     });
 
     // Auto-select the geography so the sidebar shows scores and details
     handleFeatureClick({
-      id,
-      name,
-      geoLevel: geo,
+      id: nav.id,
+      name: nav.name,
+      geoLevel: nav.geo as GeoLevel,
       value: null,
-      stateAbbr: state || undefined,
+      stateAbbr: nav.state,
     });
-  }, [mapLoaded, searchParams, handleSelectSearchResult, handleFeatureClick]);
+  }, [mapLoaded, handleSelectSearchResult, handleFeatureClick]);
 
   // Close context menu on map move/zoom
   useEffect(() => {
