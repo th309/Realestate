@@ -4,13 +4,14 @@ import {
   StanceSignal,
   StanceResult,
   StanceMetrics,
-  NationalBenchmarks,
 } from './market-stance.engine';
+import { NationalBenchmarks } from '../market-intelligence.types';
 
 describe('computeMarketStance', () => {
   const nationalBenchmarks: NationalBenchmarks = {
     vacancy_rate: 5.1,
     appreciation_yoy: 3.0,
+    unemployment_rate: 3.8,
   };
 
   describe('strong_bullish stance', () => {

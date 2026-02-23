@@ -21,6 +21,8 @@ const logger = new Logger('LocalNewsFetcher');
 export interface GeographyTarget {
   geography_id: string;
   name: string;
+  name_short: string | null;
+  cbsa_name: string | null;
   geography_type: 'metro' | 'county';
   state_code: string | null;
 }
@@ -36,14 +38,38 @@ export interface LocalNewsArticle {
   sourceGeographyName: string;
 }
 
-/** Build a Google News RSS search URL for a geography */
+/**
+ * Build a Google News RSS search URL for a geography.
+ *
+ * Strategy by geography type:
+ *
+ * **Metros** — use CBSA city names to cast a wide net. Strips the state
+ *   suffix and replaces dashes with spaces so Google treats each city as
+ *   a keyword. Examples:
+ *     "Dallas-Fort Worth-Arlington, TX" → "Dallas Fort Worth Arlington TX real estate market"
+ *     "New York-Newark-Jersey City, NY-NJ" → "New York Newark Jersey City NY real estate market"
+ *
+ * **Counties** — use `name_short` + `state_code` for precise local results.
+ *     "Los Angeles County, CA" → "Los Angeles County CA real estate market"
+ */
 function buildGoogleNewsUrl(geo: GeographyTarget): string {
-  // Extract the primary city name from the full metro/county name
-  // "Denver-Aurora-Lakewood, CO" → "Denver CO real estate"
-  // "Los Angeles County, CA" → "Los Angeles County CA real estate"
-  const shortName = geo.name.split('-')[0].split(',')[0].trim();
-  const state = geo.state_code || geo.name.split(',').pop()?.trim() || '';
-  const query = encodeURIComponent(`${shortName} ${state} real estate housing`.trim());
+  let searchName: string;
+  let state: string;
+
+  if (geo.geography_type === 'metro') {
+    // Use CBSA name: "Dallas-Fort Worth-Arlington, TX" → cities + state
+    const cbsa = geo.cbsa_name || geo.name;
+    const [cityPart, statePart] = cbsa.split(',').map(s => s.trim());
+    searchName = cityPart.replace(/-/g, ' ');
+    // Take first state only for multi-state metros ("NY-NJ" → "NY")
+    state = (statePart || '').split('-')[0].trim();
+  } else {
+    // Counties: use short name + state_code
+    searchName = geo.name_short || geo.name.split(',')[0].trim();
+    state = geo.state_code || '';
+  }
+
+  const query = encodeURIComponent(`${searchName} ${state} real estate market`.trim());
   return `https://news.google.com/rss/search?q=${query}&hl=en-US&gl=US&ceid=US:en`;
 }
 
@@ -139,7 +165,7 @@ export async function loadTargetGeographies(
 
   const { data: metros } = await client
     .from('geographies')
-    .select('geography_id, name, geography_type, state_code')
+    .select('geography_id, name, name_short, cbsa_name, geography_type, state_code')
     .eq('geography_type', 'metro')
     .not('population', 'is', null)
     .order('population', { ascending: false })
@@ -149,7 +175,7 @@ export async function loadTargetGeographies(
 
   const { data: counties } = await client
     .from('geographies')
-    .select('geography_id, name, geography_type, state_code')
+    .select('geography_id, name, name_short, cbsa_name, geography_type, state_code')
     .eq('geography_type', 'county')
     .not('population', 'is', null)
     .order('population', { ascending: false })

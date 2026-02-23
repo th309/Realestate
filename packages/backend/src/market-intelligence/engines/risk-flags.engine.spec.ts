@@ -2,14 +2,15 @@ import {
   computeRiskFlags,
   RiskFlag,
   RiskMetrics,
-  NationalBenchmarks,
   GeoData,
 } from './risk-flags.engine';
+import { NationalBenchmarks } from '../market-intelligence.types';
 
 describe('computeRiskFlags', () => {
   const nationalBenchmarks: NationalBenchmarks = {
     vacancy_rate: 5.1,
     unemployment_rate: 3.8,
+    appreciation_yoy: 3.0,
   };
 
   // ---------------------------------------------------------------------------
@@ -440,7 +441,7 @@ describe('computeRiskFlags', () => {
   // ---------------------------------------------------------------------------
   describe('benchmark-relative thresholds adapt to different benchmarks', () => {
     it('high_vacancy threshold adjusts with different national vacancy_rate', () => {
-      const lowBenchmarks: NationalBenchmarks = { vacancy_rate: 3.0, unemployment_rate: 3.8 };
+      const lowBenchmarks: NationalBenchmarks = { vacancy_rate: 3.0, unemployment_rate: 3.8, appreciation_yoy: 3.0 };
       // 3.0 + 2 = 5.0 threshold; 5.5 should trigger
       const metrics: RiskMetrics = { vacancy_rate: 5.5 };
       const flags = computeRiskFlags(metrics, lowBenchmarks, null);
@@ -448,7 +449,7 @@ describe('computeRiskFlags', () => {
     });
 
     it('rising_unemployment threshold adjusts with different national rate', () => {
-      const lowBenchmarks: NationalBenchmarks = { vacancy_rate: 5.1, unemployment_rate: 2.0 };
+      const lowBenchmarks: NationalBenchmarks = { vacancy_rate: 5.1, unemployment_rate: 2.0, appreciation_yoy: 3.0 };
       // 2.0 + 1.5 = 3.5 threshold; 4.0 should trigger
       const metrics: RiskMetrics = { unemployment_rate: 4.0 };
       const flags = computeRiskFlags(metrics, lowBenchmarks, null);
@@ -456,7 +457,7 @@ describe('computeRiskFlags', () => {
     });
 
     it('vacancy at 5.5 does NOT trigger with higher national benchmark', () => {
-      const highBenchmarks: NationalBenchmarks = { vacancy_rate: 6.0, unemployment_rate: 3.8 };
+      const highBenchmarks: NationalBenchmarks = { vacancy_rate: 6.0, unemployment_rate: 3.8, appreciation_yoy: 3.0 };
       // 6.0 + 2 = 8.0 threshold; 5.5 should NOT trigger
       const metrics: RiskMetrics = { vacancy_rate: 5.5 };
       const flags = computeRiskFlags(metrics, highBenchmarks, null);

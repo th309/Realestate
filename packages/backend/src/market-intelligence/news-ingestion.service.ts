@@ -39,11 +39,17 @@ interface NewsArticle {
 
 /** Free RSS feeds for real estate news — no API key needed */
 const DEFAULT_RSS_FEEDS: Array<{ url: string; name: string }> = [
+  // National industry news
   { url: 'https://www.housingwire.com/feed/', name: 'HousingWire' },
   { url: 'https://www.nar.realtor/blogs.rss', name: 'NAR' },
   { url: 'https://zillow.mediaroom.com/rss', name: 'Zillow' },
   { url: 'https://www.mortgagenewsdaily.com/rss/news', name: 'Mortgage News Daily' },
   { url: 'https://www.cnbc.com/id/10000115/device/rss/rss.html', name: 'CNBC Real Estate' },
+  // Market data & analysis
+  { url: 'https://www.redfin.com/news/feed/', name: 'Redfin' },
+  { url: 'https://www.realtor.com/news/feed/', name: 'Realtor.com' },
+  // Investor-focused
+  { url: 'https://www.biggerpockets.com/blog/feed', name: 'BiggerPockets' },
 ];
 
 @Injectable()

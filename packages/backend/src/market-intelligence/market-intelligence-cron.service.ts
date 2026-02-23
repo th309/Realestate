@@ -24,7 +24,7 @@ import { NationalBenchmarks, DEFAULT_NATIONAL_BENCHMARKS } from './market-intell
 /** A geography row from the geographies table */
 interface GeographyRow {
   geography_id: string;
-  geography_name: string;
+  name: string;
   geography_type: 'metro' | 'county';
 }
 
@@ -87,7 +87,7 @@ export class MarketIntelligenceCronService {
             this.briefingGenerator.generateBriefing(
               geo.geography_id,
               geo.geography_type,
-              geo.geography_name,
+              geo.name,
               benchmarks,
             ),
           ),
@@ -209,7 +209,7 @@ export class MarketIntelligenceCronService {
       // Fetch metros
       const { data: metros, error: metroError } = await client
         .from('geographies')
-        .select('geography_id, geography_name, geography_type')
+        .select('geography_id, name, geography_type')
         .eq('geography_type', 'metro')
         .order('population', { ascending: false })
         .limit(maxMetros);
@@ -221,7 +221,7 @@ export class MarketIntelligenceCronService {
       // Fetch counties
       const { data: counties, error: countyError } = await client
         .from('geographies')
-        .select('geography_id, geography_name, geography_type')
+        .select('geography_id, name, geography_type')
         .eq('geography_type', 'county')
         .order('population', { ascending: false })
         .limit(maxCounties);
