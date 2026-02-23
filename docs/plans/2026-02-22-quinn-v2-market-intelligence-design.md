@@ -42,10 +42,27 @@ Pre-compute a structured "intelligence briefing" for each market on a weekly sch
 
 ### What's NOT Changing
 
-- The existing tool-call architecture stays as a fallback for edge-case queries
 - `MetricResolutionService` remains the data source of truth
 - Frontend Quinn components remain (rendering improvements layered on top)
-- Report section-based narrative generation stays, just gets briefing context injected
+- Report section-based narrative generation stays, optionally gets briefing context injected
+- Report generation works identically with or without the intelligence layer
+
+### Modularity — Quinn vs. Reports Dependency
+
+**Quinn requires the intelligence layer.** If intelligence features are toggled off in admin, Quinn is unavailable (hidden/disabled). Quinn does not have a "degraded mode."
+
+**Reports are fully independent.** They always work, regardless of the intelligence layer:
+- Intelligence ON + briefing exists → Reports inject briefing context for consistency (enhanced)
+- Intelligence OFF or no briefing → Reports generate narratives exactly as today (original, no degradation)
+
+### Admin Configuration
+
+All intelligence settings are managed via an admin UI at `/admin/intelligence`:
+- Toggle features on/off (briefings, news, rankings)
+- Set API keys and providers (News API, DeepSeek, Claude)
+- Monitor system health (briefing freshness, news pipeline, failed markets)
+
+Settings stored in `app_config` table (Supabase). Backend reads DB first, falls back to env vars. No redeployment needed to change settings.
 
 ### Quinn's Scope (Defined)
 

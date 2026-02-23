@@ -4,11 +4,24 @@
 
 **Goal:** Build a pre-computed market intelligence layer that feeds both Quinn and Reports, switching to DeepSeek as primary LLM, achieving 3-8s response times for 80% of queries.
 
-**Architecture:** Weekly batch job generates structured briefings for ~1,400 markets (900 metros + 500 counties) using MetricResolutionService. Daily news ingestion via News API. Quinn checks briefings before tool dispatch. Reports inject briefing context into narrative prompts. Rule-based market stance ensures consistency.
+**Architecture:** Weekly batch job generates structured briefings for ~1,400 markets (900 metros + 500 counties) using MetricResolutionService. Daily news ingestion via News API. Quinn checks briefings before tool dispatch. Reports inject briefing context into narrative prompts. Rule-based market stance ensures consistency. **The entire intelligence layer is optional** — if disabled or unavailable, Quinn and Reports fall back to their original behavior with no degradation.
 
 **Tech Stack:** NestJS + @nestjs/schedule (cron), Supabase (PostgreSQL/JSONB), DeepSeek V3 (via OpenAI SDK), MetricResolutionService (existing), Redis (existing cache layer), News API service (new external dependency).
 
 **Design Doc:** `docs/plans/2026-02-22-quinn-v2-market-intelligence-design.md`
+
+**Key Design Principle — Modularity:**
+
+**Quinn depends on the intelligence layer.** If the intelligence features are toggled off in admin, Quinn is unavailable (hidden/disabled). Quinn does not have a "degraded mode" — it either runs with briefings or it doesn't run.
+
+**Reports are fully independent.** They ALWAYS work, with or without the intelligence layer:
+- Intelligence ON + briefing exists → Reports inject briefing context for consistency (better)
+- Intelligence OFF or no briefing → Reports generate narratives exactly as today (original behavior, no degradation, no error)
+
+This means:
+- Toggling intelligence off in admin hides Quinn but does NOT affect Reports
+- Reports never break due to intelligence layer issues
+- The intelligence layer is an enhancement for Reports, not a dependency
 
 ---
 
@@ -102,15 +115,228 @@ CREATE UNIQUE INDEX idx_rankings_lookup
 CREATE INDEX idx_rankings_date ON rankings_cache (generated_date DESC);
 ```
 
-**Step 4: Verify tables exist**
+**Step 4: Create `app_config` table (admin-editable settings)**
 
-Run: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('market_briefings', 'market_news', 'rankings_cache');`
-Expected: 3 rows returned.
+```sql
+CREATE TABLE IF NOT EXISTS app_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  field_type TEXT NOT NULL DEFAULT 'text'
+    CHECK (field_type IN ('text', 'password', 'toggle', 'select', 'number')),
+  field_options JSONB DEFAULT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
+  display_order INTEGER DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by TEXT DEFAULT 'system'
+);
 
-**Step 5: Commit**
+-- Seed default intelligence settings
+INSERT INTO app_config (key, value, description, field_type, category, display_order) VALUES
+  ('BRIEFING_GENERATION_ENABLED', 'false', 'Enable weekly market briefing generation', 'toggle', 'intelligence', 1),
+  ('NEWS_INGESTION_ENABLED', 'false', 'Enable daily news ingestion pipeline', 'toggle', 'intelligence', 2),
+  ('RANKINGS_CACHE_ENABLED', 'false', 'Enable weekly rankings cache refresh', 'toggle', 'intelligence', 3),
+  ('BRIEFING_MARKET_COUNT', '1400', 'Number of markets to generate briefings for (900 metros + top counties)', 'number', 'intelligence', 4),
+  ('NEWS_API_PROVIDER', 'newsapi', 'News API provider', 'select', 'news', 10),
+  ('NEWS_API_KEY', '', 'News API key', 'password', 'news', 11),
+  ('AI_PROVIDER', 'deepseek', 'Primary LLM provider for Quinn', 'select', 'llm', 20),
+  ('AI_MODEL', 'deepseek-chat', 'LLM model name', 'text', 'llm', 21),
+  ('AI_BASE_URL', 'https://api.deepseek.com', 'LLM API base URL', 'text', 'llm', 22),
+  ('DEEPSEEK_API_KEY', '', 'DeepSeek API key', 'password', 'llm', 23),
+  ('ANTHROPIC_API_KEY', '', 'Anthropic API key (Claude fallback)', 'password', 'llm', 24)
+ON CONFLICT (key) DO NOTHING;
+
+-- Set field_options for select fields
+UPDATE app_config SET field_options = '["newsapi", "bing"]' WHERE key = 'NEWS_API_PROVIDER';
+UPDATE app_config SET field_options = '["deepseek", "anthropic", "openai"]' WHERE key = 'AI_PROVIDER';
+```
+
+**Step 5: Verify all 4 tables exist**
+
+Run: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('market_briefings', 'market_news', 'rankings_cache', 'app_config');`
+Expected: 4 rows returned.
+
+**Step 6: Commit**
 
 ```bash
-git add -A && git commit -m "feat: add market_briefings, market_news, rankings_cache tables"
+git add -A && git commit -m "feat: add market_briefings, market_news, rankings_cache, app_config tables"
+```
+
+---
+
+## Task 1B: AppConfigService — DB-First Config with Env Var Fallback
+
+**Files:**
+- Create: `packages/backend/src/config/app-config.service.ts`
+- Create: `packages/backend/src/config/app-config.controller.ts`
+- Create: `packages/backend/src/config/app-config.module.ts`
+- Test: `packages/backend/src/config/app-config.service.spec.ts`
+
+This service reads settings from `app_config` table first, falls back to environment variables if no DB entry exists. Caches values in memory for 60 seconds to avoid hitting DB on every request.
+
+**Step 1: Write failing tests**
+
+```typescript
+// app-config.service.spec.ts
+import { AppConfigService } from './app-config.service';
+
+describe('AppConfigService', () => {
+  let service: AppConfigService;
+  let mockSupabase: any;
+
+  beforeEach(() => {
+    mockSupabase = {
+      getClient: () => ({
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn(),
+      }),
+    };
+  });
+
+  it('returns DB value when it exists', async () => {
+    // Mock DB returning a value
+    const result = await service.get('AI_PROVIDER');
+    expect(result).toBe('deepseek');
+  });
+
+  it('falls back to env var when DB has no entry', async () => {
+    // Mock DB returning null, env var set
+    process.env.AI_PROVIDER = 'anthropic';
+    const result = await service.get('AI_PROVIDER');
+    expect(result).toBe('anthropic');
+  });
+
+  it('returns default when neither DB nor env var exists', async () => {
+    const result = await service.get('NONEXISTENT_KEY', 'fallback');
+    expect(result).toBe('fallback');
+  });
+
+  it('caches DB lookups for 60 seconds', async () => {
+    await service.get('AI_PROVIDER');
+    await service.get('AI_PROVIDER');
+    // DB should only be queried once
+    expect(mockSupabase.getClient().from).toHaveBeenCalledTimes(1);
+  });
+
+  it('getBool returns boolean for toggle fields', async () => {
+    const result = await service.getBool('BRIEFING_GENERATION_ENABLED');
+    expect(typeof result).toBe('boolean');
+  });
+});
+```
+
+**Step 2: Implement AppConfigService**
+
+```typescript
+// app-config.service.ts
+@Injectable()
+export class AppConfigService {
+  private cache = new Map<string, { value: string; expiry: number }>();
+  private readonly CACHE_TTL_MS = 60_000; // 60 seconds
+
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async get(key: string, defaultValue = ''): Promise<string> {
+    // 1. Check memory cache
+    const cached = this.cache.get(key);
+    if (cached && Date.now() < cached.expiry) return cached.value;
+
+    // 2. Check DB
+    try {
+      const client = this.supabase.getClient();
+      const { data } = await client
+        .from('app_config')
+        .select('value')
+        .eq('key', key)
+        .single();
+      if (data?.value) {
+        this.cache.set(key, { value: data.value, expiry: Date.now() + this.CACHE_TTL_MS });
+        return data.value;
+      }
+    } catch {
+      // DB unavailable — fall through to env var
+    }
+
+    // 3. Fall back to env var
+    const envValue = this.configService.get(key);
+    if (envValue) return envValue;
+
+    // 4. Default
+    return defaultValue;
+  }
+
+  async getBool(key: string, defaultValue = false): Promise<boolean> {
+    const value = await this.get(key, String(defaultValue));
+    return value === 'true' || value === '1';
+  }
+
+  async getNumber(key: string, defaultValue = 0): Promise<number> {
+    const value = await this.get(key, String(defaultValue));
+    return Number(value) || defaultValue;
+  }
+
+  // Admin: get all settings for a category
+  async getAllByCategory(category: string): Promise<AppConfigEntry[]> {
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from('app_config')
+      .select('*')
+      .eq('category', category)
+      .order('display_order');
+    return data || [];
+  }
+
+  // Admin: update a setting
+  async set(key: string, value: string, updatedBy: string): Promise<void> {
+    const client = this.supabase.getClient();
+    await client
+      .from('app_config')
+      .upsert({ key, value, updated_at: new Date().toISOString(), updated_by: updatedBy });
+    this.cache.delete(key); // Invalidate cache
+  }
+
+  // Invalidate all cached values (called after admin changes)
+  clearCache(): void {
+    this.cache.clear();
+  }
+}
+```
+
+**Step 3: Create admin API controller**
+
+```typescript
+// app-config.controller.ts
+@Controller('api/admin/config')
+@UseGuards(AdminGuard)
+export class AppConfigController {
+  constructor(private readonly appConfig: AppConfigService) {}
+
+  @Get(':category')
+  async getByCategory(@Param('category') category: string) {
+    return this.appConfig.getAllByCategory(category);
+  }
+
+  @Put(':key')
+  async updateSetting(
+    @Param('key') key: string,
+    @Body('value') value: string,
+    @Request() req: any,
+  ) {
+    await this.appConfig.set(key, value, req.user?.email || 'admin');
+    return { success: true };
+  }
+}
+```
+
+**Step 4: Create module, run tests, commit**
+
+```bash
+git commit -m "feat: add AppConfigService with DB-first config and env var fallback"
 ```
 
 ---
@@ -924,22 +1150,51 @@ git commit -m "feat: add market intelligence module with cron jobs"
 - Modify: `packages/backend/src/analytics-chat/analytics-chat.service.ts`
 - Modify: `packages/backend/src/analytics-chat/analytics-chat.module.ts`
 
-This is the critical change — Quinn checks briefings before dispatching tools.
+This is the critical change — Quinn checks briefings before dispatching tools. **Quinn requires the intelligence layer. If disabled, Quinn returns a service-unavailable response.**
 
-**Step 1: Add BriefingGeneratorService to AnalyticsChatModule imports**
+**Step 1: Add AppConfigService + MarketIntelligenceModule to AnalyticsChatModule imports**
 
-In `analytics-chat.module.ts`, import `MarketIntelligenceModule` and inject `BriefingGeneratorService`.
+In `analytics-chat.module.ts`, import `MarketIntelligenceModule` and `AppConfigModule`. Inject `AppConfigService`.
 
-**Step 2: Add briefing lookup to `chat()` method**
+**Step 2: Add availability gate to `chat()` and `chatStream()` methods**
 
-In `analytics-chat.service.ts`, in the `chat()` method (line ~946), BEFORE the tool dispatch loop:
+In `analytics-chat.service.ts`, at the TOP of `chat()` (line ~946) and `chatStream()` (line ~850):
 
 ```typescript
-// After intent detection, before tool dispatch:
+// Gate: Quinn requires intelligence layer to be enabled
+const intelligenceEnabled = await this.appConfig.getBool('BRIEFING_GENERATION_ENABLED', false);
+if (!intelligenceEnabled) {
+  return {
+    success: false,
+    response: 'Quinn is currently offline. Market intelligence features are being configured.',
+    toolsUsed: [],
+  };
+}
+```
+
+Also update `isAvailable()` (line 255) to check the toggle:
+```typescript
+async isAvailable(): Promise<boolean> {
+  const intelligenceEnabled = await this.appConfig.getBool('BRIEFING_GENERATION_ENABLED', false);
+  return intelligenceEnabled && (!!this.anthropicClient || !!this.openaiClient);
+}
+```
+
+The frontend health check (`/api/analytics/chat/health`) already calls `isAvailable()`, so the Quinn FAB button will auto-hide when intelligence is off.
+
+**Step 3: Add briefing lookup to `chat()` method**
+
+AFTER the availability gate, BEFORE the tool dispatch loop:
+
+```typescript
+// Look up briefing for the user's geography
 const briefingContext = await this.lookupBriefingContext(userMessage, context);
 if (briefingContext) {
   // Inject briefing + fresh news into the system prompt
-  // Skip tool dispatch — answer directly from briefing
+  // Skip tool dispatch — answer directly from briefing (3-8s)
+} else {
+  // No briefing for this specific market — fall back to tool calls (10-15s)
+  // This handles uncovered geographies, ranking queries, complex analysis
 }
 ```
 
@@ -951,13 +1206,14 @@ private async lookupBriefingContext(
 ): Promise<string | null> {
   // 1. Extract geography from message or context
   // 2. Query market_briefings WHERE geography_id = ? AND is_latest = true
-  // 3. Query market_news WHERE ? = ANY(geography_ids) AND published_at > briefing.generated_date
-  // 4. Format briefing + news into context string
-  // 5. Return null if no briefing found (will fall back to tools)
+  // 3. If no briefing found, return null (fall back to tools — no error)
+  // 4. Query market_news WHERE ? = ANY(geography_ids) AND published_at > briefing.generated_date
+  // 5. Format briefing + news into context string
+  // 6. Return context string
 }
 ```
 
-**Step 3: Add rankings cache lookup**
+**Step 3: Add rankings cache lookup (also guarded by feature toggle)**
 
 For ranking-intent queries, check `rankings_cache` before calling `get_rankings` tool:
 
@@ -965,9 +1221,12 @@ For ranking-intent queries, check `rankings_cache` before calling `get_rankings`
 private async lookupRankingsCache(
   message: string,
 ): Promise<string | null> {
+  const enabled = await this.appConfig.getBool('RANKINGS_CACHE_ENABLED', false);
+  if (!enabled) return null; // Fall back to get_rankings tool
+
   // 1. Parse metric + direction from message
   // 2. Query rankings_cache WHERE metric_id = ? AND direction = ? AND is_latest = true
-  // 3. Return formatted rankings or null
+  // 3. Return formatted rankings or null (null = fall back to tool)
 }
 ```
 
@@ -1024,18 +1283,22 @@ git commit -m "feat: update Quinn system prompt for opinionated voice and briefi
 
 ---
 
-## Task 11: Report Briefing Injection
+## Task 11: Report Briefing Injection (Optional Enhancement)
+
+**MODULARITY: Reports ALWAYS work. Briefing injection is an optional enhancement. If no briefing exists or intelligence is off, reports generate exactly as they do today. No errors, no degradation.**
 
 **Files:**
 - Modify: `packages/backend/src/reports/reports-orchestrator.ts` (insert briefing fetch at ~line 220)
 - Modify: `packages/backend/src/reports/reports-narratives.ts` (inject briefing into `buildNarrativeContext()` at ~line 109)
 
-**Step 1: Add briefing fetch to orchestrator**
+**Step 1: Add optional briefing fetch to orchestrator**
 
 In `generateReportAsync()`, after data assembly (line ~220) and before narrative generation (line ~223):
 
 ```typescript
-// Fetch market briefing for consistency
+// Optional: Fetch market briefing for narrative consistency
+// If briefing exists → inject stance/risks into narrative context (enhanced)
+// If no briefing → proceed exactly as before (original behavior)
 let briefingContext: MarketBriefing | null = null;
 try {
   const { data: briefing } = await supabase
@@ -1045,12 +1308,16 @@ try {
     .eq('is_latest', true)
     .single();
   briefingContext = briefing;
+  if (briefingContext) {
+    logger.log(`Using market briefing for ${dto.primary_geography_name} (stance: ${briefingContext.market_stance})`);
+  }
 } catch {
-  logger.warn('No briefing found for geography — narratives will generate without stance anchor');
+  // This is fine — no briefing means reports work as originally designed
+  logger.debug('No briefing found — generating report with original narrative flow');
 }
 ```
 
-Pass `briefingContext` to `generateSectionNarratives()`.
+Pass `briefingContext` (which may be null) to `generateSectionNarratives()`.
 
 **Step 2: Inject briefing context into narrative prompts**
 
@@ -1207,16 +1474,18 @@ git commit -m "feat: add on-demand briefing generation for uncovered markets"
 
 ---
 
-## Task 15: Admin Dashboard — Briefing Health Widget
+## Task 15: Admin Intelligence Page — Config + Health Dashboard
 
 **Files:**
 - Create: `packages/frontend/app/admin/intelligence/page.tsx`
+- Uses: `AppConfigController` from Task 1B (backend already done)
 - Create: backend endpoint for briefing stats
+
+This is the admin page where you toggle features on/off, set API keys, and monitor health.
 
 **Step 1: Create backend stats endpoint**
 
 ```typescript
-// In a new controller or existing admin controller
 @Get('admin/intelligence/stats')
 async getBriefingStats() {
   return {
@@ -1227,18 +1496,70 @@ async getBriefingStats() {
     news_articles_last_7d: count,
     rankings_last_refresh: date,
     failed_markets: string[],
+    quinn_available: boolean,
   };
 }
 ```
 
-**Step 2: Create admin page**
+**Step 2: Create admin page with two sections**
 
-Simple dashboard showing briefing health, news pipeline status, failed markets.
+**Section A — Configuration (env var editor style)**
+
+Fetch settings from `GET /api/admin/config/intelligence`, `/api/admin/config/news`, `/api/admin/config/llm`.
+
+Render each setting based on `field_type`:
+- `toggle` → Switch component (on/off)
+- `text` → Text input
+- `password` → Password input with show/hide toggle
+- `select` → Dropdown (options from `field_options`)
+- `number` → Number input
+
+On change: `PUT /api/admin/config/:key` with new value. Show "Saved" confirmation.
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────┐
+│ Market Intelligence Configuration                   │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ INTELLIGENCE FEATURES                               │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ BRIEFING_GENERATION_ENABLED    [  ON  ]         │ │
+│ │ NEWS_INGESTION_ENABLED         [  OFF ]         │ │
+│ │ RANKINGS_CACHE_ENABLED         [  ON  ]         │ │
+│ │ BRIEFING_MARKET_COUNT          [ 1400 ]         │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ NEWS API                                            │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ NEWS_API_PROVIDER              [ newsapi ▼]     │ │
+│ │ NEWS_API_KEY                   [ ••••••••• ]    │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ LLM PROVIDER                                        │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ AI_PROVIDER                    [ deepseek ▼]    │ │
+│ │ AI_MODEL                       [ deepseek-chat ]│ │
+│ │ AI_BASE_URL                    [ https://... ]  │ │
+│ │ DEEPSEEK_API_KEY               [ ••••••••• ]    │ │
+│ │ ANTHROPIC_API_KEY              [ ••••••••• ]    │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ SYSTEM HEALTH                                       │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Briefings: 1,387 / 1,400 (2 days old)          │ │
+│ │ News: 142 articles (last 7 days)                │ │
+│ │ Rankings: Refreshed 2 days ago                  │ │
+│ │ Quinn: Available ✓                              │ │
+│ │ Failed markets: 13 [View]                       │ │
+│ └─────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
 
 **Step 3: Commit**
 
 ```bash
-git commit -m "feat: add admin intelligence dashboard"
+git commit -m "feat: add admin intelligence config and health dashboard"
 ```
 
 ---
