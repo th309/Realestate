@@ -56,7 +56,7 @@ function MarketCard({ item }: { item: WatchlistItem }) {
       )}
 
       <p className="text-[10px] text-on-surface-variant/60 mt-2">
-        Saved {new Date(item.added_at).toLocaleDateString()}
+        Favorited {new Date(item.added_at).toLocaleDateString()}
       </p>
     </Link>
   );
@@ -83,9 +83,9 @@ function EmptyState() {
   return (
     <div className="text-center py-8">
       <MapPin className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-3" />
-      <p className="text-sm font-medium text-on-surface">No saved markets yet</p>
+      <p className="text-sm font-medium text-on-surface">No favorites yet</p>
       <p className="text-xs text-on-surface-variant mt-1">
-        Search for a market and tap the heart icon to save it here.
+        Search for a market and tap the heart icon to favorite it here.
       </p>
       <Link
         href="/map"

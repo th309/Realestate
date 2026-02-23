@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { getAuthHeaders } from '@/lib/data/fetchers/auth-headers';
 import type { WatchlistItem } from './types';
 
 interface UseWatchlistOptions {
@@ -46,9 +47,14 @@ export function useWatchlist({
     setError(null);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const [itemsRes, foldersRes] = await Promise.all([
-        fetch(`/api/analytics/persistence/watchlist?userId=${userId}`),
-        fetch(`/api/analytics/persistence/watchlist/folders?userId=${userId}`),
+        fetch(`/api/analytics/persistence/watchlist?userId=${userId}`, {
+          headers: authHeaders,
+        }),
+        fetch(`/api/analytics/persistence/watchlist/folders?userId=${userId}`, {
+          headers: authHeaders,
+        }),
       ]);
 
       const itemsData = await itemsRes.json();
@@ -81,9 +87,10 @@ export function useWatchlist({
       scoreAtAdd?: number
     ): Promise<WatchlistItem | null> => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch('/api/analytics/persistence/watchlist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             userId,
             geography_type: geographyType,
@@ -113,9 +120,10 @@ export function useWatchlist({
   const removeFromWatchlist = useCallback(
     async (id: string) => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
           `/api/analytics/persistence/watchlist/${id}?userId=${userId}`,
-          { method: 'DELETE' }
+          { method: 'DELETE', headers: authHeaders }
         );
 
         const data = await response.json();
@@ -146,9 +154,10 @@ export function useWatchlist({
   const updateItem = useCallback(
     async (id: string, updates: { tags?: string[]; folder?: string }) => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(`/api/analytics/persistence/watchlist/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ userId, ...updates }),
         });
 

@@ -44,7 +44,7 @@ export function ActivityTab({ user }: ActivityTabProps) {
       {/* Saved Markets */}
       <section>
         <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-sm font-semibold text-on-surface">Saved Markets</h3>
+          <h3 className="text-sm font-semibold text-on-surface">Favorites</h3>
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-on-surface/10 text-on-surface-variant">
             {watchlistItems.length}
             {watchlistLimit !== -1 ? ` of ${watchlistLimit}` : ''}

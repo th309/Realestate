@@ -76,10 +76,10 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
             ? 'bg-primary/10 text-primary border border-primary/30'
             : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
           } disabled:opacity-40 disabled:cursor-not-allowed`}
-        title={!user?.id ? 'Sign in to save markets' : isSaved ? 'Remove from watchlist' : 'Save to watchlist'}
+        title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
       >
         <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
-        {isSaved ? 'Saved' : 'Save'}
+        {isSaved ? 'Favorited' : 'Favorite'}
       </button>
 
       <button

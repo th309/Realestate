@@ -68,8 +68,8 @@ export function SaveMarketButton({
           disabled:opacity-50
           ${className}
         `}
-        title={isSaved ? `Remove ${geographyName} from watchlist` : `Save ${geographyName}`}
-        aria-label={isSaved ? 'Remove from watchlist' : 'Save to watchlist'}
+        title={isSaved ? `Remove ${geographyName} from favorites` : `Add ${geographyName} to favorites`}
+        aria-label={isSaved ? 'Remove from favorites' : 'Add to favorites'}
       >
         {loading ? (
           <Loader2 className={`${iconSize} animate-spin`} />
@@ -85,8 +85,8 @@ export function SaveMarketButton({
         <div className="absolute z-50 top-full right-0 mt-2 w-72">
           <ContextualUpgradeCTA
             featureSlug="watchlist_limit"
-            title="Watchlist is full"
-            description={`You've saved ${watchlistCount} of ${watchlistLimit} markets. Upgrade for more.`}
+            title="Favorites full"
+            description={`You've favorited ${watchlistCount} of ${watchlistLimit} markets. Upgrade for more.`}
             ctaText="Upgrade to Pro"
           />
           <button

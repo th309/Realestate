@@ -6,7 +6,7 @@ import { fetchScore } from '@/lib/data';
 export interface MyMarket {
   id: string;
   name: string;
-  type: 'metro' | 'county' | 'zip';
+  type: string;
   state?: string;
   score: number | null;
   trend?: 'up' | 'down' | 'stable';
@@ -175,11 +175,11 @@ function getRecentMarkets(): MyMarket[] {
     const lastGeo = localStorage.getItem('propertyiq-last-geography');
     if (lastGeo) {
       const geo = JSON.parse(lastGeo);
-      if (geo?.id && geo?.name && ['metro', 'county', 'zip'].includes(geo.type)) {
+      if (geo?.id && geo?.name && geo.type) {
         return [{
           id: geo.id,
           name: geo.name,
-          type: geo.type as 'metro' | 'county' | 'zip',
+          type: geo.type as string,
           state: geo.state,
           score: null,
           lastViewed: new Date().toISOString(),

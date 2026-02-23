@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Bookmark, Check, ChevronDown, FileText } from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
+import { Heart, Check, ChevronDown, FileText, Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 import type { GraphsState } from '../hooks/useGraphsState';
 
 interface SaveGraphButtonProps {
@@ -11,9 +11,9 @@ interface SaveGraphButtonProps {
 }
 
 export function SaveGraphButton({ graphState, onSaveTemplate }: SaveGraphButtonProps) {
-  const { canAccess } = useEntitlements();
-  const canSave = canAccess('feature', 'graph_save');
+  const { user } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,46 +29,78 @@ export function SaveGraphButton({ graphState, onSaveTemplate }: SaveGraphButtonP
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
-  const handleSave = useCallback(() => {
-    if (!canSave) return;
+  const marketsToFavorite = graphState.markets.filter((m) => m.id && m.name);
+  const hasMarkets = marketsToFavorite.length > 0;
 
-    const existing = JSON.parse(localStorage.getItem('propertyiq-saved-graphs') || '[]');
-    const entry = {
-      id: String(Date.now()),
-      name: `Graph - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
-      timestamp: new Date().toISOString(),
-      state: graphState,
-    };
-    existing.push(entry);
-    localStorage.setItem('propertyiq-saved-graphs', JSON.stringify(existing));
+  const handleFavorite = useCallback(async () => {
+    if (!user?.id || saving || !hasMarkets) return;
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }, [canSave, graphState]);
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        marketsToFavorite.map(async (market) => {
+          const response = await fetch('/api/analytics/persistence/watchlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              geography_type: market.type,
+              geography_id: market.id,
+              geography_name: market.name,
+            }),
+          });
+          const data = await response.json();
+          return data.success;
+        })
+      );
+
+      if (results.some(Boolean)) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch {
+      // Silent fail — button reverts to default state
+    } finally {
+      setSaving(false);
+    }
+  }, [user?.id, saving, hasMarkets, marketsToFavorite]);
+
+  const disabled = !user || saving || !hasMarkets;
+  const title = !user
+    ? 'Sign in to favorite markets'
+    : !hasMarkets
+      ? 'Select a market first'
+      : 'Favorite selected markets';
 
   return (
     <div ref={ref} className="relative">
       <div className="flex items-center">
-        {/* Main save button */}
+        {/* Main favorite button */}
         <button
           type="button"
-          onClick={handleSave}
+          onClick={handleFavorite}
+          disabled={disabled}
           className={`
             flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-l-xl text-xs font-medium
             transition-all duration-150
-            ${canSave
-              ? 'text-on-surface-variant hover:bg-surface-container-high'
-              : 'text-on-surface-variant/50 cursor-not-allowed'
+            ${disabled
+              ? 'text-on-surface-variant/50 cursor-not-allowed'
+              : 'text-on-surface-variant hover:bg-surface-container-high'
             }
           `}
-          title={canSave ? 'Save graph' : 'Upgrade to save graphs'}
+          title={title}
         >
-          {saved ? <Check className="w-3.5 h-3.5" style={{ color: '#16a34a' }} /> : <Bookmark className="w-3.5 h-3.5" />}
-          <span>{saved ? 'Saved!' : 'Save'}</span>
+          {saving
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : saved
+              ? <Check className="w-3.5 h-3.5" style={{ color: '#16a34a' }} />
+              : <Heart className="w-3.5 h-3.5" />
+          }
+          <span>{saved ? 'Favorited!' : 'Favorite'}</span>
         </button>
 
         {/* Dropdown toggle */}
-        {canSave && (
+        {user && (
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
