@@ -110,6 +110,49 @@ export class BriefingGeneratorService {
     return briefing;
   }
 
+  /**
+   * Lightweight on-demand briefing generation, triggered when Quinn's briefing
+   * lookup returns null for a market. This is fire-and-forget — it generates
+   * the briefing so it's ready for the next request.
+   *
+   * Skips generation if a latest briefing already exists for the geography.
+   */
+  async generateBriefingOnDemand(
+    geographyId: string,
+    geographyType: 'metro' | 'county',
+    geographyName: string,
+  ): Promise<void> {
+    try {
+      // Avoid regenerating if a briefing already exists
+      const client = this.supabase.getClient();
+      const { data: existing } = await client
+        .from('market_briefings')
+        .select('id')
+        .eq('geography_id', geographyId)
+        .eq('is_latest', true)
+        .single();
+
+      if (existing) return;
+
+      const defaultBenchmarks: NationalBenchmarks = {
+        vacancy_rate: 6.4,
+        appreciation_yoy: 3.5,
+        unemployment_rate: 3.7,
+      };
+
+      this.logger.log(
+        `On-demand briefing generation for ${geographyName} (${geographyId})`,
+      );
+      await this.generateBriefing(
+        geographyId, geographyType, geographyName, defaultBenchmarks,
+      );
+    } catch (error: any) {
+      this.logger.warn(
+        `On-demand briefing failed for ${geographyId}: ${error.message}`,
+      );
+    }
+  }
+
   // -- Metric Resolution (resilient) ----------------------------------------
 
   private async resolveMetricsSafe(

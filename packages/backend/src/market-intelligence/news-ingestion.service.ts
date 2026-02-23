@@ -14,6 +14,7 @@ import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { GeoTaggerService, GeoTagResult } from './geo-tagger.service';
+import { BriefingGeneratorService } from './briefing-generator.service';
 
 /** Counts returned after an ingestion run */
 export interface IngestionResult {
@@ -57,6 +58,7 @@ export class NewsIngestionService {
     private readonly supabase: SupabaseService,
     private readonly appConfig: AppConfigService,
     private readonly geoTagger: GeoTaggerService,
+    private readonly briefingGenerator: BriefingGeneratorService,
   ) {}
 
   /**
@@ -99,7 +101,97 @@ export class NewsIngestionService {
       `News ingestion complete: ${result.ingested} ingested, ` +
       `${result.skipped} skipped, ${result.errors} errors`,
     );
+
+    // Fire-and-forget: detect high-severity markets and trigger emergency briefing refresh.
+    // Detached promise so it never slows down the ingestion return path.
+    this.triggerHighSeverityBriefingRefresh()
+      .catch((err) => this.logger.warn(`High-severity briefing refresh failed: ${err.message}`));
+
     return result;
+  }
+
+  // -- High-Severity Market Detection & Emergency Briefing Refresh ----------
+
+  /** Regex matching keywords that indicate a high-severity event for a market */
+  private static readonly HIGH_SEVERITY_PATTERN =
+    /disaster|layoffs?|closure|bankruptcy|flood|hurricane|fire|crash|collapse|crisis/i;
+
+  /**
+   * Query `market_news` for markets with 2+ negative-sentiment, high-severity
+   * articles in the last 24 hours. These markets need an emergency briefing refresh.
+   */
+  private async detectHighSeverityMarkets(): Promise<
+    Array<{ geography_id: string; geography_type: string; geography_name: string }>
+  > {
+    const client = this.supabase.getClient();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: recentNegative } = await client
+      .from('market_news')
+      .select('geography_ids, headline, summary')
+      .eq('sentiment', 'negative')
+      .gte('published_at', oneDayAgo);
+
+    if (!recentNegative?.length) return [];
+
+    // Count negative articles per geography that contain high-severity keywords
+    const geoCount = new Map<string, number>();
+
+    for (const article of recentNegative) {
+      const text = `${article.headline} ${article.summary}`;
+      if (!NewsIngestionService.HIGH_SEVERITY_PATTERN.test(text)) continue;
+
+      for (const geoId of (article.geography_ids || [])) {
+        geoCount.set(geoId, (geoCount.get(geoId) || 0) + 1);
+      }
+    }
+
+    // Return markets with 2+ high-severity articles
+    return [...geoCount.entries()]
+      .filter(([, count]) => count >= 2)
+      .map(([geoId]) => ({
+        geography_id: geoId,
+        geography_type: 'metro',
+        geography_name: geoId, // Best effort; name resolved by briefing generator
+      }));
+  }
+
+  /**
+   * Detect high-severity markets and trigger an emergency briefing refresh
+   * for each one. Each generation is fire-and-forget so individual failures
+   * do not block the others.
+   */
+  private async triggerHighSeverityBriefingRefresh(): Promise<void> {
+    const markets = await this.detectHighSeverityMarkets();
+    if (markets.length === 0) return;
+
+    this.logger.warn(
+      `Detected ${markets.length} market(s) with high-severity news — triggering emergency briefing refresh`,
+    );
+
+    const defaultBenchmarks = {
+      vacancy_rate: 6.4,
+      appreciation_yoy: 3.5,
+      unemployment_rate: 3.7,
+    };
+
+    for (const market of markets) {
+      this.briefingGenerator
+        .generateBriefing(
+          market.geography_id,
+          market.geography_type as 'metro' | 'county',
+          market.geography_name,
+          defaultBenchmarks,
+        )
+        .then(() =>
+          this.logger.log(`Emergency briefing refreshed for ${market.geography_id}`),
+        )
+        .catch((err) =>
+          this.logger.warn(
+            `Emergency briefing failed for ${market.geography_id}: ${err.message}`,
+          ),
+        );
+    }
   }
 
   // -- News API Fetch -------------------------------------------------------

@@ -18,6 +18,7 @@ import { OpenAIProvider } from './providers/openai.provider';
 import { AnthropicProvider } from './providers/anthropic.provider';
 import { AppConfigService } from '../config/app-config.service';
 import { RankingsCacheService } from '../market-intelligence/rankings-cache.service';
+import { BriefingGeneratorService } from '../market-intelligence/briefing-generator.service';
 import { MarketBriefing } from '../market-intelligence/market-intelligence.types';
 
 export interface ChatMessage {
@@ -131,6 +132,7 @@ export class AnalyticsChatService {
     private readonly redisService: RedisService,
     private readonly appConfig: AppConfigService,
     private readonly rankingsCache: RankingsCacheService,
+    private readonly briefingGenerator: BriefingGeneratorService,
   ) {
     // Determine Provider
     const rawProvider = this.configService.get<string>('AI_PROVIDER', 'anthropic').toLowerCase();
@@ -1175,7 +1177,17 @@ USER QUERY:`;
         .eq('is_latest', true)
         .single();
 
-      if (!briefing) return null;
+      if (!briefing) {
+        // Fire-and-forget: generate a briefing for this market so it's ready
+        // next time. The detached promise must NOT slow down the current request.
+        const geoType = (geographyType === 'county' ? 'county' : 'metro') as 'metro' | 'county';
+        this.briefingGenerator
+          .generateBriefingOnDemand(geographyId, geoType, String(geographyId))
+          .catch((err) =>
+            this.logger.warn(`On-demand briefing trigger failed: ${err.message}`),
+          );
+        return null;
+      }
 
       // Fetch any news published after the briefing was generated
       const { data: freshNews } = await client
