@@ -3,7 +3,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/lib/auth';
-import { EntitlementsProvider } from '@/lib/entitlements';
+import { EntitlementsProvider, PaywallProvider } from '@/lib/entitlements';
 
 // Create a client instance that persists across re-renders
 // Using a function to create it lazily avoids issues with SSR
@@ -40,7 +40,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
                 <EntitlementsProvider>
-                    {children}
+                    <PaywallProvider>
+                        {children}
+                    </PaywallProvider>
                 </EntitlementsProvider>
             </AuthProvider>
         </QueryClientProvider>
