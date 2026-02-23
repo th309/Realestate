@@ -13,7 +13,7 @@ import { usePathname } from 'next/navigation';
 const STORAGE_KEY = 'piq-paywall-views';
 const VIEW_THRESHOLD = 5;
 
-const PRODUCT_PREFIXES = ['/maps', '/graphs', '/markets', '/scores', '/reports'];
+const PRODUCT_PREFIXES = ['/map', '/graphs', '/market', '/scores', '/reports'];
 const EXEMPT_PATHS = ['/reports/sample', '/reports/shared'];
 
 function isProductPage(pathname: string): boolean {
