@@ -12,6 +12,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useQuinnUser, generateConversationId } from './useQuinnUser';
 import { QuinnRichData } from './QuinnRichData';
+import { STARTER_PROMPTS, parseFollowUpSuggestions } from './quinnChatHelpers';
 import type { QuinnStructuredData } from './QuinnStructuredData.types';
 
 interface Message {
@@ -20,19 +21,8 @@ interface Message {
   content: string;
   timestamp: string;
   structuredData?: QuinnStructuredData;
+  followUps?: string[];
 }
-
-const STARTER_PROMPTS = [
-  "What's the market trend in Los Angeles?",
-  "Compare Austin vs Denver for investment",
-  "Which metros have the best rental yields?",
-];
-
-const SUGGESTION_CHIPS = [
-  "Analyze zip code",
-  "Compare ROI",
-  "Find hot markets",
-];
 
 /** Material Symbol icon component */
 function MaterialIcon({ name, className = '', filled = false }: { 
@@ -187,12 +177,16 @@ export function QuinnFloatingButton() {
       }
       if (!content) content = 'I received your message but had trouble showing a response. Please try again.';
 
+      // Extract follow-up suggestions from the response text
+      const { cleanText, followUps } = parseFollowUpSuggestions(content);
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content,
+        content: cleanText,
         timestamp: new Date().toISOString(),
         ...(structured && (structured.rankings || structured.comparison || structured.chart || structured.table) ? { structuredData: structured } : {}),
+        ...(followUps.length > 0 ? { followUps } : {}),
       };
 
       console.log(`[Quinn Client ${requestId}] === SUCCESS === Response length:`, assistantMessage.content.length);
@@ -320,20 +314,21 @@ export function QuinnFloatingButton() {
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
                     <span className="text-3xl font-bold">Q</span>
                   </div>
-                  <h4 className="text-on-surface font-medium mb-2">
-                    Ask Quinn anything about real estate markets
-                  </h4>
-                  <p className="text-on-surface-variant text-sm mb-6">
-                    Get insights on home values, market trends, and investment opportunities
+                  <p className="text-on-surface-variant text-sm leading-relaxed mb-5 max-w-[320px] mx-auto">
+                    I&apos;m Quinn, your real estate market analyst. I track 900+ metros and 3,000+ counties with weekly intelligence briefings.
+                  </p>
+                  <p className="text-on-surface text-sm font-medium mb-3">
+                    Try asking me something:
                   </p>
                   <div className="space-y-2">
                     {STARTER_PROMPTS.map((prompt, i) => (
                       <button
                         key={i}
-                        onClick={() => sendMessage(prompt)}
-                        className="block w-full text-left px-4 py-3 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface hover:border-primary hover:bg-primary-container/10 transition-colors duration-200"
+                        onClick={() => sendMessage(prompt.text)}
+                        className="flex items-center gap-3 w-full text-left px-4 py-3 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface hover:border-primary hover:bg-primary-container/10 transition-colors duration-200"
                       >
-                        {prompt}
+                        <MaterialIcon name={prompt.icon} className="text-lg text-on-surface-variant" />
+                        {prompt.text}
                       </button>
                     ))}
                   </div>
@@ -363,6 +358,19 @@ export function QuinnFloatingButton() {
                         {msg.role === 'assistant' && msg.structuredData && (
                           <QuinnRichData data={msg.structuredData} />
                         )}
+                        {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {msg.followUps.map((question, i) => (
+                              <button
+                                key={i}
+                                onClick={() => sendMessage(question)}
+                                className="text-xs px-3 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {msg.role === 'user' && (
                           <span className="text-[10px] text-on-surface-variant text-right">Delivered</span>
                         )}
@@ -390,19 +398,6 @@ export function QuinnFloatingButton() {
 
             {/* Input Area */}
             <div className="p-4 border-t border-outline-variant bg-surface-container">
-              {/* Suggestion Chips */}
-              <div className="flex gap-2 overflow-x-auto pb-3 -mx-1 px-1">
-                {SUGGESTION_CHIPS.map((chip, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setInput(chip)}
-                    className="whitespace-nowrap px-3 py-1.5 bg-surface border border-outline-variant rounded-full text-xs font-medium text-on-surface hover:border-primary hover:bg-primary-container/10 transition-colors duration-200"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-              
               {/* Input Field */}
               <div className="flex items-end gap-3 bg-surface-container-high px-4 py-3 rounded-2xl border border-outline-variant focus-within:border-primary transition-colors">
                 <textarea
