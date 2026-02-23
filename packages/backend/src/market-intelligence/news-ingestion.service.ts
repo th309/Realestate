@@ -10,11 +10,12 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { GeoTaggerService, GeoTagResult } from './geo-tagger.service';
 import { BriefingGeneratorService } from './briefing-generator.service';
+import { classifyArticle } from './news-classification.helpers';
+import { DEFAULT_NATIONAL_BENCHMARKS } from './market-intelligence.types';
 
 /** Counts returned after an ingestion run */
 export interface IngestionResult {
@@ -39,14 +40,6 @@ interface NewsApiResponse {
   articles: NewsApiArticle[];
 }
 
-/** Parsed LLM classification of an article */
-interface ArticleClassification {
-  summary: string;
-  tags: string[];
-  sentiment: 'positive' | 'negative' | 'neutral';
-}
-
-const LLM_TIMEOUT_MS = 15_000;
 const NEWSAPI_BASE_URL = 'https://newsapi.org/v2/everything';
 const NEWSAPI_QUERY = '"real estate" OR "housing market" OR "home prices"';
 
@@ -169,19 +162,13 @@ export class NewsIngestionService {
       `Detected ${markets.length} market(s) with high-severity news — triggering emergency briefing refresh`,
     );
 
-    const defaultBenchmarks = {
-      vacancy_rate: 6.4,
-      appreciation_yoy: 3.5,
-      unemployment_rate: 3.7,
-    };
-
     for (const market of markets) {
       this.briefingGenerator
         .generateBriefing(
           market.geography_id,
           market.geography_type as 'metro' | 'county',
           market.geography_name,
-          defaultBenchmarks,
+          DEFAULT_NATIONAL_BENCHMARKS,
         )
         .then(() =>
           this.logger.log(`Emergency briefing refreshed for ${market.geography_id}`),
@@ -267,7 +254,7 @@ export class NewsIngestionService {
     const geoTags = await this.geoTagger.tagArticle(headline, description);
 
     // LLM classification (with fallback)
-    const classification = await this.classifyArticle(headline, description);
+    const classification = await classifyArticle(headline, description, this.appConfig);
 
     // Build row and insert
     const geographyIds = geoTags.map(t => t.geography_id);
@@ -294,97 +281,5 @@ export class NewsIngestionService {
     if (error) {
       throw new Error(`Supabase insert failed: ${error.message}`);
     }
-  }
-
-  // -- LLM Classification ---------------------------------------------------
-
-  /** Classify an article via LLM. Falls back to defaults on failure. */
-  private async classifyArticle(
-    headline: string, description: string,
-  ): Promise<ArticleClassification> {
-    try {
-      return await this.callLlmForClassification(headline, description);
-    } catch (err) {
-      this.logger.warn(`LLM classification failed: ${err.message}`);
-      return this.buildFallbackClassification(headline);
-    }
-  }
-
-  /** Call DeepSeek LLM to classify article content */
-  private async callLlmForClassification(
-    headline: string, description: string,
-  ): Promise<ArticleClassification> {
-    const [baseUrl, model, apiKey] = await Promise.all([
-      this.appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
-      this.appConfig.get('AI_MODEL', 'deepseek-chat'),
-      this.appConfig.get('DEEPSEEK_API_KEY'),
-    ]);
-
-    if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
-
-    const client = new OpenAI({ baseURL: baseUrl, apiKey });
-    const prompt = this.buildClassificationPrompt(headline, description);
-
-    const response = await Promise.race([
-      client.chat.completions.create({
-        model,
-        messages: [{ role: 'system', content: prompt }],
-        max_tokens: 300,
-        temperature: 0.3,
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('LLM request timed out')), LLM_TIMEOUT_MS),
-      ),
-    ]);
-
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) throw new Error('LLM returned empty response');
-
-    return this.parseLlmClassification(content, headline);
-  }
-
-  /** Build the LLM prompt for article classification */
-  private buildClassificationPrompt(headline: string, description: string): string {
-    return `Classify this real estate news article.
-
-Headline: ${headline}
-Description: ${description}
-
-Return ONLY valid JSON (no markdown fences):
-{
-  "summary": "1-2 sentence summary",
-  "tags": ["housing", "prices", ...],
-  "sentiment": "positive|negative|neutral"
-}`;
-  }
-
-  /** Parse the LLM JSON response, falling back gracefully */
-  private parseLlmClassification(
-    raw: string, headline: string,
-  ): ArticleClassification {
-    try {
-      // Strip markdown fences if present
-      const cleaned = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-
-      return {
-        summary: typeof parsed.summary === 'string' ? parsed.summary : headline,
-        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-        sentiment: ['positive', 'negative', 'neutral'].includes(parsed.sentiment)
-          ? parsed.sentiment
-          : 'neutral',
-      };
-    } catch {
-      return this.buildFallbackClassification(headline);
-    }
-  }
-
-  /** Fallback classification when LLM is unavailable */
-  private buildFallbackClassification(headline: string): ArticleClassification {
-    return {
-      summary: headline,
-      tags: [],
-      sentiment: 'neutral',
-    };
   }
 }

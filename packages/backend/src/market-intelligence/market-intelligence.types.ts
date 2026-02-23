@@ -110,6 +110,13 @@ export interface NationalBenchmarks {
   unemployment_rate: number;
 }
 
+/** Default national benchmarks used when live data is unavailable */
+export const DEFAULT_NATIONAL_BENCHMARKS: NationalBenchmarks = {
+  vacancy_rate: 6.4,
+  appreciation_yoy: 3.5,
+  unemployment_rate: 3.7,
+};
+
 /** Metrics needed for briefing generation */
 export const BRIEFING_METRIC_IDS = [
   'home_value',

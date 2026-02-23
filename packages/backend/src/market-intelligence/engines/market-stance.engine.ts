@@ -9,6 +9,8 @@
  * the overall market stance.
  */
 
+import { NationalBenchmarks } from '../market-intelligence.types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -49,13 +51,6 @@ export interface StanceMetrics {
   dom_yoy_change: number | null;
   /** HomeReady score (0-100) */
   homeready_score: number | null;
-}
-
-export interface NationalBenchmarks {
-  /** National average vacancy rate */
-  vacancy_rate: number;
-  /** National average year-over-year appreciation */
-  appreciation_yoy: number;
 }
 
 // ---------------------------------------------------------------------------

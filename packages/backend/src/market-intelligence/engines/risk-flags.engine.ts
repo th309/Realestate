@@ -8,6 +8,8 @@
  * at three severity levels: high, medium, and low (geography-based).
  */
 
+import { NationalBenchmarks } from '../market-intelligence.types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -42,13 +44,6 @@ export interface RiskMetrics {
   price_to_income?: number | null;
   /** Year-over-year rent growth percentage */
   rent_growth_yoy?: number | null;
-}
-
-export interface NationalBenchmarks {
-  /** National average vacancy rate */
-  vacancy_rate: number;
-  /** National average unemployment rate */
-  unemployment_rate: number;
 }
 
 export interface GeoData {

@@ -19,7 +19,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { BriefingGeneratorService } from './briefing-generator.service';
 import { NewsIngestionService } from './news-ingestion.service';
 import { RankingsCacheService } from './rankings-cache.service';
-import { NationalBenchmarks } from './market-intelligence.types';
+import { NationalBenchmarks, DEFAULT_NATIONAL_BENCHMARKS } from './market-intelligence.types';
 
 /** A geography row from the geographies table */
 interface GeographyRow {
@@ -27,13 +27,6 @@ interface GeographyRow {
   geography_name: string;
   geography_type: 'metro' | 'county';
 }
-
-/** Default national benchmark values when resolution fails */
-const DEFAULT_NATIONAL_BENCHMARKS: NationalBenchmarks = {
-  vacancy_rate: 6.4,
-  appreciation_yoy: 3.5,
-  unemployment_rate: 3.7,
-};
 
 /** Batch size for briefing generation to avoid overwhelming the LLM API */
 const BRIEFING_BATCH_SIZE = 10;

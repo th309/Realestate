@@ -13,7 +13,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { ResolvedMetric } from '../metric-resolution/metric-resolution.types';
 import {
   MarketBriefing, MetricSnapshot, NationalBenchmarks,
-  NewsItem, BRIEFING_METRIC_IDS,
+  DEFAULT_NATIONAL_BENCHMARKS, NewsItem, BRIEFING_METRIC_IDS,
 } from './market-intelligence.types';
 import { computeMarketStance, StanceSignal } from './engines/market-stance.engine';
 import { computeRiskFlags, RiskFlag } from './engines/risk-flags.engine';
@@ -134,17 +134,11 @@ export class BriefingGeneratorService {
 
       if (existing) return;
 
-      const defaultBenchmarks: NationalBenchmarks = {
-        vacancy_rate: 6.4,
-        appreciation_yoy: 3.5,
-        unemployment_rate: 3.7,
-      };
-
       this.logger.log(
         `On-demand briefing generation for ${geographyName} (${geographyId})`,
       );
       await this.generateBriefing(
-        geographyId, geographyType, geographyName, defaultBenchmarks,
+        geographyId, geographyType, geographyName, DEFAULT_NATIONAL_BENCHMARKS,
       );
     } catch (error: any) {
       this.logger.warn(
@@ -233,6 +227,8 @@ export class BriefingGeneratorService {
       this.appConfig.get('AI_MODEL', 'deepseek-chat'),
       this.appConfig.get('DEEPSEEK_API_KEY'),
     ]);
+
+    if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
 
     const client = new OpenAI({ baseURL: baseUrl, apiKey });
 
