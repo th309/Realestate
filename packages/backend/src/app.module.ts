@@ -39,6 +39,8 @@ import { AnalyticsEventsModule } from './analytics-events/analytics-events.modul
 import { SupportModule } from './support/support.module';
 import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { PricingModule } from './pricing/pricing.module';
+import { AppConfigModule } from './config/app-config.module';
+import { MarketIntelligenceModule } from './market-intelligence/market-intelligence.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -83,6 +85,8 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     SupportModule,
     MetricResolutionModule,
     PricingModule,
+    AppConfigModule,
+    MarketIntelligenceModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
