@@ -13,11 +13,16 @@ import {
   Req,
   Logger,
   UseGuards,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { AppConfigService } from './app-config.service';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
+
+export class UpdateConfigDto {
+  @IsString()
+  @IsNotEmpty()
+  value: string;
+}
 
 @UseGuards(AdminGuard)
 @Controller('api/admin/config')
@@ -33,20 +38,12 @@ export class AppConfigController {
   @Get(':category')
   async getByCategory(@Param('category') category: string) {
     this.logger.log(`GET /api/admin/config/${category}`);
-
-    try {
-      const entries = await this.appConfigService.getAllByCategory(category);
-      return {
-        success: true,
-        data: entries,
-        count: entries.length,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+    const entries = await this.appConfigService.getAllByCategory(category);
+    return {
+      success: true,
+      data: entries,
+      count: entries.length,
+    };
   }
 
   /**
@@ -56,28 +53,15 @@ export class AppConfigController {
   @Put(':key')
   async updateKey(
     @Param('key') key: string,
-    @Body() body: { value: string },
+    @Body() body: UpdateConfigDto,
     @Req() req: any,
   ) {
     this.logger.log(`PUT /api/admin/config/${key}`);
-
-    if (body.value === undefined || body.value === null) {
-      throw new HttpException('value is required', HttpStatus.BAD_REQUEST);
-    }
-
     const updatedBy: string = req.userId ?? 'unknown';
-
-    try {
-      await this.appConfigService.set(key, String(body.value), updatedBy);
-      return {
-        success: true,
-        updated: { key, value: body.value },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
+    await this.appConfigService.set(key, body.value, updatedBy);
+    return {
+      success: true,
+      updated: { key, value: body.value },
+    };
   }
 }
