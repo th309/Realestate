@@ -7,4 +7,3 @@ export { BlurredTeaser } from './BlurredTeaser';
 export { GeoLockCard } from './GeoLockCard';
 export { ScoreBreakdownGate } from './ScoreBreakdownGate';
 export { ContextualUpgradeCTA } from './ContextualUpgradeCTA';
-export { SignupPromptBanner } from './SignupPromptBanner';
