@@ -11,6 +11,16 @@ function forwardAuthHeader(request: NextRequest): Record<string, string> {
   return auth ? { Authorization: auth } : {};
 }
 
+async function parseBackendResponse(response: Response) {
+  const data = await response.json();
+  if (response.ok && data.success !== undefined) return data;
+  if (response.ok) return { success: true, data };
+  return {
+    success: false,
+    error: data.message || data.error || `Request failed (${response.status})`,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
@@ -27,8 +37,8 @@ export async function GET(request: NextRequest) {
       `${BACKEND_URL}/analytics/watchlist/folders?userId=${userId}`,
       { headers: { 'Content-Type': 'application/json', ...forwardAuthHeader(request) } }
     );
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await parseBackendResponse(response);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch folders' },

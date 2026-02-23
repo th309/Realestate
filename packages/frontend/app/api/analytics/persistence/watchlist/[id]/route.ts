@@ -11,6 +11,16 @@ function forwardAuthHeader(request: NextRequest): Record<string, string> {
   return auth ? { Authorization: auth } : {};
 }
 
+async function parseBackendResponse(response: Response) {
+  const data = await response.json();
+  if (response.ok && data.success !== undefined) return data;
+  if (response.ok) return { success: true, data };
+  return {
+    success: false,
+    error: data.message || data.error || `Request failed (${response.status})`,
+  };
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,8 +36,8 @@ export async function PUT(
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await parseBackendResponse(response);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Failed to update watchlist item' },
@@ -56,8 +66,8 @@ export async function DELETE(
       `${BACKEND_URL}/analytics/watchlist/${id}?userId=${userId}`,
       { method: 'DELETE', headers: forwardAuthHeader(request) }
     );
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await parseBackendResponse(response);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Failed to remove from watchlist' },

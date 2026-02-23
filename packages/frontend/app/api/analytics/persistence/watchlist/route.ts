@@ -11,6 +11,27 @@ function forwardAuthHeader(request: NextRequest): Record<string, string> {
   return auth ? { Authorization: auth } : {};
 }
 
+/** Normalize backend responses into { success, data?, error? } format */
+async function parseBackendResponse(response: Response) {
+  const data = await response.json();
+
+  // Backend already returns { success: true, data } on success
+  if (response.ok && data.success !== undefined) {
+    return data;
+  }
+
+  // Backend success but missing success field — wrap it
+  if (response.ok) {
+    return { success: true, data };
+  }
+
+  // Backend error (NestJS format: { statusCode, message, error })
+  return {
+    success: false,
+    error: data.message || data.error || `Request failed (${response.status})`,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
@@ -30,8 +51,8 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, {
       headers: { 'Content-Type': 'application/json', ...forwardAuthHeader(request) },
     });
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await parseBackendResponse(response);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Failed to fetch watchlist' },
@@ -50,8 +71,8 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const result = await parseBackendResponse(response);
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { success: false, error: 'Failed to add to watchlist' },

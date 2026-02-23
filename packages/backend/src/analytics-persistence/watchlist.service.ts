@@ -131,7 +131,11 @@ export class WatchlistService {
     );
     const access = entitlementsResult.access['feature:watchlist_limit'];
 
-    // -1 means unlimited, undefined means no limit configured
+    // 'full' access means unlimited (e.g. admin tier where value is -1)
+    if (access?.level === 'full')
+      return { allowed: true, current: currentCount, limit: -1 };
+
+    // Numeric limit from 'preview' level
     const limit = access?.limit ?? 0;
     if (limit === -1)
       return { allowed: true, current: currentCount, limit: -1 };

@@ -86,9 +86,11 @@ export class EntitlementsService {
 
     for (const resource of resources) {
       const [type, id] = resource.split(':');
-      const featureSlug = `${type}_${id}`;
-
-      const hasAccess = resolved.features[featureSlug];
+      // DB slugs are inconsistent: some have type prefix (metric_home_value, geo_state,
+      // feature_reports) and some don't (watchlist_limit, alerts_limit). Try prefixed first.
+      const prefixedSlug = `${type}_${id}`;
+      const hasAccess = resolved.features[prefixedSlug] ?? resolved.features[id];
+      const effectiveSlug = (resolved.features[prefixedSlug] !== undefined) ? prefixedSlug : id;
 
       if (hasAccess === true || hasAccess === -1) {
         access[resource] = { level: 'full' };
@@ -96,7 +98,7 @@ export class EntitlementsService {
         access[resource] = { level: 'preview', limit: hasAccess };
       } else {
         // Find which tier has this feature
-        const tierRequired = await this.findTierWithFeature(featureSlug);
+        const tierRequired = await this.findTierWithFeature(effectiveSlug);
         access[resource] = { level: 'none', tierRequired };
       }
     }

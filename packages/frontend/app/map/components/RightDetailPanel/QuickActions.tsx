@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, ExternalLink, FileText } from 'lucide-react';
+import { Heart, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlements';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
@@ -15,22 +16,28 @@ interface QuickActionsProps {
 export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist, items } = useWatchlist({
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist, items, error } = useWatchlist({
     userId: user?.id ?? '',
     autoLoad: !!user?.id,
   });
+  const [toggling, setToggling] = useState(false);
 
   const isSaved = isInWatchlist(geoLevel, geography.id);
 
   const handleToggleWatchlist = async () => {
-    if (!user?.id) return;
-    if (isSaved) {
-      const item = items.find(
-        (i) => i.geography_type === geoLevel && i.geography_id === geography.id,
-      );
-      if (item) await removeFromWatchlist(item.id);
-    } else {
-      await addToWatchlist(geoLevel, geography.id, geography.name);
+    if (!user?.id || toggling) return;
+    setToggling(true);
+    try {
+      if (isSaved) {
+        const item = items.find(
+          (i) => i.geography_type === geoLevel && i.geography_id === geography.id,
+        );
+        if (item) await removeFromWatchlist(item.id);
+      } else {
+        await addToWatchlist(geoLevel, geography.id, geography.name);
+      }
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -40,7 +47,7 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
     router.push(`/market/${geography.id}?${params.toString()}`);
   };
 
-  const { getAccess } = useEntitlements(); // Added entitlement hook
+  const { getAccess } = useEntitlements();
 
   const handleGenerateReport = () => {
     try {
@@ -55,7 +62,6 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       );
     } catch { /* ignore */ }
 
-    // Check if user has full report access
     const reportAccess = getAccess('feature', 'reports');
     if (reportAccess.level === 'full') {
       router.push('/reports');
@@ -67,36 +73,47 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   const btnBase =
     'flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors';
 
+  const disabled = !user?.id || toggling;
+
   return (
-    <div className="flex gap-2">
-      <button
-        onClick={handleToggleWatchlist}
-        disabled={!user?.id}
-        className={`${btnBase} ${isSaved
-            ? 'bg-primary/10 text-primary border border-primary/30'
-            : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
-          } disabled:opacity-40 disabled:cursor-not-allowed`}
-        title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
-      >
-        <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
-        {isSaved ? 'Favorited' : 'Favorite'}
-      </button>
+    <div>
+      <div className="flex gap-2">
+        <button
+          onClick={handleToggleWatchlist}
+          disabled={disabled}
+          className={`${btnBase} ${isSaved
+              ? 'bg-primary/10 text-primary border border-primary/30'
+              : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {toggling
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
+          }
+          {toggling ? 'Saving...' : isSaved ? 'Favorited' : 'Favorite'}
+        </button>
 
-      <button
-        onClick={handleViewMarket}
-        className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
-      >
-        <ExternalLink className="w-3.5 h-3.5" />
-        Details
-      </button>
+        <button
+          onClick={handleViewMarket}
+          className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          Details
+        </button>
 
-      <button
-        onClick={handleGenerateReport}
-        className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
-      >
-        <FileText className="w-3.5 h-3.5" />
-        Report
-      </button>
+        <button
+          onClick={handleGenerateReport}
+          className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
+        >
+          <FileText className="w-3.5 h-3.5" />
+          Report
+        </button>
+      </div>
+
+      {error && (
+        <p className="text-[10px] text-red-500 mt-1 px-1">{error}</p>
+      )}
     </div>
   );
 }
