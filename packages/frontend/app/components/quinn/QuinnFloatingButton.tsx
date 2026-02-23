@@ -14,6 +14,7 @@ import { useQuinnUser, generateConversationId } from './useQuinnUser';
 import { QuinnRichData } from './QuinnRichData';
 import { STARTER_PROMPTS, parseFollowUpSuggestions } from './quinnChatHelpers';
 import type { QuinnStructuredData } from './QuinnStructuredData.types';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface Message {
   id: string;
@@ -114,10 +115,25 @@ export function QuinnFloatingButton() {
     try {
       const apiUrl = `/api/analytics/chat/${conversationId}`;
       console.log(`[Quinn Client ${requestId}] Fetching:`, apiUrl);
-      
+
+      // Get Supabase session token for auth
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        } else {
+          // Anonymous user — pass user ID for dev auth bypass
+          headers['x-user-id'] = userId;
+        }
+      } catch {
+        headers['x-user-id'] = userId;
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           message: text
         })

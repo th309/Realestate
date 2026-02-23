@@ -1,21 +1,25 @@
 /**
  * News Ingestion Service
  *
- * Fetches real estate news articles from a configurable News API provider,
- * geo-tags them against known metro areas, classifies via LLM (summary,
- * tags, sentiment), and stores in the `market_news` table.
+ * Two-tier ingestion pipeline:
+ * 1. National feeds (HousingWire, NAR, Zillow, etc.) — general market news
+ * 2. Local feeds (Google News RSS per metro/county) — location-specific news
+ *
+ * No API key required — uses publicly available RSS feeds.
  *
  * Designed for resilience: individual article failures are counted as errors
  * but never crash the pipeline. LLM failures fall back to sensible defaults.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import Parser from 'rss-parser';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
-import { GeoTaggerService, GeoTagResult } from './geo-tagger.service';
+import { GeoTaggerService } from './geo-tagger.service';
 import { BriefingGeneratorService } from './briefing-generator.service';
 import { classifyArticle } from './news-classification.helpers';
-import { DEFAULT_NATIONAL_BENCHMARKS } from './market-intelligence.types';
+import { fetchLocalNews, loadTargetGeographies } from './local-news-fetcher';
+import { triggerHighSeverityBriefingRefresh } from './high-severity-detector';
 
 /** Counts returned after an ingestion run */
 export interface IngestionResult {
@@ -24,8 +28,8 @@ export interface IngestionResult {
   errors: number;
 }
 
-/** Shape of a single article from the NewsAPI response */
-interface NewsApiArticle {
+/** Normalized article shape from any source (RSS or API) */
+interface NewsArticle {
   title: string | null;
   description: string | null;
   url: string;
@@ -33,15 +37,14 @@ interface NewsApiArticle {
   publishedAt: string;
 }
 
-/** Shape of the NewsAPI /v2/everything response */
-interface NewsApiResponse {
-  status: string;
-  totalResults: number;
-  articles: NewsApiArticle[];
-}
-
-const NEWSAPI_BASE_URL = 'https://newsapi.org/v2/everything';
-const NEWSAPI_QUERY = '"real estate" OR "housing market" OR "home prices"';
+/** Free RSS feeds for real estate news — no API key needed */
+const DEFAULT_RSS_FEEDS: Array<{ url: string; name: string }> = [
+  { url: 'https://www.housingwire.com/feed/', name: 'HousingWire' },
+  { url: 'https://www.nar.realtor/blogs.rss', name: 'NAR' },
+  { url: 'https://zillow.mediaroom.com/rss', name: 'Zillow' },
+  { url: 'https://www.mortgagenewsdaily.com/rss/news', name: 'Mortgage News Daily' },
+  { url: 'https://www.cnbc.com/id/10000115/device/rss/rss.html', name: 'CNBC Real Estate' },
+];
 
 @Injectable()
 export class NewsIngestionService {
@@ -56,30 +59,46 @@ export class NewsIngestionService {
 
   /**
    * Ingest the latest real estate news articles.
+   *
+   * Two-tier pipeline:
+   * 1. National RSS feeds — general market news (HousingWire, CNBC, etc.)
+   * 2. Local Google News RSS — per-metro and per-county real estate news
+   *
    * Returns counts of ingested, skipped (duplicate), and errored articles.
    */
   async ingestLatestNews(): Promise<IngestionResult> {
     const result: IngestionResult = { ingested: 0, skipped: 0, errors: 0 };
 
-    // 1. Fetch articles from News API
-    const articles = await this.fetchFromNewsApi();
+    // 1. Fetch national articles from curated RSS feeds
+    const nationalArticles = await this.fetchFromRssFeeds();
+
+    // 2. Fetch local articles from Google News RSS per geography
+    const localArticles = await this.fetchLocalArticles();
+
+    // 3. Merge both streams into a unified article list
+    const articles = [...nationalArticles, ...localArticles];
     if (articles.length === 0) return result;
 
-    // 2. Deduplicate against existing URLs
+    // 4. Deduplicate against existing URLs in the database
     const urls = articles.map(a => a.url).filter(Boolean);
     const existingUrls = await this.findExistingUrls(urls);
 
-    // 3. Process each article
+    // 5. Also deduplicate within the current batch (Google News may return
+    //    the same article for multiple geographies)
+    const seenUrls = new Set<string>();
+
+    // 6. Process each article
     for (const article of articles) {
       if (!article.url || !article.title) {
         result.errors++;
         continue;
       }
 
-      if (existingUrls.has(article.url)) {
+      if (existingUrls.has(article.url) || seenUrls.has(article.url)) {
         result.skipped++;
         continue;
       }
+      seenUrls.add(article.url);
 
       try {
         await this.processAndStoreArticle(article);
@@ -96,131 +115,96 @@ export class NewsIngestionService {
     );
 
     // Fire-and-forget: detect high-severity markets and trigger emergency briefing refresh.
-    // Detached promise so it never slows down the ingestion return path.
-    this.triggerHighSeverityBriefingRefresh()
+    triggerHighSeverityBriefingRefresh(this.supabase, this.briefingGenerator)
       .catch((err) => this.logger.warn(`High-severity briefing refresh failed: ${err.message}`));
 
     return result;
   }
 
-  // -- High-Severity Market Detection & Emergency Briefing Refresh ----------
-
-  /** Regex matching keywords that indicate a high-severity event for a market */
-  private static readonly HIGH_SEVERITY_PATTERN =
-    /disaster|layoffs?|closure|bankruptcy|flood|hurricane|fire|crash|collapse|crisis/i;
+  // -- Local News Fetch (Google News RSS per geography) ---------------------
 
   /**
-   * Query `market_news` for markets with 2+ negative-sentiment, high-severity
-   * articles in the last 24 hours. These markets need an emergency briefing refresh.
+   * Fetch local real estate news for top metros and counties.
+   * Reads batch settings from AppConfigService, delegates to local-news-fetcher.
    */
-  private async detectHighSeverityMarkets(): Promise<
-    Array<{ geography_id: string; geography_type: string; geography_name: string }>
-  > {
-    const client = this.supabase.getClient();
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    const { data: recentNegative } = await client
-      .from('market_news')
-      .select('geography_ids, headline, summary')
-      .eq('sentiment', 'negative')
-      .gte('published_at', oneDayAgo);
-
-    if (!recentNegative?.length) return [];
-
-    // Count negative articles per geography that contain high-severity keywords
-    const geoCount = new Map<string, number>();
-
-    for (const article of recentNegative) {
-      const text = `${article.headline} ${article.summary}`;
-      if (!NewsIngestionService.HIGH_SEVERITY_PATTERN.test(text)) continue;
-
-      for (const geoId of (article.geography_ids || [])) {
-        geoCount.set(geoId, (geoCount.get(geoId) || 0) + 1);
-      }
-    }
-
-    // Return markets with 2+ high-severity articles
-    return [...geoCount.entries()]
-      .filter(([, count]) => count >= 2)
-      .map(([geoId]) => ({
-        geography_id: geoId,
-        geography_type: 'metro',
-        geography_name: geoId, // Best effort; name resolved by briefing generator
-      }));
-  }
-
-  /**
-   * Detect high-severity markets and trigger an emergency briefing refresh
-   * for each one. Each generation is fire-and-forget so individual failures
-   * do not block the others.
-   */
-  private async triggerHighSeverityBriefingRefresh(): Promise<void> {
-    const markets = await this.detectHighSeverityMarkets();
-    if (markets.length === 0) return;
-
-    this.logger.warn(
-      `Detected ${markets.length} market(s) with high-severity news — triggering emergency briefing refresh`,
-    );
-
-    for (const market of markets) {
-      this.briefingGenerator
-        .generateBriefing(
-          market.geography_id,
-          market.geography_type as 'metro' | 'county',
-          market.geography_name,
-          DEFAULT_NATIONAL_BENCHMARKS,
-        )
-        .then(() =>
-          this.logger.log(`Emergency briefing refreshed for ${market.geography_id}`),
-        )
-        .catch((err) =>
-          this.logger.warn(
-            `Emergency briefing failed for ${market.geography_id}: ${err.message}`,
-          ),
-        );
-    }
-  }
-
-  // -- News API Fetch -------------------------------------------------------
-
-  /** Fetch articles from the configured News API provider */
-  private async fetchFromNewsApi(): Promise<NewsApiArticle[]> {
+  private async fetchLocalArticles(): Promise<NewsArticle[]> {
     try {
-      const [provider, apiKey] = await Promise.all([
-        this.appConfig.get('NEWS_API_PROVIDER', 'newsapi'),
-        this.appConfig.get('NEWS_API_KEY'),
+      const [maxMetros, maxCounties, batchSize, batchDelay] = await Promise.all([
+        this.appConfig.getNumber('QUINN_MAX_METROS', 900),
+        this.appConfig.getNumber('QUINN_MAX_COUNTIES', 500),
+        this.appConfig.getNumber('QUINN_BRIEFING_BATCH_SIZE', 10),
+        this.appConfig.getNumber('QUINN_BRIEFING_BATCH_DELAY_MS', 2000),
       ]);
 
-      if (!apiKey) {
-        this.logger.warn('NEWS_API_KEY not configured, skipping news ingestion');
+      const client = this.supabase.getClient();
+      const geographies = await loadTargetGeographies(client, maxMetros, maxCounties);
+      if (geographies.length === 0) {
+        this.logger.warn('No geographies found for local news fetch');
         return [];
       }
 
-      if (provider !== 'newsapi') {
-        this.logger.warn(`Unsupported news provider "${provider}", only "newsapi" supported`);
-        return [];
-      }
+      this.logger.log(
+        `Fetching local news for ${geographies.length} geographies (batch size ${batchSize})`,
+      );
 
-      const url = `${NEWSAPI_BASE_URL}?q=${encodeURIComponent(NEWSAPI_QUERY)}` +
-        `&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
+      const localArticles = await fetchLocalNews(geographies, batchSize, batchDelay);
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        this.logger.error(`News API returned ${response.status}: ${response.statusText}`);
-        return [];
-      }
-
-      const body: NewsApiResponse = await response.json();
-      if (body.status !== 'ok' || !body.articles) {
-        this.logger.error('News API returned non-ok status or no articles');
-        return [];
-      }
-
-      return body.articles;
-    } catch (err) {
-      this.logger.error(`News API fetch failed: ${err.message}`);
+      // Convert LocalNewsArticle → NewsArticle with pre-set geography info
+      return localArticles.map((la) => ({
+        title: la.title,
+        description: la.description,
+        url: la.url,
+        source: { name: 'Google News' },
+        publishedAt: la.publishedAt,
+        _preTaggedGeo: {
+          id: la.sourceGeographyId,
+          type: la.sourceGeographyType,
+          name: la.sourceGeographyName,
+        },
+      } as NewsArticle & { _preTaggedGeo: { id: string; type: string; name: string } }));
+    } catch (err: any) {
+      this.logger.warn(`Local news fetch failed: ${err.message}`);
       return [];
     }
+  }
+
+  // -- RSS Feed Fetch -------------------------------------------------------
+
+  /** Fetch articles from all configured RSS feeds in parallel */
+  private async fetchFromRssFeeds(): Promise<NewsArticle[]> {
+    const parser = new Parser({ timeout: 15_000 });
+    const allArticles: NewsArticle[] = [];
+
+    const feedResults = await Promise.allSettled(
+      DEFAULT_RSS_FEEDS.map(async (feed) => {
+        try {
+          const parsed = await parser.parseURL(feed.url);
+          const articles: NewsArticle[] = (parsed.items || [])
+            .filter((item) => item.link && item.title)
+            .map((item) => ({
+              title: item.title ?? null,
+              description: item.contentSnippet || item.content || item.summary || null,
+              url: item.link!,
+              source: { name: feed.name },
+              publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
+            }));
+          this.logger.log(`Fetched ${articles.length} articles from ${feed.name}`);
+          return articles;
+        } catch (err: any) {
+          this.logger.warn(`RSS feed "${feed.name}" failed: ${err.message}`);
+          return [];
+        }
+      }),
+    );
+
+    for (const result of feedResults) {
+      if (result.status === 'fulfilled') {
+        allArticles.push(...result.value);
+      }
+    }
+
+    this.logger.log(`Total articles fetched from RSS feeds: ${allArticles.length}`);
+    return allArticles;
   }
 
   // -- Deduplication --------------------------------------------------------
@@ -245,22 +229,37 @@ export class NewsIngestionService {
   // -- Article Processing ---------------------------------------------------
 
   /** Geo-tag, classify via LLM, and insert a single article */
-  private async processAndStoreArticle(article: NewsApiArticle): Promise<void> {
+  private async processAndStoreArticle(article: NewsArticle): Promise<void> {
     const headline = article.title ?? '';
     const description = article.description ?? '';
     const sourceName = article.source?.name ?? 'Unknown';
 
-    // Geo-tag
-    const geoTags = await this.geoTagger.tagArticle(headline, description);
+    // Check if article was pre-tagged from local news fetch
+    const preTagged = (article as any)._preTaggedGeo as
+      | { id: string; type: string; name: string }
+      | undefined;
+
+    let geographyIds: string[];
+    let geoType: string | null;
+    let geoConfidence: number;
+
+    if (preTagged) {
+      // Local article — geography is already known from the search query
+      geographyIds = [preTagged.id];
+      geoType = preTagged.type;
+      geoConfidence = 1.0;
+    } else {
+      // National article — run geo-tagger to detect location
+      const geoTags = await this.geoTagger.tagArticle(headline, description);
+      geographyIds = geoTags.map(t => t.geography_id);
+      geoType = geographyIds.length > 0 ? 'metro' : null;
+      geoConfidence = geoTags.length > 0
+        ? Math.max(...geoTags.map(t => t.confidence))
+        : 0;
+    }
 
     // LLM classification (with fallback)
     const classification = await classifyArticle(headline, description, this.appConfig);
-
-    // Build row and insert
-    const geographyIds = geoTags.map(t => t.geography_id);
-    const maxConfidence = geoTags.length > 0
-      ? Math.max(...geoTags.map(t => t.confidence))
-      : 0;
 
     const client = this.supabase.getClient();
     const { error } = await client.from('market_news').insert({
@@ -272,8 +271,8 @@ export class NewsIngestionService {
       tags: classification.tags,
       sentiment: classification.sentiment,
       geography_ids: geographyIds,
-      geography_type: geographyIds.length > 0 ? 'metro' : null,
-      geo_tag_confidence: maxConfidence,
+      geography_type: geoType,
+      geo_tag_confidence: geoConfidence,
       raw_description: description,
       ingested_at: new Date().toISOString(),
     });

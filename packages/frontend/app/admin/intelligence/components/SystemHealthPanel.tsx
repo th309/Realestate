@@ -3,13 +3,18 @@
  *
  * Displays market intelligence system health metrics in an M3 card:
  * briefing coverage, news volume, rankings freshness, and Quinn status.
+ * Includes "Run Now" buttons for manually triggering each pipeline.
  */
 
 'use client';
 
-import React from 'react';
-import { Activity, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Activity, AlertCircle, Loader2, Play } from 'lucide-react';
+import { fetchAPIRaw } from '@/lib/data';
 import type { IntelligenceStats } from '../hooks/useIntelligenceStats';
+
+type PipelineId = 'briefings' | 'news' | 'rankings';
+type RunState = 'idle' | 'running' | 'done' | 'error';
 
 interface SystemHealthPanelProps {
   stats: IntelligenceStats | null;
@@ -18,6 +23,30 @@ interface SystemHealthPanelProps {
 }
 
 export function SystemHealthPanel({ stats, loading, error }: SystemHealthPanelProps) {
+  const [runStates, setRunStates] = useState<Record<PipelineId, RunState>>({
+    briefings: 'idle',
+    news: 'idle',
+    rankings: 'idle',
+  });
+
+  const triggerPipeline = useCallback(async (pipeline: PipelineId) => {
+    setRunStates((prev) => ({ ...prev, [pipeline]: 'running' }));
+    try {
+      const res = await fetchAPIRaw(`/api/admin/intelligence/trigger/${pipeline}`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setRunStates((prev) => ({ ...prev, [pipeline]: 'done' }));
+      setTimeout(() => {
+        setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
+      }, 3000);
+    } catch {
+      setRunStates((prev) => ({ ...prev, [pipeline]: 'error' }));
+      setTimeout(() => {
+        setRunStates((prev) => ({ ...prev, [pipeline]: 'idle' }));
+      }, 3000);
+    }
+  }, []);
   return (
     <div className="bg-surface-container-low border border-outline-variant rounded-xl">
       {/* Heading */}
@@ -46,6 +75,7 @@ export function SystemHealthPanel({ stats, loading, error }: SystemHealthPanelPr
               label="Briefings"
               value={formatBriefingsSummary(stats)}
               status={getBriefingStatus(stats)}
+              action={<TriggerButton pipeline="briefings" state={runStates.briefings} onTrigger={triggerPipeline} />}
             />
             <HealthRow
               label="Coverage"
@@ -56,11 +86,13 @@ export function SystemHealthPanel({ stats, loading, error }: SystemHealthPanelPr
               label="News"
               value={`${stats.news_articles_last_7d.toLocaleString()} articles (last 7 days)`}
               status={stats.news_articles_last_7d > 0 ? 'good' : 'warning'}
+              action={<TriggerButton pipeline="news" state={runStates.news} onTrigger={triggerPipeline} />}
             />
             <HealthRow
               label="Rankings"
               value={formatRankingsRefresh(stats.rankings_last_refresh)}
               status={getRankingsStatus(stats.rankings_last_refresh)}
+              action={<TriggerButton pipeline="rankings" state={runStates.rankings} onTrigger={triggerPipeline} />}
             />
             <HealthRow
               label="Quinn"
@@ -90,11 +122,13 @@ function HealthRow({
   value,
   status,
   showIndicator,
+  action,
 }: {
   label: string;
   value: string;
   status: HealthStatus;
   showIndicator?: boolean;
+  action?: React.ReactNode;
 }) {
   const statusColors: Record<HealthStatus, string> = {
     good: 'text-green-600',
@@ -118,8 +152,55 @@ function HealthRow({
         {showIndicator && (
           <span className={`w-2 h-2 rounded-full ${dotColors[status]}`} />
         )}
+        {action}
       </div>
     </div>
+  );
+}
+
+function TriggerButton({
+  pipeline,
+  state,
+  onTrigger,
+}: {
+  pipeline: PipelineId;
+  state: RunState;
+  onTrigger: (pipeline: PipelineId) => void;
+}) {
+  const isRunning = state === 'running';
+
+  return (
+    <button
+      onClick={() => onTrigger(pipeline)}
+      disabled={isRunning}
+      className={`
+        ml-2 px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors
+        ${state === 'done'
+          ? 'bg-green-100 text-green-700'
+          : state === 'error'
+            ? 'bg-red-100 text-red-700'
+            : isRunning
+              ? 'bg-surface-container-high text-on-surface-variant cursor-wait'
+              : 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'}
+      `}
+      title={`Manually trigger ${pipeline} pipeline`}
+    >
+      {state === 'done' ? (
+        'Started'
+      ) : state === 'error' ? (
+        'Failed'
+      ) : isRunning ? (
+        <span className="flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Running
+        </span>
+      ) : (
+        <span className="flex items-center gap-1">
+          <Play className="w-3 h-3" />
+          Run
+        </span>
+      )}
+    </button>
   );
 }
 

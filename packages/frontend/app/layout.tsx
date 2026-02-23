@@ -4,7 +4,7 @@ import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
-// import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
+import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton";
 
 // M3 Typography: Roboto is the standard Material Design typeface
 const roboto = Roboto({
@@ -139,7 +139,7 @@ export default function RootLayout({
             </p>
           </footer>
           <DevToolbarLoader />
-          {/* <QuinnFloatingButton /> */} {/* PAUSED: Quinn development on hold */}
+          <QuinnFloatingButton />
         </Providers>
       </body>
     </html>

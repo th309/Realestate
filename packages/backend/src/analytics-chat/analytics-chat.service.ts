@@ -31,9 +31,7 @@ export class AnalyticsChatService {
   private providers: Map<string, AIProvider> = new Map();
   private readonly MODEL_BALANCED = 'claude-3-5-sonnet-20241022';
   private conversations: Map<string, ConversationState> = new Map();
-  private readonly CONVERSATION_TTL_MS = 30 * 60 * 1000;
   private readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-  private readonly MAX_CONVERSATIONS = 1000;
   private cleanupIntervalId: NodeJS.Timeout | null = null;
   private dataDigest = '';
 
@@ -99,18 +97,21 @@ export class AnalyticsChatService {
     if (this.cleanupIntervalId) { clearInterval(this.cleanupIntervalId); this.cleanupIntervalId = null; }
   }
 
-  private cleanupStaleConversations(): void {
+  private async cleanupStaleConversations(): Promise<void> {
+    const ttlMinutes = await this.appConfig.getNumber('QUINN_CONVERSATION_TTL_MINUTES', 30);
+    const ttlMs = ttlMinutes * 60 * 1000;
+    const maxConversations = await this.appConfig.getNumber('QUINN_MAX_CONVERSATIONS', 1000);
     const now = Date.now();
     let cleaned = 0;
     for (const [id, conv] of this.conversations.entries()) {
-      if (now - new Date(conv.lastMessageAt).getTime() > this.CONVERSATION_TTL_MS) {
+      if (now - new Date(conv.lastMessageAt).getTime() > ttlMs) {
         this.conversations.delete(id); cleaned++;
       }
     }
-    if (this.conversations.size > this.MAX_CONVERSATIONS) {
+    if (this.conversations.size > maxConversations) {
       const sorted = Array.from(this.conversations.entries())
         .sort((a, b) => new Date(a[1].lastMessageAt).getTime() - new Date(b[1].lastMessageAt).getTime());
-      for (const [id] of sorted.slice(0, this.conversations.size - this.MAX_CONVERSATIONS)) {
+      for (const [id] of sorted.slice(0, this.conversations.size - maxConversations)) {
         this.conversations.delete(id); cleaned++;
       }
     }

@@ -26,6 +26,9 @@ function createMockAppConfig(overrides: Record<string, boolean> = {}) {
       if (key in overrides) return Promise.resolve(overrides[key]);
       return Promise.resolve(defaultValue);
     }),
+    getNumber: jest.fn().mockImplementation((_key: string, defaultValue: number) => {
+      return Promise.resolve(defaultValue);
+    }),
   };
 }
 

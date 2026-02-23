@@ -2,12 +2,14 @@
  * Market Intelligence Admin Controller
  *
  * Provides admin-only endpoints for monitoring the health and coverage
- * of the market intelligence subsystem (briefings, news, rankings).
+ * of the market intelligence subsystem (briefings, news, rankings),
+ * plus manual triggers for each cron job.
  */
 
-import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Logger, UseGuards } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
+import { MarketIntelligenceCronService } from './market-intelligence-cron.service';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 
 interface IntelligenceStats {
@@ -28,6 +30,7 @@ export class MarketIntelligenceController {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly appConfig: AppConfigService,
+    private readonly cronService: MarketIntelligenceCronService,
   ) {}
 
   /**
@@ -117,5 +120,49 @@ export class MarketIntelligenceController {
       rankings_last_refresh: latestRankingResult.data?.generated_date ?? null,
       quinn_available: quinnAvailable,
     };
+  }
+
+  // ===========================================================================
+  // Manual Cron Triggers
+  // ===========================================================================
+
+  /**
+   * POST /api/admin/intelligence/trigger/briefings
+   * Manually trigger the weekly briefing generation pipeline.
+   */
+  @Post('trigger/briefings')
+  async triggerBriefings(): Promise<{ success: true; message: string }> {
+    this.logger.log('Manual trigger: weekly briefings');
+    // Fire-and-forget — the cron method handles its own error logging
+    this.cronService.handleWeeklyBriefings().catch((err) => {
+      this.logger.error(`Manual briefing trigger failed: ${err.message}`);
+    });
+    return { success: true, message: 'Briefing generation started' };
+  }
+
+  /**
+   * POST /api/admin/intelligence/trigger/news
+   * Manually trigger the daily news ingestion pipeline.
+   */
+  @Post('trigger/news')
+  async triggerNewsIngestion(): Promise<{ success: true; message: string }> {
+    this.logger.log('Manual trigger: news ingestion');
+    this.cronService.handleDailyNewsIngestion().catch((err) => {
+      this.logger.error(`Manual news ingestion trigger failed: ${err.message}`);
+    });
+    return { success: true, message: 'News ingestion started' };
+  }
+
+  /**
+   * POST /api/admin/intelligence/trigger/rankings
+   * Manually trigger the weekly rankings cache refresh.
+   */
+  @Post('trigger/rankings')
+  async triggerRankings(): Promise<{ success: true; message: string }> {
+    this.logger.log('Manual trigger: rankings cache refresh');
+    this.cronService.handleWeeklyRankings().catch((err) => {
+      this.logger.error(`Manual rankings trigger failed: ${err.message}`);
+    });
+    return { success: true, message: 'Rankings cache refresh started' };
   }
 }

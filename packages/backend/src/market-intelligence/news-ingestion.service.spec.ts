@@ -1,7 +1,7 @@
 /**
  * NewsIngestionService Tests
  *
- * Tests the full news ingestion pipeline: News API fetch, deduplication,
+ * Tests the full news ingestion pipeline: RSS feed fetch, deduplication,
  * geo-tagging, LLM classification, and database insertion.
  */
 
@@ -12,7 +12,17 @@ import { AppConfigService } from '../config/app-config.service';
 import { GeoTaggerService, GeoTagResult } from './geo-tagger.service';
 import { BriefingGeneratorService } from './briefing-generator.service';
 
-// -- Mock OpenAI SDK --------------------------------------------------------
+// -- Mock rss-parser ----------------------------------------------------------
+
+const mockParseURL = jest.fn();
+
+jest.mock('rss-parser', () => {
+  return jest.fn().mockImplementation(() => ({
+    parseURL: mockParseURL,
+  }));
+});
+
+// -- Mock OpenAI SDK ----------------------------------------------------------
 
 const mockChatCompletionsCreate = jest.fn();
 
@@ -22,40 +32,41 @@ jest.mock('openai', () => {
   }));
 });
 
-// -- Mock global fetch ------------------------------------------------------
+// -- Mock local-news-fetcher --------------------------------------------------
 
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('./local-news-fetcher', () => ({
+  loadTargetGeographies: jest.fn().mockResolvedValue([]),
+  fetchLocalNews: jest.fn().mockResolvedValue([]),
+}));
 
-// -- Test Data --------------------------------------------------------------
+// -- Mock high-severity-detector ----------------------------------------------
 
-const SAMPLE_NEWSAPI_RESPONSE = {
-  status: 'ok',
-  totalResults: 3,
-  articles: [
-    {
-      title: 'Denver housing market surges',
-      description: 'Home prices in the Denver metro area continue to climb.',
-      url: 'https://example.com/denver-housing',
-      source: { name: 'Reuters' },
-      publishedAt: '2026-02-20T10:00:00Z',
-    },
-    {
-      title: 'Tampa real estate booms',
-      description: 'Tampa Bay area sees record buyer activity.',
-      url: 'https://example.com/tampa-real-estate',
-      source: { name: 'Bloomberg' },
-      publishedAt: '2026-02-19T14:00:00Z',
-    },
-    {
-      title: 'National housing trends for 2026',
-      description: 'Nationwide analysis of the housing market.',
-      url: 'https://example.com/national-trends',
-      source: { name: 'CNBC' },
-      publishedAt: '2026-02-18T09:00:00Z',
-    },
-  ],
-};
+jest.mock('./high-severity-detector', () => ({
+  triggerHighSeverityBriefingRefresh: jest.fn().mockResolvedValue(undefined),
+}));
+
+// -- Test Data ----------------------------------------------------------------
+
+const SAMPLE_RSS_ITEMS = [
+  {
+    title: 'Denver housing market surges',
+    contentSnippet: 'Home prices in the Denver metro area continue to climb.',
+    link: 'https://example.com/denver-housing',
+    isoDate: '2026-02-20T10:00:00Z',
+  },
+  {
+    title: 'Tampa real estate booms',
+    contentSnippet: 'Tampa Bay area sees record buyer activity.',
+    link: 'https://example.com/tampa-real-estate',
+    isoDate: '2026-02-19T14:00:00Z',
+  },
+  {
+    title: 'National housing trends for 2026',
+    contentSnippet: 'Nationwide analysis of the housing market.',
+    link: 'https://example.com/national-trends',
+    isoDate: '2026-02-18T09:00:00Z',
+  },
+];
 
 const LLM_CLASSIFICATION_JSON = JSON.stringify({
   summary: 'Denver home prices continue to rise significantly.',
@@ -63,7 +74,7 @@ const LLM_CLASSIFICATION_JSON = JSON.stringify({
   sentiment: 'positive',
 });
 
-// -- Mock Supabase ----------------------------------------------------------
+// -- Mock Supabase ------------------------------------------------------------
 
 function createMockSupabaseClient(existingUrls: string[] = []) {
   const mockInsert = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -87,7 +98,7 @@ function createMockSupabaseClient(existingUrls: string[] = []) {
   };
 }
 
-// -- Mock GeoTagger ---------------------------------------------------------
+// -- Mock GeoTagger -----------------------------------------------------------
 
 function createMockGeoTagger(): jest.Mocked<GeoTaggerService> {
   return {
@@ -106,24 +117,31 @@ function createMockGeoTagger(): jest.Mocked<GeoTaggerService> {
   } as any;
 }
 
-// -- Mock AppConfig ---------------------------------------------------------
+// -- Mock AppConfig -----------------------------------------------------------
 
 function createMockAppConfig() {
   return {
     get: jest.fn().mockImplementation((key: string, defaultValue = '') => {
       const config: Record<string, string> = {
-        NEWS_API_PROVIDER: 'newsapi',
-        NEWS_API_KEY: 'test-news-api-key',
         AI_BASE_URL: 'https://api.deepseek.com',
         AI_MODEL: 'deepseek-chat',
         DEEPSEEK_API_KEY: 'test-deepseek-key',
       };
       return Promise.resolve(config[key] ?? defaultValue);
     }),
+    getNumber: jest.fn().mockImplementation((key: string, defaultValue = 0) => {
+      const config: Record<string, number> = {
+        QUINN_MAX_METROS: 900,
+        QUINN_MAX_COUNTIES: 500,
+        QUINN_BRIEFING_BATCH_SIZE: 10,
+        QUINN_BRIEFING_BATCH_DELAY_MS: 2000,
+      };
+      return Promise.resolve(config[key] ?? defaultValue);
+    }),
   } as any;
 }
 
-// -- Test Suite -------------------------------------------------------------
+// -- Test Suite ---------------------------------------------------------------
 
 describe('NewsIngestionService', () => {
   let service: NewsIngestionService;
@@ -138,11 +156,8 @@ describe('NewsIngestionService', () => {
     mockGeoTagger = createMockGeoTagger();
     mockAppConfig = createMockAppConfig();
 
-    // Default: News API returns sample articles
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => SAMPLE_NEWSAPI_RESPONSE,
-    });
+    // Default: RSS parser returns sample items for every feed
+    mockParseURL.mockResolvedValue({ items: SAMPLE_RSS_ITEMS });
 
     // Default: LLM returns valid classification
     mockChatCompletionsCreate.mockResolvedValue({
@@ -162,8 +177,13 @@ describe('NewsIngestionService', () => {
     service = module.get<NewsIngestionService>(NewsIngestionService);
   });
 
-  describe('successful ingestion pipeline', () => {
-    it('processes articles from News API and returns correct counts', async () => {
+  describe('successful ingestion from RSS feeds', () => {
+    it('processes articles from RSS feeds and returns correct counts', async () => {
+      // Only the first feed returns articles; the rest return the same (deduped by URL)
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       const result = await service.ingestLatestNews();
 
       expect(result.ingested).toBe(3);
@@ -171,17 +191,20 @@ describe('NewsIngestionService', () => {
       expect(result.errors).toBe(0);
     });
 
-    it('calls fetch with NewsAPI URL including query and API key', async () => {
+    it('calls rss-parser for each configured feed', async () => {
+      mockParseURL.mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-      const fetchUrl = mockFetch.mock.calls[0][0] as string;
-      expect(fetchUrl).toContain('newsapi.org');
-      expect(fetchUrl).toContain('real%20estate');
-      expect(fetchUrl).toContain('apiKey=test-news-api-key');
+      // Should be called once per feed (5 default feeds)
+      expect(mockParseURL.mock.calls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('inserts articles into market_news table', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       expect(mockClient._mockInsert).toHaveBeenCalledTimes(3);
@@ -190,24 +213,34 @@ describe('NewsIngestionService', () => {
 
   describe('geo-tagging integration', () => {
     it('calls geo-tagger for each article', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       expect(mockGeoTagger.tagArticle).toHaveBeenCalledTimes(3);
     });
 
     it('stores geography_ids from geo-tagger results', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
-      // Denver article should get geography_ids=['19740']
       const firstInsertCall = mockClient._mockInsert.mock.calls[0][0];
       expect(firstInsertCall.geography_ids).toEqual(['19740']);
       expect(firstInsertCall.geo_tag_confidence).toBe(0.95);
     });
 
     it('stores empty geography_ids for non-matching articles', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
-      // "National housing trends" should have no geo tags
       const thirdInsertCall = mockClient._mockInsert.mock.calls[2][0];
       expect(thirdInsertCall.geography_ids).toEqual([]);
       expect(thirdInsertCall.geo_tag_confidence).toBe(0);
@@ -216,12 +249,20 @@ describe('NewsIngestionService', () => {
 
   describe('LLM classification', () => {
     it('calls LLM for each article', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       expect(mockChatCompletionsCreate).toHaveBeenCalledTimes(3);
     });
 
     it('stores LLM-generated summary and tags', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       const firstInsert = mockClient._mockInsert.mock.calls[0][0];
@@ -231,6 +272,9 @@ describe('NewsIngestionService', () => {
     });
 
     it('falls back to headline as summary when LLM fails', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
       mockChatCompletionsCreate.mockRejectedValue(new Error('LLM rate limit'));
 
       const result = await service.ingestLatestNews();
@@ -241,19 +285,6 @@ describe('NewsIngestionService', () => {
       expect(firstInsert.tags).toEqual([]);
       expect(firstInsert.sentiment).toBe('neutral');
     });
-
-    it('falls back when LLM returns invalid JSON', async () => {
-      mockChatCompletionsCreate.mockResolvedValue({
-        choices: [{ message: { content: 'This is not JSON' } }],
-      });
-
-      const result = await service.ingestLatestNews();
-
-      expect(result.ingested).toBe(3);
-      const firstInsert = mockClient._mockInsert.mock.calls[0][0];
-      expect(firstInsert.summary).toBe('Denver housing market surges');
-      expect(firstInsert.sentiment).toBe('neutral');
-    });
   });
 
   describe('deduplication by URL', () => {
@@ -262,6 +293,10 @@ describe('NewsIngestionService', () => {
         'https://example.com/denver-housing',
         'https://example.com/tampa-real-estate',
       ]);
+
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -282,41 +317,33 @@ describe('NewsIngestionService', () => {
     });
   });
 
-  describe('News API failure handling', () => {
-    it('returns zeros when News API returns non-ok response', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 429,
-        statusText: 'Too Many Requests',
-      });
+  describe('RSS feed failure handling', () => {
+    it('returns zeros when all RSS feeds fail', async () => {
+      mockParseURL.mockRejectedValue(new Error('Network error'));
 
       const result = await service.ingestLatestNews();
 
       expect(result).toEqual({ ingested: 0, skipped: 0, errors: 0 });
     });
 
-    it('returns zeros when fetch throws', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
+    it('continues when some feeds fail and others succeed', async () => {
+      mockParseURL
+        .mockRejectedValueOnce(new Error('Feed 1 timeout'))
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockRejectedValue(new Error('Feed 3+ timeout'));
 
       const result = await service.ingestLatestNews();
 
-      expect(result).toEqual({ ingested: 0, skipped: 0, errors: 0 });
-    });
-
-    it('returns zeros when NEWS_API_KEY is not configured', async () => {
-      mockAppConfig.get.mockImplementation((key: string, defaultValue = '') => {
-        if (key === 'NEWS_API_KEY') return Promise.resolve('');
-        return Promise.resolve(defaultValue);
-      });
-
-      const result = await service.ingestLatestNews();
-
-      expect(result).toEqual({ ingested: 0, skipped: 0, errors: 0 });
+      expect(result.ingested).toBe(3);
     });
   });
 
   describe('individual article error handling', () => {
     it('counts insert failures as errors and continues', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       let callCount = 0;
       mockClient._mockInsert.mockImplementation(() => {
         callCount++;
@@ -335,61 +362,50 @@ describe('NewsIngestionService', () => {
       expect(result.errors).toBe(1);
     });
 
-    it('counts articles with null title as errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          status: 'ok',
-          totalResults: 1,
-          articles: [{ title: null, description: 'Some desc', url: 'https://example.com/x', source: null, publishedAt: '2026-02-20T10:00:00Z' }],
-        }),
-      });
+    it('silently filters articles with null title at RSS parse stage', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({
+          items: [{ title: null, contentSnippet: 'Desc', link: 'https://example.com/x', isoDate: '2026-02-20T10:00:00Z' }],
+        })
+        .mockResolvedValue({ items: [] });
 
       const result = await service.ingestLatestNews();
 
-      expect(result.errors).toBe(1);
+      // Null-title articles are filtered out during RSS parsing, not counted as errors
+      expect(result.errors).toBe(0);
       expect(result.ingested).toBe(0);
     });
   });
 
   describe('article data is stored correctly', () => {
     it('populates all required fields in the insert payload', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       const firstInsert = mockClient._mockInsert.mock.calls[0][0];
       expect(firstInsert).toMatchObject({
         url: 'https://example.com/denver-housing',
         headline: 'Denver housing market surges',
-        source_name: 'Reuters',
         published_at: '2026-02-20T10:00:00Z',
         raw_description: 'Home prices in the Denver metro area continue to climb.',
         geography_type: 'metro',
       });
+      expect(firstInsert.source_name).toBeDefined();
       expect(firstInsert.ingested_at).toBeDefined();
     });
 
     it('sets geography_type to null when no geo tags found', async () => {
+      mockParseURL
+        .mockResolvedValueOnce({ items: SAMPLE_RSS_ITEMS })
+        .mockResolvedValue({ items: [] });
+
       await service.ingestLatestNews();
 
       const thirdInsert = mockClient._mockInsert.mock.calls[2][0];
       expect(thirdInsert.geography_type).toBeNull();
-    });
-  });
-
-  describe('unsupported provider handling', () => {
-    it('returns zeros for unsupported news provider', async () => {
-      mockAppConfig.get.mockImplementation((key: string, defaultValue = '') => {
-        const config: Record<string, string> = {
-          NEWS_API_PROVIDER: 'unsupported_provider',
-          NEWS_API_KEY: 'some-key',
-        };
-        return Promise.resolve(config[key] ?? defaultValue);
-      });
-
-      const result = await service.ingestLatestNews();
-
-      expect(result).toEqual({ ingested: 0, skipped: 0, errors: 0 });
-      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });

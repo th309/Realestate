@@ -41,6 +41,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   intelligence: 'Intelligence Features',
   news: 'News API',
   llm: 'LLM Provider',
+  quinn: 'Quinn Chat & Briefings',
 };
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS);

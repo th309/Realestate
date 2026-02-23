@@ -23,8 +23,6 @@ import {
   parseSuggestedQuestions, buildFallbackNarrative,
 } from './briefing-generator.helpers';
 
-const LLM_TIMEOUT_MS = 30_000;
-
 @Injectable()
 export class BriefingGeneratorService {
   private readonly logger = new Logger(BriefingGeneratorService.name);
@@ -162,14 +160,15 @@ export class BriefingGeneratorService {
   private async fetchRecentNews(geographyId: string): Promise<NewsItem[]> {
     try {
       const client = this.supabase.getClient();
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const lookbackDays = await this.appConfig.getNumber('QUINN_NEWS_LOOKBACK_DAYS', 30);
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - lookbackDays);
 
       const { data, error } = await client
         .from('market_news')
         .select('headline, source_name, published_at, summary, tags, sentiment')
         .contains('geography_ids', [geographyId])
-        .gte('published_at', thirtyDaysAgo.toISOString())
+        .gte('published_at', cutoffDate.toISOString())
         .order('published_at', { ascending: false })
         .limit(5);
 
@@ -216,25 +215,29 @@ export class BriefingGeneratorService {
   }
 
   private async callLlm(prompt: string): Promise<string> {
-    const [baseUrl, model, apiKey] = await Promise.all([
+    const [baseUrl, model, apiKey, timeoutMs, maxTokens, temperatureStr] = await Promise.all([
       this.appConfig.get('AI_BASE_URL', 'https://api.deepseek.com'),
       this.appConfig.get('AI_MODEL', 'deepseek-chat'),
       this.appConfig.get('DEEPSEEK_API_KEY'),
+      this.appConfig.getNumber('QUINN_LLM_TIMEOUT_MS', 30000),
+      this.appConfig.getNumber('QUINN_LLM_MAX_TOKENS', 500),
+      this.appConfig.get('QUINN_LLM_TEMPERATURE', '0.7'),
     ]);
 
     if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
 
     const client = new OpenAI({ baseURL: baseUrl, apiKey });
+    const temperature = parseFloat(temperatureStr) || 0.7;
 
     const response = await Promise.race([
       client.chat.completions.create({
         model,
         messages: [{ role: 'system', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7,
+        max_tokens: maxTokens,
+        temperature,
       }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('LLM request timed out')), LLM_TIMEOUT_MS),
+        setTimeout(() => reject(new Error('LLM request timed out')), timeoutMs),
       ),
     ]);
 

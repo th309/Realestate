@@ -119,6 +119,9 @@ describe('BriefingGeneratorService', () => {
         };
         return Promise.resolve(config[key] ?? defaultValue);
       }),
+      getNumber: jest.fn().mockImplementation((_key: string, defaultValue = 0) => {
+        return Promise.resolve(defaultValue);
+      }),
     } as any;
 
     mockChatCompletionsCreate.mockResolvedValue({

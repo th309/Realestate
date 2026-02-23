@@ -28,9 +28,6 @@ interface GeographyRow {
   geography_type: 'metro' | 'county';
 }
 
-/** Batch size for briefing generation to avoid overwhelming the LLM API */
-const BRIEFING_BATCH_SIZE = 10;
-
 @Injectable()
 export class MarketIntelligenceCronService {
   private readonly logger = new Logger(MarketIntelligenceCronService.name);
@@ -80,8 +77,11 @@ export class MarketIntelligenceCronService {
       this.logger.log(`Generating briefings for ${geographies.length} geographies`);
 
       // 3. Process in batches to avoid overwhelming the LLM API
-      for (let i = 0; i < geographies.length; i += BRIEFING_BATCH_SIZE) {
-        const batch = geographies.slice(i, i + BRIEFING_BATCH_SIZE);
+      const batchSize = await this.appConfig.getNumber('QUINN_BRIEFING_BATCH_SIZE', 10);
+      const batchDelay = await this.appConfig.getNumber('QUINN_BRIEFING_BATCH_DELAY_MS', 2000);
+
+      for (let i = 0; i < geographies.length; i += batchSize) {
+        const batch = geographies.slice(i, i + batchSize);
         const results = await Promise.allSettled(
           batch.map(geo =>
             this.briefingGenerator.generateBriefing(
@@ -103,8 +103,8 @@ export class MarketIntelligenceCronService {
         }
 
         // Brief pause between batches to respect rate limits
-        if (i + BRIEFING_BATCH_SIZE < geographies.length) {
-          await this.sleep(2000);
+        if (i + batchSize < geographies.length) {
+          await this.sleep(batchDelay);
         }
       }
     } catch (error: any) {
@@ -203,6 +203,8 @@ export class MarketIntelligenceCronService {
   private async fetchTargetGeographies(): Promise<GeographyRow[]> {
     try {
       const client = this.supabase.getClient();
+      const maxMetros = await this.appConfig.getNumber('QUINN_MAX_METROS', 900);
+      const maxCounties = await this.appConfig.getNumber('QUINN_MAX_COUNTIES', 500);
 
       // Fetch metros
       const { data: metros, error: metroError } = await client
@@ -210,7 +212,7 @@ export class MarketIntelligenceCronService {
         .select('geography_id, geography_name, geography_type')
         .eq('geography_type', 'metro')
         .order('population', { ascending: false })
-        .limit(900);
+        .limit(maxMetros);
 
       if (metroError) {
         this.logger.warn(`Failed to fetch metros: ${metroError.message}`);
@@ -222,7 +224,7 @@ export class MarketIntelligenceCronService {
         .select('geography_id, geography_name, geography_type')
         .eq('geography_type', 'county')
         .order('population', { ascending: false })
-        .limit(500);
+        .limit(maxCounties);
 
       if (countyError) {
         this.logger.warn(`Failed to fetch counties: ${countyError.message}`);
