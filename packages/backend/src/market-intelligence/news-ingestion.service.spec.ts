@@ -10,6 +10,7 @@ import { NewsIngestionService } from './news-ingestion.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AppConfigService } from '../config/app-config.service';
 import { GeoTaggerService, GeoTagResult } from './geo-tagger.service';
+import { BriefingGeneratorService } from './briefing-generator.service';
 
 // -- Mock OpenAI SDK --------------------------------------------------------
 
@@ -154,6 +155,7 @@ describe('NewsIngestionService', () => {
         { provide: SupabaseService, useValue: { getClient: () => mockClient } },
         { provide: AppConfigService, useValue: mockAppConfig },
         { provide: GeoTaggerService, useValue: mockGeoTagger },
+        { provide: BriefingGeneratorService, useValue: { generateBriefing: jest.fn(), generateBriefingOnDemand: jest.fn() } },
       ],
     }).compile();
 
@@ -267,6 +269,7 @@ describe('NewsIngestionService', () => {
           { provide: SupabaseService, useValue: { getClient: () => clientWithExisting } },
           { provide: AppConfigService, useValue: mockAppConfig },
           { provide: GeoTaggerService, useValue: mockGeoTagger },
+          { provide: BriefingGeneratorService, useValue: { generateBriefing: jest.fn(), generateBriefingOnDemand: jest.fn() } },
         ],
       }).compile();
 
