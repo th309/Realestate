@@ -12,6 +12,7 @@ import {
   StanceMetrics,
   StanceSignal,
 } from './engines/market-stance.engine';
+import { NewsItem } from './market-intelligence.types';
 import { RiskMetrics, RiskFlag } from './engines/risk-flags.engine';
 
 // ---------------------------------------------------------------------------
@@ -89,18 +90,26 @@ export function buildMetricsSnapshot(
 // ---------------------------------------------------------------------------
 
 /**
- * Extract the 5 metrics needed for market stance computation.
- * Maps resolved metrics to the StanceMetrics shape.
+ * Extract the metrics + news sentiment needed for market stance computation.
+ * Maps resolved metrics and news articles to the StanceMetrics shape.
  */
 export function extractStanceMetrics(
   resolved: Record<string, ResolvedMetric>,
+  newsItems: NewsItem[] = [],
 ): StanceMetrics {
+  const positiveCount = newsItems.filter((n) => n.sentiment === 'positive').length;
+  const negativeCount = newsItems.filter((n) => n.sentiment === 'negative').length;
+
   return {
     appreciation_yoy: resolved.appreciation_yoy?.value ?? null,
     population_growth: resolved.population_growth?.value ?? null,
     vacancy_rate: resolved.vacancy_rate?.value ?? null,
     dom_yoy_change: null, // DOM YoY change requires time-series; not in batch
-    homeready_score: null, // TODO: Wire up scoring service in Task 8
+    homeready_score: null, // TODO: Wire up scoring service
+    unemployment_rate: resolved.unemployment_rate?.value ?? null,
+    cap_rate: resolved.cap_rate?.value ?? null,
+    positive_news_count: positiveCount,
+    negative_news_count: negativeCount,
   };
 }
 

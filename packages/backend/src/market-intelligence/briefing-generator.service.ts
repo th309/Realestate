@@ -42,22 +42,22 @@ export class BriefingGeneratorService {
   ): Promise<MarketBriefing> {
     const startTime = Date.now();
 
-    // 1. Resolve all briefing metrics
-    const resolvedMetrics = await this.resolveMetricsSafe(geographyType, geographyId);
+    // 1. Resolve all briefing metrics + fetch news in parallel
+    const [resolvedMetrics, newsSnapshot] = await Promise.all([
+      this.resolveMetricsSafe(geographyType, geographyId),
+      this.fetchRecentNews(geographyId),
+    ]);
 
     // 2. Build metrics snapshot
     const metricsSnapshot = buildMetricsSnapshot(resolvedMetrics);
 
-    // 3. Compute market stance (deterministic)
-    const stanceInput = extractStanceMetrics(resolvedMetrics);
+    // 3. Compute market stance (deterministic) — includes news sentiment signals
+    const stanceInput = extractStanceMetrics(resolvedMetrics, newsSnapshot);
     const stanceResult = computeMarketStance(stanceInput, nationalBenchmarks);
 
     // 4. Compute risk flags (deterministic)
     const riskInput = extractRiskMetrics(resolvedMetrics);
     const riskFlags = computeRiskFlags(riskInput, nationalBenchmarks, null);
-
-    // 5. Fetch recent news
-    const newsSnapshot = await this.fetchRecentNews(geographyId);
 
     // 6. Generate narrative via LLM
     const metricsCount = Object.values(metricsSnapshot).filter(m => m.value !== null).length;

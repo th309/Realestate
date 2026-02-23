@@ -2,11 +2,12 @@
  * Market Stance Engine (Rule-Based)
  *
  * Pure function that computes a market stance (strong_bullish -> strong_bearish)
- * from metric values and national benchmarks. Deterministic, no AI involved.
+ * from metric values, news sentiment, and national benchmarks.
+ * Deterministic, no AI involved.
  *
  * The stance is derived by evaluating each metric against predefined thresholds
  * to produce bullish or bearish signals, then counting signals to determine
- * the overall market stance.
+ * the overall market stance. News sentiment is included as a signal source.
  */
 
 import { NationalBenchmarks } from '../market-intelligence.types';
@@ -51,6 +52,14 @@ export interface StanceMetrics {
   dom_yoy_change: number | null;
   /** HomeReady score (0-100) */
   homeready_score: number | null;
+  /** Unemployment rate percentage */
+  unemployment_rate: number | null;
+  /** Cap rate percentage (annual rental yield) */
+  cap_rate: number | null;
+  /** Number of positive-sentiment news articles for this geography */
+  positive_news_count: number;
+  /** Number of negative-sentiment news articles for this geography */
+  negative_news_count: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,7 +79,7 @@ interface SignalRule {
 }
 
 const SIGNAL_RULES: SignalRule[] = [
-  // --- Bullish signals ---
+  // --- Bullish signals (metrics) ---
   {
     signalName: 'strong_appreciation',
     direction: 'bullish',
@@ -107,8 +116,30 @@ const SIGNAL_RULES: SignalRule[] = [
     evaluate: (value) => value > 70,
     describeThreshold: () => 'homeready_score > 70',
   },
+  {
+    signalName: 'low_unemployment',
+    direction: 'bullish',
+    metricKey: 'unemployment_rate',
+    evaluate: (value, benchmarks) => value < benchmarks.unemployment_rate - 0.5,
+    describeThreshold: (benchmarks) =>
+      `unemployment_rate < national avg - 0.5% (${(benchmarks.unemployment_rate - 0.5).toFixed(1)}%)`,
+  },
+  {
+    signalName: 'strong_cap_rate',
+    direction: 'bullish',
+    metricKey: 'cap_rate',
+    evaluate: (value) => value > 5,
+    describeThreshold: () => 'cap_rate > 5% (strong rental yield)',
+  },
+  {
+    signalName: 'positive_news_sentiment',
+    direction: 'bullish',
+    metricKey: 'positive_news_count',
+    evaluate: (value) => value >= 2,
+    describeThreshold: () => '2+ positive news articles in last 30 days',
+  },
 
-  // --- Bearish signals ---
+  // --- Bearish signals (metrics) ---
   {
     signalName: 'price_decline',
     direction: 'bearish',
@@ -145,6 +176,28 @@ const SIGNAL_RULES: SignalRule[] = [
     evaluate: (value) => value < 45,
     describeThreshold: () => 'homeready_score < 45',
   },
+  {
+    signalName: 'high_unemployment',
+    direction: 'bearish',
+    metricKey: 'unemployment_rate',
+    evaluate: (value, benchmarks) => value > benchmarks.unemployment_rate + 1.5,
+    describeThreshold: (benchmarks) =>
+      `unemployment_rate > national avg + 1.5% (${(benchmarks.unemployment_rate + 1.5).toFixed(1)}%)`,
+  },
+  {
+    signalName: 'weak_cap_rate',
+    direction: 'bearish',
+    metricKey: 'cap_rate',
+    evaluate: (value) => value < 2,
+    describeThreshold: () => 'cap_rate < 2% (poor rental yield)',
+  },
+  {
+    signalName: 'negative_news_sentiment',
+    direction: 'bearish',
+    metricKey: 'negative_news_count',
+    evaluate: (value) => value >= 2,
+    describeThreshold: () => '2+ negative news articles in last 30 days',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -155,10 +208,10 @@ const SIGNAL_RULES: SignalRule[] = [
  * Determines the market stance from signal counts.
  *
  * Rules:
- * - 5+ bullish signals  -> strong_bullish
- * - 3-4 bullish signals -> weak_bullish
- * - 5+ bearish signals  -> strong_bearish
- * - 3-4 bearish signals -> weak_bearish
+ * - 4+ bullish signals  -> strong_bullish
+ * - 2-3 bullish signals -> weak_bullish
+ * - 4+ bearish signals  -> strong_bearish
+ * - 2-3 bearish signals -> weak_bearish
  * - Otherwise           -> neutral
  *
  * When both bullish and bearish counts qualify for a stance,
@@ -168,8 +221,8 @@ function determineStance(
   bullishCount: number,
   bearishCount: number,
 ): MarketStance {
-  const bullishStrength = bullishCount >= 5 ? 2 : bullishCount >= 3 ? 1 : 0;
-  const bearishStrength = bearishCount >= 5 ? 2 : bearishCount >= 3 ? 1 : 0;
+  const bullishStrength = bullishCount >= 4 ? 2 : bullishCount >= 2 ? 1 : 0;
+  const bearishStrength = bearishCount >= 4 ? 2 : bearishCount >= 2 ? 1 : 0;
 
   if (bullishStrength === 0 && bearishStrength === 0) {
     return 'neutral';
@@ -192,12 +245,13 @@ function determineStance(
 // ---------------------------------------------------------------------------
 
 /**
- * Computes a market stance from metric values and national benchmarks.
+ * Computes a market stance from metric values, news sentiment, and national
+ * benchmarks.
  *
  * This is a pure, deterministic function with no side effects.
  * Null metric values are skipped (they produce no signal).
  *
- * @param metrics - The market's current metric values (nulls allowed)
+ * @param metrics - The market's current metric values + news counts (nulls allowed)
  * @param nationalBenchmarks - National averages used as comparison baselines
  * @returns StanceResult with the stance, signals list, and signal counts
  */
