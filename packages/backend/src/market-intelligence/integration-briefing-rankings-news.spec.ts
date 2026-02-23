@@ -369,38 +369,20 @@ describe('Flow 3: News ingestion -> geo-tagging -> storage', () => {
   });
 
   it('deduplicates articles by URL', async () => {
-    const mockSelectIn = jest.fn().mockResolvedValue({
-      data: [{ url: 'https://example.com/denver-housing' }],
-      error: null,
+    // Pre-seed the in-memory store with a Denver article to simulate existing row
+    supabaseClient._tables.market_news.push({
+      id: 'existing-1',
+      url: 'https://example.com/denver-housing',
+      headline: 'Old Denver article',
     });
-    const mockInsert = jest.fn().mockResolvedValue({ data: null, error: null });
 
-    const dedupClient = {
-      from: jest.fn().mockImplementation(() => ({
-        select: jest.fn().mockReturnValue({ in: mockSelectIn }),
-        insert: mockInsert,
-        eq: jest.fn().mockReturnValue({
-          gte: jest.fn().mockResolvedValue({ data: [], error: null }),
-          contains: jest.fn().mockResolvedValue({ data: [], error: null }),
-        }),
-      })),
-    };
+    const result = await newsService.ingestLatestNews();
 
-    const dedupModule: TestingModule = await Test.createTestingModule({
-      providers: [
-        NewsIngestionService,
-        { provide: SupabaseService, useValue: { getClient: () => dedupClient } },
-        { provide: AppConfigService, useValue: createMockAppConfig() },
-        { provide: GeoTaggerService, useValue: mockGeoTagger },
-        { provide: BriefingGeneratorService, useValue: mockBriefingGenerator },
-      ],
-    }).compile();
-
-    const dedupService = dedupModule.get<NewsIngestionService>(NewsIngestionService);
-    const result = await dedupService.ingestLatestNews();
-
+    // Denver article should be skipped (URL already exists), 2 others ingested
     expect(result.skipped).toBe(1);
     expect(result.ingested).toBe(2);
-    expect(mockInsert).toHaveBeenCalledTimes(2);
+
+    // 3 total rows: 1 pre-existing + 2 newly inserted
+    expect(supabaseClient._tables.market_news.length).toBe(3);
   });
 });

@@ -116,27 +116,28 @@ export function createIntegrationSupabaseClient() {
       }),
       update: jest.fn().mockImplementation((payload: any) => {
         const updateFilters: Record<string, any> = {};
-        const updateChain: any = {
-          eq: jest.fn().mockImplementation((col: string, val: any) => {
-            updateFilters[col] = val;
-            return updateChain;
-          }),
-          then: (resolve: Function, reject?: Function) => {
-            try {
-              const rows = tables[tableName] || [];
-              for (const row of rows) {
-                const match = Object.entries(updateFilters).every(
-                  ([k, v]) => row[k] === v,
-                );
-                if (match) Object.assign(row, payload);
-              }
-              resolve({ data: null, error: null });
-            } catch (err) {
-              if (reject) reject(err);
-            }
-          },
+        // Use a plain self-referential object (not jest.fn) to avoid
+        // deeply-chained mock issues with 4+ .eq() calls.
+        const self: any = {};
+        self.eq = (col: string, val: any) => {
+          updateFilters[col] = val;
+          return self;
         };
-        return updateChain;
+        self.then = (resolve: Function, reject?: Function) => {
+          try {
+            const rows = tables[tableName] || [];
+            for (const row of rows) {
+              const match = Object.entries(updateFilters).every(
+                ([k, v]) => row[k] === v,
+              );
+              if (match) Object.assign(row, payload);
+            }
+            resolve({ data: null, error: null });
+          } catch (err) {
+            if (reject) reject(err);
+          }
+        };
+        return self;
       }),
     };
 
