@@ -7,3 +7,4 @@ export { BlurredTeaser } from './BlurredTeaser';
 export { GeoLockCard } from './GeoLockCard';
 export { ScoreBreakdownGate } from './ScoreBreakdownGate';
 export { ContextualUpgradeCTA } from './ContextualUpgradeCTA';
+export { AnonPaywallOverlay } from './AnonPaywallOverlay';
