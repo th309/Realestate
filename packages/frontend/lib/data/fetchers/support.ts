@@ -18,3 +18,21 @@ export async function submitSupportTicket(ticket: SupportTicket): Promise<void> 
     throw new Error('Failed to submit support ticket');
   }
 }
+
+export interface ContactFormData {
+  name: string;
+  email: string;
+  issue_type: string;
+  description: string;
+}
+
+export async function submitContactForm(data: ContactFormData): Promise<void> {
+  const res = await fetchAPIRaw('/api/support/tickets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to submit contact form');
+  }
+}

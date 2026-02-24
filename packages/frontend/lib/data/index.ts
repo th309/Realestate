@@ -243,7 +243,9 @@ export {
 
   // Support
   submitSupportTicket,
+  submitContactForm,
   type SupportTicket,
+  type ContactFormData,
 } from './fetchers';
 
 // ============================================================================

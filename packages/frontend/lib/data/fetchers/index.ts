@@ -152,4 +152,4 @@ export {
 } from './email-preferences';
 
 // Support
-export { submitSupportTicket, type SupportTicket } from './support';
+export { submitSupportTicket, submitContactForm, type SupportTicket, type ContactFormData } from './support';
