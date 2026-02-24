@@ -2,11 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
   const type = searchParams.get('type');
   const next = searchParams.get('next') ?? '/dashboard';
   const tosAccepted = searchParams.get('tos') === '1';
+
+  // Use forwarded headers to get the real external origin.
+  // Behind reverse proxies (Railway, etc.), request.nextUrl.origin
+  // resolves to the container's internal address (e.g. 0.0.0.0:8080).
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : request.nextUrl.origin;
 
   if (code) {
     const supabase = await createSupabaseServerClient();
