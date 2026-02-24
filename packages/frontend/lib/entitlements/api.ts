@@ -39,27 +39,15 @@ export async function fetchEntitlements(
       credentials: 'include',
       cache: 'no-store',
     });
-  } catch {
-    // Network error (backend unreachable) — fail open with free tier defaults
-    console.warn('[Entitlements] Backend unreachable, defaulting to free tier');
-    return {
-      tier: 'free',
-      access: {},
-      trial: null,
-      loading: false,
-      error: null,
-    };
+  } catch (err) {
+    // Network error (backend unreachable) — throw so the caller preserves previous tier
+    console.warn('[Entitlements] Backend unreachable:', err);
+    throw new Error('Backend unreachable');
   }
 
   if (!response.ok) {
-    console.warn('[Entitlements] API returned', response.status, '- defaulting to free tier');
-    return {
-      tier: 'free',
-      access: {},
-      trial: null,
-      loading: false,
-      error: null,
-    };
+    console.warn('[Entitlements] API returned', response.status);
+    throw new Error(`Entitlements API returned ${response.status}`);
   }
 
   const data = await response.json();

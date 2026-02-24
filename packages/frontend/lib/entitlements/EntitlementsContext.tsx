@@ -153,8 +153,11 @@ export function EntitlementsProvider({
       const data = await fetchEntitlements(resources, currentTier, currentUserId);
       setState(data);
     } catch (error) {
-      // Fail open: default to free tier on API failure
-      console.error('[Entitlements] fetch error:', error);
+      // Transient error (backend unreachable, 5xx, etc.)
+      // Preserve previous tier for authenticated users so a brief outage
+      // doesn't downgrade them to 'free'. Only default to 'free' if there
+      // is no previous tier (i.e. first load for unauthenticated user).
+      console.warn('[Entitlements] fetch failed, preserving previous state:', error);
       setState(prev => ({
         ...prev,
         loading: false,
