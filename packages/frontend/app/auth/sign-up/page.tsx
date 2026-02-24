@@ -13,6 +13,7 @@ import {
   Circle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface PasswordRequirement {
   label: string;
@@ -41,7 +42,7 @@ export default function SignUpPage() {
 }
 
 function SignUpContent() {
-  const { signUp, signInWithOAuth } = useAuth();
+  const { signUp } = useAuth();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 
@@ -51,11 +52,16 @@ function SignUpContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   const requirements = getPasswordRequirements(password);
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
+    if (!tosAccepted) {
+      setError('You must accept the Terms of Service to create an account');
+      return;
+    }
     if (!email || !password || !confirmPassword) return;
 
     if (password !== confirmPassword) {
@@ -85,7 +91,12 @@ function SignUpContent() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await signInWithOAuth(provider, redirectTo);
+    const supabase = createSupabaseBrowserClient();
+    const callbackUrl = `${window.location.origin}/auth/callback?tos=1&next=${encodeURIComponent(redirectTo)}`;
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: callbackUrl },
+    });
 
     if (authError) {
       setError(authError.message);
@@ -247,10 +258,33 @@ function SignUpContent() {
                   )}
               </div>
 
+              {/* Terms of Service Checkbox */}
+              <label className="flex items-start gap-3 cursor-pointer select-none py-1">
+                <input
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => setTosAccepted(e.target.checked)}
+                  disabled={loading}
+                  className="mt-0.5 h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/30 accent-primary"
+                />
+                <span className="text-sm text-on-surface-variant leading-snug">
+                  I agree to the{' '}
+                  <a
+                    href="/about/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80 font-medium underline underline-offset-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Terms of Service
+                  </a>
+                </span>
+              </label>
+
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !tosAccepted}
                 className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -272,7 +306,7 @@ function SignUpContent() {
               <button
                 type="button"
                 onClick={() => handleOAuth('google')}
-                disabled={loading}
+                disabled={loading || !tosAccepted}
                 className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
