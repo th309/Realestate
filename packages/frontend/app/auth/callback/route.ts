@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get('code');
   const type = searchParams.get('type');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const next = searchParams.get('next') ?? '/map';
   const tosAccepted = searchParams.get('tos') === '1';
 
   // Use forwarded headers to get the real external origin.

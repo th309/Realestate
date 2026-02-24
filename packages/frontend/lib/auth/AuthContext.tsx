@@ -12,7 +12,7 @@ interface AuthContextValue {
   signInWithPassword: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (provider: 'google', redirectPath?: string) => Promise<{ error: AuthError | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: AuthError | null; session: Session | null }>;
+  signUp: (email: string, password: string, redirectTo?: string) => Promise<{ error: AuthError | null; session: Session | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOAuth = useCallback(async (provider: 'google', redirectPath?: string) => {
     const supabase = createSupabaseBrowserClient();
-    const callbackUrl = redirectPath && redirectPath !== '/dashboard'
+    const callbackUrl = redirectPath && redirectPath !== '/map'
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`
       : `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
@@ -48,13 +48,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, redirectTo?: string) => {
     const supabase = createSupabaseBrowserClient();
+    const callbackUrl = redirectTo
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
+      : `${window.location.origin}/auth/callback`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl,
         data: { tos_accepted_at: new Date().toISOString() },
       },
     });

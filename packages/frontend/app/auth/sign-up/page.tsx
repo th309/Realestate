@@ -45,7 +45,7 @@ function SignUpContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+  const redirectTo = searchParams.get('redirect') ?? '/map';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -78,7 +78,7 @@ function SignUpContent() {
     setLoading(true);
     setError(null);
 
-    const { error: authError, session } = await signUp(email, password);
+    const { error: authError, session } = await signUp(email, password, redirectTo);
 
     if (authError) {
       setError(authError.message);
@@ -357,7 +357,7 @@ function SignUpContent() {
             <p className="mt-8 text-center text-sm text-on-surface-variant">
               Already have an account?{' '}
               <Link
-                href={redirectTo !== '/dashboard' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
+                href={redirectTo !== '/map' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign in

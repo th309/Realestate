@@ -78,14 +78,14 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (!adminRow || !['admin', 'super_admin'].includes(adminRow.role)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/map', request.url));
     }
   }
 
-  // Auth routes — redirect authenticated users to dashboard
+  // Auth routes — redirect authenticated users to map
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route);
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/map', request.url));
   }
 
   return supabaseResponse;

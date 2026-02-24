@@ -39,7 +39,7 @@ export default function SignInPage() {
 function SignInPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+  const redirectTo = searchParams.get('redirect') ?? '/map';
   const callbackError = searchParams.get('error');
 
   const { signInWithPassword, signInWithMagicLink, signInWithOAuth } =
@@ -289,7 +289,7 @@ function SignInPageContent() {
             <p className="mt-8 text-center text-sm text-on-surface-variant">
               Don&apos;t have an account?{' '}
               <Link
-                href={redirectTo !== '/dashboard' ? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-up'}
+                href={redirectTo !== '/map' ? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-up'}
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign up
