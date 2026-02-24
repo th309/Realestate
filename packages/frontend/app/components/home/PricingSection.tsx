@@ -1,10 +1,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useInView } from './hooks/useInView';
 import { usePricingTiers } from '@/lib/data';
 
+const CTA_HREF: Record<string, string> = {
+  free: '/auth/sign-up',
+  pro: '/auth/sign-up',
+  enterprise: '/contact',
+};
+
 interface PricingTierProps {
+  slug: string;
   name: string;
   price: string;
   period?: string;
@@ -14,7 +22,7 @@ interface PricingTierProps {
   delay?: number;
 }
 
-function PricingTier({ name, price, period, features, highlighted, cta, delay = 0 }: PricingTierProps) {
+function PricingTier({ slug, name, price, period, features, highlighted, cta, delay = 0 }: PricingTierProps) {
   const [setRef, inView] = useInView();
   const [hovered, setHovered] = useState(false);
 
@@ -61,9 +69,10 @@ function PricingTier({ name, price, period, features, highlighted, cta, delay = 
         ))}
       </ul>
 
-      <button
+      <Link
+        href={CTA_HREF[slug] ?? '/auth/sign-up'}
         className={`
-          w-full py-3 px-6 rounded-full text-sm font-semibold transition-colors duration-200
+          block w-full py-3 px-6 rounded-full text-sm font-semibold text-center transition-colors duration-200
           ${highlighted
             ? 'bg-primary text-on-primary hover:bg-primary/90'
             : 'border border-outline text-on-surface hover:bg-surface-container'
@@ -71,7 +80,7 @@ function PricingTier({ name, price, period, features, highlighted, cta, delay = 
         `}
       >
         {cta}
-      </button>
+      </Link>
     </div>
   );
 }
@@ -110,6 +119,7 @@ export function PricingSection() {
       return Object.entries(TIER_META)
         .sort(([, a], [, b]) => a.order - b.order)
         .map(([slug, meta]) => ({
+          slug,
           name: slug.charAt(0).toUpperCase() + slug.slice(1),
           price: slug === 'free' ? '$0' : '...',
           period: slug === 'free' ? undefined : 'mo',
@@ -123,6 +133,7 @@ export function PricingSection() {
         const meta = TIER_META[t.slug];
         const monthly = Number(t.price_monthly) || 0;
         return {
+          slug: t.slug,
           name: t.name,
           price: monthly === 0 ? '$0' : `$${Math.round(monthly)}`,
           period: monthly === 0 ? undefined : 'mo',
