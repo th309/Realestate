@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
  * 2. OAuth signup: tos=1 query param in callback URL
  *
  * Uses upsert so it works whether or not the user_profiles row exists yet.
- * Only writes if tos_accepted_at is currently NULL (won't overwrite).
+ * Note: If the row already exists with a tos_accepted_at value, the upsert
+ * will overwrite it. This is acceptable — the legal requirement is met at
+ * checkbox time, and repeated writes only occur on callback URL replays.
  */
 async function recordTosAcceptance(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,

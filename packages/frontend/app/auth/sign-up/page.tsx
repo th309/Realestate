@@ -88,6 +88,11 @@ function SignUpContent() {
   };
 
   const handleOAuth = async (provider: 'google') => {
+    if (!tosAccepted) {
+      setError('You must accept the Terms of Service to create an account');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
