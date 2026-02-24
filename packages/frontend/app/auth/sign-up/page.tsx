@@ -2,15 +2,15 @@
 
 import { Suspense, useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Building2,
-  Mail,
   Lock,
   Loader2,
   AlertCircle,
   Check,
   Circle,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -43,6 +43,7 @@ export default function SignUpPage() {
 
 function SignUpContent() {
   const { signUp } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 
@@ -51,7 +52,6 @@ function SignUpContent() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
 
   const requirements = getPasswordRequirements(password);
@@ -77,14 +77,31 @@ function SignUpContent() {
     setLoading(true);
     setError(null);
 
-    const { error: authError } = await signUp(email, password);
+    const { error: authError, session } = await signUp(email, password);
 
     if (authError) {
       setError(authError.message);
-    } else {
-      setSuccess(true);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // With autoconfirm enabled, signup returns a session immediately.
+    // Record ToS acceptance and redirect to dashboard.
+    if (session) {
+      const supabase = createSupabaseBrowserClient();
+      await supabase
+        .from('user_profiles')
+        .update({ tos_accepted_at: new Date().toISOString() })
+        .eq('id', session.user.id);
+
+      router.push(redirectTo);
+      return;
+    }
+
+    // Fallback: if email confirmation is enabled, redirect to sign-in with message
+    router.push(
+      `/auth/sign-in?message=${encodeURIComponent('Account created. Check your email to confirm, then sign in.')}`
+    );
   };
 
   const handleOAuth = async (provider: 'google') => {
@@ -130,30 +147,7 @@ function SignUpContent() {
           </div>
         )}
 
-        {/* Success State */}
-        {success ? (
-          <div className="text-center py-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-6 h-6 text-primary" />
-            </div>
-            <h2 className="text-lg font-medium text-on-surface mb-2">
-              Check your email
-            </h2>
-            <p className="text-sm text-on-surface-variant mb-6">
-              We sent a confirmation link to{' '}
-              <span className="font-medium text-on-surface">{email}</span>.
-              Click the link to confirm your account.
-            </p>
-            <Link
-              href={redirectTo !== '/dashboard' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
-              className="text-sm text-primary hover:text-primary/80 font-medium"
-            >
-              Back to sign in
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* Sign-Up Form */}
+        {/* Sign-Up Form */}
             <form onSubmit={handleSignUp} className="space-y-4">
               {/* Email */}
               <div>
@@ -346,8 +340,6 @@ function SignUpContent() {
                 Sign in
               </Link>
             </p>
-          </>
-        )}
       </div>
     </div>
   );
