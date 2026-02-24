@@ -17,6 +17,9 @@ const FOOTER_NAV = {
     { label: 'Contact', href: '/contact' },
     { label: 'info@propertyiq.app', href: 'mailto:info@propertyiq.app' },
   ],
+  'Legal': [
+    { label: 'Terms of Service', href: '/about/terms' },
+  ],
 };
 
 function Logo() {

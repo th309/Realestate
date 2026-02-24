@@ -1,4 +1,4 @@
-import { Info, Users, Target, Shield, Database } from 'lucide-react';
+import { Info, Users, Target, Shield, Database, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 
@@ -97,6 +97,23 @@ export default function AboutPage() {
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
             >
               View all data sources
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </section>
+
+          {/* Legal */}
+          <section>
+            <h2 className="text-xl font-semibold text-on-surface mb-4 flex items-center gap-2">
+              <Scale className="w-5 h-5 text-primary" />
+              Legal
+            </h2>
+            <Link
+              href="/about/terms"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Terms of Service
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
