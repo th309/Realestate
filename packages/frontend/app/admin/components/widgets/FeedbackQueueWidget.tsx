@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MessageSquare } from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
+import { getAuthHeaders } from '@/lib/data/fetchers/auth-headers';
 import { WidgetShell } from './WidgetShell';
 
 type FeedbackStatus = 'new' | 'acknowledged' | 'in_progress' | 'resolved' | 'closed';
@@ -50,7 +50,11 @@ export function FeedbackQueueWidget({ refreshTrigger }: FeedbackQueueWidgetProps
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchAPIRaw('/api/admin/feedback');
+        const authHeaders = await getAuthHeaders();
+        const res = await fetch('/api/admin/feedback', {
+          credentials: 'include',
+          headers: { ...authHeaders },
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
 

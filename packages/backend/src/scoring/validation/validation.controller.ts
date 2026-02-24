@@ -30,7 +30,7 @@ import {
 import type { GeographyType, ScoreType } from '../scoring.types';
 
 @ApiTags('score-validation')
-@Controller('api/scoring/validation')
+@Controller('api/admin/scores/validation')
 export class ValidationController {
   constructor(private readonly validationService: ValidationService) {}
 
@@ -56,7 +56,7 @@ export class ValidationController {
   /**
    * Get quintile analysis - performance by score bucket
    *
-   * GET /api/scoring/validation/quintile-analysis
+   * GET /api/admin/scores/validation/quintile-analysis
    */
   @Get('quintile-analysis')
   @ApiOperation({ summary: 'Get score performance by quintile' })
@@ -79,7 +79,7 @@ export class ValidationController {
    * Get quintile performance data formatted for reports
    * Returns average returns by score bucket for displaying score credibility
    *
-   * GET /api/scoring/validation/quintile-performance
+   * GET /api/admin/scores/validation/quintile-performance
    */
   @Get('quintile-performance')
   @ApiOperation({ summary: 'Get quintile performance data for reports' })

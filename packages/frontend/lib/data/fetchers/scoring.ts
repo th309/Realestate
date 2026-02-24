@@ -92,7 +92,7 @@ export interface ValidationGeographyBreakdown {
 export async function fetchQuintilePerformance<T = QuintilePerformanceData>(
   scoreType: string,
 ): Promise<T> {
-  return fetchAPIWithParams<T>('/api/scoring/validation/quintile-performance', {
+  return fetchAPIWithParams<T>('/api/admin/scores/validation/quintile-performance', {
     score_type: scoreType,
   });
 }
@@ -112,7 +112,7 @@ export async function fetchValidationSummary(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
 }): Promise<ValidationSummary> {
-  return fetchAPIWithParams<ValidationSummary>('/api/scoring/validation/summary', params);
+  return fetchAPIWithParams<ValidationSummary>('/api/admin/scores/validation/summary', params);
 }
 
 /**
@@ -123,7 +123,7 @@ export async function fetchValidationQuintiles(params?: {
   score_type?: ValidationScoreType;
   horizon?: '1y' | '3y';
 }): Promise<ValidationQuintile[]> {
-  return fetchAPIWithParams<ValidationQuintile[]>('/api/scoring/validation/quintile-analysis', params);
+  return fetchAPIWithParams<ValidationQuintile[]>('/api/admin/scores/validation/quintile-analysis', params);
 }
 
 /**
@@ -134,7 +134,7 @@ export async function fetchValidationScatter(params?: {
   score_type?: ValidationScoreType;
   limit?: number;
 }): Promise<ValidationScatterPoint[]> {
-  return fetchAPIWithParams<ValidationScatterPoint[]>('/api/scoring/validation/scatter', params);
+  return fetchAPIWithParams<ValidationScatterPoint[]>('/api/admin/scores/validation/scatter', params);
 }
 
 /**
@@ -144,7 +144,7 @@ export async function fetchValidationTimeSeries(params?: {
   geography?: ValidationGeography;
   score_type?: ValidationScoreType;
 }): Promise<ValidationTimeSeriesPoint[]> {
-  return fetchAPIWithParams<ValidationTimeSeriesPoint[]>('/api/scoring/validation/time-series', params);
+  return fetchAPIWithParams<ValidationTimeSeriesPoint[]>('/api/admin/scores/validation/time-series', params);
 }
 
 /**
@@ -153,5 +153,5 @@ export async function fetchValidationTimeSeries(params?: {
 export async function fetchValidationGeography(params?: {
   score_type?: ValidationScoreType;
 }): Promise<ValidationGeographyBreakdown[]> {
-  return fetchAPIWithParams<ValidationGeographyBreakdown[]>('/api/scoring/validation/geography-breakdown', params);
+  return fetchAPIWithParams<ValidationGeographyBreakdown[]>('/api/admin/scores/validation/geography-breakdown', params);
 }
