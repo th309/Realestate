@@ -76,6 +76,14 @@ export {
   type UseTopMarketsResult,
 } from './useTopMarkets';
 
+// Pricing tiers
+export {
+  usePricingTiers,
+  buildPriceLookup,
+  type UsePricingTiersResult,
+  type TierPriceLookup,
+} from './usePricingTiers';
+
 // Validation data hooks
 export {
   useValidationSummary,

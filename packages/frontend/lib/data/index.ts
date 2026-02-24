@@ -296,6 +296,12 @@ export {
   useMetricAccess,
   type MetricAccessResult,
 
+  // Pricing tiers
+  usePricingTiers,
+  buildPriceLookup,
+  type UsePricingTiersResult,
+  type TierPriceLookup,
+
   // Validation data hooks
   useValidationSummary,
   useValidationQuintiles,
