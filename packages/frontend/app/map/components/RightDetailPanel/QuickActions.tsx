@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Heart, ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { Heart, ExternalLink, FileText, Loader2, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlements';
+import { PaywallCard } from '@/components/entitlements/PaywallCard';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
 import type { SelectedGeography, GeoLevel } from '../../types';
 
@@ -48,6 +50,9 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   };
 
   const { getAccess } = useEntitlements();
+  const watchlistAccess = getAccess('feature', 'watchlist_limit');
+  const isWatchlistLocked = watchlistAccess.level === 'none';
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const handleGenerateReport = () => {
     try {
@@ -78,21 +83,32 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   return (
     <div>
       <div className="flex gap-2">
-        <button
-          onClick={handleToggleWatchlist}
-          disabled={disabled}
-          className={`${btnBase} ${isSaved
-              ? 'bg-primary/10 text-primary border border-primary/30'
-              : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
-            } disabled:opacity-40 disabled:cursor-not-allowed`}
-          title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          {toggling
-            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            : <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
-          }
-          {toggling ? 'Saving...' : isSaved ? 'Favorited' : 'Favorite'}
-        </button>
+        {isWatchlistLocked ? (
+          <button
+            onClick={() => setShowPaywall(true)}
+            className={`${btnBase} text-on-surface-variant/60 bg-surface-container border border-outline-variant hover:bg-surface-container-high`}
+            title="Upgrade to Pro to favorite markets"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Favorite
+          </button>
+        ) : (
+          <button
+            onClick={handleToggleWatchlist}
+            disabled={disabled}
+            className={`${btnBase} ${isSaved
+                ? 'bg-primary/10 text-primary border border-primary/30'
+                : 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            title={!user?.id ? 'Sign in to favorite markets' : isSaved ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {toggling
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-primary' : ''}`} />
+            }
+            {toggling ? 'Saving...' : isSaved ? 'Favorited' : 'Favorite'}
+          </button>
+        )}
 
         <button
           onClick={handleViewMarket}
@@ -111,8 +127,24 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
         </button>
       </div>
 
-      {error && (
+      {error && !isWatchlistLocked && (
         <p className="text-[10px] text-red-500 mt-1 px-1">{error}</p>
+      )}
+
+      {showPaywall && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
+          onClick={() => setShowPaywall(false)}
+        >
+          <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <PaywallCard
+              type="feature"
+              id="watchlist_limit"
+              title="Unlock Favorites"
+            />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
