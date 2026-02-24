@@ -21,7 +21,7 @@ Approach all changes through the Hermeneutic Circle. Before touching any file or
 * **NEVER** create separate API methods for each metric; always use the unified `fetchMetricData`.
 * **NEVER** format values manually; use `formatValue()` or `formatTooltipValue()` from utils.
 * **NEVER** hardcode zoom levels; use `GEO_ZOOM_LEVELS` from `config/metrics.ts`.
-* **NEVER** write ad-hoc metric fallback logic in backend services. All metric source fallbacks and geography inheritance MUST go through `MetricResolutionService`. See **Section 3.1**.
+* **NEVER** write ad-hoc metric fallback logic in backend services. All metric source fallbacks and geography inheritance MUST go through `MetricResolutionService`. See **Section 6.1**.
 
 ### 1.2 Security & Data Protection (Strict)
 * **Authentication & Authorization:**
@@ -109,9 +109,68 @@ Agent 3 (general-purpose): Write unit tests for the backend service
 
 ---
 
-## 2. PROJECT ARCHITECTURE & STACK
+## 2. WORKFLOW ORCHESTRATION
 
-### 2.1 Technology Stack
+### 2.1 Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately — don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2.2 Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+
+### 2.3 Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 2.4 Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
+
+### 2.5 Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes — don't over-engineer
+- Challenge your own work before presenting it
+
+### 2.6 Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests — then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
+
+---
+
+## 3. TASK MANAGEMENT
+
+1. **Plan First:** Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan:** Check in before starting implementation
+3. **Track Progress:** Mark items complete as you go
+4. **Explain Changes:** High-level summary at each step
+5. **Document Results:** Add review section to `tasks/todo.md`
+6. **Capture Lessons:** Update `tasks/lessons.md` after corrections
+
+---
+
+## 4. CORE PRINCIPLES
+
+- **Simplicity First:** Make every change as simple as possible. Impact minimal code.
+- **No Laziness:** Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact:** Changes should only touch what's necessary. Avoid introducing bugs.
+
+---
+
+## 5. PROJECT ARCHITECTURE & STACK
+
+### 5.1 Technology Stack
 
 | Layer | Technology | Version |
 | :--- | :--- | :--- |
@@ -124,7 +183,7 @@ Agent 3 (general-purpose): Write unit tests for the backend service
 | **Caching** | Redis (ioredis) | 5.9.1 |
 | **State Management** | TanStack React Query | 5.90.7 |
 
-### 2.2 Third-Party Services
+### 5.2 Third-Party Services
 * **Mapbox:** Map tiles and geocoding.
 * **Supabase:** Database + Auth.
 * **Zillow/Realtor/Redfin:** Real estate data feeds.
@@ -132,7 +191,7 @@ Agent 3 (general-purpose): Write unit tests for the backend service
 * **Anthropic Claude:** AI integration (backend SDK).
 * **Stripe:** Payments (Phase 1).
 
-### 2.3 Architecture Style: Full-Stack Monorepo
+### 5.3 Architecture Style: Full-Stack Monorepo
 **Pattern:** Modular monolith with clear frontend/backend separation.
 
 **Deployment Targets (STRICT):**
@@ -141,7 +200,7 @@ Agent 3 (general-purpose): Write unit tests for the backend service
 * **Analytics:** Railway (Production/Staging) — `analytics-production-af35.up.railway.app`
 * **Infrastructure Rule:** Code changes to `.env` files affect **LOCAL ONLY**. Production/Staging variables must be updated in the Railway cloud dashboard. **NEVER** assume a local `.env` change enables a feature in production.
 
-### 2.4 Project Structure
+### 5.4 Project Structure
 
 ```
 packages/
@@ -167,7 +226,7 @@ data/                 # Raw data files
 **Backend Pattern:** NestJS modules with dependency injection (Controllers → Services → Supabase).
 **Frontend Pattern:** React hooks + React Query for server state; component composition.
 
-### 2.5 Data Flow
+### 5.5 Data Flow
 
 ```
 User selects metric → triggers useMapData hook
@@ -179,7 +238,7 @@ User selects metric → triggers useMapData hook
 → Map + Legend render with consistent color scales
 ```
 
-### 2.6 Database Schema (Long Format)
+### 5.6 Database Schema (Long Format)
 Each geography level has its own table. All follow the same schema pattern: `region_id`, `region_name`, `period_date`, `metric_name`, `value`.
 
 | Table | Region ID Format |
@@ -191,7 +250,7 @@ Each geography level has its own table. All follow the same schema pattern: `reg
 
 ---
 
-## 3. DATA FETCHING - CRITICAL
+## 6. DATA FETCHING - CRITICAL
 
 **ALL frontend data fetching MUST go through `@/lib/data`.**
 
@@ -261,7 +320,7 @@ const { options } = useAllMetricOptions(geoLevel);
 - Consistent formatting via `formatValue()`
 - Trend calculation (3-month comparison)
 
-### 3.1 BACKEND METRIC RESOLUTION - CRITICAL
+### 6.1 BACKEND METRIC RESOLUTION - CRITICAL
 
 **ALL backend metric fallback logic MUST go through `MetricResolutionService`.**
 
@@ -339,7 +398,7 @@ interface ResolvedMetric {
 
 ---
 
-## 4. METRIC CONFIGURATION (SOURCE OF TRUTH)
+## 7. METRIC CONFIGURATION (SOURCE OF TRUTH)
 
 **IMPORTANT:** All metric properties are defined in ONE place.
 
@@ -405,7 +464,7 @@ formatMetricValue(value, getMetricFormat(metricId));  // Use metric's format
 
 ---
 
-## 5. COMMON PATTERNS
+## 8. COMMON PATTERNS
 
 ### Check Geography Support
 ```typescript
@@ -438,13 +497,13 @@ const data = await queryMarketIndicatorLatest(supabase, table, geography);
 
 ---
 
-## 6. DESIGN SYSTEM: MATERIAL DESIGN 3 (M3)
+## 9. DESIGN SYSTEM: MATERIAL DESIGN 3 (M3)
 
-### 6.1 Core Authority
+### 9.1 Core Authority
 * **Source of Truth:** All UI patterns must strictly adhere to [Material Design 3 Guidelines](https://m3.material.io/).
 * **Strict Adherence:** Do NOT mix generic/Geist aesthetics with Material. If a pattern exists in M3 (e.g., Navigation Drawer), use it instead of a custom sidebar.
 
-### 6.2 Visual Foundation (Tailwind Implementation)
+### 9.2 Visual Foundation (Tailwind Implementation)
 
 **Typography (M3 Type Scale)**
 * **Font Family:** Use `Roboto` (via `next/font/google`) for all text.
@@ -474,7 +533,7 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
     * Level 1 (Cards): `shadow-sm bg-surface-container-low`
     * Level 3 (Dialogs/FABs): `shadow-lg bg-surface-container-high`
 
-### 6.3 UI Components (M3 Mapping)
+### 9.3 UI Components (M3 Mapping)
 
 | Current Concept | Material 3 Replacement | Tailwind Spec |
 | :--- | :--- | :--- |
@@ -485,11 +544,11 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 | **Benchmark Panel** | **Standard Side Sheet** | Fixed right, `bg-surface-container-low`, `border-l` |
 | **Floating Map Details** | **Bottom Sheet** | `rounded-t-xl`, `bg-surface-container` |
 
-### 6.4 Iconography
+### 9.4 Iconography
 * **Set:** Material Symbols (Rounded or Sharp).
 * **Implementation:** Use a consistent SVG set that matches Material Symbols.
 
-### 6.5 Motion
+### 9.5 Motion
 * **Easing:** Use M3 Standard Easing (`ease-[0.2, 0.0, 0, 1.0]`).
 * **Durations:**
     * Short: `duration-200` (icons, selection)
@@ -498,7 +557,7 @@ Do NOT use hex codes directly. Use Semantic CSS Variables mapped to Tailwind col
 
 ---
 
-## 7. SCORE & CONFIDENCE DISPLAY (Standardized Components)
+## 10. SCORE & CONFIDENCE DISPLAY (Standardized Components)
 
 **CRITICAL:** All score displays (HomeReady, InvestorEdge, Market Health) MUST use the standardized score components. Do NOT create custom score visualizations.
 
@@ -686,3 +745,4 @@ Full expanded view with component breakdown, sparkline history, confidence, and 
 - Lines: Score, Actual Return, State Benchmark (dashed)
 - Toggle between 3Y and 5Y views
 - Validation badge when 3Y+ of return data exists
+
