@@ -113,10 +113,10 @@ export function HeroSection() {
         >
           <div className="rounded-xl overflow-hidden shadow-2xl border border-outline-variant/30 bg-surface">
             <Image
-              src="/images/home/market-map-hero-v3.png"
-              alt="PropertyIQ interactive market map showing median home values across all US states color-coded from $169K to $636K, with left sidebar for Market Trends, scores, and data categories, and top toolbar with search and geography level filters"
-              width={1440}
-              height={900}
+              src="/images/home/market-map-hero-v4.png"
+              alt="PropertyIQ interactive market map showing median home values across all US states color-coded from $168K to $639K, with left sidebar for Market Trends, scores, and metric categories, and top toolbar with search and geography level filters"
+              width={1556}
+              height={730}
               className="w-full h-auto"
               priority
             />
