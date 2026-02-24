@@ -460,6 +460,56 @@ export class UsersService {
     await this.userFeatures.removeOverride(userId, featureSlug);
   }
 
+  async createUser(params: {
+    email: string;
+    password: string;
+    fullName?: string;
+    tier?: string;
+  }): Promise<{ id: string; email: string }> {
+    const client = this.supabase.getClient();
+
+    // Create auth user via Supabase Admin API
+    const { data: authData, error: authError } = await client.auth.admin.createUser({
+      email: params.email,
+      password: params.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: params.fullName,
+      },
+    });
+
+    if (authError) {
+      this.logger.error('Failed to create auth user', authError);
+      throw new Error(authError.message);
+    }
+
+    const userId = authData.user.id;
+
+    // Create user_profiles row
+    const { error: profileError } = await client
+      .from('user_profiles')
+      .insert({
+        id: userId,
+        email: params.email,
+        full_name: params.fullName || null,
+        subscription_tier: params.tier || 'free',
+        subscription_status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      this.logger.error('Failed to create user_profiles row', profileError);
+      // Auth user was created but profile failed — clean up
+      await client.auth.admin.deleteUser(userId);
+      throw new Error(profileError.message);
+    }
+
+    this.logger.log(`Admin created user ${userId} (${params.email}) with tier ${params.tier || 'free'}`);
+
+    return { id: userId, email: params.email };
+  }
+
   async updateUserTier(userId: string, tier: string): Promise<void> {
     const client = this.supabase.getClient();
 
@@ -469,5 +519,56 @@ export class UsersService {
       .eq('id', userId);
 
     this.logger.log(`Updated user ${userId} tier to ${tier}`);
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    const client = this.supabase.getClient();
+
+    // Clean up all dependent rows before deleting profile and auth user.
+    // Tables with FK to user_profiles(id) or auth.users(id) without ON DELETE CASCADE
+    // must be cleared first, plus tables with user_id columns referencing this user.
+    const dependentTables = [
+      { table: 'user_feature_overrides', column: 'user_id' },
+      { table: 'user_grandfathering', column: 'user_id' },
+      { table: 'user_trials', column: 'user_id' },
+      { table: 'paywall_events', column: 'user_id' },
+      { table: 'reports', column: 'user_id' },
+      { table: 'report_conversations', column: 'user_id' },
+      { table: 'user_report_memory', column: 'user_id' },
+      { table: 'report_templates', column: 'created_by' },
+      { table: 'user_alerts', column: 'user_id' },
+      { table: 'analytics_saved_queries', column: 'user_id' },
+      { table: 'analytics_watchlist', column: 'user_id' },
+      { table: 'analytics_alerts', column: 'user_id' },
+    ];
+
+    for (const { table, column } of dependentTables) {
+      const { error } = await client.from(table).delete().eq(column, userId);
+      if (error) {
+        this.logger.warn(`Failed to clean ${table} for user ${userId}: ${error.message}`);
+        // Continue — table may not exist or have no rows for this user
+      }
+    }
+
+    // Delete user_profiles row
+    const { error: profileError } = await client
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      this.logger.error(`Failed to delete user_profiles for ${userId}`, profileError);
+      throw new Error(profileError.message);
+    }
+
+    // Delete auth user
+    const { error: authError } = await client.auth.admin.deleteUser(userId);
+
+    if (authError) {
+      this.logger.error(`Failed to delete auth user ${userId}`, authError);
+      throw new Error(authError.message);
+    }
+
+    this.logger.log(`Admin deleted user ${userId}`);
   }
 }

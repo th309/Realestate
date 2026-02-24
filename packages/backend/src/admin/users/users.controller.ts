@@ -48,6 +48,51 @@ export class UsersController {
     return user;
   }
 
+  @Post()
+  async createUser(
+    @Body() body: {
+      email: string;
+      password: string;
+      fullName?: string;
+      tier?: string;
+    },
+  ) {
+    if (!body.email || !body.password) {
+      throw new HttpException(
+        'Email and password are required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const user = await this.usersService.createUser({
+        email: body.email,
+        password: body.password,
+        fullName: body.fullName,
+        tier: body.tier,
+      });
+      return { success: true, data: user };
+    } catch (err) {
+      throw new HttpException(
+        err.message || 'Failed to create user',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Delete(':userId')
+  async deleteUser(@Param('userId') userId: string) {
+    try {
+      await this.usersService.deleteUser(userId);
+      return { success: true };
+    } catch (err) {
+      throw new HttpException(
+        err.message || 'Failed to delete user',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   @Post(':userId/overrides')
   async addOverride(
     @Param('userId') userId: string,

@@ -137,14 +137,25 @@ function UserCard({
   features,
   onAddOverride,
   onRemoveOverride,
+  onChangeTier,
+  onStartTrial,
+  onDeleteUser,
 }: {
   user: UserData;
   features: FeatureDefinition[];
   onAddOverride: (userId: string, featureSlug: string) => void;
   onRemoveOverride: (userId: string, featureSlug: string) => void;
+  onChangeTier: (userId: string, newTier: string) => void;
+  onStartTrial: (userId: string, tier: string) => void;
+  onDeleteUser: (userId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddOverride, setShowAddOverride] = useState(false);
+  const [showChangeTier, setShowChangeTier] = useState(false);
+  const [showStartTrial, setShowStartTrial] = useState(false);
+  const [trialTierSelection, setTrialTierSelection] = useState('pro');
+  const [showActivity, setShowActivity] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const overrides = user.overrides || [];
 
@@ -422,16 +433,226 @@ function UserCard({
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-2 pt-2">
-            <button className="flex-1 px-4 py-2 bg-surface-container-high text-on-surface rounded-lg text-sm hover:bg-surface-container transition-colors">
-              Start Trial
-            </button>
-            <button className="flex-1 px-4 py-2 bg-surface-container-high text-on-surface rounded-lg text-sm hover:bg-surface-container transition-colors">
-              Change Tier
-            </button>
-            <button className="flex-1 px-4 py-2 bg-surface-container-high text-on-surface rounded-lg text-sm hover:bg-surface-container transition-colors">
-              View Activity
-            </button>
+          <div className="space-y-3 pt-2">
+            <div className="flex gap-2">
+              {user.trialActive ? (
+                <button
+                  disabled
+                  className="flex-1 px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm cursor-not-allowed flex items-center justify-center gap-1"
+                >
+                  <Clock className="w-3 h-3" />
+                  Trial Active
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStartTrial(!showStartTrial);
+                    setShowChangeTier(false);
+                    setShowActivity(false);
+                    setShowDeleteConfirm(false);
+                  }}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
+                    showStartTrial
+                      ? 'bg-primary text-on-primary'
+                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                  }`}
+                >
+                  Start Trial
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowChangeTier(!showChangeTier);
+                  setShowStartTrial(false);
+                  setShowActivity(false);
+                  setShowDeleteConfirm(false);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
+                  showChangeTier
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                }`}
+              >
+                Change Tier
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowActivity(!showActivity);
+                  setShowStartTrial(false);
+                  setShowChangeTier(false);
+                  setShowDeleteConfirm(false);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
+                  showActivity
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container-high text-on-surface hover:bg-surface-container'
+                }`}
+              >
+                View Activity
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(!showDeleteConfirm);
+                  setShowStartTrial(false);
+                  setShowChangeTier(false);
+                  setShowActivity(false);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm transition-colors ${
+                  showDeleteConfirm
+                    ? 'bg-red-600 text-white'
+                    : 'bg-surface-container-high text-red-600 hover:bg-red-50'
+                }`}
+              >
+                Delete User
+              </button>
+            </div>
+
+            {/* Start Trial Inline Form */}
+            {showStartTrial && (
+              <div className="bg-surface-container-high rounded-lg p-3 flex items-center gap-3">
+                <label className="text-sm text-on-surface-variant whitespace-nowrap">Trial tier:</label>
+                <select
+                  value={trialTierSelection}
+                  onChange={(e) => setTrialTierSelection(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-surface-container border border-outline-variant rounded-lg text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStartTrial(user.id, trialTierSelection);
+                    setShowStartTrial(false);
+                  }}
+                  className="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm hover:bg-primary/90 transition-colors"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStartTrial(false);
+                  }}
+                  className="p-1.5 hover:bg-surface-container rounded text-on-surface-variant"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Change Tier Inline Form */}
+            {showChangeTier && (
+              <div className="bg-surface-container-high rounded-lg p-3">
+                <select
+                  className="w-full px-3 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      onChangeTier(user.id, e.target.value);
+                      setShowChangeTier(false);
+                    }
+                  }}
+                  defaultValue=""
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <option value="" disabled>
+                    Select new tier...
+                  </option>
+                  {['free', 'pro', 'enterprise', 'admin'].filter((t) => t !== user.tier).map((t) => (
+                    <option key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Delete User Confirmation */}
+            {showDeleteConfirm && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-sm text-red-700 flex-1">
+                  Permanently delete <strong>{user.name}</strong> ({user.email})? This cannot be undone.
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteUser(user.id);
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(false);
+                  }}
+                  className="p-1.5 hover:bg-red-100 rounded text-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* View Activity Inline Panel */}
+            {showActivity && (
+              <div className="bg-surface-container-high rounded-lg p-4">
+                <h5 className="text-sm font-medium text-on-surface mb-3">User Activity Summary</h5>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">{user.paywallHits}</div>
+                      <div className="text-xs text-on-surface-variant">Paywall Hits</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">{user.reportsGenerated}</div>
+                      <div className="text-xs text-on-surface-variant">Reports Generated</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">{user.savedQueriesCount}</div>
+                      <div className="text-xs text-on-surface-variant">Saved Queries</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bookmark className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">{user.watchlistCount}</div>
+                      <div className="text-xs text-on-surface-variant">Watchlist Items</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">{user.alertsCount}</div>
+                      <div className="text-xs text-on-surface-variant">Alerts</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">
+                        {new Date(user.lastActive).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">Last Active</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -448,6 +669,10 @@ export default function UserOverridesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [createForm, setCreateForm] = useState({ email: '', password: '', fullName: '', tier: 'free' });
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -572,6 +797,97 @@ export default function UserOverridesPage() {
     }
   };
 
+  const handleChangeTier = async (userId: string, newTier: string) => {
+    try {
+      const res = await fetchAPIRaw(`/api/admin/users/${userId}/tier`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: newTier }),
+      });
+
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Failed to change tier:', err);
+    }
+  };
+
+  const handleStartTrial = async (userId: string, tier: string) => {
+    try {
+      const res = await fetchAPIRaw(`/api/admin/trial/users/${userId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Failed to start trial:', err);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const res = await fetchAPIRaw(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        fetchData();
+      } else {
+        const body = await res.json().catch(() => null);
+        setError(body?.message || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      setError('Failed to delete user');
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    if (!createForm.email || !createForm.password) {
+      setCreateError('Email and password are required');
+      return;
+    }
+    if (createForm.password.length < 6) {
+      setCreateError('Password must be at least 6 characters');
+      return;
+    }
+
+    try {
+      setCreateLoading(true);
+      setCreateError(null);
+
+      const res = await fetchAPIRaw('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: createForm.email,
+          password: createForm.password,
+          fullName: createForm.fullName || undefined,
+          tier: createForm.tier,
+        }),
+      });
+
+      if (res.ok) {
+        setShowCreateAccount(false);
+        setCreateForm({ email: '', password: '', fullName: '', tier: 'free' });
+        fetchData();
+      } else {
+        const body = await res.json().catch(() => null);
+        setCreateError(body?.message || 'Failed to create account');
+      }
+    } catch (err) {
+      console.error('Failed to create account:', err);
+      setCreateError('Failed to create account');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   if (loading && users.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -598,14 +914,112 @@ export default function UserOverridesPage() {
             Manage users, feature overrides, and subscriptions
           </p>
         </div>
-        <button
-          onClick={fetchData}
-          className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
-          title="Refresh data"
-        >
-          <RefreshCw className={`w-4 h-4 text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowCreateAccount(!showCreateAccount);
+              setCreateError(null);
+            }}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-colors ${
+              showCreateAccount
+                ? 'bg-primary text-on-primary'
+                : 'bg-primary/10 text-primary hover:bg-primary/20'
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            Create Account
+          </button>
+          <button
+            onClick={fetchData}
+            className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
+            title="Refresh data"
+          >
+            <RefreshCw className={`w-4 h-4 text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
+
+      {/* Create Account Form */}
+      {showCreateAccount && (
+        <div className="mb-6 bg-surface-container rounded-xl border border-outline-variant p-5">
+          <h3 className="text-sm font-medium text-on-surface mb-4">Create New Account</h3>
+          {createError && (
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {createError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-xs text-on-surface-variant mb-1">Email *</label>
+              <input
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="user@example.com"
+                className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-on-surface-variant mb-1">Password *</label>
+              <input
+                type="password"
+                value={createForm.password}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Min 6 characters"
+                className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-on-surface-variant mb-1">Full Name</label>
+              <input
+                type="text"
+                value={createForm.fullName}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, fullName: e.target.value }))}
+                placeholder="John Doe"
+                className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-on-surface-variant mb-1">Tier</label>
+              <select
+                value={createForm.tier}
+                onChange={(e) => setCreateForm(prev => ({ ...prev, tier: e.target.value }))}
+                className="w-full px-3 py-2 bg-surface-container-high border border-outline-variant rounded-lg text-sm"
+              >
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCreateAccount}
+              disabled={createLoading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-lg text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {createLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              {createLoading ? 'Creating...' : 'Create Account'}
+            </button>
+            <button
+              onClick={() => {
+                setShowCreateAccount(false);
+                setCreateError(null);
+                setCreateForm({ email: '', password: '', fullName: '', tier: 'free' });
+              }}
+              className="px-4 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg text-sm transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex gap-4 mb-6">
@@ -657,6 +1071,9 @@ export default function UserOverridesPage() {
             features={features}
             onAddOverride={handleAddOverride}
             onRemoveOverride={handleRemoveOverride}
+            onChangeTier={handleChangeTier}
+            onStartTrial={handleStartTrial}
+            onDeleteUser={handleDeleteUser}
           />
         ))}
 
