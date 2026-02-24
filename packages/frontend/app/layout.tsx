@@ -137,7 +137,10 @@ export default function RootLayout({
                   Coming Soon
                 </span>
                 <span className="text-on-surface-variant">
-                  PropertyIQ is launching shortly. Stay tuned!
+                  PropertyIQ is launching shortly. Become a beta tester and get 3 months of Pro access in exchange for your feedback &mdash; reach out at{' '}
+                  <a href="mailto:betatesters@propertyiq.app" className="text-primary hover:text-primary/80 font-semibold underline underline-offset-2">
+                    betatesters@propertyiq.app
+                  </a>
                 </span>
               </span>
             </p>
