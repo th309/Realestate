@@ -272,17 +272,19 @@ export class MarketSnapshotService {
         const censusVal = Number(censusResult.value.data.median_home_value);
         if (censusVal > 0 && censusVal !== -666666666) {
           const year = censusResult.value.data.year ? `${censusResult.value.data.year}-01-01` : null;
-          metrics['home_value'] = { value: censusVal, date: year };
+          metrics['home_value'] = toMetric(censusVal, year, 'census', { isFallback: true });
         }
       }
       // Then Realtor listing price (same pattern as reports-data-fetcher.ts line 97-100)
       if (!metrics['home_value'] && realtorResult.status === 'fulfilled' && realtorResult.value) {
         const listingPrice = realtorResult.value.data.median_listing_price;
         if (listingPrice != null) {
-          metrics['home_value'] = {
-            value: Number(listingPrice),
-            date: realtorResult.value.data.period_date ?? realtorResult.value.date ?? null,
-          };
+          metrics['home_value'] = toMetric(
+            Number(listingPrice),
+            realtorResult.value.data.period_date ?? realtorResult.value.date ?? null,
+            'realtor',
+            { isFallback: true },
+          );
         }
       }
     }
