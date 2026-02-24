@@ -20,15 +20,16 @@ import { useEntitlements } from '@/lib/entitlements';
 import type { UserTier } from '@/lib/entitlements';
 import { useWatchlist } from '@/components/analytics-assistant/persistence/useWatchlist';
 import { useAlerts } from '@/lib/alerts/hooks';
-import { getBillingPortalUrl } from '@/lib/data';
+import { getBillingPortalUrl, usePricingTiers, buildPriceLookup } from '@/lib/data';
 import type { User } from '@supabase/supabase-js';
 
 // --- Tier constants -----------------------------------------------------------
 
-const TIER_INFO: Record<string, { label: string; price: string; priceNote?: string }> = {
+/** Fallback labels / non-price metadata. Prices are overridden from the API. */
+const TIER_INFO_DEFAULTS: Record<string, { label: string; price: string; priceNote?: string }> = {
   free: { label: 'Free', price: '$0', priceNote: 'forever' },
-  pro: { label: 'Pro', price: '$29', priceNote: '/mo' },
-  enterprise: { label: 'Enterprise', price: '$99', priceNote: '/mo' },
+  pro: { label: 'Pro', price: '...', priceNote: '/mo' },
+  enterprise: { label: 'Enterprise', price: '...', priceNote: '/mo' },
   admin: { label: 'Admin', price: 'Internal', priceNote: '' },
 };
 
@@ -46,50 +47,22 @@ const ALERT_LIMITS: Record<UserTier, number> = {
   admin: -1,
 };
 
-const PLAN_FEATURES: {
+/** Static feature lists per tier. Prices are injected from the API at render time. */
+const PLAN_FEATURES_META: {
   tier: UserTier;
-  label: string;
-  price: string;
-  priceNote: string;
   features: string[];
 }[] = [
   {
     tier: 'free',
-    label: 'Free',
-    price: '$0',
-    priceNote: 'forever',
-    features: [
-      'Metro-level data',
-      '3 saved markets',
-      'Basic scores',
-    ],
+    features: ['Metro-level data', '3 saved markets', 'Basic scores'],
   },
   {
     tier: 'pro',
-    label: 'Pro',
-    price: '$29',
-    priceNote: '/mo',
-    features: [
-      'All geography levels',
-      '10 saved markets',
-      '5 alerts',
-      'Score breakdowns',
-      '5 reports/mo',
-      'AI analysis',
-    ],
+    features: ['All geography levels', '10 saved markets', '5 alerts', 'Score breakdowns', '5 reports/mo', 'AI analysis'],
   },
   {
     tier: 'enterprise',
-    label: 'Enterprise',
-    price: '$99',
-    priceNote: '/mo',
-    features: [
-      'Everything in Pro',
-      '25 saved markets',
-      '15 alerts',
-      'Unlimited reports',
-      'Priority support',
-    ],
+    features: ['Everything in Pro', '25 saved markets', '15 alerts', 'Unlimited reports', 'Priority support'],
   },
 ];
 
@@ -99,15 +72,60 @@ interface SubscriptionTabProps {
   user: User;
 }
 
+/** Build tier info with live prices from the API, falling back to defaults. */
+function useTierInfo() {
+  const { tiers } = usePricingTiers();
+  const lookup = React.useMemo(() => buildPriceLookup(tiers), [tiers]);
+
+  const tierInfo = React.useMemo(() => {
+    const result = { ...TIER_INFO_DEFAULTS };
+    for (const [slug, defaults] of Object.entries(TIER_INFO_DEFAULTS)) {
+      const live = lookup[slug];
+      if (live && slug !== 'admin') {
+        const monthly = live.priceMonthly;
+        result[slug] = {
+          label: live.name,
+          price: monthly === 0 ? '$0' : `$${Math.round(monthly)}`,
+          priceNote: monthly === 0 ? 'forever' : '/mo',
+        };
+      } else {
+        result[slug] = defaults;
+      }
+    }
+    return result;
+  }, [lookup]);
+
+  const planFeatures = React.useMemo(() => {
+    return PLAN_FEATURES_META.map(plan => {
+      const live = lookup[plan.tier];
+      const defaults = TIER_INFO_DEFAULTS[plan.tier];
+      const monthly = live?.priceMonthly ?? 0;
+      return {
+        ...plan,
+        label: live?.name ?? defaults?.label ?? plan.tier,
+        price: plan.tier === 'free'
+          ? '$0'
+          : live
+            ? `$${Math.round(monthly)}`
+            : defaults?.price ?? '...',
+        priceNote: plan.tier === 'free' ? 'forever' : '/mo',
+      };
+    });
+  }, [lookup]);
+
+  return { tierInfo, planFeatures };
+}
+
 export function SubscriptionTab({ user }: SubscriptionTabProps) {
   const { tier, trial, getUsage } = useEntitlements();
   const { items: watchlistItems } = useWatchlist({ userId: user.id, autoLoad: true });
   const { alerts } = useAlerts();
+  const { tierInfo, planFeatures } = useTierInfo();
 
   return (
     <div className="py-8 space-y-0">
       {/* Current plan card */}
-      <CurrentPlanCard tier={tier} trial={trial} />
+      <CurrentPlanCard tier={tier} trial={trial} tierInfo={tierInfo} />
 
       <div className="border-t border-outline-variant my-8" />
 
@@ -122,7 +140,7 @@ export function SubscriptionTab({ user }: SubscriptionTabProps) {
       <div className="border-t border-outline-variant my-8" />
 
       {/* Plan comparison */}
-      <PlanComparison activeTier={tier} />
+      <PlanComparison activeTier={tier} planFeatures={planFeatures} />
 
       <div className="border-t border-outline-variant my-8" />
 
@@ -151,11 +169,13 @@ const TIER_ICON_BG: Record<UserTier, string> = {
 function CurrentPlanCard({
   tier,
   trial,
+  tierInfo,
 }: {
   tier: UserTier;
   trial: { active: boolean; daysRemaining?: number; tier?: UserTier } | null;
+  tierInfo: Record<string, { label: string; price: string; priceNote?: string }>;
 }) {
-  const info = TIER_INFO[tier] || TIER_INFO.free;
+  const info = tierInfo[tier] || tierInfo.free;
 
   return (
     <section>
@@ -295,12 +315,15 @@ function UsageMeterCard({
 
 // --- Plan Comparison ----------------------------------------------------------
 
-function PlanComparison({ activeTier }: { activeTier: UserTier }) {
+function PlanComparison({ activeTier, planFeatures }: {
+  activeTier: UserTier;
+  planFeatures: { tier: UserTier; label: string; price: string; priceNote: string; features: string[] }[];
+}) {
   return (
     <section>
       <h3 className="text-sm font-semibold text-on-surface mb-4">Compare Plans</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {PLAN_FEATURES.map((plan) => {
+        {planFeatures.map((plan) => {
           const isCurrent = plan.tier === activeTier;
           // Admin tier is above all plans — never show Upgrade
           const isUpgrade = activeTier !== 'admin' &&

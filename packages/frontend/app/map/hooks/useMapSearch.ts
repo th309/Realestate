@@ -39,7 +39,7 @@ interface UseMapSearchReturn {
   searchLoading: boolean;
   showSearchResults: boolean;
   searchRef: React.RefObject<HTMLDivElement | null>;
-  searchNavigatedRef: React.MutableRefObject<boolean>;
+  searchNavigatedRef: React.MutableRefObject<number>;
   handleSearch: (query: string) => Promise<void>;
   handleSelectSearchResult: (result: SearchResult) => void;
   setShowSearchResults: (show: boolean) => void;
@@ -64,7 +64,7 @@ export function useMapSearch({
     clearSearch,
   } = useUniversalSearch({});
 
-  const searchNavigatedRef = useRef(false);
+  const searchNavigatedRef = useRef(0);
 
 
   // Handle search result selection — wrapped in useCallback so the URL-processing
@@ -108,8 +108,10 @@ export function useMapSearch({
       }).catch(() => { /* geocode failed, no zoom */ });
     }
 
-    // Mark that search initiated this navigation (so geo level effect skips its zoom)
-    searchNavigatedRef.current = true;
+    // Mark that search initiated this navigation (so geo level effect skips its zoom).
+    // Uses a timestamp instead of a boolean so the guard survives React Strict Mode's
+    // double-invocation (mount → unmount → remount) without being consumed on first read.
+    searchNavigatedRef.current = Date.now();
 
     // Set highlighted feature - strip common suffixes for better matching with backend data
     let cleanName = result.name.split(',')[0]; // Take first part "Austin" from "Austin, Texas"

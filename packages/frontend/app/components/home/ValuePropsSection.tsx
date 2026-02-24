@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useInView } from './hooks/useInView';
 import { ArrowRight } from 'lucide-react';
+import { useEntitlements } from '@/lib/entitlements';
 
 /* ─── Individual value-prop row ─── */
 interface ValuePropProps {
@@ -87,8 +88,9 @@ function ValueProp({
           transitionDelay: '0.15s',
         }}
       >
-        <div
-          className="relative rounded-xl overflow-hidden shadow-xl border border-outline-variant/20 bg-surface"
+        <a
+          href={href}
+          className="relative block rounded-xl overflow-hidden shadow-xl border border-outline-variant/20 bg-surface transition-shadow hover:shadow-2xl"
           style={imageMaxHeight ? { maxHeight: imageMaxHeight } : undefined}
         >
           <Image
@@ -107,7 +109,7 @@ function ValueProp({
               aria-hidden="true"
             />
           )}
-        </div>
+        </a>
       </div>
     </div>
   );
@@ -115,6 +117,11 @@ function ValueProp({
 
 /* ─── Main section ─── */
 export function ValuePropsSection() {
+  const { tier } = useEntitlements();
+  const isPaid = tier === 'pro' || tier === 'enterprise' || tier === 'admin';
+  const reportsHref = isPaid ? '/reports' : '/reports/sample';
+  const reportsLinkLabel = isPaid ? 'View your reports' : 'See a sample report';
+
   return (
     <section className="py-20 lg:py-28 px-6" id="features" aria-labelledby="value-props-heading">
       <h2 id="value-props-heading" className="sr-only">
@@ -151,8 +158,8 @@ export function ValuePropsSection() {
             width: 1425,
             height: 1490,
           }}
-          href="/reports/sample"
-          linkLabel="See a sample report"
+          href={reportsHref}
+          linkLabel={reportsLinkLabel}
           imageMaxHeight={560}
         />
 

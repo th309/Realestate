@@ -14,6 +14,7 @@ const FOOTER_NAV = {
   ],
   'Company': [
     { label: 'About', href: '/about' },
+    { label: 'Contact: info@propertyiq.app', href: 'mailto:info@propertyiq.app' },
   ],
 };
 

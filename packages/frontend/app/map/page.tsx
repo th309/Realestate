@@ -21,6 +21,7 @@ import { useScoreData } from './hooks/useScoreData';
 // Import config
 import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
 import { useEntitlements } from '@/lib/entitlements';
+import { fetchGeographySearch } from '@/lib/data';
 
 const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
 
@@ -350,6 +351,13 @@ function MapPageInner() {
   // Process navigation params captured in pendingNavRef (e.g. /map?geo=metro&id=31080).
   // Reads from the ref (populated during render) rather than searchParams to avoid
   // the URL sync effect's replaceState stripping these one-time navigation params.
+  //
+  // Two fixes vs. the original implementation:
+  // 1. Looks up centroid coordinates from the backend (same API as the search bar)
+  //    so handleSelectSearchResult gets a real `center` instead of falling through
+  //    to the unreliable async Mapbox geocode fallback.
+  // 2. Opens the right panel and resizes the map BEFORE the flyTo so the camera
+  //    targets the final (narrower) container instead of the pre-panel width.
   useEffect(() => {
     if (!mapLoaded) return;
 
@@ -359,22 +367,65 @@ function MapPageInner() {
     // Consume — prevent re-processing on subsequent renders
     pendingNavRef.current = null;
 
-    handleSelectSearchResult({
-      id: nav.id,
-      name: nav.name,
-      type: nav.geo as SearchResult['type'],
-      center: nav.lat && nav.lng ? [parseFloat(nav.lng), parseFloat(nav.lat)] : undefined,
-      state: nav.state,
-    });
+    const navigateToGeography = async () => {
+      // Resolve center coordinates: prefer URL params → backend → Mapbox geocode.
+      // We await all lookups here so handleSelectSearchResult always gets a real
+      // `center` and never falls through to its fire-and-forget geocode branch.
+      let center: [number, number] | undefined;
+      if (nav.lat && nav.lng) {
+        center = [parseFloat(nav.lng), parseFloat(nav.lat)];
+      } else {
+        // 1. Try backend geography search (same API the search bar uses)
+        try {
+          const results = await fetchGeographySearch(nav.name, {
+            type: nav.geo,
+            limit: 1,
+          });
+          const hit = results[0];
+          if (hit?.longitude != null && hit?.latitude != null) {
+            center = [hit.longitude, hit.latitude];
+          }
+        } catch { /* fall through */ }
 
-    // Auto-select the geography so the sidebar shows scores and details
-    handleFeatureClick({
-      id: nav.id,
-      name: nav.name,
-      geoLevel: nav.geo as GeoLevel,
-      value: null,
-      stateAbbr: nav.state,
-    });
+        // 2. If backend has no coords (e.g. county centroids not in DB), use Mapbox geocoding
+        if (!center && mapboxgl.accessToken) {
+          try {
+            const query = encodeURIComponent(nav.name);
+            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${mapboxgl.accessToken}&limit=1&country=us`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const feature = data.features?.[0];
+            if (feature?.center) {
+              center = feature.center as [number, number];
+            }
+          } catch { /* no coords available — handleSelectSearchResult will try its own fallback */ }
+        }
+      }
+
+      // Open the panel FIRST so the map container reaches its final width
+      handleFeatureClick({
+        id: nav.id,
+        name: nav.name,
+        geoLevel: nav.geo as GeoLevel,
+        value: null,
+        stateAbbr: nav.state,
+      });
+
+      // Wait one frame for the DOM to reflow, then resize the map canvas
+      // to match the now-narrower container before issuing the flyTo.
+      await new Promise(r => requestAnimationFrame(r));
+      map.current?.resize();
+
+      handleSelectSearchResult({
+        id: nav.id,
+        name: nav.name,
+        type: nav.geo as SearchResult['type'],
+        center,
+        state: nav.state,
+      });
+    };
+
+    navigateToGeography();
   }, [mapLoaded, handleSelectSearchResult, handleFeatureClick]);
 
   // Close context menu on map move/zoom
@@ -389,9 +440,10 @@ function MapPageInner() {
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Skip if search or URL navigation already positioned the map
-    if (searchNavigatedRef.current) {
-      searchNavigatedRef.current = false;
+    // Skip if search or URL navigation recently positioned the map.
+    // Uses a timestamp (not a consumed boolean) so the guard survives
+    // React Strict Mode's double-invocation (mount → unmount → remount).
+    if (searchNavigatedRef.current > 0 && Date.now() - searchNavigatedRef.current < 3000) {
       return;
     }
 
@@ -538,7 +590,7 @@ function MapPageInner() {
           {/* M3 Extended FAB */}
           <button
             onClick={() => setShowTableView(true)}
-            className="absolute bottom-16 right-3 md:bottom-20 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
+            className="absolute bottom-8 right-3 md:bottom-10 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
           >
             <TableIcon />
             <span className="hidden sm:inline font-medium">Table View</span>

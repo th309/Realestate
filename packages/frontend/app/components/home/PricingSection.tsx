@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useInView } from './hooks/useInView';
+import { usePricingTiers } from '@/lib/data';
 
 interface PricingTierProps {
   name: string;
@@ -75,33 +76,63 @@ function PricingTier({ name, price, period, features, highlighted, cta, delay = 
   );
 }
 
-const PRICING_TIERS = [
-  {
-    name: 'Free',
-    price: '$0',
+/** Static tier metadata (features, CTA, display order). Prices come from API. */
+const TIER_META: Record<string, {
+  features: string[];
+  highlighted?: boolean;
+  cta: string;
+  order: number;
+}> = {
+  free: {
     features: ['Interactive market maps', 'National & state-level data', 'Historical trends & charts', 'Preview reports'],
     cta: 'Get Started',
+    order: 0,
   },
-  {
-    name: 'Pro',
-    price: '$29',
-    period: 'mo',
+  pro: {
     features: ['Everything in Free, plus:', 'Metro, county, and ZIP code data', 'PropertyIQ composite scores', 'AI market analysis', 'Unlimited AI reports', 'CSV data export'],
     highlighted: true,
     cta: 'Start Free Trial',
+    order: 1,
   },
-  {
-    name: 'Enterprise',
-    price: '$99',
-    period: 'mo',
+  enterprise: {
     features: ['Everything in Pro, plus:', 'Scenario modeling', 'Statistical deep dives', 'Team & brokerage features', 'Priority support'],
     cta: 'Contact Sales',
+    order: 2,
   },
-];
+};
 
 export function PricingSection() {
+  const { tiers } = usePricingTiers();
+
+  const pricingTiers = useMemo(() => {
+    if (tiers.length === 0) {
+      // Loading / fallback — show structure with placeholder prices
+      return Object.entries(TIER_META)
+        .sort(([, a], [, b]) => a.order - b.order)
+        .map(([slug, meta]) => ({
+          name: slug.charAt(0).toUpperCase() + slug.slice(1),
+          price: slug === 'free' ? '$0' : '...',
+          period: slug === 'free' ? undefined : 'mo',
+          ...meta,
+        }));
+    }
+    return tiers
+      .filter(t => TIER_META[t.slug])
+      .sort((a, b) => (TIER_META[a.slug]?.order ?? 99) - (TIER_META[b.slug]?.order ?? 99))
+      .map(t => {
+        const meta = TIER_META[t.slug];
+        const monthly = Number(t.price_monthly) || 0;
+        return {
+          name: t.name,
+          price: monthly === 0 ? '$0' : `$${Math.round(monthly)}`,
+          period: monthly === 0 ? undefined : 'mo',
+          ...meta,
+        };
+      });
+  }, [tiers]);
+
   return (
-    <section className="py-20 lg:py-28 px-6 max-w-6xl mx-auto" id="pricing">
+    <section className="pt-10 pb-20 lg:pt-14 lg:pb-28 px-6 max-w-6xl mx-auto" id="pricing">
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-sm font-semibold text-primary uppercase tracking-widest">Pricing</span>
@@ -113,7 +144,7 @@ export function PricingSection() {
 
       {/* Tiers */}
       <div className="flex flex-col md:flex-row gap-6 justify-center items-stretch">
-        {PRICING_TIERS.map((tier, i) => (
+        {pricingTiers.map((tier, i) => (
           <PricingTier key={tier.name} {...tier} delay={i * 100} />
         ))}
       </div>

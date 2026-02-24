@@ -21,8 +21,8 @@ export default function AboutPage() {
               Our Mission
             </h2>
             <p className="text-on-surface-variant leading-relaxed">
-              PropertyIQ was built to democratize real estate data. We believe everyone—from first-time
-              homebuyers to seasoned investors—deserves access to the same market intelligence that was
+              PropertyIQ was built to democratize real estate data. We believe everyone, from first-time
+              homebuyers to seasoned investors, deserves access to the same market intelligence that was
               once reserved for institutional players. Our AI-powered platform analyzes millions of data
               points across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes to deliver actionable insights.
             </p>
@@ -54,17 +54,31 @@ export default function AboutPage() {
             </ul>
           </section>
 
-          {/* Team */}
+          {/* Behind PropertyIQ */}
           <section>
             <h2 className="text-xl font-semibold text-on-surface mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Our Team
+              Behind PropertyIQ
             </h2>
-            <p className="text-on-surface-variant leading-relaxed">
-              We&apos;re a team of data scientists, real estate professionals, and engineers passionate
-              about making real estate decisions easier. Based in Austin, TX, we combine local market
-              expertise with cutting-edge AI technology.
-            </p>
+            <div className="space-y-4 text-on-surface-variant leading-relaxed">
+              <p>
+                PropertyIQ was born out of a simple frustration: real estate data is everywhere, but
+                it&apos;s scattered, contradictory, and overwhelming. As someone deeply passionate about
+                real estate, I kept running into the same problem. Dozens of sources telling different
+                stories, making it nearly impossible to see the full picture without hours of manual research.
+              </p>
+              <p>
+                I built PropertyIQ to solve that. The goal is to take complicated and often conflicting
+                data and condense it down into manageable, actionable information. Technology is changing
+                fast around us, and by leveraging the power of AI we can make sense of an overwhelming
+                amount of information, helping people make decisions faster and with more clarity.
+              </p>
+              <p>
+                Whether you&apos;re buying your first home or evaluating your next investment, you
+                deserve access to clear, trustworthy insights without needing a data science degree
+                to understand them.
+              </p>
+            </div>
           </section>
 
           {/* Data Sources */}
