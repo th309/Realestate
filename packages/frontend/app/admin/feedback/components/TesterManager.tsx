@@ -64,7 +64,7 @@ export function TesterManager({ testers, onTesterCreated }: TesterManagerProps) 
   };
 
   const copyLink = async (token: string) => {
-    const baseUrl = window.location.origin;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const link = `${baseUrl}/betatest/${token}`;
     await navigator.clipboard.writeText(link);
     setCopiedId(token);
