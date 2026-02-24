@@ -52,7 +52,9 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
   const { getAccess } = useEntitlements();
   const watchlistAccess = getAccess('feature', 'watchlist_limit');
   const isWatchlistLocked = watchlistAccess.level === 'none';
-  const [showPaywall, setShowPaywall] = useState(false);
+  const reportAccess = getAccess('feature', 'reports');
+  const isReportLocked = reportAccess.level === 'none';
+  const [showPaywall, setShowPaywall] = useState<'watchlist' | 'reports' | null>(null);
 
   const handleGenerateReport = () => {
     try {
@@ -67,7 +69,6 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       );
     } catch { /* ignore */ }
 
-    const reportAccess = getAccess('feature', 'reports');
     if (reportAccess.level === 'full') {
       router.push('/reports');
     } else {
@@ -85,7 +86,7 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       <div className="flex gap-2">
         {isWatchlistLocked ? (
           <button
-            onClick={() => setShowPaywall(true)}
+            onClick={() => setShowPaywall('watchlist')}
             className={`${btnBase} text-on-surface-variant/60 bg-surface-container border border-outline-variant hover:bg-surface-container-high`}
             title="Upgrade to Pro to favorite markets"
           >
@@ -118,13 +119,24 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
           Details
         </button>
 
-        <button
-          onClick={handleGenerateReport}
-          className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          Report
-        </button>
+        {isReportLocked ? (
+          <button
+            onClick={() => setShowPaywall('reports')}
+            className={`${btnBase} text-on-surface-variant/60 bg-surface-container border border-outline-variant hover:bg-surface-container-high`}
+            title="Upgrade to Pro to generate reports"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Report
+          </button>
+        ) : (
+          <button
+            onClick={handleGenerateReport}
+            className={`${btnBase} bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Report
+          </button>
+        )}
       </div>
 
       {error && !isWatchlistLocked && (
@@ -134,13 +146,13 @@ export function QuickActions({ geography, geoLevel }: QuickActionsProps) {
       {showPaywall && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/40"
-          onClick={() => setShowPaywall(false)}
+          onClick={() => setShowPaywall(null)}
         >
           <div className="max-w-sm mx-4" onClick={e => e.stopPropagation()}>
             <PaywallCard
               type="feature"
-              id="watchlist_limit"
-              title="Unlock Favorites"
+              id={showPaywall === 'watchlist' ? 'watchlist_limit' : 'reports'}
+              title={showPaywall === 'watchlist' ? 'Unlock Favorites' : 'Unlock Reports'}
             />
           </div>
         </div>,
