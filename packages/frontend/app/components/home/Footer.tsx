@@ -13,7 +13,7 @@ const FOOTER_NAV = {
     { label: 'Pricing', href: '/pricing' },
   ],
   'Company': [
-    { label: 'About', href: '/about' },
+    { label: 'Federal Contracting Services LLC', href: '/about' },
     { label: 'Contact: info@propertyiq.app', href: 'mailto:info@propertyiq.app' },
   ],
 };
@@ -67,7 +67,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-on-surface-variant">
-            © {new Date().getFullYear()} PropertyIQ. All rights reserved.
+            © {new Date().getFullYear()} Federal Contracting Services LLC. All rights reserved.
           </p>
           <p className="text-xs text-on-surface-variant">
             Data from US Census, BLS, Zillow, and FRED. Updated regularly.
