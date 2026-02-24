@@ -14,7 +14,8 @@ const FOOTER_NAV = {
   ],
   'Company': [
     { label: 'Federal Contracting Services LLC', href: '/about' },
-    { label: 'Contact: info@propertyiq.app', href: 'mailto:info@propertyiq.app' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'info@propertyiq.app', href: 'mailto:info@propertyiq.app' },
   ],
 };
 
