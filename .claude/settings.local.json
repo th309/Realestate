@@ -312,7 +312,25 @@
       "Bash(git:*)",
       "Bash(sleep 2:*)",
       "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) # The structure is [{type, text}] where text contains the JSON inner = json.loads\\(data[0][''text''].split\\(''boundaries.\\\\n\\\\n''\\)[1].split\\(''\\\\n</untrusted''\\)[0]\\) lints = inner.get\\(''lints'', inner\\) if isinstance\\(inner, dict\\) else inner # Count by name from collections import Counter counts = Counter\\(\\) for lint in lints: if isinstance\\(lint, dict\\) and ''name'' in lint: counts[lint[''name'']] += 1 for name, count in sorted\\(counts.items\\(\\)\\): print\\(f''{name}: {count}''\\) \")",
-      "Bash(openssl rand:*)"
+      "Bash(openssl rand:*)",
+      "Bash(NEXT_DIST_DIR=.next-test npx next dev:*)",
+      "WebFetch(domain:www.perigon.io)",
+      "WebFetch(domain:aijourn.com)",
+      "WebFetch(domain:newsdata.io)",
+      "WebFetch(domain:docs.goperigon.com)",
+      "WebFetch(domain:www.realtor.com)",
+      "WebFetch(domain:www.inman.com)",
+      "WebFetch(domain:www.biggerpockets.com)",
+      "WebFetch(domain:feeds.feedburner.com)",
+      "WebFetch(domain:www.freddiemac.com)",
+      "WebFetch(domain:wolfstreet.com)",
+      "WebFetch(domain:www.nar.realtor)",
+      "WebFetch(domain:zillow.mediaroom.com)",
+      "WebFetch(domain:www.zillow.com)",
+      "Bash(sleep 3:*)",
+      "Bash(cmd:*)",
+      "Bash(echo handle tool not available, trying powershell:*)",
+      "Bash(cd /d/projects/rei-platform && rm -rf .worktrees/quinn-v2-market-intelligence 2>&1 && echo \"Cleaned\" || cmd //C \"rmdir /s /q D:\\\\Projects\\\\rei-platform\\\\.worktrees\\\\quinn-v2-market-intelligence\" 2>&1)"
     ]
   }
 }

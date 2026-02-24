@@ -7,12 +7,25 @@
  * - GET /api/health/data-sources - Check data source availability
  * - GET /api/health/pipeline-runs - Get recent pipeline runs
  * - GET /api/health/data-alerts - Get active alerts
+ * - POST /api/health/pipeline-status - Accept pipeline status reports (API key protected)
  * - POST /api/health/data-alerts/:id/acknowledge - Acknowledge an alert
  * - POST /api/health/data-alerts/:id/resolve - Resolve an alert
  * - POST /api/pipelines/:name/trigger - Trigger a pipeline manually
  */
 
-import { Controller, Get, Post, Param, Query, Body, HttpCode, Inject } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Body,
+  HttpCode,
+  Inject,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
@@ -20,8 +33,8 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
-import { DataFreshnessService } from './data-freshness.service';
-import { TriggerPipelineDto } from './dto/trigger-pipeline.dto';
+import { PipelineApiKeyGuard } from '../common/guards/pipeline-api-key.guard';
+import { PipelineStatusDto } from './dto/pipeline-status.dto';
 
 @ApiTags('health')
 @Controller('api/health')
@@ -32,7 +45,6 @@ export class HealthController {
     private readonly dataSourcesHealth: DataSourcesHealthService,
     private readonly pipelineRuns: PipelineRunsService,
     private readonly dataAlerts: DataAlertsService,
-    private readonly dataFreshness: DataFreshnessService,
   ) {}
 
   @Get()
@@ -73,13 +85,6 @@ export class HealthController {
     return this.dataSourcesHealth.checkAllSources();
   }
 
-  @Get('data-freshness')
-  @ApiOperation({ summary: 'Get canonical data freshness dates for UI display' })
-  @ApiResponse({ status: 200, description: 'Freshness dates by source, table, and metric family' })
-  async getDataFreshness() {
-    return this.dataFreshness.getFreshness();
-  }
-
   @Get('pipeline-runs')
   @ApiOperation({ summary: 'Get recent pipeline runs' })
   @ApiQuery({ name: 'hours', required: false, description: 'Hours to look back (default: 72)' })
@@ -89,11 +94,15 @@ export class HealthController {
     return this.pipelineRuns.getRecentRuns(hoursNum);
   }
 
-  @Get('pipeline-runs/:runId/details')
-  @ApiOperation({ summary: 'Get per-metric details for a pipeline run' })
-  @ApiResponse({ status: 200, description: 'Per-metric breakdown of a pipeline run' })
-  async getPipelineRunDetails(@Param('runId') runId: string) {
-    return this.pipelineRuns.getRunDetails(runId);
+  @Post('pipeline-status')
+  @HttpCode(200)
+  @UseGuards(PipelineApiKeyGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  @ApiOperation({ summary: 'Accept pipeline status report from import scripts' })
+  @ApiResponse({ status: 200, description: 'Pipeline status recorded' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing pipeline API key' })
+  async reportPipelineStatus(@Body() statusReport: PipelineStatusDto) {
+    return this.pipelineRuns.recordPipelineStatus(statusReport);
   }
 
   @Get('data-alerts')
@@ -137,12 +146,9 @@ export class PipelinesController {
 
   @Post(':name/trigger')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Trigger a pipeline manually with optional filters' })
+  @ApiOperation({ summary: 'Trigger a pipeline manually' })
   @ApiResponse({ status: 200, description: 'Pipeline trigger queued' })
-  async triggerPipeline(
-    @Param('name') name: string,
-    @Body() body?: TriggerPipelineDto,
-  ) {
-    return this.pipelineRuns.triggerPipeline(name, body?.filters);
+  async triggerPipeline(@Param('name') name: string) {
+    return this.pipelineRuns.triggerPipeline(name);
   }
 }

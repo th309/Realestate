@@ -267,11 +267,21 @@ export class AnalyticsChatService {
   private getQueryIntent(message: string): 'conversational' | 'ranking' | 'filtering' | 'comparison' | 'analysis' | 'raw_data' | 'ml_analysis' | 'news' | 'geography' {
     const lower = message.toLowerCase().trim();
 
+    // GEOGRAPHY MENTION CHECK — if user names a specific place, NEVER classify as conversational.
+    // This ensures Quinn always looks up PropertyIQ scores before opining on any market.
+    const mentionsGeography = /\b(st\.?\s*louis|phoenix|austin|nashville|denver|miami|tampa|dallas|houston|chicago|atlanta|charlotte|raleigh|portland|seattle|san\s*francisco|san\s*diego|los\s*angeles|new\s*york|boston|detroit|cleveland|pittsburgh|minneapolis|indianapolis|columbus|cincinnati|kansas\s*city|fort\s*wayne|madison|sioux\s*falls|tulsa|oklahoma\s*city|memphis|jacksonville|orlando|las\s*vegas|salt\s*lake|boise|omaha|des\s*moines|richmond|virginia\s*beach|baltimore|washington\s*dc|philadelphia|san\s*antonio|sacramento|riverside|tucson|el\s*paso|albuquerque|birmingham|louisville|milwaukee|hartford|providence|new\s*orleans|reno|spokane|charleston|savannah|knoxville|greenville|durham|winston|fayetteville|springfield|little\s*rock|wichita|dayton|akron|toledo|youngstown|scranton|harrisburg|rochester|buffalo|syracuse|albany)\b/i.test(lower)
+      || /\b\d{5}\b/.test(lower)     // ZIP codes
+      || /\bcounty\b/i.test(lower)    // County references
+      || /\b(invest|buy|market|real\s*estate|housing)\b/i.test(lower) && /,\s*[A-Z]{2}\b/.test(message); // "City, ST" pattern
+
     // CONVERSATIONAL - no tools needed, answer from digest/context/knowledge
-    if (/^(hi|hello|hey|thanks|thank you|ok|okay|got it|cool|great)\b/i.test(lower)) return 'conversational';
-    if (/^(help|what can you do|what do you do)\b/i.test(lower)) return 'conversational';
-    if (/\b(how does|how do).*(scor|rating|algorithm|methodology|work)\b/.test(lower)) return 'conversational';
-    if (/\bwhat('s| is) a good (score|rating)\b/.test(lower)) return 'conversational';
+    // CRITICAL: Only classify as conversational if NO specific geography is mentioned
+    if (!mentionsGeography) {
+      if (/^(hi|hello|hey|thanks|thank you|ok|okay|got it|cool|great)\b/i.test(lower)) return 'conversational';
+      if (/^(help|what can you do|what do you do)\b/i.test(lower)) return 'conversational';
+      if (/\b(how does|how do).*(scor|rating|algorithm|methodology|work)\b/.test(lower)) return 'conversational';
+      if (/\bwhat('s| is) a good (score|rating)\b/.test(lower)) return 'conversational';
+    }
 
     // FOLLOW-UP: "out of those / of those / from that list" + price/trend → comparison so get_time_series is available
     const followUpRef = /\b(?:out of those|of those|from that list|among those|which of those|which of these|of these)\b/i.test(lower);

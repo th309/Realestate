@@ -456,6 +456,13 @@ class AdhocAnalysisService:
             'series': series
         }
 
+    # Map from Quinn's column-style score names to the propertyiq_scores score_type values
+    SCORE_TYPE_MAP = {
+        'homeready_score': 'homeready',
+        'investoredge_score': 'investoredge',
+        'market_health_score': 'markethealth',
+    }
+
     def get_rankings_direct(
         self,
         criteria: FilterCriteria,
@@ -464,26 +471,27 @@ class AdhocAnalysisService:
         sort_by: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Get rankings via direct database query (SQL Pushdown).
-        Avoids loading full dataset into memory.
+        Get rankings via direct database query against propertyiq_scores
+        (the single source of truth for all PIQ scores).
         """
         try:
-            # 1. Determine sort column
-            sort_column = sort_by if sort_by == 'actual_appreciation_12m' else criteria.score_type
-            
-            # 2. Get latest date for this geography type (fast query)
+            # 1. Map score type: 'homeready_score' -> 'homeready'
+            db_score_type = self.SCORE_TYPE_MAP.get(criteria.score_type, 'investoredge')
+
+            # 2. Get latest score_date for this geography + score_type
             max_date = None
             date_query = (
-                self.cache.supabase.table('propertyiq_scores_history')
-                .select('period_date')
-                .eq('geography_type', criteria.geography_type)
-                .order('period_date', desc=True)
+                self.cache.supabase.table('propertyiq_scores')
+                .select('score_date')
+                .eq('geography', criteria.geography_type)
+                .eq('score_type', db_score_type)
+                .order('score_date', desc=True)
                 .limit(1)
             )
             date_res = date_query.execute()
             if date_res.data:
-                max_date = date_res.data[0]['period_date']
-            
+                max_date = date_res.data[0]['score_date']
+
             if not max_date:
                 return {"error": "No data found", "rankings": []}
 
@@ -491,7 +499,6 @@ class AdhocAnalysisService:
             allowed_ids = None
             self.cache._ensure_crosswalks_loaded()
 
-            # State Filter
             if criteria.states:
                 states_upper = [s.upper() for s in criteria.states]
                 if criteria.geography_type == 'zip':
@@ -503,87 +510,75 @@ class AdhocAnalysisService:
                     if cw is not None and not cw.empty:
                         allowed_ids = cw[cw['state_abbrev'].isin(states_upper)]['county_fips'].tolist()
                 elif criteria.geography_type == 'metro':
-                    # Metros cross multiple states, but we check parent_geography_id logic
-                    # Usually explicit metro filter is better, but if state filter on metro:
-                    pass # TODO: Implement Metro-by-State resolution if needed from crosswalk
+                    pass  # TODO: Metro-by-State resolution from crosswalk
 
-            # Metro Filter (for Zips/Counties inside a Metro)
-            # Note: Crosswalk currently doesn't map Zip->Metro efficiently?
-            # User rarely queries "Zips in Austin Metro" via this tool, usually "Zips in Austin City".
-            
-            # 4. Build Main Query
+            # 4. Build main query against propertyiq_scores (source of truth)
             query = (
-                self.cache.supabase.table('propertyiq_scores_history')
-                .select('geography_id, period_date, investoredge_score, homeready_score, market_health_score, actual_appreciation_12m')
-                .eq('geography_type', criteria.geography_type)
-                .eq('period_date', max_date)
+                self.cache.supabase.table('propertyiq_scores')
+                .select('location_id, location_name, score, score_date, grade, confidence, confidence_level')
+                .eq('geography', criteria.geography_type)
+                .eq('score_type', db_score_type)
+                .eq('score_date', max_date)
             )
 
             # Apply ID filter
             if allowed_ids is not None:
-                # Chunking if too many IDs? Supabase limit on URL length.
-                # If IDs > 1000, maybe standard ranking without filter is better?
-                # For "Texas Zips", there are ~2000. Might fit.
-                if len(allowed_ids) < 100: # Safe limit for IN clause
-                   query = query.in_('geography_id', allowed_ids)
-                else:
-                    # Fallback: If too many IDs, we can't push down efficiently without join.
-                    # We might have to fetch top 1000 and filter in memory?
-                    # Or relying on the fact that we sort by score, so we just want top N overall?
-                    # If user asks "Top Zips in Texas", and we can't filter by TX in DB...
-                    # we will get "Top Zips Nationally".
-                    # This IS a limitation of no-join.
-                    # CRITICAL: We need 'parent_geography_id' in history table for effective pushdown!
-                    pass 
+                if len(allowed_ids) < 100:
+                    query = query.in_('location_id', allowed_ids)
 
             # Apply Score Filters
             if criteria.min_score:
-                query = query.gte(criteria.score_type, criteria.min_score)
-            
+                query = query.gte('score', criteria.min_score)
+
             # Order and Limit
-            query = query.order(sort_column, desc=not ascending).limit(limit)
+            query = query.order('score', desc=not ascending).limit(limit)
 
             # Execute
             res = query.execute()
             data = res.data
 
-            # 5. Enrich and Format
             if not data:
                 return {"error": "No data matched criteria", "rankings": []}
 
-            # Convert to DataFrame for easier enrichment reuse
+            # 5. Convert to DataFrame and rename columns for compatibility
             df = pd.DataFrame(data)
+            # Rename to match enrichment expectations (geography_id required by _enrich_with_geography_names)
+            df = df.rename(columns={
+                'location_id': 'geography_id',
+                'score_date': 'period_date',
+            })
+            # Add the score under its original column name for downstream compatibility
+            df[criteria.score_type] = df['score']
+
             df = self.cache._enrich_with_geography_names(df, criteria.geography_type)
-            
+
             # Build Result List
             rankings = []
             for rank, (_, row) in enumerate(df.iterrows(), 1):
-                 gid = row.get("geography_id")
-                 gname = row.get("geography_name", gid)
-                 item = {
-                     "rank": rank,
-                     "geography_id": _native_scalar(gid),
-                     "geography_name": _native_scalar(gname),
-                     "score": round(float(row.get(criteria.score_type, 0)), 1) if pd.notna(row.get(criteria.score_type)) else None,
-                 }
-                 if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
-                     item["state"] = _native_scalar(row["parent_geography_id"])
-                 if "actual_appreciation_12m" in row and pd.notna(row.get("actual_appreciation_12m")):
-                     item["appreciation_12m"] = round(float(row["actual_appreciation_12m"]) * 100, 2)
-                 rankings.append(item)
+                gid = row.get("geography_id")
+                # Use location_name from propertyiq_scores if enrichment didn't provide a name
+                gname = row.get("geography_name") or row.get("location_name") or gid
+                item = {
+                    "rank": rank,
+                    "geography_id": _native_scalar(gid),
+                    "geography_name": _native_scalar(gname),
+                    "score": round(float(row.get('score', 0)), 1) if pd.notna(row.get('score')) else None,
+                }
+                if "parent_geography_id" in row and pd.notna(row.get("parent_geography_id")):
+                    item["state"] = _native_scalar(row["parent_geography_id"])
+                # Appreciation comes from history table — not available here, but score accuracy is priority
+                rankings.append(item)
 
             return {
-                "total_geographies": "unknown (optimized)", # Count requires separate query
+                "total_geographies": "unknown (optimized)",
                 "direction": "bottom" if ascending else "top",
                 "limit": limit,
                 "rankings": rankings,
-                "note": "optimized_direct_query"
+                "note": "source_of_truth_propertyiq_scores"
             }
 
         except Exception as e:
             logger.error(f"get_rankings_direct failed: {e}")
-            # Fallback to slow cached method?
-            # return self.get_rankings(...)
             raise e
 
 

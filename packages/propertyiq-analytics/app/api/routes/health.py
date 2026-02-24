@@ -45,7 +45,7 @@ async def database_health_check():
         
         # Test table access - just get 1 record
         logger.info("Testing table access...")
-        query = client.table('propertyiq_scores_history').select('id').limit(1)
+        query = client.table('propertyiq_scores').select('score_date').limit(1)
         response = query.execute()
         
         result["table_test"] = "query_executed"

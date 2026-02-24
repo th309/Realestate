@@ -260,6 +260,31 @@ export class MarketSnapshotService {
           metrics[metricId] = toMetric(Number(raw), year, 'census');
         }
       }
+
+    }
+
+    // Fallback: home_value when Zillow ZHVI is unavailable
+    // Priority: Census ACS median_home_value (survey-based median, more representative)
+    //   then:   Realtor median_listing_price (can be skewed by low listing count)
+    if (!metrics['home_value']) {
+      // Try Census ACS first (same pattern as scoring-data-fetcher.ts line 264-266)
+      if (censusResult.status === 'fulfilled' && censusResult.value) {
+        const censusVal = Number(censusResult.value.data.median_home_value);
+        if (censusVal > 0 && censusVal !== -666666666) {
+          const year = censusResult.value.data.year ? `${censusResult.value.data.year}-01-01` : null;
+          metrics['home_value'] = { value: censusVal, date: year };
+        }
+      }
+      // Then Realtor listing price (same pattern as reports-data-fetcher.ts line 97-100)
+      if (!metrics['home_value'] && realtorResult.status === 'fulfilled' && realtorResult.value) {
+        const listingPrice = realtorResult.value.data.median_listing_price;
+        if (listingPrice != null) {
+          metrics['home_value'] = {
+            value: Number(listingPrice),
+            date: realtorResult.value.data.period_date ?? realtorResult.value.date ?? null,
+          };
+        }
+      }
     }
 
     // Process Economic data
@@ -475,7 +500,7 @@ export class MarketSnapshotService {
 
     if (!keyCol) return null;
 
-    const cols = [...Object.keys(CENSUS_COLUMN_MAP), 'year', nameCol].join(',');
+    const cols = [...Object.keys(CENSUS_COLUMN_MAP), 'median_home_value', 'median_gross_rent', 'year', nameCol].join(',');
 
     const { data, error } = await this.supabase
       .from(table)

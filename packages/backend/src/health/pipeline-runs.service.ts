@@ -1,13 +1,14 @@
 /**
  * Pipeline Runs Service
  *
- * Retrieves recent ETL pipeline runs from the data_ingestion_log table.
+ * Retrieves recent ETL pipeline runs from the data_ingestion_log table,
+ * records pipeline status reports from import scripts, and triggers
+ * pipeline runs via GitHub Actions workflow dispatch.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { spawn } from 'child_process';
-import * as path from 'path';
 import { SupabaseService } from '../supabase/supabase.service';
+import type { PipelineStatusDto } from './dto/pipeline-status.dto';
 
 export interface PipelineRun {
   id: string;
@@ -30,34 +31,6 @@ export interface PipelineRunsResponse {
     successful: number;
     failed: number;
     running: number;
-  };
-}
-
-export interface RunDetail {
-  metricName: string;
-  geography: string;
-  status: 'success' | 'failed' | 'skipped';
-  recordsInserted: number;
-  recordsFailed: number;
-  recordsDelta: number;
-  periodsAdded: string[];
-  latestDataDate: string | null;
-  freshnessDays: number;
-  coveragePct: number;
-  coverageDelta: number;
-  durationMs: number;
-  errorMessage: string | null;
-}
-
-export interface RunDetailsResponse {
-  runId: string;
-  pipelineName: string;
-  details: RunDetail[];
-  summary: {
-    totalMetrics: number;
-    succeeded: number;
-    failed: number;
-    skipped: number;
   };
 }
 
@@ -134,192 +107,113 @@ export class PipelineRunsService {
     }
   }
 
-  async getRunDetails(runId: string): Promise<RunDetailsResponse> {
+  /**
+   * Record a pipeline status report from import-reporter.ts.
+   *
+   * Inserts one row per geography in the data_ingestion_log table,
+   * matching the schema used by the IngestionLogger in scripts/.
+   */
+  async recordPipelineStatus(
+    report: PipelineStatusDto,
+  ): Promise<{ recorded: number; errors: string[] }> {
     const client = this.supabase.getClient();
+    const completedAt = report.timestamp || new Date().toISOString();
+    const insertErrors: string[] = [];
+    let recordedCount = 0;
 
-    // Get parent run for pipeline name
-    const { data: run } = await client
-      .from('data_ingestion_log')
-      .select('source')
-      .eq('id', runId)
-      .single();
-
-    // Get detail rows
-    const { data, error } = await client
-      .from('data_ingestion_details')
-      .select('*')
-      .eq('run_id', runId)
-      .order('status', { ascending: true })
-      .order('metric_name', { ascending: true })
-      .order('geography', { ascending: true });
-
-    if (error) {
-      throw new Error(`Failed to fetch run details: ${error.message}`);
-    }
-
-    const details: RunDetail[] = (data || []).map((row) => ({
-      metricName: row.metric_name,
-      geography: row.geography,
-      status: row.status,
-      recordsInserted: row.records_inserted || 0,
-      recordsFailed: row.records_failed || 0,
-      recordsDelta: row.records_delta || 0,
-      periodsAdded: row.periods_added || [],
-      latestDataDate: row.latest_data_date,
-      freshnessDays: row.freshness_days || 0,
-      coveragePct: parseFloat(row.coverage_pct) || 0,
-      coverageDelta: parseFloat(row.coverage_delta) || 0,
-      durationMs: row.duration_ms || 0,
-      errorMessage: row.error_message,
-    }));
-
-    return {
-      runId,
-      pipelineName: run?.source || 'unknown',
-      details,
-      summary: {
-        totalMetrics: details.length,
-        succeeded: details.filter((d) => d.status === 'success').length,
-        failed: details.filter((d) => d.status === 'failed').length,
-        skipped: details.filter((d) => d.status === 'skipped').length,
-      },
-    };
-  }
-
-  async triggerPipeline(
-    pipelineName: string,
-    filters?: Record<string, string[]>,
-  ): Promise<{ success: boolean; message: string }> {
-    this.logger.log(`Pipeline trigger requested: ${pipelineName}, filters: ${JSON.stringify(filters)}`);
-
-    const commands = this.buildPipelineCommands(pipelineName, filters);
-    if (commands.length === 0) {
-      return { success: false, message: `Unknown pipeline: ${pipelineName}` };
-    }
-
-    const filterSummary = filters
-      ? Object.entries(filters).map(([k, v]) => `${k}=${v.join(',')}`).join('; ')
-      : 'all';
-
-    // Spawn scripts in background — each script creates its own ingestion log entry
-    this.spawnScriptsInBackground(commands, pipelineName);
-
-    return {
-      success: true,
-      message: `Pipeline ${pipelineName} triggered (${filterSummary})`,
-    };
-  }
-
-  private buildPipelineCommands(
-    pipelineName: string,
-    filters?: Record<string, string[]>,
-  ): { script: string; args: string[] }[] {
-    const scriptsRoot = path.resolve(__dirname, '..', '..', '..', '..', 'scripts');
-
-    switch (pipelineName) {
-      case 'zillow': {
-        const args: string[] = [];
-        for (const m of filters?.metric || []) args.push(`--filter=${m}`);
-        for (const g of filters?.geography || []) args.push(`--filter=${g}`);
-        return [{ script: path.join(scriptsRoot, 'ingest-all-zillow-clean.ts'), args }];
-      }
-
-      case 'realtor': {
-        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
-        return [{ script: path.join(scriptsRoot, 'import-realtor-data.ts'), args }];
-      }
-
-      case 'redfin': {
-        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
-        return [{ script: path.join(scriptsRoot, 'redfin-sales-import', 'import-redfin-sales.ts'), args }];
-      }
-
-      case 'census_acs': {
-        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
-        return [{ script: path.join(scriptsRoot, 'import-census-data.ts'), args }];
-      }
-
-      case 'bls':
-      case 'fred': {
-        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
-        return [{ script: path.join(scriptsRoot, 'import-economic-data.ts'), args }];
-      }
-
-      case 'hud_fmr':
-        return [{ script: path.join(scriptsRoot, 'import-hud-fmr.ts'), args: [] }];
-
-      case 'building_permits': {
-        const args = (filters?.geography || []).map((g) => `--geo=${g}`);
-        return [{ script: path.join(scriptsRoot, 'import-building-permits.ts'), args }];
-      }
-
-      default:
-        return [];
-    }
-  }
-
-  private async spawnScriptsInBackground(
-    commands: { script: string; args: string[] }[],
-    pipelineName: string,
-  ): Promise<void> {
-    for (const cmd of commands) {
+    for (const geo of report.geographies) {
       try {
-        const result = await this.spawnScript(cmd.script, cmd.args);
-        if (result.exitCode === 0) {
-          this.logger.log(`Script completed for ${pipelineName}: ${cmd.script}`);
+        const { error } = await client.from('data_ingestion_log').insert({
+          source: report.source,
+          table_name: geo.table,
+          status: geo.status,
+          records_processed: geo.inserted + geo.failed,
+          records_success: geo.inserted,
+          records_error: geo.failed,
+          started_at: completedAt,
+          completed_at: completedAt,
+          duration_ms: report.durationMs,
+        });
+
+        if (error) {
+          const errorMsg = `Failed to insert log for ${geo.id}/${geo.table}: ${error.message}`;
+          this.logger.warn(errorMsg);
+          insertErrors.push(errorMsg);
         } else {
-          this.logger.error(
-            `Script exited with code ${result.exitCode} for ${pipelineName}: ${result.stderr.slice(-500)}`,
-          );
+          recordedCount++;
         }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Script spawn failed for ${pipelineName}: ${msg}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        const errorMsg = `Exception inserting log for ${geo.id}/${geo.table}: ${message}`;
+        this.logger.error(errorMsg);
+        insertErrors.push(errorMsg);
       }
     }
+
+    this.logger.log(
+      `Pipeline status recorded for ${report.source}: ${recordedCount}/${report.geographies.length} geographies`,
+    );
+
+    return { recorded: recordedCount, errors: insertErrors };
   }
 
-  private spawnScript(
-    scriptPath: string,
-    args: string[],
-  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-      this.logger.log(`Spawning: npx tsx ${scriptPath} ${args.join(' ')}`);
+  /**
+   * Trigger a pipeline run via GitHub Actions workflow dispatch.
+   *
+   * Requires GITHUB_TOKEN and GITHUB_REPO (owner/repo format) env vars.
+   * Returns an error message if env vars are not configured (does not crash).
+   */
+  async triggerPipeline(pipelineName: string): Promise<{ success: boolean; message: string }> {
+    const githubToken = process.env.GITHUB_TOKEN;
+    const githubRepo = process.env.GITHUB_REPO;
 
-      const child = spawn('npx', ['tsx', scriptPath, ...args], {
-        cwd: path.resolve(__dirname, '..', '..', '..', '..'),
-        env: { ...process.env },
-        shell: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
+    if (!githubToken || !githubRepo) {
+      this.logger.warn(
+        `Pipeline trigger for ${pipelineName} skipped: GITHUB_TOKEN or GITHUB_REPO not configured`,
+      );
+      return {
+        success: false,
+        message: 'GitHub token or repo not configured — cannot dispatch workflow',
+      };
+    }
+
+    const [owner, repoName] = githubRepo.split('/');
+    if (!owner || !repoName) {
+      return {
+        success: false,
+        message: 'GITHUB_REPO must be in "owner/repo" format',
+      };
+    }
+
+    const workflowUrl = `https://api.github.com/repos/${owner}/${repoName}/actions/workflows/data-pipeline-cycle.yml/dispatches`;
+
+    try {
+      const response = await fetch(workflowUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { sources: pipelineName },
+        }),
       });
 
-      let stdout = '';
-      let stderr = '';
+      if (response.ok || response.status === 204) {
+        this.logger.log(`Pipeline ${pipelineName} triggered via GitHub Actions`);
+        return { success: true, message: `Pipeline ${pipelineName} triggered` };
+      }
 
-      child.stdout.on('data', (data: Buffer) => {
-        const text = data.toString();
-        stdout += text;
-        // Log last line for progress visibility
-        const lines = text.trim().split('\n');
-        if (lines.length > 0) {
-          this.logger.debug(`[stdout] ${lines[lines.length - 1].slice(0, 200)}`);
-        }
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        const text = data.toString();
-        stderr += text;
-        this.logger.warn(`[stderr] ${text.slice(0, 200)}`);
-      });
-
-      child.on('error', (err) => {
-        reject(err);
-      });
-
-      child.on('close', (code) => {
-        resolve({ exitCode: code ?? 1, stdout, stderr });
-      });
-    });
+      const statusText = `GitHub API returned ${response.status}: ${response.statusText}`;
+      this.logger.warn(`Pipeline trigger failed: ${statusText}`);
+      return { success: false, message: statusText };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Pipeline trigger error: ${message}`);
+      return { success: false, message: `GitHub API request failed: ${message}` };
+    }
   }
 
   private mapStatus(dbStatus: string): PipelineRun['status'] {
@@ -333,5 +227,4 @@ export class PipelineRunsService {
     };
     return statusMap[dbStatus?.toLowerCase()] || 'failed';
   }
-
 }
