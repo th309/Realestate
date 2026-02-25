@@ -1,0 +1,115 @@
+---
+title: "How PropertyIQ Uses AI Real Estate Analytics to Score Every Market in America"
+description: "A deep dive into PropertyIQ's AI real estate analytics methodology — our data sources, three proprietary scores, confidence system, and how machine learning powers smarter real estate decisions."
+date: "2026-02-25"
+author: "PropertyIQ Research"
+category: "methodology"
+tags: ["AI", "methodology", "machine-learning", "data-science", "scoring"]
+targetKeyword: "AI real estate analytics"
+---
+
+# How PropertyIQ Uses AI Real Estate Analytics to Score Every Market in America
+
+**AI real estate analytics** is transforming how buyers, investors, and analysts evaluate housing markets. Instead of relying on gut instinct, anecdotal reports, or a single data point, modern platforms can synthesize dozens of economic, demographic, and housing indicators into actionable intelligence — updated continuously and available at a granularity that was impossible just a few years ago.
+
+PropertyIQ is built on this premise. We believe that better data, processed by smarter models, leads to better real estate decisions. This article explains exactly how our platform works: where our data comes from, how we score markets, and what makes our approach to AI real estate analytics different from what came before.
+
+## Our Data Sources
+
+The quality of any analytics platform is bounded by the quality of its inputs. PropertyIQ ingests data from six authoritative sources, each covering a different dimension of market health:
+
+| Source | What It Provides | Update Frequency |
+|--------|-----------------|------------------|
+| **Zillow** | Home values (ZHVI), rental estimates (ZORI), market heat, inventory, days on market, price cuts | Monthly |
+| **Realtor.com** | Active listings, median listing prices, new listing counts, price-to-income ratios | Monthly |
+| **U.S. Census Bureau** | Population, household income, demographics, housing characteristics, migration flows | Annual (ACS), Decennial |
+| **Bureau of Labor Statistics (BLS)** | Unemployment rates, employment by sector, wage growth, CPI | Monthly |
+| **Federal Reserve (FRED)** | Mortgage rates, construction permits, housing starts, economic indicators | Weekly to Monthly |
+| **PropertyIQ Calculated** | Derived metrics (affordability indices, composite scores, trend indicators) | Continuous |
+
+We currently track **over 40 distinct metrics** across these sources, organized into six categories: housing prices, rental markets, supply conditions, affordability, economic indicators, and demographic trends. Every metric is available at multiple geographic levels — state, metro (CBSA), county, and ZIP code — where the underlying data supports it.
+
+You can explore all available metrics on the [PropertyIQ interactive map](/map) and see the underlying data for any geography in the country.
+
+## The Three PropertyIQ Scores
+
+Raw metrics are useful but overwhelming. A single metro might have 30 or more data points, each telling a slightly different story. PropertyIQ's core value proposition is **synthesis**: we distill those metrics into three proprietary scores, each designed for a specific use case.
+
+### HomeReady Score (0-100)
+
+**Purpose**: Evaluates whether a market is favorable for purchasing a primary residence.
+
+The HomeReady score answers the question most homebuyers are actually asking: *"Is this a good place to buy a home right now?"* It weighs:
+
+- **Affordability**: Price-to-income ratio, monthly payment as a percentage of median income, and how these compare to historical norms for that specific market.
+- **Market conditions**: Months of supply, days on market, and the share of listings with price reductions — indicators of whether buyers or sellers have leverage.
+- **Stability**: Price volatility, foreclosure rates, and employment concentration risk. A market with rapid appreciation but high volatility scores lower than one with steady, moderate growth.
+- **Economic foundation**: Job growth, wage growth, and unemployment rate relative to national benchmarks.
+
+### InvestorEdge Score (0-100)
+
+**Purpose**: Evaluates a market's attractiveness for rental property investment.
+
+The InvestorEdge score is optimized for cash flow and total return potential. It emphasizes:
+
+- **Cash flow metrics**: Rent-to-price ratio, estimated cap rates, and gross rent multiplier.
+- **Rental demand**: Vacancy rates, rent growth trajectory, renter population percentage.
+- **Entry cost**: Median purchase price relative to expected rental income.
+- **Growth potential**: Population growth, job growth, and in-migration trends that drive future rental demand.
+
+### Market Health Score (0-100)
+
+**Purpose**: A broad assessment of market sustainability and risk.
+
+The Market Health score is a diagnostic tool. It answers: *"Is this market functioning normally, overheating, or deteriorating?"* It tracks:
+
+- **Supply-demand balance**: The relationship between new listings, pending sales, and active inventory.
+- **Price sustainability**: Whether price levels are supported by income growth and rental yields, or are detached from fundamentals.
+- **Market velocity**: How quickly homes are selling relative to historical norms.
+- **Construction pipeline**: Whether new supply is arriving to meet demand or is at risk of overshooting it.
+
+All three scores are available at the metro level on our [scores dashboard](/scores), with detailed breakdowns and historical trends.
+
+## How We Calculate Confidence
+
+A score is only as useful as its reliability. That is why every PropertyIQ score comes with a **confidence level** — a separate measurement of how much you should trust the score based on data quality.
+
+Confidence is rated on a letter scale:
+
+| Level | Range | Meaning |
+|-------|-------|---------|
+| **A** | 80-100% | Excellent data coverage and freshness. High trust. |
+| **B** | 65-79% | Good data with minor gaps. Reliable for decisions. |
+| **C** | 45-64% | Fair data with notable gaps. Use with caution. |
+| **F** | 0-44% | Insufficient data. Score may be unreliable. |
+
+The confidence calculation is based on three factors:
+
+1. **Data completeness**: What percentage of the metrics needed for the score are available for this geography? A metro with 38 out of 40 metrics available scores higher than one with 25.
+2. **Data freshness**: How recent is the data? Metrics updated within the last 30 days score highest. Data older than 90 days is penalized.
+3. **Statistical fit**: How well do the available data points correlate with the scoring model's expectations? Outliers and inconsistencies reduce confidence.
+
+Confidence is independent of the score itself. A market can have a high HomeReady score with low confidence (promising on paper but insufficient data to be sure) or a low score with high confidence (reliably unfavorable). We surface both numbers so you can make informed decisions.
+
+Learn more about our confidence methodology on the [scores methodology page](/scores/methodology).
+
+## AI-Powered Market Reports
+
+Beyond scoring, PropertyIQ uses large language models to generate **narrative market reports** for every geography we cover. These reports synthesize the underlying metrics into plain-language analysis — identifying trends, flagging risks, and providing context that raw numbers alone cannot convey.
+
+The AI reports are not generic templates with numbers plugged in. They are generated dynamically based on the actual data for each market, with the model trained to identify the most salient patterns and present them in order of importance. If a market's inventory is spiking while prices remain flat, the report will lead with that divergence. If rent growth is accelerating while home prices stagnate, the report will highlight the emerging investor opportunity.
+
+This combination of **quantitative scoring** and **qualitative AI analysis** is what we mean by AI real estate analytics — not AI as a buzzword, but AI as a tool that makes complex data accessible and actionable.
+
+## What Makes Our Approach Different
+
+Most real estate data platforms give you metrics. PropertyIQ gives you **judgment** — data-informed, transparent, and continuously updated. The key differences:
+
+- **Multi-source synthesis**: We do not rely on a single data provider. Our fallback system automatically pulls from secondary sources when primary data is unavailable, ensuring coverage even in smaller markets.
+- **Geographic granularity**: National and state-level analysis is nearly useless for actual decisions. We score at the metro, county, and ZIP code level because that is where real estate decisions are made.
+- **Separation of score and confidence**: No other platform we are aware of provides an independent confidence measure alongside its scores. We believe you deserve to know not just "what we think" but "how sure we are."
+- **Transparent methodology**: We publish our data sources, scoring factors, and confidence calculations. You can see the [full data catalog](/data) and the [methodology details](/scores/methodology) on our site.
+
+---
+
+**Ready to see AI real estate analytics in action?** Explore PropertyIQ's [interactive map](/map) to view scores and metrics for every market in the country, or visit the [scores dashboard](/scores) to compare metros head-to-head. Start making real estate decisions backed by data, not guesswork.
