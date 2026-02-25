@@ -18,6 +18,7 @@ const NAV_LINKS = [
     { name: 'Graphs', href: '/graphs', icon: TrendingIcon },
     { name: 'Reports', href: '/reports', icon: ArticleIcon },
     { name: 'Scores', href: '/scores', icon: ScoreIcon },
+    { name: 'Blog', href: '/blog', icon: BookIcon },
     { name: 'About us', href: '/about', icon: InfoIcon },
     { name: 'Pricing', href: '/pricing', icon: MoneyIcon },
 ];
