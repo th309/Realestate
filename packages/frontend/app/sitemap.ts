@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { METRO_SLUG_DATA } from '@/lib/data/metro-slug-data';
 import { getAllPosts } from '@/lib/blog';
+import { COMPARISONS } from '@/lib/data/comparisons';
 
 const BASE_URL = 'https://www.propertyiq.app';
 
@@ -38,5 +39,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...metroRoutes, ...blogRoutes];
+  const comparisonRoutes: MetadataRoute.Sitemap = COMPARISONS.map((c) => ({
+    url: `${BASE_URL}/compare/${c.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...metroRoutes, ...blogRoutes, ...comparisonRoutes];
 }

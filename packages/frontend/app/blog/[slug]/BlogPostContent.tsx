@@ -2,6 +2,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import Link from 'next/link';
 import type { BlogPost } from '@/lib/blog/types';
 import { mdxComponents } from './mdx-components';
+import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
 
 interface BlogPostContentProps {
   post: BlogPost;
@@ -66,6 +67,9 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
           ))}
         </div>
       )}
+
+      {/* Newsletter Signup */}
+      <NewsletterSignup />
     </article>
   );
 }

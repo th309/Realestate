@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { MetroSlugEntry } from '@/lib/data/metro-slugs';
 import { METRO_SLUG_DATA } from '@/lib/data/metro-slug-data';
 import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
+import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
 
 interface MetroPageContentProps {
   metro: MetroSlugEntry;
@@ -82,6 +83,9 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
           Full Market Dashboard
         </Link>
       </section>
+
+      {/* Newsletter Signup */}
+      <NewsletterSignup />
 
       {/* Nearby Markets (internal linking) */}
       {nearbyMetros.length > 0 && (
