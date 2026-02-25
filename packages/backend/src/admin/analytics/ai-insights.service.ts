@@ -218,7 +218,7 @@ export class AiInsightsService {
   private async getRevenueSnapshot(since: string): Promise<RevenueSnapshot> {
     const client = this.supabase.getClient();
 
-    const [paidResult, tierResult, failedResult, churnResult] =
+    const [paidResult, tierResult, failedResult, churnResult, tierPriceResult] =
       await Promise.all([
         client
           .from('user_profiles')
@@ -239,6 +239,10 @@ export class AiInsightsService {
           .select('*', { count: 'exact', head: true })
           .eq('subscription_status', 'cancelled')
           .gte('updated_at', since),
+        client
+          .from('subscription_tiers')
+          .select('slug, price_monthly')
+          .in('slug', ['pro', 'enterprise']),
       ]);
 
     const tierCounts: Record<string, number> = {};
@@ -249,10 +253,16 @@ export class AiInsightsService {
       },
     );
 
-    // Estimate MRR: Pro=$29, Enterprise=$99
+    // Estimate MRR from live tier pricing in subscription_tiers table
+    const tierPrices: Record<string, number> = {};
+    (tierPriceResult.data || []).forEach(
+      (t: { slug: string; price_monthly: string | number | null }) => {
+        tierPrices[t.slug] = Number(t.price_monthly) || 0;
+      },
+    );
     const estimatedMrr =
-      (tierCounts['pro'] || 0) * 29 +
-      (tierCounts['enterprise'] || 0) * 99;
+      (tierCounts['pro'] || 0) * (tierPrices['pro'] || 0) +
+      (tierCounts['enterprise'] || 0) * (tierPrices['enterprise'] || 0);
 
     return {
       totalPaidUsers: paidResult.count || 0,

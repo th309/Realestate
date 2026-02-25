@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { Sparkles, Lock, ArrowRight, Check } from 'lucide-react';
+import { usePricingTiers, buildPriceLookup } from '@/lib/data/hooks/usePricingTiers';
 
 interface UpgradePromptProps {
   feature?: string;
@@ -49,9 +50,12 @@ export function UpgradePrompt({
   onUpgrade,
   onClose,
 }: UpgradePromptProps) {
+  const { tiers } = usePricingTiers();
+  const priceLookup = buildPriceLookup(tiers);
   const benefits = TIER_BENEFITS[requiredTier] || TIER_BENEFITS.pro;
   const tierName = requiredTier === 'enterprise' ? 'Enterprise' : 'Pro';
-  const price = requiredTier === 'enterprise' ? '$99' : '$29';
+  const monthly = priceLookup[requiredTier]?.priceMonthly;
+  const price = monthly != null ? `$${monthly}` : '...';
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-6 text-center">

@@ -4,9 +4,11 @@ import Link from 'next/link';
 import {
   COMPARISONS,
   getComparison,
+  withLivePricing,
   type ComparisonData,
   type ComparisonWinner,
 } from '@/lib/data/comparisons';
+import { fetchPricingSummary } from '@/lib/data/fetchers/pricing';
 
 // ---------------------------------------------------------------------------
 // Static params & metadata
@@ -224,10 +226,24 @@ export default async function ComparisonPage({
   params,
 }: ComparisonPageProps) {
   const { slug } = await params;
-  const comparison = getComparison(slug);
+  const rawComparison = getComparison(slug);
 
-  if (!comparison) {
+  if (!rawComparison) {
     notFound();
+  }
+
+  // Fetch live prices from the database
+  let comparison = rawComparison;
+  try {
+    const pricing = await fetchPricingSummary();
+    const pro = pricing.tiers.find((t) => t.slug === 'pro');
+    const enterprise = pricing.tiers.find((t) => t.slug === 'enterprise');
+    comparison = withLivePricing(rawComparison, {
+      proMonthly: pro?.price_monthly ? `$${Math.round(Number(pro.price_monthly))}` : '$39',
+      enterpriseMonthly: enterprise?.price_monthly ? `$${Math.round(Number(enterprise.price_monthly))}` : '$149',
+    });
+  } catch {
+    // Pricing fetch failed; use static data as-is
   }
 
   const faqJsonLd = buildFaqJsonLd(comparison);

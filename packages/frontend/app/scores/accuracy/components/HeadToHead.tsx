@@ -2,10 +2,11 @@
  * Head-to-Head Comparison Table
  *
  * PropertyIQ vs leading competitor comparison using publicly available data.
- * Server component — static comparison data.
+ * Fetches PropertyIQ pricing from the database to avoid hardcoded prices.
  */
 
 import { CheckCircle, X } from 'lucide-react';
+import { fetchPricingSummary } from '@/lib/data/fetchers/pricing';
 
 interface ComparisonRow {
   dimension: string;
@@ -14,62 +15,64 @@ interface ComparisonRow {
   winner: 'propertyiq' | 'competitor' | 'tie';
 }
 
-const ROWS: ComparisonRow[] = [
-  {
-    dimension: 'Best-window correlation',
-    propertyiq: '\u03C1 = 0.80 (Mar 2024, 250K+)',
-    competitor: 'r = 0.79 (Apr 2024, 250K+)',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Same-window match (Apr 2024)',
-    propertyiq: '\u03C1 = 0.76 (250K+)',
-    competitor: 'r = 0.79 (250K+)',
-    winner: 'competitor',
-  },
-  {
-    dimension: 'Validation windows tested',
-    propertyiq: '24 consecutive months',
-    competitor: '1 cherry-picked window',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Geography coverage',
-    propertyiq: '860 metros + 3K counties + 25K ZIPs',
-    competitor: '~380 metros',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Quintile dollar impact',
-    propertyiq: '$11,978/yr per home',
-    competitor: 'Not published',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Bottom quintile warning',
-    propertyiq: 'Yes: -0.23% = actual loss',
-    competitor: 'No',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Walk-forward cross-validation',
-    propertyiq: 'Yes (no look-ahead bias)',
-    competitor: 'No',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Bootstrap significance testing',
-    propertyiq: 'Yes (95% CI excludes zero)',
-    competitor: 'No',
-    winner: 'propertyiq',
-  },
-  {
-    dimension: 'Price',
-    propertyiq: '$29/mo',
-    competitor: '$399/yr',
-    winner: 'propertyiq',
-  },
-];
+function buildRows(proPrice: string): ComparisonRow[] {
+  return [
+    {
+      dimension: 'Best-window correlation',
+      propertyiq: '\u03C1 = 0.80 (Mar 2024, 250K+)',
+      competitor: 'r = 0.79 (Apr 2024, 250K+)',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Same-window match (Apr 2024)',
+      propertyiq: '\u03C1 = 0.76 (250K+)',
+      competitor: 'r = 0.79 (250K+)',
+      winner: 'competitor',
+    },
+    {
+      dimension: 'Validation windows tested',
+      propertyiq: '24 consecutive months',
+      competitor: '1 cherry-picked window',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Geography coverage',
+      propertyiq: '860 metros + 3K counties + 25K ZIPs',
+      competitor: '~380 metros',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Quintile dollar impact',
+      propertyiq: '$11,978/yr per home',
+      competitor: 'Not published',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Bottom quintile warning',
+      propertyiq: 'Yes: -0.23% = actual loss',
+      competitor: 'No',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Walk-forward cross-validation',
+      propertyiq: 'Yes (no look-ahead bias)',
+      competitor: 'No',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Bootstrap significance testing',
+      propertyiq: 'Yes (95% CI excludes zero)',
+      competitor: 'No',
+      winner: 'propertyiq',
+    },
+    {
+      dimension: 'Price',
+      propertyiq: proPrice,
+      competitor: '$399/yr',
+      winner: 'propertyiq',
+    },
+  ];
+}
 
 function WinnerBadge({ winner }: { winner: ComparisonRow['winner'] }) {
   if (winner === 'tie') return null;
@@ -80,7 +83,18 @@ function WinnerBadge({ winner }: { winner: ComparisonRow['winner'] }) {
   );
 }
 
-export function HeadToHead() {
+export async function HeadToHead() {
+  let proPrice = '...';
+  try {
+    const pricing = await fetchPricingSummary();
+    const pro = pricing.tiers.find((t) => t.slug === 'pro');
+    if (pro?.price_monthly) proPrice = `$${Math.round(Number(pro.price_monthly))}/mo`;
+  } catch {
+    // Pricing fetch failed; leave as placeholder
+  }
+
+  const ROWS = buildRows(proPrice);
+
   return (
     <section>
       <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">

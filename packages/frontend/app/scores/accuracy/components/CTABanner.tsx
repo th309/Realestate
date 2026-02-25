@@ -2,13 +2,23 @@
  * CTA Banner
  *
  * Call-to-action directing users to explore maps and view pricing.
- * Server component.
+ * Fetches pricing from the database to avoid hardcoded prices.
  */
 
 import Link from 'next/link';
 import { Map, CreditCard } from 'lucide-react';
+import { fetchPricingSummary } from '@/lib/data/fetchers/pricing';
 
-export function CTABanner() {
+export async function CTABanner() {
+  let proPrice = '...';
+  try {
+    const pricing = await fetchPricingSummary();
+    const pro = pricing.tiers.find((t) => t.slug === 'pro');
+    if (pro?.price_monthly) proPrice = `$${Math.round(Number(pro.price_monthly))}/mo`;
+  } catch {
+    // Pricing fetch failed; leave as placeholder
+  }
+
   return (
     <section>
       <div className="bg-primary/[0.06] rounded-2xl border border-primary/20 p-6 md:p-8">
@@ -17,7 +27,7 @@ export function CTABanner() {
             Ready to Invest Smarter?
           </h2>
           <p className="text-on-surface-variant mt-2">
-            Explore top-scored markets on our interactive map or start with plans at $29/mo.
+            Explore top-scored markets on our interactive map or start with plans at {proPrice}.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
@@ -33,7 +43,7 @@ export function CTABanner() {
               className="inline-flex items-center gap-2 bg-surface border border-outline-variant text-on-surface px-6 py-2.5 rounded-full font-medium hover:bg-surface-container transition-colors"
             >
               <CreditCard className="w-4 h-4" />
-              Plans Starting at $29/mo
+              Plans Starting at {proPrice}
             </Link>
           </div>
         </div>

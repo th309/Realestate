@@ -64,7 +64,7 @@ export const COMPARISONS: ComparisonData[] = [
     ],
     pricing: [
       { tier: 'Free', propertyiq: '$0', competitor: '$0' },
-      { tier: 'Pro', propertyiq: '$29/mo', competitor: '$49/mo' },
+      { tier: 'Pro', propertyiq: '$39/mo', competitor: '$49/mo' },
     ],
     summary:
       'PropertyIQ offers broader geographic coverage across 925 metros, AI-powered market reports, and three proprietary scoring models at a lower monthly price. Reventure App brings a massive YouTube community with over one million followers and native mobile apps for iOS and Android. If you value deep analytics and AI insights at a lower cost, PropertyIQ is the stronger choice. If community-driven content and mobile convenience are your priority, Reventure is worth considering.',
@@ -72,12 +72,12 @@ export const COMPARISONS: ComparisonData[] = [
       {
         question: 'Is PropertyIQ better than Reventure?',
         answer:
-          'PropertyIQ covers more metros (925 vs ~500), offers AI-generated market reports, and costs $20 less per month on the Pro plan. Reventure has a larger community and mobile apps. For data-driven investors who want the broadest coverage and AI insights, PropertyIQ is the better fit.',
+          'PropertyIQ covers more metros (925 vs ~500), offers AI-generated market reports, and costs less per month on the Pro plan. Reventure has a larger community and mobile apps. For data-driven investors who want the broadest coverage and AI insights, PropertyIQ is the better fit.',
       },
       {
         question: 'How much does PropertyIQ cost vs Reventure?',
         answer:
-          'Both offer free tiers. PropertyIQ Pro is $29/month while Reventure Pro is $49/month, making PropertyIQ $240 cheaper per year.',
+          'Both offer free tiers. PropertyIQ Pro starts at $39/month while Reventure Pro is $49/month. See our pricing page for current rates.',
       },
       {
         question: 'Does PropertyIQ have a mobile app like Reventure?',
@@ -103,20 +103,20 @@ export const COMPARISONS: ComparisonData[] = [
     ],
     pricing: [
       { tier: 'Free', propertyiq: '$0', competitor: 'No free tier' },
-      { tier: 'Pro', propertyiq: '$29/mo', competitor: '$99/mo' },
+      { tier: 'Pro', propertyiq: '$39/mo', competitor: '$99/mo' },
     ],
     summary:
-      'PropertyIQ covers more than four times as many metros as Mashvisor, updates data monthly rather than quarterly, and offers a free tier plus a Pro plan at $29/month compared to Mashvisor\'s $99/month starting price. Mashvisor specializes in short-term rental analytics with Airbnb data, making it a better fit for vacation-rental investors. For broad market analysis with AI-powered scoring at a fraction of the cost, PropertyIQ is the clear winner.',
+      'PropertyIQ covers more than four times as many metros as Mashvisor, updates data monthly rather than quarterly, and offers a free tier plus a Pro plan at $39/month compared to Mashvisor\'s $99/month starting price. Mashvisor specializes in short-term rental analytics with Airbnb data, making it a better fit for vacation-rental investors. For broad market analysis with AI-powered scoring at a fraction of the cost, PropertyIQ is the clear winner.',
     faqs: [
       {
         question: 'Is PropertyIQ better than Mashvisor for real estate investing?',
         answer:
-          'PropertyIQ covers 925 metros versus Mashvisor\'s ~200, offers three proprietary scoring models, and costs $70 less per month. Mashvisor is stronger for short-term rental analysis with Airbnb-specific data. For general market intelligence, PropertyIQ offers more value.',
+          'PropertyIQ covers 925 metros versus Mashvisor\'s ~200, offers three proprietary scoring models, and costs significantly less per month. Mashvisor is stronger for short-term rental analysis with Airbnb-specific data. For general market intelligence, PropertyIQ offers more value.',
       },
       {
         question: 'How much does PropertyIQ cost compared to Mashvisor?',
         answer:
-          'PropertyIQ has a free tier and a $29/month Pro plan. Mashvisor has no free tier and starts at $99/month, making PropertyIQ $840 cheaper per year on the paid plan.',
+          'PropertyIQ has a free tier and a Pro plan starting at $39/month. Mashvisor has no free tier and starts at $99/month. See our pricing page for current rates.',
       },
       {
         question: 'Does Mashvisor have features PropertyIQ doesn\'t?',
@@ -142,8 +142,8 @@ export const COMPARISONS: ComparisonData[] = [
     ],
     pricing: [
       { tier: 'Free', propertyiq: '$0', competitor: 'None' },
-      { tier: 'Pro', propertyiq: '$29/mo', competitor: '$41.60/mo' },
-      { tier: 'Enterprise', propertyiq: 'Custom', competitor: '$208/mo' },
+      { tier: 'Pro', propertyiq: '$39/mo', competitor: '$41.60/mo' },
+      { tier: 'Enterprise', propertyiq: '$149/mo', competitor: '$208/mo' },
     ],
     summary:
       'PropertyIQ provides AI-powered market scoring, interactive data visualizations, and a generous free tier at a fraction of the price NeighborhoodScout charges. NeighborhoodScout has deep neighborhood-level crime statistics and school rating data built over many years. For investors who need modern AI-driven market intelligence with interactive tools, PropertyIQ delivers more value. For hyper-local crime and school research, NeighborhoodScout remains a specialized resource.',
@@ -156,7 +156,7 @@ export const COMPARISONS: ComparisonData[] = [
       {
         question: 'How much does PropertyIQ cost vs NeighborhoodScout?',
         answer:
-          'PropertyIQ offers a free tier and Pro at $29/month. NeighborhoodScout\'s cheapest plan is $41.60/month (billed annually at $499), with their professional plan at $208/month. PropertyIQ saves you at least $151 per year.',
+          'PropertyIQ offers a free tier and a Pro plan starting at $39/month. NeighborhoodScout\'s cheapest plan is $41.60/month (billed annually at $499), with their professional plan at $208/month. See our pricing page for current rates.',
       },
       {
         question: 'Does NeighborhoodScout have crime and school data that PropertyIQ doesn\'t?',
@@ -174,4 +174,35 @@ export const COMPARISONS: ComparisonData[] = [
 /** Look up a comparison by its URL slug. Returns undefined if not found. */
 export function getComparison(slug: string): ComparisonData | undefined {
   return COMPARISONS.find((c) => c.slug === slug);
+}
+
+/**
+ * Inject live PropertyIQ prices into comparison data, replacing hardcoded values.
+ * Call this with prices fetched from the pricing API.
+ */
+export function withLivePricing(
+  comparison: ComparisonData,
+  prices: { proMonthly: string; enterpriseMonthly: string },
+): ComparisonData {
+  const { proMonthly, enterpriseMonthly } = prices;
+
+  const pricing = comparison.pricing.map((row) => {
+    if (row.tier === 'Pro') return { ...row, propertyiq: `${proMonthly}/mo` };
+    if (row.tier === 'Enterprise') return { ...row, propertyiq: `${enterpriseMonthly}/mo` };
+    return row;
+  });
+
+  // Replace dollar references in summary and FAQ answers
+  const replacePrices = (text: string) =>
+    text.replace(/\$29\/month|\$29\/mo|\$39\/month|\$39\/mo/g, `${proMonthly}/month`)
+        .replace(/\$99\/month|\$99\/mo|\$149\/month|\$149\/mo/g, `${enterpriseMonthly}/month`);
+
+  const summary = replacePrices(comparison.summary);
+
+  const faqs = comparison.faqs.map((faq) => ({
+    ...faq,
+    answer: replacePrices(faq.answer),
+  }));
+
+  return { ...comparison, pricing, summary, faqs };
 }

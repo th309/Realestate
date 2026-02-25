@@ -65,12 +65,8 @@ function PricingContent() {
         if (data.trial) setTrialInfo(data.trial);
       })
       .catch(err => {
-        console.warn('Pricing fetch failed, using fallback:', err.message);
-        setPlans([
-          { slug: 'free', name: 'Free', price_monthly: '0', price_yearly: '0', description: 'Explore the platform', features: [] },
-          { slug: 'pro', name: 'Pro', price_monthly: '29', price_yearly: '290', description: 'The unfair advantage', features: [] },
-          { slug: 'enterprise', name: 'Enterprise', price_monthly: '99', price_yearly: '990', description: 'For brokerages', features: [] },
-        ]);
+        console.warn('Pricing fetch failed:', err.message);
+        setPlans([]);
       })
       .finally(() => setPlansLoading(false));
   }, []);
@@ -547,7 +543,7 @@ function PricingContent() {
                 <li>Metrics, scores, trends, and AI narratives pulled into one polished document.</li>
                 <li>Focus on a single market or compare two head-to-head.</li>
                 <li>Share with partners, lenders, or your team — looks like it came from a professional analyst.</li>
-                <li className="text-on-surface font-medium">Institutional investors pay thousands for reports like these. Yours start at $29/month.</li>
+                <li className="text-on-surface font-medium">Institutional investors pay thousands for reports like these. Yours start at {(() => { const pro = plans.find(p => p.slug === 'pro'); return pro?.price_monthly ? `$${Math.round(Number(pro.price_monthly))}/month` : '...'; })()}.</li>
               </ul>
             </div>
 
