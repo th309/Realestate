@@ -47,24 +47,30 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
           PropertyIQ Scores
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ScoreWidget
-            geographyType="metro"
-            geographyId={metro.cbsaCode}
-            scoreType="homeready"
-            showConfidence
-          />
-          <ScoreWidget
-            geographyType="metro"
-            geographyId={metro.cbsaCode}
-            scoreType="investoredge"
-            showConfidence
-          />
-          <ScoreWidget
-            geographyType="metro"
-            geographyId={metro.cbsaCode}
-            scoreType="market_health"
-            showConfidence
-          />
+          <div className="flex flex-col items-center gap-2">
+            <ScoreWidget
+              geographyType="metro"
+              geographyId={metro.cbsaCode}
+              scoreType="homeready"
+            />
+            <span className="text-sm font-medium text-on-surface">HomeReady</span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <ScoreWidget
+              geographyType="metro"
+              geographyId={metro.cbsaCode}
+              scoreType="investoredge"
+            />
+            <span className="text-sm font-medium text-on-surface">InvestorEdge</span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <ScoreWidget
+              geographyType="metro"
+              geographyId={metro.cbsaCode}
+              scoreType="market_health"
+            />
+            <span className="text-sm font-medium text-on-surface">Market Health</span>
+          </div>
         </div>
       </section>
 
