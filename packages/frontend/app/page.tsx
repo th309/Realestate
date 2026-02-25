@@ -12,13 +12,9 @@ import {
 } from './components/home';
 
 export const metadata: Metadata = {
-  title:
-    'PropertyIQ - AI Real Estate Market Intelligence for Homebuyers, Investors & Agents',
+  title: 'PropertyIQ: AI Housing Market Data & Forecasts by ZIP Code',
   description:
-    'PropertyIQ uses machine learning to rank 925 US metros, 3,100+ counties, and 33,000+ ZIP codes and generate AI market reports. Find markets that outperform, get personalized analysis, and invest with data—not guesswork.',
-  alternates: {
-    canonical: 'https://propertyiq.com',
-  },
+    'PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find markets that outperform. Free interactive maps, market scores, and AI-generated reports.',
 };
 
 /**
