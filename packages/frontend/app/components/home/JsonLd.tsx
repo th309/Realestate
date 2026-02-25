@@ -12,12 +12,12 @@
 // Organization schema - tells search engines about the company
 const organizationSchema = {
   "@type": "Organization",
-  "@id": "https://propertyiq.com/#organization",
+  "@id": "https://www.propertyiq.app/#organization",
   name: "PropertyIQ",
-  url: "https://propertyiq.com",
+  url: "https://www.propertyiq.app",
   logo: {
     "@type": "ImageObject",
-    url: "https://propertyiq.com/logo.png",
+    url: "https://www.propertyiq.app/logo.png",
     width: 512,
     height: 512
   },
@@ -30,14 +30,14 @@ const organizationSchema = {
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
-    email: "support@propertyiq.com"
+    email: "support@propertyiq.app"
   }
 };
 
 // SoftwareApplication schema - describes the platform
 const softwareSchema = {
   "@type": "SoftwareApplication",
-  "@id": "https://propertyiq.com/#software",
+  "@id": "https://www.propertyiq.app/#software",
   name: "PropertyIQ",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
@@ -93,16 +93,16 @@ const softwareSchema = {
 // WebSite schema with search action for sitelinks
 const websiteSchema = {
   "@type": "WebSite",
-  "@id": "https://propertyiq.com/#website",
-  url: "https://propertyiq.com",
+  "@id": "https://www.propertyiq.app/#website",
+  url: "https://www.propertyiq.app",
   name: "PropertyIQ",
   description: "AI-powered real estate market intelligence platform",
-  publisher: { "@id": "https://propertyiq.com/#organization" },
+  publisher: { "@id": "https://www.propertyiq.app/#organization" },
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://propertyiq.com/search?q={search_term_string}"
+      urlTemplate: "https://www.propertyiq.app/map?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   }
@@ -158,13 +158,13 @@ const faqSchema = {
 // Main WebPage schema
 const webPageSchema = {
   "@type": "WebPage",
-  "@id": "https://propertyiq.com/#webpage",
-  url: "https://propertyiq.com",
+  "@id": "https://www.propertyiq.app/#webpage",
+  url: "https://www.propertyiq.app",
   name: "PropertyIQ - AI-Powered Real Estate Market Intelligence",
   description: "Make smarter real estate decisions with AI-powered market analysis for homebuyers, renters, investors, and real estate professionals.",
-  isPartOf: { "@id": "https://propertyiq.com/#website" },
-  about: { "@id": "https://propertyiq.com/#software" },
-  provider: { "@id": "https://propertyiq.com/#organization" },
+  isPartOf: { "@id": "https://www.propertyiq.app/#website" },
+  about: { "@id": "https://www.propertyiq.app/#software" },
+  provider: { "@id": "https://www.propertyiq.app/#organization" },
   speakable: {
     "@type": "SpeakableSpecification",
     cssSelector: ["h1", ".hero-description", ".feature-title"]
