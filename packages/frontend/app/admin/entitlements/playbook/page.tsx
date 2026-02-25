@@ -496,7 +496,7 @@ export default function PlaybookPage() {
           Have questions about optimizing your entitlements strategy?
         </p>
         <a
-          href="mailto:support@propertyiq.com"
+          href="mailto:support@propertyiq.app"
           className="inline-flex items-center gap-2 text-primary hover:underline"
         >
           Contact our team

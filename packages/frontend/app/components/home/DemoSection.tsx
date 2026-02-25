@@ -106,7 +106,7 @@ export function DemoSection() {
                   <path d="M21 21l-4.35-4.35" />
                 </svg>
                 <span className="text-xs text-on-surface-variant">
-                  propertyiq.com/{activeTab === 'map' ? 'map' : activeTab === 'charts' ? 'graphs' : 'reports'}
+                  propertyiq.app/{activeTab === 'map' ? 'map' : activeTab === 'charts' ? 'graphs' : 'reports'}
                 </span>
               </div>
             </div>

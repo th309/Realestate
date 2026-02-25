@@ -172,7 +172,7 @@ function AccountPageContent() {
           // In dev, create a mock user if no real session exists (for visual testing)
           const effectiveUser = user ?? (process.env.NODE_ENV !== 'production' ? {
             id: 'dev-mock-user',
-            email: 'dev@propertyiq.com',
+            email: 'dev@propertyiq.app',
             created_at: '2025-06-01T00:00:00Z',
             user_metadata: { display_name: 'Dev User' },
             app_metadata: {},

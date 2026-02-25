@@ -401,10 +401,10 @@ function AccountActionsSection() {
             <p className="text-sm text-on-surface">
               Contact support at{' '}
               <a
-                href="mailto:support@propertyiq.com"
+                href="mailto:support@propertyiq.app"
                 className="font-medium text-primary hover:underline"
               >
-                support@propertyiq.com
+                support@propertyiq.app
               </a>{' '}
               to delete your account and all associated data.
             </p>
