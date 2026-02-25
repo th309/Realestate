@@ -1,6 +1,6 @@
 ---
 name: scaffold-module
-description: Scaffold a complete NestJS backend module with controller, service, DTOs, and tests
+description: Scaffold a complete NestJS backend module with controller, service, DTOs, and tests. Use when creating a new backend feature, API endpoint, or module from scratch.
 disable-model-invocation: true
 ---
 

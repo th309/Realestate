@@ -1,6 +1,6 @@
 ---
 name: gen-tests
-description: Generate unit tests for a specified file using project test patterns
+description: Generate unit tests for a specified file using project test patterns. Use after implementing a feature, fixing a bug, or when a file has no test coverage.
 disable-model-invocation: true
 ---
 

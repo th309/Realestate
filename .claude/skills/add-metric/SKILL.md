@@ -1,6 +1,6 @@
 ---
 name: add-metric
-description: Scaffold a new metric in the PropertyIQ data layer (registry, fetcher, types)
+description: Scaffold a new metric in the PropertyIQ data layer (registry, fetcher, types). Use when adding a new data metric to the platform, connecting a new data source, or when the user asks to track a new indicator.
 arguments:
   - name: metricId
     description: "The metric identifier in snake_case (e.g., rent_growth, vacancy_rate)"
@@ -48,19 +48,20 @@ ${metricId}: {
      - ZIP: `postal_code`
 
 3. **Test the Metric**:
+
 ```typescript
-import { useSnapshotData } from '@/lib/data';
-const { value, isLoading } = useSnapshotData('${metricId}', 'metro', '35620');
+import { useSnapshotData } from "@/lib/data";
+const { value, isLoading } = useSnapshotData("${metricId}", "metro", "35620");
 ```
 
 ## Key Field Reference
 
-| Geo Level | Key Field | Example |
-|-----------|-----------|---------|
-| state | region_name | "California" |
-| metro | cbsa_code | "35620" |
-| county | county_fips | "06001" |
-| zip | postal_code | "90210" |
+| Geo Level | Key Field   | Example      |
+| --------- | ----------- | ------------ |
+| state     | region_name | "California" |
+| metro     | cbsa_code   | "35620"      |
+| county    | county_fips | "06001"      |
+| zip       | postal_code | "90210"      |
 
 ## Common Pitfalls
 

@@ -1,6 +1,6 @@
 ---
 name: add-dto-validation
-description: Add class-validator DTO validation to an existing NestJS controller
+description: Add class-validator DTO validation to an existing NestJS controller. Use after creating or modifying backend controller endpoints, or when auditing input validation.
 disable-model-invocation: true
 ---
 

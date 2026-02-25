@@ -1,6 +1,6 @@
 ---
 name: data-layer-check
-description: Enforces PropertyIQ data layer architecture rules
+description: Enforces PropertyIQ data layer architecture rules. Use after modifying frontend data fetching, adding API calls, or changing hooks/fetchers to verify data layer compliance.
 user-invocable: false
 ---
 
@@ -12,7 +12,7 @@ user-invocable: false
 
 ```typescript
 // CORRECT - Use the data layer
-import { fetchSnapshotData, useSnapshotData, useDataCard } from '@/lib/data';
+import { fetchSnapshotData, useSnapshotData, useDataCard } from "@/lib/data";
 
 // WRONG - Never do this outside lib/data/fetchers/
 const response = await fetch(`${API_URL}/api/...`);
@@ -20,21 +20,21 @@ const response = await fetch(`${API_URL}/api/...`);
 
 ## Available Functions
 
-| Function | Purpose |
-|----------|---------|
-| `fetchSnapshotData(metricId, geoLevel, options)` | Current metric values |
-| `fetchTimeSeriesData(metricId, geoLevel, geoId, options)` | Historical data |
-| `fetchScore(geoLevel, geoId)` | PropertyIQ scores |
-| `fetchMarketStats()` | Market statistics |
+| Function                                                  | Purpose               |
+| --------------------------------------------------------- | --------------------- |
+| `fetchSnapshotData(metricId, geoLevel, options)`          | Current metric values |
+| `fetchTimeSeriesData(metricId, geoLevel, geoId, options)` | Historical data       |
+| `fetchScore(geoLevel, geoId)`                             | PropertyIQ scores     |
+| `fetchMarketStats()`                                      | Market statistics     |
 
 ## Available Hooks
 
-| Hook | Purpose |
-|------|---------|
-| `useSnapshotData` | Fetch current value with React Query |
-| `useTimeSeriesData` | Fetch time series with React Query |
-| `useDataCard` | Combined snapshot + trend for metric cards |
-| `useDataCardBatch` | Multiple metrics at once |
+| Hook                | Purpose                                    |
+| ------------------- | ------------------------------------------ |
+| `useSnapshotData`   | Fetch current value with React Query       |
+| `useTimeSeriesData` | Fetch time series with React Query         |
+| `useDataCard`       | Combined snapshot + trend for metric cards |
+| `useDataCardBatch`  | Multiple metrics at once                   |
 
 ## If Endpoint Doesn't Exist
 
@@ -46,12 +46,12 @@ const response = await fetch(`${API_URL}/api/...`);
 
 Data is keyed by these fields - search must return matching IDs:
 
-| Geo Level | Key Field | Example |
-|-----------|-----------|---------|
-| state | region_name | "California" |
-| metro | cbsa_code | "35620" |
-| county | county_fips | "06001" |
-| zip | postal_code | "90210" |
+| Geo Level | Key Field   | Example      |
+| --------- | ----------- | ------------ |
+| state     | region_name | "California" |
+| metro     | cbsa_code   | "35620"      |
+| county    | county_fips | "06001"      |
+| zip       | postal_code | "90210"      |
 
 ## Files to NEVER Import
 

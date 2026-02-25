@@ -1,6 +1,6 @@
 ---
 name: railway-deploy
-description: Deploy to Railway with pre-flight checks (build, lint, test)
+description: Deploy to Railway with pre-flight checks (build, lint, test). Use when the user says deploy, push to production, go live, or ship it.
 disable-model-invocation: true
 ---
 

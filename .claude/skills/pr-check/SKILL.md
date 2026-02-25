@@ -1,6 +1,6 @@
 ---
 name: pr-check
-description: Run full PR validation suite (lint, build, tests, code review) before creating a PR
+description: Run full PR validation suite (lint, build, tests, code review) before creating a PR. Use before merging to main, before creating a pull request, or when the user says they are done with a feature.
 disable-model-invocation: true
 ---
 

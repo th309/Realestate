@@ -1,6 +1,6 @@
 ---
 name: gen-swagger
-description: Generate Swagger/OpenAPI documentation for a NestJS controller
+description: Generate Swagger/OpenAPI documentation for a NestJS controller. Use after creating or modifying backend API endpoints to keep docs in sync.
 disable-model-invocation: true
 ---
 
