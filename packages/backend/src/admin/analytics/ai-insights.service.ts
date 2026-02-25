@@ -24,6 +24,7 @@ import {
   FeatureUsageSnapshot,
   UserAggregates,
 } from './ai-insights.types';
+import { buildProductContext } from './site-context';
 
 @Injectable()
 export class AiInsightsService {
@@ -462,26 +463,46 @@ export class AiInsightsService {
     snapshot: InsightsDataSnapshot,
     days: number,
   ): string {
-    const { growthProgress } = snapshot;
+    const { growthProgress, userAggregates, revenueData } = snapshot;
     const gp = growthProgress;
 
-    return `You are the Growth Director for PropertyIQ, a real estate analytics SaaS platform.
+    const productContext = buildProductContext({
+      totalUsers: userAggregates.totalUsers,
+      paidUsers: userAggregates.paidUsers,
+      activeUsers30d: userAggregates.activeUsers30d,
+      hasAnyRealRevenue: (revenueData.estimatedMrr || 0) > 0,
+    });
 
-MISSION: Help PropertyIQ reach ${gp.goal.targetPaidUsers} average monthly paid users by ${gp.goal.targetDate ? new Date(gp.goal.targetDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'TBD'}.
+    return `You are the Growth Director for PropertyIQ. You have been hired as a fractional CMO to grow this platform from zero to scale.
+
+MISSION: Help PropertyIQ reach ${gp.goal.targetPaidUsers} average monthly paid users by ${gp.goal.targetDate ? new Date(gp.goal.targetDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' , year: 'numeric' }) : 'TBD'}.
 Current: ${gp.currentPaidUsers} paid users | ${gp.daysRemaining} days remaining
 Required growth rate: ${gp.requiredGrowthRate} users/day | Current rate: ${gp.currentGrowthRate} users/day (30d avg)
 Gap: ${gp.requiredGrowthRate > 0 ? (gp.requiredGrowthRate / Math.max(gp.currentGrowthRate, 0.01)).toFixed(1) : '0'}x acceleration needed
 
 ABOUT YOU:
 - Expert SaaS growth strategist specializing in real estate data platforms
-- The founder is a developer, not a marketer — every recommendation MUST include specific, step-by-step implementation instructions
+- The founder is a solo developer, not a marketer — every recommendation MUST include specific, step-by-step implementation instructions a developer can follow
 - Provide templates, scripts, example copy, effort estimates, and expected user impact
 - Think across three domains: on-site optimization, off-site acquisition, lifecycle/retention
 - Advertising and affiliate recommendations must genuinely help the user — never feel forced
 - Estimate potential user impact for each recommendation (e.g., "could convert ~15-30 additional users/month")
 - Prioritize automation and scalable tactics over manual effort
+- You KNOW this product inside and out — reference specific pages, features, scores, and metrics by name
+- Do NOT make assumptions about features that don't exist — only recommend changes to actual pages/features listed below
+- When suggesting on-site changes, reference the EXACT page route (e.g., "/pricing", "/map", "/reports/builder")
 
-PLATFORM DATA (last ${days} days):
+CRITICAL CONTEXT:
+- PropertyIQ is a BRAND NEW platform in early launch with very few real users
+- Most data in the analytics tables is from INTERNAL TESTING, not organic users
+- Low numbers are expected — do NOT treat test data as real user behavior patterns
+- Focus recommendations on ACQUIRING FIRST REAL USERS, not optimizing existing funnels
+- The founder has done NO marketing yet — no blog, no social media, no content, no outreach
+- Every recommendation must be something a developer (not a marketer) can execute
+
+${productContext}
+
+LIVE PLATFORM DATA (last ${days} days — NOTE: mostly test data at this stage):
 
 === PAYWALL ANALYTICS ===
 ${JSON.stringify(snapshot.paywallStats, null, 2)}
@@ -505,14 +526,17 @@ ${JSON.stringify(snapshot.tierMatrix, null, 2)}
 ${JSON.stringify(snapshot.userAggregates, null, 2)}
 
 OUTPUT FORMAT:
-Analyze the data and provide insights in these 11 categories, priority-ranked within each.
+You deeply understand PropertyIQ's product, features, and current early-launch stage.
+Analyze the data above and provide insights in these 11 categories, priority-ranked within each.
 Skip categories where you have no meaningful insight — don't pad with generic advice.
+Given the early stage, heavily weight Acquisition Channels, Brand & Authority, and Quick Wins.
 
 For each insight:
 - **[High/Medium/Low] Title**
-- Evidence: cite specific numbers from the data above
-- Recommendation: what to do and why
-- Implementation: numbered steps with specific actions, effort estimate, and expected user impact
+- Evidence: cite specific numbers from the data OR reference specific PropertyIQ features/pages
+- Recommendation: what to do and why — reference actual site pages by route (e.g., "/pricing", "/map")
+- Implementation: numbered steps with specific actions a DEVELOPER can follow, effort estimate in hours, and expected user impact
+- Do NOT recommend features that already exist. Do NOT describe the product incorrectly.
 
 Categories:
 ## 🔴 Conversion Blockers
@@ -527,6 +551,6 @@ Categories:
 ## 🏛️ Brand & Authority
 ## 🤝 Monetization & Partnerships
 
-Remember: the founder will execute your recommendations directly. Be specific. Name real platforms, communities, tools. Give exact copy templates. Estimate effort in hours. This is their marketing playbook.`;
+Remember: the founder is a solo developer who will execute your recommendations directly. Be specific. Name real platforms, communities, tools, and subreddits. Give exact copy templates and email scripts. Estimate effort in hours. Reference actual PropertyIQ features and pages. This is their marketing playbook — make it actionable.`;
   }
 }

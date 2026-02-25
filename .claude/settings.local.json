@@ -332,7 +332,9 @@
       "Bash(echo handle tool not available, trying powershell:*)",
       "Bash(cd /d/projects/rei-platform && rm -rf .worktrees/quinn-v2-market-intelligence 2>&1 && echo \"Cleaned\" || cmd //C \"rmdir /s /q D:\\\\Projects\\\\rei-platform\\\\.worktrees\\\\quinn-v2-market-intelligence\" 2>&1)",
       "Bash(redis-server:*)",
-      "mcp__supabase-db__list_projects"
+      "mcp__supabase-db__list_projects",
+      "mcp__plugin_playwright_playwright__browser_navigate_back",
+      "Bash(tail:*)"
     ]
   }
 }

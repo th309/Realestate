@@ -316,3 +316,10 @@ export {
   type UseValidationTimeSeriesOptions,
   type UseValidationGeographyOptions,
 } from './hooks';
+
+// ============================================================================
+// METRO SLUGS
+// ============================================================================
+export { METRO_SLUG_DATA, SLUG_TO_METRO, CBSA_TO_METRO } from './metro-slug-data';
+export { generateMetroSlug, getMetroShortName, getMetroState } from './metro-slugs';
+export type { MetroSlugEntry } from './metro-slugs';
