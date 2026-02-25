@@ -70,4 +70,5 @@ Blog content MUST align with PropertyIQ's own scoring data. Recommending metros 
 - Use the target keyword naturally 3-5 times in the body
 - Include at least 3 internal links to PropertyIQ pages
 - All `/markets/[slug]` links must be verified against `metro-slug-data.ts`
+- Never use em dashes (---, —). Use commas, periods, colons, or parentheses instead
 - End with a clear CTA
