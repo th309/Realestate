@@ -29,11 +29,13 @@ export class PaywallAnalyticsController {
   async getPaywallStats(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('days') days?: string,
   ) {
     this.logger.log('GET /admin/analytics/paywall');
+    const range = this.resolveDateRange(startDate, endDate, days);
 
     try {
-      const stats = await this.analyticsService.getStats({ startDate, endDate });
+      const stats = await this.analyticsService.getStats(range);
       return { success: true, data: stats };
     } catch (error) {
       return { success: false, error: error.message };
@@ -48,11 +50,13 @@ export class PaywallAnalyticsController {
   async getFunnel(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('days') days?: string,
   ) {
     this.logger.log('GET /admin/analytics/funnel');
+    const range = this.resolveDateRange(startDate, endDate, days);
 
     try {
-      const funnel = await this.analyticsService.getFunnelData({ startDate, endDate });
+      const funnel = await this.analyticsService.getFunnelData(range);
       return { success: true, data: funnel };
     } catch (error) {
       return { success: false, error: error.message };
@@ -87,5 +91,27 @@ export class PaywallAnalyticsController {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  }
+
+  /** Convert `?days=30` shorthand to startDate/endDate for the service */
+  private resolveDateRange(
+    startDate?: string,
+    endDate?: string,
+    days?: string,
+  ): { startDate?: string; endDate?: string } {
+    if (startDate || endDate) return { startDate, endDate };
+    if (days) {
+      const d = parseInt(days, 10);
+      if (!isNaN(d) && d > 0) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - d);
+        return {
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        };
+      }
+    }
+    return {};
   }
 }
