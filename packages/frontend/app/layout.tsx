@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
+import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
@@ -128,6 +129,7 @@ export default function RootLayout({
       <body
         className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col`}
       >
+        <GoogleAnalytics />
         <Providers>
           <Header />
           <div className="bg-primary/10 border-b border-primary/20 px-4 py-2.5 text-center">

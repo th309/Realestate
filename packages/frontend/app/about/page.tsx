@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Info, Users, Target, Shield, Database, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
+
+export const metadata: Metadata = {
+  title: 'About PropertyIQ - AI Real Estate Market Intelligence',
+  description: 'Learn how PropertyIQ uses machine learning to analyze 925 US metros and 33,000+ ZIP codes, helping homebuyers, investors, and agents make data-driven real estate decisions.',
+};
 
 export default function AboutPage() {
   return (

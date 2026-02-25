@@ -47,7 +47,7 @@ export function HeroSection() {
             transitionDelay: '0.1s',
           }}
         >
-          We find the markets that{' '}
+          Find housing markets that{' '}
           <span className="text-primary">outperform</span>
         </h1>
 

@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { Mail, Building2, MapPin, Globe, Send } from 'lucide-react';
 import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
 import { ContactForm } from './ContactForm';
+
+export const metadata: Metadata = {
+  title: 'Contact PropertyIQ',
+  description: 'Get in touch with the PropertyIQ team. Questions about AI-powered real estate market analysis, pricing, or partnerships.',
+};
 
 export default function ContactPage() {
   return (
