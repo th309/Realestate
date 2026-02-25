@@ -151,7 +151,33 @@ Task tool with run_in_background: true
 - **Skills** (`/gen-tests`, `/pr-check`, `/scaffold-module`, etc.) are full workflows — only run when the user explicitly invokes them
 - **Agents** are lightweight reviewers — dispatch them in the background automatically
 
-### 1.7 Core Principles
+### 1.7 Skill Suggestions
+
+**After completing a task, suggest relevant skills the user might want to run.** Do NOT invoke them automatically — just mention them in a brief line at the end of your response.
+
+**Format:** One line, natural language, with the `/command` so they can copy it:
+
+> Might be useful: `/gen-tests` for the new service, `/gen-swagger` to add API docs.
+
+**When to suggest:**
+
+| Just finished...                     | Suggest                                        |
+| ------------------------------------ | ---------------------------------------------- |
+| Implementing a feature or bugfix     | `/gen-tests`                                   |
+| Creating/modifying backend endpoints | `/add-dto-validation`, `/gen-swagger`          |
+| Creating a new backend module        | `/scaffold-module` (if they built it manually) |
+| Completing a branch of work          | `/pr-check`                                    |
+| Ready to ship                        | `/railway-deploy`                              |
+
+**Rules:**
+
+- Keep it to ONE line — not a table, not a list, not a paragraph
+- Only suggest skills that are actually relevant to what just happened
+- Don't suggest on trivial changes (typo fixes, config tweaks, single-line edits)
+- Don't repeat a suggestion the user already declined in this session
+- If the user ignores a suggestion, that's fine — move on
+
+### 1.8 Core Principles
 
 - **Simplicity First:** Make every change as simple as possible. Impact minimal code.
 - **No Laziness:** Find root causes. No temporary fixes. Senior developer standards.
