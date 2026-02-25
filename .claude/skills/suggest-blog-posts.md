@@ -34,7 +34,7 @@ When the user approves a post idea:
 3. Write a complete MDX file with frontmatter
 4. Save to `packages/frontend/content/blog/drafts/[slug].mdx`
 5. Include:
-   - Proper frontmatter (title, description, date, author, category, tags, targetKeyword)
+   - Proper frontmatter (title, description, date, author: "PropertyIQ Research + AI", category, tags, targetKeyword)
    - 800-1500 words of substantive content
    - H2/H3 headings with keywords worked in naturally
    - Internal links to `/markets/[slug]` pages (verified in step 2)
