@@ -41,6 +41,7 @@ export function useAiInsights({
   const [error, setError] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  const chatHistoryRef = useRef<ChatMessage[]>([]);
 
   const streamFromEndpoint = useCallback(
     async (params: Record<string, string>, appendToChat: boolean) => {
@@ -144,8 +145,14 @@ export function useAiInsights({
     );
   }, [days, provider, streamFromEndpoint]);
 
+  // Keep ref in sync with state so sendFollowUp always reads latest history
+  chatHistoryRef.current = chatHistory;
+
   const sendFollowUp = useCallback(
     async (message: string) => {
+      // Read current history from ref (avoids stale closure)
+      const currentHistory = chatHistoryRef.current;
+
       // Add user message and placeholder assistant message
       setChatHistory((prev) => [
         ...prev,
@@ -153,7 +160,7 @@ export function useAiInsights({
         { role: 'assistant', content: '' },
       ]);
 
-      const historyForApi = chatHistory.map((m) => ({
+      const historyForApi = currentHistory.map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -168,7 +175,7 @@ export function useAiInsights({
         true,
       );
     },
-    [days, provider, chatHistory, streamFromEndpoint],
+    [days, provider, streamFromEndpoint],
   );
 
   const reset = useCallback(() => {

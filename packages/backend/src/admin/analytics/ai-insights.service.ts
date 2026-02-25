@@ -267,7 +267,7 @@ export class AiInsightsService {
     const client = this.supabase.getClient();
     const now = new Date().toISOString();
 
-    const [activeResult, expiredResult, convertedResult, cancelledResult] =
+    const [activeResult, expiredResult, convertedResult, cancelledResult, trialDurations] =
       await Promise.all([
         client
           .from('user_trials')
@@ -289,6 +289,9 @@ export class AiInsightsService {
           .from('user_trials')
           .select('*', { count: 'exact', head: true })
           .not('cancelled_at', 'is', null),
+        client
+          .from('user_trials')
+          .select('started_at, expires_at'),
       ]);
 
     const active = activeResult.count || 0;
@@ -299,13 +302,28 @@ export class AiInsightsService {
     const conversionRate =
       totalCompleted > 0 ? (converted / totalCompleted) * 100 : 0;
 
+    // Calculate average trial duration from actual data
+    let avgTrialDurationDays = 14; // default fallback
+    const trials = trialDurations.data || [];
+    if (trials.length > 0) {
+      const totalDays = trials.reduce(
+        (sum: number, t: { started_at: string; expires_at: string }) => {
+          const start = new Date(t.started_at).getTime();
+          const end = new Date(t.expires_at).getTime();
+          return sum + (end - start) / (1000 * 60 * 60 * 24);
+        },
+        0,
+      );
+      avgTrialDurationDays = Math.round(totalDays / trials.length);
+    }
+
     return {
       activeTrials: active,
       expiredTrials: expired,
       convertedTrials: converted,
       cancelledTrials: cancelled,
       conversionRate: Math.round(conversionRate * 10) / 10,
-      avgTrialDurationDays: 14,
+      avgTrialDurationDays,
     };
   }
 
@@ -316,20 +334,25 @@ export class AiInsightsService {
 
     const { data: topEvents } = await client
       .from('analytics_events')
-      .select('event_name')
+      .select('event_name, user_id')
       .gte('created_at', since);
 
     const eventCounts: Record<
       string,
       { count: number; users: Set<string> }
     > = {};
-    (topEvents || []).forEach((e: { event_name: string }) => {
-      const name = e.event_name;
-      if (!eventCounts[name]) {
-        eventCounts[name] = { count: 0, users: new Set() };
-      }
-      eventCounts[name].count++;
-    });
+    (topEvents || []).forEach(
+      (e: { event_name: string; user_id?: string }) => {
+        const name = e.event_name;
+        if (!eventCounts[name]) {
+          eventCounts[name] = { count: 0, users: new Set() };
+        }
+        eventCounts[name].count++;
+        if (e.user_id) {
+          eventCounts[name].users.add(e.user_id);
+        }
+      },
+    );
 
     const topEventsByCount = Object.entries(eventCounts)
       .map(([eventName, { count, users }]) => ({
