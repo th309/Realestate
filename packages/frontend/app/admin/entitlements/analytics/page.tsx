@@ -7,7 +7,6 @@ import {
   TrendingDown,
   MousePointerClick,
   Eye,
-  Users,
   DollarSign,
   Calendar,
   Download,
@@ -17,6 +16,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { fetchAPIRaw } from '@/lib/data';
+import { GoalProgressWidget } from './components/GoalProgressWidget';
+import { AiInsightsPanel } from './components/AiInsightsPanel';
 
 // Types
 interface MetricCardData {
@@ -330,6 +331,11 @@ export default function AnalyticsDashboardPage() {
         </div>
       </div>
 
+      {/* Growth Goal Progress */}
+      <div className="mb-8">
+        <GoalProgressWidget />
+      </div>
+
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {metrics.length > 0 ? (
@@ -476,36 +482,8 @@ export default function AnalyticsDashboardPage() {
         </div>
       </div>
 
-      {/* Insights Section */}
-      <div className="mt-8 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-6 border border-primary/20">
-        <h3 className="text-lg font-medium text-on-surface mb-4">
-          AI Insights
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-surface rounded-lg">
-            <TrendingUp className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-on-surface font-medium">
-                rental_yield has the highest CTR at 12%
-              </p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                Consider adding a teaser preview to increase conversions
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 p-3 bg-surface rounded-lg">
-            <Users className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-on-surface font-medium">
-                42% of free users hit multiple paywalls
-              </p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                These high-intent users may convert with a targeted offer
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* AI Marketing Insights */}
+      <AiInsightsPanel days={dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30} />
     </div>
   );
 }
