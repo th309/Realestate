@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useEntitlements, ResourceType, UserTier } from '@/lib/entitlements';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface PaywallCardProps {
   type: ResourceType;
@@ -29,6 +30,7 @@ export function PaywallCard({
 }: PaywallCardProps) {
   const { getTierRequired, trackUpgradeClick } = useEntitlements();
   const tierRequired = getTierRequired(type, id) || 'pro';
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(true); // default true to avoid flash
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export function PaywallCard({
 
       <Link
         data-testid="paywall-cta"
-        href="/pricing"
+        href={`/pricing?from=${encodeURIComponent(pathname)}`}
         onClick={handleUpgradeClick}
         className="
           inline-flex items-center gap-2 px-6 py-2.5

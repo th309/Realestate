@@ -14,7 +14,11 @@ export class BillingService {
     private readonly stripe: StripeService,
     private readonly config: ConfigService,
   ) {
-    this.frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const url = this.config.get<string>('FRONTEND_URL');
+    if (!url) {
+      throw new Error('FRONTEND_URL environment variable is required');
+    }
+    this.frontendUrl = url;
   }
 
   async startCheckout(userId: string, tier: string, interval: 'month' | 'year', returnContext?: string): Promise<string> {

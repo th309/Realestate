@@ -42,10 +42,10 @@ function PricingContent() {
       autoCheckoutTriggered.current = true;
       sessionStorage.removeItem('checkoutIntent');
       try {
-        const { tier: checkoutTier, interval } = JSON.parse(stored);
+        const { tier: checkoutTier, interval, returnContext: storedReturn } = JSON.parse(stored);
         setBillingInterval(interval);
         setCheckoutLoading(checkoutTier);
-        startCheckout(checkoutTier, interval)
+        startCheckout(checkoutTier, interval, storedReturn || '/map')
           .then(url => { window.location.href = url; })
           .catch(err => {
             console.error('Auto-checkout failed:', err);
@@ -85,20 +85,23 @@ function PricingContent() {
   // Determine effective tier (considering trial)
   const effectiveTier = trial?.active ? trial.tier : tier;
 
+  const returnContext = searchParams.get('from') || '/map';
+
   const handleUpgrade = async (planSlug: string) => {
     // If not authenticated, save checkout intent and redirect to sign-in
     if (!user) {
       sessionStorage.setItem('checkoutIntent', JSON.stringify({
         tier: planSlug,
         interval: billingInterval,
+        returnContext,
       }));
-      router.push(`/auth/sign-in?redirect=${encodeURIComponent('/pricing')}`);
+      router.push(`/auth/sign-in?redirect=${encodeURIComponent(`/pricing?from=${encodeURIComponent(returnContext)}`)}`);
       return;
     }
 
     setCheckoutLoading(planSlug);
     try {
-      const url = await startCheckout(planSlug, billingInterval);
+      const url = await startCheckout(planSlug, billingInterval, returnContext);
       window.location.href = url;
     } catch (err) {
       console.error('Checkout failed:', err);
