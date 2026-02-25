@@ -71,7 +71,7 @@ const FEATURES = [
   {
     icon: <Icons.Score />,
     title: 'Market & Investment Scores',
-    description: 'HomeReady Score helps homebuyers evaluate livability. InvestorEdge Score helps investors analyze cap rates, cash flow, and ROI potential—all in one number.'
+    description: 'HomeReady Score helps homebuyers evaluate livability. InvestorEdge Score helps investors analyze cap rates, cash flow, and ROI potential, all in one number.'
   },
   {
     icon: <Icons.Map />,
@@ -86,7 +86,7 @@ const FEATURES = [
   {
     icon: <Icons.Data />,
     title: 'Comprehensive Real Estate Data',
-    description: 'Access Census demographics, employment data, Zillow home values, rental estimates, and economic indicators—all normalized across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.'
+    description: 'Access Census demographics, employment data, Zillow home values, rental estimates, and economic indicators. All normalized across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.'
   },
   {
     icon: <Icons.Trend />,
@@ -110,7 +110,7 @@ export function FeaturesSection() {
           Tools for homebuyers, renters, investors & agents
         </h2>
         <p className="text-on-surface-variant">
-          From market scores for first-time buyers to ROI analysis for seasoned investors—PropertyIQ delivers institutional-grade real estate intelligence.
+          From market scores for first-time buyers to ROI analysis for seasoned investors, PropertyIQ delivers institutional-grade real estate intelligence.
         </p>
       </header>
 

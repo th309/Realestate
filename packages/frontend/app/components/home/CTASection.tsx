@@ -27,7 +27,7 @@ export function CTASection() {
         </h2>
         <p className="text-lg text-on-surface-variant mb-10 leading-relaxed">
           Join homebuyers, investors, and agents who use PropertyIQ to make
-          smarter real estate decisions. Free to start—no credit card required.
+          smarter real estate decisions. Free to start, no credit card required.
         </p>
         <a
           href="/map"

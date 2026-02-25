@@ -132,8 +132,8 @@ export function ValuePropsSection() {
         {/* 1. We do the hard part */}
         <ValueProp
           eyebrow="Market Rankings"
-          heading="We do the hard part—finding markets that beat the average"
-          body="Most platforms give you data. We give you answers. PropertyIQ ranks every metro, county, and ZIP code by investment potential and homebuyer readiness, so you see exactly which markets are outperforming—and which to avoid."
+          heading="We do the hard part: finding markets that beat the average"
+          body="Most platforms give you data. We give you answers. PropertyIQ ranks every metro, county, and ZIP code by investment potential and homebuyer readiness, so you see exactly which markets are outperforming and which to avoid."
           stat={{ value: '142%', label: 'more equity returned by our top-scored markets vs. bottom' }}
           image={{
             src: '/images/home/top-ranked-markets-v2.png',
@@ -151,7 +151,7 @@ export function ValuePropsSection() {
           reverse
           eyebrow="AI Reports"
           heading="Personalized analysis written for your specific market"
-          body="Every report is generated fresh by AI for the exact geography you're evaluating. Score breakdowns, affordability analysis, market timing signals, growth potential, and a clear bottom-line verdict—whether you're buying a home or evaluating an investment."
+          body="Every report is generated fresh by AI for the exact geography you're evaluating. Score breakdowns, affordability analysis, market timing signals, growth potential, and a clear bottom-line verdict, whether you're buying a home or evaluating an investment."
           image={{
             src: '/images/home/ai-report-narrative-v2.png',
             alt: 'PropertyIQ AI-generated market report for Las Vegas NV showing HomeReady score of 25, score breakdown with Affordability, Growth Potential, Stability, and Market Timing components, and detailed AI narrative analysis explaining market transition dynamics and buyer opportunities',
@@ -167,7 +167,7 @@ export function ValuePropsSection() {
         <ValueProp
           eyebrow="Proven Scores"
           heading="Scores that predict real market performance"
-          body="HomeReady, InvestorEdge, and MarketHealth scores are built from 40+ metrics using machine learning—not opinions. Validated across 1.1 million observations and 5 years of data. Top-scored markets don't just correlate with better returns. They deliver them."
+          body="HomeReady, InvestorEdge, and MarketHealth scores are built from 40+ metrics using machine learning, not opinions. Validated across 1.1 million observations and 5 years of data. Top-scored markets don't just correlate with better returns. They deliver them."
           stat={{ value: '$27,100', label: 'more equity on a typical home over 3 years in top-scored markets' }}
           image={{
             src: '/images/home/market-scores-detail-v2.png',
