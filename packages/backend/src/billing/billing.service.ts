@@ -22,30 +22,34 @@ export class BillingService {
   }
 
   async startCheckout(userId: string, tier: string, interval: 'month' | 'year', returnContext?: string): Promise<string> {
-    // Get user email
     const client = this.supabase.getClient();
-    const { data: profile } = await client
+
+    // Guard: block duplicate subscriptions for the same tier
+    const { data: currentProfile } = await client
       .from('user_profiles')
-      .select('email')
+      .select('email, stripe_customer_id, subscription_tier, subscription_status')
       .eq('id', userId)
       .single();
 
-    if (!profile?.email) {
+    if (!currentProfile?.email) {
       throw new BadRequestException('User profile not found');
+    }
+
+    if (
+      currentProfile.subscription_tier === tier &&
+      (currentProfile.subscription_status === 'active' || currentProfile.subscription_status === 'trialing')
+    ) {
+      throw new BadRequestException(`You already have an active ${tier} subscription`);
     }
 
     // Get or create Stripe customer
     let stripeCustomerId: string;
-    const { data: existingProfile } = await client
-      .from('user_profiles')
-      .select('stripe_customer_id')
-      .eq('id', userId)
-      .single();
+    const existingProfile = currentProfile;
 
     if (existingProfile?.stripe_customer_id) {
       stripeCustomerId = existingProfile.stripe_customer_id;
     } else {
-      stripeCustomerId = await this.stripe.getOrCreateCustomer(userId, profile.email);
+      stripeCustomerId = await this.stripe.getOrCreateCustomer(userId, currentProfile.email);
       await client
         .from('user_profiles')
         .update({ stripe_customer_id: stripeCustomerId })

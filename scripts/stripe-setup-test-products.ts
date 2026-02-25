@@ -32,12 +32,12 @@ interface TierConfig {
 }
 
 const TIERS: TierConfig[] = [
-  { slug: 'pro', name: 'PropertyIQ Pro', monthlyPrice: 2900, yearlyPrice: 29000 },
+  { slug: 'pro', name: 'PropertyIQ Pro', monthlyPrice: 3900, yearlyPrice: 39900 },
   {
     slug: 'enterprise',
     name: 'PropertyIQ Enterprise',
-    monthlyPrice: 9900,
-    yearlyPrice: 99000,
+    monthlyPrice: 14900,
+    yearlyPrice: 99900,
   },
 ];
 
