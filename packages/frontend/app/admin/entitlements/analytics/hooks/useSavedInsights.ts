@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Saved Insights CRUD Hook
@@ -7,16 +7,14 @@
  * list, load, save, delete, pin/unpin.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
-import type {
-  ParsedRecommendation,
-} from '../utils/parseRecommendations';
+import { useState, useCallback, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import type { ParsedRecommendation } from "../utils/parseRecommendations";
 
 export interface SavedInsightSummary {
   id: string;
   title: string;
-  provider: 'deepseek' | 'claude';
+  provider: "deepseek" | "claude";
   days_analyzed: number;
   is_pinned: boolean;
   recommendation_count: number;
@@ -31,7 +29,7 @@ export interface SavedInsight {
   title: string;
   markdown_content: string;
   recommendations: ParsedRecommendation[];
-  provider: 'deepseek' | 'claude';
+  provider: "deepseek" | "claude";
   days_analyzed: number;
   chat_history: Array<{ role: string; content: string }>;
   is_pinned: boolean;
@@ -43,12 +41,12 @@ interface CreateInsightPayload {
   title: string;
   markdown_content: string;
   recommendations: ParsedRecommendation[];
-  provider: 'deepseek' | 'claude';
+  provider: "deepseek" | "claude";
   days_analyzed: number;
   chat_history?: Array<{ role: string; content: string }>;
 }
 
-const BASE = '/api/admin/analytics/insights';
+const BASE = "/api/admin/analytics/insights";
 
 export function useSavedInsights() {
   const [insights, setInsights] = useState<SavedInsightSummary[]>([]);
@@ -64,7 +62,7 @@ export function useSavedInsights() {
       const data = await res.json();
       setInsights(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load insights');
+      setError(err instanceof Error ? err.message : "Failed to load insights");
     } finally {
       setLoading(false);
     }
@@ -75,23 +73,19 @@ export function useSavedInsights() {
   }, [fetchList]);
 
   const saveInsight = useCallback(
-    async (payload: CreateInsightPayload): Promise<SavedInsight | null> => {
-      try {
-        const res = await fetchAPIRaw(BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const saved = await res.json();
-        await fetchList();
-        return saved;
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to save insight',
-        );
-        return null;
+    async (payload: CreateInsightPayload): Promise<SavedInsight> => {
+      const res = await fetchAPIRaw(BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(body || `Save failed (HTTP ${res.status})`);
       }
+      const saved = await res.json();
+      await fetchList();
+      return saved;
     },
     [fetchList],
   );
@@ -103,9 +97,7 @@ export function useSavedInsights() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load insight',
-        );
+        setError(err instanceof Error ? err.message : "Failed to load insight");
         return null;
       }
     },
@@ -119,8 +111,8 @@ export function useSavedInsights() {
     ): Promise<boolean> => {
       try {
         const res = await fetchAPIRaw(`${BASE}/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updates),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -136,7 +128,7 @@ export function useSavedInsights() {
   const deleteInsight = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        const res = await fetchAPIRaw(`${BASE}/${id}`, { method: 'DELETE' });
+        const res = await fetchAPIRaw(`${BASE}/${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await fetchList();
         return true;

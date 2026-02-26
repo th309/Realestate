@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { ParsedRecommendation } from '../utils/parseRecommendations';
-import { RecommendationItem } from './RecommendationItem';
+import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import type { ParsedRecommendation } from "../utils/parseRecommendations";
+import { RecommendationItem } from "./RecommendationItem";
 
 interface InsightCategoryCardProps {
   icon: string;
@@ -12,12 +12,10 @@ interface InsightCategoryCardProps {
   defaultOpen?: boolean;
   /** Structured recommendations for this category (if available). */
   recommendations?: ParsedRecommendation[];
-  /** Called when user clicks "Implement" on a recommendation. */
-  onImplement?: (rec: ParsedRecommendation) => void;
+  /** Called when user clicks "Copy Prompt" on a recommendation. */
+  onCopyPrompt?: (rec: ParsedRecommendation) => void;
   /** Called when user clicks "Dismiss" on a recommendation. */
   onDismiss?: (rec: ParsedRecommendation) => void;
-  /** ID of the recommendation currently being planned. */
-  implementingRecId?: string | null;
 }
 
 export function InsightCategoryCard({
@@ -26,9 +24,8 @@ export function InsightCategoryCard({
   content,
   defaultOpen = true,
   recommendations,
-  onImplement,
+  onCopyPrompt,
   onDismiss,
-  implementingRecId,
 }: InsightCategoryCardProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -49,7 +46,7 @@ export function InsightCategoryCard({
         </h4>
         {hasStructuredRecs && (
           <span className="text-xs text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">
-            {categoryRecs.filter((r) => r.status === 'pending').length} pending
+            {categoryRecs.filter((r) => r.status === "pending").length} pending
           </span>
         )}
         {isOpen ? (
@@ -66,9 +63,10 @@ export function InsightCategoryCard({
                 <RecommendationItem
                   key={rec.id}
                   recommendation={rec}
-                  onImplement={onImplement ? () => onImplement(rec) : undefined}
+                  onCopyPrompt={
+                    onCopyPrompt ? () => onCopyPrompt(rec) : undefined
+                  }
                   onDismiss={onDismiss ? () => onDismiss(rec) : undefined}
-                  implementLoading={implementingRecId === rec.id}
                 />
               ))}
             </div>
@@ -98,12 +96,9 @@ function parseInsightMarkdown(md: string): string {
       /\*\*\[([^\]]+)\]\s*([^*]+)\*\*/g,
       '<strong class="inline-flex items-center gap-1"><span class="px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary font-semibold">$1</span> $2</strong>',
     )
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(
-      /^\d+\.\s+/gm,
-      (match) => `<li>${match.replace(/^\d+\.\s+/, '')}`,
-    )
-    .replace(/^- /gm, '<li>')
-    .replace(/\n{2,}/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/^\d+\.\s+/gm, (match) => `<li>${match.replace(/^\d+\.\s+/, "")}`)
+    .replace(/^- /gm, "<li>")
+    .replace(/\n{2,}/g, "<br/><br/>")
+    .replace(/\n/g, "<br/>");
 }

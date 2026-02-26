@@ -1,37 +1,37 @@
-'use client';
+"use client";
 
 /**
  * Recommendation Item
  *
  * Renders a single parsed recommendation with priority badge,
- * action type icon, expandable content, and implement/dismiss buttons.
+ * action type icon, expandable content, copy-to-clipboard and dismiss buttons.
  */
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Wrench,
   Code2,
   HandHelping,
-  Play,
+  Copy,
+  Check,
   X,
   CheckCircle2,
   XCircle,
   ChevronDown,
   ChevronRight,
-} from 'lucide-react';
-import type { ParsedRecommendation } from '../utils/parseRecommendations';
+} from "lucide-react";
+import type { ParsedRecommendation } from "../utils/parseRecommendations";
 
 interface RecommendationItemProps {
   recommendation: ParsedRecommendation;
-  onImplement?: () => void;
+  onCopyPrompt?: () => void;
   onDismiss?: () => void;
-  implementLoading?: boolean;
 }
 
 const PRIORITY_STYLES = {
-  High: 'bg-red-500/10 text-red-700 dark:text-red-400',
-  Medium: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  Low: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  High: "bg-red-500/10 text-red-700 dark:text-red-400",
+  Medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  Low: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
 } as const;
 
 const ACTION_ICONS = {
@@ -41,18 +41,24 @@ const ACTION_ICONS = {
 } as const;
 
 const ACTION_LABELS = {
-  db_change: 'DB Change',
-  code_change: 'Code Change',
-  manual: 'Manual',
+  db_change: "DB Change",
+  code_change: "Code Change",
+  manual: "Manual",
 } as const;
 
 export function RecommendationItem({
   recommendation: rec,
-  onImplement,
+  onCopyPrompt,
   onDismiss,
-  implementLoading,
 }: RecommendationItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    onCopyPrompt?.();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   const ActionIcon = ACTION_ICONS[rec.action_type];
 
   return (
@@ -96,32 +102,36 @@ export function RecommendationItem({
 
           {/* Status / Actions */}
           <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
-            {rec.status === 'implemented' && (
+            {rec.status === "implemented" && (
               <span className="flex items-center gap-1 text-xs font-medium text-green-600">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Implemented
               </span>
             )}
-            {rec.status === 'dismissed' && (
+            {rec.status === "dismissed" && (
               <span className="flex items-center gap-1 text-xs text-on-surface-variant">
                 <XCircle className="w-3.5 h-3.5" />
                 Dismissed
               </span>
             )}
-            {rec.status === 'pending' && (
+            {rec.status === "pending" && (
               <>
-                {onImplement && (
+                {onCopyPrompt && (
                   <button
-                    onClick={onImplement}
-                    disabled={implementLoading}
-                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 disabled:opacity-50 transition-colors"
+                    onClick={handleCopy}
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
                   >
-                    <Play className="w-3 h-3" />
-                    {implementLoading
-                      ? 'Planning...'
-                      : rec.action_type === 'manual'
-                        ? 'Get Steps'
-                        : 'Implement'}
+                    {copied ? (
+                      <>
+                        <Check className="w-3 h-3" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        Copy Prompt
+                      </>
+                    )}
                   </button>
                 )}
                 {onDismiss && (
@@ -145,12 +155,15 @@ export function RecommendationItem({
 /** Convert recommendation markdown content to HTML. */
 function formatRecContent(md: string): string {
   return md
-    .replace(/\*\*\[([^\]]+)\]\s*([^*]*)\*\*/g, '<strong>$2</strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="text-xs bg-surface-container px-1 py-0.5 rounded">$1</code>')
-    .replace(/^#{1,4}\s+(.+)$/gm, '<strong>$1</strong>')
-    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
-    .replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>')
-    .replace(/\n{2,}/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+    .replace(/\*\*\[([^\]]+)\]\s*([^*]*)\*\*/g, "<strong>$2</strong>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /`([^`]+)`/g,
+      '<code class="text-xs bg-surface-container px-1 py-0.5 rounded">$1</code>',
+    )
+    .replace(/^#{1,4}\s+(.+)$/gm, "<strong>$1</strong>")
+    .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
+    .replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>")
+    .replace(/\n{2,}/g, "<br/><br/>")
+    .replace(/\n/g, "<br/>");
 }
