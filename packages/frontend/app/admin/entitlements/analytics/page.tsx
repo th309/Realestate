@@ -102,38 +102,47 @@ function MetricCard({ data }: { data: MetricCardData }) {
 }
 
 function SimpleBarChart({ data }: { data: TimeSeriesPoint[] }) {
-  const maxViews = Math.max(...data.map((d) => d.views));
+  const maxViews = Math.max(...data.map((d) => d.views), 1);
 
   return (
     <div className="h-48 flex items-end gap-2">
-      {data.map((point, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-          <div
-            className="w-full bg-primary/20 rounded-t relative group cursor-pointer"
-            style={{ height: `${(point.views / maxViews) * 100}%` }}
-          >
+      {data.map((point, i) => {
+        const barHeight = maxViews > 0 ? (point.views / maxViews) * 100 : 0;
+        const clickHeight =
+          point.views > 0 ? (point.clicks / point.views) * 100 : 0;
+
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
             <div
-              className="absolute bottom-0 left-0 right-0 bg-primary rounded-t transition-all"
-              style={{ height: `${(point.clicks / point.views) * 100}%` }}
-            />
-            {/* Tooltip */}
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-surface-container-high border border-outline-variant rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg">
-              <div className="text-xs text-on-surface-variant">
-                Views: {point.views.toLocaleString()}
-              </div>
-              <div className="text-xs text-on-surface-variant">
-                Clicks: {point.clicks.toLocaleString()}
+              className="w-full bg-primary/20 rounded-t relative group cursor-pointer"
+              style={{
+                height: `${barHeight}%`,
+                minHeight: point.views > 0 ? "4px" : "0",
+              }}
+            >
+              <div
+                className="absolute bottom-0 left-0 right-0 bg-primary rounded-t transition-all"
+                style={{ height: `${clickHeight}%` }}
+              />
+              {/* Tooltip */}
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-surface-container-high border border-outline-variant rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                <div className="text-xs text-on-surface-variant">
+                  Views: {point.views.toLocaleString()}
+                </div>
+                <div className="text-xs text-on-surface-variant">
+                  Clicks: {point.clicks.toLocaleString()}
+                </div>
               </div>
             </div>
+            <span className="text-xs text-on-surface-variant">
+              {new Date(point.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
           </div>
-          <span className="text-xs text-on-surface-variant">
-            {new Date(point.date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -215,11 +224,30 @@ export default function AnalyticsDashboardPage() {
       if (funnelRes.ok) {
         const funnelResponse = await funnelRes.json();
         const funnelData = funnelResponse.data || funnelResponse;
-        // Ensure funnel is an array
+        // Backend returns flat object { views, clicks, conversions, ... }
+        // Convert to FunnelStep[] for the ConversionFunnel component
         if (Array.isArray(funnelData)) {
           setFunnel(funnelData);
         } else if (funnelData.stages) {
           setFunnel(funnelData.stages);
+        } else if (typeof funnelData.views === "number") {
+          const views = funnelData.views || 0;
+          const clicks = funnelData.clicks || 0;
+          const conversions = funnelData.conversions || 0;
+          setFunnel([
+            { stage: "Paywall Views", count: views, percentage: 100 },
+            {
+              stage: "Upgrade Clicks",
+              count: clicks,
+              percentage: views > 0 ? Math.round((clicks / views) * 100) : 0,
+            },
+            {
+              stage: "Conversions",
+              count: conversions,
+              percentage:
+                views > 0 ? Math.round((conversions / views) * 100) : 0,
+            },
+          ]);
         }
       }
     } catch (err) {
