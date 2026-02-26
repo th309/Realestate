@@ -1,36 +1,47 @@
-'use client';
+"use client";
 
-import { Suspense, useState, FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import {
-  Building2,
-  Mail,
-  Lock,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
+import { Suspense, useState, FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Building2, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
-type AuthMode = 'password' | 'magic-link';
+type AuthMode = "password" | "magic-link";
+
+/** Map raw Supabase/OAuth error messages to user-friendly text. */
+function friendlyAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("provider") && lower.includes("not enabled")) {
+    return "Google sign-in is not currently available. Please use email and password instead.";
+  }
+  if (lower.includes("provider") && lower.includes("disabled")) {
+    return "Google sign-in is not currently available. Please use email and password instead.";
+  }
+  if (lower.includes("popup") || lower.includes("cancelled")) {
+    return "Sign-in was cancelled. Please try again.";
+  }
+  return message;
+}
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant p-8 animate-pulse">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-surface-container-highest rounded-xl mb-4" />
-            <div className="h-6 w-48 bg-surface-container-highest rounded" />
-          </div>
-          <div className="space-y-4">
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
-            <div className="h-10 bg-surface-container-highest rounded-lg" />
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-surface flex items-center justify-center">
+          <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant p-8 animate-pulse">
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-12 h-12 bg-surface-container-highest rounded-xl mb-4" />
+              <div className="h-6 w-48 bg-surface-container-highest rounded" />
+            </div>
+            <div className="space-y-4">
+              <div className="h-10 bg-surface-container-highest rounded-lg" />
+              <div className="h-10 bg-surface-container-highest rounded-lg" />
+              <div className="h-10 bg-surface-container-highest rounded-lg" />
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SignInPageContent />
     </Suspense>
   );
@@ -39,20 +50,20 @@ export default function SignInPage() {
 function SignInPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/map';
-  const callbackError = searchParams.get('error');
+  const redirectTo = searchParams.get("redirect") ?? "/map";
+  const callbackError = searchParams.get("error");
 
   const { signInWithPassword, signInWithMagicLink, signInWithOAuth } =
     useAuth();
 
-  const [mode, setMode] = useState<AuthMode>('password');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<AuthMode>("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
-    callbackError === 'auth_callback_failed'
-      ? 'Authentication failed. Please try again.'
-      : null
+    callbackError === "auth_callback_failed"
+      ? "Authentication failed. Please try again."
+      : null,
   );
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
@@ -91,14 +102,14 @@ function SignInPageContent() {
     setLoading(false);
   };
 
-  const handleOAuth = async (provider: 'google') => {
+  const handleOAuth = async (provider: "google") => {
     setLoading(true);
     setError(null);
 
     const { error: authError } = await signInWithOAuth(provider, redirectTo);
 
     if (authError) {
-      setError(authError.message);
+      setError(friendlyAuthError(authError.message));
       setLoading(false);
     }
     // OAuth redirects externally, so loading stays true unless there's an error
@@ -135,14 +146,14 @@ function SignInPageContent() {
               Check your email
             </h2>
             <p className="text-sm text-on-surface-variant mb-6">
-              We sent a magic link to{' '}
+              We sent a magic link to{" "}
               <span className="font-medium text-on-surface">{email}</span>
             </p>
             <button
               type="button"
               onClick={() => {
                 setMagicLinkSent(false);
-                setMode('password');
+                setMode("password");
               }}
               className="text-sm text-primary hover:text-primary/80 font-medium"
             >
@@ -154,7 +165,7 @@ function SignInPageContent() {
             {/* Sign-In Form */}
             <form
               onSubmit={
-                mode === 'password'
+                mode === "password"
                   ? handlePasswordSignIn
                   : handleMagicLinkSignIn
               }
@@ -185,7 +196,7 @@ function SignInPageContent() {
               </div>
 
               {/* Password (only in password mode) */}
-              {mode === 'password' && (
+              {mode === "password" && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label
@@ -225,7 +236,7 @@ function SignInPageContent() {
                 className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {mode === 'password' ? 'Sign In' : 'Send Magic Link'}
+                {mode === "password" ? "Sign In" : "Send Magic Link"}
               </button>
             </form>
 
@@ -234,15 +245,15 @@ function SignInPageContent() {
               <button
                 type="button"
                 onClick={() => {
-                  setMode(mode === 'password' ? 'magic-link' : 'password');
+                  setMode(mode === "password" ? "magic-link" : "password");
                   setError(null);
                 }}
                 disabled={loading}
                 className="text-sm text-primary hover:text-primary/80 font-medium disabled:opacity-50"
               >
-                {mode === 'password'
-                  ? 'Sign in with magic link'
-                  : 'Use password instead'}
+                {mode === "password"
+                  ? "Sign in with magic link"
+                  : "Use password instead"}
               </button>
             </div>
 
@@ -259,7 +270,7 @@ function SignInPageContent() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => handleOAuth('google')}
+                onClick={() => handleOAuth("google")}
                 disabled={loading}
                 className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
@@ -287,9 +298,13 @@ function SignInPageContent() {
 
             {/* Sign Up Link */}
             <p className="mt-8 text-center text-sm text-on-surface-variant">
-              Don&apos;t have an account?{' '}
+              Don&apos;t have an account?{" "}
               <Link
-                href={redirectTo !== '/map' ? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-up'}
+                href={
+                  redirectTo !== "/map"
+                    ? `/auth/sign-up?redirect=${encodeURIComponent(redirectTo)}`
+                    : "/auth/sign-up"
+                }
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign up

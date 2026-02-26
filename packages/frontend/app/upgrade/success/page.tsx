@@ -1,22 +1,50 @@
-'use client';
+"use client";
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import { useEntitlements } from '@/lib/entitlements';
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth";
+import { useEntitlements } from "@/lib/entitlements";
+
+const TIER_LABELS: Record<string, string> = {
+  enterprise: "Enterprise",
+  pro: "Pro",
+  free: "Free",
+};
 
 function SuccessContent() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const { tier, refresh, loading } = useEntitlements();
   const searchParams = useSearchParams();
-  const returnContext = searchParams.get('returnContext') || '/map';
+  const rawReturn = searchParams.get("returnContext") || "/map";
+  const returnContext =
+    rawReturn.startsWith("/") && !rawReturn.startsWith("//")
+      ? rawReturn
+      : "/map";
   const [refreshed, setRefreshed] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth/sign-in");
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     refresh().then(() => setRefreshed(true));
   }, [refresh]);
 
-  const tierLabel = tier === 'enterprise' ? 'Enterprise' : 'Pro';
+  // Defense-in-depth: show loading while auth resolves, bail out if unauthenticated
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+        <Loader2 className="w-8 h-8 animate-spin text-on-surface-variant" />
+      </div>
+    );
+  }
+
+  const tierLabel = TIER_LABELS[tier] ?? "Pro";
 
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center p-6">
@@ -29,7 +57,8 @@ function SuccessContent() {
           Welcome to {tierLabel}!
         </h1>
         <p className="text-on-surface-variant mb-8">
-          Your subscription is active. You now have full access to all {tierLabel} features.
+          Your subscription is active. You now have full access to all{" "}
+          {tierLabel} features.
         </p>
 
         {loading || !refreshed ? (
@@ -52,7 +81,13 @@ function SuccessContent() {
 
 export default function UpgradeSuccessPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+          <Loader2 className="w-8 h-8 animate-spin text-on-surface-variant" />
+        </div>
+      }
+    >
       <SuccessContent />
     </Suspense>
   );

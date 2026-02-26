@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
 /**
  * Hook for managing market watchlist
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { getAuthHeaders } from '@/lib/data/fetchers/auth-headers';
-import type { WatchlistItem } from './types';
+import { useState, useCallback, useEffect } from "react";
+import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
+import type { WatchlistItem } from "./types";
 
 interface UseWatchlistOptions {
   userId: string;
@@ -23,11 +23,14 @@ interface UseWatchlistReturn {
     geographyType: string,
     geographyId: string,
     geographyName?: string,
-    scoreAtAdd?: number
+    scoreAtAdd?: number,
   ) => Promise<WatchlistItem | null>;
   removeFromWatchlist: (id: string) => Promise<void>;
   isInWatchlist: (geographyType: string, geographyId: string) => boolean;
-  updateItem: (id: string, updates: { tags?: string[]; folder?: string }) => Promise<void>;
+  updateItem: (
+    id: string,
+    updates: { tags?: string[]; folder?: string },
+  ) => Promise<void>;
   getByFolder: (folder: string | null) => WatchlistItem[];
 }
 
@@ -49,10 +52,10 @@ export function useWatchlist({
     try {
       const authHeaders = await getAuthHeaders();
       const [itemsRes, foldersRes] = await Promise.all([
-        fetch(`/api/analytics/persistence/watchlist?userId=${userId}`, {
+        fetch(`/api/analytics/persistence/watchlist`, {
           headers: authHeaders,
         }),
-        fetch(`/api/analytics/persistence/watchlist/folders?userId=${userId}`, {
+        fetch(`/api/analytics/persistence/watchlist/folders`, {
           headers: authHeaders,
         }),
       ]);
@@ -67,7 +70,7 @@ export function useWatchlist({
         setFolders(foldersData.data || []);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load watchlist');
+      setError(err instanceof Error ? err.message : "Failed to load watchlist");
     } finally {
       setIsLoading(false);
     }
@@ -84,15 +87,14 @@ export function useWatchlist({
       geographyType: string,
       geographyId: string,
       geographyName?: string,
-      scoreAtAdd?: number
+      scoreAtAdd?: number,
     ): Promise<WatchlistItem | null> => {
       try {
         const authHeaders = await getAuthHeaders();
-        const response = await fetch('/api/analytics/persistence/watchlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
+        const response = await fetch("/api/analytics/persistence/watchlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({
-            userId,
             geography_type: geographyType,
             geography_id: geographyId,
             geography_name: geographyName,
@@ -110,62 +112,68 @@ export function useWatchlist({
           return null;
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to add to watchlist');
+        setError(
+          err instanceof Error ? err.message : "Failed to add to watchlist",
+        );
         return null;
       }
     },
-    [userId]
+    [],
   );
 
-  const removeFromWatchlist = useCallback(
-    async (id: string) => {
-      try {
-        const authHeaders = await getAuthHeaders();
-        const response = await fetch(
-          `/api/analytics/persistence/watchlist/${id}?userId=${userId}`,
-          { method: 'DELETE', headers: authHeaders }
-        );
+  const removeFromWatchlist = useCallback(async (id: string) => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(
+        `/api/analytics/persistence/watchlist/${id}`,
+        { method: "DELETE", headers: authHeaders },
+      );
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (data.success) {
-          setItems((prev) => prev.filter((item) => item.id !== id));
-        } else {
-          setError(data.error);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to remove from watchlist');
+      if (data.success) {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        setError(data.error);
       }
-    },
-    [userId]
-  );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to remove from watchlist",
+      );
+    }
+  }, []);
 
   const isInWatchlist = useCallback(
     (geographyType: string, geographyId: string): boolean => {
       return items.some(
         (item) =>
           item.geography_type === geographyType &&
-          item.geography_id === geographyId
+          item.geography_id === geographyId,
       );
     },
-    [items]
+    [items],
   );
 
   const updateItem = useCallback(
     async (id: string, updates: { tags?: string[]; folder?: string }) => {
       try {
         const authHeaders = await getAuthHeaders();
-        const response = await fetch(`/api/analytics/persistence/watchlist/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ userId, ...updates }),
-        });
+        const response = await fetch(
+          `/api/analytics/persistence/watchlist/${id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify(updates),
+          },
+        );
 
         const data = await response.json();
 
         if (data.success) {
           setItems((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, ...data.data } : item))
+            prev.map((item) =>
+              item.id === id ? { ...item, ...data.data } : item,
+            ),
           );
 
           // Update folders if needed
@@ -176,10 +184,14 @@ export function useWatchlist({
           setError(data.error);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update watchlist item');
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to update watchlist item",
+        );
       }
     },
-    [userId, folders]
+    [folders],
   );
 
   const getByFolder = useCallback(
@@ -189,7 +201,7 @@ export function useWatchlist({
       }
       return items.filter((item) => item.folder === folder);
     },
-    [items]
+    [items],
   );
 
   return {

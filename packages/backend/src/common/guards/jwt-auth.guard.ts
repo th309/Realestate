@@ -2,7 +2,7 @@
  * Reusable JWT Authentication Guard
  *
  * Validates Bearer tokens via Supabase Auth and sets `request.userId`.
- * During migration, falls back to x-user-id header with a deprecation warning.
+ * A valid Bearer token is REQUIRED — there is no fallback.
  */
 
 import {
@@ -41,17 +41,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException(result.error || 'Invalid token');
     }
 
-    // 2. Fallback: x-user-id header (backward compatibility during migration)
-    const headerUserId = request.headers?.['x-user-id'];
-    if (headerUserId && typeof headerUserId === 'string' && headerUserId.length > 0) {
-      this.logger.warn(
-        `[JwtAuth] Using x-user-id header fallback for user ${headerUserId.substring(0, 8)}... — migrate to Bearer token`,
-      );
-      request.userId = headerUserId;
-      return true;
-    }
-
-    // 3. No authentication provided
+    // No valid Bearer token provided
     throw new UnauthorizedException('Authentication required');
   }
 

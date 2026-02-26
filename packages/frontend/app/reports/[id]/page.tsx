@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import { ReportViewer } from './ReportViewer';
-import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
-import { PaywallCard } from '@/components/entitlements/PaywallCard';
+import React, { Suspense } from "react";
+import { useParams } from "next/navigation";
+import { ReportViewer } from "./ReportViewer";
+import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
 
 function LoadingFallback() {
   return (
@@ -26,6 +26,7 @@ export default function ReportPage() {
       <EntitlementGate
         type="feature"
         id="reports"
+        loadingFallback={<LoadingFallback />}
         fallback={
           <div className="min-h-screen bg-surface flex items-center justify-center p-6">
             <PaywallCard

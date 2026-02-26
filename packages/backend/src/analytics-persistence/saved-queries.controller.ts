@@ -2,6 +2,7 @@
  * Saved Queries Controller
  *
  * REST endpoints for saved analytics queries.
+ * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
  */
 
 import {
@@ -12,17 +13,20 @@ import {
   Delete,
   Body,
   Param,
-  Query,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import {
   SavedQueriesService,
   CreateSavedQueryDto,
   UpdateSavedQueryDto,
 } from './saved-queries.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('analytics/saved-queries')
 export class SavedQueriesController {
   private readonly logger = new Logger(SavedQueriesController.name);
@@ -30,16 +34,12 @@ export class SavedQueriesController {
   constructor(private readonly savedQueriesService: SavedQueriesService) {}
 
   /**
-   * Get all saved queries for a user
-   * GET /api/analytics/saved-queries?userId=xxx
+   * Get all saved queries for the authenticated user
+   * GET /api/analytics/saved-queries
    */
   @Get()
-  async getAll(@Query('userId') userId: string) {
+  async getAll(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/saved-queries for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const queries = await this.savedQueriesService.getAll(userId);
@@ -59,15 +59,13 @@ export class SavedQueriesController {
 
   /**
    * Get favorites only
-   * GET /api/analytics/saved-queries/favorites?userId=xxx
+   * GET /api/analytics/saved-queries/favorites
    */
   @Get('favorites')
-  async getFavorites(@Query('userId') userId: string) {
-    this.logger.log(`GET /analytics/saved-queries/favorites for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
+  async getFavorites(@AuthUserId() userId: string) {
+    this.logger.log(
+      `GET /analytics/saved-queries/favorites for user ${userId}`,
+    );
 
     try {
       const queries = await this.savedQueriesService.getFavorites(userId);
@@ -86,15 +84,11 @@ export class SavedQueriesController {
 
   /**
    * Get a single saved query
-   * GET /api/analytics/saved-queries/:id?userId=xxx
+   * GET /api/analytics/saved-queries/:id
    */
   @Get(':id')
-  async getById(@Param('id') id: string, @Query('userId') userId: string) {
+  async getById(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/saved-queries/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const query = await this.savedQueriesService.getById(userId, id);
@@ -121,16 +115,8 @@ export class SavedQueriesController {
    * POST /api/analytics/saved-queries
    */
   @Post()
-  async create(
-    @Body() body: CreateSavedQueryDto & { userId: string },
-  ) {
+  async create(@AuthUserId() userId: string, @Body() dto: CreateSavedQueryDto) {
     this.logger.log(`POST /analytics/saved-queries`);
-
-    const { userId, ...dto } = body;
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     if (!dto.name || !dto.query_text) {
       throw new HttpException(
@@ -160,15 +146,10 @@ export class SavedQueriesController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: UpdateSavedQueryDto & { userId: string },
+    @AuthUserId() userId: string,
+    @Body() dto: UpdateSavedQueryDto,
   ) {
     this.logger.log(`PUT /analytics/saved-queries/${id}`);
-
-    const { userId, ...dto } = body;
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const query = await this.savedQueriesService.update(userId, id, dto);
@@ -186,15 +167,11 @@ export class SavedQueriesController {
 
   /**
    * Delete a saved query
-   * DELETE /api/analytics/saved-queries/:id?userId=xxx
+   * DELETE /api/analytics/saved-queries/:id
    */
   @Delete(':id')
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
+  async delete(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`DELETE /analytics/saved-queries/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.savedQueriesService.delete(userId, id);
@@ -215,19 +192,12 @@ export class SavedQueriesController {
    * POST /api/analytics/saved-queries/:id/run
    */
   @Post(':id/run')
-  async run(
-    @Param('id') id: string,
-    @Body() body: { userId: string },
-  ) {
+  async run(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`POST /analytics/saved-queries/${id}/run`);
 
-    if (!body.userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
-
     try {
-      await this.savedQueriesService.incrementRunCount(body.userId, id);
-      const query = await this.savedQueriesService.getById(body.userId, id);
+      await this.savedQueriesService.incrementRunCount(userId, id);
+      const query = await this.savedQueriesService.getById(userId, id);
       return {
         success: true,
         data: query,

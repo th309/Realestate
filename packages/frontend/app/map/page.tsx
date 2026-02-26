@@ -1,31 +1,59 @@
-'use client';
+"use client";
 
-import { Suspense, useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 // Import types and constants
-import type { GeoLevel, ForecastHorizon, RentIndexType, RenterDemandType, ViewMode, SelectedGeography, SearchResult } from './types';
-import { STATE_CENTERS, GEO_ZOOM_LEVELS } from './types';
+import type {
+  GeoLevel,
+  ForecastHorizon,
+  RentIndexType,
+  RenterDemandType,
+  ViewMode,
+  SelectedGeography,
+  SearchResult,
+} from "./types";
+import { STATE_CENTERS, GEO_ZOOM_LEVELS } from "./types";
 
 // Import components
-import { MenuIcon, TableIcon } from './components';
-import { SearchWidget, GeoLevelPills, Legend, Sidebar, DataTableModal, RightDetailPanel, MapContextMenu } from './components';
-import { Breadcrumbs } from '@/components/navigation';
+import { MenuIcon, TableIcon } from "./components";
+import {
+  SearchWidget,
+  GeoLevelPills,
+  Legend,
+  Sidebar,
+  DataTableModal,
+  RightDetailPanel,
+  MapContextMenu,
+} from "./components";
+import { Breadcrumbs } from "@/components/navigation";
 
 // Import hooks
-import { useMapData, useMapSearch, useMapLayers } from './hooks';
-import { useScoreData } from './hooks/useScoreData';
+import { useMapData, useMapSearch, useMapLayers } from "./hooks";
+import { useScoreData } from "./hooks/useScoreData";
 
 // Import config
-import { NAV_ITEMS, getMetricCategories, isMetricSupportedForGeo, getMetricConfig } from './config';
-import { useEntitlements } from '@/lib/entitlements';
-import { fetchGeographySearch } from '@/lib/data';
+import {
+  NAV_ITEMS,
+  getMetricCategories,
+  isMetricSupportedForGeo,
+  getMetricConfig,
+} from "./config";
+import { useEntitlements } from "@/lib/entitlements";
+import { fetchGeographySearch } from "@/lib/data";
 
-const VIEW_MODE_STORAGE_KEY = 'propertyiq-view-mode';
+const VIEW_MODE_STORAGE_KEY = "propertyiq-view-mode";
 
-import { MAPBOX_ACCESS_TOKEN } from './config';
+import { MAPBOX_ACCESS_TOKEN } from "./config";
 
 mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
@@ -50,20 +78,29 @@ function MapPageInner() {
   // render — BEFORE any effects run.  This makes them immune to the URL sync
   // effect's replaceState which strips unknown params (especially under React
   // Strict Mode where the double-invocation defeats the isInitialRender guard).
-  const pendingNavRef = useRef<{
-    geo: string; id: string; name: string;
-    lat?: string; lng?: string; state?: string;
-  } | null | undefined>(undefined);
+  const pendingNavRef = useRef<
+    | {
+        geo: string;
+        id: string;
+        name: string;
+        lat?: string;
+        lng?: string;
+        state?: string;
+      }
+    | null
+    | undefined
+  >(undefined);
   if (pendingNavRef.current === undefined) {
-    const geo = searchParams.get('geo');
-    const id = searchParams.get('id');
+    const geo = searchParams.get("geo");
+    const id = searchParams.get("id") || searchParams.get("region");
     if (geo && id) {
       pendingNavRef.current = {
-        geo, id,
-        name: searchParams.get('name') || id,
-        lat: searchParams.get('lat') || undefined,
-        lng: searchParams.get('lng') || undefined,
-        state: searchParams.get('state') || undefined,
+        geo,
+        id,
+        name: searchParams.get("name") || id,
+        lat: searchParams.get("lat") || undefined,
+        lng: searchParams.get("lng") || undefined,
+        state: searchParams.get("state") || undefined,
       };
     } else {
       pendingNavRef.current = null;
@@ -75,38 +112,49 @@ function MapPageInner() {
 
   // Core state — initialized from URL params so browser back-button restores previous view
   const [geoLevel, setGeoLevel] = useState<GeoLevel>(() => {
-    return (searchParams.get('level') as GeoLevel) || 'state';
+    return (searchParams.get("level") as GeoLevel) || "state";
   });
   const [selectedState, setSelectedState] = useState<string>(() => {
-    return searchParams.get('st') || '';
+    return searchParams.get("st") || "";
   });
   const [selectedMetric, setSelectedMetric] = useState(() => {
-    return searchParams.get('metric') || 'home_value';
+    return searchParams.get("metric") || "home_value";
   });
-  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>(() => {
-    return (searchParams.get('fh') as ForecastHorizon) || '12m';
-  });
+  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>(
+    () => {
+      return (searchParams.get("fh") as ForecastHorizon) || "12m";
+    },
+  );
   const [rentIndexType, setRentIndexType] = useState<RentIndexType>(() => {
-    return (searchParams.get('ri') as RentIndexType) || 'all';
+    return (searchParams.get("ri") as RentIndexType) || "all";
   });
-  const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>(() => {
-    return (searchParams.get('rd') as RenterDemandType) || 'all';
-  });
+  const [renterDemandType, setRenterDemandType] = useState<RenterDemandType>(
+    () => {
+      return (searchParams.get("rd") as RenterDemandType) || "all";
+    },
+  );
 
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['popular']);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([
+    "popular",
+  ]);
   const [sidebarWidth, setSidebarWidth] = useState(256);
-  const [viewMode, setViewMode] = useState<ViewMode>('homebuyer');
+  const [viewMode, setViewMode] = useState<ViewMode>("homebuyer");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [selectedGeography, setSelectedGeography] = useState<SelectedGeography | null>(null);
+  const [selectedGeography, setSelectedGeography] =
+    useState<SelectedGeography | null>(null);
   const [showTableView, setShowTableView] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ geography: SelectedGeography; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    geography: SelectedGeography;
+    x: number;
+    y: number;
+  } | null>(null);
   const isResizing = useRef(false);
 
   // Load view mode from localStorage on mount
   useEffect(() => {
     const savedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (savedViewMode === 'homebuyer' || savedViewMode === 'investor') {
+    if (savedViewMode === "homebuyer" || savedViewMode === "investor") {
       setViewMode(savedViewMode);
     }
   }, []);
@@ -125,72 +173,113 @@ function MapPageInner() {
       return;
     }
     const params = new URLSearchParams();
-    if (geoLevel !== 'state') params.set('level', geoLevel);
-    if (selectedMetric !== 'home_value') params.set('metric', selectedMetric);
-    if (selectedState) params.set('st', selectedState);
-    if (forecastHorizon !== '12m') params.set('fh', forecastHorizon);
-    if (rentIndexType !== 'all') params.set('ri', rentIndexType);
-    if (renterDemandType !== 'all') params.set('rd', renterDemandType);
+    if (geoLevel !== "state") params.set("level", geoLevel);
+    if (selectedMetric !== "home_value") params.set("metric", selectedMetric);
+    if (selectedState) params.set("st", selectedState);
+    if (forecastHorizon !== "12m") params.set("fh", forecastHorizon);
+    if (rentIndexType !== "all") params.set("ri", rentIndexType);
+    if (renterDemandType !== "all") params.set("rd", renterDemandType);
     const paramStr = params.toString();
     const newUrl = paramStr ? `${pathname}?${paramStr}` : pathname;
-    window.history.replaceState(null, '', newUrl);
-  }, [geoLevel, selectedMetric, selectedState, forecastHorizon, rentIndexType, renterDemandType, pathname]);
+    window.history.replaceState(null, "", newUrl);
+  }, [
+    geoLevel,
+    selectedMetric,
+    selectedState,
+    forecastHorizon,
+    rentIndexType,
+    renterDemandType,
+    pathname,
+  ]);
 
   // Compute metric categories based on view mode
-  const metricCategories = useMemo(() => getMetricCategories(viewMode), [viewMode]);
+  const metricCategories = useMemo(
+    () => getMetricCategories(viewMode),
+    [viewMode],
+  );
 
-  const [highlightedFeature, setHighlightedFeature] = useState<SearchResult | null>(null);
+  const [highlightedFeature, setHighlightedFeature] =
+    useState<SearchResult | null>(null);
 
   // Use extracted hooks
   const { mapData, dataLoading, fetchMapData } = useMapData();
   const {
-    searchQuery, searchResults, searchLoading, showSearchResults, searchRef, searchNavigatedRef,
-    handleSearch, handleSelectSearchResult, setShowSearchResults
+    searchQuery,
+    searchResults,
+    searchLoading,
+    showSearchResults,
+    searchRef,
+    searchNavigatedRef,
+    handleSearch,
+    handleSelectSearchResult,
+    setShowSearchResults,
   } = useMapSearch({
     mapRef: map,
     onGeoLevelChange: setGeoLevel,
     onStateChange: setSelectedState,
-    accessToken: mapboxgl.accessToken || '',
+    accessToken: mapboxgl.accessToken || "",
     geoLevel,
-    onHighlightFeature: setHighlightedFeature
+    onHighlightFeature: setHighlightedFeature,
   });
   // Handle feature click - open right panel with geography details
-  const handleFeatureClick = useCallback((geography: SelectedGeography | null) => {
-    setSelectedGeography(geography);
-    if (geography) {
-      setRightPanelOpen(true);
-      // Persist to localStorage so other pages (graphs, reports) can pick it up
-      try {
-        localStorage.setItem('propertyiq-last-geography', JSON.stringify({
-          id: geography.id,
-          name: geography.name,
-          type: geography.geoLevel,
-          state: geography.stateAbbr,
-        }));
-      } catch { /* ignore storage errors */ }
-    }
-  }, []);
+  const handleFeatureClick = useCallback(
+    (geography: SelectedGeography | null) => {
+      setSelectedGeography(geography);
+      if (geography) {
+        setRightPanelOpen(true);
+        // Persist to localStorage so other pages (graphs, reports) can pick it up
+        try {
+          localStorage.setItem(
+            "propertyiq-last-geography",
+            JSON.stringify({
+              id: geography.id,
+              name: geography.name,
+              type: geography.geoLevel,
+              state: geography.stateAbbr,
+            }),
+          );
+        } catch {
+          /* ignore storage errors */
+        }
+      }
+    },
+    [],
+  );
 
-  const handleFeatureContextMenu = useCallback((info: { geography: SelectedGeography; x: number; y: number }) => {
-    setContextMenu(info);
-  }, []);
+  const handleFeatureContextMenu = useCallback(
+    (info: { geography: SelectedGeography; x: number; y: number }) => {
+      setContextMenu(info);
+    },
+    [],
+  );
 
   const { updateMapLayers } = useMapLayers({
-    map, popup, geoLevel, selectedState, selectedMetric, forecastHorizon, mapData, mapLoaded,
+    map,
+    popup,
+    geoLevel,
+    selectedState,
+    selectedMetric,
+    forecastHorizon,
+    mapData,
+    mapLoaded,
     dataLoading,
     highlightedFeature,
     onFeatureClick: handleFeatureClick,
-    onFeatureContextMenu: handleFeatureContextMenu
+    onFeatureContextMenu: handleFeatureContextMenu,
   });
 
   // Single fetch through data binding layer: scores with 3-month trend for sidebar + right panel
   const { data: scoreResponse, loading: scoresLoading } = useScoreData(
     geoLevel as any,
     selectedGeography?.id ?? null,
-    { expanded: true, historyMonths: 3 }
+    { expanded: true, historyMonths: 3 },
   );
 
-  const { isMetricGated, getAccess, loading: entitlementsLoading } = useEntitlements();
+  const {
+    isMetricGated,
+    getAccess,
+    loading: entitlementsLoading,
+  } = useEntitlements();
 
   // Map score response to sidebar format with all three scores
   // Gating info flows from entitlements through props — no hardcoded tier checks
@@ -201,29 +290,37 @@ function MapPageInner() {
 
     if (!scoreResponse) return undefined;
 
-    const isBreakdownGated = !entitlementsLoading && getAccess('feature', 'score_breakdown').level === 'none';
+    const isBreakdownGated =
+      !entitlementsLoading &&
+      getAccess("feature", "score_breakdown").level === "none";
 
     // Helper to extract score info from response, with entitlements-driven gating
     const extractScoreInfo = (scoreObj: any, metricId: string) => {
-      if (!scoreObj || typeof scoreObj !== 'object' || !('score' in scoreObj)) {
+      if (!scoreObj || typeof scoreObj !== "object" || !("score" in scoreObj)) {
         return undefined;
       }
-      const scoreMetricAccess = getAccess('metric', metricId);
-      const gated = !entitlementsLoading && scoreMetricAccess.level === 'none';
+      const scoreMetricAccess = getAccess("metric", metricId);
+      const gated = !entitlementsLoading && scoreMetricAccess.level === "none";
       return {
         score: gated ? undefined : (scoreObj.score ?? undefined),
         trend: gated ? undefined : (scoreObj.trendChange ?? undefined),
-        access: (isBreakdownGated ? 'teaser' : 'full') as 'full' | 'teaser',
+        access: (isBreakdownGated ? "teaser" : "full") as "full" | "teaser",
         gated,
         tierRequired: gated ? scoreMetricAccess.tierRequired : undefined,
       };
     };
 
     return {
-      marketHealth: extractScoreInfo(scoreResponse.marketHealth, 'market_health_score'),
-      homeready: extractScoreInfo(scoreResponse.homeready, 'homeready_score'),
-      investoredge: extractScoreInfo(scoreResponse.investoredge, 'investoredge_score'),
-      marketCondition: 'balanced' as const, // TODO: Calculate from market data
+      marketHealth: extractScoreInfo(
+        scoreResponse.marketHealth,
+        "market_health_score",
+      ),
+      homeready: extractScoreInfo(scoreResponse.homeready, "homeready_score"),
+      investoredge: extractScoreInfo(
+        scoreResponse.investoredge,
+        "investoredge_score",
+      ),
+      marketCondition: "balanced" as const, // TODO: Calculate from market data
       isLoading: false,
     };
   }, [scoreResponse, scoresLoading, entitlementsLoading, getAccess]);
@@ -231,7 +328,7 @@ function MapPageInner() {
   // Fallback to home_value if selected metric becomes gated (e.g., subscription expired)
   useEffect(() => {
     if (isMetricGated(selectedMetric)) {
-      setSelectedMetric('home_value');
+      setSelectedMetric("home_value");
     }
   }, [selectedMetric, isMetricGated]);
 
@@ -255,8 +352,8 @@ function MapPageInner() {
     setGeoLevel(level);
     // Clear state filter when switching to levels that don't require it
     // (only city, zip, tract need state filtering)
-    if (!['city', 'zip', 'tract'].includes(level)) {
-      setSelectedState('');
+    if (!["city", "zip", "tract"].includes(level)) {
+      setSelectedState("");
     }
   }, []);
 
@@ -264,8 +361,8 @@ function MapPageInner() {
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isResizing.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   }, []);
 
   useEffect(() => {
@@ -278,31 +375,53 @@ function MapPageInner() {
     const handleMouseUp = () => {
       if (isResizing.current) {
         isResizing.current = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
 
   // Fetch data immediately on mount and when parameters change (don't wait for map)
   useEffect(() => {
     // City, ZIP, and Tract levels require a state selection
-    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    const requiresState = ["city", "zip", "tract"].includes(geoLevel);
     if (requiresState) {
       if (selectedState) {
-        fetchMapData(geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
+        fetchMapData(
+          geoLevel,
+          selectedState,
+          selectedMetric,
+          forecastHorizon,
+          rentIndexType,
+          renterDemandType,
+        );
       }
     } else {
-      fetchMapData(geoLevel, undefined, selectedMetric, forecastHorizon, rentIndexType, renterDemandType);
+      fetchMapData(
+        geoLevel,
+        undefined,
+        selectedMetric,
+        forecastHorizon,
+        rentIndexType,
+        renterDemandType,
+      );
     }
-  }, [geoLevel, selectedState, selectedMetric, forecastHorizon, rentIndexType, renterDemandType, fetchMapData]);
+  }, [
+    geoLevel,
+    selectedState,
+    selectedMetric,
+    forecastHorizon,
+    rentIndexType,
+    renterDemandType,
+    fetchMapData,
+  ]);
 
   // Handle Mapbox resize when right panel opens/closes
   useEffect(() => {
@@ -322,23 +441,30 @@ function MapPageInner() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: "mapbox://styles/mapbox/light-v11",
       center: [-96, 37.8],
       zoom: GEO_ZOOM_LEVELS[geoLevel],
-      projection: 'mercator',
+      projection: "mercator",
     });
 
-    map.current.on('load', () => setMapLoaded(true));
-    map.current.on('error', (e: mapboxgl.ErrorEvent & { error?: { message?: string; status?: number } }) => {
-      const msg = e.error?.message || 'Unknown map error';
-      // Tile/source errors are transient — only set fatal error if the map never loaded
-      if (!map.current?.loaded()) {
-        console.error('[Map] fatal load error:', msg);
-        setMapError('Map failed to load');
-      } else {
-        console.warn('[Map] non-fatal error:', msg);
-      }
-    });
+    map.current.on("load", () => setMapLoaded(true));
+    map.current.on(
+      "error",
+      (
+        e: mapboxgl.ErrorEvent & {
+          error?: { message?: string; status?: number };
+        },
+      ) => {
+        const msg = e.error?.message || "Unknown map error";
+        // Tile/source errors are transient — only set fatal error if the map never loaded
+        if (!map.current?.loaded()) {
+          console.error("[Map] fatal load error:", msg);
+          setMapError("Map failed to load");
+        } else {
+          console.warn("[Map] non-fatal error:", msg);
+        }
+      },
+    );
 
     return () => {
       if (map.current) {
@@ -385,7 +511,9 @@ function MapPageInner() {
           if (hit?.longitude != null && hit?.latitude != null) {
             center = [hit.longitude, hit.latitude];
           }
-        } catch { /* fall through */ }
+        } catch {
+          /* fall through */
+        }
 
         // 2. If backend has no coords (e.g. county centroids not in DB), use Mapbox geocoding
         if (!center && mapboxgl.accessToken) {
@@ -398,7 +526,9 @@ function MapPageInner() {
             if (feature?.center) {
               center = feature.center as [number, number];
             }
-          } catch { /* no coords available — handleSelectSearchResult will try its own fallback */ }
+          } catch {
+            /* no coords available — handleSelectSearchResult will try its own fallback */
+          }
         }
       }
 
@@ -413,13 +543,13 @@ function MapPageInner() {
 
       // Wait one frame for the DOM to reflow, then resize the map canvas
       // to match the now-narrower container before issuing the flyTo.
-      await new Promise(r => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
       map.current?.resize();
 
       handleSelectSearchResult({
         id: nav.id,
         name: nav.name,
-        type: nav.geo as SearchResult['type'],
+        type: nav.geo as SearchResult["type"],
         center,
         state: nav.state,
       });
@@ -432,8 +562,10 @@ function MapPageInner() {
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     const close = () => setContextMenu(null);
-    map.current.on('movestart', close);
-    return () => { map.current?.off('movestart', close); };
+    map.current.on("movestart", close);
+    return () => {
+      map.current?.off("movestart", close);
+    };
   }, [mapLoaded]);
 
   // Adjust zoom for different geo levels (skip if search or URL already handled navigation)
@@ -443,35 +575,56 @@ function MapPageInner() {
     // Skip if search or URL navigation recently positioned the map.
     // Uses a timestamp (not a consumed boolean) so the guard survives
     // React Strict Mode's double-invocation (mount → unmount → remount).
-    if (searchNavigatedRef.current > 0 && Date.now() - searchNavigatedRef.current < 3000) {
+    if (
+      searchNavigatedRef.current > 0 &&
+      Date.now() - searchNavigatedRef.current < 3000
+    ) {
       return;
     }
 
     // City, ZIP, and Tract levels zoom to the selected state
-    const requiresState = ['city', 'zip', 'tract'].includes(geoLevel);
+    const requiresState = ["city", "zip", "tract"].includes(geoLevel);
     if (requiresState && selectedState && STATE_CENTERS[selectedState]) {
       const center = STATE_CENTERS[selectedState];
-      map.current.flyTo({ center: [center.lng, center.lat], zoom: center.zoom, duration: 800 });
+      map.current.flyTo({
+        center: [center.lng, center.lat],
+        zoom: center.zoom,
+        duration: 800,
+      });
       return;
     }
 
-    map.current.flyTo({ center: [-96, 37.8], zoom: GEO_ZOOM_LEVELS[geoLevel], duration: 500 });
+    map.current.flyTo({
+      center: [-96, 37.8],
+      zoom: GEO_ZOOM_LEVELS[geoLevel],
+      duration: 500,
+    });
   }, [geoLevel, selectedState]);
 
   const toggleCategory = (id: string) => {
-    setExpandedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+    setExpandedCategories((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
+    );
   };
 
   return (
-    <div className="flex flex-col bg-surface" style={{ fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif", height: 'calc(100dvh - 64px - 44px)' }}>
+    <div
+      className="flex flex-col bg-surface"
+      style={{
+        fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
+        height: "calc(100dvh - 64px - 44px)",
+      }}
+    >
       {/* Map Controls Toolbar */}
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-3 z-20 shadow-sm">
         <div className="max-w-[1920px] mx-auto flex flex-col md:flex-row items-center gap-4">
-
           {/* Top Row (Desktop) or Only Row (Mobile) */}
           <div className="flex items-center gap-4 w-full md:w-auto flex-1">
             {/* Breadcrumbs */}
-            <Breadcrumbs items={[{ label: 'Map' }]} className="hidden md:flex text-sm" />
+            <Breadcrumbs
+              items={[{ label: "Map" }]}
+              className="hidden md:flex text-sm"
+            />
             <div className="hidden md:block h-5 w-px bg-outline-variant" />
 
             {/* Sidebar Toggle */}
@@ -493,7 +646,9 @@ function MapPageInner() {
                 showSearchResults={showSearchResults}
                 onSearch={handleSearch}
                 onSelectResult={handleSelectSearchResult}
-                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                onFocus={() =>
+                  searchResults.length > 0 && setShowSearchResults(true)
+                }
               />
             </div>
           </div>
@@ -563,7 +718,7 @@ function MapPageInner() {
         />
 
         {/* Map */}
-        <main className="flex-1 relative" style={{ minHeight: '100%' }}>
+        <main className="flex-1 relative" style={{ minHeight: "100%" }}>
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
               <p className="text-on-error-container font-medium">{mapError}</p>
@@ -574,11 +729,17 @@ function MapPageInner() {
               <div className="flex flex-col items-center gap-3">
                 {/* M3 Circular Progress Indicator */}
                 <div className="w-8 h-8 border-4 border-primary-container border-t-primary rounded-full animate-spin"></div>
-                <p className="text-on-surface-variant">Loading {geoLevel} data...</p>
+                <p className="text-on-surface-variant">
+                  Loading {geoLevel} data...
+                </p>
               </div>
             </div>
           )}
-          <div ref={mapContainer} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
+          <div
+            ref={mapContainer}
+            className="absolute inset-0"
+            style={{ width: "100%", height: "100%" }}
+          />
 
           <Legend
             selectedMetric={selectedMetric}

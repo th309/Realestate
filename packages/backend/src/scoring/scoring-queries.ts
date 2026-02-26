@@ -23,7 +23,9 @@ const LEGACY_CONFIDENCE_MAP: Record<string, ConfidenceLevel> = {
   INSUFFICIENT: 'F',
 };
 
-function normalizeConfidenceLevel(raw: string | null | undefined): ConfidenceLevel {
+function normalizeConfidenceLevel(
+  raw: string | null | undefined,
+): ConfidenceLevel {
   if (!raw) return 'F';
   // Already new format
   if (raw === 'A' || raw === 'B' || raw === 'C' || raw === 'F') return raw;
@@ -64,9 +66,9 @@ export async function getScoreDatesForLocation(
     .order('score_date', { ascending: false })
     .limit(limit);
   if (!data?.length) return [];
-  return [...new Set(data.map((r: { score_date: string }) => r.score_date))].sort(
-    (a, b) => b.localeCompare(a),
-  );
+  return [
+    ...new Set(data.map((r: { score_date: string }) => r.score_date)),
+  ].sort((a, b) => b.localeCompare(a));
 }
 
 /**
@@ -85,9 +87,9 @@ export async function getScoreDates(
     .order('score_date', { ascending: false })
     .limit(limit * 4);
   if (!data?.length) return [];
-  const dates = [...new Set(data.map((r: { score_date: string }) => r.score_date))].sort(
-    (a, b) => b.localeCompare(a),
-  );
+  const dates = [
+    ...new Set(data.map((r: { score_date: string }) => r.score_date)),
+  ].sort((a, b) => b.localeCompare(a));
   return dates.slice(0, limit);
 }
 
@@ -148,24 +150,9 @@ export async function getScoreForDate(
     median_price: medianPrice,
     score_date: scoreDate,
     scores: {
-      homeready: scoresByType.homeready || {
-        score: 0,
-        grade: 'F',
-        confidence: 0,
-        confidence_level: 'F',
-      },
-      investoredge: scoresByType.investoredge || {
-        score: 0,
-        grade: 'F',
-        confidence: 0,
-        confidence_level: 'F',
-      },
-      markethealth: scoresByType.markethealth || {
-        score: 0,
-        grade: 'F',
-        confidence: 0,
-        confidence_level: 'F',
-      },
+      homeready: scoresByType.homeready || null,
+      investoredge: scoresByType.investoredge || null,
+      markethealth: scoresByType.markethealth || null,
     },
     z_scores: zScores,
     return_1y: data[0]?.return_1y,
@@ -333,7 +320,7 @@ export async function fetchScoresPage(
   }
 
   // Normalize legacy confidence_level values from existing DB rows
-  const normalized = (data || []).map(row => ({
+  const normalized = (data || []).map((row) => ({
     ...row,
     confidence_level: normalizeConfidenceLevel(row.confidence_level),
   }));

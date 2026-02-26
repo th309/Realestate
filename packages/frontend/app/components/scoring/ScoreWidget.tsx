@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * ScoreWidget - Connected Score Display Component
@@ -10,17 +10,17 @@
  * Use ScoreDisplay directly when you already have the score value.
  */
 
-import React from 'react';
-import { Loader2 } from 'lucide-react';
-import { ScoreDisplay, ScoreDisplayProps } from './ScoreDisplay';
+import React from "react";
+import { Loader2 } from "lucide-react";
+import { ScoreDisplay, ScoreDisplayProps } from "./ScoreDisplay";
 import {
   useScoreData,
   type GeographyType,
   type ScoreType,
   type ConfidenceLevel,
-} from '@/app/map/hooks/useScoreData';
+} from "@/app/map/hooks/useScoreData";
 
-export interface ScoreWidgetProps extends Omit<ScoreDisplayProps, 'value'> {
+export interface ScoreWidgetProps extends Omit<ScoreDisplayProps, "value"> {
   /** Geography type (state, metro, county, etc.) */
   geographyType: GeographyType | null;
   /** Geography ID (FIPS code, CBSA code, etc.) */
@@ -30,21 +30,25 @@ export interface ScoreWidgetProps extends Omit<ScoreDisplayProps, 'value'> {
   /** Show confidence badge (default: false) */
   showConfidence?: boolean;
   /** Callback when score data loads */
-  onScoreLoad?: (score: number | null, confidence: ConfidenceLevel | null) => void;
+  onScoreLoad?: (
+    score: number | null,
+    confidence: ConfidenceLevel | null,
+  ) => void;
 }
 
-const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> = {
-  a: { bg: 'bg-green-500', text: 'text-white' },
-  b: { bg: 'bg-amber-500', text: 'text-white' },
-  c: { bg: 'bg-orange-500', text: 'text-white' },
-  f: { bg: 'bg-red-500', text: 'text-white' },
-};
+const CONFIDENCE_COLORS: Record<ConfidenceLevel, { bg: string; text: string }> =
+  {
+    a: { bg: "bg-green-500", text: "text-white" },
+    b: { bg: "bg-amber-500", text: "text-white" },
+    c: { bg: "bg-orange-500", text: "text-white" },
+    f: { bg: "bg-red-500", text: "text-white" },
+  };
 
 const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-  a: 'A',
-  b: 'B',
-  c: 'C',
-  f: 'F',
+  a: "A",
+  b: "B",
+  c: "C",
+  f: "F",
 };
 
 /**
@@ -78,7 +82,7 @@ export function ScoreWidget({
   strokeWidth = 6,
   showGrade = true,
   showLabel = true,
-  className = '',
+  className = "",
 }: ScoreWidgetProps) {
   const { data, loading, error } = useScoreData(geographyType, geographyId);
 
@@ -86,13 +90,19 @@ export function ScoreWidget({
   const scoreData = React.useMemo(() => {
     if (!data) return { score: null, confidence: null };
 
-    const key = scoreType === 'market_health' ? 'marketHealth' : scoreType;
+    const key = scoreType === "market_health" ? "marketHealth" : scoreType;
     const scoreObj = data[key as keyof typeof data];
 
-    if (typeof scoreObj === 'object' && scoreObj !== null && 'score' in scoreObj) {
+    if (
+      typeof scoreObj === "object" &&
+      scoreObj !== null &&
+      "score" in scoreObj
+    ) {
       const score = (scoreObj as any).score as number | null;
-      const confidence = (scoreObj as any).confidence?.level as ConfidenceLevel | undefined;
-      return { score, confidence: confidence ?? 'b' };
+      const confidence = (scoreObj as any).confidence?.level as
+        | ConfidenceLevel
+        | undefined;
+      return { score, confidence: confidence ?? "b" };
     }
 
     return { score: null, confidence: null };
@@ -124,7 +134,7 @@ export function ScoreWidget({
         className={`flex items-center justify-center rounded-full border-4 border-surface-container-highest ${className}`}
         style={{ width: size, height: size }}
       >
-        <span className="text-lg text-on-surface-variant">--</span>
+        <span className="text-lg text-on-surface-variant">{"\u2014"}</span>
       </div>
     );
   }

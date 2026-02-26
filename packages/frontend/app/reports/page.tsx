@@ -1,20 +1,51 @@
-'use client';
+"use client";
 
-import React, { Suspense, useState, useCallback, useEffect, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Home, TrendingUp, MapPin, DollarSign, ChevronRight, Plus, X, Sparkles, Info, AlertCircle, History, Clock, FileText, ArrowRight, BarChart3, Zap } from 'lucide-react';
-import { EntitlementGate } from '@/components/entitlements/EntitlementGate';
-import { PaywallCard } from '@/components/entitlements/PaywallCard';
-import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
-import { useAuth } from '@/lib/auth';
-import { Breadcrumbs } from '@/components/navigation';
-import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
-import { SearchWidget } from '@/app/map/components/SearchWidget';
-import type { SearchResult } from '@/app/map/types';
-import type { UserType, Geography, GeographyType, ReportListItem } from './types';
-import PrioritySelector from './components/PrioritySelector';
-import { generateReport as generateReportAPI, fetchReportList } from '@/lib/data';
+import React, {
+  Suspense,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Home,
+  TrendingUp,
+  MapPin,
+  DollarSign,
+  ChevronRight,
+  Plus,
+  X,
+  Sparkles,
+  Info,
+  AlertCircle,
+  History,
+  Clock,
+  FileText,
+  ArrowRight,
+  BarChart3,
+  Zap,
+} from "lucide-react";
+import { EntitlementGate } from "@/components/entitlements/EntitlementGate";
+import { PaywallCard } from "@/components/entitlements/PaywallCard";
+import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
+import { useAuth } from "@/lib/auth";
+import { Breadcrumbs } from "@/components/navigation";
+import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
+import { SearchWidget } from "@/app/map/components/SearchWidget";
+import type { SearchResult } from "@/app/map/types";
+import type {
+  UserType,
+  Geography,
+  GeographyType,
+  ReportListItem,
+} from "./types";
+import PrioritySelector from "./components/PrioritySelector";
+import {
+  generateReport as generateReportAPI,
+  fetchReportList,
+} from "@/lib/data";
 
 // ============================================================================
 // TYPES
@@ -23,7 +54,7 @@ import { generateReport as generateReportAPI, fetchReportList } from '@/lib/data
 interface Market {
   id: string;
   name: string;
-  type: 'metro' | 'city' | 'zip' | 'county' | 'state';
+  type: "metro" | "city" | "zip" | "county" | "state";
   center?: [number, number];
   state?: string;
 }
@@ -33,12 +64,12 @@ interface Market {
 // ============================================================================
 
 interface ReportCardProps {
-  type: 'homebuyer' | 'investor';
+  type: "homebuyer" | "investor";
   onSelect: () => void;
 }
 
 function ReportCard({ type, onSelect }: ReportCardProps) {
-  const isHomebuyer = type === 'homebuyer';
+  const isHomebuyer = type === "homebuyer";
 
   return (
     <motion.button
@@ -47,9 +78,10 @@ function ReportCard({ type, onSelect }: ReportCardProps) {
         group relative overflow-hidden
         w-full text-left rounded-3xl p-8 md:p-10
         transition-all duration-500 ease-out
-        ${isHomebuyer
-          ? 'bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 hover:from-primary/10 hover:via-primary/15 hover:to-primary/10'
-          : 'bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-tertiary/5 hover:from-tertiary/10 hover:via-tertiary/15 hover:to-tertiary/10'
+        ${
+          isHomebuyer
+            ? "bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 hover:from-primary/10 hover:via-primary/15 hover:to-primary/10"
+            : "bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-tertiary/5 hover:from-tertiary/10 hover:via-tertiary/15 hover:to-tertiary/10"
         }
         border border-outline-variant/30 hover:border-outline-variant/60
         hover:shadow-xl hover:shadow-black/5
@@ -58,59 +90,73 @@ function ReportCard({ type, onSelect }: ReportCardProps) {
       whileTap={{ scale: 0.98 }}
     >
       {/* Decorative gradient orb */}
-      <div className={`
+      <div
+        className={`
         absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30
         transition-opacity duration-500 group-hover:opacity-50
-        ${isHomebuyer ? 'bg-primary' : 'bg-tertiary'}
-      `} />
+        ${isHomebuyer ? "bg-primary" : "bg-tertiary"}
+      `}
+      />
 
       {/* Icon */}
-      <div className={`
+      <div
+        className={`
         relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6
-        ${isHomebuyer
-          ? 'bg-primary/15 text-primary'
-          : 'bg-tertiary/15 text-tertiary'
+        ${
+          isHomebuyer
+            ? "bg-primary/15 text-primary"
+            : "bg-tertiary/15 text-tertiary"
         }
-      `}>
-        {isHomebuyer ? <Home className="w-7 h-7" /> : <TrendingUp className="w-7 h-7" />}
+      `}
+      >
+        {isHomebuyer ? (
+          <Home className="w-7 h-7" />
+        ) : (
+          <TrendingUp className="w-7 h-7" />
+        )}
       </div>
 
       {/* Content */}
       <div className="relative">
         <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
-          {isHomebuyer ? 'Homebuyer Report' : 'Investor Report'}
+          {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
         </h2>
 
         <p className="text-on-surface-variant text-base md:text-lg mb-6 leading-relaxed max-w-md">
           {isHomebuyer
-            ? 'Discover if a market fits your budget and lifestyle. See affordability, competition, and buying conditions.'
-            : 'Analyze cash flow, appreciation potential, and risk. Get pro forma projections for any market.'
-          }
+            ? "Discover if a market fits your budget and lifestyle. See affordability, competition, and buying conditions."
+            : "Analyze cash flow, appreciation potential, and risk. Get pro forma projections for any market."}
         </p>
 
         {/* Score badge */}
-        <div className={`
+        <div
+          className={`
           inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-          ${isHomebuyer
-            ? 'bg-primary/10 text-primary'
-            : 'bg-tertiary/10 text-tertiary'
+          ${
+            isHomebuyer
+              ? "bg-primary/10 text-primary"
+              : "bg-tertiary/10 text-tertiary"
           }
-        `}>
+        `}
+        >
           <Sparkles className="w-4 h-4" />
-          {isHomebuyer ? 'HomeReady Score' : 'InvestorEdge Score'}
+          {isHomebuyer ? "HomeReady Score" : "InvestorEdge Score"}
         </div>
       </div>
 
       {/* Arrow */}
-      <div className={`
+      <div
+        className={`
         absolute bottom-8 right-8 w-12 h-12 rounded-full
         flex items-center justify-center
         transition-all duration-300 group-hover:scale-110
-        ${isHomebuyer
-          ? 'bg-primary text-on-primary'
-          : 'bg-tertiary text-on-tertiary'
+        ${
+          isHomebuyer
+            ? "bg-primary text-on-primary"
+            : "bg-tertiary text-on-tertiary"
         }
-      `}>
+      `}
+      >
         <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
       </div>
     </motion.button>
@@ -126,10 +172,16 @@ interface MarketSelectorProps {
   onAdd: (market: Market) => void;
   onRemove: (id: string) => void;
   maxMarkets?: number;
-  accentColor?: 'primary' | 'tertiary';
+  accentColor?: "primary" | "tertiary";
 }
 
-function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor = 'primary' }: MarketSelectorProps) {
+function MarketSelector({
+  markets,
+  onAdd,
+  onRemove,
+  maxMarkets = 5,
+  accentColor = "primary",
+}: MarketSelectorProps) {
   const [showSearch, setShowSearch] = useState(false);
 
   const {
@@ -143,22 +195,25 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
     setShowSearchResults,
   } = useUniversalSearch({});
 
-  const handleSelectResult = useCallback((result: SearchResult) => {
-    const market: Market = {
-      id: result.id,
-      name: result.name,
-      type: result.type,
-      center: result.center,
-      state: result.state,
-    };
+  const handleSelectResult = useCallback(
+    (result: SearchResult) => {
+      const market: Market = {
+        id: result.id,
+        name: result.name,
+        type: result.type,
+        center: result.center,
+        state: result.state,
+      };
 
-    if (!markets.find(m => m.id === market.id)) {
-      onAdd(market);
-    }
+      if (!markets.find((m) => m.id === market.id)) {
+        onAdd(market);
+      }
 
-    clearSearch();
-    setShowSearch(false);
-  }, [markets, onAdd, clearSearch]);
+      clearSearch();
+      setShowSearch(false);
+    },
+    [markets, onAdd, clearSearch],
+  );
 
   const handleFocus = useCallback(() => {
     if (searchQuery.length >= 2) {
@@ -181,11 +236,12 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
               className={`
                 group flex items-center gap-2 pl-4 pr-2 py-2 rounded-full
                 border transition-all duration-200
-                ${index === 0
-                  ? accentColor === 'primary'
-                    ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'bg-tertiary/10 border-tertiary/30 text-tertiary'
-                  : 'bg-surface-container border-outline-variant/50 text-on-surface'
+                ${
+                  index === 0
+                    ? accentColor === "primary"
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-tertiary/10 border-tertiary/30 text-tertiary"
+                    : "bg-surface-container border-outline-variant/50 text-on-surface"
                 }
               `}
             >
@@ -211,9 +267,10 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
             className={`flex items-center gap-2 px-4 py-2 rounded-full
               border-2 border-dashed border-outline-variant/50
               text-on-surface-variant transition-all duration-200
-              ${accentColor === 'primary'
-                ? 'hover:border-primary/50 hover:text-primary'
-                : 'hover:border-tertiary/50 hover:text-tertiary'
+              ${
+                accentColor === "primary"
+                  ? "hover:border-primary/50 hover:text-primary"
+                  : "hover:border-tertiary/50 hover:text-tertiary"
               }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -231,7 +288,9 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 text-sm text-on-surface-variant"
         >
-          <Info className={`w-4 h-4 ${accentColor === 'primary' ? 'text-primary' : 'text-tertiary'}`} />
+          <Info
+            className={`w-4 h-4 ${accentColor === "primary" ? "text-primary" : "text-tertiary"}`}
+          />
           Add another market to see a side-by-side comparison
         </motion.p>
       )}
@@ -240,7 +299,7 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`flex items-center gap-2 text-sm ${accentColor === 'primary' ? 'text-primary' : 'text-tertiary'}`}
+          className={`flex items-center gap-2 text-sm ${accentColor === "primary" ? "text-primary" : "text-tertiary"}`}
         >
           <Sparkles className="w-4 h-4" />
           Comparison mode: We&apos;ll show how these markets stack up
@@ -249,26 +308,29 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
 
       {/* Search Widget */}
       <AnimatePresence>
-        {(showSearch || markets.length === 0) && markets.length < maxMarkets && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <SearchWidget
-              searchQuery={searchQuery}
-              searchResults={searchResults.filter(r => !markets.find(m => m.id === r.id))}
-              searchLoading={searchLoading}
-              showSearchResults={showSearchResults}
-              searchRef={searchRef}
-              onSearch={handleSearch}
-              onSelectResult={handleSelectResult}
-              onFocus={handleFocus}
-              className="w-full"
-              placeholder="Search for a city, metro, ZIP, or county..."
-            />
-          </motion.div>
-        )}
+        {(showSearch || markets.length === 0) &&
+          markets.length < maxMarkets && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <SearchWidget
+                searchQuery={searchQuery}
+                searchResults={searchResults.filter(
+                  (r) => !markets.find((m) => m.id === r.id),
+                )}
+                searchLoading={searchLoading}
+                showSearchResults={showSearchResults}
+                searchRef={searchRef}
+                onSearch={handleSearch}
+                onSelectResult={handleSelectResult}
+                onFocus={handleFocus}
+                className="w-full"
+                placeholder="Search for a city, metro, ZIP, or county..."
+              />
+            </motion.div>
+          )}
       </AnimatePresence>
     </div>
   );
@@ -281,27 +343,27 @@ function MarketSelector({ markets, onAdd, onRemove, maxMarkets = 5, accentColor 
 // Format a number string with commas (e.g., "1234567" -> "1,234,567")
 function formatWithCommas(value: string): string {
   // Remove all non-digit characters except decimal point
-  const digits = value.replace(/[^\d.]/g, '');
-  if (!digits) return '';
+  const digits = value.replace(/[^\d.]/g, "");
+  if (!digits) return "";
 
   // Split by decimal point if present
-  const parts = digits.split('.');
+  const parts = digits.split(".");
   // Format the integer part with commas
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-  return parts.join('.');
+  return parts.join(".");
 }
 
 // Strip commas from a value (for storing raw number)
 function stripCommas(value: string): string {
-  return value.replace(/,/g, '');
+  return value.replace(/,/g, "");
 }
 
 // Handle currency input change - format display but store raw value
 function handleCurrencyChange(
   rawValue: string,
   onChange: (key: string, value: string) => void,
-  key: string
+  key: string,
 ): void {
   // Format the input with commas for display
   const formatted = formatWithCommas(rawValue);
@@ -313,14 +375,18 @@ function handleCurrencyChange(
 // ============================================================================
 
 interface PersonalizationPanelProps {
-  type: 'homebuyer' | 'investor';
+  type: "homebuyer" | "investor";
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
 }
 
-function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelProps) {
+function PersonalizationPanel({
+  type,
+  values,
+  onChange,
+}: PersonalizationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isHomebuyer = type === 'homebuyer';
+  const isHomebuyer = type === "homebuyer";
 
   return (
     <div className="border border-outline-variant/30 rounded-2xl overflow-hidden">
@@ -334,11 +400,18 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
             <DollarSign className="w-4 h-4 text-on-surface-variant" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm font-medium text-on-surface">Personalize your report</h3>
-            <p className="text-xs text-on-surface-variant">Optional - Get tailored insights</p>
+            <h3 className="text-sm font-medium text-on-surface">
+              Personalize your report
+            </h3>
+            <p className="text-xs text-on-surface-variant">
+              Optional - Get tailored insights
+            </p>
           </div>
         </div>
-        <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+        <motion.div
+          animate={{ rotate: isExpanded ? 90 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
           <ChevronRight className="w-5 h-5 text-on-surface-variant" />
         </motion.div>
       </button>
@@ -347,9 +420,9 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             <div className="px-6 pb-6 pt-2 border-t border-outline-variant/20">
               {/* Priority Selector */}
@@ -359,8 +432,12 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                 </h4>
                 <PrioritySelector
                   userType={type}
-                  selected={values.priorities ? JSON.parse(values.priorities) : []}
-                  onChange={(priorities) => onChange('priorities', JSON.stringify(priorities))}
+                  selected={
+                    values.priorities ? JSON.parse(values.priorities) : []
+                  }
+                  onChange={(priorities) =>
+                    onChange("priorities", JSON.stringify(priorities))
+                  }
                 />
               </div>
 
@@ -372,11 +449,19 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                       Household income
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                        $
+                      </span>
                       <input
                         type="text"
-                        value={values.income || ''}
-                        onChange={(e) => handleCurrencyChange(e.target.value, onChange, 'income')}
+                        value={values.income || ""}
+                        onChange={(e) =>
+                          handleCurrencyChange(
+                            e.target.value,
+                            onChange,
+                            "income",
+                          )
+                        }
                         placeholder="85,000"
                         className="w-full pl-8 pr-4 py-3 rounded-xl
                           bg-surface-container border border-outline-variant/50
@@ -394,11 +479,19 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                       Down payment
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                        $
+                      </span>
                       <input
                         type="text"
-                        value={values.downPayment || ''}
-                        onChange={(e) => handleCurrencyChange(e.target.value, onChange, 'downPayment')}
+                        value={values.downPayment || ""}
+                        onChange={(e) =>
+                          handleCurrencyChange(
+                            e.target.value,
+                            onChange,
+                            "downPayment",
+                          )
+                        }
                         placeholder="50,000"
                         className="w-full pl-8 pr-4 py-3 rounded-xl
                           bg-surface-container border border-outline-variant/50
@@ -419,11 +512,19 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                       Purchase price
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                        $
+                      </span>
                       <input
                         type="text"
-                        value={values.purchasePrice || ''}
-                        onChange={(e) => handleCurrencyChange(e.target.value, onChange, 'purchasePrice')}
+                        value={values.purchasePrice || ""}
+                        onChange={(e) =>
+                          handleCurrencyChange(
+                            e.target.value,
+                            onChange,
+                            "purchasePrice",
+                          )
+                        }
                         placeholder="450,000"
                         className="w-full pl-8 pr-4 py-3 rounded-xl
                           bg-surface-container border border-outline-variant/50
@@ -443,8 +544,10 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                     <div className="relative">
                       <input
                         type="text"
-                        value={values.downPaymentPct || ''}
-                        onChange={(e) => onChange('downPaymentPct', e.target.value)}
+                        value={values.downPaymentPct || ""}
+                        onChange={(e) =>
+                          onChange("downPaymentPct", e.target.value)
+                        }
                         placeholder="25"
                         className="w-full pl-4 pr-8 py-3 rounded-xl
                           bg-surface-container border border-outline-variant/50
@@ -452,7 +555,9 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                           focus:outline-none focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary/50
                           transition-all duration-200"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">%</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                        %
+                      </span>
                     </div>
                     <p className="mt-1.5 text-xs text-on-surface-variant/70">
                       Default: 25%
@@ -463,11 +568,19 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                       Expected rent
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                        $
+                      </span>
                       <input
                         type="text"
-                        value={values.expectedRent || ''}
-                        onChange={(e) => handleCurrencyChange(e.target.value, onChange, 'expectedRent')}
+                        value={values.expectedRent || ""}
+                        onChange={(e) =>
+                          handleCurrencyChange(
+                            e.target.value,
+                            onChange,
+                            "expectedRent",
+                          )
+                        }
                         placeholder="2,500"
                         className="w-full pl-8 pr-16 py-3 rounded-xl
                           bg-surface-container border border-outline-variant/50
@@ -475,7 +588,9 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
                           focus:outline-none focus:ring-2 focus:ring-tertiary/30 focus:border-tertiary/50
                           transition-all duration-200"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">/mo</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">
+                        /mo
+                      </span>
                     </div>
                     <p className="mt-1.5 text-xs text-on-surface-variant/70">
                       Leave blank for market rent
@@ -496,7 +611,7 @@ function PersonalizationPanel({ type, values, onChange }: PersonalizationPanelPr
 // ============================================================================
 
 interface ReportCreationPageProps {
-  type: 'homebuyer' | 'investor';
+  type: "homebuyer" | "investor";
   onBack: () => void;
 }
 
@@ -518,36 +633,47 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
 
     // Priority 1: URL params (mid, mname, mtype)
     if (!urlPrefillApplied.current) {
-      const mid = searchParams.get('mid');
-      const mname = searchParams.get('mname');
-      const mtype = searchParams.get('mtype') as Market['type'] | null;
-      const mstate = searchParams.get('mstate');
+      const mid = searchParams.get("mid");
+      const mname = searchParams.get("mname");
+      const mtype = searchParams.get("mtype") as Market["type"] | null;
+      const mstate = searchParams.get("mstate");
       if (mid && mname && mtype) {
         urlPrefillApplied.current = true;
-        setMarkets([{ id: mid, name: mname, type: mtype, state: mstate || undefined }]);
+        setMarkets([
+          { id: mid, name: mname, type: mtype, state: mstate || undefined },
+        ]);
         return;
       }
     }
 
     // Priority 2: localStorage prefill (map context menu)
     try {
-      const raw = localStorage.getItem('propertyiq-report-prefill');
+      const raw = localStorage.getItem("propertyiq-report-prefill");
       if (raw) {
-        localStorage.removeItem('propertyiq-report-prefill');
+        localStorage.removeItem("propertyiq-report-prefill");
         const prefill = JSON.parse(raw);
         if (prefill?.id && prefill?.name && prefill?.type) {
-          setMarkets([{ id: prefill.id, name: prefill.name, type: prefill.type, state: prefill.state }]);
+          setMarkets([
+            {
+              id: prefill.id,
+              name: prefill.name,
+              type: prefill.type,
+              state: prefill.state,
+            },
+          ]);
         }
       }
-    } catch { /* ignore malformed data */ }
+    } catch {
+      /* ignore malformed data */
+    }
   }, [markets.length, searchParams]);
 
-  const isHomebuyer = type === 'homebuyer';
+  const isHomebuyer = type === "homebuyer";
   const canGenerate = markets.length > 0;
 
   const handleGenerate = async () => {
     if (markets.length === 0) {
-      setError('Please select at least one market');
+      setError("Please select at least one market");
       return;
     }
 
@@ -555,11 +681,14 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
     setError(null);
 
     try {
-      const templateSlug = markets.length > 1
-        ? 'comparison'
-        : (isHomebuyer ? 'homeready' : 'investoredge');
+      const templateSlug =
+        markets.length > 1
+          ? "comparison"
+          : isHomebuyer
+            ? "homeready"
+            : "investoredge";
 
-      const userType: UserType = isHomebuyer ? 'homebuyer' : 'investor';
+      const userType: UserType = isHomebuyer ? "homebuyer" : "investor";
 
       const primaryMarket = markets[0];
       const primaryGeography: Geography = {
@@ -570,7 +699,7 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
         center: primaryMarket.center,
       };
 
-      const comparisonGeographies: Geography[] = markets.slice(1).map(m => ({
+      const comparisonGeographies: Geography[] = markets.slice(1).map((m) => ({
         id: m.id,
         type: m.type as GeographyType,
         name: m.name,
@@ -580,12 +709,25 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
 
       const userInputs: Record<string, any> = {};
       if (isHomebuyer) {
-        if (inputs.income) userInputs.household_income = parseFloat(inputs.income.replace(/,/g, ''));
-        if (inputs.downPayment) userInputs.down_payment = parseFloat(inputs.downPayment.replace(/,/g, ''));
+        if (inputs.income)
+          userInputs.household_income = parseFloat(
+            inputs.income.replace(/,/g, ""),
+          );
+        if (inputs.downPayment)
+          userInputs.down_payment = parseFloat(
+            inputs.downPayment.replace(/,/g, ""),
+          );
       } else {
-        if (inputs.purchasePrice) userInputs.purchase_price = parseFloat(inputs.purchasePrice.replace(/,/g, ''));
-        if (inputs.downPaymentPct) userInputs.down_payment_pct = parseFloat(inputs.downPaymentPct);
-        if (inputs.expectedRent) userInputs.expected_rent = parseFloat(inputs.expectedRent.replace(/,/g, ''));
+        if (inputs.purchasePrice)
+          userInputs.purchase_price = parseFloat(
+            inputs.purchasePrice.replace(/,/g, ""),
+          );
+        if (inputs.downPaymentPct)
+          userInputs.down_payment_pct = parseFloat(inputs.downPaymentPct);
+        if (inputs.expectedRent)
+          userInputs.expected_rent = parseFloat(
+            inputs.expectedRent.replace(/,/g, ""),
+          );
       }
 
       // Add priorities if selected
@@ -596,7 +738,7 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
             userInputs.priorities = parsedPriorities;
           }
         } catch (e) {
-          console.warn('Failed to parse priorities:', e);
+          console.warn("Failed to parse priorities:", e);
         }
       }
 
@@ -604,23 +746,30 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
         template_slug: templateSlug,
         user_type: userType,
         primary_geography: primaryGeography,
-        comparison_geographies: comparisonGeographies.length > 0 ? comparisonGeographies : undefined,
-        user_inputs: Object.keys(userInputs).length > 0 ? userInputs : undefined,
+        comparison_geographies:
+          comparisonGeographies.length > 0 ? comparisonGeographies : undefined,
+        user_inputs:
+          Object.keys(userInputs).length > 0 ? userInputs : undefined,
       };
 
       const userId = user?.id;
       if (!userId) {
-        setError('You must be signed in to generate a report.');
+        setError("You must be signed in to generate a report.");
         setIsGenerating(false);
         return;
       }
       const effectiveTier = simulatedTier || tier;
 
-      const data = await generateReportAPI(requestBody, { userId, userTier: effectiveTier || undefined });
+      const data = await generateReportAPI(requestBody, {
+        userId,
+        userTier: effectiveTier || undefined,
+      });
       router.push(`/reports/${data.report_id}`);
     } catch (err) {
-      console.error('Report generation error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate report');
+      console.error("Report generation error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to generate report",
+      );
       setIsGenerating(false);
     }
   };
@@ -628,17 +777,22 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
   return (
     <div className="min-h-screen bg-surface">
       {/* Header */}
-      <div className={`
+      <div
+        className={`
         relative overflow-hidden
-        ${isHomebuyer
-          ? 'bg-gradient-to-br from-primary/5 via-primary/10 to-transparent'
-          : 'bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-transparent'
+        ${
+          isHomebuyer
+            ? "bg-gradient-to-br from-primary/5 via-primary/10 to-transparent"
+            : "bg-gradient-to-br from-tertiary/5 via-tertiary/10 to-transparent"
         }
-      `}>
-        <div className={`
+      `}
+      >
+        <div
+          className={`
           absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl opacity-20
-          ${isHomebuyer ? 'bg-primary' : 'bg-tertiary'}
-        `} />
+          ${isHomebuyer ? "bg-primary" : "bg-tertiary"}
+        `}
+        />
 
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 relative">
           <button
@@ -651,24 +805,30 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
           </button>
 
           <div className="flex items-center gap-4 mb-2">
-            <div className={`
+            <div
+              className={`
               w-12 h-12 rounded-2xl flex items-center justify-center
-              ${isHomebuyer
-                ? 'bg-primary/15 text-primary'
-                : 'bg-tertiary/15 text-tertiary'
+              ${
+                isHomebuyer
+                  ? "bg-primary/15 text-primary"
+                  : "bg-tertiary/15 text-tertiary"
               }
-            `}>
-              {isHomebuyer ? <Home className="w-6 h-6" /> : <TrendingUp className="w-6 h-6" />}
+            `}
+            >
+              {isHomebuyer ? (
+                <Home className="w-6 h-6" />
+              ) : (
+                <TrendingUp className="w-6 h-6" />
+              )}
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight">
-                {isHomebuyer ? 'Homebuyer Report' : 'Investor Report'}
+                {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
               </h1>
               <p className="text-on-surface-variant">
                 {isHomebuyer
-                  ? 'Powered by HomeReady Score'
-                  : 'Powered by InvestorEdge Score'
-                }
+                  ? "Powered by HomeReady Score"
+                  : "Powered by InvestorEdge Score"}
               </p>
             </div>
           </div>
@@ -678,15 +838,17 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
       {/* Form */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         <section>
-          <h2 className="text-lg font-semibold text-on-surface mb-1">Select your market(s)</h2>
+          <h2 className="text-lg font-semibold text-on-surface mb-1">
+            Select your market(s)
+          </h2>
           <p className="text-sm text-on-surface-variant mb-4">
             Choose up to 5 markets to analyze
           </p>
           <MarketSelector
             markets={markets}
             onAdd={(market) => setMarkets([...markets, market])}
-            onRemove={(id) => setMarkets(markets.filter(m => m.id !== id))}
-            accentColor={isHomebuyer ? 'primary' : 'tertiary'}
+            onRemove={(id) => setMarkets(markets.filter((m) => m.id !== id))}
+            accentColor={isHomebuyer ? "primary" : "tertiary"}
           />
         </section>
 
@@ -706,9 +868,10 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
             flex items-center justify-center gap-3
             transition-all duration-300
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${isHomebuyer
-              ? 'bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25'
-              : 'bg-tertiary text-on-tertiary hover:bg-tertiary/90 shadow-lg shadow-tertiary/25'
+            ${
+              isHomebuyer
+                ? "bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                : "bg-tertiary text-on-tertiary hover:bg-tertiary/90 shadow-lg shadow-tertiary/25"
             }
           `}
           whileHover={canGenerate ? { scale: 1.01 } : {}}
@@ -719,7 +882,7 @@ function ReportCreationPage({ type, onBack }: ReportCreationPageProps) {
               <motion.div
                 className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
               Generating your report...
             </>
@@ -770,9 +933,12 @@ function ReportHistory() {
 
   useEffect(() => {
     const userId = user?.id;
-    if (!userId) { setLoading(false); return; }
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     fetchReportList({ userId, limit: 10 })
-      .then(data => setReports(data as ReportListItem[]))
+      .then((data) => setReports(data as ReportListItem[]))
       .catch(() => setReports([]))
       .finally(() => setLoading(false));
   }, []);
@@ -804,17 +970,26 @@ function ReportHistory() {
             border border-outline-variant/30 hover:border-outline-variant/50
             transition-all duration-200 text-left group"
         >
-          <div className={`
+          <div
+            className={`
             w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-            ${report.user_type === 'homebuyer'
-              ? 'bg-primary/10 text-primary'
-              : 'bg-tertiary/10 text-tertiary'
+            ${
+              report.user_type === "homebuyer"
+                ? "bg-primary/10 text-primary"
+                : "bg-tertiary/10 text-tertiary"
             }
-          `}>
-            {report.user_type === 'homebuyer' ? <Home className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
+          `}
+          >
+            {report.user_type === "homebuyer" ? (
+              <Home className="w-5 h-5" />
+            ) : (
+              <TrendingUp className="w-5 h-5" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-on-surface truncate">{report.title}</div>
+            <div className="font-medium text-on-surface truncate">
+              {report.title}
+            </div>
             <div className="text-sm text-on-surface-variant truncate">
               {report.primary_geography_name}
             </div>
@@ -836,10 +1011,10 @@ function ReportHistory() {
 
 function ReportsContent() {
   const searchParams = useSearchParams();
-  const urlType = searchParams.get('rtype') as 'homebuyer' | 'investor' | null;
-  const [selectedType, setSelectedType] = useState<'homebuyer' | 'investor' | null>(
-    urlType && ['homebuyer', 'investor'].includes(urlType) ? urlType : null
-  );
+  const urlType = searchParams.get("rtype") as "homebuyer" | "investor" | null;
+  const [selectedType, setSelectedType] = useState<
+    "homebuyer" | "investor" | null
+  >(urlType && ["homebuyer", "investor"].includes(urlType) ? urlType : null);
 
   if (selectedType) {
     return (
@@ -853,7 +1028,7 @@ function ReportsContent() {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-6" />
+        <Breadcrumbs items={[{ label: "Reports" }]} className="mb-6" />
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-on-surface tracking-tight mb-3">
@@ -866,8 +1041,14 @@ function ReportsContent() {
 
         {/* Report Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <ReportCard type="homebuyer" onSelect={() => setSelectedType('homebuyer')} />
-          <ReportCard type="investor" onSelect={() => setSelectedType('investor')} />
+          <ReportCard
+            type="homebuyer"
+            onSelect={() => setSelectedType("homebuyer")}
+          />
+          <ReportCard
+            type="investor"
+            onSelect={() => setSelectedType("investor")}
+          />
         </div>
 
         {/* Recent Reports */}
@@ -876,7 +1057,9 @@ function ReportsContent() {
             <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
               <History className="w-4 h-4 text-on-surface-variant" />
             </div>
-            <h2 className="text-xl font-semibold text-on-surface">Recent Reports</h2>
+            <h2 className="text-xl font-semibold text-on-surface">
+              Recent Reports
+            </h2>
           </div>
           <ReportHistory />
         </div>
@@ -890,7 +1073,9 @@ function LoadingFallback() {
     <div className="flex items-center justify-center h-screen bg-surface">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-on-surface-variant font-medium">Loading reports...</p>
+        <p className="text-on-surface-variant font-medium">
+          Loading reports...
+        </p>
       </div>
     </div>
   );
@@ -898,16 +1083,32 @@ function LoadingFallback() {
 
 function ReportsLanding() {
   const features = [
-    { icon: <BarChart3 className="w-5 h-5" />, title: 'Deep Market Analysis', desc: 'AI-powered insights across 60+ metrics' },
-    { icon: <TrendingUp className="w-5 h-5" />, title: 'Investment Projections', desc: 'Cash flow, appreciation, and risk scenarios' },
-    { icon: <MapPin className="w-5 h-5" />, title: 'Market Comparisons', desc: 'Side-by-side analysis of up to 5 markets' },
-    { icon: <Zap className="w-5 h-5" />, title: 'Personalized Insights', desc: 'Tailored to your budget and priorities' },
+    {
+      icon: <BarChart3 className="w-5 h-5" />,
+      title: "Deep Market Analysis",
+      desc: "AI-powered insights across 60+ metrics",
+    },
+    {
+      icon: <TrendingUp className="w-5 h-5" />,
+      title: "Investment Projections",
+      desc: "Cash flow, appreciation, and risk scenarios",
+    },
+    {
+      icon: <MapPin className="w-5 h-5" />,
+      title: "Market Comparisons",
+      desc: "Side-by-side analysis of up to 5 markets",
+    },
+    {
+      icon: <Zap className="w-5 h-5" />,
+      title: "Personalized Insights",
+      desc: "Tailored to your budget and priorities",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <Breadcrumbs items={[{ label: 'Reports' }]} className="mb-8" />
+        <Breadcrumbs items={[{ label: "Reports" }]} className="mb-8" />
 
         {/* Hero */}
         <div className="text-center mb-10">
@@ -915,7 +1116,8 @@ function ReportsLanding() {
             AI-Powered Market Reports
           </h1>
           <p className="text-lg text-on-surface-variant max-w-2xl mx-auto">
-            Get comprehensive market analysis tailored to homebuyers and investors. See a real report below.
+            Get comprehensive market analysis tailored to homebuyers and
+            investors. See a real report below.
           </p>
         </div>
 
@@ -937,13 +1139,16 @@ function ReportsLanding() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold tracking-widest text-primary uppercase">Sample Report</span>
+                <span className="text-[10px] font-bold tracking-widest text-primary uppercase">
+                  Sample Report
+                </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold text-on-surface mb-1.5">
                 View a Full Market Report
               </h2>
               <p className="text-on-surface-variant text-sm sm:text-base max-w-lg">
-                See exactly what you get — AI narratives, score breakdowns, market trends, and investment analysis for a real metro area.
+                See exactly what you get — AI narratives, score breakdowns,
+                market trends, and investment analysis for a real metro area.
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110">
@@ -955,13 +1160,20 @@ function ReportsLanding() {
         {/* Feature grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
           {features.map((f) => (
-            <div key={f.title} className="flex items-start gap-3 p-4 rounded-xl bg-surface-container border border-outline-variant/30">
+            <div
+              key={f.title}
+              className="flex items-start gap-3 p-4 rounded-xl bg-surface-container border border-outline-variant/30"
+            >
               <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
                 {f.icon}
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-on-surface">{f.title}</h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">{f.desc}</p>
+                <h3 className="text-sm font-semibold text-on-surface">
+                  {f.title}
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  {f.desc}
+                </p>
               </div>
             </div>
           ))}
@@ -987,6 +1199,7 @@ export default function ReportsPage() {
         type="feature"
         id="reports"
         fallback={<ReportsLanding />}
+        loadingFallback={<LoadingFallback />}
       >
         <ReportsContent />
       </EntitlementGate>

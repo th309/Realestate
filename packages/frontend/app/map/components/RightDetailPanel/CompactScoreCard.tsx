@@ -9,21 +9,29 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useCallback, memo } from 'react';
-import { Settings, Check, X, TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
-import { getMetricCategories } from '../../config/metric-categories';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-import { MetricTitle } from '@/app/components/MetricTitle';
-import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
-import type { ViewMode } from '../../types';
+import { useState, useCallback, memo } from "react";
+import {
+  Settings,
+  Check,
+  X,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Loader2,
+} from "lucide-react";
+import { getMetricCategories } from "../../config/metric-categories";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
+import { MetricTitle } from "@/app/components/MetricTitle";
+import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
+import type { ViewMode } from "../../types";
 
 export interface TrendData {
   currentValue: number | null;
   previousValue: number | null;
   changePercent: number | null;
-  direction: 'up' | 'down' | 'flat' | null;
+  direction: "up" | "down" | "flat" | null;
 }
 
 interface SubScoreDisplayProps {
@@ -34,7 +42,7 @@ interface SubScoreDisplayProps {
   metricId?: string;
   source?: string | null;
   sourceGeoId?: string | null;
-  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel?: "metro" | "county" | "zip" | "state" | "national" | null;
   isInherited?: boolean;
   isFallback?: boolean;
 }
@@ -52,35 +60,41 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({
   isFallback,
 }) => {
   const getTrendIcon = () => {
-    if (trend.direction === 'up') return <TrendingUp className="w-2.5 h-2.5" />;
-    if (trend.direction === 'down') return <TrendingDown className="w-2.5 h-2.5" />;
-    if (trend.direction === 'flat') return <Minus className="w-2.5 h-2.5" />;
+    if (trend.direction === "up") return <TrendingUp className="w-2.5 h-2.5" />;
+    if (trend.direction === "down")
+      return <TrendingDown className="w-2.5 h-2.5" />;
+    if (trend.direction === "flat") return <Minus className="w-2.5 h-2.5" />;
     return null;
   };
 
   const getTrendColor = () => {
-    if (trend.direction === 'up') return 'text-green-600';
-    if (trend.direction === 'down') return 'text-red-500';
-    return 'text-on-surface-variant';
+    if (trend.direction === "up") return "text-green-600";
+    if (trend.direction === "down") return "text-red-500";
+    return "text-on-surface-variant";
   };
 
   const getTrendLabel = () => {
     if (trend.changePercent === null) return null;
-    const sign = trend.changePercent > 0 ? '+' : '';
+    const sign = trend.changePercent > 0 ? "+" : "";
     return `${sign}${trend.changePercent.toFixed(1)}%`;
   };
 
   const inheritedLevel =
-    isInherited && sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(sourceGeoLevel)
-      ? (sourceGeoLevel as 'county' | 'metro' | 'state' | 'national')
+    isInherited &&
+    sourceGeoLevel &&
+    ["county", "metro", "state", "national"].includes(sourceGeoLevel)
+      ? (sourceGeoLevel as "county" | "metro" | "state" | "national")
       : null;
   const sourceLabel = source
-    ? source.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    ? source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
   return (
     <div className="flex flex-col items-center flex-1 min-w-0">
-      <span className="text-[9px] text-on-surface-variant mb-0.5 truncate max-w-full" title={label}>
+      <span
+        className="text-[9px] text-on-surface-variant mb-0.5 truncate max-w-full"
+        title={label}
+      >
         {metricId ? (
           <MetricTitle
             metricId={metricId}
@@ -92,19 +106,27 @@ const SubScoreDisplay: React.FC<SubScoreDisplayProps> = ({
               isFallback: !!isFallback,
             }}
           />
-        ) : label}
+        ) : (
+          label
+        )}
       </span>
       {loading ? (
         <Loader2 className="w-3 h-3 animate-spin text-on-surface-variant" />
       ) : (
         <>
-          <span className="text-xs font-semibold text-on-surface">{formattedValue}</span>
+          <span className="text-xs font-semibold text-on-surface">
+            {formattedValue}
+          </span>
           {(isFallback || inheritedLevel) && (
             <div className="flex items-center gap-1 mt-0.5">
               {isFallback && (
                 <span
                   className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-[8px] font-medium text-amber-700"
-                  title={sourceLabel ? `Resolved from fallback source: ${sourceLabel}` : 'Resolved from fallback source'}
+                  title={
+                    sourceLabel
+                      ? `Resolved from fallback source: ${sourceLabel}`
+                      : "Resolved from fallback source"
+                  }
                 >
                   Fallback
                 </span>
@@ -167,15 +189,18 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
   const [selected, setSelected] = useState<string[]>(selectedMetrics);
   const availableMetrics = getAvailableMetrics(viewMode);
 
-  const groupedMetrics = availableMetrics.reduce((acc, m) => {
-    if (!acc[m.category]) acc[m.category] = [];
-    acc[m.category].push(m);
-    return acc;
-  }, {} as Record<string, AvailableMetric[]>);
+  const groupedMetrics = availableMetrics.reduce(
+    (acc, m) => {
+      if (!acc[m.category]) acc[m.category] = [];
+      acc[m.category].push(m);
+      return acc;
+    },
+    {} as Record<string, AvailableMetric[]>,
+  );
 
   const toggleMetric = (metricId: string) => {
     if (selected.includes(metricId)) {
-      setSelected(selected.filter(id => id !== metricId));
+      setSelected(selected.filter((id) => id !== metricId));
     } else if (selected.length < maxSelections) {
       setSelected([...selected, metricId]);
     }
@@ -212,15 +237,17 @@ const MetricSelector: React.FC<MetricSelectorProps> = ({
               {category}
             </div>
             <div className="flex flex-wrap gap-1">
-              {metrics.map(m => (
+              {metrics.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => toggleMetric(m.id)}
-                  disabled={!selected.includes(m.id) && selected.length >= maxSelections}
+                  disabled={
+                    !selected.includes(m.id) && selected.length >= maxSelections
+                  }
                   className={`px-1.5 py-0.5 text-[9px] rounded-full border transition-colors ${
                     selected.includes(m.id)
-                      ? 'bg-primary text-on-primary border-primary'
-                      : 'bg-surface border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50'
+                      ? "bg-primary text-on-primary border-primary"
+                      : "bg-surface border-outline-variant text-on-surface hover:bg-surface-container disabled:opacity-50"
                   }`}
                 >
                   {m.name}
@@ -240,7 +267,7 @@ export interface MetricIndicator {
   formattedValue: string;
   source: string | null;
   sourceGeoId: string | null;
-  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null;
   isInherited: boolean;
   isFallback: boolean;
   trend: TrendData;
@@ -249,7 +276,7 @@ export interface MetricIndicator {
 export interface CompactScoreCardProps {
   title: string;
   score: number | null;
-  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence?: "HIGH" | "MEDIUM" | "LOW";
   indicators: MetricIndicator[];
   loading?: boolean;
   metricsLoading?: boolean;
@@ -262,7 +289,7 @@ export interface CompactScoreCardProps {
 export const CompactScoreCard = memo(function CompactScoreCard({
   title,
   score,
-  confidence = 'MEDIUM',
+  confidence = "MEDIUM",
   indicators,
   loading = false,
   metricsLoading = false,
@@ -273,10 +300,13 @@ export const CompactScoreCard = memo(function CompactScoreCard({
 }: CompactScoreCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleSave = useCallback((metricIds: string[]) => {
-    setIsEditing(false);
-    onMetricsChange?.(metricIds);
-  }, [onMetricsChange]);
+  const handleSave = useCallback(
+    (metricIds: string[]) => {
+      setIsEditing(false);
+      onMetricsChange?.(metricIds);
+    },
+    [onMetricsChange],
+  );
 
   if (loading) {
     return (
@@ -314,7 +344,7 @@ export const CompactScoreCard = memo(function CompactScoreCard({
           <ScoreDisplay value={score} size={80} strokeWidth={5} />
         ) : (
           <div className="w-[80px] h-[80px] rounded-full bg-surface-container-highest flex items-center justify-center">
-            <span className="text-on-surface-variant text-sm">--</span>
+            <span className="text-on-surface-variant text-sm">{"\u2014"}</span>
           </div>
         )}
 

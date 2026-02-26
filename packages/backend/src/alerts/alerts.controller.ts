@@ -21,10 +21,14 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
-import { AlertsService, CreateAlertDto, UpdateAlertDto } from './alerts.service';
+import {
+  AlertsService,
+  CreateAlertDto,
+  UpdateAlertDto,
+} from './alerts.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('alerts')
+@Controller('api/alerts')
 export class AlertsController {
   private readonly logger = new Logger(AlertsController.name);
 
@@ -57,13 +61,16 @@ export class AlertsController {
    * POST /api/alerts
    */
   @Post()
-  async createAlert(
-    @AuthUserId() userId: string,
-    @Body() dto: CreateAlertDto,
-  ) {
+  async createAlert(@AuthUserId() userId: string, @Body() dto: CreateAlertDto) {
     this.logger.log('POST /alerts');
 
-    if (!dto.geography_type || !dto.geography_id || !dto.metric_id || !dto.condition || dto.threshold == null) {
+    if (
+      !dto.geography_type ||
+      !dto.geography_id ||
+      !dto.metric_id ||
+      !dto.condition ||
+      dto.threshold == null
+    ) {
       throw new HttpException(
         'geography_type, geography_id, metric_id, condition, and threshold are required',
         HttpStatus.BAD_REQUEST,
@@ -167,10 +174,7 @@ export class AlertsController {
    * PATCH /api/alerts/history/:id/read
    */
   @Patch('history/:id/read')
-  async markRead(
-    @AuthUserId() userId: string,
-    @Param('id') historyId: string,
-  ) {
+  async markRead(@AuthUserId() userId: string, @Param('id') historyId: string) {
     this.logger.log(`PATCH /alerts/history/${historyId}/read`);
 
     try {

@@ -1,14 +1,14 @@
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import Link from 'next/link';
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import Link from "next/link";
 import {
   COMPARISONS,
   getComparison,
   withLivePricing,
   type ComparisonData,
   type ComparisonWinner,
-} from '@/lib/data/comparisons';
-import { fetchPricingSummary } from '@/lib/data/fetchers/pricing';
+} from "@/lib/data/comparisons";
+import { fetchPricingSummary } from "@/lib/data/fetchers/pricing";
 
 // ---------------------------------------------------------------------------
 // Static params & metadata
@@ -29,7 +29,7 @@ export async function generateMetadata({
   const comparison = getComparison(slug);
 
   if (!comparison) {
-    return { title: 'Comparison Not Found' };
+    return { title: "Comparison Not Found" };
   }
 
   return {
@@ -47,13 +47,13 @@ export async function generateMetadata({
 // ---------------------------------------------------------------------------
 
 function winnerCellClass(
-  column: 'propertyiq' | 'competitor',
+  column: "propertyiq" | "competitor",
   winner: ComparisonWinner,
 ): string {
   if (winner === column) {
-    return 'bg-green-500/10 text-on-surface font-semibold';
+    return "bg-green-500/10 text-on-surface font-semibold";
   }
-  return 'text-on-surface-variant';
+  return "text-on-surface-variant";
 }
 
 // ---------------------------------------------------------------------------
@@ -104,20 +104,16 @@ function FeatureComparisonTable({
                   {row.feature}
                 </td>
                 <td
-                  className={`px-4 py-3 ${winnerCellClass('propertyiq', row.winner)}`}
+                  className={`px-4 py-3 ${winnerCellClass("propertyiq", row.winner)}`}
                 >
                   {row.propertyiq}
-                  {row.winner === 'propertyiq' && (
-                    <WinnerBadge />
-                  )}
+                  {row.winner === "propertyiq" && <WinnerBadge />}
                 </td>
                 <td
-                  className={`px-4 py-3 ${winnerCellClass('competitor', row.winner)}`}
+                  className={`px-4 py-3 ${winnerCellClass("competitor", row.winner)}`}
                 >
                   {row.competitor}
-                  {row.winner === 'competitor' && (
-                    <WinnerBadge />
-                  )}
+                  {row.winner === "competitor" && <WinnerBadge />}
                 </td>
               </tr>
             ))}
@@ -200,31 +196,10 @@ function CallToAction() {
 }
 
 // ---------------------------------------------------------------------------
-// FAQ JSON-LD
-// ---------------------------------------------------------------------------
-
-function buildFaqJsonLd(comparison: ComparisonData) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: comparison.faqs.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer,
-      },
-    })),
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function ComparisonPage({
-  params,
-}: ComparisonPageProps) {
+export default async function ComparisonPage({ params }: ComparisonPageProps) {
   const { slug } = await params;
   const rawComparison = getComparison(slug);
 
@@ -236,25 +211,22 @@ export default async function ComparisonPage({
   let comparison = rawComparison;
   try {
     const pricing = await fetchPricingSummary();
-    const pro = pricing.tiers.find((t) => t.slug === 'pro');
-    const enterprise = pricing.tiers.find((t) => t.slug === 'enterprise');
+    const pro = pricing.tiers.find((t) => t.slug === "pro");
+    const enterprise = pricing.tiers.find((t) => t.slug === "enterprise");
     comparison = withLivePricing(rawComparison, {
-      proMonthly: pro?.price_monthly ? `$${Math.round(Number(pro.price_monthly))}` : '$39',
-      enterpriseMonthly: enterprise?.price_monthly ? `$${Math.round(Number(enterprise.price_monthly))}` : '$149',
+      proMonthly: pro?.price_monthly
+        ? `$${Math.round(Number(pro.price_monthly))}`
+        : "$39",
+      enterpriseMonthly: enterprise?.price_monthly
+        ? `$${Math.round(Number(enterprise.price_monthly))}`
+        : "$149",
     });
-  } catch {
-    // Pricing fetch failed; use static data as-is
+  } catch (error) {
+    console.error("Failed to fetch pricing:", error);
   }
-
-  const faqJsonLd = buildFaqJsonLd(comparison);
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-
       <Breadcrumb comparison={comparison} />
 
       <h1 className="text-3xl font-medium text-on-surface tracking-tight">

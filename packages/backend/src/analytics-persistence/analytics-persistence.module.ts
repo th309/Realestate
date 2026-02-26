@@ -15,6 +15,7 @@ import { NotesService } from './notes.service';
 import { NotesController } from './notes.controller';
 import { ConversationsService } from './conversations.service';
 import { ConversationsController } from './conversations.controller';
+import { ConversationActionsController } from './conversation-actions.controller';
 import { AlertsService } from './alerts.service';
 import { AlertsController } from './alerts.controller';
 import { SharesService } from './shares.service';
@@ -38,6 +39,7 @@ import { ExportController } from './export.controller';
     WatchlistController,
     NotesController,
     ConversationsController,
+    ConversationActionsController,
     AlertsController,
     SharesController,
     ExportController,

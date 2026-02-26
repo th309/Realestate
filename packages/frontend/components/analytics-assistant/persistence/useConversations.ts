@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
 /**
  * Hook for managing conversation history
+ *
+ * Uses JWT auth headers — userId is extracted from the token on the backend.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { Conversation, ConversationMessage } from './types';
+import { useState, useCallback, useEffect } from "react";
+import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
+import type { Conversation, ConversationMessage } from "./types";
 
 interface UseConversationsOptions {
   userId: string;
@@ -21,7 +24,7 @@ interface UseConversationsReturn {
   saveConversation: (
     conversationId: string,
     messages: ConversationMessage[],
-    title?: string
+    title?: string,
   ) => Promise<void>;
   archiveConversation: (conversationId: string) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<void>;
@@ -43,18 +46,21 @@ export function useConversations({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/analytics/persistence/conversations?userId=${userId}`
-      );
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/analytics/persistence/conversations`, {
+        headers: authHeaders,
+      });
       const data = await response.json();
 
       if (data.success) {
         setConversations(data.data || []);
       } else {
-        setError(data.error || 'Failed to load conversations');
+        setError(data.error || "Failed to load conversations");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load conversations');
+      setError(
+        err instanceof Error ? err.message : "Failed to load conversations",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -69,8 +75,10 @@ export function useConversations({
   const getConversation = useCallback(
     async (conversationId: string): Promise<Conversation | null> => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
-          `/api/analytics/persistence/conversations/${conversationId}?userId=${userId}`
+          `/api/analytics/persistence/conversations/${conversationId}`,
+          { headers: authHeaders },
         );
         const data = await response.json();
 
@@ -82,26 +90,29 @@ export function useConversations({
         return null;
       }
     },
-    [userId]
+    [],
   );
 
   const saveConversation = useCallback(
     async (
       conversationId: string,
       messages: ConversationMessage[],
-      title?: string
+      title?: string,
     ) => {
       try {
-        const response = await fetch('/api/analytics/persistence/conversations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            conversation_id: conversationId,
-            messages,
-            title,
-          }),
-        });
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(
+          "/api/analytics/persistence/conversations",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+              conversation_id: conversationId,
+              messages,
+              title,
+            }),
+          },
+        );
 
         const data = await response.json();
 
@@ -109,81 +120,84 @@ export function useConversations({
           // Update local state
           setConversations((prev) => {
             const existing = prev.find(
-              (c) => c.conversation_id === conversationId
+              (c) => c.conversation_id === conversationId,
             );
             if (existing) {
               return prev.map((c) =>
-                c.conversation_id === conversationId ? data.data : c
+                c.conversation_id === conversationId ? data.data : c,
               );
             }
             return [data.data, ...prev];
           });
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save conversation');
-      }
-    },
-    [userId]
-  );
-
-  const archiveConversation = useCallback(
-    async (conversationId: string) => {
-      try {
-        const response = await fetch(
-          `/api/analytics/persistence/conversations/${conversationId}/archive`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId }),
-          }
+        setError(
+          err instanceof Error ? err.message : "Failed to save conversation",
         );
-
-        const data = await response.json();
-
-        if (data.success) {
-          setConversations((prev) =>
-            prev.filter((c) => c.conversation_id !== conversationId)
-          );
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to archive conversation');
       }
     },
-    [userId]
+    [],
   );
 
-  const deleteConversation = useCallback(
-    async (conversationId: string) => {
-      try {
-        const response = await fetch(
-          `/api/analytics/persistence/conversations/${conversationId}?userId=${userId}`,
-          { method: 'DELETE' }
+  const archiveConversation = useCallback(async (conversationId: string) => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(
+        `/api/analytics/persistence/conversations/${conversationId}/archive`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({}),
+        },
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConversations((prev) =>
+          prev.filter((c) => c.conversation_id !== conversationId),
         );
-
-        const data = await response.json();
-
-        if (data.success) {
-          setConversations((prev) =>
-            prev.filter((c) => c.conversation_id !== conversationId)
-          );
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete conversation');
       }
-    },
-    [userId]
-  );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to archive conversation",
+      );
+    }
+  }, []);
+
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(
+        `/api/analytics/persistence/conversations/${conversationId}`,
+        { method: "DELETE", headers: authHeaders },
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setConversations((prev) =>
+          prev.filter((c) => c.conversation_id !== conversationId),
+        );
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete conversation",
+      );
+    }
+  }, []);
 
   const updateTitle = useCallback(
     async (conversationId: string, title: string) => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
           `/api/analytics/persistence/conversations/${conversationId}/title`,
           {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, title }),
-          }
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({ title }),
+          },
         );
 
         const data = await response.json();
@@ -193,15 +207,15 @@ export function useConversations({
             prev.map((c) =>
               c.conversation_id === conversationId
                 ? { ...c, title: data.data.title }
-                : c
-            )
+                : c,
+            ),
           );
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update title');
+        setError(err instanceof Error ? err.message : "Failed to update title");
       }
     },
-    [userId]
+    [],
   );
 
   return {

@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import type { MetroSlugEntry } from '@/lib/data/metro-slugs';
-import { METRO_SLUG_DATA } from '@/lib/data/metro-slug-data';
-import { ScoreWidget } from '@/app/components/scoring/ScoreWidget';
-import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
+import Link from "next/link";
+import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
+import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
+import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 
 interface MetroPageContentProps {
   metro: MetroSlugEntry;
 }
 
 export function MetroPageContent({ metro }: MetroPageContentProps) {
-  const nearbyMetros = METRO_SLUG_DATA
-    .filter(m => m.state === metro.state && m.cbsaCode !== metro.cbsaCode)
-    .slice(0, 5);
+  const nearbyMetros = METRO_SLUG_DATA.filter(
+    (m) => m.state === metro.state && m.cbsaCode !== metro.cbsaCode,
+  ).slice(0, 5);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -53,7 +53,9 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
               geographyId={metro.cbsaCode}
               scoreType="homeready"
             />
-            <span className="text-sm font-medium text-on-surface">HomeReady</span>
+            <span className="text-sm font-medium text-on-surface">
+              HomeReady
+            </span>
           </div>
           <div className="flex flex-col items-center gap-2">
             <ScoreWidget
@@ -61,7 +63,9 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
               geographyId={metro.cbsaCode}
               scoreType="investoredge"
             />
-            <span className="text-sm font-medium text-on-surface">InvestorEdge</span>
+            <span className="text-sm font-medium text-on-surface">
+              InvestorEdge
+            </span>
           </div>
           <div className="flex flex-col items-center gap-2">
             <ScoreWidget
@@ -69,7 +73,9 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
               geographyId={metro.cbsaCode}
               scoreType="market_health"
             />
-            <span className="text-sm font-medium text-on-surface">Market Health</span>
+            <span className="text-sm font-medium text-on-surface">
+              Market Health
+            </span>
           </div>
         </div>
       </section>
@@ -77,7 +83,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
       {/* CTAs */}
       <section className="flex flex-wrap gap-4 mb-10">
         <Link
-          href={`/map?geo=metro&region=${metro.cbsaCode}`}
+          href={`/map?geo=metro&id=${metro.cbsaCode}&name=${encodeURIComponent(metro.name)}&state=${metro.state}`}
           className="px-6 py-3 bg-primary text-on-primary rounded-full font-medium hover:bg-primary/90 transition-colors"
         >
           View on Interactive Map
@@ -100,7 +106,7 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
             More Markets in {metro.state}
           </h2>
           <div className="flex flex-wrap gap-2">
-            {nearbyMetros.map(m => (
+            {nearbyMetros.map((m) => (
               <Link
                 key={m.cbsaCode}
                 href={`/markets/${m.slug}`}
@@ -118,13 +124,13 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Place',
+            "@context": "https://schema.org",
+            "@type": "Place",
             name: metro.name,
             url: `https://www.propertyiq.app/markets/${metro.slug}`,
             containedInPlace: {
-              '@type': 'Country',
-              name: 'United States',
+              "@type": "Country",
+              name: "United States",
             },
           }),
         }}

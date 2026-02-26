@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   TrendingUp,
   Home,
@@ -13,24 +13,31 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Lock,
-} from 'lucide-react';
-import Link from 'next/link';
-import { ScoreDisplay, getScoreLabel } from '@/app/components/scoring/ScoreDisplay';
-import { useMarketSnapshot, type GeoLevel, isMetricSupportedForGeo } from '@/lib/data';
-import { Breadcrumbs } from '@/components/navigation';
-import { getMetricCategories } from '@/app/map/config/metric-categories';
-import { MetricTitle } from '@/app/components/MetricTitle';
-import { InheritedBadge } from '@/app/components/scoring/InheritedBadge';
-import { useEntitlements } from '@/lib/entitlements';
-import { AIMarketAnalysis } from './AIMarketAnalysis';
-import { useQueryClient } from '@tanstack/react-query';
-import { BenchmarkBadge } from '@/components/benchmarks';
-import { useBenchmarks, getBenchmarkForMetric } from '@/lib/benchmarks/hooks';
+} from "lucide-react";
+import Link from "next/link";
+import {
+  ScoreDisplay,
+  getScoreLabel,
+} from "@/app/components/scoring/ScoreDisplay";
+import {
+  useMarketSnapshot,
+  type GeoLevel,
+  isMetricSupportedForGeo,
+} from "@/lib/data";
+import { Breadcrumbs } from "@/components/navigation";
+import { getMetricCategories } from "@/app/map/config/metric-categories";
+import { MetricTitle } from "@/app/components/MetricTitle";
+import { InheritedBadge } from "@/app/components/scoring/InheritedBadge";
+import { useEntitlements } from "@/lib/entitlements";
+import { AIMarketAnalysis } from "./AIMarketAnalysis";
+import { useQueryClient } from "@tanstack/react-query";
+import { BenchmarkBadge } from "@/components/benchmarks";
+import { useBenchmarks, getBenchmarkForMetric } from "@/lib/benchmarks/hooks";
 
 interface MarketDashboardProps {
   geographyId: string;
-  geographyType: 'metro' | 'county' | 'zip';
-  userView: 'investor' | 'homebuyer';
+  geographyType: "metro" | "county" | "zip";
+  userView: "investor" | "homebuyer";
   stateFilter?: string;
 }
 
@@ -45,25 +52,33 @@ function MetricCard({
   isInherited,
   isFallback,
   benchmark,
+  isLoading = false,
   delay = 0,
 }: {
   metricId: string;
   formattedValue: string;
   trendPercent: number | null;
-  trendDirection: 'up' | 'down' | 'stable';
+  trendDirection: "up" | "down" | "stable";
   source?: string;
-  sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel?: "metro" | "county" | "zip" | "state" | "national" | null;
   isInherited?: boolean;
   isFallback?: boolean;
-  benchmark?: { diff: number; direction: 'better' | 'worse' | 'similar'; parentGeoName: string } | null;
+  benchmark?: {
+    diff: number;
+    direction: "better" | "worse" | "similar";
+    parentGeoName: string;
+  } | null;
+  isLoading?: boolean;
   delay?: number;
 }) {
   const inheritedLevel =
-    isInherited && sourceGeoLevel && ['county', 'metro', 'state', 'national'].includes(sourceGeoLevel)
-      ? (sourceGeoLevel as 'county' | 'metro' | 'state' | 'national')
+    isInherited &&
+    sourceGeoLevel &&
+    ["county", "metro", "state", "national"].includes(sourceGeoLevel)
+      ? (sourceGeoLevel as "county" | "metro" | "state" | "national")
       : null;
   const sourceLabel = source
-    ? source.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    ? source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : null;
 
   return (
@@ -86,14 +101,23 @@ function MetricCard({
           />
         </div>
         {trendPercent != null && (
-          <div className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${
-            trendDirection === 'up' ? 'text-green-600' :
-            trendDirection === 'down' ? 'text-red-600' :
-            'text-on-surface-variant'
-          }`}>
-            {trendDirection === 'up' && <ArrowUpRight className="w-3.5 h-3.5" />}
-            {trendDirection === 'down' && <ArrowDownRight className="w-3.5 h-3.5" />}
-            {trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%
+          <div
+            className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${
+              trendDirection === "up"
+                ? "text-green-600"
+                : trendDirection === "down"
+                  ? "text-red-600"
+                  : "text-on-surface-variant"
+            }`}
+          >
+            {trendDirection === "up" && (
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            )}
+            {trendDirection === "down" && (
+              <ArrowDownRight className="w-3.5 h-3.5" />
+            )}
+            {trendPercent >= 0 ? "+" : ""}
+            {trendPercent.toFixed(1)}%
           </div>
         )}
       </div>
@@ -102,7 +126,11 @@ function MetricCard({
           {isFallback && (
             <span
               className="inline-flex items-center rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-              title={sourceLabel ? `Resolved from fallback source: ${sourceLabel}` : 'Resolved from fallback source'}
+              title={
+                sourceLabel
+                  ? `Resolved from fallback source: ${sourceLabel}`
+                  : "Resolved from fallback source"
+              }
             >
               Fallback
             </span>
@@ -110,7 +138,13 @@ function MetricCard({
           {inheritedLevel && <InheritedBadge sourceType={inheritedLevel} />}
         </div>
       )}
-      <div className="text-xl font-bold text-on-surface">{formattedValue}</div>
+      <div className="text-xl font-bold text-on-surface">
+        {isLoading ? (
+          <span className="inline-block h-6 w-20 rounded bg-on-surface/10 animate-pulse" />
+        ) : (
+          formattedValue
+        )}
+      </div>
       {benchmark && (
         <div className="mt-2">
           <BenchmarkBadge
@@ -139,17 +173,20 @@ function MetricCategorySection({
   subtext?: string;
   icon: React.ReactNode;
   metricIds: string[];
-  factorsData: Record<string, {
-    formattedValue: string;
-    percentChange: number | null;
-    direction: 'up' | 'down' | 'stable' | null;
-    source?: string;
-    sourceGeoLevel?: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
-    isInherited?: boolean;
-    isFallback?: boolean;
-    isLoading?: boolean;
-  }>;
-  benchmarks?: import('@/lib/benchmarks/api').BenchmarkResult[];
+  factorsData: Record<
+    string,
+    {
+      formattedValue: string;
+      percentChange: number | null;
+      direction: "up" | "down" | "stable" | null;
+      source?: string;
+      sourceGeoLevel?: "metro" | "county" | "zip" | "state" | "national" | null;
+      isInherited?: boolean;
+      isFallback?: boolean;
+      isLoading?: boolean;
+    }
+  >;
+  benchmarks?: import("@/lib/benchmarks/api").BenchmarkResult[];
   hasBenchmarkAccess?: boolean;
   delay?: number;
 }) {
@@ -165,25 +202,39 @@ function MetricCategorySection({
           {icon}
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-on-surface">{categoryName}</h4>
-          {subtext && <p className="text-xs text-on-surface-variant">{subtext}</p>}
+          <h4 className="text-sm font-semibold text-on-surface">
+            {categoryName}
+          </h4>
+          {subtext && (
+            <p className="text-xs text-on-surface-variant">{subtext}</p>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {metricIds.map((metricId, i) => {
           const datum = factorsData[metricId];
-          const benchmarkData = hasBenchmarkAccess ? getBenchmarkForMetric(benchmarks, metricId) : null;
-          const benchmarkProp = benchmarkData?.diff != null && benchmarkData?.direction && benchmarkData?.parentGeo
-            ? { diff: benchmarkData.diff, direction: benchmarkData.direction, parentGeoName: benchmarkData.parentGeo.name }
+          const benchmarkData = hasBenchmarkAccess
+            ? getBenchmarkForMetric(benchmarks, metricId)
             : null;
+          const benchmarkProp =
+            benchmarkData?.diff != null &&
+            benchmarkData?.direction &&
+            benchmarkData?.parentGeo
+              ? {
+                  diff: benchmarkData.diff,
+                  direction: benchmarkData.direction,
+                  parentGeoName: benchmarkData.parentGeo.name,
+                }
+              : null;
 
           return (
             <MetricCard
               key={metricId}
               metricId={metricId}
-              formattedValue={datum?.isLoading ? '...' : (datum?.formattedValue ?? '\u2014')}
+              formattedValue={datum?.formattedValue ?? "\u2014"}
+              isLoading={!!datum?.isLoading}
               trendPercent={datum?.percentChange ?? null}
-              trendDirection={datum?.direction ?? 'stable'}
+              trendDirection={datum?.direction ?? "stable"}
               source={datum?.source}
               sourceGeoLevel={datum?.sourceGeoLevel}
               isInherited={datum?.isInherited}
@@ -216,14 +267,16 @@ function ScoreBadge({ label, score }: { label: string; score: number }) {
       />
       <div className="flex-1">
         <div className="text-sm font-medium text-on-surface">{label}</div>
-        <div className="text-xs text-on-surface-variant">{getScoreLabel(score)}</div>
+        <div className="text-xs text-on-surface-variant">
+          {getScoreLabel(score)}
+        </div>
       </div>
     </motion.div>
   );
 }
 
 // Premium geography levels that require entitlements
-const PREMIUM_GEO_LEVELS = ['county', 'zip', 'tract'];
+const PREMIUM_GEO_LEVELS = ["county", "zip", "tract"];
 
 export function MarketDashboard({
   geographyId,
@@ -231,42 +284,49 @@ export function MarketDashboard({
   userView,
   stateFilter,
 }: MarketDashboardProps) {
-  const [activeView, setActiveView] = useState<'investor' | 'homebuyer'>(userView);
+  const [activeView, setActiveView] = useState<"investor" | "homebuyer">(
+    userView,
+  );
   const queryClient = useQueryClient();
 
   // Check entitlements for geography level
   const { getAccess } = useEntitlements();
-  const geoAccess = getAccess('geo', geographyType);
-  const hasGeoAccess = geoAccess.level === 'full' || geoAccess.level === 'preview' || !PREMIUM_GEO_LEVELS.includes(geographyType);
+  const geoAccess = getAccess("geo", geographyType);
+  const hasGeoAccess =
+    geoAccess.level === "full" ||
+    geoAccess.level === "preview" ||
+    !PREMIUM_GEO_LEVELS.includes(geographyType);
 
   // Derive state filter: use URL param if available
   // Note: metros don't use state filter - they can span state boundaries
   const effectiveStateFilter = useMemo(() => {
-    if (geographyType === 'metro') return undefined;
+    if (geographyType === "metro") return undefined;
     if (stateFilter) return stateFilter;
-    if (geographyType !== 'zip' && geographyType !== 'county') return undefined;
+    if (geographyType !== "zip" && geographyType !== "county") return undefined;
     return undefined;
   }, [stateFilter, geographyType]);
 
   // Single hook replaces fetchData() + useDataCardBatch() — 2 HTTP calls instead of 116
-  const { cards, scores, geography, lastUpdated, isLoading, error } = useMarketSnapshot(
-    geographyType,
-    geographyId,
-    { state: effectiveStateFilter, trendMonths: 6 },
-  );
+  const { cards, scores, geography, lastUpdated, isLoading, error } =
+    useMarketSnapshot(geographyType, geographyId, {
+      state: effectiveStateFilter,
+      trendMonths: 6,
+    });
 
   // Get metric categories for the current view (must be called before early returns)
   const categories = useMemo(() => {
-    const viewMode = activeView === 'investor' ? 'investor' : 'homebuyer';
-    return getMetricCategories(viewMode).filter(cat => !cat.isDivider && cat.id !== 'scores');
+    const viewMode = activeView === "investor" ? "investor" : "homebuyer";
+    return getMetricCategories(viewMode).filter(
+      (cat) => !cat.isDivider && cat.id !== "scores",
+    );
   }, [activeView]);
 
   // Collect all displayed metric IDs for benchmarking
   const allMetricIds = useMemo(() => {
-    return categories.flatMap(cat =>
+    return categories.flatMap((cat) =>
       (cat.metrics || [])
-        .filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel))
-        .map(m => m.id)
+        .filter((m) => isMetricSupportedForGeo(m.id, geographyType as GeoLevel))
+        .map((m) => m.id),
     );
   }, [categories, geographyType]);
 
@@ -279,23 +339,27 @@ export function MarketDashboard({
   // Apply metric fallbacks: home_value falls back to listing_price when ZHVI is unavailable
   const displayData = useMemo(() => {
     const result = { ...cards };
-    if (!result['home_value']?.value && result['listing_price']?.value) {
-      result['home_value'] = { ...result['listing_price'] };
+    if (!result["home_value"]?.value && result["listing_price"]?.value) {
+      result["home_value"] = { ...result["listing_price"] };
     }
     return result;
   }, [cards]);
 
   const updatedDateLabel = useMemo(() => {
-    if (!lastUpdated) return 'Unknown';
+    if (!lastUpdated) return "Unknown";
     const parsed = new Date(lastUpdated);
-    if (Number.isNaN(parsed.getTime())) return 'Unknown';
+    if (Number.isNaN(parsed.getTime())) return "Unknown";
     return parsed.toLocaleDateString();
   }, [lastUpdated]);
 
   // Refresh handler
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['market-snapshot', geographyType, geographyId] });
-    queryClient.invalidateQueries({ queryKey: ['market-snapshot-trends', geographyType, geographyId] });
+    queryClient.invalidateQueries({
+      queryKey: ["market-snapshot", geographyType, geographyId],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["market-snapshot-trends", geographyType, geographyId],
+    });
   };
 
   if (isLoading) {
@@ -320,8 +384,12 @@ export function MarketDashboard({
           <div className="w-16 h-16 mx-auto bg-error/10 rounded-2xl flex items-center justify-center mb-4">
             <span className="text-3xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-semibold text-on-surface mb-2">Unable to Load Market Data</h2>
-          <p className="text-on-surface-variant mb-6">{error?.message ?? 'Unknown error'}</p>
+          <h2 className="text-xl font-semibold text-on-surface mb-2">
+            Unable to Load Market Data
+          </h2>
+          <p className="text-on-surface-variant mb-6">
+            {error?.message ?? "Unknown error"}
+          </p>
           <button
             onClick={handleRefresh}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-full hover:bg-primary/90 transition-colors"
@@ -337,16 +405,21 @@ export function MarketDashboard({
   // Check geography access after loading data
   if (!hasGeoAccess) {
     return (
-      <div data-testid="geo-gate-wall" className="min-h-screen bg-surface flex items-center justify-center">
+      <div
+        data-testid="geo-gate-wall"
+        className="min-h-screen bg-surface flex items-center justify-center"
+      >
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
             <Lock className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-xl font-semibold text-on-surface mb-2">
-            {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} Level Data
+            {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)}{" "}
+            Level Data
           </h2>
           <p className="text-on-surface-variant mb-6">
-            Access detailed {geographyType}-level market data with a Pro subscription. Get granular insights to make more informed decisions.
+            Access detailed {geographyType}-level market data with a Pro
+            subscription. Get granular insights to make more informed decisions.
           </p>
           <div className="flex flex-col gap-3">
             <Link
@@ -355,10 +428,7 @@ export function MarketDashboard({
             >
               Upgrade to Pro
             </Link>
-            <Link
-              href="/map"
-              className="text-sm text-primary hover:underline"
-            >
+            <Link href="/map" className="text-sm text-primary hover:underline">
               ← Back to Map
             </Link>
           </div>
@@ -367,9 +437,8 @@ export function MarketDashboard({
     );
   }
 
-  const primaryScore = activeView === 'investor'
-    ? scores?.investoredge
-    : scores?.homeready;
+  const primaryScore =
+    activeView === "investor" ? scores?.investoredge : scores?.homeready;
 
   return (
     <div className="min-h-screen bg-surface">
@@ -378,7 +447,7 @@ export function MarketDashboard({
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-4">
           <Breadcrumbs
             items={[
-              { label: 'Markets', href: '/market' },
+              { label: "Markets", href: "/market" },
               { label: geography.name },
             ]}
             className="mb-3"
@@ -394,10 +463,14 @@ export function MarketDashboard({
               <div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-primary" />
-                  <h1 className="text-xl font-semibold text-on-surface">{geography.name}</h1>
+                  <h1 className="text-xl font-semibold text-on-surface">
+                    {geography.name}
+                  </h1>
                 </div>
                 <p className="text-sm text-on-surface-variant">
-                  {geographyType.charAt(0).toUpperCase() + geographyType.slice(1)} • Updated {updatedDateLabel}
+                  {geographyType.charAt(0).toUpperCase() +
+                    geographyType.slice(1)}{" "}
+                  • Updated {updatedDateLabel}
                 </p>
               </div>
             </div>
@@ -410,10 +483,16 @@ export function MarketDashboard({
               >
                 <RefreshCw className="w-5 h-5 text-on-surface-variant" />
               </button>
-              <button className="p-2.5 rounded-xl hover:bg-surface-container transition-colors" title="Share">
+              <button
+                className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
+                title="Share"
+              >
                 <Share2 className="w-5 h-5 text-on-surface-variant" />
               </button>
-              <button className="p-2.5 rounded-xl hover:bg-surface-container transition-colors" title="Download">
+              <button
+                className="p-2.5 rounded-xl hover:bg-surface-container transition-colors"
+                title="Download"
+              >
                 <Download className="w-5 h-5 text-on-surface-variant" />
               </button>
             </div>
@@ -427,22 +506,22 @@ export function MarketDashboard({
         <div className="flex justify-center mb-8">
           <div className="inline-flex items-center bg-surface-container rounded-full p-1 border border-outline-variant/50">
             <button
-              onClick={() => setActiveView('homebuyer')}
+              onClick={() => setActiveView("homebuyer")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-                activeView === 'homebuyer'
-                  ? 'bg-primary text-on-primary shadow-md'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+                activeView === "homebuyer"
+                  ? "bg-primary text-on-primary shadow-md"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
               }`}
             >
               <Home className="w-4 h-4" />
               Homebuyer
             </button>
             <button
-              onClick={() => setActiveView('investor')}
+              onClick={() => setActiveView("investor")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${
-                activeView === 'investor'
-                  ? 'bg-tertiary text-on-tertiary shadow-md'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+                activeView === "investor"
+                  ? "bg-tertiary text-on-tertiary shadow-md"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
               }`}
             >
               <TrendingUp className="w-4 h-4" />
@@ -468,17 +547,31 @@ export function MarketDashboard({
                 transition={{ duration: 0.4 }}
                 className="flex justify-center mb-4"
               >
-                <ScoreDisplay
-                  value={primaryScore?.score ?? 0}
-                  size={160}
-                  strokeWidth={10}
-                  showGrade={true}
-                  showLabel={true}
-                />
+                {primaryScore?.score != null ? (
+                  <ScoreDisplay
+                    value={primaryScore.score}
+                    size={160}
+                    strokeWidth={10}
+                    showGrade={true}
+                    showLabel={true}
+                  />
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center rounded-full border-4 border-surface-container-highest"
+                    style={{ width: 160, height: 160 }}
+                  >
+                    <span className="text-2xl font-bold text-on-surface-variant">
+                      {"\u2014"}
+                    </span>
+                    <span className="text-xs text-on-surface-variant mt-1">
+                      Unavailable
+                    </span>
+                  </div>
+                )}
               </motion.div>
 
               <p className="text-on-surface-variant">
-                {activeView === 'investor' ? 'InvestorEdge' : 'HomeReady'} Score
+                {activeView === "investor" ? "InvestorEdge" : "HomeReady"} Score
               </p>
             </motion.div>
 
@@ -500,9 +593,19 @@ export function MarketDashboard({
               </h3>
               <div className="space-y-6">
                 {categories.map((category, catIndex) => {
-                  const supportedMetrics = category.metrics?.filter(m => isMetricSupportedForGeo(m.id, geographyType as GeoLevel)).map(m => m.id) ?? [];
-                  // Only show metrics that have actual data (data layer filters nulls)
-                  const metricsWithData = supportedMetrics.filter(id => displayData[id] !== undefined);
+                  const supportedMetrics =
+                    category.metrics
+                      ?.filter((m) =>
+                        isMetricSupportedForGeo(
+                          m.id,
+                          geographyType as GeoLevel,
+                        ),
+                      )
+                      .map((m) => m.id) ?? [];
+                  // Show metrics present in the snapshot (null-valued ones render with em-dash)
+                  const metricsWithData = supportedMetrics.filter(
+                    (id) => displayData[id] !== undefined,
+                  );
                   if (metricsWithData.length === 0) return null;
 
                   // Add divider between view-specific (first 3) and shared categories
@@ -542,27 +645,27 @@ export function MarketDashboard({
                     value: card.value,
                     formattedValue: card.formattedValue,
                     percentChange: card.percentChange,
-                  }
-                ])
+                  },
+                ]),
               )}
-              scores={scores ? {
-                homeready: scores.homeready ?? { score: 0, grade: 'N/A' },
-                investoredge: scores.investoredge ?? { score: 0, grade: 'N/A' },
-                markethealth: scores.markethealth ?? { score: 0, grade: 'N/A' },
-              } : { homeready: { score: 0, grade: 'N/A' }, investoredge: { score: 0, grade: 'N/A' }, markethealth: { score: 0, grade: 'N/A' } }}
+              scores={{
+                homeready: scores?.homeready ?? null,
+                investoredge: scores?.investoredge ?? null,
+                markethealth: scores?.markethealth ?? null,
+              }}
               lastUpdated={lastUpdated ?? new Date().toISOString()}
             />
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
-                href={`/reports?rtype=${userView}&mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ''}`}
+                href={`/reports?rtype=${userView}&mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ""}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-medium rounded-full hover:bg-primary/90 transition-colors shadow-md"
               >
                 Generate Full Report
               </Link>
               <Link
-                href={`/graphs?mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ''}`}
+                href={`/graphs?mid=${geographyId}&mname=${encodeURIComponent(geography.name)}&mtype=${geographyType}${stateFilter ? `&mstate=${stateFilter}` : ""}`}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant"
               >
                 <TrendingUp className="w-4 h-4" />
@@ -584,21 +687,21 @@ export function MarketDashboard({
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:hidden z-20">
         <div className="flex items-center bg-surface-container-high rounded-full p-1 shadow-xl border border-outline-variant">
           <button
-            onClick={() => setActiveView('homebuyer')}
+            onClick={() => setActiveView("homebuyer")}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeView === 'homebuyer'
-                ? 'bg-primary text-on-primary'
-                : 'text-on-surface-variant'
+              activeView === "homebuyer"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant"
             }`}
           >
             Buyer
           </button>
           <button
-            onClick={() => setActiveView('investor')}
+            onClick={() => setActiveView("investor")}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeView === 'investor'
-                ? 'bg-tertiary text-on-tertiary'
-                : 'text-on-surface-variant'
+              activeView === "investor"
+                ? "bg-tertiary text-on-tertiary"
+                : "text-on-surface-variant"
             }`}
           >
             Investor

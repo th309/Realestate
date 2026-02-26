@@ -8,26 +8,32 @@
  *   const { cards, scores, geography, isLoading, error } = useMarketSnapshot('metro', '12420');
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { fetchMarketSnapshot, type MarketSnapshotResponse } from '../fetchers/market-snapshot';
-import { fetchBatchTrendsServer, type BatchTrendEntry } from '../fetchers/trend';
-import { getMetricConfig, isMetricSupportedForGeo } from '../registry-helpers';
-import { formatMetricValue } from '../format';
-import type { GeoLevel, MetricFormat } from '../types';
-import { useEntitlements } from '@/lib/entitlements';
+import { useQuery } from "@tanstack/react-query";
+import {
+  fetchMarketSnapshot,
+  type MarketSnapshotResponse,
+} from "../fetchers/market-snapshot";
+import {
+  fetchBatchTrendsServer,
+  type BatchTrendEntry,
+} from "../fetchers/trend";
+import { getMetricConfig, isMetricSupportedForGeo } from "../registry-helpers";
+import { formatMetricValue } from "../format";
+import type { GeoLevel, MetricFormat } from "../types";
+import { useEntitlements } from "@/lib/entitlements";
 
-const IS_DEV = process.env.NODE_ENV === 'development';
+const IS_DEV = process.env.NODE_ENV === "development";
 
 export interface MarketSnapshotCard {
   value: number | null;
   formattedValue: string;
   percentChange: number | null;
-  direction: 'up' | 'down' | 'stable' | null;
+  direction: "up" | "down" | "stable" | null;
   isLoading: boolean;
   date: string | null;
   source: string;
   sourceGeoId: string | null;
-  sourceGeoLevel: 'metro' | 'county' | 'zip' | 'state' | 'national' | null;
+  sourceGeoLevel: "metro" | "county" | "zip" | "state" | "national" | null;
   isInherited: boolean;
   isFallback: boolean;
 }
@@ -41,8 +47,8 @@ export interface UseMarketSnapshotOptions {
 
 export interface UseMarketSnapshotResult {
   cards: Record<string, MarketSnapshotCard>;
-  scores: MarketSnapshotResponse['scores'] | null;
-  geography: MarketSnapshotResponse['geography'] | null;
+  scores: MarketSnapshotResponse["scores"] | null;
+  geography: MarketSnapshotResponse["geography"] | null;
   lastUpdated: string | null;
   isLoading: boolean;
   error: Error | null;
@@ -53,13 +59,18 @@ export function useMarketSnapshot(
   geoId: string | undefined,
   options: UseMarketSnapshotOptions = {},
 ): UseMarketSnapshotResult {
-  const { state, trendMonths = 6, includeTrends = true, enabled = true } = options;
+  const {
+    state,
+    trendMonths = 6,
+    includeTrends = true,
+    enabled = true,
+  } = options;
 
   const isEnabled = enabled && !!geoType && !!geoId;
 
   // Query 1: Fetch all snapshot data (metrics + scores) in a single call
   const snapshotQuery = useQuery<MarketSnapshotResponse>({
-    queryKey: ['market-snapshot', geoType, geoId, state],
+    queryKey: ["market-snapshot", geoType, geoId, state],
     queryFn: () => fetchMarketSnapshot(geoType!, geoId!, state),
     enabled: isEnabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -73,7 +84,13 @@ export function useMarketSnapshot(
 
   // Query 2: Fetch all trends in a single call (fires as soon as snapshot returns)
   const trendQuery = useQuery<Record<string, BatchTrendEntry>>({
-    queryKey: ['market-snapshot-trends', geoType, geoId, trendMonths, metricIds.join(',')],
+    queryKey: [
+      "market-snapshot-trends",
+      geoType,
+      geoId,
+      trendMonths,
+      metricIds.join(","),
+    ],
     queryFn: () =>
       fetchBatchTrendsServer(
         metricIds,
@@ -99,22 +116,28 @@ export function useMarketSnapshot(
       if (isMetricGated(metricId)) continue;
 
       const config = getMetricConfig(metricId);
-      const format: MetricFormat = config?.format ?? 'number';
+      const format: MetricFormat = config?.format ?? "number";
 
       // Backend market-snapshot endpoint returns display-ready values
       // (Realtor percent cols, sale_to_list, rent_to_price_ratio already converted)
       const value = metric.value;
 
-      // Skip metrics with no data — consumers only see metrics with values
-      // Warn in dev when a metric that should be supported returns null (potential bug)
+      // Include metrics with null values so card grids show a consistent layout
+      // instead of silently dropping cards. Null-valued cards render with an em-dash.
       if (value == null) {
-        if (IS_DEV && geoType && isMetricSupportedForGeo(metricId, geoType as GeoLevel)) {
-          console.warn(`[useMarketSnapshot] ${metricId} returned null for ${geoType}/${geoId} — expected data based on supportedGeos`);
+        if (
+          IS_DEV &&
+          geoType &&
+          isMetricSupportedForGeo(metricId, geoType as GeoLevel)
+        ) {
+          console.warn(
+            `[useMarketSnapshot] ${metricId} returned null for ${geoType}/${geoId} — expected data based on supportedGeos`,
+          );
         }
-        continue;
       }
 
-      const formatted = formatMetricValue(value, format);
+      const formatted =
+        value != null ? formatMetricValue(value, format) : "\u2014";
       const trend = trends[metricId];
 
       // For 'percent' metrics (rates of change like home_value_yoy), show
@@ -123,7 +146,11 @@ export function useMarketSnapshot(
       // For 'percent_abs' metrics (absolute rates like cap_rate, gross_yield),
       // keep the relative percent change since pp differences are tiny.
       let trendChange = trend?.percentChange ?? null;
-      if (format === 'percent' && trend?.current != null && trend?.prior != null) {
+      if (
+        format === "percent" &&
+        trend?.current != null &&
+        trend?.prior != null
+      ) {
         trendChange = Number((trend.current - trend.prior).toFixed(1));
       }
 
@@ -152,6 +179,7 @@ export function useMarketSnapshot(
     geography: snapshotQuery.data?.geography ?? null,
     lastUpdated: snapshotQuery.data?.lastUpdated ?? null,
     isLoading,
-    error: (snapshotQuery.error as Error) ?? (trendQuery.error as Error) ?? null,
+    error:
+      (snapshotQuery.error as Error) ?? (trendQuery.error as Error) ?? null,
   };
 }

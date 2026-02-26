@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Suspense, useState, FormEvent } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, FormEvent } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   Lock,
@@ -11,9 +11,9 @@ import {
   Check,
   Circle,
   Mail,
-} from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+} from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface PasswordRequirement {
   label: string;
@@ -22,15 +22,30 @@ interface PasswordRequirement {
 
 function getPasswordRequirements(password: string): PasswordRequirement[] {
   return [
-    { label: 'At least 8 characters', met: password.length >= 8 },
-    { label: 'At least 1 uppercase letter', met: /[A-Z]/.test(password) },
-    { label: 'At least 1 lowercase letter', met: /[a-z]/.test(password) },
-    { label: 'At least 1 number', met: /[0-9]/.test(password) },
+    { label: "At least 8 characters", met: password.length >= 8 },
+    { label: "At least 1 uppercase letter", met: /[A-Z]/.test(password) },
+    { label: "At least 1 lowercase letter", met: /[a-z]/.test(password) },
+    { label: "At least 1 number", met: /[0-9]/.test(password) },
   ];
 }
 
 function allRequirementsMet(password: string): boolean {
   return getPasswordRequirements(password).every((r) => r.met);
+}
+
+/** Map raw Supabase/OAuth error messages to user-friendly text. */
+function friendlyAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("provider") && lower.includes("not enabled")) {
+    return "Google sign-up is not currently available. Please use email and password instead.";
+  }
+  if (lower.includes("provider") && lower.includes("disabled")) {
+    return "Google sign-up is not currently available. Please use email and password instead.";
+  }
+  if (lower.includes("popup") || lower.includes("cancelled")) {
+    return "Sign-up was cancelled. Please try again.";
+  }
+  return message;
 }
 
 export default function SignUpPage() {
@@ -45,11 +60,11 @@ function SignUpContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/map';
+  const redirectTo = searchParams.get("redirect") ?? "/map";
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tosAccepted, setTosAccepted] = useState(false);
@@ -60,25 +75,29 @@ function SignUpContent() {
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
     if (!tosAccepted) {
-      setError('You must accept the Terms of Service to create an account');
+      setError("You must accept the Terms of Service to create an account");
       return;
     }
     if (!email || !password || !confirmPassword) return;
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (!allRequirementsMet(password)) {
-      setError('Password does not meet all requirements');
+      setError("Password does not meet all requirements");
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    const { error: authError, session } = await signUp(email, password, redirectTo);
+    const { error: authError, session } = await signUp(
+      email,
+      password,
+      redirectTo,
+    );
 
     if (authError) {
       setError(authError.message);
@@ -91,9 +110,9 @@ function SignUpContent() {
     if (session) {
       const supabase = createSupabaseBrowserClient();
       await supabase
-        .from('user_profiles')
+        .from("user_profiles")
         .update({ tos_accepted_at: new Date().toISOString() })
-        .eq('id', session.user.id);
+        .eq("id", session.user.id);
 
       router.push(redirectTo);
       return;
@@ -104,9 +123,9 @@ function SignUpContent() {
     setLoading(false);
   };
 
-  const handleOAuth = async (provider: 'google') => {
+  const handleOAuth = async (provider: "google") => {
     if (!tosAccepted) {
-      setError('You must accept the Terms of Service to create an account');
+      setError("You must accept the Terms of Service to create an account");
       return;
     }
 
@@ -121,7 +140,7 @@ function SignUpContent() {
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(friendlyAuthError(authError.message));
       setLoading(false);
     }
   };
@@ -149,7 +168,7 @@ function SignUpContent() {
               Check your email
             </h2>
             <p className="text-sm text-on-surface-variant mb-6">
-              We sent a confirmation link to{' '}
+              We sent a confirmation link to{" "}
               <span className="font-medium text-on-surface">{email}</span>.
               Click the link in the email to activate your account.
             </p>
@@ -161,16 +180,16 @@ function SignUpContent() {
             </Link>
           </div>
         ) : (
-        <>
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-6 flex items-start gap-2 rounded-lg bg-error/10 border border-error/20 px-4 py-3 text-sm text-error">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+          <>
+            {/* Error Banner */}
+            {error && (
+              <div className="mb-6 flex items-start gap-2 rounded-lg bg-error/10 border border-error/20 px-4 py-3 text-sm text-error">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-        {/* Sign-Up Form */}
+            {/* Sign-Up Form */}
             <form onSubmit={handleSignUp} className="space-y-4">
               {/* Email */}
               <div>
@@ -238,8 +257,8 @@ function SignUpContent() {
                         <span
                           className={
                             req.met
-                              ? 'text-green-600'
-                              : 'text-on-surface-variant/60'
+                              ? "text-green-600"
+                              : "text-on-surface-variant/60"
                           }
                         >
                           {req.label}
@@ -272,12 +291,11 @@ function SignUpContent() {
                     className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
                   />
                 </div>
-                {confirmPassword.length > 0 &&
-                  password !== confirmPassword && (
-                    <p className="mt-1 text-xs text-error">
-                      Passwords do not match
-                    </p>
-                  )}
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <p className="mt-1 text-xs text-error">
+                    Passwords do not match
+                  </p>
+                )}
               </div>
 
               {/* Terms of Service Checkbox */}
@@ -290,7 +308,7 @@ function SignUpContent() {
                   className="mt-0.5 h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/30 accent-primary"
                 />
                 <span className="text-sm text-on-surface-variant leading-snug">
-                  I agree to the{' '}
+                  I agree to the{" "}
                   <a
                     href="/about/terms"
                     target="_blank"
@@ -327,7 +345,7 @@ function SignUpContent() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => handleOAuth('google')}
+                onClick={() => handleOAuth("google")}
                 disabled={loading || !tosAccepted}
                 className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
@@ -355,15 +373,19 @@ function SignUpContent() {
 
             {/* Sign In Link */}
             <p className="mt-8 text-center text-sm text-on-surface-variant">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <Link
-                href={redirectTo !== '/map' ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}` : '/auth/sign-in'}
+                href={
+                  redirectTo !== "/map"
+                    ? `/auth/sign-in?redirect=${encodeURIComponent(redirectTo)}`
+                    : "/auth/sign-in"
+                }
                 className="text-primary hover:text-primary/80 font-medium"
               >
                 Sign in
               </Link>
             </p>
-        </>
+          </>
         )}
       </div>
     </div>

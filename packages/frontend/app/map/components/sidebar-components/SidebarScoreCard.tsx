@@ -9,19 +9,19 @@
  * No hardcoded tier gating — use the admin tiers page to move scores between tiers.
  */
 
-import { useState } from 'react';
-import { InsightsIcon, ChevronLeftIcon, ChevronRightIcon } from '../Icons';
-import { TrendArrow, getTrendDirection, formatTrendValue } from './TrendArrow';
-import { MarketCondition } from './MarketConditionBadge';
-import { ScoreDisplay } from '@/app/components/scoring/ScoreDisplay';
-import { Loader2 } from 'lucide-react';
+import { useState } from "react";
+import { InsightsIcon, ChevronLeftIcon, ChevronRightIcon } from "../Icons";
+import { TrendArrow, getTrendDirection, formatTrendValue } from "./TrendArrow";
+import { MarketCondition } from "./MarketConditionBadge";
+import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
+import { Loader2 } from "lucide-react";
 
-export type ScoreTypeKey = 'marketHealth' | 'homeready' | 'investoredge';
+export type ScoreTypeKey = "marketHealth" | "homeready" | "investoredge";
 
 interface ScoreInfo {
   score?: number;
   trend?: number; // Change from 3 months ago (e.g., +2.5 or -1.3)
-  access: 'full' | 'teaser';
+  access: "full" | "teaser";
   /** Whether this score metric is gated by entitlements */
   gated?: boolean;
   /** Tier required to unlock (e.g. 'pro', 'enterprise') */
@@ -39,20 +39,24 @@ interface SidebarScoreCardProps {
 
 const SCORE_CONFIG: Record<ScoreTypeKey, { name: string; label: string }> = {
   marketHealth: {
-    name: 'Market Health',
-    label: 'Market Health Score',
+    name: "Market Health",
+    label: "Market Health Score",
   },
   homeready: {
-    name: 'HomeReady',
-    label: 'HomeReady Score',
+    name: "HomeReady",
+    label: "HomeReady Score",
   },
   investoredge: {
-    name: 'InvestorEdge',
-    label: 'InvestorEdge Score',
+    name: "InvestorEdge",
+    label: "InvestorEdge Score",
   },
 };
 
-const SCORE_ORDER: ScoreTypeKey[] = ['marketHealth', 'homeready', 'investoredge'];
+const SCORE_ORDER: ScoreTypeKey[] = [
+  "marketHealth",
+  "homeready",
+  "investoredge",
+];
 
 export function SidebarScoreCard({
   marketHealthScore,
@@ -69,18 +73,18 @@ export function SidebarScoreCard({
   // Get current score data
   const getScoreData = (key: ScoreTypeKey): ScoreInfo | undefined => {
     switch (key) {
-      case 'marketHealth':
+      case "marketHealth":
         return marketHealthScore;
-      case 'homeready':
+      case "homeready":
         return homereadyScore;
-      case 'investoredge':
+      case "investoredge":
         return investoredgeScore;
     }
   };
 
   const currentScore = getScoreData(activeScoreKey);
   const hasScore = currentScore?.score !== undefined && !isLoading;
-  const isBreakdownLocked = currentScore?.access === 'teaser';
+  const isBreakdownLocked = currentScore?.access === "teaser";
 
   // Navigation handlers
   const goToPrevious = () => {
@@ -92,19 +96,21 @@ export function SidebarScoreCard({
   };
 
   // Show trend arrow only when we have real trend data from API (not when missing/no history)
-  const trendDirection = currentScore?.trend !== undefined
-    ? getTrendDirection(currentScore.trend)
-    : 'flat';
-  const trendValue = currentScore?.trend !== undefined
-    ? formatTrendValue(currentScore.trend, 'points')
-    : '\u2014';
+  const trendDirection =
+    currentScore?.trend !== undefined
+      ? getTrendDirection(currentScore.trend)
+      : "flat";
+  const trendValue =
+    currentScore?.trend !== undefined
+      ? formatTrendValue(currentScore.trend, "points")
+      : "\u2014";
 
   return (
     <div
       data-testid="sidebar-score-card"
       className={`
         bg-surface-container rounded-xl p-3 mb-4 border border-outline-variant
-        ${onClick ? 'cursor-pointer hover:bg-surface-container-high transition-colors duration-200' : ''}
+        ${onClick ? "cursor-pointer hover:bg-surface-container-high transition-colors duration-200" : ""}
       `}
       onClick={onClick}
     >
@@ -114,9 +120,17 @@ export function SidebarScoreCard({
           <span className="w-5 h-5 text-on-surface-variant">
             <InsightsIcon />
           </span>
-          <span data-testid={`score-label-${activeScoreKey}`} className="text-sm font-semibold">{config.label}</span>
+          <span
+            data-testid={`score-label-${activeScoreKey}`}
+            className="text-sm font-semibold"
+          >
+            {config.label}
+          </span>
           {currentScore?.gated && currentScore.tierRequired && (
-            <span data-testid={`score-pro-badge-${activeScoreKey}`} className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded">
+            <span
+              data-testid={`score-pro-badge-${activeScoreKey}`}
+              className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-primary text-on-primary rounded"
+            >
               {currentScore.tierRequired}
             </span>
           )}
@@ -140,7 +154,9 @@ export function SidebarScoreCard({
             />
           ) : (
             <div className="w-16 h-16 flex items-center justify-center rounded-full border-4 border-surface-container-highest">
-              <span className="text-lg text-on-surface-variant">--</span>
+              <span className="text-lg text-on-surface-variant">
+                {"\u2014"}
+              </span>
             </div>
           )}
         </div>
@@ -150,11 +166,10 @@ export function SidebarScoreCard({
           {hasScore ? (
             <>
               <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-xs text-on-surface-variant">3-month change</span>
-                <TrendArrow
-                  direction={trendDirection}
-                  value={trendValue}
-                />
+                <span className="text-xs text-on-surface-variant">
+                  3-month change
+                </span>
+                <TrendArrow direction={trendDirection} value={trendValue} />
               </div>
               {isBreakdownLocked && (
                 <button
@@ -196,7 +211,7 @@ export function SidebarScoreCard({
             const scoreConfig = SCORE_CONFIG[key];
             const scoreData = getScoreData(key);
             const isActive = index === activeIndex;
-            const isLocked = scoreData?.access === 'teaser';
+            const isLocked = scoreData?.access === "teaser";
 
             return (
               <button
@@ -208,11 +223,12 @@ export function SidebarScoreCard({
                 }}
                 className={`
                   relative w-2 h-2 rounded-full transition-all
-                  ${isActive
-                    ? 'w-6 bg-primary'
-                    : isLocked
-                      ? 'bg-surface-container-highest'
-                      : 'bg-outline-variant hover:bg-outline'
+                  ${
+                    isActive
+                      ? "w-6 bg-primary"
+                      : isLocked
+                        ? "bg-surface-container-highest"
+                        : "bg-outline-variant hover:bg-outline"
                   }
                 `}
                 aria-label={`View ${scoreConfig.name} score`}

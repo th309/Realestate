@@ -8,14 +8,14 @@
  * Paid users (pro/enterprise/admin) and dev-simulated tiers are never affected.
  */
 
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '@/lib/auth';
-import { useEntitlements } from '@/lib/entitlements/EntitlementsContext';
-import { usePaywallPageTracking } from './usePaywallPageTracking';
-import { AnonPaywallOverlay } from '@/components/entitlements/AnonPaywallOverlay';
-import { FreeUserUpgradeModal } from '@/components/entitlements/FreeUserUpgradeModal';
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useAuth } from "@/lib/auth";
+import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
+import { usePaywallPageTracking } from "./usePaywallPageTracking";
+import { AnonPaywallOverlay } from "@/components/entitlements/AnonPaywallOverlay";
+import { FreeUserUpgradeModal } from "@/components/entitlements/FreeUserUpgradeModal";
 
 const NAG_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -24,16 +24,23 @@ interface PaywallProviderProps {
 }
 
 export function PaywallProvider({ children }: PaywallProviderProps) {
-  const { user } = useAuth();
-  const { tier } = useEntitlements();
+  const { user, loading: authLoading } = useAuth();
+  const { tier, simulatedAuth } = useEntitlements();
   const { isOverThreshold, isOnProductPage } = usePaywallPageTracking();
 
   const [nagVisible, setNagVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isAnon = user === null;
-  const isFree = !isAnon && tier === 'free';
-  const isPaid = !isAnon && (tier === 'pro' || tier === 'enterprise' || tier === 'admin');
+  // Dev simulation: simulatedAuth === false means "pretend anon"
+  const effectiveUser = simulatedAuth === false ? null : user;
+
+  // Gate all auth-dependent checks on authLoading to prevent flash during hydration
+  const isAnon = !authLoading && effectiveUser === null;
+  const isFree = !authLoading && !isAnon && tier === "free";
+  const isPaid =
+    !authLoading &&
+    !isAnon &&
+    (tier === "pro" || tier === "enterprise" || tier === "admin");
 
   // Anon hard block: show when over threshold and on a product page
   const showAnonBlock = isAnon && isOverThreshold && isOnProductPage;
@@ -81,7 +88,9 @@ export function PaywallProvider({ children }: PaywallProviderProps) {
     <>
       {children}
       {showAnonBlock && <AnonPaywallOverlay />}
-      {nagVisible && !showAnonBlock && <FreeUserUpgradeModal onDismiss={handleDismissNag} />}
+      {nagVisible && !showAnonBlock && (
+        <FreeUserUpgradeModal onDismiss={handleDismissNag} />
+      )}
     </>
   );
 }

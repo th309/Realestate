@@ -41,7 +41,12 @@ export {
  * Status label for a score component based on its normalized score.
  * Used in component breakdowns to provide quick-read assessments.
  */
-export type ComponentStatus = 'excellent' | 'strong' | 'moderate' | 'watch' | 'concern';
+export type ComponentStatus =
+  | 'excellent'
+  | 'strong'
+  | 'moderate'
+  | 'watch'
+  | 'concern';
 
 /**
  * Breakdown of a single component's contribution to an overall score.
@@ -131,9 +136,9 @@ export interface ScoreResult {
   median_price: number | null;
   score_date: string;
   scores: {
-    homeready: SingleScoreResult;
-    investoredge: SingleScoreResult;
-    markethealth: SingleScoreResult;
+    homeready: SingleScoreResult | null;
+    investoredge: SingleScoreResult | null;
+    markethealth: SingleScoreResult | null;
   };
   /** Per-metric z-scores for this location (shared across all score types) */
   z_scores?: Record<string, number>;
@@ -141,7 +146,10 @@ export interface ScoreResult {
   return_3y_ann?: number;
 }
 
-import { HISTORY_MONTHS_MAX, SCORE_HISTORY_YEARS_MAX } from '../common/history.constants';
+import {
+  HISTORY_MONTHS_MAX,
+  SCORE_HISTORY_YEARS_MAX,
+} from '../common/history.constants';
 
 /** Maximum months of history (shared across all data types). */
 export const SCORE_HISTORY_MONTHS_MAX = HISTORY_MONTHS_MAX;
@@ -389,7 +397,11 @@ export interface MetricPercentiles {
 // Legacy Metric Definitions (for reference only)
 // ============================================================================
 
-export type MetricDirection = 'higher_better' | 'lower_better' | 'moderate_better' | 'neutral';
+export type MetricDirection =
+  | 'higher_better'
+  | 'lower_better'
+  | 'moderate_better'
+  | 'neutral';
 export type NullStrategy = 'skip' | 'neutral' | 'penalize';
 
 export interface MetricDefinition {
@@ -415,18 +427,22 @@ export const HOMEREADY_DETAILED_METRICS: Record<string, MetricDefinition[]> = {
 /**
  * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts
  */
-export const INVESTOREDGE_DETAILED_METRICS: Record<string, MetricDefinition[]> = {
-  cash_flow: [],
-  rent_demand: [],
-  appreciation: [],
-  entry_point: [],
-  risk: [],
-};
+export const INVESTOREDGE_DETAILED_METRICS: Record<string, MetricDefinition[]> =
+  {
+    cash_flow: [],
+    rent_demand: [],
+    appreciation: [],
+    entry_point: [],
+    risk: [],
+  };
 
 /**
  * @deprecated Use FORMULA_WEIGHTS from formula-weights.ts
  */
-export const MARKET_HEALTH_DETAILED_METRICS: Record<string, MetricDefinition[]> = {
+export const MARKET_HEALTH_DETAILED_METRICS: Record<
+  string,
+  MetricDefinition[]
+> = {
   demand_strength: [],
   supply_balance: [],
   price_stability: [],

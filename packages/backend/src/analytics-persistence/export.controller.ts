@@ -2,6 +2,7 @@
  * Export Controller
  *
  * REST endpoints for exporting analytics data.
+ * Protected by JwtAuthGuard — requires authenticated user.
  */
 
 import {
@@ -9,13 +10,16 @@ import {
   Post,
   Body,
   Res,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { JwtAuthGuard } from '../common/guards';
 import { ExportService, ExportOptions } from './export.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('analytics/export')
 export class ExportController {
   private readonly logger = new Logger(ExportController.name);
@@ -28,7 +32,8 @@ export class ExportController {
    */
   @Post('query')
   async exportQuery(
-    @Body() body: {
+    @Body()
+    body: {
       columns: Array<{ key: string; label: string }>;
       rows: Record<string, unknown>[];
       format?: 'csv' | 'json';
@@ -54,7 +59,10 @@ export class ExportController {
       const filename = body.filename || result.filename;
 
       res.setHeader('Content-Type', result.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.send(result.data);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -67,7 +75,8 @@ export class ExportController {
    */
   @Post('comparison')
   async exportComparison(
-    @Body() body: {
+    @Body()
+    body: {
       geographies: Array<{
         name: string;
         type: string;
@@ -98,7 +107,10 @@ export class ExportController {
       const filename = body.filename || result.filename;
 
       res.setHeader('Content-Type', result.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.send(result.data);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -111,7 +123,8 @@ export class ExportController {
    */
   @Post('timeseries')
   async exportTimeSeries(
-    @Body() body: {
+    @Body()
+    body: {
       series: Array<{
         name: string;
         data: Array<{ date: string; value: number }>;
@@ -135,7 +148,10 @@ export class ExportController {
       const filename = body.filename || result.filename;
 
       res.setHeader('Content-Type', result.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.send(result.data);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -148,7 +164,8 @@ export class ExportController {
    */
   @Post('raw')
   async exportRaw(
-    @Body() body: {
+    @Body()
+    body: {
       data: Record<string, unknown>[];
       format?: 'csv' | 'json';
       columns?: string[];
@@ -168,14 +185,18 @@ export class ExportController {
         columns: body.columns,
       };
 
-      const result = options.format === 'json'
-        ? this.exportService.exportToJson(body.data, options)
-        : this.exportService.exportToCsv(body.data, options);
+      const result =
+        options.format === 'json'
+          ? this.exportService.exportToJson(body.data, options)
+          : this.exportService.exportToCsv(body.data, options);
 
       const filename = body.filename || result.filename;
 
       res.setHeader('Content-Type', result.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.send(result.data);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);

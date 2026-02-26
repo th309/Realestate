@@ -17,6 +17,7 @@ import {
   Query,
   HttpException,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import {
@@ -28,7 +29,9 @@ import {
   GeographyBreakdown,
 } from './validation.service';
 import type { GeographyType, ScoreType } from '../scoring.types';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @ApiTags('score-validation')
 @Controller('api/admin/scores/validation')
 export class ValidationController {
@@ -41,8 +44,16 @@ export class ValidationController {
    */
   @Get('summary')
   @ApiOperation({ summary: 'Get score validation summary metrics' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
   async getSummary(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
@@ -60,9 +71,22 @@ export class ValidationController {
    */
   @Get('quintile-analysis')
   @ApiOperation({ summary: 'Get score performance by quintile' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
-  @ApiQuery({ name: 'horizon', required: false, enum: ['1y', '3y'], description: 'Return horizon to analyze' })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
+  @ApiQuery({
+    name: 'horizon',
+    required: false,
+    enum: ['1y', '3y'],
+    description: 'Return horizon to analyze',
+  })
   async getQuintileAnalysis(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
@@ -83,7 +107,12 @@ export class ValidationController {
    */
   @Get('quintile-performance')
   @ApiOperation({ summary: 'Get quintile performance data for reports' })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge'], description: 'Score type (defaults to homeready)' })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge'],
+    description: 'Score type (defaults to homeready)',
+  })
   async getQuintilePerformance(
     @Query('score_type') scoreType?: string,
   ): Promise<{
@@ -104,33 +133,42 @@ export class ValidationController {
     const sType = scoreType ? this.validateScoreType(scoreType) : 'homeready';
 
     // Get quintile data for metros (most reliable data)
-    const quintileData = await this.validationService.getQuintileAnalysis('metro', sType, '3y');
+    const quintileData = await this.validationService.getQuintileAnalysis(
+      'metro',
+      sType,
+      '3y',
+    );
 
     // Format for reports display
-    const quintiles = quintileData.map(q => ({
+    const quintiles = quintileData.map((q) => ({
       label: q.label,
       scoreRange: `${Math.round(q.scoreMin)}-${Math.round(q.scoreMax)}`,
-      avgReturn1y: q.avgReturn1y != null ? Math.round(q.avgReturn1y * 10) / 10 : null,
-      avgReturn3y: q.avgReturn3y != null ? Math.round(q.avgReturn3y * 10) / 10 : null,
+      avgReturn1y:
+        q.avgReturn1y != null ? Math.round(q.avgReturn1y * 10) / 10 : null,
+      avgReturn3y:
+        q.avgReturn3y != null ? Math.round(q.avgReturn3y * 10) / 10 : null,
       count: q.count,
     }));
 
     // Calculate summary metrics
-    const topQuintile = quintileData.find(q => q.quintile === 5);
-    const bottomQuintile = quintileData.find(q => q.quintile === 1);
+    const topQuintile = quintileData.find((q) => q.quintile === 5);
+    const bottomQuintile = quintileData.find((q) => q.quintile === 1);
     const totalSamples = quintileData.reduce((sum, q) => sum + q.count, 0);
 
     const topReturn = topQuintile?.avgReturn3y ?? null;
     const bottomReturn = bottomQuintile?.avgReturn3y ?? null;
-    const spread = topReturn != null && bottomReturn != null
-      ? Math.round((topReturn - bottomReturn) * 10) / 10
-      : null;
+    const spread =
+      topReturn != null && bottomReturn != null
+        ? Math.round((topReturn - bottomReturn) * 10) / 10
+        : null;
 
     return {
       quintiles,
       summary: {
-        topQuintileReturn: topReturn != null ? Math.round(topReturn * 10) / 10 : null,
-        bottomQuintileReturn: bottomReturn != null ? Math.round(bottomReturn * 10) / 10 : null,
+        topQuintileReturn:
+          topReturn != null ? Math.round(topReturn * 10) / 10 : null,
+        bottomQuintileReturn:
+          bottomReturn != null ? Math.round(bottomReturn * 10) / 10 : null,
         spread,
         totalSamples,
       },
@@ -144,9 +182,21 @@ export class ValidationController {
    */
   @Get('scatter')
   @ApiOperation({ summary: 'Get score vs return scatter data' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
-  @ApiQuery({ name: 'limit', required: false, description: 'Max points to return (default 500)' })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Max points to return (default 500)',
+  })
   async getScatterData(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
@@ -166,8 +216,16 @@ export class ValidationController {
    */
   @Get('time-series')
   @ApiOperation({ summary: 'Get prediction accuracy over time' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
   async getTimeSeriesAccuracy(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
@@ -185,7 +243,11 @@ export class ValidationController {
    */
   @Get('geography-breakdown')
   @ApiOperation({ summary: 'Get validation breakdown by geography type' })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
   async getGeographyBreakdown(
     @Query('score_type') scoreType?: string,
   ): Promise<GeographyBreakdown[]> {
@@ -213,7 +275,11 @@ export class ValidationController {
   }
 
   private validateScoreType(scoreType: string): ScoreType {
-    const validTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const validTypes: ScoreType[] = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ];
     const lower = scoreType.toLowerCase() as ScoreType;
 
     if (!validTypes.includes(lower)) {

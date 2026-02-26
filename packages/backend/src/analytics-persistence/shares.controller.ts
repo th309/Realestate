@@ -2,6 +2,8 @@
  * Shares Controller
  *
  * REST endpoints for shareable links.
+ * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
+ * Exception: The access/:token endpoint is public (share viewers don't need auth).
  */
 
 import {
@@ -13,10 +15,13 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import { SharesService, CreateShareDto } from './shares.service';
 
 @Controller('analytics/shares')
@@ -26,16 +31,13 @@ export class SharesController {
   constructor(private readonly sharesService: SharesService) {}
 
   /**
-   * Get all shares for a user
-   * GET /api/analytics/shares?userId=xxx
+   * Get all shares for the authenticated user
+   * GET /api/analytics/shares
    */
+  @UseGuards(JwtAuthGuard)
   @Get()
-  async getAll(@Query('userId') userId: string) {
+  async getAll(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/shares for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const shares = await this.sharesService.getAll(userId);
@@ -53,7 +55,7 @@ export class SharesController {
   }
 
   /**
-   * Access a share by token (public)
+   * Access a share by token (public — no auth required)
    * GET /api/analytics/shares/access/:token
    */
   @Get('access/:token')
@@ -65,8 +67,11 @@ export class SharesController {
     this.logger.log(`GET /analytics/shares/access/${token}`);
 
     try {
-      const result = await this.sharesService.access(token, { password, email });
-      
+      const result = await this.sharesService.access(token, {
+        password,
+        email,
+      });
+
       if (!result.accessGranted) {
         return {
           success: false,
@@ -90,15 +95,12 @@ export class SharesController {
 
   /**
    * Get share by ID (owner)
-   * GET /api/analytics/shares/:id?userId=xxx
+   * GET /api/analytics/shares/:id
    */
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async getById(@Param('id') id: string, @Query('userId') userId: string) {
+  async getById(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/shares/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const share = await this.sharesService.getById(userId, id);
@@ -124,15 +126,14 @@ export class SharesController {
    * Create a shareable link
    * POST /api/analytics/shares
    */
+  @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Body() body: CreateShareDto & { userId: string }) {
+  async create(@AuthUserId() userId: string, @Body() dto: CreateShareDto) {
     this.logger.log('POST /analytics/shares');
 
-    const { userId, ...dto } = body;
-
-    if (!userId || !dto.content_type || !dto.content) {
+    if (!dto.content_type || !dto.content) {
       throw new HttpException(
-        'userId, content_type, and content are required',
+        'content_type and content are required',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -156,10 +157,13 @@ export class SharesController {
    * Update share settings
    * PUT /api/analytics/shares/:id
    */
+  @UseGuards(JwtAuthGuard)
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: { userId: string } & Partial<{
+    @AuthUserId() userId: string,
+    @Body()
+    updates: Partial<{
       title: string;
       description: string;
       is_public: boolean;
@@ -170,12 +174,6 @@ export class SharesController {
     }>,
   ) {
     this.logger.log(`PUT /analytics/shares/${id}`);
-
-    const { userId, ...updates } = body;
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const share = await this.sharesService.update(userId, id, updates);
@@ -193,15 +191,12 @@ export class SharesController {
 
   /**
    * Delete a share
-   * DELETE /api/analytics/shares/:id?userId=xxx
+   * DELETE /api/analytics/shares/:id
    */
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
+  async delete(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`DELETE /analytics/shares/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.sharesService.delete(userId, id);

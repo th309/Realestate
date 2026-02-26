@@ -2,12 +2,12 @@
  * API route for watchlist
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 function forwardAuthHeader(request: NextRequest): Record<string, string> {
-  const auth = request.headers.get('Authorization');
+  const auth = request.headers.get("Authorization");
   return auth ? { Authorization: auth } : {};
 }
 
@@ -34,29 +34,24 @@ async function parseBackendResponse(response: Response) {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-  const folder = searchParams.get('folder');
-
-  if (!userId) {
-    return NextResponse.json(
-      { success: false, error: 'userId is required' },
-      { status: 400 }
-    );
-  }
+  const folder = searchParams.get("folder");
 
   try {
-    let url = `${BACKEND_URL}/analytics/watchlist?userId=${userId}`;
-    if (folder) url += `&folder=${folder}`;
+    let url = `${BACKEND_URL}/analytics/watchlist`;
+    if (folder) url += `?folder=${folder}`;
 
     const response = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...forwardAuthHeader(request) },
+      headers: {
+        "Content-Type": "application/json",
+        ...forwardAuthHeader(request),
+      },
     });
     const result = await parseBackendResponse(response);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch watchlist' },
-      { status: 500 }
+      { success: false, error: "Failed to fetch watchlist" },
+      { status: 500 },
     );
   }
 }
@@ -66,8 +61,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const response = await fetch(`${BACKEND_URL}/analytics/watchlist`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...forwardAuthHeader(request) },
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...forwardAuthHeader(request),
+      },
       body: JSON.stringify(body),
     });
 
@@ -75,8 +73,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to add to watchlist' },
-      { status: 500 }
+      { success: false, error: "Failed to add to watchlist" },
+      { status: 500 },
     );
   }
 }

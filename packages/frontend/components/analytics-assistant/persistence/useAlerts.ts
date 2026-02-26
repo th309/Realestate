@@ -1,28 +1,30 @@
-'use client';
+"use client";
 
 /**
  * useAlerts Hook
  *
  * Manages user alerts for price/score changes.
+ * Uses JWT auth headers — userId is extracted from the token on the backend.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from "react";
+import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
 
 export interface AlertCondition {
   geography_type: string;
   geography_id: string;
   geography_name?: string;
   metric: string;
-  operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq' | 'change_pct';
+  operator: "gt" | "lt" | "gte" | "lte" | "eq" | "change_pct";
   value: number;
-  direction?: 'up' | 'down' | 'any';
+  direction?: "up" | "down" | "any";
 }
 
 export interface Alert {
   id: string;
   user_id: string;
   name: string;
-  alert_type: 'price_change' | 'score_change' | 'threshold' | 'comparison';
+  alert_type: "price_change" | "score_change" | "threshold" | "comparison";
   condition: AlertCondition;
   notify_email: boolean;
   notify_inapp: boolean;
@@ -45,7 +47,18 @@ interface UseAlertsReturn {
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  createAlert: (alert: Omit<Alert, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'trigger_count' | 'last_checked_at' | 'last_triggered_at'>) => Promise<Alert | null>;
+  createAlert: (
+    alert: Omit<
+      Alert,
+      | "id"
+      | "user_id"
+      | "created_at"
+      | "updated_at"
+      | "trigger_count"
+      | "last_checked_at"
+      | "last_triggered_at"
+    >,
+  ) => Promise<Alert | null>;
   updateAlert: (id: string, updates: Partial<Alert>) => Promise<Alert | null>;
   deleteAlert: (id: string) => Promise<boolean>;
   toggleAlert: (id: string) => Promise<Alert | null>;
@@ -67,16 +80,19 @@ export function useAlerts({
     setError(null);
 
     try {
-      const response = await fetch(`/api/analytics/persistence/alerts?userId=${userId}`);
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/analytics/persistence/alerts`, {
+        headers: authHeaders,
+      });
       const data = await response.json();
 
       if (data.success) {
         setAlerts(data.data || []);
       } else {
-        setError(data.error || 'Failed to load alerts');
+        setError(data.error || "Failed to load alerts");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load alerts');
+      setError(err instanceof Error ? err.message : "Failed to load alerts");
     } finally {
       setIsLoading(false);
     }
@@ -90,15 +106,25 @@ export function useAlerts({
 
   const createAlert = useCallback(
     async (
-      alert: Omit<Alert, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'trigger_count' | 'last_checked_at' | 'last_triggered_at'>
+      alert: Omit<
+        Alert,
+        | "id"
+        | "user_id"
+        | "created_at"
+        | "updated_at"
+        | "trigger_count"
+        | "last_checked_at"
+        | "last_triggered_at"
+      >,
     ): Promise<Alert | null> => {
       if (!userId) return null;
 
       try {
-        const response = await fetch('/api/analytics/persistence/alerts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, ...alert }),
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch("/api/analytics/persistence/alerts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify(alert),
         });
         const data = await response.json();
 
@@ -111,7 +137,7 @@ export function useAlerts({
         return null;
       }
     },
-    [userId]
+    [userId],
   );
 
   const updateAlert = useCallback(
@@ -119,17 +145,19 @@ export function useAlerts({
       if (!userId) return null;
 
       try {
-        const response = await fetch(`/api/analytics/persistence/alerts/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, ...updates }),
-        });
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(
+          `/api/analytics/persistence/alerts/${id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify(updates),
+          },
+        );
         const data = await response.json();
 
         if (data.success) {
-          setAlerts((prev) =>
-            prev.map((a) => (a.id === id ? data.data : a))
-          );
+          setAlerts((prev) => prev.map((a) => (a.id === id ? data.data : a)));
           return data.data;
         }
         return null;
@@ -137,7 +165,7 @@ export function useAlerts({
         return null;
       }
     },
-    [userId]
+    [userId],
   );
 
   const deleteAlert = useCallback(
@@ -145,9 +173,10 @@ export function useAlerts({
       if (!userId) return false;
 
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
-          `/api/analytics/persistence/alerts/${id}?userId=${userId}`,
-          { method: 'DELETE' }
+          `/api/analytics/persistence/alerts/${id}`,
+          { method: "DELETE", headers: authHeaders },
         );
         const data = await response.json();
 
@@ -160,7 +189,7 @@ export function useAlerts({
         return false;
       }
     },
-    [userId]
+    [userId],
   );
 
   const toggleAlert = useCallback(
@@ -168,17 +197,19 @@ export function useAlerts({
       if (!userId) return null;
 
       try {
-        const response = await fetch(`/api/analytics/persistence/alerts/${id}/toggle`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId }),
-        });
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(
+          `/api/analytics/persistence/alerts/${id}/toggle`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({}),
+          },
+        );
         const data = await response.json();
 
         if (data.success) {
-          setAlerts((prev) =>
-            prev.map((a) => (a.id === id ? data.data : a))
-          );
+          setAlerts((prev) => prev.map((a) => (a.id === id ? data.data : a)));
           return data.data;
         }
         return null;
@@ -186,7 +217,7 @@ export function useAlerts({
         return null;
       }
     },
-    [userId]
+    [userId],
   );
 
   const activeCount = alerts.filter((a) => a.is_active).length;

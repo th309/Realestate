@@ -22,12 +22,18 @@ import {
   HttpStatus,
   Res,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ScoringService, ScoreResult } from './scoring.service';
-import { PerformanceTrackingService, PerformanceMetrics, AlertResult } from './performance-tracking.service';
+import {
+  PerformanceTrackingService,
+  PerformanceMetrics,
+  AlertResult,
+} from './performance-tracking.service';
 import { ScoreAccessService } from './scoring.guard';
+import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { GeographyLevel, ScoreType } from './formula-weights';
 import { parseHistoryMonths } from '../common/history.constants';
 import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
@@ -66,10 +72,26 @@ export class ScoringController {
   @Get()
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get PropertyIQ scores for a location' })
-  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'location_id', required: true, description: 'Location identifier (cbsa_code, fips, or zip)' })
-  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
-  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations` })
+  @ApiQuery({
+    name: 'geography',
+    required: true,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'location_id',
+    required: true,
+    description: 'Location identifier (cbsa_code, fips, or zip)',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
+  @ApiQuery({
+    name: 'historyMonths',
+    required: false,
+    description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations`,
+  })
   async getScores(
     @Query('geography') geography: string,
     @Query('location_id') locationId: string,
@@ -78,17 +100,29 @@ export class ScoringController {
     @Req() request?: any,
   ): Promise<ScoreResult> {
     if (!geography) {
-      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'geography query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (!locationId) {
-      throw new HttpException('location_id query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'location_id query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoLevel = this.validateGeography(geography);
-    const options = historyMonths != null
-      ? { historyMonths: parseHistoryMonths(historyMonths) }
-      : undefined;
-    const score = await this.scoringService.getScore(locationId, geoLevel, date, options);
+    const options =
+      historyMonths != null
+        ? { historyMonths: parseHistoryMonths(historyMonths) }
+        : undefined;
+    const score = await this.scoringService.getScore(
+      locationId,
+      geoLevel,
+      date,
+      options,
+    );
 
     if (!score) {
       throw new HttpException(
@@ -108,28 +142,62 @@ export class ScoringController {
   @Get('top')
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get top markets by score' })
-  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: true, enum: ['homeready', 'investoredge', 'markethealth'] })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of results (default 10, max 100)' })
-  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({
+    name: 'geography',
+    required: true,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: true,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of results (default 10, max 100)',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
   async getTopMarkets(
     @Query('geography') geography: string,
     @Query('score_type') scoreType: string,
     @Query('limit') limitStr?: string,
     @Query('date') date?: string,
-  ): Promise<{ location_id: string; location_name: string; score: number; grade: string }[]> {
+  ): Promise<
+    {
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+    }[]
+  > {
     if (!geography) {
-      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'geography query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (!scoreType) {
-      throw new HttpException('score_type query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'score_type query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoLevel = this.validateGeography(geography);
     const validScoreType = this.validateScoreType(scoreType);
     const limit = Math.min(Math.max(parseInt(limitStr || '10', 10), 1), 100);
 
-    return this.scoringService.getTopMarkets(geoLevel, validScoreType, limit, date);
+    return this.scoringService.getTopMarkets(
+      geoLevel,
+      validScoreType,
+      limit,
+      date,
+    );
   }
 
   /**
@@ -141,15 +209,29 @@ export class ScoringController {
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Search markets by name' })
   @ApiQuery({ name: 'q', required: true, description: 'Search query' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'], description: 'Filter by geography type' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of results (default 20, max 100)' })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+    description: 'Filter by geography type',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of results (default 20, max 100)',
+  })
   async searchMarkets(
     @Query('q') query: string,
     @Query('geography') geography?: string,
     @Query('limit') limitStr?: string,
-  ): Promise<{ location_id: string; location_name: string; geography: string }[]> {
+  ): Promise<
+    { location_id: string; location_name: string; geography: string }[]
+  > {
     if (!query || query.trim().length < 2) {
-      throw new HttpException('q query parameter must be at least 2 characters', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'q query parameter must be at least 2 characters',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoLevel = geography ? this.validateGeography(geography) : undefined;
@@ -168,13 +250,25 @@ export class ScoringController {
    * POST /api/scores/calculate/:geography
    */
   @Post('calculate/:geography')
-  @ApiOperation({ summary: 'Calculate scores for all locations at a geography level' })
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Calculate scores for all locations at a geography level',
+  })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'date', required: false, description: 'Period date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Period date (YYYY-MM-DD), defaults to latest',
+  })
   async calculateScores(
     @Param('geography') geography: string,
     @Query('date') date?: string,
-  ): Promise<{ success: boolean; calculated: number; errors: number; scoreDate: string }> {
+  ): Promise<{
+    success: boolean;
+    calculated: number;
+    errors: number;
+    scoreDate: string;
+  }> {
     const geoLevel = this.validateGeography(geography);
     const result = await this.scoringService.calculateAllScores(geoLevel, date);
 
@@ -199,9 +293,22 @@ export class ScoringController {
   @Get('distribution')
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get score distribution for a geography level' })
-  @ApiQuery({ name: 'geography', required: true, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, description: 'homeready, investoredge, or markethealth. If omitted, returns all score types.' })
-  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
+  @ApiQuery({
+    name: 'geography',
+    required: true,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    description:
+      'homeready, investoredge, or markethealth. If omitted, returns all score types.',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
   async getScoreDistribution(
     @Query('geography') geography: string,
     @Query('score_type') scoreType?: string,
@@ -233,14 +340,20 @@ export class ScoringController {
     distributions?: Record<string, any>;
   }> {
     if (!geography) {
-      throw new HttpException('geography query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'geography query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoLevel = this.validateGeography(geography);
 
     // If no score_type provided, return all distributions
     if (!scoreType) {
-      const result = await this.scoringService.getAllScoreDistributions(geoLevel, date);
+      const result = await this.scoringService.getAllScoreDistributions(
+        geoLevel,
+        date,
+      );
       return {
         geography: result.geography,
         score_date: result.score_date,
@@ -250,7 +363,11 @@ export class ScoringController {
 
     // Otherwise return specific score type distribution
     const validScoreType = this.validateScoreType(scoreType);
-    return this.scoringService.getScoreDistribution(geoLevel, validScoreType, date);
+    return this.scoringService.getScoreDistribution(
+      geoLevel,
+      validScoreType,
+      date,
+    );
   }
 
   // ============================================================================
@@ -268,12 +385,40 @@ export class ScoringController {
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get all scores for a geography level (paginated)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: true, description: 'homeready, investoredge, markethealth, or all' })
-  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (0-indexed)', type: Number })
-  @ApiQuery({ name: 'page_size', required: false, description: 'Page size (default 1000, max 1000)', type: Number })
-  @ApiQuery({ name: 'all', required: false, description: 'Fetch all rows (server will batch internally)', type: Boolean })
-  @ApiQuery({ name: 'concurrency', required: false, description: 'Batch concurrency when all=true (default 4, max 8)', type: Number })
+  @ApiQuery({
+    name: 'score_type',
+    required: true,
+    description: 'homeready, investoredge, markethealth, or all',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (0-indexed)',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'page_size',
+    required: false,
+    description: 'Page size (default 1000, max 1000)',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    description: 'Fetch all rows (server will batch internally)',
+    type: Boolean,
+  })
+  @ApiQuery({
+    name: 'concurrency',
+    required: false,
+    description: 'Batch concurrency when all=true (default 4, max 8)',
+    type: Number,
+  })
   async getAllScores(
     @Param('geography') geography: string,
     @Query('score_type') scoreType: string,
@@ -306,9 +451,13 @@ export class ScoringController {
     const requestedTypes = this.parseScoreTypes(scoreType);
     const wantsAll = all === 'true' || all === '1';
     // Allow up to 1000 records per page (Supabase limit)
-    const pageSizeNum = pageSize ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000) : 1000;
+    const pageSizeNum = pageSize
+      ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000)
+      : 1000;
     const pageNum = page ? Math.max(0, parseInt(page, 10)) : 0;
-    const concurrencyNum = concurrency ? Math.min(Math.max(parseInt(concurrency, 10), 1), 8) : 4;
+    const concurrencyNum = concurrency
+      ? Math.min(Math.max(parseInt(concurrency, 10), 1), 8)
+      : 4;
 
     if (wantsAll) {
       const resultsByType = await Promise.all(
@@ -325,7 +474,7 @@ export class ScoringController {
       );
 
       const data = resultsByType.flatMap(({ type, result }) =>
-        result.data.map(item => ({
+        result.data.map((item) => ({
           region_id: item.location_id,
           region_name: item.location_name,
           value: item.score,
@@ -353,7 +502,10 @@ export class ScoringController {
     }
 
     if (requestedTypes.length !== 1) {
-      throw new HttpException('score_type must be a single value unless all=true', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'score_type must be a single value unless all=true',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const validScoreType = requestedTypes[0];
 
@@ -368,7 +520,7 @@ export class ScoringController {
     return {
       success: true,
       count: result.data.length,
-      data: result.data.map(item => ({
+      data: result.data.map((item) => ({
         region_id: item.location_id,
         region_name: item.location_name,
         value: item.score,
@@ -389,9 +541,22 @@ export class ScoringController {
   @Get('all/:geography/stream')
   @ApiOperation({ summary: 'Stream all scores as NDJSON (one row per line)' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: true, description: 'homeready, investoredge, markethealth, or all' })
-  @ApiQuery({ name: 'date', required: false, description: 'Score date (YYYY-MM-DD), defaults to latest' })
-  @ApiQuery({ name: 'page_size', required: false, description: 'Page size (default 1000, max 1000)', type: Number })
+  @ApiQuery({
+    name: 'score_type',
+    required: true,
+    description: 'homeready, investoredge, markethealth, or all',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    description: 'Score date (YYYY-MM-DD), defaults to latest',
+  })
+  @ApiQuery({
+    name: 'page_size',
+    required: false,
+    description: 'Page size (default 1000, max 1000)',
+    type: Number,
+  })
   async streamAllScores(
     @Param('geography') geography: string,
     @Query('score_type') scoreType: string,
@@ -401,7 +566,9 @@ export class ScoringController {
   ): Promise<void> {
     const geoLevel = this.validateGeography(geography);
     const requestedTypes = this.parseScoreTypes(scoreType);
-    const pageSizeNum = pageSize ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000) : 1000;
+    const pageSizeNum = pageSize
+      ? Math.min(Math.max(parseInt(pageSize, 10), 1), 1000)
+      : 1000;
 
     res.setHeader('Content-Type', 'application/x-ndjson');
     res.setHeader('Cache-Control', 'no-cache');
@@ -433,7 +600,8 @@ export class ScoringController {
     } catch (err: any) {
       res.status(500);
       res.write(
-        JSON.stringify({ error: err?.message || 'Failed to stream scores' }) + '\n',
+        JSON.stringify({ error: err?.message || 'Failed to stream scores' }) +
+          '\n',
       );
       res.end();
     }
@@ -441,16 +609,25 @@ export class ScoringController {
 
   private parseScoreTypes(scoreType: string): ScoreType[] {
     if (!scoreType) {
-      throw new HttpException('score_type query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'score_type query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const raw = scoreType.toLowerCase();
     if (raw === 'all') {
       return ['homeready', 'investoredge', 'markethealth'];
     }
-    const parts = raw.split(',').map(p => p.trim()).filter(Boolean);
-    const valid = parts.map(p => this.validateScoreType(p));
+    const parts = raw
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const valid = parts.map((p) => this.validateScoreType(p));
     if (valid.length === 0) {
-      throw new HttpException('score_type must be homeready, investoredge, markethealth, or all', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'score_type must be homeready, investoredge, markethealth, or all',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return valid;
   }
@@ -475,9 +652,21 @@ export class ScoringController {
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
   @ApiParam({ name: 'locationId', description: 'Location identifier' })
   @ApiQuery({ name: 'date', required: false })
-  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations` })
-  @ApiQuery({ name: 'historyYears', required: false, description: '3 or 5; include extended history with outcomes' })
-  @ApiQuery({ name: 'includeOutcomes', required: false, description: 'true to include actual returns and benchmarks' })
+  @ApiQuery({
+    name: 'historyMonths',
+    required: false,
+    description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history for real-time calculations`,
+  })
+  @ApiQuery({
+    name: 'historyYears',
+    required: false,
+    description: '3 or 5; include extended history with outcomes',
+  })
+  @ApiQuery({
+    name: 'includeOutcomes',
+    required: false,
+    description: 'true to include actual returns and benchmarks',
+  })
   async getScoreByPath(
     @Param('geography') geography: string,
     @Param('locationId') locationId: string,
@@ -512,10 +701,16 @@ export class ScoringController {
     }
 
     // Otherwise use standard method
-    const options = historyMonths != null
-      ? { historyMonths: parseHistoryMonths(historyMonths) }
-      : undefined;
-    const score = await this.scoringService.getScore(locationId, geoLevel, date, options);
+    const options =
+      historyMonths != null
+        ? { historyMonths: parseHistoryMonths(historyMonths) }
+        : undefined;
+    const score = await this.scoringService.getScore(
+      locationId,
+      geoLevel,
+      date,
+      options,
+    );
 
     if (!score) {
       throw new HttpException(
@@ -536,37 +731,66 @@ export class ScoringController {
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get scores for multiple locations' })
   @ApiParam({ name: 'geography', enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'ids', required: true, description: 'Comma-separated location IDs' })
+  @ApiQuery({
+    name: 'ids',
+    required: true,
+    description: 'Comma-separated location IDs',
+  })
   @ApiQuery({ name: 'date', required: false })
-  @ApiQuery({ name: 'historyMonths', required: false, description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history per location` })
+  @ApiQuery({
+    name: 'historyMonths',
+    required: false,
+    description: `0-${SCORE_HISTORY_MONTHS_MAX}; include history per location`,
+  })
   async getBatchScores(
     @Param('geography') geography: string,
     @Query('ids') ids: string,
     @Query('date') date?: string,
     @Query('historyMonths') historyMonths?: string,
     @Req() request?: any,
-  ): Promise<{ geography: string; scores: (ScoreResult | { location_id: string; error: string })[] }> {
+  ): Promise<{
+    geography: string;
+    scores: (ScoreResult | { location_id: string; error: string })[];
+  }> {
     if (!ids) {
-      throw new HttpException('ids query parameter is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'ids query parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const geoLevel = this.validateGeography(geography);
-    const locationIds = ids.split(',').map(id => id.trim()).filter(id => id);
-    const options = historyMonths != null
-      ? { historyMonths: parseHistoryMonths(historyMonths) }
-      : undefined;
+    const locationIds = ids
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id);
+    const options =
+      historyMonths != null
+        ? { historyMonths: parseHistoryMonths(historyMonths) }
+        : undefined;
 
     if (locationIds.length === 0) {
-      throw new HttpException('At least one location ID is required', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'At least one location ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (locationIds.length > 100) {
-      throw new HttpException('Maximum 100 locations per batch', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Maximum 100 locations per batch',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const scores = await Promise.all(
       locationIds.map(async (id) => {
         try {
-          const score = await this.scoringService.getScore(id, geoLevel, date, options);
+          const score = await this.scoringService.getScore(
+            id,
+            geoLevel,
+            date,
+            options,
+          );
           if (!score) return { location_id: id, error: 'Score not found' };
           return await this.stripBreakdownIfNeeded(score, request);
         } catch {
@@ -607,8 +831,16 @@ export class ScoringController {
   @Get('performance')
   @Header('Cache-Control', 'public, max-age=21600')
   @ApiOperation({ summary: 'Get performance metrics for score validation' })
-  @ApiQuery({ name: 'geography', required: false, enum: ['metro', 'county', 'zip'] })
-  @ApiQuery({ name: 'score_type', required: false, enum: ['homeready', 'investoredge', 'markethealth'] })
+  @ApiQuery({
+    name: 'geography',
+    required: false,
+    enum: ['metro', 'county', 'zip'],
+  })
+  @ApiQuery({
+    name: 'score_type',
+    required: false,
+    enum: ['homeready', 'investoredge', 'markethealth'],
+  })
   async getPerformanceMetrics(
     @Query('geography') geography?: string,
     @Query('score_type') scoreType?: string,
@@ -617,7 +849,10 @@ export class ScoringController {
     if (geography && scoreType) {
       const geoLevel = this.validateGeography(geography);
       const validScoreType = this.validateScoreType(scoreType);
-      return this.performanceTrackingService.getPerformanceMetrics(geoLevel, validScoreType);
+      return this.performanceTrackingService.getPerformanceMetrics(
+        geoLevel,
+        validScoreType,
+      );
     }
 
     // Otherwise return all metrics
@@ -641,8 +876,14 @@ export class ScoringController {
    * POST /api/scores/validate
    */
   @Post('validate')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Validate predictions from 12 months ago' })
-  async validatePredictions(): Promise<{ success: boolean; validated: number; errors: number; predictionDate: string }> {
+  async validatePredictions(): Promise<{
+    success: boolean;
+    validated: number;
+    errors: number;
+    predictionDate: string;
+  }> {
     const result = await this.performanceTrackingService.validatePredictions();
     return {
       success: result.errors === 0,
@@ -659,7 +900,9 @@ export class ScoringController {
    */
   @Get('debug/latest-date/:geography')
   @ApiOperation({ summary: 'Get latest data date for a geography' })
-  async getLatestDate(@Param('geography') geography: string): Promise<{ geography: string; latestDate: string | null }> {
+  async getLatestDate(
+    @Param('geography') geography: string,
+  ): Promise<{ geography: string; latestDate: string | null }> {
     const geoLevel = this.validateGeography(geography);
     const latestDate = await this.scoringService.debugGetLatestDate(geoLevel);
     return { geography, latestDate };
@@ -676,7 +919,11 @@ export class ScoringController {
     @Query('date') date?: string,
   ) {
     const geoLevel = this.validateGeography(geography);
-    const stats = await this.scoringService.debugGetMetricStats(geoLevel, metric, date);
+    const stats = await this.scoringService.debugGetMetricStats(
+      geoLevel,
+      metric,
+      date,
+    );
     return { geography, metric, stats };
   }
 
@@ -688,9 +935,13 @@ export class ScoringController {
    * Strip score component breakdowns from response for users without access.
    * Scores (number, grade, confidence) are always visible — only `components` is gated.
    */
-  private async stripBreakdownIfNeeded(result: ScoreResult, request: any): Promise<ScoreResult> {
+  private async stripBreakdownIfNeeded(
+    result: ScoreResult,
+    request: any,
+  ): Promise<ScoreResult> {
     const userTier = this.scoreAccessService.getUserTierFromRequest(request);
-    const canBreakdown = await this.scoreAccessService.canAccessBreakdown(userTier);
+    const canBreakdown =
+      await this.scoreAccessService.canAccessBreakdown(userTier);
 
     if (canBreakdown) return result;
 
@@ -702,7 +953,11 @@ export class ScoringController {
 
     // Shallow-clone to avoid mutating cached service objects
     const stripped: ScoreResult = { ...result, scores: { ...result.scores } };
-    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
+    for (const scoreType of [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ] as const) {
       const scoreData = stripped.scores[scoreType];
       if (scoreData?.components) {
         stripped.scores[scoreType] = { ...scoreData };
@@ -732,7 +987,11 @@ export class ScoringController {
   }
 
   private validateScoreType(scoreType: string): ScoreType {
-    const validTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const validTypes: ScoreType[] = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ];
     const lower = scoreType.toLowerCase() as ScoreType;
 
     if (!validTypes.includes(lower)) {

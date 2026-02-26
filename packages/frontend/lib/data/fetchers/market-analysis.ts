@@ -5,7 +5,7 @@
  * Single call returns both homebuyer and investor perspectives.
  */
 
-import { API_URL } from './base';
+import { API_URL } from "./base";
 
 export interface MarketAnalysisSection {
   title: string;
@@ -24,11 +24,14 @@ export async function fetchMarketAnalysis(
   geoId: string,
   payload: {
     geoName: string;
-    metrics: Record<string, { value: number | null; formatted: string; change: number | null }>;
+    metrics: Record<
+      string,
+      { value: number | null; formatted: string; change: number | null }
+    >;
     scores: {
-      homeready: { score: number; grade: string };
-      investoredge: { score: number; grade: string };
-      markethealth: { score: number; grade: string };
+      homeready: { score: number; grade: string } | null;
+      investoredge: { score: number; grade: string } | null;
+      markethealth: { score: number; grade: string } | null;
     };
     lastUpdated?: string;
   },
@@ -36,9 +39,9 @@ export async function fetchMarketAnalysis(
   const url = `${API_URL}/api/markets/${geoType}/${geoId}/ai-analysis`;
 
   const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({
       geoName: payload.geoName,
       metrics: payload.metrics,

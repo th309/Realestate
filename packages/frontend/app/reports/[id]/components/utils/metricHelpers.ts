@@ -1,166 +1,96 @@
 /**
  * REPORT METRIC HELPERS
  *
- * Utilities for accessing metric data in reports with geo-level fallbacks.
- * Uses the same availability logic as the map.
+ * Barrel re-export + value-access, trend, and score helpers for reports.
+ *
+ * IMPORTANT (CLAUDE.md Section 5.1): ALL backend metric fallback logic is
+ * handled by MetricResolutionService.  See metric-geo-fallback.ts for the
+ * provenance-aware fallback function.  This file only handles alias-based
+ * value lookups against `populated_data.current`.
  */
 
-import { isMetricAvailableForGeo } from '@/app/map/config/metric-availability';
-import type { GeoLevel } from '@/lib/data';
-import type { ReportWithTemplate } from '../types';
+import { isMetricAvailableForGeo } from "@/app/map/config/metric-availability";
+import type { GeoLevel } from "@/lib/data";
+import type { ReportWithTemplate } from "../types";
+import { METRIC_ALIASES } from "./metric-aliases";
+
+// ---------------------------------------------------------------------------
+// Re-exports (preserve existing import paths for consumers)
+// ---------------------------------------------------------------------------
+
+export { METRIC_ALIASES, GEO_HIERARCHY, GEO_LABELS } from "./metric-aliases";
+
+export {
+  type MetricProvenance,
+  type MetricWithGeoFallback,
+  getMetricProvenance,
+  getMetricWithGeoFallback,
+  getParentGeoLevel,
+  isMetricAvailableForReport,
+  getBestGeoLevelForMetric,
+} from "./metric-geo-fallback";
+
+// ---------------------------------------------------------------------------
+// Value access helpers
+// ---------------------------------------------------------------------------
 
 /**
- * Geography hierarchy for fallback lookups (most specific to most general)
- */
-const GEO_HIERARCHY: GeoLevel[] = ['zip', 'city', 'county', 'metro', 'state', 'national'];
-
-/**
- * Get the parent geography level for fallback
- */
-export function getParentGeoLevel(geoLevel: GeoLevel): GeoLevel | null {
-  const index = GEO_HIERARCHY.indexOf(geoLevel);
-  if (index === -1 || index >= GEO_HIERARCHY.length - 1) return null;
-  return GEO_HIERARCHY[index + 1];
-}
-
-/**
- * Check if a metric is available at the report's geography level
- */
-export function isMetricAvailableForReport(
-  metricId: string,
-  report: ReportWithTemplate
-): boolean {
-  const geoLevel = report.primary_geography_type as GeoLevel;
-  return isMetricAvailableForGeo(metricId, geoLevel);
-}
-
-/**
- * Get the best available geo level for a metric
- * Returns the report's geo level if available, or the nearest parent level
- */
-export function getBestGeoLevelForMetric(
-  metricId: string,
-  reportGeoLevel: GeoLevel
-): GeoLevel | null {
-  let currentLevel: GeoLevel | null = reportGeoLevel;
-
-  while (currentLevel) {
-    if (isMetricAvailableForGeo(metricId, currentLevel)) {
-      return currentLevel;
-    }
-    currentLevel = getParentGeoLevel(currentLevel);
-  }
-
-  return null;
-}
-
-/**
- * Get a metric value from the report, checking if it's available
- * Returns null if metric is not available at this geo level
+ * Get a metric value from the report, checking geo-level availability.
+ * Returns null if metric is not available at this geo level.
  */
 export function getMetricValue(
   report: ReportWithTemplate,
-  metricId: string
+  metricId: string,
 ): number | null {
   const geoLevel = report.primary_geography_type as GeoLevel;
-
-  // Check if metric is available at this geo level
-  if (!isMetricAvailableForGeo(metricId, geoLevel)) {
-    return null;
-  }
+  if (!isMetricAvailableForGeo(metricId, geoLevel)) return null;
 
   const value = report.populated_data?.current?.[metricId];
   if (value === undefined || value === null) return null;
-
-  return typeof value === 'number' ? value : null;
+  return typeof value === "number" ? value : null;
 }
 
 /**
- * Get a metric value with fallback to benchmarks if not available at report level
+ * Get a metric value with fallback to benchmarks (for comparison display).
+ * NOTE: This does NOT duplicate MetricResolutionService.  It reads
+ * already-resolved current data, then falls back to benchmark data
+ * which is comparison data, not primary metric resolution.
  */
 export function getMetricValueWithFallback(
   report: ReportWithTemplate,
-  metricId: string
-): { value: number | null; source: 'current' | 'state' | 'national' | null } {
-  // First try current geography
+  metricId: string,
+): { value: number | null; source: "current" | "state" | "national" | null } {
   const currentValue = report.populated_data?.current?.[metricId];
   if (currentValue !== undefined && currentValue !== null) {
-    return { value: Number(currentValue), source: 'current' };
+    return { value: Number(currentValue), source: "current" };
   }
 
-  // Try state benchmark
   const stateValue = report.populated_data?.benchmarks?.state?.[metricId];
   if (stateValue !== undefined && stateValue !== null) {
-    return { value: Number(stateValue), source: 'state' };
+    return { value: Number(stateValue), source: "state" };
   }
 
-  // Try national benchmark
   const nationalValue = report.populated_data?.benchmarks?.national?.[metricId];
   if (nationalValue !== undefined && nationalValue !== null) {
-    return { value: Number(nationalValue), source: 'national' };
+    return { value: Number(nationalValue), source: "national" };
   }
 
   return { value: null, source: null };
 }
 
 /**
- * Map of common metric ID aliases between template and actual data
- */
-const METRIC_ALIASES: Record<string, string[]> = {
-  zhvi: ['home_value', 'median_listing_price'],
-  home_value: ['zhvi', 'median_listing_price'],
-  median_listing_price: ['zhvi', 'home_value'],
-  median_household_income: ['median_income'],
-  median_income: ['median_household_income'],
-  net_migration: ['migration_net'],
-  population_growth_yoy: ['population_growth', 'population_yoy'],
-  population_yoy: ['population_growth_yoy', 'population_growth'],
-  unemployment_rate: ['unemployment'],
-  job_growth_yoy: ['job_growth'],
-  income_growth_yoy: ['income_growth'],
-  // YoY aliases — sections look for various names
-  home_value_yoy: ['zhvi_yoy', 'median_listing_price_yoy'],
-  zhvi_yoy: ['home_value_yoy', 'median_listing_price_yoy'],
-  // Appreciation / growth aliases (descriptive ↔ Zillow names)
-  home_value_3y_cagr: ['zhvi_3y_cagr', 'appreciation_3yr'],
-  zhvi_3y_cagr: ['home_value_3y_cagr', 'appreciation_3yr'],
-  home_value_5y_cagr: ['zhvi_5y_cagr', 'appreciation_5yr'],
-  zhvi_5y_cagr: ['home_value_5y_cagr', 'appreciation_5yr'],
-  home_value_forecast_1yr: ['zhvf_1yr_pct', 'forecast_1yr'],
-  zhvf_1yr_pct: ['home_value_forecast_1yr', 'forecast_1yr'],
-  // Rent aliases (descriptive ↔ Zillow names)
-  median_rent: ['zori', 'rent_index', 'median_gross_rent'],
-  zori: ['median_rent', 'rent_index', 'median_gross_rent'],
-  rent_yoy: ['zori_yoy', 'rent_growth_yoy'],
-  zori_yoy: ['rent_yoy', 'rent_growth_yoy'],
-  rent_5y_cagr: ['zori_5y_cagr', 'rent_growth_5yr'],
-  zori_5y_cagr: ['rent_5y_cagr', 'rent_growth_5yr'],
-  rental_demand_index: ['zordi', 'renter_demand_index'],
-  zordi: ['rental_demand_index', 'renter_demand_index'],
-  // Listing/inventory aliases
-  for_sale_inventory: ['active_listing_count'],
-  active_listing_count: ['for_sale_inventory'],
-  median_days_on_market: ['days_on_market'],
-  days_on_market: ['median_days_on_market'],
-  price_cut_pct: ['price_reduced_share'],
-  price_reduced_share: ['price_cut_pct'],
-  hotness_score: ['market_hotness'],
-};
-
-/**
- * Get a metric value, trying aliases if primary key not found
+ * Get a metric value, trying aliases if primary key not found.
+ * Reads from `populated_data.current` only (backend-resolved data).
  */
 export function getMetricWithAliases(
   report: ReportWithTemplate,
-  metricId: string
+  metricId: string,
 ): number | null {
-  // Try primary metric ID
   const primaryValue = report.populated_data?.current?.[metricId];
   if (primaryValue !== undefined && primaryValue !== null) {
     return Number(primaryValue);
   }
 
-  // Try aliases
   const aliases = METRIC_ALIASES[metricId] || [];
   for (const alias of aliases) {
     const aliasValue = report.populated_data?.current?.[alias];
@@ -173,55 +103,16 @@ export function getMetricWithAliases(
 }
 
 /**
- * Check if any of the required metrics are available
- */
-export function hasAnyMetric(
-  report: ReportWithTemplate,
-  metricIds: string[]
-): boolean {
-  return metricIds.some(id => getMetricWithAliases(report, id) !== null);
-}
-
-/**
- * Check if all required metrics are available
- */
-export function hasAllMetrics(
-  report: ReportWithTemplate,
-  metricIds: string[]
-): boolean {
-  return metricIds.every(id => getMetricWithAliases(report, id) !== null);
-}
-
-/**
- * Trend direction type
- */
-export type TrendDirection = 'up' | 'down' | 'stable';
-
-/**
- * Trend data for displaying metric changes over time
- */
-export interface MetricTrend {
-  direction: TrendDirection;
-  changePct: number;
-  sparklineData?: number[];
-}
-
-/**
- * Get a metric value trying the primary ID and a list of aliases
- *
- * This is a convenience wrapper around getMetricWithAliases that accepts
- * an explicit list of aliases to try in order.
+ * Convenience wrapper: try primary ID then explicit aliases list.
  */
 export function getMetricValueWithAliases(
   report: ReportWithTemplate,
   metricId: string,
-  aliases: string[] = []
+  aliases: string[] = [],
 ): number | null {
-  // Try primary ID first
   const primaryValue = getMetricWithAliases(report, metricId);
   if (primaryValue !== null) return primaryValue;
 
-  // Try aliases
   for (const alias of aliases) {
     const aliasValue = getMetricWithAliases(report, alias);
     if (aliasValue !== null) return aliasValue;
@@ -230,21 +121,45 @@ export function getMetricValueWithAliases(
   return null;
 }
 
+/** Check if any of the required metrics are available */
+export function hasAnyMetric(
+  report: ReportWithTemplate,
+  metricIds: string[],
+): boolean {
+  return metricIds.some((id) => getMetricWithAliases(report, id) !== null);
+}
+
+/** Check if all required metrics are available */
+export function hasAllMetrics(
+  report: ReportWithTemplate,
+  metricIds: string[],
+): boolean {
+  return metricIds.every((id) => getMetricWithAliases(report, id) !== null);
+}
+
+// ---------------------------------------------------------------------------
+// Trend helpers
+// ---------------------------------------------------------------------------
+
+export type TrendDirection = "up" | "down" | "stable";
+
+export interface MetricTrend {
+  direction: TrendDirection;
+  changePct: number;
+  sparklineData?: number[];
+}
+
 /**
- * Get historical trend data for a metric, trying the primary ID and aliases
- *
- * Returns trend information including direction, percentage change, and
- * sparkline data points extracted from the report's historical data.
+ * Get historical trend data for a metric, trying the primary ID and aliases.
  */
 export function getMetricTrend(
   report: ReportWithTemplate,
   metricId: string,
-  aliases: string[] = []
+  aliases: string[] = [],
 ): MetricTrend | undefined {
   const historical = report.populated_data?.historical;
   if (!historical) return undefined;
 
-  // Try primary ID and aliases
   const idsToTry = [metricId, ...aliases];
 
   for (const id of idsToTry) {
@@ -261,157 +176,10 @@ export function getMetricTrend(
   return undefined;
 }
 
-/**
- * Result type for metric with geo fallback
- */
-export interface MetricWithGeoFallback {
-  value: number | null;
-  /** The geography level the data came from (e.g., 'county' if zip wasn't available) */
-  sourceGeo: GeoLevel | null;
-  /** Human-readable label for the source (e.g., "County average") */
-  sourceLabel: string | null;
-  /** Whether this is from a fallback geography (not the report's primary geo) */
-  isFallback: boolean;
-}
+// ---------------------------------------------------------------------------
+// Score helpers
+// ---------------------------------------------------------------------------
 
-/**
- * Geography level display names
- */
-const GEO_LABELS: Record<GeoLevel, string> = {
-  zip: 'ZIP code',
-  city: 'City',
-  county: 'County',
-  metro: 'Metro area',
-  state: 'State',
-  national: 'National',
-  tract: 'Census tract',
-};
-
-/**
- * Get a metric value with automatic fallback to higher geography levels.
- *
- * If data isn't available at the report's geography (e.g., ZIP), tries
- * progressively higher levels (county → metro → state → national).
- *
- * Returns both the value and information about where it came from,
- * so the UI can indicate when using fallback data.
- *
- * @example
- * ```tsx
- * const { value, isFallback, sourceLabel } = getMetricWithGeoFallback(report, 'median_income');
- *
- * return (
- *   <MetricCard value={value}>
- *     {isFallback && <span className="text-xs">({sourceLabel})</span>}
- *   </MetricCard>
- * );
- * ```
- */
-export function getMetricWithGeoFallback(
-  report: ReportWithTemplate,
-  metricId: string,
-  aliases: string[] = []
-): MetricWithGeoFallback {
-  const reportGeo = report.primary_geography_type as GeoLevel;
-  const idsToTry = [metricId, ...aliases, ...(METRIC_ALIASES[metricId] || [])];
-
-  // First try current geography data
-  for (const id of idsToTry) {
-    const currentValue = report.populated_data?.current?.[id];
-    if (currentValue !== undefined && currentValue !== null) {
-      return {
-        value: Number(currentValue),
-        sourceGeo: reportGeo,
-        sourceLabel: null,
-        isFallback: false,
-      };
-    }
-  }
-
-  // Try county benchmark
-  for (const id of idsToTry) {
-    const countyValue = (report.populated_data?.benchmarks as any)?.county?.[id];
-    if (countyValue !== undefined && countyValue !== null) {
-      return {
-        value: Number(countyValue),
-        sourceGeo: 'county',
-        sourceLabel: `${GEO_LABELS['county']} average`,
-        isFallback: true,
-      };
-    }
-  }
-
-  // Try metro benchmark (similar_metros)
-  const similarMetros = report.populated_data?.benchmarks?.similar_metros;
-  if (similarMetros) {
-    for (const id of idsToTry) {
-      for (const metroData of Object.values(similarMetros)) {
-        if (metroData?.[id] !== undefined && metroData?.[id] !== null) {
-          return {
-            value: Number(metroData[id]),
-            sourceGeo: 'metro',
-            sourceLabel: `${GEO_LABELS['metro']} average`,
-            isFallback: true,
-          };
-        }
-      }
-    }
-  }
-
-  // Try state benchmark
-  for (const id of idsToTry) {
-    const stateValue = report.populated_data?.benchmarks?.state?.[id];
-    if (stateValue !== undefined && stateValue !== null) {
-      return {
-        value: Number(stateValue),
-        sourceGeo: 'state',
-        sourceLabel: `${GEO_LABELS['state']} average`,
-        isFallback: true,
-      };
-    }
-  }
-
-  // Try national benchmark
-  for (const id of idsToTry) {
-    const nationalValue = report.populated_data?.benchmarks?.national?.[id];
-    if (nationalValue !== undefined && nationalValue !== null) {
-      return {
-        value: Number(nationalValue),
-        sourceGeo: 'national',
-        sourceLabel: `${GEO_LABELS['national']} average`,
-        isFallback: true,
-      };
-    }
-  }
-
-  // Try historical data - get the most recent value
-  const historical = report.populated_data?.historical;
-  if (historical) {
-    for (const id of idsToTry) {
-      const histData = historical[id];
-      if (histData && histData.data && histData.data.length > 0) {
-        const latestValue = histData.data[histData.data.length - 1].value;
-        return {
-          value: latestValue,
-          sourceGeo: reportGeo,
-          sourceLabel: 'Historical',
-          isFallback: true,
-        };
-      }
-    }
-  }
-
-  return {
-    value: null,
-    sourceGeo: null,
-    sourceLabel: null,
-    isFallback: false,
-  };
-}
-
-/**
- * Get score context data for the homeready or investoredge score
- */
 export interface ScoreContext {
   comparison: string;
   dollarImpact: string;
@@ -421,28 +189,30 @@ export interface ScoreContext {
 
 export function getScoreContext(
   report: ReportWithTemplate,
-  scoreType: 'homeready' | 'investoredge'
+  scoreType: "homeready" | "investoredge",
 ): ScoreContext | null {
   if (!report.populated_data?.scores) return null;
 
-  const scoreData = report.populated_data.scores[scoreType] as {
-    score?: number;
-    context?: {
-      comparison?: string;
-      dollar_impact?: string;
-      interpretation?: string;
-      percentile_text?: string;
-    };
-  } | undefined;
+  const scoreData = report.populated_data.scores[scoreType] as
+    | {
+        score?: number;
+        context?: {
+          comparison?: string;
+          dollar_impact?: string;
+          interpretation?: string;
+          percentile_text?: string;
+        };
+      }
+    | undefined;
 
   if (!scoreData || !scoreData.context) return null;
 
   const ctx = scoreData.context;
 
   return {
-    comparison: ctx.comparison || '',
-    dollarImpact: ctx.dollar_impact || '',
-    interpretation: ctx.interpretation || '',
-    percentileText: ctx.percentile_text || '',
+    comparison: ctx.comparison || "",
+    dollarImpact: ctx.dollar_impact || "",
+    interpretation: ctx.interpretation || "",
+    percentileText: ctx.percentile_text || "",
   };
 }

@@ -12,12 +12,30 @@
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { MarketSnapshotService } from '../market-snapshot/market-snapshot.service';
-import { TimeSeriesService, TimeSeriesDataPoint } from '../timeseries/timeseries.service';
+import {
+  TimeSeriesService,
+  TimeSeriesDataPoint,
+} from '../timeseries/timeseries.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import { HISTORY_MONTHS_MAX } from '../common/history.constants';
 import { MarketMetrics } from './reports-market-comparison';
 
 const logger = new Logger('ReportsDataFetcher');
+
+/** Provenance metadata for a single resolved metric value */
+export interface MetricProvenance {
+  source: string;
+  sourceGeoId: string | null;
+  sourceGeoLevel: string | null;
+  isInherited: boolean;
+  isFallback: boolean;
+}
+
+/** Return type for fetchMarketMetrics — values plus provenance */
+export interface MarketMetricsWithProvenance {
+  metrics: MarketMetrics;
+  provenance: Record<string, MetricProvenance>;
+}
 
 /** Historical data for a single metric */
 export interface HistoricalMetricData {
@@ -42,16 +60,67 @@ export async function fetchMarketMetrics(
   geographyType: 'metro' | 'county' | 'zip',
   requiredMetrics?: string[],
   metricResolutionService?: MetricResolutionService,
-): Promise<MarketMetrics> {
+): Promise<MarketMetricsWithProvenance> {
   const metrics: MarketMetrics = {};
+  const provenance: Record<string, MetricProvenance> = {};
 
   try {
     // Use MarketSnapshotService - same data feed as market pages
-    const snapshot = await marketSnapshotService.getSnapshot(geographyType, geographyId);
-    const sm = snapshot.metrics; // Record<string, { value, date }>
+    const snapshot = await marketSnapshotService.getSnapshot(
+      geographyType,
+      geographyId,
+    );
+    const sm = snapshot.metrics; // Record<string, { value, date, source, ... }>
 
     // Map snapshot metric IDs to MarketMetrics field names
     const v = (id: string) => sm[id]?.value ?? undefined;
+
+    // Collect provenance from snapshot for each metric that has data.
+    // Maps snapshot metric ID -> report field name for provenance tracking.
+    const snapshotFieldMap: Record<string, string> = {
+      home_value: 'zhvi',
+      home_value_yoy: 'zhvi_yoy',
+      home_price_forecast: 'zhvf_1yr_pct',
+      listing_price: 'median_listing_price',
+      rent_index: 'zori',
+      rent_for_houses: 'zordi',
+      hotness_score: 'hotness_score',
+      demand_score: 'demand_score',
+      supply_score: 'supply_score',
+      days_on_market: 'days_on_market',
+      for_sale_inventory: 'active_listing_count',
+      inventory_yoy: 'inventory_yoy',
+      pending_ratio: 'pending_ratio',
+      price_cut_pct: 'price_reduced_share',
+      sale_to_list: 'sale_to_list_ratio',
+      cap_rate: 'cap_rate',
+      gross_yield: 'gross_yield',
+      grm: 'grm',
+      overvalued_pct: 'overvalued_pct',
+      rent_to_price_ratio: 'rent_to_price_ratio',
+      population: 'population',
+      median_income: 'median_income',
+      median_age: 'median_age',
+      population_growth: 'population_growth_yoy',
+      unemployment_rate: 'unemployment_rate',
+      job_growth: 'job_growth_yoy',
+      income_growth: 'income_growth_yoy',
+      homeownership_rate: 'homeownership_rate',
+      home_value_5yr: 'zhvi_5y_cagr',
+    };
+
+    for (const [snapshotId, fieldName] of Object.entries(snapshotFieldMap)) {
+      const entry = sm[snapshotId];
+      if (entry?.value != null) {
+        provenance[fieldName] = {
+          source: entry.source,
+          sourceGeoId: entry.sourceGeoId,
+          sourceGeoLevel: entry.sourceGeoLevel,
+          isInherited: entry.isInherited,
+          isFallback: entry.isFallback,
+        };
+      }
+    }
 
     // Price metrics
     metrics.zhvi = v('home_value');
@@ -102,17 +171,34 @@ export async function fetchMarketMetrics(
     // unemployment_rate: economic table with geo inheritance
     // hotness_score/demand_score: realtor with geo inheritance
     if (metricResolutionService) {
-      const fallbackTargets: Array<{ metricId: string; field: keyof MarketMetrics }> = [];
-      if (metrics.zhvi == null) fallbackTargets.push({ metricId: 'home_value', field: 'zhvi' });
-      if (metrics.zori == null) fallbackTargets.push({ metricId: 'rent_index', field: 'zori' });
-      if (metrics.unemployment_rate == null) fallbackTargets.push({ metricId: 'unemployment_rate', field: 'unemployment_rate' });
-      if (metrics.hotness_score == null) fallbackTargets.push({ metricId: 'hotness_score', field: 'hotness_score' });
-      if (metrics.demand_score == null) fallbackTargets.push({ metricId: 'demand_score', field: 'demand_score' });
+      const fallbackTargets: Array<{
+        metricId: string;
+        field: keyof MarketMetrics;
+      }> = [];
+      if (metrics.zhvi == null)
+        fallbackTargets.push({ metricId: 'home_value', field: 'zhvi' });
+      if (metrics.zori == null)
+        fallbackTargets.push({ metricId: 'rent_index', field: 'zori' });
+      if (metrics.unemployment_rate == null)
+        fallbackTargets.push({
+          metricId: 'unemployment_rate',
+          field: 'unemployment_rate',
+        });
+      if (metrics.hotness_score == null)
+        fallbackTargets.push({
+          metricId: 'hotness_score',
+          field: 'hotness_score',
+        });
+      if (metrics.demand_score == null)
+        fallbackTargets.push({
+          metricId: 'demand_score',
+          field: 'demand_score',
+        });
 
       if (fallbackTargets.length > 0) {
         try {
           const resolved = await metricResolutionService.resolveMetricBatch(
-            fallbackTargets.map(t => t.metricId),
+            fallbackTargets.map((t) => t.metricId),
             geographyType,
             geographyId,
           );
@@ -120,10 +206,20 @@ export async function fetchMarketMetrics(
             const r = resolved[metricId];
             if (r?.value != null) {
               (metrics as any)[field] = r.value;
+              provenance[field] = {
+                source: r.source,
+                sourceGeoId: r.sourceGeoId,
+                sourceGeoLevel: r.sourceGeoLevel,
+                isInherited: r.isInherited,
+                isFallback: r.isFallback,
+              };
             }
           }
         } catch (err) {
-          logger.warn(`MetricResolution fallback failed for ${geographyType}/${geographyId}:`, err);
+          logger.warn(
+            `MetricResolution fallback failed for ${geographyType}/${geographyId}:`,
+            err,
+          );
         }
       }
     } else {
@@ -137,10 +233,18 @@ export async function fetchMarketMetrics(
 
     // Calculate 3yr/5yr CAGR and YoY from ZHVI history
     if (metrics.zhvi_3y_cagr == null || metrics.zori_yoy == null) {
-      const zillowTable = geographyType === 'metro' ? 'zillow_metro'
-        : geographyType === 'county' ? 'zillow_county' : 'zillow_zip';
-      const zillowIdCol = geographyType === 'metro' ? 'cbsa_code'
-        : geographyType === 'county' ? 'fips_code' : 'region_name';
+      const zillowTable =
+        geographyType === 'metro'
+          ? 'zillow_metro'
+          : geographyType === 'county'
+            ? 'zillow_county'
+            : 'zillow_zip';
+      const zillowIdCol =
+        geographyType === 'metro'
+          ? 'cbsa_code'
+          : geographyType === 'county'
+            ? 'fips_code'
+            : 'region_name';
 
       // ZHVI history for 3yr CAGR
       if (metrics.zhvi_3y_cagr == null) {
@@ -155,15 +259,19 @@ export async function fetchMarketMetrics(
         if (zhviHistory && zhviHistory.length >= 1) {
           const current = zhviHistory[0]?.value;
           if (zhviHistory.length >= 36) {
-            const threeYrAgo = zhviHistory[Math.min(36, zhviHistory.length - 1)]?.value;
+            const threeYrAgo =
+              zhviHistory[Math.min(36, zhviHistory.length - 1)]?.value;
             if (current && threeYrAgo && threeYrAgo > 0) {
-              metrics.zhvi_3y_cagr = (Math.pow(current / threeYrAgo, 1 / 3) - 1) * 100;
+              metrics.zhvi_3y_cagr =
+                (Math.pow(current / threeYrAgo, 1 / 3) - 1) * 100;
             }
           }
           if (metrics.zhvi_5y_cagr == null && zhviHistory.length >= 60) {
-            const fiveYrAgo = zhviHistory[Math.min(60, zhviHistory.length - 1)]?.value;
+            const fiveYrAgo =
+              zhviHistory[Math.min(60, zhviHistory.length - 1)]?.value;
             if (current && fiveYrAgo && fiveYrAgo > 0) {
-              metrics.zhvi_5y_cagr = (Math.pow(current / fiveYrAgo, 1 / 5) - 1) * 100;
+              metrics.zhvi_5y_cagr =
+                (Math.pow(current / fiveYrAgo, 1 / 5) - 1) * 100;
             }
           }
         }
@@ -183,7 +291,8 @@ export async function fetchMarketMetrics(
           const currentRent = zoriHistory[0]?.value;
           const rentYearAgo = zoriHistory[12]?.value;
           if (currentRent && rentYearAgo && rentYearAgo > 0) {
-            metrics.zori_yoy = ((currentRent - rentYearAgo) / rentYearAgo) * 100;
+            metrics.zori_yoy =
+              ((currentRent - rentYearAgo) / rentYearAgo) * 100;
           }
         }
       }
@@ -191,10 +300,18 @@ export async function fetchMarketMetrics(
 
     // Calculate population_growth_yoy from census if snapshot didn't provide it
     if (metrics.population_growth_yoy == null && metrics.population != null) {
-      const censusTable = geographyType === 'metro' ? 'census_metro'
-        : geographyType === 'county' ? 'census_county' : 'census_zip';
-      const censusIdCol = geographyType === 'metro' ? 'cbsa_code'
-        : geographyType === 'county' ? 'fips_code' : 'zcta';
+      const censusTable =
+        geographyType === 'metro'
+          ? 'census_metro'
+          : geographyType === 'county'
+            ? 'census_county'
+            : 'census_zip';
+      const censusIdCol =
+        geographyType === 'metro'
+          ? 'cbsa_code'
+          : geographyType === 'county'
+            ? 'fips_code'
+            : 'zcta';
 
       const { data: censusRows } = await supabaseClient
         .from(censusTable)
@@ -220,12 +337,14 @@ export async function fetchMarketMetrics(
     metrics.gross_rent_multiplier = metrics.grm;
     metrics.price_cut_pct = metrics.price_reduced_share;
 
-    logger.log(`Fetched market metrics via snapshot for ${geographyType} ${geographyId}: ${Object.keys(metrics).filter(k => metrics[k as keyof MarketMetrics] !== undefined).length} fields`);
+    logger.log(
+      `Fetched market metrics via snapshot for ${geographyType} ${geographyId}: ${Object.keys(metrics).filter((k) => metrics[k as keyof MarketMetrics] !== undefined).length} fields`,
+    );
   } catch (error) {
     logger.error(`Failed to fetch market metrics for ${geographyId}:`, error);
   }
 
-  return metrics;
+  return { metrics, provenance };
 }
 
 /**
@@ -266,7 +385,9 @@ export async function fetchStateBenchmark(
       benchmarks.demand_score = stateData.demand_score;
     }
 
-    logger.log(`Fetched state benchmark for ${stateCode}: ${Object.keys(benchmarks).filter(k => benchmarks[k] != null).length} fields`);
+    logger.log(
+      `Fetched state benchmark for ${stateCode}: ${Object.keys(benchmarks).filter((k) => benchmarks[k] != null).length} fields`,
+    );
   } catch (error) {
     logger.warn(`Failed to fetch state benchmark for ${stateCode}:`, error);
   }
@@ -300,13 +421,16 @@ export async function fetchNationalBenchmark(
       benchmarks.active_listing_count = nationalData.active_listing_count;
       benchmarks.inventory_yoy = nationalData.active_listing_count_yy;
       benchmarks.hotness_score = nationalData.hotness_score;
-      benchmarks.median_listing_price_yoy = nationalData.median_listing_price_yy;
+      benchmarks.median_listing_price_yoy =
+        nationalData.median_listing_price_yy;
       benchmarks.pending_ratio = nationalData.pending_ratio;
       benchmarks.price_reduced_share = nationalData.price_reduced_share;
       benchmarks.demand_score = nationalData.demand_score;
     }
 
-    logger.log(`Fetched national benchmark: ${Object.keys(benchmarks).filter(k => benchmarks[k] != null).length} fields`);
+    logger.log(
+      `Fetched national benchmark: ${Object.keys(benchmarks).filter((k) => benchmarks[k] != null).length} fields`,
+    );
   } catch (error) {
     logger.warn('Failed to fetch national benchmark:', error);
   }
@@ -349,41 +473,47 @@ export async function fetchHistoricalData(
   ];
 
   // Fetch all metrics in parallel for performance
-  const fetchPromises = metricsToFetch.map(async ({ reportKey, timeseriesId }) => {
-    try {
-      // Use lastPoints to get the most recent N months of data
-      // HISTORY_MONTHS_MAX = 6, so we fetch 6 data points
-      const data = await timeSeriesService.getTimeSeries(
-        timeseriesId,
-        geographyType,
-        geographyId,
-        undefined, // startDate
-        undefined, // endDate
-        undefined, // limit
-        HISTORY_MONTHS_MAX, // lastPoints - get last 6 months
-      );
+  const fetchPromises = metricsToFetch.map(
+    async ({ reportKey, timeseriesId }) => {
+      try {
+        // Use lastPoints to get the most recent N months of data
+        // HISTORY_MONTHS_MAX = 6, so we fetch 6 data points
+        const data = await timeSeriesService.getTimeSeries(
+          timeseriesId,
+          geographyType,
+          geographyId,
+          undefined, // startDate
+          undefined, // endDate
+          undefined, // limit
+          HISTORY_MONTHS_MAX, // lastPoints - get last 6 months
+        );
 
-      if (!data || data.length === 0) {
-        logger.debug(`No historical data for ${reportKey} in ${geographyType} ${geographyId}`);
+        if (!data || data.length === 0) {
+          logger.debug(
+            `No historical data for ${reportKey} in ${geographyType} ${geographyId}`,
+          );
+          return { reportKey, result: null };
+        }
+
+        // Calculate trend and change percentage
+        const { trend, change_pct } = calculateTrendAndChange(data);
+
+        return {
+          reportKey,
+          result: {
+            data: data.map((d) => ({ date: d.date, value: d.value })),
+            trend,
+            change_pct,
+          } as HistoricalMetricData,
+        };
+      } catch (error) {
+        logger.warn(
+          `Failed to fetch historical data for ${reportKey}: ${error.message}`,
+        );
         return { reportKey, result: null };
       }
-
-      // Calculate trend and change percentage
-      const { trend, change_pct } = calculateTrendAndChange(data);
-
-      return {
-        reportKey,
-        result: {
-          data: data.map(d => ({ date: d.date, value: d.value })),
-          trend,
-          change_pct,
-        } as HistoricalMetricData,
-      };
-    } catch (error) {
-      logger.warn(`Failed to fetch historical data for ${reportKey}: ${error.message}`);
-      return { reportKey, result: null };
-    }
-  });
+    },
+  );
 
   // Wait for all fetches to complete
   const results = await Promise.all(fetchPromises);

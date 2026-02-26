@@ -27,6 +27,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 
 import {
@@ -34,7 +35,9 @@ import {
   ListBacktestRunsParams,
 } from './backtest-runs.service';
 import { TriggerBacktestDto } from './trigger-backtest.dto';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/backtest-runs')
 export class BacktestRunsController {
   private readonly logger = new Logger(BacktestRunsController.name);
@@ -165,7 +168,8 @@ export class BacktestRunsController {
       throw new HttpException(
         {
           success: false,
-          error: 'Missing required parameters: scoreType, horizon, geographyType',
+          error:
+            'Missing required parameters: scoreType, horizon, geographyType',
         },
         HttpStatus.BAD_REQUEST,
       );

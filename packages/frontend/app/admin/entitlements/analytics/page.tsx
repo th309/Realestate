@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -14,10 +14,10 @@ import {
   Loader2,
   RefreshCw,
   AlertCircle,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
-import { GoalProgressWidget } from './components/GoalProgressWidget';
-import { AiInsightsPanel } from './components/AiInsightsPanel';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
+import { GoalProgressWidget } from "./components/GoalProgressWidget";
+import { AiInsightsPanel } from "./components/AiInsightsPanel";
 
 // Types
 interface MetricCardData {
@@ -81,7 +81,7 @@ function MetricCard({ data }: { data: MetricCardData }) {
         <div
           className={`
             flex items-center gap-1 text-xs px-2 py-0.5 rounded-full
-            ${isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}
+            ${isPositive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}
           `}
         >
           {isPositive ? (
@@ -89,11 +89,13 @@ function MetricCard({ data }: { data: MetricCardData }) {
           ) : (
             <TrendingDown className="w-3 h-3" />
           )}
-          {isPositive ? '+' : ''}
+          {isPositive ? "+" : ""}
           {data.change}%
         </div>
       </div>
-      <div className="text-2xl font-semibold text-on-surface mb-1">{data.value}</div>
+      <div className="text-2xl font-semibold text-on-surface mb-1">
+        {data.value}
+      </div>
       <div className="text-sm text-on-surface-variant">{data.label}</div>
     </div>
   );
@@ -125,7 +127,10 @@ function SimpleBarChart({ data }: { data: TimeSeriesPoint[] }) {
             </div>
           </div>
           <span className="text-xs text-on-surface-variant">
-            {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            {new Date(point.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
           </span>
         </div>
       ))}
@@ -163,7 +168,7 @@ function ConversionFunnel({
 }
 
 export default function AnalyticsDashboardPage() {
-  const [dateRange, setDateRange] = useState('30d');
+  const [dateRange, setDateRange] = useState("30d");
   const [stats, setStats] = useState<PaywallStats | null>(null);
   const [funnel, setFunnel] = useState<FunnelStep[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,7 +179,7 @@ export default function AnalyticsDashboardPage() {
       setLoading(true);
       setError(null);
 
-      const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;
+      const days = dateRange === "7d" ? 7 : dateRange === "90d" ? 90 : 30;
 
       const [statsRes, funnelRes] = await Promise.all([
         fetchAPIRaw(`/api/admin/analytics/paywall?days=${days}`),
@@ -187,18 +192,23 @@ export default function AnalyticsDashboardPage() {
         // Map snake_case to camelCase
         setStats({
           paywallViews: statsData.paywall_views ?? statsData.paywallViews ?? 0,
-          upgradeClicks: statsData.upgrade_clicks ?? statsData.upgradeClicks ?? 0,
-          conversionRate: statsData.conversion_rate ?? statsData.conversionRate ?? 0,
+          upgradeClicks:
+            statsData.upgrade_clicks ?? statsData.upgradeClicks ?? 0,
+          conversionRate:
+            statsData.conversion_rate ?? statsData.conversionRate ?? 0,
           conversions: statsData.conversions ?? 0,
-          topBlockedResources: (statsData.top_blocked_resources ?? statsData.topBlockedResources ?? []).map(
-            (r: Record<string, unknown>) => ({
-              resourceId: r.resource_id ?? r.resourceId,
-              resourceType: r.resource_type ?? r.resourceType,
-              viewCount: r.view_count ?? r.viewCount ?? 0,
-              clickCount: r.click_count ?? r.clickCount ?? 0,
-            })
-          ),
-          trendsLast7Days: statsData.trends_last_7_days ?? statsData.trendsLast7Days ?? [],
+          topBlockedResources: (
+            statsData.top_blocked_resources ??
+            statsData.topBlockedResources ??
+            []
+          ).map((r: Record<string, unknown>) => ({
+            resourceId: r.resource_id ?? r.resourceId,
+            resourceType: r.resource_type ?? r.resourceType,
+            viewCount: r.view_count ?? r.viewCount ?? r.views ?? 0,
+            clickCount: r.click_count ?? r.clickCount ?? r.clicks ?? 0,
+          })),
+          trendsLast7Days:
+            statsData.trends_last_7_days ?? statsData.trendsLast7Days ?? [],
         });
       }
 
@@ -213,8 +223,8 @@ export default function AnalyticsDashboardPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to fetch analytics:', err);
-      setError('Failed to load analytics data');
+      console.error("Failed to fetch analytics:", err);
+      setError("Failed to load analytics data");
     } finally {
       setLoading(false);
     }
@@ -228,54 +238,60 @@ export default function AnalyticsDashboardPage() {
   const metrics: MetricCardData[] = stats
     ? [
         {
-          label: 'Paywall Views',
+          label: "Paywall Views",
           value: stats.paywallViews.toLocaleString(),
           change: 0,
-          changeLabel: 'vs last period',
+          changeLabel: "vs last period",
           icon: Eye,
         },
         {
-          label: 'Upgrade Clicks',
+          label: "Upgrade Clicks",
           value: stats.upgradeClicks.toLocaleString(),
           change: 0,
-          changeLabel: 'vs last period',
+          changeLabel: "vs last period",
           icon: MousePointerClick,
         },
         {
-          label: 'Click-Through Rate',
-          value: stats.paywallViews > 0
-            ? `${((stats.upgradeClicks / stats.paywallViews) * 100).toFixed(1)}%`
-            : '0%',
+          label: "Click-Through Rate",
+          value:
+            stats.paywallViews > 0
+              ? `${((stats.upgradeClicks / stats.paywallViews) * 100).toFixed(1)}%`
+              : "0%",
           change: 0,
-          changeLabel: 'vs last period',
+          changeLabel: "vs last period",
           icon: BarChart3,
         },
         {
-          label: 'Conversions',
+          label: "Conversions",
           value: stats.conversions.toLocaleString(),
           change: 0,
-          changeLabel: 'vs last period',
+          changeLabel: "vs last period",
           icon: DollarSign,
         },
       ]
     : [];
 
   // Build top resources from stats
-  const topResources: TopResource[] = stats?.topBlockedResources?.map((r) => ({
-    resource: r.resourceId,
-    type: r.resourceType,
-    views: r.viewCount,
-    clicks: r.clickCount,
-    ctr: r.viewCount > 0 ? Math.round((r.clickCount / r.viewCount) * 1000) / 10 : 0,
-  })) ?? [];
+  const topResources: TopResource[] =
+    stats?.topBlockedResources?.map((r) => ({
+      resource: r.resourceId,
+      type: r.resourceType,
+      views: r.viewCount,
+      clicks: r.clickCount,
+      ctr:
+        r.viewCount > 0
+          ? Math.round((r.clickCount / r.viewCount) * 1000) / 10
+          : 0,
+    })) ?? [];
 
   // Build timeseries from stats
-  const timeseries: TimeSeriesPoint[] = stats?.trendsLast7Days?.map((d) => ({
-    date: d.date,
-    views: d.views,
-    clicks: d.clicks,
-    conversions: 0,
-  })) ?? [];
+  const timeseries: TimeSeriesPoint[] =
+    stats?.trendsLast7Days?.map((d) => ({
+      date: d.date,
+      views: d.views,
+      clicks: d.clicks,
+      conversions: 0,
+    })) ?? [];
 
   if (loading) {
     return (
@@ -438,9 +454,10 @@ export default function AnalyticsDashboardPage() {
                       <span
                         className={`
                           text-xs px-2 py-0.5 rounded-full
-                          ${resource.type === 'metric'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-purple-100 text-purple-700'
+                          ${
+                            resource.type === "metric"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
                           }
                         `}
                       >
@@ -457,11 +474,12 @@ export default function AnalyticsDashboardPage() {
                       <span
                         className={`
                           text-sm font-medium
-                          ${resource.ctr >= 10
-                            ? 'text-green-600'
-                            : resource.ctr >= 7
-                            ? 'text-amber-600'
-                            : 'text-on-surface-variant'
+                          ${
+                            resource.ctr >= 10
+                              ? "text-green-600"
+                              : resource.ctr >= 7
+                                ? "text-amber-600"
+                                : "text-on-surface-variant"
                           }
                         `}
                       >
@@ -472,7 +490,10 @@ export default function AnalyticsDashboardPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-on-surface-variant">
+                  <td
+                    colSpan={5}
+                    className="py-8 text-center text-on-surface-variant"
+                  >
                     No blocked resources tracked yet
                   </td>
                 </tr>
@@ -483,7 +504,9 @@ export default function AnalyticsDashboardPage() {
       </div>
 
       {/* AI Marketing Insights */}
-      <AiInsightsPanel days={dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30} />
+      <AiInsightsPanel
+        days={dateRange === "7d" ? 7 : dateRange === "90d" ? 90 : 30}
+      />
     </div>
   );
 }

@@ -28,8 +28,16 @@ export interface MarketSnapshotResponse {
     type: string;
   };
   scores: {
-    homeready: { score: number; grade: string; components?: Record<string, number> } | null;
-    investoredge: { score: number; grade: string; components?: Record<string, number> } | null;
+    homeready: {
+      score: number;
+      grade: string;
+      components?: Record<string, number>;
+    } | null;
+    investoredge: {
+      score: number;
+      grade: string;
+      components?: Record<string, number>;
+    } | null;
     markethealth: { score: number; grade: string } | null;
   };
   metrics: Record<string, MarketSnapshotMetric>;
@@ -137,7 +145,11 @@ export class MarketSnapshotService {
     private readonly metricResolution: MetricResolutionService,
   ) {}
 
-  async getSnapshot(geoType: GeoType, geoId: string, state?: string): Promise<MarketSnapshotResponse> {
+  async getSnapshot(
+    geoType: GeoType,
+    geoId: string,
+    state?: string,
+  ): Promise<MarketSnapshotResponse> {
     const metrics: Record<string, MarketSnapshotMetric> = {};
     let geographyName = `${geoType} ${geoId}`;
     let lastUpdated = new Date().toISOString();
@@ -145,7 +157,12 @@ export class MarketSnapshotService {
       value: number,
       date: string | null | undefined,
       source: string,
-      overrides?: Partial<Pick<MarketSnapshotMetric, 'sourceGeoId' | 'sourceGeoLevel' | 'isInherited' | 'isFallback'>>,
+      overrides?: Partial<
+        Pick<
+          MarketSnapshotMetric,
+          'sourceGeoId' | 'sourceGeoLevel' | 'isInherited' | 'isFallback'
+        >
+      >,
     ): MarketSnapshotMetric => ({
       value,
       date: date ?? null,
@@ -157,23 +174,48 @@ export class MarketSnapshotService {
     });
 
     // Run all data source queries in parallel
-    const [realtorResult, zillowResult, censusResult, economicResult, calcResult, permitsResult, scoresResult] =
-      await Promise.allSettled([
-        this.fetchRealtor(geoType, geoId),
-        this.fetchZillow(geoType, geoId),
-        this.fetchCensus(geoType, geoId),
-        this.fetchEconomic(geoType, geoId),
-        this.fetchCalculated(geoType, geoId),
-        geoType === 'county' ? this.fetchPermits(geoId) : Promise.resolve(null),
-        this.fetchScores(geoType, geoId),
-      ]);
+    const [
+      realtorResult,
+      zillowResult,
+      censusResult,
+      economicResult,
+      calcResult,
+      permitsResult,
+      scoresResult,
+    ] = await Promise.allSettled([
+      this.fetchRealtor(geoType, geoId),
+      this.fetchZillow(geoType, geoId),
+      this.fetchCensus(geoType, geoId),
+      this.fetchEconomic(geoType, geoId),
+      this.fetchCalculated(geoType, geoId),
+      geoType === 'county' ? this.fetchPermits(geoId) : Promise.resolve(null),
+      this.fetchScores(geoType, geoId),
+    ]);
 
     // Log any rejected promises for debugging
-    const labels = ['realtor', 'zillow', 'census', 'economic', 'calculated', 'permits', 'scores'];
-    const allResults = [realtorResult, zillowResult, censusResult, economicResult, calcResult, permitsResult, scoresResult];
+    const labels = [
+      'realtor',
+      'zillow',
+      'census',
+      'economic',
+      'calculated',
+      'permits',
+      'scores',
+    ];
+    const allResults = [
+      realtorResult,
+      zillowResult,
+      censusResult,
+      economicResult,
+      calcResult,
+      permitsResult,
+      scoresResult,
+    ];
     for (let i = 0; i < allResults.length; i++) {
       if (allResults[i].status === 'rejected') {
-        this.logger.error(`fetchData[${labels[i]}] rejected for ${geoType}/${geoId}: ${(allResults[i] as PromiseRejectedResult).reason}`);
+        this.logger.error(
+          `fetchData[${labels[i]}] rejected for ${geoType}/${geoId}: ${(allResults[i] as PromiseRejectedResult).reason}`,
+        );
       }
     }
 
@@ -185,8 +227,14 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(REALTOR_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          const value = REALTOR_PERCENT_COLS.has(col) ? Number(raw) * 100 : Number(raw);
-          metrics[metricId] = toMetric(value, data.period_date ?? date ?? null, 'realtor');
+          const value = REALTOR_PERCENT_COLS.has(col)
+            ? Number(raw) * 100
+            : Number(raw);
+          metrics[metricId] = toMetric(
+            value,
+            data.period_date ?? date ?? null,
+            'realtor',
+          );
         }
       }
       // home_sales_yoy from Realtor
@@ -227,11 +275,15 @@ export class MarketSnapshotService {
     // Fallbacks via centralized MetricResolutionService (source of truth: fallback-registry.ts)
     // home_sales: Zillow sales_count -> Realtor pending_listing_count
     // rent_index: Zillow ZORI -> HUD FMR (ZIP only) -> Census median_gross_rent
-    const fallbackMetrics = ['home_sales', 'rent_index'].filter(m => !metrics[m]);
+    const fallbackMetrics = ['home_sales', 'rent_index'].filter(
+      (m) => !metrics[m],
+    );
     if (fallbackMetrics.length > 0) {
       try {
         const resolved = await this.metricResolution.resolveMetricBatch(
-          fallbackMetrics, geoType as any, geoId,
+          fallbackMetrics,
+          geoType as any,
+          geoId,
         );
         for (const metricId of fallbackMetrics) {
           const r = resolved[metricId];
@@ -245,7 +297,9 @@ export class MarketSnapshotService {
           }
         }
       } catch (e) {
-        this.logger.warn(`MetricResolution fallback failed for ${geoType}/${geoId}: ${e}`);
+        this.logger.warn(
+          `MetricResolution fallback failed for ${geoType}/${geoId}: ${e}`,
+        );
       }
     }
 
@@ -260,7 +314,6 @@ export class MarketSnapshotService {
           metrics[metricId] = toMetric(Number(raw), year, 'census');
         }
       }
-
     }
 
     // Fallback: home_value when Zillow ZHVI is unavailable
@@ -271,17 +324,27 @@ export class MarketSnapshotService {
       if (censusResult.status === 'fulfilled' && censusResult.value) {
         const censusVal = Number(censusResult.value.data.median_home_value);
         if (censusVal > 0 && censusVal !== -666666666) {
-          const year = censusResult.value.data.year ? `${censusResult.value.data.year}-01-01` : null;
-          metrics['home_value'] = toMetric(censusVal, year, 'census', { isFallback: true });
+          const year = censusResult.value.data.year
+            ? `${censusResult.value.data.year}-01-01`
+            : null;
+          metrics['home_value'] = toMetric(censusVal, year, 'census', {
+            isFallback: true,
+          });
         }
       }
       // Then Realtor listing price (same pattern as reports-data-fetcher.ts line 97-100)
-      if (!metrics['home_value'] && realtorResult.status === 'fulfilled' && realtorResult.value) {
+      if (
+        !metrics['home_value'] &&
+        realtorResult.status === 'fulfilled' &&
+        realtorResult.value
+      ) {
         const listingPrice = realtorResult.value.data.median_listing_price;
         if (listingPrice != null) {
           metrics['home_value'] = toMetric(
             Number(listingPrice),
-            realtorResult.value.data.period_date ?? realtorResult.value.date ?? null,
+            realtorResult.value.data.period_date ??
+              realtorResult.value.date ??
+              null,
             'realtor',
             { isFallback: true },
           );
@@ -296,7 +359,11 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(ECONOMIC_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          metrics[metricId] = toMetric(Number(raw), data.period_date ?? null, 'economic');
+          metrics[metricId] = toMetric(
+            Number(raw),
+            data.period_date ?? null,
+            'economic',
+          );
         }
       }
     }
@@ -309,13 +376,23 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(CALC_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          const value = CALC_PERCENT_COLS.has(col) ? Number(raw) * 100 : Number(raw);
-          metrics[metricId] = toMetric(value, data.period_date ?? null, 'calculated');
+          const value = CALC_PERCENT_COLS.has(col)
+            ? Number(raw) * 100
+            : Number(raw);
+          metrics[metricId] = toMetric(
+            value,
+            data.period_date ?? null,
+            'calculated',
+          );
         }
       }
       // Also set years_to_save from calculated_metrics if Zillow didn't provide it
       if (data.years_to_save != null && !metrics['years_to_save']) {
-        metrics['years_to_save'] = toMetric(Number(data.years_to_save), data.period_date ?? null, 'calculated');
+        metrics['years_to_save'] = toMetric(
+          Number(data.years_to_save),
+          data.period_date ?? null,
+          'calculated',
+        );
       }
     }
 
@@ -325,18 +402,30 @@ export class MarketSnapshotService {
       for (const [col, metricId] of Object.entries(PERMITS_COLUMN_MAP)) {
         const raw = data[col];
         if (raw != null) {
-          metrics[metricId] = toMetric(Number(raw), data.period_date ?? null, 'permits');
+          metrics[metricId] = toMetric(
+            Number(raw),
+            data.period_date ?? null,
+            'permits',
+          );
         }
       }
       // Derived: sf_mf_ratio and permit_value_per_unit
       const sf = Number(data.sf_units) || 0;
       const total = Number(data.total_units) || 0;
       if (total > 0) {
-        metrics['sf_mf_ratio'] = toMetric((sf / total) * 100, data.period_date ?? null, 'permits');
+        metrics['sf_mf_ratio'] = toMetric(
+          (sf / total) * 100,
+          data.period_date ?? null,
+          'permits',
+        );
       }
       const totalValue = Number(data.total_value) || 0;
       if (total > 0 && totalValue > 0) {
-        metrics['permit_value_per_unit'] = toMetric(totalValue / total, data.period_date ?? null, 'permits');
+        metrics['permit_value_per_unit'] = toMetric(
+          totalValue / total,
+          data.period_date ?? null,
+          'permits',
+        );
       }
     }
 
@@ -351,31 +440,49 @@ export class MarketSnapshotService {
       if (s.location_name) geographyName = s.location_name;
       if (s.score_date) lastUpdated = s.score_date;
       scores = {
-        homeready: s.scores?.homeready ? {
-          score: Math.round(s.scores.homeready.score),
-          grade: s.scores.homeready.grade,
-          components: s.scores.homeready.components,
-        } : null,
-        investoredge: s.scores?.investoredge ? {
-          score: Math.round(s.scores.investoredge.score),
-          grade: s.scores.investoredge.grade,
-          components: s.scores.investoredge.components,
-        } : null,
-        markethealth: s.scores?.markethealth ? {
-          score: Math.round(s.scores.markethealth.score),
-          grade: s.scores.markethealth.grade,
-        } : null,
+        homeready: s.scores?.homeready
+          ? {
+              score: Math.round(s.scores.homeready.score),
+              grade: s.scores.homeready.grade,
+              components: s.scores.homeready.components,
+            }
+          : null,
+        investoredge: s.scores?.investoredge
+          ? {
+              score: Math.round(s.scores.investoredge.score),
+              grade: s.scores.investoredge.grade,
+              components: s.scores.investoredge.components,
+            }
+          : null,
+        markethealth: s.scores?.markethealth
+          ? {
+              score: Math.round(s.scores.markethealth.score),
+              grade: s.scores.markethealth.grade,
+            }
+          : null,
       };
 
       // Also add score values as metrics for data card display
       if (s.scores?.homeready) {
-        metrics['homeready_score'] = toMetric(Math.round(s.scores.homeready.score), s.score_date ?? null, 'propertyiq');
+        metrics['homeready_score'] = toMetric(
+          Math.round(s.scores.homeready.score),
+          s.score_date ?? null,
+          'propertyiq',
+        );
       }
       if (s.scores?.investoredge) {
-        metrics['investoredge_score'] = toMetric(Math.round(s.scores.investoredge.score), s.score_date ?? null, 'propertyiq');
+        metrics['investoredge_score'] = toMetric(
+          Math.round(s.scores.investoredge.score),
+          s.score_date ?? null,
+          'propertyiq',
+        );
       }
       if (s.scores?.markethealth) {
-        metrics['market_health_score'] = toMetric(Math.round(s.scores.markethealth.score), s.score_date ?? null, 'propertyiq');
+        metrics['market_health_score'] = toMetric(
+          Math.round(s.scores.markethealth.score),
+          s.score_date ?? null,
+          'propertyiq',
+        );
       }
     }
 
@@ -396,7 +503,10 @@ export class MarketSnapshotService {
   // Data Source Fetchers
   // ============================================================================
 
-  private async fetchRealtor(geoType: GeoType, geoId: string): Promise<{
+  private async fetchRealtor(
+    geoType: GeoType,
+    geoId: string,
+  ): Promise<{
     data: Record<string, any>;
     name: string | null;
     date: string | null;
@@ -411,10 +521,16 @@ export class MarketSnapshotService {
       nameCol,
     ].join(',');
 
+    // Realtor state_id stores 2-letter abbreviations (e.g. 'KS'), not FIPS codes (e.g. '20')
+    const filterVal =
+      geoType === 'state'
+        ? (normalizeStateRegionId(geoId)?.stateCode ?? geoId)
+        : geoId;
+
     const { data, error } = await this.supabase
       .from(table)
       .select(cols)
-      .eq(keyCol, geoId)
+      .eq(keyCol, filterVal)
       .order('period_date', { ascending: false })
       .limit(1)
       .single();
@@ -428,7 +544,10 @@ export class MarketSnapshotService {
     };
   }
 
-  private async fetchZillow(geoType: GeoType, geoId: string): Promise<{
+  private async fetchZillow(
+    geoType: GeoType,
+    geoId: string,
+  ): Promise<{
     rows: Record<string, any>[];
     name: string | null;
   } | null> {
@@ -449,7 +568,7 @@ export class MarketSnapshotService {
       filterVal = normalizeZipKey(geoId);
     } else {
       filterCol = 'state_code';
-      filterVal = geoId;
+      filterVal = normalizeStateRegionId(geoId)?.stateCode ?? geoId;
     }
 
     // Query each Zillow metric individually in parallel.
@@ -485,14 +604,19 @@ export class MarketSnapshotService {
     }
 
     if (rows.length === 0) {
-      this.logger.warn(`fetchZillow no data for ${geoType}/${geoId} from ${table}.${filterCol}=${filterVal}`);
+      this.logger.warn(
+        `fetchZillow no data for ${geoType}/${geoId} from ${table}.${filterCol}=${filterVal}`,
+      );
       return null;
     }
 
     return { rows, name };
   }
 
-  private async fetchCensus(geoType: GeoType, geoId: string): Promise<{
+  private async fetchCensus(
+    geoType: GeoType,
+    geoId: string,
+  ): Promise<{
     data: Record<string, any>;
     name: string | null;
   } | null> {
@@ -502,7 +626,13 @@ export class MarketSnapshotService {
 
     if (!keyCol) return null;
 
-    const cols = [...Object.keys(CENSUS_COLUMN_MAP), 'median_home_value', 'median_gross_rent', 'year', nameCol].join(',');
+    const cols = [
+      ...Object.keys(CENSUS_COLUMN_MAP),
+      'median_home_value',
+      'median_gross_rent',
+      'year',
+      nameCol,
+    ].join(',');
 
     const { data, error } = await this.supabase
       .from(table)
@@ -520,7 +650,10 @@ export class MarketSnapshotService {
     };
   }
 
-  private async fetchEconomic(geoType: GeoType, geoId: string): Promise<{
+  private async fetchEconomic(
+    geoType: GeoType,
+    geoId: string,
+  ): Promise<{
     data: Record<string, any>;
     name: string | null;
   } | null> {
@@ -530,7 +663,11 @@ export class MarketSnapshotService {
 
     if (!keyCol) return null;
 
-    const cols = [...Object.keys(ECONOMIC_COLUMN_MAP), 'period_date', nameCol].join(',');
+    const cols = [
+      ...Object.keys(ECONOMIC_COLUMN_MAP),
+      'period_date',
+      nameCol,
+    ].join(',');
 
     const { data, error } = await this.supabase
       .from(table)
@@ -548,11 +685,18 @@ export class MarketSnapshotService {
     };
   }
 
-  private async fetchCalculated(geoType: GeoType, geoId: string): Promise<{
+  private async fetchCalculated(
+    geoType: GeoType,
+    geoId: string,
+  ): Promise<{
     data: Record<string, any>;
   } | null> {
     // Fetch latest 3 rows and merge (different batch jobs write at different dates)
-    const cols = [...Object.keys(CALC_COLUMN_MAP), 'years_to_save', 'period_date'].join(',');
+    const cols = [
+      ...Object.keys(CALC_COLUMN_MAP),
+      'years_to_save',
+      'period_date',
+    ].join(',');
 
     const { data, error } = await this.supabase
       .from('calculated_metrics')
@@ -601,9 +745,14 @@ export class MarketSnapshotService {
 
   private async fetchScores(geoType: GeoType, geoId: string): Promise<any> {
     try {
-      return await this.scoringService.getScore(geoId, geoType as any, undefined, {
-        components: true,
-      });
+      return await this.scoringService.getScore(
+        geoId,
+        geoType as any,
+        undefined,
+        {
+          components: true,
+        },
+      );
     } catch (e) {
       this.logger.warn(`Failed to fetch scores for ${geoType}/${geoId}: ${e}`);
       return null;
@@ -616,69 +765,102 @@ export class MarketSnapshotService {
 
   private getRealtorKeyCol(geoType: GeoType): string {
     switch (geoType) {
-      case 'metro': return 'cbsa_code';
-      case 'county': return 'county_fips';
-      case 'zip': return 'postal_code';
-      case 'state': return 'state_id';
-      default: return 'cbsa_code';
+      case 'metro':
+        return 'cbsa_code';
+      case 'county':
+        return 'county_fips';
+      case 'zip':
+        return 'postal_code';
+      case 'state':
+        return 'state_id';
+      default:
+        return 'cbsa_code';
     }
   }
 
   private getRealtorNameCol(geoType: GeoType): string {
     switch (geoType) {
-      case 'metro': return 'cbsa_title';
-      case 'county': return 'county_name';
-      case 'zip': return 'zip_name';
-      case 'state': return 'state_name';
-      default: return 'cbsa_title';
+      case 'metro':
+        return 'cbsa_title';
+      case 'county':
+        return 'county_name';
+      case 'zip':
+        return 'zip_name';
+      case 'state':
+        return 'state_name';
+      default:
+        return 'cbsa_title';
     }
   }
 
   private getZillowKeyCol(geoType: GeoType): string {
     switch (geoType) {
-      case 'metro': return 'cbsa_code';
-      case 'county': return 'fips_code';
-      case 'zip': return 'region_name';
-      case 'state': return 'state_code';
-      default: return 'region_id';
+      case 'metro':
+        return 'cbsa_code';
+      case 'county':
+        return 'fips_code';
+      case 'zip':
+        return 'region_name';
+      case 'state':
+        return 'state_code';
+      default:
+        return 'region_id';
     }
   }
 
   private getCensusKeyCol(geoType: GeoType): string | null {
     switch (geoType) {
-      case 'metro': return 'cbsa_code';
-      case 'county': return 'fips_code';
-      case 'zip': return 'zcta';
-      case 'state': return 'state_fips';
-      default: return null;
+      case 'metro':
+        return 'cbsa_code';
+      case 'county':
+        return 'fips_code';
+      case 'zip':
+        return 'zcta';
+      case 'state':
+        return 'state_fips';
+      default:
+        return null;
     }
   }
 
   private getCensusNameCol(geoType: GeoType): string {
     switch (geoType) {
-      case 'metro': return 'cbsa_title';
-      case 'county': return 'county_name';
-      case 'zip': return 'zcta';
-      case 'state': return 'state_name';
-      default: return 'cbsa_title';
+      case 'metro':
+        return 'cbsa_title';
+      case 'county':
+        return 'county_name';
+      case 'zip':
+        return 'zcta';
+      case 'state':
+        return 'state_name';
+      default:
+        return 'cbsa_title';
     }
   }
 
   private getEconomicKeyCol(geoType: GeoType): string | null {
     switch (geoType) {
-      case 'metro': return 'cbsa_code';
-      case 'county': return 'fips_code';
-      case 'state': return 'state_fips';
-      default: return null;
+      case 'metro':
+        return 'cbsa_code';
+      case 'county':
+        return 'fips_code';
+      case 'state':
+        return 'state_fips';
+      default:
+        return null;
     }
   }
 
   private getEconomicNameCol(geoType: GeoType): string {
     switch (geoType) {
-      case 'metro': return 'cbsa_title';
-      case 'county': return 'county_name';
-      case 'state': return 'state_name';
-      default: return 'cbsa_title';
+      case 'metro':
+        return 'cbsa_title';
+      case 'county':
+        return 'county_name';
+      case 'state':
+        return 'state_name';
+      default:
+        return 'cbsa_title';
     }
   }
 }

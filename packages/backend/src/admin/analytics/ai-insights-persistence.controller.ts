@@ -65,7 +65,14 @@ export class AiInsightsPersistenceController {
   @Get()
   async listInsights(@Req() req: Request) {
     const userId = getAdminUserId(req);
-    return this.persistence.getAll(userId);
+    try {
+      return await this.persistence.getAll(userId);
+    } catch (error) {
+      this.logger.error(`Failed to list insights: ${error.message}`);
+      // Return empty array on DB errors (e.g. table not yet created)
+      // so the frontend renders a clean empty state instead of a 500
+      return [];
+    }
   }
 
   /** Get full insight with recommendations. */
@@ -186,9 +193,7 @@ export class AiInsightsPersistenceController {
         };
       }
 
-      res.write(
-        `data: ${JSON.stringify({ type: 'plan', content: plan })}\n\n`,
-      );
+      res.write(`data: ${JSON.stringify({ type: 'plan', content: plan })}\n\n`);
       res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
     } catch (error) {
       this.logger.error('Plan generation failed', error);

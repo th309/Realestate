@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
 /**
  * Hook for managing saved queries
+ *
+ * Uses JWT auth headers — userId is extracted from the token on the backend.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import type { SavedQuery } from './types';
+import { useState, useCallback, useEffect } from "react";
+import { getAuthHeaders } from "@/lib/data/fetchers/auth-headers";
+import type { SavedQuery } from "./types";
 
 interface UseSavedQueriesOptions {
   userId: string;
@@ -18,7 +21,11 @@ interface UseSavedQueriesReturn {
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  saveQuery: (name: string, queryText: string, description?: string) => Promise<SavedQuery | null>;
+  saveQuery: (
+    name: string,
+    queryText: string,
+    description?: string,
+  ) => Promise<SavedQuery | null>;
   updateQuery: (id: string, updates: Partial<SavedQuery>) => Promise<void>;
   deleteQuery: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
@@ -40,18 +47,21 @@ export function useSavedQueries({
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/analytics/persistence/saved-queries?userId=${userId}`
-      );
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/analytics/persistence/saved-queries`, {
+        headers: authHeaders,
+      });
       const data = await response.json();
 
       if (data.success) {
         setQueries(data.data || []);
       } else {
-        setError(data.error || 'Failed to load saved queries');
+        setError(data.error || "Failed to load saved queries");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load saved queries');
+      setError(
+        err instanceof Error ? err.message : "Failed to load saved queries",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -67,19 +77,22 @@ export function useSavedQueries({
     async (
       name: string,
       queryText: string,
-      description?: string
+      description?: string,
     ): Promise<SavedQuery | null> => {
       try {
-        const response = await fetch('/api/analytics/persistence/saved-queries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            name,
-            query_text: queryText,
-            description,
-          }),
-        });
+        const authHeaders = await getAuthHeaders();
+        const response = await fetch(
+          "/api/analytics/persistence/saved-queries",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+              name,
+              query_text: queryText,
+              description,
+            }),
+          },
+        );
 
         const data = await response.json();
 
@@ -91,59 +104,61 @@ export function useSavedQueries({
           return null;
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save query');
+        setError(err instanceof Error ? err.message : "Failed to save query");
         return null;
       }
     },
-    [userId]
+    [],
   );
 
   const updateQuery = useCallback(
     async (id: string, updates: Partial<SavedQuery>) => {
       try {
-        const response = await fetch(`/api/analytics/persistence/saved-queries/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, ...updates }),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          setQueries((prev) =>
-            prev.map((q) => (q.id === id ? { ...q, ...data.data } : q))
-          );
-        } else {
-          setError(data.error);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update query');
-      }
-    },
-    [userId]
-  );
-
-  const deleteQuery = useCallback(
-    async (id: string) => {
-      try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
-          `/api/analytics/persistence/saved-queries/${id}?userId=${userId}`,
-          { method: 'DELETE' }
+          `/api/analytics/persistence/saved-queries/${id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify(updates),
+          },
         );
 
         const data = await response.json();
 
         if (data.success) {
-          setQueries((prev) => prev.filter((q) => q.id !== id));
+          setQueries((prev) =>
+            prev.map((q) => (q.id === id ? { ...q, ...data.data } : q)),
+          );
         } else {
           setError(data.error);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete query');
+        setError(err instanceof Error ? err.message : "Failed to update query");
       }
     },
-    [userId]
+    [],
   );
+
+  const deleteQuery = useCallback(async (id: string) => {
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(
+        `/api/analytics/persistence/saved-queries/${id}`,
+        { method: "DELETE", headers: authHeaders },
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setQueries((prev) => prev.filter((q) => q.id !== id));
+      } else {
+        setError(data.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete query");
+    }
+  }, []);
 
   const toggleFavorite = useCallback(
     async (id: string) => {
@@ -152,27 +167,26 @@ export function useSavedQueries({
         await updateQuery(id, { is_favorite: !query.is_favorite });
       }
     },
-    [queries, updateQuery]
+    [queries, updateQuery],
   );
 
   const runQuery = useCallback(
     async (id: string): Promise<SavedQuery | null> => {
       try {
+        const authHeaders = await getAuthHeaders();
         const response = await fetch(
           `/api/analytics/persistence/saved-queries/${id}/run`,
           {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId }),
-          }
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({}),
+          },
         );
 
         const data = await response.json();
 
         if (data.success) {
-          setQueries((prev) =>
-            prev.map((q) => (q.id === id ? data.data : q))
-          );
+          setQueries((prev) => prev.map((q) => (q.id === id ? data.data : q)));
           return data.data;
         }
         return null;
@@ -180,7 +194,7 @@ export function useSavedQueries({
         return null;
       }
     },
-    [userId]
+    [],
   );
 
   const favorites = queries.filter((q) => q.is_favorite);

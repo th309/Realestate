@@ -11,16 +11,16 @@
  * Used for Market Health, HomeReady, and InvestorEdge scores.
  */
 
-'use client';
+"use client";
 
-import { memo } from 'react';
-import { MARKET_THRESHOLDS } from './ScoreDisplay';
-import { useEntitlements } from '@/lib/entitlements';
+import { memo } from "react";
+import { MARKET_THRESHOLDS } from "./ScoreDisplay";
+import { useEntitlements } from "@/lib/entitlements";
 
-export type ScoreType = 'market_health' | 'homeready' | 'investoredge';
-export type ScoreAccess = 'full' | 'teaser';
-export type TrendDirection = 'up' | 'down' | 'stable';
-export type ScoreStatus = 'complete' | 'partial' | 'unavailable';
+export type ScoreType = "market_health" | "homeready" | "investoredge";
+export type ScoreAccess = "full" | "teaser";
+export type TrendDirection = "up" | "down" | "stable";
+export type ScoreStatus = "complete" | "partial" | "unavailable";
 
 interface ScoreBadgeProps {
   type: ScoreType;
@@ -31,7 +31,7 @@ interface ScoreBadgeProps {
   access: ScoreAccess;
   status: ScoreStatus;
   statusMessage?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   onClick?: () => void;
   showLabel?: boolean;
   className?: string;
@@ -41,20 +41,20 @@ interface ScoreBadgeProps {
  * Get ring color based on score value
  */
 function getRingColor(score: number | null): string {
-  if (score === null) return 'stroke-surface-container-highest';
-  if (score >= 70) return 'stroke-emerald-500';
-  if (score >= 40) return 'stroke-amber-500';
-  return 'stroke-rose-500';
+  if (score === null) return "stroke-surface-container-highest";
+  if (score >= 70) return "stroke-emerald-500";
+  if (score >= 40) return "stroke-amber-500";
+  return "stroke-rose-500";
 }
 
 /**
  * Get score text color based on value
  */
 function getScoreColor(score: number | null): string {
-  if (score === null) return 'text-on-surface-variant';
-  if (score >= 70) return 'text-emerald-600';
-  if (score >= 40) return 'text-amber-600';
-  return 'text-rose-600';
+  if (score === null) return "text-on-surface-variant";
+  if (score >= 70) return "text-emerald-600";
+  if (score >= 40) return "text-amber-600";
+  return "text-rose-600";
 }
 
 /**
@@ -62,14 +62,14 @@ function getScoreColor(score: number | null): string {
  */
 function getTypeColor(type: ScoreType): string {
   switch (type) {
-    case 'market_health':
-      return 'bg-blue-50 border-blue-200';
-    case 'homeready':
-      return 'bg-purple-50 border-purple-200';
-    case 'investoredge':
-      return 'bg-emerald-50 border-emerald-200';
+    case "market_health":
+      return "bg-blue-50 border-blue-200";
+    case "homeready":
+      return "bg-purple-50 border-purple-200";
+    case "investoredge":
+      return "bg-emerald-50 border-emerald-200";
     default:
-      return 'bg-surface-container border-outline-variant';
+      return "bg-surface-container border-outline-variant";
   }
 }
 
@@ -78,30 +78,34 @@ function getTypeColor(type: ScoreType): string {
  */
 function getTypeLabelColor(type: ScoreType): string {
   switch (type) {
-    case 'market_health':
-      return 'text-blue-700';
-    case 'homeready':
-      return 'text-purple-700';
-    case 'investoredge':
-      return 'text-emerald-700';
+    case "market_health":
+      return "text-blue-700";
+    case "homeready":
+      return "text-purple-700";
+    case "investoredge":
+      return "text-emerald-700";
     default:
-      return 'text-on-surface-variant';
+      return "text-on-surface-variant";
   }
 }
 
 /**
  * Get trend arrow icon
  */
-function TrendArrow({ direction, change }: { direction: TrendDirection; change?: number }) {
-  if (direction === 'stable') {
-    return (
-      <span className="text-on-surface-variant text-xs">→</span>
-    );
+function TrendArrow({
+  direction,
+  change,
+}: {
+  direction: TrendDirection;
+  change?: number;
+}) {
+  if (direction === "stable") {
+    return <span className="text-on-surface-variant text-xs">→</span>;
   }
 
-  const isUp = direction === 'up';
-  const color = isUp ? 'text-emerald-600' : 'text-rose-600';
-  const arrow = isUp ? '↑' : '↓';
+  const isUp = direction === "up";
+  const color = isUp ? "text-emerald-600" : "text-rose-600";
+  const arrow = isUp ? "↑" : "↓";
 
   return (
     <span className={`${color} text-xs font-medium flex items-center gap-0.5`}>
@@ -113,11 +117,31 @@ function TrendArrow({ direction, change }: { direction: TrendDirection; change?:
   );
 }
 
-
 const SIZES = {
-  sm: { svg: 'w-12 h-12', radius: 20, stroke: 3, text: 'text-sm', viewBox: 48, label: 'text-[10px]' },
-  md: { svg: 'w-16 h-16', radius: 28, stroke: 4, text: 'text-lg', viewBox: 64, label: 'text-xs' },
-  lg: { svg: 'w-20 h-20', radius: 34, stroke: 5, text: 'text-2xl', viewBox: 80, label: 'text-sm' },
+  sm: {
+    svg: "w-12 h-12",
+    radius: 20,
+    stroke: 3,
+    text: "text-sm",
+    viewBox: 48,
+    label: "text-[10px]",
+  },
+  md: {
+    svg: "w-16 h-16",
+    radius: 28,
+    stroke: 4,
+    text: "text-lg",
+    viewBox: 64,
+    label: "text-xs",
+  },
+  lg: {
+    svg: "w-20 h-20",
+    radius: 34,
+    stroke: 5,
+    text: "text-2xl",
+    viewBox: 80,
+    label: "text-sm",
+  },
 };
 
 /**
@@ -128,7 +152,7 @@ const getTickMarkPoints = (
   cx: number,
   cy: number,
   radius: number,
-  tickLength: number
+  tickLength: number,
 ): { x1: number; y1: number; x2: number; y2: number } => {
   const angle = (percentage / 100) * 2 * Math.PI;
   const dirX = Math.sin(angle);
@@ -152,26 +176,38 @@ export const ScoreBadge = memo(function ScoreBadge({
   access,
   status,
   statusMessage,
-  size = 'md',
+  size = "md",
   onClick,
   showLabel = true,
-  className = '',
+  className = "",
 }: ScoreBadgeProps) {
   const { getTierRequired } = useEntitlements();
-  const breakdownTierRequired = getTierRequired('feature', 'score_breakdown');
+  const breakdownTierRequired = getTierRequired("feature", "score_breakdown");
 
   const config = SIZES[size];
   const circumference = 2 * Math.PI * config.radius;
   const progress = score !== null ? (score / 100) * circumference : 0;
   const center = config.viewBox / 2;
-  const isTeaser = access === 'teaser';
-  const isUnavailable = status === 'unavailable';
+  const isTeaser = access === "teaser";
+  const isUnavailable = status === "unavailable";
 
   // Tick mark calculations
   const tickLength = config.stroke * 1.8;
   const tickWidth = Math.max(1, config.stroke / 4);
-  const tick33 = getTickMarkPoints(MARKET_THRESHOLDS.sellersMax, center, center, config.radius, tickLength);
-  const tick66 = getTickMarkPoints(MARKET_THRESHOLDS.balancedMax, center, center, config.radius, tickLength);
+  const tick33 = getTickMarkPoints(
+    MARKET_THRESHOLDS.sellersMax,
+    center,
+    center,
+    config.radius,
+    tickLength,
+  );
+  const tick66 = getTickMarkPoints(
+    MARKET_THRESHOLDS.balancedMax,
+    center,
+    center,
+    config.radius,
+    tickLength,
+  );
 
   return (
     <button
@@ -180,7 +216,7 @@ export const ScoreBadge = memo(function ScoreBadge({
       className={`
         flex flex-col items-center gap-1 p-2 rounded-xl border transition-all duration-200
         ${getTypeColor(type)}
-        ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-105' : 'cursor-default'}
+        ${onClick ? "cursor-pointer hover:shadow-md hover:scale-105" : "cursor-default"}
         ${className}
       `}
       title={statusMessage || label}
@@ -192,7 +228,7 @@ export const ScoreBadge = memo(function ScoreBadge({
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
         >
           {/* Rotated group for circles (clockwise from top) */}
-          <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}>
+          <g style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}>
             {/* Background ring */}
             <circle
               cx={center}
@@ -218,21 +254,33 @@ export const ScoreBadge = memo(function ScoreBadge({
 
           {/* Tick marks at 33% and 66% (not rotated, calculated from top) */}
           <line
-            x1={tick33.x1} y1={tick33.y1} x2={tick33.x2} y2={tick33.y2}
-            stroke="var(--color-gray-500, #6b7280)" strokeWidth={tickWidth} strokeLinecap="round"
+            x1={tick33.x1}
+            y1={tick33.y1}
+            x2={tick33.x2}
+            y2={tick33.y2}
+            stroke="var(--color-gray-500, #6b7280)"
+            strokeWidth={tickWidth}
+            strokeLinecap="round"
           />
           <line
-            x1={tick66.x1} y1={tick66.y1} x2={tick66.x2} y2={tick66.y2}
-            stroke="var(--color-gray-500, #6b7280)" strokeWidth={tickWidth} strokeLinecap="round"
+            x1={tick66.x1}
+            y1={tick66.y1}
+            x2={tick66.x2}
+            y2={tick66.y2}
+            stroke="var(--color-gray-500, #6b7280)"
+            strokeWidth={tickWidth}
+            strokeLinecap="round"
           />
         </svg>
 
         {/* Center content */}
         <div className="absolute inset-0 flex items-center justify-center">
           {isUnavailable ? (
-            <span className="text-on-surface-variant">--</span>
+            <span className="text-on-surface-variant">{"\u2014"}</span>
           ) : (
-            <span className={`font-bold ${config.text} ${getScoreColor(score)}`}>
+            <span
+              className={`font-bold ${config.text} ${getScoreColor(score)}`}
+            >
               {score}
             </span>
           )}
@@ -242,18 +290,23 @@ export const ScoreBadge = memo(function ScoreBadge({
       {/* Label and trend */}
       {showLabel && (
         <div className="flex flex-col items-center gap-0.5">
-          <span className={`${config.label} font-medium ${getTypeLabelColor(type)} leading-tight text-center`}>
+          <span
+            className={`${config.label} font-medium ${getTypeLabelColor(type)} leading-tight text-center`}
+          >
             {label}
           </span>
           {!isUnavailable && (
             <TrendArrow direction={trend} change={trendChange} />
           )}
           {isTeaser && breakdownTierRequired && (
-            <span className="text-[10px] text-primary font-semibold px-1 py-0.5 bg-primary/10 rounded" title={`Upgrade to ${breakdownTierRequired.charAt(0).toUpperCase() + breakdownTierRequired.slice(1)} for full breakdown`}>
+            <span
+              className="text-[10px] text-primary font-semibold px-1 py-0.5 bg-primary/10 rounded"
+              title={`Upgrade to ${breakdownTierRequired.charAt(0).toUpperCase() + breakdownTierRequired.slice(1)} for full breakdown`}
+            >
               {breakdownTierRequired.toUpperCase()} breakdown
             </span>
           )}
-          {status === 'partial' && (
+          {status === "partial" && (
             <span className="text-[10px] text-amber-600">Partial</span>
           )}
         </div>

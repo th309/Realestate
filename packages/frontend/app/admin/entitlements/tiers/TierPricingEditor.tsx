@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   DollarSign,
   Save,
   Loader2,
   AlertCircle,
   ExternalLink,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
 
 interface TierPricing {
   slug: string;
@@ -32,7 +32,19 @@ export default function TierPricingEditor() {
   const fetchPricing = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetchAPIRaw('/api/admin/tier-pricing');
+      setError(null);
+      const res = await fetchAPIRaw("/api/admin/tier-pricing");
+
+      if (!res.ok) {
+        const statusMsg =
+          res.status === 401
+            ? "Unauthorized — your session may have expired."
+            : res.status === 403
+              ? "Forbidden — you do not have admin access."
+              : `Failed to load pricing (${res.status})`;
+        throw new Error(statusMsg);
+      }
+
       const result = await res.json();
       if (result.success) {
         setTiers(result.data);
@@ -40,14 +52,14 @@ export default function TierPricingEditor() {
         const initial: Record<string, { monthly: string; yearly: string }> = {};
         for (const t of result.data) {
           initial[t.slug] = {
-            monthly: t.price_monthly ?? '0',
-            yearly: t.price_yearly ?? '0',
+            monthly: t.price_monthly ?? "0",
+            yearly: t.price_yearly ?? "0",
           };
         }
         setEdits(initial);
       }
-    } catch {
-      setError('Failed to load pricing');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load pricing");
     } finally {
       setLoading(false);
     }
@@ -66,21 +78,29 @@ export default function TierPricingEditor() {
 
     try {
       const res = await fetchAPIRaw(`/api/admin/tier-pricing/${slug}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           price_monthly: parseFloat(edit.monthly),
           price_yearly: parseFloat(edit.yearly),
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(
+          res.status === 401
+            ? "Unauthorized — please sign in again."
+            : `Failed to save pricing (${res.status})`,
+        );
+      }
+
       const result = await res.json();
-      if (!result.success) throw new Error(result.error || 'Save failed');
+      if (!result.success) throw new Error(result.error || "Save failed");
 
       // Refresh to get updated Stripe IDs
       await fetchPricing();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(null);
     }
@@ -91,8 +111,8 @@ export default function TierPricingEditor() {
     const edit = edits[slug];
     if (!tier || !edit) return false;
     return (
-      edit.monthly !== (tier.price_monthly ?? '0') ||
-      edit.yearly !== (tier.price_yearly ?? '0')
+      edit.monthly !== (tier.price_monthly ?? "0") ||
+      edit.yearly !== (tier.price_yearly ?? "0")
     );
   };
 
@@ -104,6 +124,23 @@ export default function TierPricingEditor() {
           <span className="text-sm text-on-surface-variant">
             Loading pricing...
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && tiers.length === 0) {
+    return (
+      <div className="bg-surface-container rounded-xl p-6 mb-6">
+        <div className="flex items-center gap-2 text-red-600">
+          <AlertCircle className="w-5 h-5" />
+          <span className="text-sm">{error}</span>
+          <button
+            onClick={fetchPricing}
+            className="ml-auto px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -150,7 +187,7 @@ export default function TierPricingEditor() {
           </thead>
           <tbody>
             {tiers.map((tier) => {
-              const isFree = tier.slug === 'free';
+              const isFree = tier.slug === "free";
               const edit = edits[tier.slug];
 
               return (
@@ -171,7 +208,7 @@ export default function TierPricingEditor() {
                         <span className="text-on-surface-variant">$</span>
                         <input
                           type="number"
-                          value={edit?.monthly ?? ''}
+                          value={edit?.monthly ?? ""}
                           onChange={(e) =>
                             setEdits((prev) => ({
                               ...prev,
@@ -199,7 +236,7 @@ export default function TierPricingEditor() {
                         <span className="text-on-surface-variant">$</span>
                         <input
                           type="number"
-                          value={edit?.yearly ?? ''}
+                          value={edit?.yearly ?? ""}
                           onChange={(e) =>
                             setEdits((prev) => ({
                               ...prev,
@@ -231,7 +268,7 @@ export default function TierPricingEditor() {
                       </div>
                     ) : (
                       <span className="text-xs text-on-surface-variant/50 italic">
-                        {isFree ? '\u2014' : 'Not configured'}
+                        {isFree ? "\u2014" : "Not configured"}
                       </span>
                     )}
                   </td>

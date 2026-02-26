@@ -1,23 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { MyMarket } from './useMyMarkets';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { MyMarket } from "./useMyMarkets";
 
-export type ChartType = 'timeseries' | 'scatter' | 'waterfall' | 'radar' | 'bar';
-export type TimeFrame = '1Y' | '3Y' | '5Y' | '10Y' | 'Max';
-export type UserType = 'homebuyer' | 'investor';
-export type BaselineType = 'none' | 'state' | 'region' | 'national';
-export type ScatterScope = 'state' | 'region' | 'national';
-export type WaterfallPreset = 'investment' | 'affordability' | 'momentum' | 'benchmark' | 'score';
-export type RadarPreset = 'homebuyer' | 'investor' | 'market_health' | 'custom';
-export type BarSort = 'asc' | 'desc';
+export type ChartType =
+  | "timeseries"
+  | "scatter"
+  | "waterfall"
+  | "radar"
+  | "bar";
+export type TimeFrame = "1Y" | "3Y" | "5Y" | "10Y" | "Max";
+export type UserType = "homebuyer" | "investor";
+export type BaselineType = "none" | "state" | "region" | "national";
+export type ScatterScope = "state" | "region" | "national";
+export type WaterfallPreset =
+  | "investment"
+  | "affordability"
+  | "momentum"
+  | "benchmark"
+  | "score";
+export type RadarPreset = "homebuyer" | "investor" | "market_health" | "custom";
+export type BarSort = "asc" | "desc";
 export type BarCount = 10 | 25;
-export type ScoreTypeOption = 'homeready' | 'investoredge' | 'markethealth';
-export type ScaleType = 'auto' | 'linear' | 'log';
+export type ScoreTypeOption = "homeready" | "investoredge" | "markethealth";
+export type ScaleType = "auto" | "linear" | "log";
 
 // Backward-compat aliases (old components still reference these)
-export type TemplateType = 'affordability' | 'investment' | 'momentum' | 'cashflow' | 'custom';
+export type TemplateType =
+  | "affordability"
+  | "investment"
+  | "momentum"
+  | "cashflow"
+  | "custom";
 export type VizType = ChartType;
 
 /** Maximum number of markets that can be selected simultaneously */
@@ -129,26 +144,26 @@ const DEFAULT_STATE: GraphsState = {
   primaryMarket: null,
   comparisonMarket: null,
   markets: [],
-  chartType: 'timeseries',
-  timeFrame: '5Y',
-  activeMetric: 'home_value',
-  scatterXMetric: 'cap_rate',
-  scatterYMetric: 'days_on_market',
-  scatterXScaleType: 'auto',
-  scatterYScaleType: 'auto',
+  chartType: "timeseries",
+  timeFrame: "5Y",
+  activeMetric: "home_value",
+  scatterXMetric: "cap_rate",
+  scatterYMetric: "days_on_market",
+  scatterXScaleType: "auto",
+  scatterYScaleType: "auto",
   showRegression: true,
   showQuadrants: true,
-  waterfallPreset: 'investment',
-  scoreType: 'homeready',
-  radarPreset: 'homebuyer',
+  waterfallPreset: "investment",
+  scoreType: "homeready",
+  radarPreset: "homebuyer",
   radarMetrics: [],
-  barMetric: 'home_value',
-  barSort: 'desc',
+  barMetric: "home_value",
+  barSort: "desc",
   barCount: 10,
   raceMode: false,
-  scope: 'state',
-  baselineType: 'none',
-  userType: 'homebuyer',
+  scope: "state",
+  baselineType: "none",
+  userType: "homebuyer",
 };
 
 /**
@@ -162,28 +177,55 @@ export function useGraphsState(): UseGraphsStateReturn {
   const isInitialRender = useRef(true);
 
   const [state, setState] = useState<GraphsState>(() => {
-    const chart = searchParams.get('chart') as ChartType | null;
-    const tf = searchParams.get('tf') as TimeFrame | null;
-    const metric = searchParams.get('metric');
-    const userType = searchParams.get('user') as UserType | null;
-    const baseline = searchParams.get('baseline') as BaselineType | null;
-    const scope = searchParams.get('scope') as ScatterScope | null;
-    const ymetric = searchParams.get('ymetric');
-    const xmetric = searchParams.get('xm');
-    const reg = searchParams.get('reg');
-    const quad = searchParams.get('quad');
-    const xst = searchParams.get('xst') as ScaleType | null;
-    const yst = searchParams.get('yst') as ScaleType | null;
-    const wf = searchParams.get('wf') as WaterfallPreset | null;
-    const st = searchParams.get('st') as ScoreTypeOption | null;
-    const rp = searchParams.get('rp') as RadarPreset | null;
-    const bm = searchParams.get('bm');
-    const bs = searchParams.get('bs') as BarSort | null;
-    const bc = searchParams.get('bc');
-    const br = searchParams.get('br');
+    const chart = searchParams.get("chart") as ChartType | null;
+    const tf = searchParams.get("tf") as TimeFrame | null;
+    const metric = searchParams.get("metric");
+    const userType = searchParams.get("user") as UserType | null;
+    const baseline = searchParams.get("baseline") as BaselineType | null;
+    const scope = searchParams.get("scope") as ScatterScope | null;
+    const ymetric = searchParams.get("ymetric");
+    const xmetric = searchParams.get("xm");
+    const reg = searchParams.get("reg");
+    const quad = searchParams.get("quad");
+    const xst = searchParams.get("xst") as ScaleType | null;
+    const yst = searchParams.get("yst") as ScaleType | null;
+    const wf = searchParams.get("wf") as WaterfallPreset | null;
+    const st = searchParams.get("st") as ScoreTypeOption | null;
+    const rp = searchParams.get("rp") as RadarPreset | null;
+    const bm = searchParams.get("bm");
+    const bs = searchParams.get("bs") as BarSort | null;
+    const bc = searchParams.get("bc");
+    const br = searchParams.get("br");
+
+    // Read market params from URL (e.g. from "View Trends" links on market detail page)
+    const mid = searchParams.get("mid");
+    const mname = searchParams.get("mname");
+    const mtype = searchParams.get("mtype") as
+      | "metro"
+      | "county"
+      | "zip"
+      | null;
+    const mstate = searchParams.get("mstate");
+
+    let initialMarkets: MyMarket[] = DEFAULT_STATE.markets;
+    let initialPrimary: MyMarket | null = DEFAULT_STATE.primaryMarket;
+
+    if (mid && mname && mtype && ["metro", "county", "zip"].includes(mtype)) {
+      const urlMarket = normalizeMarket({
+        id: mid,
+        name: mname,
+        type: mtype,
+        state: mstate || undefined,
+        score: null,
+      });
+      initialMarkets = [urlMarket];
+      initialPrimary = urlMarket;
+    }
 
     return {
       ...DEFAULT_STATE,
+      markets: initialMarkets,
+      primaryMarket: initialPrimary,
       chartType: chart || DEFAULT_STATE.chartType,
       timeFrame: tf || DEFAULT_STATE.timeFrame,
       activeMetric: metric || DEFAULT_STATE.activeMetric,
@@ -194,15 +236,15 @@ export function useGraphsState(): UseGraphsStateReturn {
       scatterYMetric: ymetric || DEFAULT_STATE.scatterYMetric,
       scatterXScaleType: xst || DEFAULT_STATE.scatterXScaleType,
       scatterYScaleType: yst || DEFAULT_STATE.scatterYScaleType,
-      showRegression: reg !== null ? reg === '1' : DEFAULT_STATE.showRegression,
-      showQuadrants: quad !== null ? quad === '1' : DEFAULT_STATE.showQuadrants,
+      showRegression: reg !== null ? reg === "1" : DEFAULT_STATE.showRegression,
+      showQuadrants: quad !== null ? quad === "1" : DEFAULT_STATE.showQuadrants,
       waterfallPreset: wf || DEFAULT_STATE.waterfallPreset,
       scoreType: st || DEFAULT_STATE.scoreType,
       radarPreset: rp || DEFAULT_STATE.radarPreset,
       barMetric: bm || DEFAULT_STATE.barMetric,
       barSort: bs || DEFAULT_STATE.barSort,
       barCount: bc ? (parseInt(bc, 10) as BarCount) : DEFAULT_STATE.barCount,
-      raceMode: br === '1',
+      raceMode: br === "1",
     };
   });
 
@@ -216,67 +258,67 @@ export function useGraphsState(): UseGraphsStateReturn {
     const params = new URLSearchParams();
 
     if (state.primaryMarket) {
-      params.set('primary', state.primaryMarket.id);
+      params.set("primary", state.primaryMarket.id);
     }
     if (state.comparisonMarket) {
-      params.set('compare', state.comparisonMarket.id);
+      params.set("compare", state.comparisonMarket.id);
     }
     if (state.chartType !== DEFAULT_STATE.chartType) {
-      params.set('chart', state.chartType);
+      params.set("chart", state.chartType);
     }
     if (state.timeFrame !== DEFAULT_STATE.timeFrame) {
-      params.set('tf', state.timeFrame);
+      params.set("tf", state.timeFrame);
     }
     if (state.activeMetric !== DEFAULT_STATE.activeMetric) {
-      params.set('metric', state.activeMetric);
+      params.set("metric", state.activeMetric);
     }
     if (state.userType !== DEFAULT_STATE.userType) {
-      params.set('user', state.userType);
+      params.set("user", state.userType);
     }
     if (state.baselineType !== DEFAULT_STATE.baselineType) {
-      params.set('baseline', state.baselineType);
+      params.set("baseline", state.baselineType);
     }
     if (state.scope !== DEFAULT_STATE.scope) {
-      params.set('scope', state.scope);
+      params.set("scope", state.scope);
     }
     if (state.scatterXMetric !== DEFAULT_STATE.scatterXMetric) {
-      params.set('xm', state.scatterXMetric);
+      params.set("xm", state.scatterXMetric);
     }
     if (state.scatterYMetric !== DEFAULT_STATE.scatterYMetric) {
-      params.set('ymetric', state.scatterYMetric);
+      params.set("ymetric", state.scatterYMetric);
     }
     if (state.scatterXScaleType !== DEFAULT_STATE.scatterXScaleType) {
-      params.set('xst', state.scatterXScaleType);
+      params.set("xst", state.scatterXScaleType);
     }
     if (state.scatterYScaleType !== DEFAULT_STATE.scatterYScaleType) {
-      params.set('yst', state.scatterYScaleType);
+      params.set("yst", state.scatterYScaleType);
     }
     if (state.showRegression !== DEFAULT_STATE.showRegression) {
-      params.set('reg', state.showRegression ? '1' : '0');
+      params.set("reg", state.showRegression ? "1" : "0");
     }
     if (state.showQuadrants !== DEFAULT_STATE.showQuadrants) {
-      params.set('quad', state.showQuadrants ? '1' : '0');
+      params.set("quad", state.showQuadrants ? "1" : "0");
     }
     if (state.waterfallPreset !== DEFAULT_STATE.waterfallPreset) {
-      params.set('wf', state.waterfallPreset);
+      params.set("wf", state.waterfallPreset);
     }
     if (state.scoreType !== DEFAULT_STATE.scoreType) {
-      params.set('st', state.scoreType);
+      params.set("st", state.scoreType);
     }
     if (state.radarPreset !== DEFAULT_STATE.radarPreset) {
-      params.set('rp', state.radarPreset);
+      params.set("rp", state.radarPreset);
     }
     if (state.barMetric !== DEFAULT_STATE.barMetric) {
-      params.set('bm', state.barMetric);
+      params.set("bm", state.barMetric);
     }
     if (state.barSort !== DEFAULT_STATE.barSort) {
-      params.set('bs', state.barSort);
+      params.set("bs", state.barSort);
     }
     if (state.barCount !== DEFAULT_STATE.barCount) {
-      params.set('bc', String(state.barCount));
+      params.set("bc", String(state.barCount));
     }
     if (state.raceMode !== DEFAULT_STATE.raceMode) {
-      params.set('br', state.raceMode ? '1' : '0');
+      params.set("br", state.raceMode ? "1" : "0");
     }
 
     const paramStr = params.toString();
@@ -287,7 +329,7 @@ export function useGraphsState(): UseGraphsStateReturn {
   // ── Market setters (legacy) ──────────────────────────────────────────
 
   const setPrimaryMarket = useCallback((market: MyMarket | null) => {
-    setState(prev => {
+    setState((prev) => {
       const m = market ? normalizeMarket(market) : null;
       const newMarkets = [...prev.markets];
       if (m) {
@@ -300,7 +342,7 @@ export function useGraphsState(): UseGraphsStateReturn {
   }, []);
 
   const setComparisonMarket = useCallback((market: MyMarket | null) => {
-    setState(prev => {
+    setState((prev) => {
       const m = market ? normalizeMarket(market) : null;
       const newMarkets = [...prev.markets];
       if (m) {
@@ -317,34 +359,56 @@ export function useGraphsState(): UseGraphsStateReturn {
 
   const selectMarket = useCallback((market: MyMarket) => {
     const m = normalizeMarket(market);
-    setState(prev => {
+    setState((prev) => {
       if (prev.primaryMarket?.id === m.id) {
         const newPrimary = prev.comparisonMarket || null;
-        const newMarkets = prev.markets.filter(mk => mk.id !== m.id);
-        return { ...prev, primaryMarket: newPrimary, comparisonMarket: null, markets: newMarkets };
+        const newMarkets = prev.markets.filter((mk) => mk.id !== m.id);
+        return {
+          ...prev,
+          primaryMarket: newPrimary,
+          comparisonMarket: null,
+          markets: newMarkets,
+        };
       }
       if (prev.comparisonMarket?.id === m.id) {
-        const newMarkets = prev.markets.filter(mk => mk.id !== m.id);
+        const newMarkets = prev.markets.filter((mk) => mk.id !== m.id);
         return { ...prev, comparisonMarket: null, markets: newMarkets };
       }
       if (!prev.primaryMarket) {
-        return { ...prev, primaryMarket: m, markets: [m, ...prev.markets.slice(1)] };
+        return {
+          ...prev,
+          primaryMarket: m,
+          markets: [m, ...prev.markets.slice(1)],
+        };
       }
       if (!prev.comparisonMarket) {
-        const newMarkets = [prev.markets[0] || prev.primaryMarket, m, ...prev.markets.slice(2)];
+        const newMarkets = [
+          prev.markets[0] || prev.primaryMarket,
+          m,
+          ...prev.markets.slice(2),
+        ];
         return { ...prev, comparisonMarket: m, markets: newMarkets };
       }
-      const newMarkets = [prev.markets[0] || prev.primaryMarket, m, ...prev.markets.slice(2)];
+      const newMarkets = [
+        prev.markets[0] || prev.primaryMarket,
+        m,
+        ...prev.markets.slice(2),
+      ];
       return { ...prev, comparisonMarket: m, markets: newMarkets };
     });
   }, []);
 
   const clearComparison = useCallback(() => {
-    setState(prev => ({ ...prev, primaryMarket: null, comparisonMarket: null, markets: [] }));
+    setState((prev) => ({
+      ...prev,
+      primaryMarket: null,
+      comparisonMarket: null,
+      markets: [],
+    }));
   }, []);
 
   const swapMarkets = useCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       const newMarkets = [...prev.markets];
       if (newMarkets.length >= 2) {
         [newMarkets[0], newMarkets[1]] = [newMarkets[1], newMarkets[0]];
@@ -362,7 +426,7 @@ export function useGraphsState(): UseGraphsStateReturn {
 
   const setMarkets = useCallback((markets: MyMarket[]) => {
     const clamped = markets.slice(0, MAX_MARKETS).map(normalizeMarket);
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       markets: clamped,
       primaryMarket: clamped[0] || null,
@@ -372,9 +436,9 @@ export function useGraphsState(): UseGraphsStateReturn {
 
   const addMarket = useCallback((market: MyMarket) => {
     const m = normalizeMarket(market);
-    setState(prev => {
+    setState((prev) => {
       if (prev.markets.length >= MAX_MARKETS) return prev;
-      if (prev.markets.some(mk => mk.id === m.id)) return prev;
+      if (prev.markets.some((mk) => mk.id === m.id)) return prev;
       const newMarkets = [...prev.markets, m];
       return {
         ...prev,
@@ -386,7 +450,7 @@ export function useGraphsState(): UseGraphsStateReturn {
   }, []);
 
   const removeMarket = useCallback((index: number) => {
-    setState(prev => {
+    setState((prev) => {
       const newMarkets = prev.markets.filter((_, i) => i !== index);
       return {
         ...prev,
@@ -400,27 +464,27 @@ export function useGraphsState(): UseGraphsStateReturn {
   // ── Shared setters ───────────────────────────────────────────────────
 
   const setChartType = useCallback((type: ChartType) => {
-    setState(prev => ({ ...prev, chartType: type }));
+    setState((prev) => ({ ...prev, chartType: type }));
   }, []);
 
   const setTimeFrame = useCallback((tf: TimeFrame) => {
-    setState(prev => ({ ...prev, timeFrame: tf }));
+    setState((prev) => ({ ...prev, timeFrame: tf }));
   }, []);
 
   const setActiveMetric = useCallback((metric: string) => {
-    setState(prev => ({ ...prev, activeMetric: metric }));
+    setState((prev) => ({ ...prev, activeMetric: metric }));
   }, []);
 
   const setUserType = useCallback((type: UserType) => {
-    setState(prev => ({ ...prev, userType: type }));
+    setState((prev) => ({ ...prev, userType: type }));
   }, []);
 
   const setBaselineType = useCallback((type: BaselineType) => {
-    setState(prev => ({ ...prev, baselineType: type }));
+    setState((prev) => ({ ...prev, baselineType: type }));
   }, []);
 
   const setScope = useCallback((scope: ScatterScope) => {
-    setState(prev => ({ ...prev, scope }));
+    setState((prev) => ({ ...prev, scope }));
   }, []);
 
   // Backward-compat alias: setScatterScope -> setScope
@@ -429,71 +493,71 @@ export function useGraphsState(): UseGraphsStateReturn {
   // ── Scatter setters ──────────────────────────────────────────────────
 
   const setScatterXMetric = useCallback((metric: string) => {
-    setState(prev => ({ ...prev, scatterXMetric: metric }));
+    setState((prev) => ({ ...prev, scatterXMetric: metric }));
   }, []);
 
   const setScatterYMetric = useCallback((metric: string) => {
-    setState(prev => ({ ...prev, scatterYMetric: metric }));
+    setState((prev) => ({ ...prev, scatterYMetric: metric }));
   }, []);
 
   const setScatterXScaleType = useCallback((type: ScaleType) => {
-    setState(prev => ({ ...prev, scatterXScaleType: type }));
+    setState((prev) => ({ ...prev, scatterXScaleType: type }));
   }, []);
 
   const setScatterYScaleType = useCallback((type: ScaleType) => {
-    setState(prev => ({ ...prev, scatterYScaleType: type }));
+    setState((prev) => ({ ...prev, scatterYScaleType: type }));
   }, []);
 
   const setShowRegression = useCallback((show: boolean) => {
-    setState(prev => ({ ...prev, showRegression: show }));
+    setState((prev) => ({ ...prev, showRegression: show }));
   }, []);
 
   const setShowQuadrants = useCallback((show: boolean) => {
-    setState(prev => ({ ...prev, showQuadrants: show }));
+    setState((prev) => ({ ...prev, showQuadrants: show }));
   }, []);
 
   // ── Waterfall setters ────────────────────────────────────────────────
 
   const setWaterfallPreset = useCallback((preset: WaterfallPreset) => {
-    setState(prev => ({ ...prev, waterfallPreset: preset }));
+    setState((prev) => ({ ...prev, waterfallPreset: preset }));
   }, []);
 
   const setScoreType = useCallback((scoreType: ScoreTypeOption) => {
-    setState(prev => ({ ...prev, scoreType }));
+    setState((prev) => ({ ...prev, scoreType }));
   }, []);
 
   // ── Radar setters ────────────────────────────────────────────────────
 
   const setRadarPreset = useCallback((preset: RadarPreset) => {
-    setState(prev => ({ ...prev, radarPreset: preset }));
+    setState((prev) => ({ ...prev, radarPreset: preset }));
   }, []);
 
   const setRadarMetrics = useCallback((metrics: string[]) => {
-    setState(prev => ({ ...prev, radarMetrics: metrics }));
+    setState((prev) => ({ ...prev, radarMetrics: metrics }));
   }, []);
 
   // ── Bar setters ──────────────────────────────────────────────────────
 
   const setBarMetric = useCallback((metric: string) => {
-    setState(prev => ({ ...prev, barMetric: metric }));
+    setState((prev) => ({ ...prev, barMetric: metric }));
   }, []);
 
   const setBarSort = useCallback((sort: BarSort) => {
-    setState(prev => ({ ...prev, barSort: sort }));
+    setState((prev) => ({ ...prev, barSort: sort }));
   }, []);
 
   const setBarCount = useCallback((count: BarCount) => {
-    setState(prev => ({ ...prev, barCount: count }));
+    setState((prev) => ({ ...prev, barCount: count }));
   }, []);
 
   const setRaceMode = useCallback((race: boolean) => {
-    setState(prev => ({ ...prev, raceMode: race }));
+    setState((prev) => ({ ...prev, raceMode: race }));
   }, []);
 
   // ── Bulk update ──────────────────────────────────────────────────────
 
   const applyTemplate = useCallback((config: Partial<GraphsState>) => {
-    setState(prev => ({ ...prev, ...config }));
+    setState((prev) => ({ ...prev, ...config }));
   }, []);
 
   return {

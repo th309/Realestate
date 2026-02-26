@@ -14,8 +14,13 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
-import { MLValidationService, MLValidationConfig } from './ml-validation.service';
+import {
+  MLValidationService,
+  MLValidationConfig,
+} from './ml-validation.service';
+import { AdminGuard } from '../../common/guards/admin-auth.guard';
 
 interface RunMLValidationDto {
   scoreType: 'homeready' | 'investoredge' | 'market_health';
@@ -34,6 +39,7 @@ interface ApplySuggestionsDto {
   applyMetrics: boolean;
 }
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/ml-validation')
 export class MLValidationController {
   private readonly logger = new Logger(MLValidationController.name);
@@ -46,7 +52,9 @@ export class MLValidationController {
    */
   @Post('run')
   async runMLValidation(@Body() dto: RunMLValidationDto) {
-    this.logger.log(`Running ML validation for ${dto.scoreType} @ ${dto.geographyType}`);
+    this.logger.log(
+      `Running ML validation for ${dto.scoreType} @ ${dto.geographyType}`,
+    );
 
     const config: MLValidationConfig = {
       scoreType: dto.scoreType,
@@ -61,7 +69,8 @@ export class MLValidationController {
     };
 
     try {
-      const result = await this.mlValidationService.queueMLValidationJob(config);
+      const result =
+        await this.mlValidationService.queueMLValidationJob(config);
       return result;
     } catch (error) {
       this.logger.error(`Failed to queue ML validation: ${error}`);

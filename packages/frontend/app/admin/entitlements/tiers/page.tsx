@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -13,14 +13,14 @@ import {
   DragEndEvent,
   DragOverEvent,
   useDroppable,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Save,
   Search,
@@ -28,17 +28,17 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
-import TierPricingEditor from './TierPricingEditor';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
+import TierPricingEditor from "./TierPricingEditor";
 
 // Human-readable labels for feature categories
 const CATEGORY_LABELS: Record<string, string> = {
-  scores: 'PIQ Components',
-  metrics: 'Metrics',
-  geography: 'Geography',
-  preview: 'Preview Limits',
-  features: 'Features',
+  scores: "PIQ Components",
+  metrics: "Metrics",
+  geography: "Geography",
+  preview: "Preview Limits",
+  features: "Features",
 };
 
 function categoryLabel(slug: string): string {
@@ -46,27 +46,30 @@ function categoryLabel(slug: string): string {
 }
 
 // Tier styling
-const TIER_STYLES: Record<string, { bg: string; border: string; text: string; chip: string; header: string }> = {
+const TIER_STYLES: Record<
+  string,
+  { bg: string; border: string; text: string; chip: string; header: string }
+> = {
   free: {
-    bg: 'bg-gray-50',
-    border: 'border-gray-300',
-    text: 'text-gray-700',
-    chip: 'bg-gray-100 text-gray-700 border-gray-300',
-    header: 'bg-gray-100',
+    bg: "bg-gray-50",
+    border: "border-gray-300",
+    text: "text-gray-700",
+    chip: "bg-gray-100 text-gray-700 border-gray-300",
+    header: "bg-gray-100",
   },
   pro: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-300',
-    text: 'text-blue-700',
-    chip: 'bg-blue-100 text-blue-700 border-blue-300',
-    header: 'bg-blue-100',
+    bg: "bg-blue-50",
+    border: "border-blue-300",
+    text: "text-blue-700",
+    chip: "bg-blue-100 text-blue-700 border-blue-300",
+    header: "bg-blue-100",
   },
   enterprise: {
-    bg: 'bg-purple-50',
-    border: 'border-purple-300',
-    text: 'text-purple-700',
-    chip: 'bg-purple-100 text-purple-700 border-purple-300',
-    header: 'bg-purple-100',
+    bg: "bg-purple-50",
+    border: "border-purple-300",
+    text: "text-purple-700",
+    chip: "bg-purple-100 text-purple-700 border-purple-300",
+    header: "bg-purple-100",
   },
 };
 
@@ -133,10 +136,10 @@ function FeatureChip({
       className={`
         px-2 py-1 text-xs rounded border cursor-grab active:cursor-grabbing
         ${style.chip}
-        ${isDragging ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-sm'}
+        ${isDragging ? "ring-2 ring-primary shadow-lg" : "hover:shadow-sm"}
         transition-shadow
       `}
-      title={`${feature.slug}${feature.description ? '\n' + feature.description : ''}`}
+      title={`${feature.slug}${feature.description ? "\n" + feature.description : ""}`}
     >
       {feature.name}
     </div>
@@ -161,7 +164,7 @@ function TierColumn({
   // Group by category
   const byCategory = useMemo(() => {
     const map: Record<string, FeatureDefinition[]> = {};
-    features.forEach(f => {
+    features.forEach((f) => {
       if (!map[f.category]) map[f.category] = [];
       map[f.category].push(f);
     });
@@ -173,7 +176,7 @@ function TierColumn({
       ref={setNodeRef}
       className={`
         rounded-xl border-2 overflow-hidden flex flex-col
-        ${isOver ? 'border-primary ring-2 ring-primary/20' : style.border}
+        ${isOver ? "border-primary ring-2 ring-primary/20" : style.border}
         ${style.bg}
       `}
     >
@@ -185,13 +188,13 @@ function TierColumn({
             {features.length}
           </span>
         </div>
-        {tierSlug === 'free' && (
+        {tierSlug === "free" && (
           <p className="text-xs text-gray-500 mt-1">Available to all users</p>
         )}
-        {tierSlug === 'pro' && (
+        {tierSlug === "pro" && (
           <p className="text-xs text-blue-600 mt-1">Pro + Enterprise</p>
         )}
-        {tierSlug === 'enterprise' && (
+        {tierSlug === "enterprise" && (
           <p className="text-xs text-purple-600 mt-1">Enterprise only</p>
         )}
       </div>
@@ -205,14 +208,17 @@ function TierColumn({
 
       {/* Features */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4 max-h-[500px]">
-        <SortableContext items={features.map(f => f.id)} strategy={rectSortingStrategy}>
+        <SortableContext
+          items={features.map((f) => f.id)}
+          strategy={rectSortingStrategy}
+        >
           {byCategory.map(([category, catFeatures]) => (
             <div key={category}>
               <h4 className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider mb-2">
                 {categoryLabel(category)}
               </h4>
               <div className="flex flex-wrap gap-1.5">
-                {catFeatures.map(feature => (
+                {catFeatures.map((feature) => (
                   <FeatureChip
                     key={feature.id}
                     feature={feature}
@@ -251,49 +257,67 @@ export default function TiersConfigurationPage() {
   const [features, setFeatures] = useState<FeatureDefinition[]>([]);
   const [tiers, setTiers] = useState<TierData[]>([]);
   const [assignments, setAssignments] = useState<FeatureAssignments>({});
-  const [originalAssignments, setOriginalAssignments] = useState<FeatureAssignments>({});
-  const [activeFeature, setActiveFeature] = useState<FeatureDefinition | null>(null);
+  const [originalAssignments, setOriginalAssignments] =
+    useState<FeatureAssignments>({});
+  const [activeFeature, setActiveFeature] = useState<FeatureDefinition | null>(
+    null,
+  );
   const [overTierId, setOverTierId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Calculate assignments from matrix
-  const calculateAssignments = useCallback((matrix: FeatureMatrix): FeatureAssignments => {
-    const result: FeatureAssignments = {};
-    const tierOrder = ['free', 'pro', 'enterprise'];
+  const calculateAssignments = useCallback(
+    (matrix: FeatureMatrix): FeatureAssignments => {
+      const result: FeatureAssignments = {};
+      const tierOrder = ["free", "pro", "enterprise"];
 
-    for (const feature of matrix.features) {
-      let assignedTier = 'enterprise';
+      for (const feature of matrix.features) {
+        let assignedTier = "enterprise";
 
-      for (const tierSlug of tierOrder) {
-        const tier = matrix.tiers.find(t => t.slug === tierSlug);
-        if (!tier) continue;
+        for (const tierSlug of tierOrder) {
+          const tier = matrix.tiers.find((t) => t.slug === tierSlug);
+          if (!tier) continue;
 
-        const value = tier.values[feature.slug];
-        const isEnabled = value === true || (typeof value === 'number' && value !== 0);
+          const value = tier.values[feature.slug];
+          const isEnabled =
+            value === true || (typeof value === "number" && value !== 0);
 
-        if (isEnabled) {
-          assignedTier = tierSlug;
-          break;
+          if (isEnabled) {
+            assignedTier = tierSlug;
+            break;
+          }
         }
+
+        result[feature.id] = assignedTier;
       }
 
-      result[feature.id] = assignedTier;
-    }
-
-    return result;
-  }, []);
+      return result;
+    },
+    [],
+  );
 
   const fetchMatrix = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchAPIRaw('/api/admin/features/matrix');
+      const response = await fetchAPIRaw("/api/admin/features/matrix");
+
+      if (!response.ok) {
+        const statusMsg =
+          response.status === 401
+            ? "Unauthorized — your session may have expired. Please sign in again."
+            : response.status === 403
+              ? "Forbidden — you do not have admin access."
+              : `Server error (${response.status})`;
+        throw new Error(statusMsg);
+      }
+
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch feature matrix');
+        throw new Error(result.error || "Failed to fetch feature matrix");
       }
 
       const matrix: FeatureMatrix = result.data;
@@ -304,7 +328,7 @@ export default function TiersConfigurationPage() {
       setAssignments(calculated);
       setOriginalAssignments(calculated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -314,46 +338,59 @@ export default function TiersConfigurationPage() {
     fetchMatrix();
   }, [fetchMatrix]);
 
-  const featureMap = useMemo(() => new Map(features.map(f => [f.id, f])), [features]);
+  const featureMap = useMemo(
+    () => new Map(features.map((f) => [f.id, f])),
+    [features],
+  );
 
   const allCategories = useMemo(() => {
-    const cats = new Set(features.map(f => f.category));
-    return ['all', ...Array.from(cats).sort()];
+    const cats = new Set(features.map((f) => f.category));
+    return ["all", ...Array.from(cats).sort()];
   }, [features]);
 
   const filteredFeatures = useMemo(() => {
-    return features.filter(f => {
-      const matchesSearch = searchQuery === '' ||
+    return features.filter((f) => {
+      const matchesSearch =
+        searchQuery === "" ||
         f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         f.slug.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || f.category === categoryFilter;
+      const matchesCategory =
+        categoryFilter === "all" || f.category === categoryFilter;
       return matchesSearch && matchesCategory;
     });
   }, [features, searchQuery, categoryFilter]);
 
-  const activeFeatures = useMemo(() =>
-    filteredFeatures.filter(f => f.is_enforced !== false),
-    [filteredFeatures]
+  const activeFeatures = useMemo(
+    () => filteredFeatures.filter((f) => f.is_enforced !== false),
+    [filteredFeatures],
   );
 
-  const plannedFeatures = useMemo(() =>
-    filteredFeatures.filter(f => f.is_enforced === false),
-    [filteredFeatures]
+  const plannedFeatures = useMemo(
+    () => filteredFeatures.filter((f) => f.is_enforced === false),
+    [filteredFeatures],
   );
 
   const featuresByTier = useMemo(() => {
-    const result: Record<string, FeatureDefinition[]> = { free: [], pro: [], enterprise: [] };
+    const result: Record<string, FeatureDefinition[]> = {
+      free: [],
+      pro: [],
+      enterprise: [],
+    };
     for (const feature of activeFeatures) {
-      const tier = assignments[feature.id] || 'enterprise';
+      const tier = assignments[feature.id] || "enterprise";
       if (result[tier]) result[tier].push(feature);
     }
     return result;
   }, [activeFeatures, assignments]);
 
   const plannedByTier = useMemo(() => {
-    const result: Record<string, FeatureDefinition[]> = { free: [], pro: [], enterprise: [] };
+    const result: Record<string, FeatureDefinition[]> = {
+      free: [],
+      pro: [],
+      enterprise: [],
+    };
     for (const feature of plannedFeatures) {
-      const tier = assignments[feature.id] || 'enterprise';
+      const tier = assignments[feature.id] || "enterprise";
       if (result[tier]) result[tier].push(feature);
     }
     return result;
@@ -361,11 +398,15 @@ export default function TiersConfigurationPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    const data = event.active.data.current as { feature: FeatureDefinition } | undefined;
+    const data = event.active.data.current as
+      | { feature: FeatureDefinition }
+      | undefined;
     if (data) setActiveFeature(data.feature);
   };
 
@@ -373,7 +414,7 @@ export default function TiersConfigurationPage() {
     const { over } = event;
     if (over) {
       const overId = String(over.id);
-      if (['free', 'pro', 'enterprise'].includes(overId)) {
+      if (["free", "pro", "enterprise"].includes(overId)) {
         setOverTierId(overId);
       } else {
         setOverTierId(assignments[overId] || null);
@@ -395,7 +436,7 @@ export default function TiersConfigurationPage() {
     const overId = String(over.id);
     let targetTier: string | null = null;
 
-    if (['free', 'pro', 'enterprise'].includes(overId)) {
+    if (["free", "pro", "enterprise"].includes(overId)) {
       targetTier = overId;
     } else {
       targetTier = assignments[overId] || null;
@@ -404,7 +445,7 @@ export default function TiersConfigurationPage() {
     const currentTier = assignments[activeFeature.id];
 
     if (targetTier && targetTier !== currentTier) {
-      setAssignments(prev => ({ ...prev, [activeFeature.id]: targetTier! }));
+      setAssignments((prev) => ({ ...prev, [activeFeature.id]: targetTier! }));
     }
 
     setActiveFeature(null);
@@ -412,7 +453,9 @@ export default function TiersConfigurationPage() {
   };
 
   const hasChanges = useMemo(() => {
-    return Object.keys(assignments).some(id => assignments[id] !== originalAssignments[id]);
+    return Object.keys(assignments).some(
+      (id) => assignments[id] !== originalAssignments[id],
+    );
   }, [assignments, originalAssignments]);
 
   const handleSave = async () => {
@@ -420,8 +463,12 @@ export default function TiersConfigurationPage() {
     setError(null);
 
     try {
-      const tierUpdates: Record<string, Record<string, boolean>> = { free: {}, pro: {}, enterprise: {} };
-      const tierOrder = ['free', 'pro', 'enterprise'];
+      const tierUpdates: Record<string, Record<string, boolean>> = {
+        free: {},
+        pro: {},
+        enterprise: {},
+      };
+      const tierOrder = ["free", "pro", "enterprise"];
 
       for (const feature of features) {
         const newTier = assignments[feature.id];
@@ -437,19 +484,31 @@ export default function TiersConfigurationPage() {
       for (const [tierSlug, featureUpdates] of Object.entries(tierUpdates)) {
         if (Object.keys(featureUpdates).length === 0) continue;
 
-        const response = await fetchAPIRaw(`/api/admin/features/tier/${tierSlug}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ features: featureUpdates }),
-        });
+        const response = await fetchAPIRaw(
+          `/api/admin/features/tier/${tierSlug}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ features: featureUpdates }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 401
+              ? "Unauthorized — please sign in again."
+              : `Failed to save ${tierSlug} (${response.status})`,
+          );
+        }
 
         const result = await response.json();
-        if (!result.success) throw new Error(result.error || `Failed to save ${tierSlug}`);
+        if (!result.success)
+          throw new Error(result.error || `Failed to save ${tierSlug}`);
       }
 
       setOriginalAssignments({ ...assignments });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -470,8 +529,12 @@ export default function TiersConfigurationPage() {
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
           <p className="text-sm text-red-600 mb-4">{error}</p>
-          <button onClick={fetchMatrix} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">
-            <RefreshCw className="w-4 h-4 inline mr-2" />Retry
+          <button
+            onClick={fetchMatrix}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+          >
+            <RefreshCw className="w-4 h-4 inline mr-2" />
+            Retry
           </button>
         </div>
       </div>
@@ -485,8 +548,12 @@ export default function TiersConfigurationPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-on-surface">Feature Access by Tier</h1>
-          <p className="text-sm text-on-surface-variant">Drag features between columns to change access</p>
+          <h1 className="text-2xl font-semibold text-on-surface">
+            Feature Access by Tier
+          </h1>
+          <p className="text-sm text-on-surface-variant">
+            Drag features between columns to change access
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -494,16 +561,22 @@ export default function TiersConfigurationPage() {
             disabled={loading}
             className="px-3 py-2 bg-surface-container rounded-lg border border-outline-variant text-sm hover:bg-surface-container-high"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={handleSave}
             disabled={!hasChanges || saving}
             className={`px-4 py-2 rounded-lg text-sm flex items-center gap-2 ${
-              hasChanges ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'
+              hasChanges
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container-high text-on-surface-variant"
             }`}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
             Save
           </button>
         </div>
@@ -540,8 +613,10 @@ export default function TiersConfigurationPage() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="pl-9 pr-6 py-2 bg-surface-container border border-outline-variant rounded-lg text-sm"
           >
-            {allCategories.map(cat => (
-              <option key={cat} value={cat}>{cat === 'all' ? 'All' : categoryLabel(cat)}</option>
+            {allCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat === "all" ? "All" : categoryLabel(cat)}
+              </option>
             ))}
           </select>
         </div>
@@ -561,13 +636,16 @@ export default function TiersConfigurationPage() {
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {['free', 'pro', 'enterprise'].map(tierSlug => {
-            const tier = tiers.find(t => t.slug === tierSlug);
+          {["free", "pro", "enterprise"].map((tierSlug) => {
+            const tier = tiers.find((t) => t.slug === tierSlug);
             return (
               <TierColumn
                 key={tierSlug}
                 tierSlug={tierSlug}
-                tierName={tier?.name || tierSlug.charAt(0).toUpperCase() + tierSlug.slice(1)}
+                tierName={
+                  tier?.name ||
+                  tierSlug.charAt(0).toUpperCase() + tierSlug.slice(1)
+                }
                 features={featuresByTier[tierSlug] || []}
                 isOver={overTierId === tierSlug}
               />
@@ -587,43 +665,55 @@ export default function TiersConfigurationPage() {
             <h2 className="text-lg font-semibold text-on-surface-variant mb-1">
               Planned Features
               <span className="text-xs font-normal ml-2 text-on-surface-variant/60">
-                (not yet enforced — pre-assign to tiers for when they&apos;re built)
+                (not yet enforced — pre-assign to tiers for when they&apos;re
+                built)
               </span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              {['free', 'pro', 'enterprise'].map(tierSlug => {
+              {["free", "pro", "enterprise"].map((tierSlug) => {
                 const tierFeats = plannedByTier[tierSlug] || [];
                 const style = TIER_STYLES[tierSlug] || TIER_STYLES.free;
                 const byCategory: Record<string, FeatureDefinition[]> = {};
-                tierFeats.forEach(f => {
+                tierFeats.forEach((f) => {
                   if (!byCategory[f.category]) byCategory[f.category] = [];
                   byCategory[f.category].push(f);
                 });
 
                 return (
-                  <div key={tierSlug} className={`rounded-xl border ${style.border} ${style.bg} p-3 opacity-70`}>
+                  <div
+                    key={tierSlug}
+                    className={`rounded-xl border ${style.border} ${style.bg} p-3 opacity-70`}
+                  >
                     <div className={`text-xs font-semibold ${style.text} mb-2`}>
                       {tierSlug.charAt(0).toUpperCase() + tierSlug.slice(1)}
-                      <span className="ml-2 font-normal">({tierFeats.length})</span>
+                      <span className="ml-2 font-normal">
+                        ({tierFeats.length})
+                      </span>
                     </div>
-                    {Object.entries(byCategory).sort(([a], [b]) => a.localeCompare(b)).map(([cat, catFeatures]) => (
-                      <div key={cat} className="mb-2">
-                        <div className="text-[10px] uppercase tracking-wider text-on-surface-variant/50 mb-1">{categoryLabel(cat)}</div>
-                        <div className="flex flex-wrap gap-1">
-                          {catFeatures.map(f => (
-                            <span
-                              key={f.id}
-                              className={`px-2 py-0.5 text-[11px] rounded border ${style.chip} opacity-60`}
-                              title={`${f.slug}\n${f.description || 'No description'}`}
-                            >
-                              {f.name}
-                            </span>
-                          ))}
+                    {Object.entries(byCategory)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([cat, catFeatures]) => (
+                        <div key={cat} className="mb-2">
+                          <div className="text-[10px] uppercase tracking-wider text-on-surface-variant/50 mb-1">
+                            {categoryLabel(cat)}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {catFeatures.map((f) => (
+                              <span
+                                key={f.id}
+                                className={`px-2 py-0.5 text-[11px] rounded border ${style.chip} opacity-60`}
+                                title={`${f.slug}\n${f.description || "No description"}`}
+                              >
+                                {f.name}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                     {tierFeats.length === 0 && (
-                      <div className="text-xs text-on-surface-variant/40 italic">None</div>
+                      <div className="text-xs text-on-surface-variant/40 italic">
+                        None
+                      </div>
                     )}
                   </div>
                 );

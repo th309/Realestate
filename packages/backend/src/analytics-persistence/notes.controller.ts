@@ -2,6 +2,7 @@
  * Notes Controller
  *
  * REST endpoints for market notes.
+ * Protected by JwtAuthGuard — userId is extracted from the validated JWT.
  */
 
 import {
@@ -12,13 +13,16 @@ import {
   Delete,
   Body,
   Param,
-  Query,
+  UseGuards,
   Logger,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../common/guards';
+import { AuthUserId } from '../common/decorators';
 import { NotesService, CreateNoteDto, UpdateNoteDto } from './notes.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('analytics/notes')
 export class NotesController {
   private readonly logger = new Logger(NotesController.name);
@@ -26,16 +30,12 @@ export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
   /**
-   * Get all notes for a user
-   * GET /api/analytics/notes?userId=xxx
+   * Get all notes for the authenticated user
+   * GET /api/analytics/notes
    */
   @Get()
-  async getAll(@Query('userId') userId: string) {
+  async getAll(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/notes for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const notes = await this.notesService.getAll(userId);
@@ -54,19 +54,15 @@ export class NotesController {
 
   /**
    * Get notes for a specific geography
-   * GET /api/analytics/notes/geography/:type/:id?userId=xxx
+   * GET /api/analytics/notes/geography/:type/:id
    */
   @Get('geography/:type/:geoId')
   async getByGeography(
     @Param('type') type: string,
     @Param('geoId') geoId: string,
-    @Query('userId') userId: string,
+    @AuthUserId() userId: string,
   ) {
     this.logger.log(`GET /analytics/notes/geography/${type}/${geoId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const notes = await this.notesService.getByGeography(userId, type, geoId);
@@ -85,15 +81,11 @@ export class NotesController {
 
   /**
    * Get pending reminders
-   * GET /api/analytics/notes/reminders?userId=xxx
+   * GET /api/analytics/notes/reminders
    */
   @Get('reminders')
-  async getPendingReminders(@Query('userId') userId: string) {
+  async getPendingReminders(@AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/notes/reminders for user ${userId}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const notes = await this.notesService.getPendingReminders(userId);
@@ -112,15 +104,11 @@ export class NotesController {
 
   /**
    * Get a single note
-   * GET /api/analytics/notes/:id?userId=xxx
+   * GET /api/analytics/notes/:id
    */
   @Get(':id')
-  async getById(@Param('id') id: string, @Query('userId') userId: string) {
+  async getById(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`GET /analytics/notes/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const note = await this.notesService.getById(userId, id);
@@ -147,14 +135,12 @@ export class NotesController {
    * POST /api/analytics/notes
    */
   @Post()
-  async create(@Body() body: CreateNoteDto & { userId: string }) {
+  async create(@AuthUserId() userId: string, @Body() dto: CreateNoteDto) {
     this.logger.log(`POST /analytics/notes`);
 
-    const { userId, ...dto } = body;
-
-    if (!userId || !dto.geography_type || !dto.geography_id || !dto.content) {
+    if (!dto.geography_type || !dto.geography_id || !dto.content) {
       throw new HttpException(
-        'userId, geography_type, geography_id, and content are required',
+        'geography_type, geography_id, and content are required',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -180,15 +166,10 @@ export class NotesController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: UpdateNoteDto & { userId: string },
+    @AuthUserId() userId: string,
+    @Body() dto: UpdateNoteDto,
   ) {
     this.logger.log(`PUT /analytics/notes/${id}`);
-
-    const { userId, ...dto } = body;
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       const note = await this.notesService.update(userId, id, dto);
@@ -206,15 +187,11 @@ export class NotesController {
 
   /**
    * Delete a note
-   * DELETE /api/analytics/notes/:id?userId=xxx
+   * DELETE /api/analytics/notes/:id
    */
   @Delete(':id')
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
+  async delete(@Param('id') id: string, @AuthUserId() userId: string) {
     this.logger.log(`DELETE /analytics/notes/${id}`);
-
-    if (!userId) {
-      throw new HttpException('userId is required', HttpStatus.BAD_REQUEST);
-    }
 
     try {
       await this.notesService.delete(userId, id);

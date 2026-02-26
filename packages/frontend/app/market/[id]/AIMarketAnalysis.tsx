@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import {
   Sparkles,
   DollarSign,
@@ -13,25 +13,32 @@ import {
   RefreshCw,
   AlertCircle,
   ArrowRight,
-} from 'lucide-react';
-import Link from 'next/link';
+} from "lucide-react";
+import Link from "next/link";
 import {
   fetchMarketAnalysis,
   type MarketAnalysisSection,
   type MarketAnalysisResult,
-} from '@/lib/data';
-import { useEntitlements } from '@/lib/entitlements';
+} from "@/lib/data";
+import { useEntitlements } from "@/lib/entitlements";
 
 interface AIMarketAnalysisProps {
   geoType: string;
   geoId: string;
   marketName: string;
-  view: 'homebuyer' | 'investor';
-  metrics: Record<string, { value: number | null; formattedValue: string; percentChange: number | null }>;
+  view: "homebuyer" | "investor";
+  metrics: Record<
+    string,
+    {
+      value: number | null;
+      formattedValue: string;
+      percentChange: number | null;
+    }
+  >;
   scores: {
-    homeready: { score: number; grade: string };
-    investoredge: { score: number; grade: string };
-    markethealth: { score: number; grade: string };
+    homeready: { score: number; grade: string } | null;
+    investoredge: { score: number; grade: string } | null;
+    markethealth: { score: number; grade: string } | null;
   };
   lastUpdated: string;
 }
@@ -44,90 +51,167 @@ const INVESTOR_ICONS = [Wallet, BarChart3, Key];
 // Mirrors backend generateFallback() logic
 // ---------------------------------------------------------------------------
 
-type MetricMap = AIMarketAnalysisProps['metrics'];
-type ScoreMap = AIMarketAnalysisProps['scores'];
+type MetricMap = AIMarketAnalysisProps["metrics"];
+type ScoreMap = AIMarketAnalysisProps["scores"];
 
 function generateTemplateAnalysis(
   marketName: string,
-  view: 'homebuyer' | 'investor',
+  view: "homebuyer" | "investor",
   metrics: MetricMap,
   scores: ScoreMap,
 ): MarketAnalysisSection[] {
   const val = (key: string): number | null => metrics[key]?.value ?? null;
-  const fmt = (key: string): string | null => metrics[key]?.formattedValue ?? null;
-  const chg = (key: string): number | null => metrics[key]?.percentChange ?? null;
+  const fmt = (key: string): string | null =>
+    metrics[key]?.formattedValue ?? null;
+  const chg = (key: string): number | null =>
+    metrics[key]?.percentChange ?? null;
 
-  if (view === 'homebuyer') {
+  if (view === "homebuyer") {
     const hs = scores.homeready;
-    const scoreDesc = hs.score >= 70 ? 'favorable' : hs.score >= 50 ? 'moderate' : 'challenging';
+    const scoreDesc = hs
+      ? hs.score >= 70
+        ? "favorable"
+        : hs.score >= 50
+          ? "moderate"
+          : "challenging"
+      : "unknown";
 
-    const affordParts = [`${marketName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`];
-    if (fmt('listing_price')) affordParts.push(`The median listing price is ${fmt('listing_price')}.`);
-    if (fmt('income_to_buy')) affordParts.push(`You'd need roughly ${fmt('income_to_buy')} in annual income to afford a home here.`);
-    const yts = val('years_to_save');
-    if (yts != null) affordParts.push(`At current savings rates, expect about ${yts.toFixed(1)} years to save for a down payment.`);
+    const affordParts = hs
+      ? [
+          `${marketName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`,
+        ]
+      : [
+          `${marketName} conditions for homebuyers — score data is currently unavailable.`,
+        ];
+    if (fmt("listing_price"))
+      affordParts.push(`The median listing price is ${fmt("listing_price")}.`);
+    if (fmt("income_to_buy"))
+      affordParts.push(
+        `You'd need roughly ${fmt("income_to_buy")} in annual income to afford a home here.`,
+      );
+    const yts = val("years_to_save");
+    if (yts != null)
+      affordParts.push(
+        `At current savings rates, expect about ${yts.toFixed(1)} years to save for a down payment.`,
+      );
 
     const speedParts: string[] = [];
-    const dom = val('days_on_market');
-    if (dom != null) speedParts.push(`Homes in ${marketName} average ${Math.round(dom)} days on market.`);
-    const invChg = chg('for_sale_inventory');
-    if (invChg != null) speedParts.push(`Inventory is ${invChg > 0 ? 'up' : 'down'} ${Math.abs(invChg).toFixed(1)}% year-over-year.`);
-    const pr = val('pending_ratio');
-    if (pr != null) speedParts.push(`The pending ratio sits at ${(pr * 100).toFixed(0)}%, indicating ${pr > 0.4 ? 'strong' : 'moderate'} buyer activity.`);
-    if (speedParts.length === 0) speedParts.push(`Market pace data for ${marketName} is currently limited.`);
+    const dom = val("days_on_market");
+    if (dom != null)
+      speedParts.push(
+        `Homes in ${marketName} average ${Math.round(dom)} days on market.`,
+      );
+    const invChg = chg("for_sale_inventory");
+    if (invChg != null)
+      speedParts.push(
+        `Inventory is ${invChg > 0 ? "up" : "down"} ${Math.abs(invChg).toFixed(1)}% year-over-year.`,
+      );
+    const pr = val("pending_ratio");
+    if (pr != null)
+      speedParts.push(
+        `The pending ratio sits at ${(pr * 100).toFixed(0)}%, indicating ${pr > 0.4 ? "strong" : "moderate"} buyer activity.`,
+      );
+    if (speedParts.length === 0)
+      speedParts.push(
+        `Market pace data for ${marketName} is currently limited.`,
+      );
 
     const priceParts: string[] = [];
-    if (fmt('home_value')) priceParts.push(`Current median home value: ${fmt('home_value')}.`);
-    const hvYoy = val('home_value_yoy');
-    if (hvYoy != null) priceParts.push(`Values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`);
-    const hv5yr = val('home_value_5yr');
-    if (hv5yr != null) priceParts.push(`The 5-year annualized growth rate is ${hv5yr.toFixed(1)}%.`);
-    const pcPct = val('price_cut_pct');
-    if (pcPct != null) priceParts.push(`${pcPct.toFixed(0)}% of listings have price reductions.`);
-    if (priceParts.length === 0) priceParts.push(`Price trend data for ${marketName} is currently limited.`);
+    if (fmt("home_value"))
+      priceParts.push(`Current median home value: ${fmt("home_value")}.`);
+    const hvYoy = val("home_value_yoy");
+    if (hvYoy != null)
+      priceParts.push(
+        `Values are ${hvYoy >= 0 ? "up" : "down"} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
+      );
+    const hv5yr = val("home_value_5yr");
+    if (hv5yr != null)
+      priceParts.push(
+        `The 5-year annualized growth rate is ${hv5yr.toFixed(1)}%.`,
+      );
+    const pcPct = val("price_cut_pct");
+    if (pcPct != null)
+      priceParts.push(
+        `${pcPct.toFixed(0)}% of listings have price reductions.`,
+      );
+    if (priceParts.length === 0)
+      priceParts.push(
+        `Price trend data for ${marketName} is currently limited.`,
+      );
 
     return [
-      { title: 'Affordability', analysis: affordParts.join(' ') },
-      { title: 'Market Speed', analysis: speedParts.join(' ') },
-      { title: 'Price Trajectory', analysis: priceParts.join(' ') },
+      { title: "Affordability", analysis: affordParts.join(" ") },
+      { title: "Market Speed", analysis: speedParts.join(" ") },
+      { title: "Price Trajectory", analysis: priceParts.join(" ") },
     ];
   }
 
   // Investor
   const ie = scores.investoredge;
-  const scoreDesc = ie.score >= 70 ? 'strong' : ie.score >= 50 ? 'moderate' : 'limited';
+  const scoreDesc = ie
+    ? ie.score >= 70
+      ? "strong"
+      : ie.score >= 50
+        ? "moderate"
+        : "limited"
+    : "unknown";
 
-  const cfParts = [`${marketName} shows ${scoreDesc} investment potential (InvestorEdge score: ${ie.score}).`];
-  const cr = val('cap_rate');
-  if (cr != null) cfParts.push(`Cap rates are around ${cr.toFixed(1)}%, indicating ${cr >= 6 ? 'solid cash flow' : cr >= 4 ? 'moderate returns' : 'appreciation-focused'} potential.`);
-  if (fmt('rent_index')) cfParts.push(`Median rents at ${fmt('rent_index')}/month.`);
-  const gy = val('gross_yield');
+  const cfParts = ie
+    ? [
+        `${marketName} shows ${scoreDesc} investment potential (InvestorEdge score: ${ie.score}).`,
+      ]
+    : [
+        `${marketName} investment potential — score data is currently unavailable.`,
+      ];
+  const cr = val("cap_rate");
+  if (cr != null)
+    cfParts.push(
+      `Cap rates are around ${cr.toFixed(1)}%, indicating ${cr >= 6 ? "solid cash flow" : cr >= 4 ? "moderate returns" : "appreciation-focused"} potential.`,
+    );
+  if (fmt("rent_index"))
+    cfParts.push(`Median rents at ${fmt("rent_index")}/month.`);
+  const gy = val("gross_yield");
   if (gy != null) cfParts.push(`Gross yield: ${gy.toFixed(1)}%.`);
 
   const growParts: string[] = [];
-  const hvYoy = val('home_value_yoy');
-  if (hvYoy != null) growParts.push(`Property values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`);
-  const hv5yr = val('home_value_5yr');
-  if (hv5yr != null) growParts.push(`5-year annualized growth: ${hv5yr.toFixed(1)}%.`);
-  const popG = val('population_growth');
-  if (popG != null) growParts.push(`Population growth of ${popG.toFixed(1)}% supports demand.`);
-  const jobG = val('job_growth');
+  const hvYoy = val("home_value_yoy");
+  if (hvYoy != null)
+    growParts.push(
+      `Property values are ${hvYoy >= 0 ? "up" : "down"} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
+    );
+  const hv5yr = val("home_value_5yr");
+  if (hv5yr != null)
+    growParts.push(`5-year annualized growth: ${hv5yr.toFixed(1)}%.`);
+  const popG = val("population_growth");
+  if (popG != null)
+    growParts.push(`Population growth of ${popG.toFixed(1)}% supports demand.`);
+  const jobG = val("job_growth");
   if (jobG != null) growParts.push(`Job growth: ${jobG.toFixed(1)}%.`);
-  if (growParts.length === 0) growParts.push(`Growth data for ${marketName} is currently limited.`);
+  if (growParts.length === 0)
+    growParts.push(`Growth data for ${marketName} is currently limited.`);
 
   const liqParts: string[] = [];
-  const domVal = val('days_on_market');
-  if (domVal != null) liqParts.push(`Homes sell in an average of ${Math.round(domVal)} days.`);
-  const invChg = chg('for_sale_inventory');
-  if (invChg != null) liqParts.push(`Inventory ${invChg > 0 ? 'rising' : 'falling'} at ${Math.abs(invChg).toFixed(1)}% YoY.`);
-  const pr = val('pending_ratio');
-  if (pr != null) liqParts.push(`Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? 'healthy' : 'softer'} demand.`);
-  liqParts.push(`Market Health score: ${scores.markethealth.score}/100.`);
+  const domVal = val("days_on_market");
+  if (domVal != null)
+    liqParts.push(`Homes sell in an average of ${Math.round(domVal)} days.`);
+  const invChg = chg("for_sale_inventory");
+  if (invChg != null)
+    liqParts.push(
+      `Inventory ${invChg > 0 ? "rising" : "falling"} at ${Math.abs(invChg).toFixed(1)}% YoY.`,
+    );
+  const pr = val("pending_ratio");
+  if (pr != null)
+    liqParts.push(
+      `Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? "healthy" : "softer"} demand.`,
+    );
+  if (scores.markethealth) {
+    liqParts.push(`Market Health score: ${scores.markethealth.score}/100.`);
+  }
 
   return [
-    { title: 'Cash Flow Potential', analysis: cfParts.join(' ') },
-    { title: 'Value Growth', analysis: growParts.join(' ') },
-    { title: 'Liquidity & Demand', analysis: liqParts.join(' ') },
+    { title: "Cash Flow Potential", analysis: cfParts.join(" ") },
+    { title: "Value Growth", analysis: growParts.join(" ") },
+    { title: "Liquidity & Demand", analysis: liqParts.join(" ") },
   ];
 }
 
@@ -167,7 +251,7 @@ export function AIMarketAnalysis({
   lastUpdated,
 }: AIMarketAnalysisProps) {
   const { canAccess } = useEntitlements();
-  const aiEnabled = canAccess('feature', 'ai_insights');
+  const aiEnabled = canAccess("feature", "ai_insights");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,43 +260,50 @@ export function AIMarketAnalysis({
   // Track whether we've already fetched for this geoId to avoid re-fetches
   const fetchedRef = useRef<string | null>(null);
 
-  const doFetch = useCallback(async (metricsSnapshot: typeof metrics) => {
-    setLoading(true);
-    setError(null);
+  const doFetch = useCallback(
+    async (metricsSnapshot: typeof metrics) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const compactMetrics: Record<string, { value: number | null; formatted: string; change: number | null }> = {};
-      for (const [key, card] of Object.entries(metricsSnapshot)) {
-        if (card.value != null) {
-          compactMetrics[key] = {
-            value: card.value,
-            formatted: card.formattedValue,
-            change: card.percentChange,
-          };
+      try {
+        const compactMetrics: Record<
+          string,
+          { value: number | null; formatted: string; change: number | null }
+        > = {};
+        for (const [key, card] of Object.entries(metricsSnapshot)) {
+          if (card.value != null) {
+            compactMetrics[key] = {
+              value: card.value,
+              formatted: card.formattedValue,
+              change: card.percentChange,
+            };
+          }
         }
+
+        const result = await fetchMarketAnalysis(geoType, geoId, {
+          geoName: marketName,
+          metrics: compactMetrics,
+          scores,
+          lastUpdated,
+        });
+
+        setAnalysis(result);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to generate analysis",
+        );
+        fetchedRef.current = null;
+      } finally {
+        setLoading(false);
       }
-
-      const result = await fetchMarketAnalysis(geoType, geoId, {
-        geoName: marketName,
-        metrics: compactMetrics,
-        scores,
-        lastUpdated,
-      });
-
-      setAnalysis(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate analysis');
-      fetchedRef.current = null;
-    } finally {
-      setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geoType, geoId]);
+    },
+    [geoType, geoId],
+  );
 
   // Only fetch if AI is enabled
   useEffect(() => {
     if (!aiEnabled) return;
-    const hasMetrics = Object.values(metrics).some(m => m.value != null);
+    const hasMetrics = Object.values(metrics).some((m) => m.value != null);
     if (hasMetrics && fetchedRef.current !== geoId) {
       fetchedRef.current = geoId;
       doFetch(metrics);
@@ -232,31 +323,37 @@ export function AIMarketAnalysis({
   // Determine sections to show
   let sections: MarketAnalysisSection[] | null = null;
   if (aiEnabled && analysis) {
-    sections = view === 'homebuyer' ? analysis.homebuyer : analysis.investor;
+    sections = view === "homebuyer" ? analysis.homebuyer : analysis.investor;
   } else if (!aiEnabled) {
-    const hasMetrics = Object.values(metrics).some(m => m.value != null);
+    const hasMetrics = Object.values(metrics).some((m) => m.value != null);
     if (hasMetrics) {
       sections = generateTemplateAnalysis(marketName, view, metrics, scores);
     }
   }
 
-  const icons = view === 'homebuyer' ? HOMEBUYER_ICONS : INVESTOR_ICONS;
+  const icons = view === "homebuyer" ? HOMEBUYER_ICONS : INVESTOR_ICONS;
 
   const formattedDate = analysis?.generatedAt
-    ? new Date(analysis.generatedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    ? new Date(analysis.generatedAt).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      })
     : lastUpdated
-      ? new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      ? new Date(lastUpdated).toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        })
       : null;
 
   // Header config based on mode
   const HeaderIcon = aiEnabled ? Sparkles : BarChart3;
-  const headerTitle = aiEnabled ? 'AI Market Analysis' : 'Market Overview';
-  const headerSubtitle = aiEnabled ? 'Powered by PropertyIQ' : 'Data Summary';
+  const headerTitle = aiEnabled ? "AI Market Analysis" : "Market Overview";
+  const headerSubtitle = aiEnabled ? "Powered by PropertyIQ" : "Data Summary";
   const containerClass = aiEnabled
-    ? 'bg-gradient-to-br from-primary/5 via-surface-container to-tertiary/5 rounded-2xl border border-primary/20 overflow-hidden'
-    : 'bg-surface-container rounded-2xl border border-outline-variant/30 overflow-hidden';
-  const iconBgClass = aiEnabled ? 'bg-primary/15' : 'bg-on-surface/8';
-  const iconColorClass = aiEnabled ? 'text-primary' : 'text-on-surface-variant';
+    ? "bg-gradient-to-br from-primary/5 via-surface-container to-tertiary/5 rounded-2xl border border-primary/20 overflow-hidden"
+    : "bg-surface-container rounded-2xl border border-outline-variant/30 overflow-hidden";
+  const iconBgClass = aiEnabled ? "bg-primary/15" : "bg-on-surface/8";
+  const iconColorClass = aiEnabled ? "text-primary" : "text-on-surface-variant";
 
   return (
     <motion.div
@@ -277,7 +374,9 @@ export function AIMarketAnalysis({
           </div>
         </div>
         {formattedDate && (
-          <span className="text-xs text-on-surface-variant/70">Data as of {formattedDate}</span>
+          <span className="text-xs text-on-surface-variant/70">
+            Data as of {formattedDate}
+          </span>
         )}
       </div>
 
@@ -294,7 +393,9 @@ export function AIMarketAnalysis({
         {aiEnabled && error && !loading && (
           <div className="text-center py-6">
             <AlertCircle className="w-8 h-8 text-on-surface-variant/50 mx-auto mb-3" />
-            <p className="text-sm text-on-surface-variant mb-3">Unable to generate analysis</p>
+            <p className="text-sm text-on-surface-variant mb-3">
+              Unable to generate analysis
+            </p>
             <button
               onClick={() => {
                 fetchedRef.current = geoId;
@@ -308,38 +409,46 @@ export function AIMarketAnalysis({
           </div>
         )}
 
-        {!(aiEnabled && loading) && !(aiEnabled && error && !loading) && sections && sections.map((section, i) => {
-          const Icon = icons[i] || (aiEnabled ? Sparkles : BarChart3);
-          return (
-            <motion.div
-              key={`${view}-${i}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * i, duration: 0.4 }}
-            >
-              <div className="flex items-start gap-3">
-                <div className={`p-1.5 rounded-lg mt-0.5 shrink-0 ${aiEnabled ? 'bg-primary/10' : 'bg-on-surface/6'}`}>
-                  <Icon className={`w-4 h-4 ${aiEnabled ? 'text-primary' : 'text-on-surface-variant'}`} />
+        {!(aiEnabled && loading) &&
+          !(aiEnabled && error && !loading) &&
+          sections &&
+          sections.map((section, i) => {
+            const Icon = icons[i] || (aiEnabled ? Sparkles : BarChart3);
+            return (
+              <motion.div
+                key={`${view}-${i}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * i, duration: 0.4 }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`p-1.5 rounded-lg mt-0.5 shrink-0 ${aiEnabled ? "bg-primary/10" : "bg-on-surface/6"}`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 ${aiEnabled ? "text-primary" : "text-on-surface-variant"}`}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-on-surface mb-1">
+                      {section.title}
+                    </h4>
+                    <p className="text-sm text-on-surface-variant leading-relaxed">
+                      {section.analysis}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-on-surface mb-1">
-                    {section.title}
-                  </h4>
-                  <p className="text-sm text-on-surface-variant leading-relaxed">
-                    {section.analysis}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+              </motion.div>
+            );
+          })}
       </div>
 
       {/* Footer: AI disclaimer OR upgrade nudge */}
       {aiEnabled ? (
         <div className="px-6 py-3 border-t border-outline-variant/20 bg-surface-container/50">
           <p className="text-[11px] text-on-surface-variant/50 leading-relaxed">
-            AI-generated analysis may contain errors. Verify all information independently before making decisions.
+            AI-generated analysis may contain errors. Verify all information
+            independently before making decisions.
           </p>
         </div>
       ) : (

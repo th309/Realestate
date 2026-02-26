@@ -20,9 +20,12 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { MLWorkflowService } from './ml-workflow.service';
+import { AdminGuard } from '../common/guards/admin-auth.guard';
 
+@UseGuards(AdminGuard)
 @Controller('api/admin/ml-workflow')
 export class MLWorkflowController {
   private readonly logger = new Logger(MLWorkflowController.name);

@@ -25,15 +25,23 @@ export async function assessDataCoverage(
     { name: 'Home Value', available: marketMetrics.zhvi != null },
     { name: 'Home Value Trend', available: marketMetrics.zhvi_yoy != null },
     { name: 'Rent', available: marketMetrics.zori != null },
-    { name: 'Market Activity', available: marketMetrics.days_on_market != null || marketMetrics.active_listing_count != null },
-    { name: 'Unemployment', available: marketMetrics.unemployment_rate != null },
+    {
+      name: 'Market Activity',
+      available:
+        marketMetrics.days_on_market != null ||
+        marketMetrics.active_listing_count != null,
+    },
+    {
+      name: 'Unemployment',
+      available: marketMetrics.unemployment_rate != null,
+    },
     { name: 'Population', available: marketMetrics.population != null },
     { name: 'Hotness Score', available: marketMetrics.hotness_score != null },
     { name: 'Income', available: marketMetrics.median_income != null },
   ];
-  const available = keyMetrics.filter(m => m.available).length;
+  const available = keyMetrics.filter((m) => m.available).length;
   const total = keyMetrics.length;
-  const missing = keyMetrics.filter(m => !m.available).map(m => m.name);
+  const missing = keyMetrics.filter((m) => !m.available).map((m) => m.name);
   const coverage = available / total;
   const result: Record<string, any> = {
     available,
@@ -141,7 +149,7 @@ export function assemblePopulatedData(
     historical: historicalData,
     benchmarks: {},
     scores: {
-      homeready: scores
+      homeready: scores?.scores.homeready
         ? {
             score: scores.scores.homeready.score,
             grade: scores.scores.homeready.grade,
@@ -150,7 +158,7 @@ export function assemblePopulatedData(
             components: scores.scores.homeready.components || undefined,
           }
         : undefined,
-      investoredge: scores
+      investoredge: scores?.scores.investoredge
         ? {
             score: scores.scores.investoredge.score,
             grade: scores.scores.investoredge.grade,
@@ -159,7 +167,7 @@ export function assemblePopulatedData(
             components: scores.scores.investoredge.components || undefined,
           }
         : undefined,
-      markethealth: scores
+      markethealth: scores?.scores.markethealth
         ? {
             score: scores.scores.markethealth.score,
             grade: scores.scores.markethealth.grade,

@@ -8,10 +8,10 @@
  * - Total Validated Scores
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { fetchAPI } from '@/lib/data';
+import { useEffect, useState } from "react";
+import { fetchAPI } from "@/lib/data";
 
 interface ValidationSummary {
   totalScores: number;
@@ -37,18 +37,18 @@ interface Props {
 }
 
 function formatPercent(value: number | null | undefined, decimals = 1): string {
-  if (value == null) return '\u2014';
+  if (value == null) return "\u2014";
   return `${(value * 100).toFixed(decimals)}%`;
 }
 
 function formatNumber(value: number | null | undefined, decimals = 1): string {
-  if (value == null) return '\u2014';
+  if (value == null) return "\u2014";
   return value.toFixed(decimals);
 }
 
 function formatReturnPercent(value: number | null | undefined): string {
-  if (value == null) return '\u2014';
-  const sign = value >= 0 ? '+' : '';
+  if (value == null) return "\u2014";
+  const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
 }
 
@@ -64,16 +64,20 @@ export function ValidationSummaryCards({ scoreType, geography }: Props) {
 
       try {
         const params = new URLSearchParams();
-        if (scoreType) params.append('score_type', scoreType);
-        if (geography) params.append('geography', geography);
+        if (scoreType) params.append("score_type", scoreType);
+        if (geography) params.append("geography", geography);
 
         const queryString = params.toString();
-        const endpoint = `/api/admin/scores/validation/summary${queryString ? `?${queryString}` : ''}`;
+        const endpoint = `/api/admin/scores/validation/summary${queryString ? `?${queryString}` : ""}`;
 
         const data = await fetchAPI<ValidationSummary>(endpoint);
         setSummary(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch validation data');
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch validation data",
+        );
       } finally {
         setLoading(false);
       }
@@ -86,7 +90,10 @@ export function ValidationSummaryCards({ scoreType, geography }: Props) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-surface-container-low rounded-xl p-4 animate-pulse">
+          <div
+            key={i}
+            className="bg-surface-container-low rounded-xl p-4 animate-pulse"
+          >
             <div className="h-4 w-20 bg-outline-variant/30 rounded mb-2" />
             <div className="h-8 w-16 bg-outline-variant/30 rounded" />
           </div>
@@ -103,62 +110,91 @@ export function ValidationSummaryCards({ scoreType, geography }: Props) {
     );
   }
 
-  if (!summary) {
+  if (
+    !summary ||
+    (summary.totalScores === 0 && summary.scoresWithOutcomes === 0)
+  ) {
     return (
-      <div className="bg-surface-container-low rounded-xl p-4">
-        <p className="text-sm text-on-surface-variant">No validation data available.</p>
+      <div className="bg-surface-container-low border border-outline-variant rounded-xl p-8 text-center">
+        <p className="text-sm font-medium text-on-surface">
+          No Validation Data Available
+        </p>
+        <p className="text-xs text-on-surface-variant mt-2">
+          Score validation requires backtest outcome data. Run a backtest first
+          to populate this dashboard.
+        </p>
       </div>
     );
   }
 
   const cards = [
     {
-      label: '1Y Correlation',
+      label: "1Y Correlation",
       value: formatNumber(summary.correlation1y, 3),
-      description: 'Score vs 1Y return',
-      color: summary.correlation1y > 0.3 ? 'text-green-600' : summary.correlation1y > 0.1 ? 'text-amber-600' : 'text-red-600',
+      description: "Score vs 1Y return",
+      color:
+        summary.correlation1y > 0.3
+          ? "text-green-600"
+          : summary.correlation1y > 0.1
+            ? "text-amber-600"
+            : "text-red-600",
     },
     {
-      label: '3Y Correlation',
+      label: "3Y Correlation",
       value: formatNumber(summary.correlation3y, 3),
-      description: 'Score vs 3Y CAGR',
-      color: summary.correlation3y > 0.3 ? 'text-green-600' : summary.correlation3y > 0.1 ? 'text-amber-600' : 'text-red-600',
+      description: "Score vs 3Y CAGR",
+      color:
+        summary.correlation3y > 0.3
+          ? "text-green-600"
+          : summary.correlation3y > 0.1
+            ? "text-amber-600"
+            : "text-red-600",
     },
     {
-      label: '1Y Hit Rate',
+      label: "1Y Hit Rate",
       value: formatPercent(summary.hitRate1y),
-      description: 'High scores (>70) beating state',
-      color: summary.hitRate1y > 0.6 ? 'text-green-600' : summary.hitRate1y > 0.5 ? 'text-amber-600' : 'text-red-600',
+      description: "High scores (>70) beating state",
+      color:
+        summary.hitRate1y > 0.6
+          ? "text-green-600"
+          : summary.hitRate1y > 0.5
+            ? "text-amber-600"
+            : "text-red-600",
     },
     {
-      label: '3Y Hit Rate',
+      label: "3Y Hit Rate",
       value: formatPercent(summary.hitRate3y),
-      description: 'High scores (>70) beating state',
-      color: summary.hitRate3y > 0.6 ? 'text-green-600' : summary.hitRate3y > 0.5 ? 'text-amber-600' : 'text-red-600',
+      description: "High scores (>70) beating state",
+      color:
+        summary.hitRate3y > 0.6
+          ? "text-green-600"
+          : summary.hitRate3y > 0.5
+            ? "text-amber-600"
+            : "text-red-600",
     },
     {
-      label: 'Avg Excess Return (1Y)',
+      label: "Avg Excess Return (1Y)",
       value: formatReturnPercent(summary.avgExcessVsState1y),
-      description: 'vs state benchmark',
-      color: summary.avgExcessVsState1y > 0 ? 'text-green-600' : 'text-red-600',
+      description: "vs state benchmark",
+      color: summary.avgExcessVsState1y > 0 ? "text-green-600" : "text-red-600",
     },
     {
-      label: 'Avg Excess Return (3Y)',
+      label: "Avg Excess Return (3Y)",
       value: formatReturnPercent(summary.avgExcessVsState3y),
-      description: 'vs state benchmark',
-      color: summary.avgExcessVsState3y > 0 ? 'text-green-600' : 'text-red-600',
+      description: "vs state benchmark",
+      color: summary.avgExcessVsState3y > 0 ? "text-green-600" : "text-red-600",
     },
     {
-      label: 'Validated Scores',
+      label: "Validated Scores",
       value: summary.scoresWithOutcomes.toLocaleString(),
       description: `of ${summary.totalScores.toLocaleString()} total`,
-      color: 'text-on-surface',
+      color: "text-on-surface",
     },
     {
-      label: 'Data Range',
-      value: `${summary.dataRange.startDate?.slice(0, 7) || '\u2014'} to ${summary.dataRange.endDate?.slice(0, 7) || '\u2014'}`,
-      description: 'Score dates with outcomes',
-      color: 'text-on-surface',
+      label: "Data Range",
+      value: `${summary.dataRange.startDate?.slice(0, 7) || "\u2014"} to ${summary.dataRange.endDate?.slice(0, 7) || "\u2014"}`,
+      description: "Score dates with outcomes",
+      color: "text-on-surface",
       small: true,
     },
   ];
@@ -173,10 +209,14 @@ export function ValidationSummaryCards({ scoreType, geography }: Props) {
           <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wide">
             {card.label}
           </p>
-          <p className={`mt-1 ${card.small ? 'text-lg' : 'text-2xl'} font-semibold ${card.color}`}>
+          <p
+            className={`mt-1 ${card.small ? "text-lg" : "text-2xl"} font-semibold ${card.color}`}
+          >
             {card.value}
           </p>
-          <p className="mt-0.5 text-xs text-on-surface-variant">{card.description}</p>
+          <p className="mt-0.5 text-xs text-on-surface-variant">
+            {card.description}
+          </p>
         </div>
       ))}
     </div>
