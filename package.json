@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:fresh": "bash scripts/dev-start.sh",
     "dev:backend": "npm run start:dev -w backend",
     "dev:frontend": "npm run dev -w web",
     "build": "npm run build -w backend && npm run build -w web",

@@ -52,7 +52,6 @@
     "next": "^16.1.1",
     "next-mdx-remote": "^6.0.0",
     "pptxgenjs": "^4.0.1",
-    "puppeteer": "^24.29.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-map-gl": "^8.1.0",
