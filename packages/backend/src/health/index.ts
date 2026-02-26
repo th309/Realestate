@@ -3,10 +3,18 @@
  */
 
 export { HealthModule } from './health.module';
-export { HealthController, PipelinesController } from './health.controller';
+export { HealthController } from './health.controller';
+export { PipelinesController } from './pipelines.controller';
 export { DataCardsHealthService } from './data-cards-health.service';
 export { DataSourcesHealthService } from './data-sources-health.service';
 export { PipelineRunsService } from './pipeline-runs.service';
 export { DataAlertsService } from './data-alerts.service';
-export { METRIC_DEFINITIONS, getUniqueTables, getMetricsByTable } from './metric-definitions';
-export { PipelineStatusDto, PipelineGeographyResultDto } from './dto/pipeline-status.dto';
+export {
+  METRIC_DEFINITIONS,
+  getUniqueTables,
+  getMetricsByTable,
+} from './metric-definitions';
+export {
+  PipelineStatusDto,
+  PipelineGeographyResultDto,
+} from './dto/pipeline-status.dto';

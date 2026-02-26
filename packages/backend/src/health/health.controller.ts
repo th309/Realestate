@@ -5,12 +5,12 @@
  * - GET /api/health - Simple healthcheck for Railway
  * - GET /api/health/data-cards - Check all 54 data card metrics
  * - GET /api/health/data-sources - Check data source availability
+ * - GET /api/health/data-freshness - Get latest data freshness dates
  * - GET /api/health/pipeline-runs - Get recent pipeline runs
  * - GET /api/health/data-alerts - Get active alerts
  * - POST /api/health/pipeline-status - Accept pipeline status reports (API key protected)
- * - POST /api/health/data-alerts/:id/acknowledge - Acknowledge an alert
- * - POST /api/health/data-alerts/:id/resolve - Resolve an alert
- * - POST /api/pipelines/:name/trigger - Trigger a pipeline manually
+ * - POST /api/health/data-alerts/:id/acknowledge - Acknowledge an alert (admin only)
+ * - POST /api/health/data-alerts/:id/resolve - Resolve an alert (admin only)
  */
 
 import {
@@ -33,7 +33,10 @@ import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
 import { DataAlertsService } from './data-alerts.service';
+import { DataFreshnessService } from './data-freshness.service';
 import { PipelineApiKeyGuard } from '../common/guards/pipeline-api-key.guard';
+import { AdminGuard } from '../common/guards/admin-auth.guard';
+import { AuthUserId } from '../common/decorators/auth-user';
 import { PipelineStatusDto } from './dto/pipeline-status.dto';
 
 @ApiTags('health')
@@ -45,6 +48,7 @@ export class HealthController {
     private readonly dataSourcesHealth: DataSourcesHealthService,
     private readonly pipelineRuns: PipelineRunsService,
     private readonly dataAlerts: DataAlertsService,
+    private readonly dataFreshness: DataFreshnessService,
   ) {}
 
   @Get()
@@ -62,7 +66,10 @@ export class HealthController {
 
     // Quick database connectivity check
     try {
-      const { error } = await this.supabase.from('markets').select('id').limit(1);
+      const { error } = await this.supabase
+        .from('markets')
+        .select('id')
+        .limit(1);
       response.database = error ? 'error' : 'connected';
     } catch {
       response.database = 'error';
@@ -73,21 +80,41 @@ export class HealthController {
 
   @Get('data-cards')
   @ApiOperation({ summary: 'Check health of all data card metrics' })
-  @ApiResponse({ status: 200, description: 'Health check results for all 54 metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Health check results for all 54 metrics',
+  })
   async checkDataCards() {
     return this.dataCardsHealth.checkAllMetrics();
   }
 
   @Get('data-sources')
   @ApiOperation({ summary: 'Check availability of data sources' })
-  @ApiResponse({ status: 200, description: 'Health check results for all data sources' })
+  @ApiResponse({
+    status: 200,
+    description: 'Health check results for all data sources',
+  })
   async checkDataSources() {
     return this.dataSourcesHealth.checkAllSources();
   }
 
+  @Get('data-freshness')
+  @ApiOperation({ summary: 'Get latest data freshness dates for all sources' })
+  @ApiResponse({
+    status: 200,
+    description: 'Data freshness dates by table, source, and geography',
+  })
+  async getDataFreshness() {
+    return this.dataFreshness.getFreshness();
+  }
+
   @Get('pipeline-runs')
   @ApiOperation({ summary: 'Get recent pipeline runs' })
-  @ApiQuery({ name: 'hours', required: false, description: 'Hours to look back (default: 72)' })
+  @ApiQuery({
+    name: 'hours',
+    required: false,
+    description: 'Hours to look back (default: 72)',
+  })
   @ApiResponse({ status: 200, description: 'List of recent pipeline runs' })
   async getPipelineRuns(@Query('hours') hours?: string) {
     const hoursNum = hours ? parseInt(hours, 10) : 72;
@@ -98,18 +125,35 @@ export class HealthController {
   @HttpCode(200)
   @UseGuards(PipelineApiKeyGuard)
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  @ApiOperation({ summary: 'Accept pipeline status report from import scripts' })
+  @ApiOperation({
+    summary: 'Accept pipeline status report from import scripts',
+  })
   @ApiResponse({ status: 200, description: 'Pipeline status recorded' })
-  @ApiResponse({ status: 401, description: 'Invalid or missing pipeline API key' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or missing pipeline API key',
+  })
   async reportPipelineStatus(@Body() statusReport: PipelineStatusDto) {
     return this.pipelineRuns.recordPipelineStatus(statusReport);
   }
 
   @Get('data-alerts')
   @ApiOperation({ summary: 'Get data alerts' })
-  @ApiQuery({ name: 'status', required: false, description: 'Filter by status' })
-  @ApiQuery({ name: 'severity', required: false, description: 'Filter by severity' })
-  @ApiQuery({ name: 'type', required: false, description: 'Filter by alert type' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by status',
+  })
+  @ApiQuery({
+    name: 'severity',
+    required: false,
+    description: 'Filter by severity',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    description: 'Filter by alert type',
+  })
   @ApiResponse({ status: 200, description: 'List of data alerts' })
   async getDataAlerts(
     @Query('status') status?: string,
@@ -121,34 +165,28 @@ export class HealthController {
 
   @Post('data-alerts/:id/acknowledge')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Acknowledge an alert' })
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Acknowledge an alert (admin only)' })
   @ApiResponse({ status: 200, description: 'Alert acknowledged successfully' })
-  async acknowledgeAlert(@Param('id') id: string, @Body() body?: { userId?: string }) {
-    return this.dataAlerts.acknowledgeAlert(id, body?.userId);
+  @ApiResponse({ status: 403, description: 'Admin access denied' })
+  async acknowledgeAlert(
+    @Param('id') id: string,
+    @AuthUserId() userId: string,
+  ) {
+    return this.dataAlerts.acknowledgeAlert(id, userId);
   }
 
   @Post('data-alerts/:id/resolve')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Resolve an alert' })
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Resolve an alert (admin only)' })
   @ApiResponse({ status: 200, description: 'Alert resolved successfully' })
+  @ApiResponse({ status: 403, description: 'Admin access denied' })
   async resolveAlert(
     @Param('id') id: string,
-    @Body() body?: { userId?: string; notes?: string },
+    @AuthUserId() userId: string,
+    @Body() body?: { notes?: string },
   ) {
-    return this.dataAlerts.resolveAlert(id, body?.userId, body?.notes);
-  }
-}
-
-@ApiTags('pipelines')
-@Controller('api/pipelines')
-export class PipelinesController {
-  constructor(private readonly pipelineRuns: PipelineRunsService) {}
-
-  @Post(':name/trigger')
-  @HttpCode(200)
-  @ApiOperation({ summary: 'Trigger a pipeline manually' })
-  @ApiResponse({ status: 200, description: 'Pipeline trigger queued' })
-  async triggerPipeline(@Param('name') name: string) {
-    return this.pipelineRuns.triggerPipeline(name);
+    return this.dataAlerts.resolveAlert(id, userId, body?.notes);
   }
 }

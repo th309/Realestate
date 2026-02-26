@@ -6,7 +6,8 @@
  */
 
 import { Module } from '@nestjs/common';
-import { HealthController, PipelinesController } from './health.controller';
+import { HealthController } from './health.controller';
+import { PipelinesController } from './pipelines.controller';
 import { DataCardsHealthService } from './data-cards-health.service';
 import { DataSourcesHealthService } from './data-sources-health.service';
 import { PipelineRunsService } from './pipeline-runs.service';
