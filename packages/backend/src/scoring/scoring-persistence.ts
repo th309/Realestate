@@ -19,8 +19,13 @@ export function buildScoreRows(
   const rows: Array<Record<string, any>> = [];
   const createdAt = new Date().toISOString();
   for (const result of results) {
-    for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as ScoreType[]) {
+    for (const scoreType of [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ] as ScoreType[]) {
       const scoreData = result.scores[scoreType];
+      if (!scoreData) continue;
       rows.push({
         geography: result.geography,
         location_id: result.location_id,
@@ -49,14 +54,17 @@ export async function upsertScoresWithRetry(
 ): Promise<boolean> {
   const maxAttempts = 4;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const { error } = await supabase
-      .from('propertyiq_scores')
-      .upsert(rows, { onConflict: 'geography,location_id,score_type,score_date' });
+    const { error } = await supabase.from('propertyiq_scores').upsert(rows, {
+      onConflict: 'geography,location_id,score_type,score_date',
+    });
 
     if (!error) return true;
 
     const delayMs = Math.min(15000, 500 * Math.pow(2, attempt - 1));
-    console.error(`Error saving score batch (attempt ${attempt}/${maxAttempts}):`, error);
+    console.error(
+      `Error saving score batch (attempt ${attempt}/${maxAttempts}):`,
+      error,
+    );
     if (attempt < maxAttempts) {
       await sleep(delayMs + Math.floor(Math.random() * 250));
     }

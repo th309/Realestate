@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
@@ -9,7 +13,10 @@ export class StripeService {
   private readonly webhookSecret: string;
 
   constructor(private readonly config: ConfigService) {
-    const stripeKey = this.readEnvValue(['STRIPE_SECRET_KEY', 'STRIPE_API_KEY']);
+    const stripeKey = this.readEnvValue([
+      'STRIPE_SECRET_KEY',
+      'STRIPE_API_KEY',
+    ]);
     if (!stripeKey) {
       this.logger.warn(
         'Stripe key not set (checked STRIPE_SECRET_KEY, STRIPE_API_KEY) - Stripe billing features are disabled',
@@ -17,14 +24,14 @@ export class StripeService {
       this.stripe = null;
     } else {
       this.logger.log(`Stripe key detected (${this.maskedKeyInfo(stripeKey)})`);
-      this.stripe = new Stripe(stripeKey, {
-        apiVersion: '2026-01-28.clover',
-      });
+      this.stripe = new Stripe(stripeKey);
     }
 
     const webhookSecret = this.readEnvValue(['STRIPE_WEBHOOK_SECRET']);
     if (!webhookSecret) {
-      this.logger.warn('STRIPE_WEBHOOK_SECRET not set – webhook verification will fail');
+      this.logger.warn(
+        'STRIPE_WEBHOOK_SECRET not set – webhook verification will fail',
+      );
     }
     this.webhookSecret = webhookSecret || '';
   }
@@ -49,7 +56,9 @@ export class StripeService {
       if (!cleaned) continue;
 
       if (cleaned !== raw) {
-        this.logger.warn(`Normalized ${name} value by trimming whitespace/quotes`);
+        this.logger.warn(
+          `Normalized ${name} value by trimming whitespace/quotes`,
+        );
       } else {
         this.logger.log(`Loaded ${name} from environment`);
       }
@@ -102,13 +111,18 @@ export class StripeService {
       cancel_url: params.cancelUrl,
       metadata: params.metadata,
       allow_promotion_codes: true,
-      ...(params.trialPeriodDays ? { subscription_data: { trial_period_days: params.trialPeriodDays } } : {}),
+      ...(params.trialPeriodDays
+        ? { subscription_data: { trial_period_days: params.trialPeriodDays } }
+        : {}),
     });
 
     return session.url!;
   }
 
-  async createBillingPortalSession(customerId: string, returnUrl: string): Promise<string> {
+  async createBillingPortalSession(
+    customerId: string,
+    returnUrl: string,
+  ): Promise<string> {
     const stripe = this.getStripeClient();
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,

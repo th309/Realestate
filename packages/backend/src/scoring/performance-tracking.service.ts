@@ -77,13 +77,21 @@ export class PerformanceTrackingService {
    */
   async recordPrediction(score: ScoreResult): Promise<void> {
     const predictionDate = score.score_date;
-    const scoreTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const scoreTypes: ScoreType[] = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ];
 
     // Calculate quintiles based on all scores for this geography
-    const quintiles = await this.calculateQuintiles(score.geography, predictionDate);
+    const quintiles = await this.calculateQuintiles(
+      score.geography,
+      predictionDate,
+    );
 
     for (const scoreType of scoreTypes) {
       const scoreData = score.scores[scoreType];
+      if (!scoreData) continue;
       const quintile = this.getQuintile(scoreData.score, quintiles[scoreType]);
 
       const record: PredictionRecord = {
@@ -105,7 +113,9 @@ export class PerformanceTrackingService {
   /**
    * Record predictions for multiple scores (batch)
    */
-  async recordPredictions(scores: ScoreResult[]): Promise<{ recorded: number; errors: number }> {
+  async recordPredictions(
+    scores: ScoreResult[],
+  ): Promise<{ recorded: number; errors: number }> {
     let recorded = 0;
     let errors = 0;
 
@@ -115,7 +125,10 @@ export class PerformanceTrackingService {
         recorded++;
       } catch (err) {
         errors++;
-        console.error(`Error recording prediction for ${score.location_id}:`, err);
+        console.error(
+          `Error recording prediction for ${score.location_id}:`,
+          err,
+        );
       }
     }
 
@@ -123,23 +136,25 @@ export class PerformanceTrackingService {
   }
 
   private async savePrediction(record: PredictionRecord): Promise<void> {
-    const { error } = await this.supabase.from('score_performance_tracking').upsert(
-      {
-        geography: record.geography,
-        location_id: record.location_id,
-        location_name: record.location_name,
-        score_type: record.score_type,
-        prediction_date: record.prediction_date,
-        predicted_score: record.predicted_score,
-        predicted_grade: record.predicted_grade,
-        predicted_quintile: record.predicted_quintile,
-        price_at_prediction: record.price_at_prediction,
-        created_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'geography,location_id,score_type,prediction_date',
-      },
-    );
+    const { error } = await this.supabase
+      .from('score_performance_tracking')
+      .upsert(
+        {
+          geography: record.geography,
+          location_id: record.location_id,
+          location_name: record.location_name,
+          score_type: record.score_type,
+          prediction_date: record.prediction_date,
+          predicted_score: record.predicted_score,
+          predicted_grade: record.predicted_grade,
+          predicted_quintile: record.predicted_quintile,
+          price_at_prediction: record.price_at_prediction,
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'geography,location_id,score_type,prediction_date',
+        },
+      );
 
     if (error) {
       throw error;
@@ -302,11 +317,13 @@ export class PerformanceTrackingService {
     currentDate: string,
   ): Promise<Record<string, number>> {
     const medians: Record<string, number> = {};
-    const geographies = [...new Set(predictions.map(p => p.geography))];
+    const geographies = [...new Set(predictions.map((p) => p.geography))];
 
     for (const geography of geographies) {
       // Get all returns for this geography
-      const geoPredictions = predictions.filter(p => p.geography === geography);
+      const geoPredictions = predictions.filter(
+        (p) => p.geography === geography,
+      );
       const returns: number[] = [];
 
       for (const pred of geoPredictions) {
@@ -355,7 +372,8 @@ export class PerformanceTrackingService {
     }
 
     const currentPrice = data[0].median_price;
-    const returnPct = ((currentPrice - priceAtPrediction) / priceAtPrediction) * 100;
+    const returnPct =
+      ((currentPrice - priceAtPrediction) / priceAtPrediction) * 100;
 
     return Math.round(returnPct * 100) / 100; // Round to 2 decimals
   }
@@ -408,11 +426,15 @@ export class PerformanceTrackingService {
     const spread = metrics?.spread ?? 0;
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
 
-    if (topBeatRate < ALERT_THRESHOLDS.top_quintile_beat_rate.critical ||
-        spread < ALERT_THRESHOLDS.spread.critical) {
+    if (
+      topBeatRate < ALERT_THRESHOLDS.top_quintile_beat_rate.critical ||
+      spread < ALERT_THRESHOLDS.spread.critical
+    ) {
       status = 'critical';
-    } else if (topBeatRate < ALERT_THRESHOLDS.top_quintile_beat_rate.warning ||
-               spread < ALERT_THRESHOLDS.spread.warning) {
+    } else if (
+      topBeatRate < ALERT_THRESHOLDS.top_quintile_beat_rate.warning ||
+      spread < ALERT_THRESHOLDS.spread.warning
+    ) {
       status = 'warning';
     }
 
@@ -439,7 +461,11 @@ export class PerformanceTrackingService {
    */
   async getAllPerformanceMetrics(): Promise<PerformanceMetrics[]> {
     const geographies: GeographyLevel[] = ['metro', 'county', 'zip'];
-    const scoreTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const scoreTypes: ScoreType[] = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ];
     const results: PerformanceMetrics[] = [];
 
     for (const geography of geographies) {
@@ -483,6 +509,8 @@ export class PerformanceTrackingService {
    */
   async getActiveAlerts(): Promise<AlertResult[]> {
     const alerts = await this.checkAlerts();
-    return alerts.filter(a => a.status === 'CRITICAL' || a.status === 'WARNING');
+    return alerts.filter(
+      (a) => a.status === 'CRITICAL' || a.status === 'WARNING',
+    );
   }
 }
