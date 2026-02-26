@@ -99,9 +99,13 @@ data/Realtor/*.csv
 
 data/zillow/*.csv
 
-# MCP Server configuration (contains access tokens)
+# MCP Server configuration (contains access tokens and machine-specific paths)
+.mcp.json
 .gemini/settings.json
 .vscode/mcp.json
+
+# Machine-specific Claude Code settings
+.claude/settings.local.json
 
 # ML model files (too large for GitHub, download at runtime)
 packages/backend/propertyiq-ml/models/
