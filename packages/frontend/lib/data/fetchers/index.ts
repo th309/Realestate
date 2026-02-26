@@ -5,28 +5,24 @@
  */
 
 // Base utilities
-export { API_URL, fetchAPI, fetchAPIWithParams, fetchAPIRaw } from './base';
+export { API_URL, fetchAPI, fetchAPIWithParams, fetchAPIRaw } from "./base";
 
 // Snapshot data (current values)
-export {
-  fetchSnapshotData,
-  fetchMetricData,
-  toHomeValues,
-} from './snapshot';
+export { fetchSnapshotData, fetchMetricData, toHomeValues } from "./snapshot";
 
 // Time series data (historical values)
 export {
   fetchTimeSeriesData,
   fetchAvailableDates,
   timeSeriesApi,
-} from './timeseries';
+} from "./timeseries";
 
 // Trend data (change calculations)
 export {
   fetchTrendData,
   fetchTrendDataBatch,
   normalizeSparklineData,
-} from './trend';
+} from "./trend";
 
 // Score data (PropertyIQ)
 export {
@@ -37,17 +33,17 @@ export {
   type TopMarketsGeo,
   type TopMarketsScoreType,
   type TopMarketEntry,
-} from './scores';
+} from "./scores";
 
 // Market data (stats, lists)
-export { fetchMarketStats, type MarketStats } from './markets';
+export { fetchMarketStats, type MarketStats } from "./markets";
 
 // Market AI analysis
 export {
   fetchMarketAnalysis,
   type MarketAnalysisSection,
   type MarketAnalysisResult,
-} from './market-analysis';
+} from "./market-analysis";
 
 // Market snapshot (batch)
 export {
@@ -55,10 +51,10 @@ export {
   type MarketSnapshotMetric,
   type MarketSnapshotScoreEntry,
   type MarketSnapshotResponse,
-} from './market-snapshot';
+} from "./market-snapshot";
 
 // Batch trends (server-side)
-export { fetchBatchTrendsServer, type BatchTrendEntry } from './trend';
+export { fetchBatchTrendsServer, type BatchTrendEntry } from "./trend";
 
 // Reports
 export {
@@ -72,7 +68,7 @@ export {
   regenerateNarratives,
   type GenerateReportRequest,
   type GenerateReportResponse,
-} from './reports';
+} from "./reports";
 
 // Benchmarks
 export {
@@ -80,7 +76,7 @@ export {
   fetchMetricBenchmarks,
   type BenchmarkData,
   type BenchmarkResult,
-} from './benchmarks';
+} from "./benchmarks";
 
 // Alerts
 export {
@@ -92,22 +88,30 @@ export {
   markAlertRead,
   type Alert,
   type AlertHistoryEntry,
-} from './alerts';
+} from "./alerts";
 
 // Billing
-export { startCheckout, getBillingPortalUrl } from './billing';
+export {
+  startCheckout,
+  getBillingPortalUrl,
+  fetchSubscriptionStatus,
+  cancelSubscription,
+  resumeSubscription,
+  type SubscriptionStatus,
+  type CancelSubscriptionResult,
+} from "./billing";
 
 // Recommendations
 export {
   fetchMarketsToWatch,
   type MarketRecommendation,
-} from './recommendations';
+} from "./recommendations";
 
 // GeoJSON
-export { getGeoJsonApiUrl } from './geojson';
+export { getGeoJsonApiUrl } from "./geojson";
 
 // Data freshness (canonical "as of" dates for UI)
-export { fetchDataFreshness, type DataFreshnessResponse } from './freshness';
+export { fetchDataFreshness, type DataFreshnessResponse } from "./freshness";
 
 // Market search lists & geography search
 export {
@@ -121,7 +125,7 @@ export {
   fetchMarketsCounties,
   fetchMarketsZips,
   fetchMarketsCities,
-} from './search';
+} from "./search";
 
 // Scoring validation & report templates
 export {
@@ -139,17 +143,27 @@ export {
   type ValidationScatterPoint,
   type ValidationTimeSeriesPoint,
   type ValidationGeographyBreakdown,
-} from './scoring';
+} from "./scoring";
 
 // Pricing (admin features)
-export { fetchPricingSummary, type PricingTier, type TrialInfo, type PricingSummary } from './pricing';
+export {
+  fetchPricingSummary,
+  type PricingTier,
+  type TrialInfo,
+  type PricingSummary,
+} from "./pricing";
 
 // Email preferences
 export {
   fetchEmailPreferences,
   updateEmailPreferences,
   type EmailPreferences,
-} from './email-preferences';
+} from "./email-preferences";
 
 // Support
-export { submitSupportTicket, submitContactForm, type SupportTicket, type ContactFormData } from './support';
+export {
+  submitSupportTicket,
+  submitContactForm,
+  type SupportTicket,
+  type ContactFormData,
+} from "./support";

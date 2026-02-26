@@ -1,26 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useAdminDashboardRefresh } from './components/hooks/useAdminDashboardRefresh';
-import { SystemHealthBanner } from './components/SystemHealthBanner';
-import { DataFeedsWidget } from './components/widgets/DataFeedsWidget';
-import { PipelineRunsWidget } from './components/widgets/PipelineRunsWidget';
-import { ScoreSummaryWidget } from './components/widgets/ScoreSummaryWidget';
-import { MLWorkflowWidget } from './components/widgets/MLWorkflowWidget';
-import { UsersBillingWidget } from './components/widgets/UsersBillingWidget';
-import { FeedbackQueueWidget } from './components/widgets/FeedbackQueueWidget';
-
-type SystemStatus = 'healthy' | 'degraded' | 'error' | 'loading';
+import React from "react";
+import { useAdminDashboardRefresh } from "./components/hooks/useAdminDashboardRefresh";
+import { useSystemHealth } from "./components/hooks/useSystemHealth";
+import { SystemHealthBanner } from "./components/SystemHealthBanner";
+import { DataFeedsWidget } from "./components/widgets/DataFeedsWidget";
+import { PipelineRunsWidget } from "./components/widgets/PipelineRunsWidget";
+import { ScoreSummaryWidget } from "./components/widgets/ScoreSummaryWidget";
+import { MLWorkflowWidget } from "./components/widgets/MLWorkflowWidget";
+import { UsersBillingWidget } from "./components/widgets/UsersBillingWidget";
+import { FeedbackQueueWidget } from "./components/widgets/FeedbackQueueWidget";
 
 export default function AdminDashboardPage() {
-  const { refreshTrigger, lastRefreshTime, triggerRefresh } = useAdminDashboardRefresh();
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>('loading');
-
-  useEffect(() => {
-    setSystemStatus('loading');
-    const timer = setTimeout(() => setSystemStatus('healthy'), 3000);
-    return () => clearTimeout(timer);
-  }, [refreshTrigger]);
+  const { refreshTrigger, lastRefreshTime, triggerRefresh } =
+    useAdminDashboardRefresh();
+  const { status: systemStatus } = useSystemHealth(refreshTrigger);
 
   return (
     <div className="min-h-screen bg-surface">

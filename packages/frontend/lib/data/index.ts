@@ -55,7 +55,7 @@ export type {
   MapData,
   TimeSeriesDataPoint,
   TimeSeriesResponse,
-} from './types';
+} from "./types";
 
 // ============================================================================
 // REGISTRY
@@ -72,7 +72,7 @@ export {
   // Functions
   metricHasTimeSeries,
   isScoreMetric,
-} from './registry';
+} from "./registry";
 
 // ============================================================================
 // REGISTRY HELPERS
@@ -94,9 +94,9 @@ export {
   getDataSourceAnchor,
   METRIC_DEFINITIONS,
   getMetricFavorableDirection,
-} from './registry-helpers';
+} from "./registry-helpers";
 
-export type { MetricDefinition } from './registry-helpers';
+export type { MetricDefinition } from "./registry-helpers";
 
 // ============================================================================
 // FORMATTING
@@ -105,12 +105,12 @@ export {
   formatMetricValue,
   formatPercentChange,
   getTrendDirection,
-} from './format';
+} from "./format";
 
 // ============================================================================
 // AUTH
 // ============================================================================
-export { getAuthHeaders } from './fetchers/auth-headers';
+export { getAuthHeaders } from "./fetchers/auth-headers";
 
 // ============================================================================
 // FETCHERS
@@ -231,6 +231,11 @@ export {
   // Billing
   startCheckout,
   getBillingPortalUrl,
+  fetchSubscriptionStatus,
+  cancelSubscription,
+  resumeSubscription,
+  type SubscriptionStatus,
+  type CancelSubscriptionResult,
 
   // Recommendations
   fetchMarketsToWatch,
@@ -246,7 +251,7 @@ export {
   submitContactForm,
   type SupportTicket,
   type ContactFormData,
-} from './fetchers';
+} from "./fetchers";
 
 // ============================================================================
 // HOOKS
@@ -315,11 +320,19 @@ export {
   type UseValidationScatterOptions,
   type UseValidationTimeSeriesOptions,
   type UseValidationGeographyOptions,
-} from './hooks';
+} from "./hooks";
 
 // ============================================================================
 // METRO SLUGS
 // ============================================================================
-export { METRO_SLUG_DATA, SLUG_TO_METRO, CBSA_TO_METRO } from './metro-slug-data';
-export { generateMetroSlug, getMetroShortName, getMetroState } from './metro-slugs';
-export type { MetroSlugEntry } from './metro-slugs';
+export {
+  METRO_SLUG_DATA,
+  SLUG_TO_METRO,
+  CBSA_TO_METRO,
+} from "./metro-slug-data";
+export {
+  generateMetroSlug,
+  getMetroShortName,
+  getMetroState,
+} from "./metro-slugs";
+export type { MetroSlugEntry } from "./metro-slugs";

@@ -18,78 +18,20 @@ import type {
   FeatureUsage,
 } from "./types";
 import { fetchEntitlements, trackPaywallEvent } from "./api";
+import { useRealtimeTierSync } from "./useRealtimeTierSync";
 import { useAuth } from "@/lib/auth";
-import { getAllMetricIds } from "@/lib/data";
-
-const defaultState: EntitlementsState = {
-  tier: "free",
-  access: {},
-  trial: null,
-  loading: true,
-  error: null,
-};
-
-// Session storage keys for dev toolbar persistence
-const STORAGE_KEYS = {
-  SIMULATED_TIER: "devtools-simulated-tier",
-  SIMULATED_AUTH: "devtools-simulated-auth",
-} as const;
-
-/** Read simulated tier from sessionStorage */
-function getStoredSimulatedTier(): UserTier | null {
-  if (typeof window === "undefined") return null;
-  const stored = sessionStorage.getItem(STORAGE_KEYS.SIMULATED_TIER);
-  if (stored && ["free", "pro", "enterprise", "admin"].includes(stored)) {
-    return stored as UserTier;
-  }
-  return null;
-}
-
-/** Read simulated auth from sessionStorage */
-function getStoredSimulatedAuth(): boolean | null {
-  if (typeof window === "undefined") return null;
-  const stored = sessionStorage.getItem(STORAGE_KEYS.SIMULATED_AUTH);
-  if (stored === "true") return true;
-  if (stored === "false") return false;
-  return null;
-}
+import {
+  DEFAULT_ENTITLEMENTS_STATE,
+  STORAGE_KEYS,
+  getStoredSimulatedTier,
+  getStoredSimulatedAuth,
+  isValidTier,
+  buildResourceList,
+} from "./entitlements-helpers";
 
 const EntitlementsContext = createContext<EntitlementsContextValue | null>(
   null,
 );
-
-// Geography levels and features to check
-const GEO_LEVELS = [
-  "national",
-  "state",
-  "metro",
-  "county",
-  "city",
-  "zip",
-  "tract",
-];
-const FEATURES = [
-  "analytics_assistant",
-  "export_csv",
-  "reports",
-  "ai_insights",
-  "score_breakdown",
-  "reports_monthly",
-  "ai_analysis_monthly",
-  "history_months",
-  "weekly_digest",
-  "benchmarking",
-  "recommendations",
-];
-
-/** Build full resource list from metric registry + geo levels + features */
-function buildResourceList(): string[] {
-  return [
-    ...getAllMetricIds().map((id) => `metric:${id}`),
-    ...GEO_LEVELS.map((g) => `geo:${g}`),
-    ...FEATURES.map((f) => `feature:${f}`),
-  ];
-}
 
 interface EntitlementsProviderProps {
   children: React.ReactNode;
@@ -101,7 +43,9 @@ export function EntitlementsProvider({
   initialResources,
 }: EntitlementsProviderProps) {
   const { user, loading: authLoading } = useAuth();
-  const [state, setState] = useState<EntitlementsState>(defaultState);
+  const [state, setState] = useState<EntitlementsState>(
+    DEFAULT_ENTITLEMENTS_STATE,
+  );
   // Initialize from sessionStorage to persist across navigations
   const [simulatedTier, setSimulatedTierRaw] = useState<UserTier | null>(() =>
     getStoredSimulatedTier(),
@@ -146,11 +90,8 @@ export function EntitlementsProvider({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const tierParam = params.get("tier") as UserTier | null;
-      if (
-        tierParam &&
-        ["free", "pro", "enterprise", "admin"].includes(tierParam)
-      ) {
+      const tierParam = params.get("tier");
+      if (tierParam && isValidTier(tierParam)) {
         setSimulatedTier(tierParam);
         // Also simulate an authenticated state so AnonPaywallOverlay is suppressed
         setSimulatedAuth(true);
@@ -160,11 +101,9 @@ export function EntitlementsProvider({
 
   // Clear simulated tier when the authenticated user changes.
   // This prevents stale dev-tools overrides from leaking across sign-in/sign-out cycles
-  // (sessionStorage persists within the same tab even after re-authentication).
   const prevUserIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const currentUserId = user?.id ?? null;
-    // Only clear on actual user transitions (not initial mount)
     if (
       prevUserIdRef.current !== undefined &&
       prevUserIdRef.current !== currentUserId
@@ -182,7 +121,6 @@ export function EntitlementsProvider({
   userIdRef.current = user?.id ?? null;
 
   const refresh = useCallback(async () => {
-    // Use ref to get the latest simulated tier (avoids stale closure issues)
     const currentTier = simulatedTierRef.current;
     const currentUserId = userIdRef.current;
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -194,21 +132,13 @@ export function EntitlementsProvider({
       );
       setState(data);
     } catch (error) {
-      // Transient error (backend unreachable, 5xx, etc.)
-      // Preserve previous tier for authenticated users so a brief outage
-      // doesn't downgrade them to 'free'. Only default to 'free' if there
-      // is no previous tier (i.e. first load for unauthenticated user).
       console.warn(
         "[Entitlements] fetch failed, preserving previous state:",
         error,
       );
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        error: null,
-      }));
+      setState((prev) => ({ ...prev, loading: false, error: null }));
     }
-  }, [resources]); // Remove simulatedTier from deps - we use the ref instead
+  }, [resources]);
 
   // Refresh when simulatedTier or user changes, but only after auth resolves
   useEffect(() => {
@@ -216,6 +146,12 @@ export function EntitlementsProvider({
       refresh();
     }
   }, [simulatedTier, user?.id, authLoading, refresh]);
+
+  // Real-time tier sync: listen for admin tier changes via Supabase Realtime
+  const { toastMessage, dismissToast } = useRealtimeTierSync({
+    userId: user?.id ?? null,
+    onTierChange: refresh,
+  });
 
   const canAccess = useCallback(
     (type: ResourceType, id: string): boolean => {
@@ -256,10 +192,7 @@ export function EntitlementsProvider({
 
   const isMetricGated = useCallback(
     (metricId: string): boolean => {
-      // While loading, assume unlocked to prevent showing stale lock states during tier transitions
-      if (state.loading) {
-        return false;
-      }
+      if (state.loading) return false;
       const access = getAccess("metric", metricId);
       return access.level === "none";
     },
@@ -269,9 +202,7 @@ export function EntitlementsProvider({
   // TTL: re-fetch entitlements every 30 minutes
   useEffect(() => {
     const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
-    const interval = setInterval(() => {
-      refresh();
-    }, REFRESH_INTERVAL_MS);
+    const interval = setInterval(refresh, REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [refresh]);
 
@@ -301,13 +232,10 @@ export function EntitlementsProvider({
   const resetSimulation = useCallback(() => {
     setSimulatedTier(null);
     setSimulatedAuth(null);
-    // Note: refresh will be triggered by the simulatedTier useEffect
   }, [setSimulatedTier, setSimulatedAuth]);
 
   const getUsage = useCallback(
     (featureSlug: string): FeatureUsage | null => {
-      // Check if there's a numeric limit for this feature in the access map
-      // Preview features are stored as feature:<slug> in the access map
       const key = `feature:${featureSlug}`;
       const accessInfo = state.access[key];
       const limit = accessInfo?.limit ?? null;
@@ -335,9 +263,9 @@ export function EntitlementsProvider({
   const incrementUsage = useCallback(
     async (featureSlug: string): Promise<boolean> => {
       const usage = getUsage(featureSlug);
-      if (!usage) return true; // No limit configured
-      if (usage.limit === -1) return true; // Unlimited
-      if (usage.remaining <= 0) return false; // At limit
+      if (!usage) return true;
+      if (usage.limit === -1) return true;
+      if (usage.remaining <= 0) return false;
 
       setUsageCache((prev) => ({
         ...prev,
@@ -392,6 +320,25 @@ export function EntitlementsProvider({
   return (
     <EntitlementsContext.Provider value={value}>
       {children}
+      {/* Tier change toast notification (Realtime push from admin) */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-xl bg-surface-container-high px-5 py-3 shadow-lg"
+        >
+          <span className="text-sm font-medium text-on-surface">
+            {toastMessage}
+          </span>
+          <button
+            onClick={dismissToast}
+            className="ml-1 text-on-surface-variant hover:text-on-surface text-xs"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </EntitlementsContext.Provider>
   );
 }

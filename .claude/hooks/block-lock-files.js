@@ -24,9 +24,9 @@ if (blockedFiles.includes(fileName)) {
 }
 
 // Block generated files
-if (/metro-slug-data\.ts$/.test(normalized)) {
+if (/metro-slug-data\.json$/.test(normalized)) {
   process.stderr.write(
-    'BLOCKED: "metro-slug-data.ts" is a generated file. Modify the generation script instead.',
+    'BLOCKED: "metro-slug-data.json" is a generated file. Modify the generation script instead.',
   );
   process.exit(2);
 }

@@ -1,0 +1,204 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+import Stripe from 'stripe';
+
+/**
+ * Handles Stripe webhook events and syncs subscription state to user_profiles.
+ *
+ * Separated from BillingService to keep each file under the 300-line limit
+ * and give webhook processing a clear single responsibility.
+ */
+@Injectable()
+export class BillingWebhookService {
+  private readonly logger = new Logger(BillingWebhookService.name);
+
+  constructor(private readonly supabase: SupabaseService) {}
+
+  async handleWebhookEvent(event: Stripe.Event): Promise<void> {
+    this.logger.log(`Processing webhook event: ${event.type}`);
+
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        await this.handleCheckoutComplete(session);
+        break;
+      }
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        await this.handleSubscriptionUpdated(subscription);
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        await this.handleSubscriptionDeleted(subscription);
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        await this.handlePaymentFailed(invoice);
+        break;
+      }
+      default:
+        this.logger.debug(`Unhandled webhook event type: ${event.type}`);
+    }
+  }
+
+  private async handleCheckoutComplete(
+    session: Stripe.Checkout.Session,
+  ): Promise<void> {
+    const userId = session.metadata?.user_id;
+    const tier = session.metadata?.tier;
+
+    if (!userId || !tier) {
+      this.logger.warn('Checkout session missing user_id or tier metadata');
+      return;
+    }
+
+    const subscriptionId =
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id;
+
+    if (!subscriptionId) {
+      this.logger.warn('Checkout session missing subscription ID');
+      return;
+    }
+
+    await this.syncUserTier(userId, tier, subscriptionId);
+  }
+
+  private async handleSubscriptionUpdated(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
+    const userId = subscription.metadata?.user_id;
+    if (!userId) {
+      const customerId =
+        typeof subscription.customer === 'string'
+          ? subscription.customer
+          : subscription.customer.id;
+      await this.syncFromCustomerId(customerId, subscription);
+      return;
+    }
+
+    const status = subscription.status;
+    const client = this.supabase.getClient();
+
+    if (status === 'active' || status === 'trialing') {
+      const priceId = subscription.items.data[0]?.price.id;
+      const tier = await this.tierFromPriceId(priceId);
+      await this.syncUserTier(userId, tier || 'pro', subscription.id);
+    } else if (status === 'past_due' || status === 'unpaid') {
+      await client
+        .from('user_profiles')
+        .update({ subscription_status: status })
+        .eq('id', userId);
+    }
+  }
+
+  private async handleSubscriptionDeleted(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
+    const customerId =
+      typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer.id;
+
+    const client = this.supabase.getClient();
+    const { data: profile } = await client
+      .from('user_profiles')
+      .select('id')
+      .eq('stripe_customer_id', customerId)
+      .single();
+
+    if (profile) {
+      await client
+        .from('user_profiles')
+        .update({
+          subscription_tier: 'free',
+          subscription_status: 'cancelled',
+          stripe_subscription_id: null,
+        })
+        .eq('id', profile.id);
+
+      this.logger.log(`Subscription cancelled for user ${profile.id}`);
+    }
+  }
+
+  private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    const customerId =
+      typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id;
+
+    if (!customerId) return;
+
+    const client = this.supabase.getClient();
+    const { data: profile } = await client
+      .from('user_profiles')
+      .select('id')
+      .eq('stripe_customer_id', customerId)
+      .single();
+
+    if (profile) {
+      await client
+        .from('user_profiles')
+        .update({ subscription_status: 'past_due' })
+        .eq('id', profile.id);
+
+      this.logger.warn(`Payment failed for user ${profile.id}`);
+    }
+  }
+
+  private async syncUserTier(
+    userId: string,
+    tier: string,
+    stripeSubscriptionId: string,
+  ): Promise<void> {
+    const client = this.supabase.getClient();
+    await client
+      .from('user_profiles')
+      .update({
+        subscription_tier: tier,
+        subscription_status: 'active',
+        stripe_subscription_id: stripeSubscriptionId,
+      })
+      .eq('id', userId);
+
+    this.logger.log(`Synced user ${userId} to tier ${tier}`);
+  }
+
+  private async syncFromCustomerId(
+    customerId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
+    const client = this.supabase.getClient();
+    const { data: profile } = await client
+      .from('user_profiles')
+      .select('id')
+      .eq('stripe_customer_id', customerId)
+      .single();
+
+    if (profile) {
+      const priceId = subscription.items.data[0]?.price.id;
+      const tier = await this.tierFromPriceId(priceId);
+      const status = subscription.status;
+
+      if (status === 'active' || status === 'trialing') {
+        await this.syncUserTier(profile.id, tier || 'pro', subscription.id);
+      }
+    }
+  }
+
+  private async tierFromPriceId(priceId: string): Promise<string | null> {
+    const client = this.supabase.getClient();
+    const { data } = await client
+      .from('subscription_tiers')
+      .select('slug')
+      .or(
+        `stripe_price_monthly_id.eq.${priceId},stripe_price_yearly_id.eq.${priceId}`,
+      )
+      .single();
+
+    return data?.slug || null;
+  }
+}

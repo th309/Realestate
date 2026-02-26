@@ -142,6 +142,31 @@ export class StripeService {
     return stripe.subscriptions.retrieve(subscriptionId);
   }
 
+  /**
+   * Mark a subscription to cancel at the end of the current billing period.
+   * The user retains access until `current_period_end`.
+   */
+  async cancelAtPeriodEnd(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
+    const stripe = this.getStripeClient();
+    return stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true,
+    });
+  }
+
+  /**
+   * Undo a pending cancellation — resume the subscription so it renews normally.
+   */
+  async resumeSubscription(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
+    const stripe = this.getStripeClient();
+    return stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+  }
+
   async createPrice(
     productId: string,
     unitAmount: number,

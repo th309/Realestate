@@ -89,14 +89,14 @@ Root causes investigated. Implementing fixes now.
 - [x] **7a.** ML Workflow unmount — Added isMountedRef guard to all async state updates
 - [ ] **7b.** Stripe billing portal lacks plan switching (Stripe dashboard config — not a code fix)
 - [x] **7c.** Pricing loading — Added skeleton cards while plans load
-- [ ] **7d.** System health status is mocked (feature work — deferred)
-- [ ] **7e.** No WebSocket push for admin tier changes (feature work — deferred)
-- [ ] **7f.** Tester management Deactivate/Reactivate (feature work — deferred)
-- [ ] **7g.** Newsletter no double opt-in (feature work — deferred)
-- [ ] **7h.** Newsletter API no rate limiting (feature work — deferred)
-- [ ] **7i.** No retry on failed API calls (feature work — deferred)
-- [ ] **7j.** No downgrade path from Pro to Free (feature work — deferred)
-- [ ] **7k.** metro-slug-data.ts is 6564 lines (refactor — deferred)
+- [x] **7d.** System health status is mocked — Wired real /api/health + /api/health/data-sources via useSystemHealth hook
+- [x] **7e.** Real-time tier push — Added Supabase Realtime subscription on user_profiles with auto-refetch + toast
+- [x] **7f.** Tester management Deactivate/Reactivate — Already implemented (TesterManager + API routes)
+- [x] **7g.** Newsletter double opt-in — Confirmation token + Resend email + /api/newsletter/confirm endpoint
+- [x] **7h.** Newsletter API rate limiting — Added IP-based 5 req/15min via reusable RateLimiter
+- [x] **7i.** API retry logic — Added React Query retry(3) with exponential backoff, skips 4xx errors
+- [x] **7j.** Pro-to-Free downgrade — Cancel-at-period-end + resume flow, M3 dialog, backend endpoints
+- [x] **7k.** metro-slug-data.ts refactor — Extracted to JSON data file, TS wrapper now 18 lines
 - [x] **7l.** Google OAuth error — Added friendlyAuthError() to show user-friendly messages
 - [x] **7m.** Compare pricing regex — Replaced regex with {{PRO_PRICE}}/{{ENTERPRISE_PRICE}} templates
 

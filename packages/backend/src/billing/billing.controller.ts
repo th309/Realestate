@@ -27,7 +27,8 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
   async createCheckoutSession(
-    @Body() body: { tier: string; interval: 'month' | 'year'; returnContext?: string },
+    @Body()
+    body: { tier: string; interval: 'month' | 'year'; returnContext?: string },
     @AuthUserId() userId: string,
   ) {
     if (!body.tier || !['pro', 'enterprise'].includes(body.tier)) {
@@ -50,9 +51,7 @@ export class BillingController {
 
   /** Stripe webhook — no auth guard (verified by Stripe signature) */
   @Post('webhook')
-  async handleWebhook(
-    @Req() req: RawBodyRequest<Request>,
-  ) {
+  async handleWebhook(@Req() req: RawBodyRequest<Request>) {
     const signature = req.headers['stripe-signature'] as string;
     if (!signature) {
       throw new BadRequestException('Missing stripe-signature header');
@@ -60,14 +59,18 @@ export class BillingController {
 
     const rawBody = req.rawBody;
     if (!rawBody) {
-      throw new BadRequestException('Missing raw body — ensure raw body parsing is enabled');
+      throw new BadRequestException(
+        'Missing raw body — ensure raw body parsing is enabled',
+      );
     }
 
     let event;
     try {
       event = this.stripeService.constructWebhookEvent(rawBody, signature);
     } catch (err) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      this.logger.error(
+        `Webhook signature verification failed: ${err.message}`,
+      );
       throw new BadRequestException('Invalid webhook signature');
     }
 
@@ -80,5 +83,23 @@ export class BillingController {
   async getBillingPortal(@AuthUserId() userId: string) {
     const portalUrl = await this.billingService.getBillingPortalUrl(userId);
     return { portalUrl };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('cancel')
+  async cancelSubscription(@AuthUserId() userId: string) {
+    return this.billingService.cancelSubscription(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('resume')
+  async resumeSubscription(@AuthUserId() userId: string) {
+    return this.billingService.resumeSubscription(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('subscription-status')
+  async getSubscriptionStatus(@AuthUserId() userId: string) {
+    return this.billingService.getSubscriptionStatus(userId);
   }
 }
