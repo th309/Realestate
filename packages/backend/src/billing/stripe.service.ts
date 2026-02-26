@@ -147,14 +147,17 @@ export class StripeService {
         prices: p.priceIds,
       }));
 
+    const frontendUrl = this.config.get<string>('FRONTEND_URL');
+    if (!frontendUrl) {
+      throw new ServiceUnavailableException(
+        'Cannot create portal configuration: FRONTEND_URL is not configured.',
+      );
+    }
+
     const configuration = await stripe.billingPortal.configurations.create({
       business_profile: {
-        privacy_policy_url:
-          (this.config.get<string>('FRONTEND_URL') ||
-            'https://propertyiq.app') + '/privacy',
-        terms_of_service_url:
-          (this.config.get<string>('FRONTEND_URL') ||
-            'https://propertyiq.app') + '/terms',
+        privacy_policy_url: `${frontendUrl}/privacy`,
+        terms_of_service_url: `${frontendUrl}/terms`,
       },
       features: {
         subscription_update: {
