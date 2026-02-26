@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ConfigService } from '@nestjs/config';
 import { StripeService } from './stripe.service';
@@ -7,7 +12,7 @@ import Stripe from 'stripe';
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
-  private readonly frontendUrl: string;
+  private readonly frontendUrl: string | null;
 
   constructor(
     private readonly supabase: SupabaseService,
@@ -16,18 +21,36 @@ export class BillingService {
   ) {
     const url = this.config.get<string>('FRONTEND_URL');
     if (!url) {
-      throw new Error('FRONTEND_URL environment variable is required');
+      this.logger.warn(
+        'FRONTEND_URL not set — billing checkout and portal features are disabled',
+      );
     }
-    this.frontendUrl = url;
+    this.frontendUrl = url || null;
   }
 
-  async startCheckout(userId: string, tier: string, interval: 'month' | 'year', returnContext?: string): Promise<string> {
+  private getFrontendUrl(): string {
+    if (!this.frontendUrl) {
+      throw new ServiceUnavailableException(
+        'Billing is temporarily unavailable: FRONTEND_URL is not configured on the backend.',
+      );
+    }
+    return this.frontendUrl;
+  }
+
+  async startCheckout(
+    userId: string,
+    tier: string,
+    interval: 'month' | 'year',
+    returnContext?: string,
+  ): Promise<string> {
     const client = this.supabase.getClient();
 
     // Guard: block duplicate subscriptions for the same tier
     const { data: currentProfile } = await client
       .from('user_profiles')
-      .select('email, stripe_customer_id, subscription_tier, subscription_status')
+      .select(
+        'email, stripe_customer_id, subscription_tier, subscription_status',
+      )
       .eq('id', userId)
       .single();
 
@@ -37,9 +60,12 @@ export class BillingService {
 
     if (
       currentProfile.subscription_tier === tier &&
-      (currentProfile.subscription_status === 'active' || currentProfile.subscription_status === 'trialing')
+      (currentProfile.subscription_status === 'active' ||
+        currentProfile.subscription_status === 'trialing')
     ) {
-      throw new BadRequestException(`You already have an active ${tier} subscription`);
+      throw new BadRequestException(
+        `You already have an active ${tier} subscription`,
+      );
     }
 
     // Get or create Stripe customer
@@ -49,7 +75,10 @@ export class BillingService {
     if (existingProfile?.stripe_customer_id) {
       stripeCustomerId = existingProfile.stripe_customer_id;
     } else {
-      stripeCustomerId = await this.stripe.getOrCreateCustomer(userId, currentProfile.email);
+      stripeCustomerId = await this.stripe.getOrCreateCustomer(
+        userId,
+        currentProfile.email,
+      );
       await client
         .from('user_profiles')
         .update({ stripe_customer_id: stripeCustomerId })
@@ -57,7 +86,10 @@ export class BillingService {
     }
 
     // Look up Stripe price ID from subscription_tiers
-    const priceColumn = interval === 'year' ? 'stripe_price_yearly_id' : 'stripe_price_monthly_id';
+    const priceColumn =
+      interval === 'year'
+        ? 'stripe_price_yearly_id'
+        : 'stripe_price_monthly_id';
     const { data: tierData } = await client
       .from('subscription_tiers')
       .select(`${priceColumn}`)
@@ -66,7 +98,9 @@ export class BillingService {
 
     const priceId = tierData?.[priceColumn];
     if (!priceId) {
-      throw new BadRequestException(`No Stripe price configured for tier: ${tier} (${interval})`);
+      throw new BadRequestException(
+        `No Stripe price configured for tier: ${tier} (${interval})`,
+      );
     }
 
     // Check if trial is enabled
@@ -81,9 +115,12 @@ export class BillingService {
     }
 
     // Build success/cancel URLs
-    const returnParam = returnContext ? `&returnContext=${encodeURIComponent(returnContext)}` : '';
-    const successUrl = `${this.frontendUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
-    const cancelUrl = `${this.frontendUrl}/pricing`;
+    const baseUrl = this.getFrontendUrl();
+    const returnParam = returnContext
+      ? `&returnContext=${encodeURIComponent(returnContext)}`
+      : '';
+    const successUrl = `${baseUrl}/upgrade/success?session_id={CHECKOUT_SESSION_ID}${returnParam}`;
+    const cancelUrl = `${baseUrl}/pricing`;
 
     return this.stripe.createCheckoutSession({
       customerId: stripeCustomerId,
@@ -100,22 +137,22 @@ export class BillingService {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object;
         await this.handleCheckoutComplete(session);
         break;
       }
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object;
         await this.handleSubscriptionUpdated(subscription);
         break;
       }
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object;
         await this.handleSubscriptionDeleted(subscription);
         break;
       }
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object;
         await this.handlePaymentFailed(invoice);
         break;
       }
@@ -133,14 +170,21 @@ export class BillingService {
       .single();
 
     if (!profile?.stripe_customer_id) {
-      throw new BadRequestException('No billing account found. Please subscribe first.');
+      throw new BadRequestException(
+        'No billing account found. Please subscribe first.',
+      );
     }
 
-    const returnUrl = `${this.frontendUrl}/account/billing`;
-    return this.stripe.createBillingPortalSession(profile.stripe_customer_id, returnUrl);
+    const returnUrl = `${this.getFrontendUrl()}/account/billing`;
+    return this.stripe.createBillingPortalSession(
+      profile.stripe_customer_id,
+      returnUrl,
+    );
   }
 
-  private async handleCheckoutComplete(session: Stripe.Checkout.Session): Promise<void> {
+  private async handleCheckoutComplete(
+    session: Stripe.Checkout.Session,
+  ): Promise<void> {
     const userId = session.metadata?.user_id;
     const tier = session.metadata?.tier;
 
@@ -149,9 +193,10 @@ export class BillingService {
       return;
     }
 
-    const subscriptionId = typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id;
+    const subscriptionId =
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id;
 
     if (!subscriptionId) {
       this.logger.warn('Checkout session missing subscription ID');
@@ -161,13 +206,16 @@ export class BillingService {
     await this.syncUserTier(userId, tier, subscriptionId);
   }
 
-  private async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionUpdated(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
     const userId = subscription.metadata?.user_id;
     if (!userId) {
       // Try to find user by stripe_customer_id
-      const customerId = typeof subscription.customer === 'string'
-        ? subscription.customer
-        : subscription.customer.id;
+      const customerId =
+        typeof subscription.customer === 'string'
+          ? subscription.customer
+          : subscription.customer.id;
       await this.syncFromCustomerId(customerId, subscription);
       return;
     }
@@ -188,10 +236,13 @@ export class BillingService {
     }
   }
 
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-    const customerId = typeof subscription.customer === 'string'
-      ? subscription.customer
-      : subscription.customer.id;
+  private async handleSubscriptionDeleted(
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
+    const customerId =
+      typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer.id;
 
     const client = this.supabase.getClient();
     const { data: profile } = await client
@@ -215,9 +266,10 @@ export class BillingService {
   }
 
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const customerId = typeof invoice.customer === 'string'
-      ? invoice.customer
-      : invoice.customer?.id;
+    const customerId =
+      typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id;
 
     if (!customerId) return;
 
@@ -238,7 +290,11 @@ export class BillingService {
     }
   }
 
-  private async syncUserTier(userId: string, tier: string, stripeSubscriptionId: string): Promise<void> {
+  private async syncUserTier(
+    userId: string,
+    tier: string,
+    stripeSubscriptionId: string,
+  ): Promise<void> {
     const client = this.supabase.getClient();
     await client
       .from('user_profiles')
@@ -252,7 +308,10 @@ export class BillingService {
     this.logger.log(`Synced user ${userId} to tier ${tier}`);
   }
 
-  private async syncFromCustomerId(customerId: string, subscription: Stripe.Subscription): Promise<void> {
+  private async syncFromCustomerId(
+    customerId: string,
+    subscription: Stripe.Subscription,
+  ): Promise<void> {
     const client = this.supabase.getClient();
     const { data: profile } = await client
       .from('user_profiles')
@@ -276,7 +335,9 @@ export class BillingService {
     const { data } = await client
       .from('subscription_tiers')
       .select('slug')
-      .or(`stripe_price_monthly_id.eq.${priceId},stripe_price_yearly_id.eq.${priceId}`)
+      .or(
+        `stripe_price_monthly_id.eq.${priceId},stripe_price_yearly_id.eq.${priceId}`,
+      )
       .single();
 
     return data?.slug || null;
