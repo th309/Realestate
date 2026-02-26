@@ -196,10 +196,10 @@ Task tool with run_in_background: true
 
 ### 2.2 Self-Improvement Loop
 
+- **Read `tasks/lessons.md` at the start of every session** before doing any work. These are hard-won rules from past mistakes — follow them.
 - After ANY correction from the user: update `tasks/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
-- Review lessons at session start for relevant project
 
 ### 2.3 Verification Before Done
 
