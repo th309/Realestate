@@ -6,11 +6,17 @@ import {
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
+export interface PortalProduct {
+  productId: string;
+  priceIds: string[];
+}
+
 @Injectable()
 export class StripeService {
   private readonly stripe: Stripe | null;
   private readonly logger = new Logger(StripeService.name);
   private readonly webhookSecret: string;
+  private portalConfigurationId: string | null = null;
 
   constructor(private readonly config: ConfigService) {
     const stripeKey = this.readEnvValue([
@@ -119,14 +125,74 @@ export class StripeService {
     return session.url!;
   }
 
+  /**
+   * Get or create a Stripe Billing Portal Configuration that enables
+   * plan switching, cancellation, payment method updates, and invoice history.
+   * The configuration ID is cached in-memory for the lifetime of the process.
+   */
+  async getOrCreatePortalConfiguration(
+    products: PortalProduct[],
+  ): Promise<string> {
+    if (this.portalConfigurationId) {
+      return this.portalConfigurationId;
+    }
+
+    const stripe = this.getStripeClient();
+
+    // Build the product list for subscription updates
+    const portalProducts = products
+      .filter((p) => p.productId && p.priceIds.length > 0)
+      .map((p) => ({
+        product: p.productId,
+        prices: p.priceIds,
+      }));
+
+    const configuration = await stripe.billingPortal.configurations.create({
+      business_profile: {
+        privacy_policy_url:
+          (this.config.get<string>('FRONTEND_URL') ||
+            'https://propertyiq.app') + '/privacy',
+        terms_of_service_url:
+          (this.config.get<string>('FRONTEND_URL') ||
+            'https://propertyiq.app') + '/terms',
+      },
+      features: {
+        subscription_update: {
+          enabled: portalProducts.length > 0,
+          default_allowed_updates: ['price'],
+          proration_behavior: 'create_prorations',
+          products: portalProducts,
+        },
+        subscription_cancel: {
+          enabled: true,
+          mode: 'at_period_end',
+        },
+        payment_method_update: {
+          enabled: true,
+        },
+        invoice_history: {
+          enabled: true,
+        },
+      },
+    });
+
+    this.portalConfigurationId = configuration.id;
+    this.logger.log(
+      `Created billing portal configuration: ${configuration.id}`,
+    );
+    return configuration.id;
+  }
+
   async createBillingPortalSession(
     customerId: string,
     returnUrl: string,
+    configurationId?: string,
   ): Promise<string> {
     const stripe = this.getStripeClient();
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
+      ...(configurationId ? { configuration: configurationId } : {}),
     });
 
     return session.url;

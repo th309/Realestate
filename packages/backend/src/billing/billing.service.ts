@@ -251,10 +251,35 @@ export class BillingService {
       );
     }
 
+    // Fetch active tiers with Stripe product/price IDs for portal plan switching
+    const { data: tiers } = await client
+      .from('subscription_tiers')
+      .select(
+        'stripe_product_id, stripe_price_monthly_id, stripe_price_yearly_id',
+      )
+      .neq('slug', 'free');
+
+    const products = (tiers ?? [])
+      .filter((t) => t.stripe_product_id)
+      .map((t) => ({
+        productId: t.stripe_product_id as string,
+        priceIds: [t.stripe_price_monthly_id, t.stripe_price_yearly_id].filter(
+          Boolean,
+        ) as string[],
+      }))
+      .filter((p) => p.priceIds.length > 0);
+
+    let configurationId: string | undefined;
+    if (products.length > 0) {
+      configurationId =
+        await this.stripe.getOrCreatePortalConfiguration(products);
+    }
+
     const returnUrl = `${this.getFrontendUrl()}/account/billing`;
     return this.stripe.createBillingPortalSession(
       profile.stripe_customer_id,
       returnUrl,
+      configurationId,
     );
   }
 }
