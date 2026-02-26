@@ -137,6 +137,8 @@ curl -X POST http://localhost:${TEST_PORT}/api/betatest/feedback \
   }'
 ```
 
+**IMPORTANT:** Store the `feedback.id` from each successful POST response. This ID is used by the Auto-Remediation phase to update tracker status automatically. Keep a mapping of `{ finding_title → feedback_id }` throughout the session.
+
 **With screenshots** — upload first, then attach:
 
 ```bash
@@ -758,16 +760,17 @@ Within same priority: Known Code-Level Issues first, then newly discovered issue
 
 For each finding, capture:
 
-| Field         | Source                                           |
-| ------------- | ------------------------------------------------ |
-| `id`          | Sequential (F-001, F-002, ...)                   |
-| `severity`    | P0 / P1 / P2 / P3                                |
-| `title`       | Short description from feedback submission       |
-| `category`    | bug / workflow / ux_ui / performance             |
-| `where`       | File path or component name                      |
-| `phase`       | Which testing phase discovered it                |
-| `risk_level`  | `safe` / `needs_confirmation` (see Safety Gates) |
-| `description` | Full description including steps to reproduce    |
+| Field         | Source                                                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | Sequential (F-001, F-002, ...)                                                                                                                                                      |
+| `feedback_id` | The UUID returned by the POST `/api/betatest/feedback` response during submission. If not available (standalone fix), set to `null` — fuzzy matching resolves it later (see below). |
+| `severity`    | P0 / P1 / P2 / P3                                                                                                                                                                   |
+| `title`       | Short description from feedback submission                                                                                                                                          |
+| `category`    | bug / workflow / ux_ui / performance                                                                                                                                                |
+| `where`       | File path or component name                                                                                                                                                         |
+| `phase`       | Which testing phase discovered it                                                                                                                                                   |
+| `risk_level`  | `safe` / `needs_confirmation` (see Safety Gates)                                                                                                                                    |
+| `description` | Full description including steps to reproduce                                                                                                                                       |
 
 ### Step 2: Classify Risk Level (Safety Gates)
 
@@ -801,6 +804,27 @@ Each finding gets classified as `safe` (auto-fix) or `needs_confirmation` (pause
 
 ### Step 3: Invoke Systematic Debugging
 
+**Update Feedback Tracker:** Before invoking systematic debugging for each finding, update its feedback status to `in_progress`. This signals on `/admin/feedback` that the item is actively being worked on.
+
+```bash
+# If feedback_id is known (from session submission):
+curl -s -X PATCH http://localhost:${TEST_PORT}/api/admin/feedback/{feedback_id} \
+  -H "Content-Type: application/json" \
+  -d '{"status": "in_progress"}'
+```
+
+**If `feedback_id` is null** (standalone fix outside a full testing session), resolve it via fuzzy matching before updating:
+
+1. Fetch open feedback: `curl -s http://localhost:${TEST_PORT}/api/admin/feedback`
+2. Filter to actionable statuses: `submitted`, `triaged`, `in_progress`. Exclude `fixed`, `deployed`, `wont_fix`, `duplicate`.
+3. Score each item against the finding's title + description using keyword overlap on `title` (highest weight), `description`, `page_url`, `affected_component`.
+4. Pick the best match. Ties broken by oldest `created_at` (first reported = canonical entry).
+5. Announce: _"Matched to feedback: [title] (id: [id], status: [current_status])"_
+6. If no match scores above threshold, skip the tracker update silently — the fix isn't feedback-related.
+7. Assign the resolved `feedback_id` and PATCH to `in_progress` as above.
+
+If the PATCH fails (404, 500), log the error and continue — do NOT block the fix on a tracker update failure.
+
 For each finding (in priority order), invoke the `superpowers:systematic-debugging` skill workflow:
 
 1. **Phase 1 (Root Cause):** Trace the issue to its source. Read the relevant files, check git history, understand why the bug exists — not just where it manifests.
@@ -832,6 +856,29 @@ When reaching a `needs_confirmation` finding:
 
 ### Step 5: Remediation Report
 
+**Update Feedback Tracker:** For each successfully fixed finding, update its feedback status to `fixed` with a commit reference and admin note:
+
+```bash
+curl -s -X PATCH http://localhost:${TEST_PORT}/api/admin/feedback/{feedback_id} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "fixed",
+    "fix_reference": "{commit_sha}",
+    "admin_notes": "Auto-fixed: {one-line root cause summary}"
+  }'
+```
+
+**Status update rules:**
+
+| Finding Outcome                   | Tracker Update                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------- |
+| Fixed automatically               | `status: "fixed"`, `fix_reference: "<sha>"`, `admin_notes: "Auto-fixed: <root cause>"` |
+| Fixed after confirmation          | Same as above                                                                          |
+| Deferred (user declined)          | No update — leave current status                                                       |
+| Unfixable (needs design decision) | No update — leave current status                                                       |
+
+Get the commit SHA via `git rev-parse --short HEAD` after the fix is committed.
+
 After all findings have been processed, output:
 
 ```
@@ -854,6 +901,14 @@ Unfixable (requires design decision): X
 
 Batched (shared root cause): X findings → Y fixes
   - F-002, F-004, F-006 all caused by [root cause] → single fix in [file]
+
+=== Feedback Tracker Updates ===
+Updated to in_progress: X
+Updated to fixed: X
+  - [feedback_id]: [title] → fixed (ref: abc1234)
+  - [feedback_id]: [title] → fixed (ref: def5678)
+Unmatched (no tracker item found): X
+Unchanged (deferred/unfixable): X
 ```
 
 ### Step 6: Verification Pass
@@ -866,3 +921,65 @@ After all fixes are applied:
 4. Summarize: "All X fixes verified — lint clean, types clean, tests passing"
 
 **If verification fails on a `safe` fix:** That fix was misclassified. Revert it, reclassify as `needs_confirmation`, and present to the user.
+
+---
+
+## Fix from Tracker Mode
+
+**Use when:** You want to work through open feedback items from `/admin/feedback` without running a full testing session. Invoke by saying "fix the open feedback items", "work through the tracker", or similar.
+
+### Procedure
+
+1. **Fetch all open feedback:**
+
+   ```bash
+   curl -s http://localhost:${TEST_PORT}/api/admin/feedback
+   ```
+
+   Filter to actionable statuses: `submitted`, `triaged`, `in_progress`.
+
+2. **Sort by priority:**
+   - Severity: `critical` → `high` → `medium` → `low`
+   - Within same severity: oldest `created_at` first
+
+3. **Present summary:**
+   Output: _"Found X open feedback items: Y critical, Z high, W medium, V low"_
+
+4. **Work through items in priority order.** For each item:
+
+   a. PATCH status to `in_progress`:
+
+   ```bash
+   curl -s -X PATCH http://localhost:${TEST_PORT}/api/admin/feedback/{id} \
+     -H "Content-Type: application/json" \
+     -d '{"status": "in_progress"}'
+   ```
+
+   b. Invoke `superpowers:systematic-debugging` with full context from the feedback item:
+   - Title as the bug description
+   - `steps_to_reproduce` as reproduction steps
+   - `page_url` as where to look
+   - `affected_component` as starting point for code investigation
+   - `description` as full context
+
+   c. Apply the same Safety Gates from Auto-Remediation Step 2: Classify Risk Level (`safe` vs `needs_confirmation`)
+
+   d. On fix verified:
+
+   ```bash
+   curl -s -X PATCH http://localhost:${TEST_PORT}/api/admin/feedback/{id} \
+     -H "Content-Type: application/json" \
+     -d '{
+       "status": "fixed",
+       "fix_reference": "{commit_sha}",
+       "admin_notes": "Auto-fixed: {root cause summary}"
+     }'
+   ```
+
+   e. On deferred or unfixable: leave status unchanged (still `in_progress` — admin can triage)
+
+5. **Output remediation report** using the same format from Step 5 above, including the Feedback Tracker Updates section.
+
+### Batching
+
+Same rule as auto-remediation: if multiple feedback items share a root cause, investigate once and fix the root cause. Update ALL matched items to `fixed` with the same `fix_reference`.
