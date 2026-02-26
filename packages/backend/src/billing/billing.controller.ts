@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { BillingService } from './billing.service';
 import { StripeService } from './stripe.service';
+import { CreateCheckoutDto } from './create-checkout.dto';
 
 @Controller('api/billing')
 export class BillingController {
@@ -27,18 +28,9 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
   async createCheckoutSession(
-    @Body()
-    body: { tier: string; interval: 'month' | 'year'; returnContext?: string },
+    @Body() body: CreateCheckoutDto,
     @AuthUserId() userId: string,
   ) {
-    if (!body.tier || !['pro', 'enterprise'].includes(body.tier)) {
-      throw new BadRequestException('Invalid tier');
-    }
-
-    if (!body.interval || !['month', 'year'].includes(body.interval)) {
-      throw new BadRequestException('Invalid interval');
-    }
-
     const checkoutUrl = await this.billingService.startCheckout(
       userId,
       body.tier,

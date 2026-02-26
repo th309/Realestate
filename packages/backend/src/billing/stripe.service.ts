@@ -34,9 +34,10 @@ export class StripeService {
     }
 
     const webhookSecret = this.readEnvValue(['STRIPE_WEBHOOK_SECRET']);
-    if (!webhookSecret) {
-      this.logger.warn(
-        'STRIPE_WEBHOOK_SECRET not set – webhook verification will fail',
+    if (this.stripe && !webhookSecret) {
+      throw new Error(
+        'STRIPE_WEBHOOK_SECRET is required when Stripe is enabled. ' +
+          'Webhook signature verification cannot be bypassed.',
       );
     }
     this.webhookSecret = webhookSecret || '';

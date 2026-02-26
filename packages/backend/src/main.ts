@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -7,6 +8,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
   // Manual CORS middleware — cors@2.8.5 crashes on Express 5 with Origin header
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.use((req: any, res: any, next: any) => {
@@ -14,7 +17,10 @@ async function bootstrap() {
     if (origin) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,PUT,PATCH,POST,DELETE',
+      );
       res.setHeader(
         'Access-Control-Allow-Headers',
         'Content-Type,Authorization,X-User-Tier,X-User-Id,X-Session-Id,X-Requested-With',

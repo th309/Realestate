@@ -86,7 +86,13 @@ export class BillingWebhookService {
     if (status === 'active' || status === 'trialing') {
       const priceId = subscription.items.data[0]?.price.id;
       const tier = await this.tierFromPriceId(priceId);
-      await this.syncUserTier(userId, tier || 'pro', subscription.id);
+      if (!tier) {
+        this.logger.error(
+          `Unknown price ID ${priceId} for user ${userId} — skipping tier sync to avoid granting unearned access`,
+        );
+        return;
+      }
+      await this.syncUserTier(userId, tier, subscription.id);
     } else if (status === 'past_due' || status === 'unpaid') {
       await client
         .from('user_profiles')
@@ -184,21 +190,35 @@ export class BillingWebhookService {
       const status = subscription.status;
 
       if (status === 'active' || status === 'trialing') {
-        await this.syncUserTier(profile.id, tier || 'pro', subscription.id);
+        if (!tier) {
+          this.logger.error(
+            `Unknown price ID ${priceId} for customer ${customerId} — skipping tier sync`,
+          );
+          return;
+        }
+        await this.syncUserTier(profile.id, tier, subscription.id);
       }
     }
   }
 
   private async tierFromPriceId(priceId: string): Promise<string | null> {
     const client = this.supabase.getClient();
-    const { data } = await client
+
+    // Check monthly price first, then yearly — avoids string interpolation in .or()
+    const { data: monthly } = await client
       .from('subscription_tiers')
       .select('slug')
-      .or(
-        `stripe_price_monthly_id.eq.${priceId},stripe_price_yearly_id.eq.${priceId}`,
-      )
+      .eq('stripe_price_monthly_id', priceId)
       .single();
 
-    return data?.slug || null;
+    if (monthly?.slug) return monthly.slug;
+
+    const { data: yearly } = await client
+      .from('subscription_tiers')
+      .select('slug')
+      .eq('stripe_price_yearly_id', priceId)
+      .single();
+
+    return yearly?.slug || null;
   }
 }
