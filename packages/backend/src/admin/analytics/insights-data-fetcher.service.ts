@@ -9,6 +9,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PaywallAnalyticsService } from './paywall-analytics.service';
 import { InsightsSupabaseQueriesService } from './insights-supabase-queries.service';
 import { OverviewAnalyticsService } from '../../user-analytics/overview-analytics.service';
@@ -16,13 +17,18 @@ import { JourneyAnalyticsService } from '../../user-analytics/journey-analytics.
 import { RetentionAnalyticsService } from '../../user-analytics/retention-analytics.service';
 import { AcquisitionAnalyticsService } from '../../user-analytics/acquisition-analytics.service';
 import { ConversionAnalyticsService } from '../../user-analytics/conversion-analytics.service';
-import { InsightsDataSnapshot, GrowthProgress } from './ai-insights.types';
+import {
+  InsightsDataSnapshot,
+  GrowthProgress,
+  BlogPostMetadata,
+} from './ai-insights.types';
 
 @Injectable()
 export class InsightsDataFetcherService {
   private readonly logger = new Logger(InsightsDataFetcherService.name);
 
   constructor(
+    private readonly config: ConfigService,
     private readonly queries: InsightsSupabaseQueriesService,
     private readonly paywallAnalytics: PaywallAnalyticsService,
     private readonly overview: OverviewAnalyticsService,
@@ -66,13 +72,14 @@ export class InsightsDataFetcherService {
       this.queries.fetchUserAggregates(startIso),
     ]);
 
-    // User analytics — isolated so failures don't block core data
+    // User analytics + blog metadata — isolated so failures don't block core data
     const analytics = await Promise.allSettled([
       this.overview.getOverview(days, {}),
       this.journeys.getJourneys(days, {}),
       this.retention.getRetention(days, {}),
       this.acquisition.getAcquisition(days, {}),
       this.conversion.getConversion(days, {}),
+      this.fetchBlogMetadata(),
     ]);
 
     return {
@@ -89,7 +96,32 @@ export class InsightsDataFetcherService {
       retention: this.extractResult(analytics[2], 'retention'),
       acquisition: this.extractResult(analytics[3], 'acquisition'),
       conversion: this.extractResult(analytics[4], 'conversion'),
+      blogPosts: this.extractBlogResult(analytics[5]),
     };
+  }
+
+  private async fetchBlogMetadata(): Promise<BlogPostMetadata[]> {
+    const frontendUrl = this.config.get<string>('FRONTEND_URL');
+    if (!frontendUrl) return [];
+
+    const res = await fetch(`${frontendUrl}/api/blog/metadata`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`Blog metadata HTTP ${res.status}`);
+    return res.json();
+  }
+
+  private extractBlogResult(
+    result: PromiseSettledResult<unknown>,
+  ): BlogPostMetadata[] {
+    if (result.status === 'fulfilled') {
+      return result.value as BlogPostMetadata[];
+    }
+    this.logger.warn(
+      '[InsightsDataFetcher] blog metadata fetch failed — omitting from prompt',
+      result.reason,
+    );
+    return [];
   }
 
   private extractResult(

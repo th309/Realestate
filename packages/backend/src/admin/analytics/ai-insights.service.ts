@@ -109,6 +109,7 @@ export class AiInsightsService {
       paidUsers: userAggregates.paidUsers,
       activeUsers30d: userAggregates.activeUsers30d,
       hasAnyRealRevenue: (revenueData.estimatedMrr || 0) > 0,
+      blogPosts: snapshot.blogPosts,
     });
 
     const targetDateLabel = gp.goal.targetDate

@@ -82,6 +82,8 @@ export interface InsightsDataSnapshot {
   acquisition: Record<string, unknown> | null;
   /** Funnel and upgrade path data from ConversionAnalyticsService */
   conversion: Record<string, unknown> | null;
+  /** Published blog post metadata from frontend */
+  blogPosts: BlogPostMetadata[];
 }
 
 export interface RevenueSnapshot {
@@ -121,6 +123,17 @@ export interface UserAggregates {
   recentSignups30d: number;
   activeUsers30d: number;
   paidUsers: number;
+}
+
+export interface BlogPostMetadata {
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+  category: string;
+  targetKeyword: string;
+  tags: string[];
+  readingTime: string;
 }
 
 export interface ChatMessage {
