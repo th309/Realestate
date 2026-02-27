@@ -104,3 +104,22 @@
 - Immediately check: what is the actual value of `SUPABASE_WEBHOOK_SECRET` in Railway?
 - See `v1,whsec_...` — comma is the invalid character
 - Fix: strip the `v1,` prefix. Done.
+
+## Railway Monorepo Deployment: railway.json Overrides Dashboard Settings
+
+**Date:** 2026-02-27
+**Context:** Backend deploy failed with `packages/quinn-widget/package.json: not found`. The Dockerfile's COPY command couldn't find a file that existed in git. Root cause: `packages/backend/railway.json` caused Railway to set `root directory as 'packages/backend'`, limiting the Docker build context to that subdirectory — sibling packages were invisible. Previous COPY steps succeeded only from stale Docker layer cache.
+
+**The cascade:**
+
+1. Removed railway.json's root directory override → Railway fell back to Railpack (auto-builder) instead of Dockerfile
+2. Railpack tried to build entire monorepo, frontend OOM'd at 733MB
+3. Set Dockerfile builder in dashboard → build succeeded but wrong start command
+4. Railpack auto-detection had left `node dist/main.js` as custom start command, overriding Dockerfile's `CMD ["node", "packages/backend/dist/main.js"]`
+
+**Rules:**
+
+1. **Never put `railway.json` in a subdirectory for monorepo services.** It overrides the dashboard root directory setting, limiting Docker build context to that subdirectory.
+2. **Set an explicit Custom Start Command for backend services in Railway.** Railway may not respect the Dockerfile's CMD if a previous Railpack build cached a start command. Backend needs `node packages/backend/dist/main.js`. Frontend works without a custom start command (Dockerfile CMD is respected).
+3. **For monorepo Dockerfile builds, set ALL config in the Railway dashboard** — Builder: Dockerfile, Dockerfile Path, and Custom Start Command matching the Dockerfile's CMD.
+4. **When debugging Docker COPY failures, check what the build context actually is.** The `root directory set as '...'` line in Railway build logs tells you exactly what Docker can see.

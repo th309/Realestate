@@ -6,11 +6,13 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  OutcomeGeneratorService,
+import { OutcomeGeneratorService } from '../../../backtest/outcome-generator.service';
+import { OutcomeDataSourceService } from '../../../backtest/outcome-data-source.service';
+import { OutcomeBenchmarkService } from '../../../backtest/outcome-benchmark.service';
+import type {
   OutcomeRecord,
   OutcomeMetrics,
-} from '../../../backtest/outcome-generator.service';
+} from '../../../backtest/outcome-generator.types';
 import { SupabaseService } from '../../../../supabase/supabase.service';
 
 describe('OutcomeGeneratorService', () => {
@@ -25,6 +27,8 @@ describe('OutcomeGeneratorService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OutcomeGeneratorService,
+        OutcomeDataSourceService,
+        OutcomeBenchmarkService,
         { provide: SupabaseService, useValue: mockSupabaseService },
       ],
     }).compile();
@@ -49,7 +53,10 @@ describe('OutcomeGeneratorService', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             single: jest.fn().mockResolvedValue({
-              data: config.score !== undefined ? { homeready_score: config.score } : null,
+              data:
+                config.score !== undefined
+                  ? { homeready_score: config.score }
+                  : null,
               error: null,
             }),
             not: jest.fn().mockReturnThis(),
@@ -474,7 +481,12 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('metro-123', 'metro', 'markethealth', '2022-01-01');
+      await service.generateOutcomes(
+        'metro-123',
+        'metro',
+        'markethealth',
+        '2022-01-01',
+      );
 
       expect(selectCalls).toContain('market_health_score');
     });
@@ -508,7 +520,12 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('metro-123', 'metro', 'homeready', '2022-01-01');
+      await service.generateOutcomes(
+        'metro-123',
+        'metro',
+        'homeready',
+        '2022-01-01',
+      );
 
       expect(selectCalls).toContain('homeready_score');
     });
@@ -542,7 +559,12 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('metro-123', 'metro', 'investoredge', '2022-01-01');
+      await service.generateOutcomes(
+        'metro-123',
+        'metro',
+        'investoredge',
+        '2022-01-01',
+      );
 
       expect(selectCalls).toContain('investoredge_score');
     });
@@ -562,7 +584,10 @@ describe('OutcomeGeneratorService', () => {
             return {
               select: jest.fn().mockReturnThis(),
               eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({ data: { homeready_score: 70 }, error: null }),
+              single: jest.fn().mockResolvedValue({
+                data: { homeready_score: 70 },
+                error: null,
+              }),
             };
           }
           // Zillow tables - return empty to stop processing
@@ -579,28 +604,46 @@ describe('OutcomeGeneratorService', () => {
     }
 
     it('uses zillow_state for state geography', async () => {
-      const { mockClient, tablesQueried } = createGeoMappingMock('zillow_state');
+      const { mockClient, tablesQueried } =
+        createGeoMappingMock('zillow_state');
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('state-123', 'state', 'homeready', '2022-01-01');
+      await service.generateOutcomes(
+        'state-123',
+        'state',
+        'homeready',
+        '2022-01-01',
+      );
 
       expect(tablesQueried).toContain('zillow_state');
     });
 
     it('uses zillow_metro for metro geography', async () => {
-      const { mockClient, tablesQueried } = createGeoMappingMock('zillow_metro');
+      const { mockClient, tablesQueried } =
+        createGeoMappingMock('zillow_metro');
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('metro-123', 'metro', 'homeready', '2022-01-01');
+      await service.generateOutcomes(
+        'metro-123',
+        'metro',
+        'homeready',
+        '2022-01-01',
+      );
 
       expect(tablesQueried).toContain('zillow_metro');
     });
 
     it('uses zillow_county for county geography', async () => {
-      const { mockClient, tablesQueried } = createGeoMappingMock('zillow_county');
+      const { mockClient, tablesQueried } =
+        createGeoMappingMock('zillow_county');
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('county-123', 'county', 'homeready', '2022-01-01');
+      await service.generateOutcomes(
+        'county-123',
+        'county',
+        'homeready',
+        '2022-01-01',
+      );
 
       expect(tablesQueried).toContain('zillow_county');
     });
@@ -609,7 +652,12 @@ describe('OutcomeGeneratorService', () => {
       const { mockClient, tablesQueried } = createGeoMappingMock('zillow_zip');
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateOutcomes('zip-123', 'zip', 'homeready', '2022-01-01');
+      await service.generateOutcomes(
+        'zip-123',
+        'zip',
+        'homeready',
+        '2022-01-01',
+      );
 
       expect(tablesQueried).toContain('zillow_zip');
     });
@@ -652,10 +700,19 @@ describe('OutcomeGeneratorService', () => {
     }
 
     it('processes multiple geographies', async () => {
-      const mockClient = createBatchMock([{ id: 'geo-1' }, { id: 'geo-2' }, { id: 'geo-3' }]);
+      const mockClient = createBatchMock([
+        { id: 'geo-1' },
+        { id: 'geo-2' },
+        { id: 'geo-3' },
+      ]);
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      const results = await service.generateBatchOutcomes('metro', 'homeready', '2022-01-01', 10);
+      const results = await service.generateBatchOutcomes(
+        'metro',
+        'homeready',
+        '2022-01-01',
+        10,
+      );
 
       expect(results.length).toBe(3);
     });
@@ -670,16 +727,26 @@ describe('OutcomeGeneratorService', () => {
               eq: jest.fn().mockReturnThis(),
               not: jest.fn().mockReturnThis(),
               limit: jest.fn().mockResolvedValue({
-                data: [{ geography_id: 'geo-1' }, { geography_id: 'geo-2' }, { geography_id: 'geo-3' }],
+                data: [
+                  { geography_id: 'geo-1' },
+                  { geography_id: 'geo-2' },
+                  { geography_id: 'geo-3' },
+                ],
                 error: null,
               }),
               single: jest.fn().mockImplementation(() => {
                 geoCallCount++;
                 // Fail on second geography
                 if (geoCallCount === 2) {
-                  return Promise.resolve({ data: null, error: { message: 'Database error' } });
+                  return Promise.resolve({
+                    data: null,
+                    error: { message: 'Database error' },
+                  });
                 }
-                return Promise.resolve({ data: { homeready_score: 70 }, error: null });
+                return Promise.resolve({
+                  data: { homeready_score: 70 },
+                  error: null,
+                });
               }),
             };
           }
@@ -694,7 +761,12 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      const results = await service.generateBatchOutcomes('metro', 'homeready', '2022-01-01', 10);
+      const results = await service.generateBatchOutcomes(
+        'metro',
+        'homeready',
+        '2022-01-01',
+        10,
+      );
 
       // Should have 3 results (errors are caught, empty results still returned)
       expect(results.length).toBe(3);
@@ -733,7 +805,12 @@ describe('OutcomeGeneratorService', () => {
       };
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
-      await service.generateBatchOutcomes('metro', 'homeready', '2022-01-01', 50);
+      await service.generateBatchOutcomes(
+        'metro',
+        'homeready',
+        '2022-01-01',
+        50,
+      );
 
       // Verify limit was called with 50
       expect(limitCalled).toContain(50);
@@ -949,7 +1026,12 @@ describe('OutcomeGeneratorService', () => {
       mockSupabaseService.getClient.mockReturnValue(mockClient as any);
 
       const today = new Date().toISOString().split('T')[0];
-      const result = await service.generateOutcomes('metro-123', 'metro', 'homeready', today);
+      const result = await service.generateOutcomes(
+        'metro-123',
+        'metro',
+        'homeready',
+        today,
+      );
 
       expect(result.scoreDate).toBe(today);
       // No historical data means no outcomes can be calculated

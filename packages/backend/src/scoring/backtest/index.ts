@@ -5,7 +5,14 @@
  */
 
 export { OutcomeGeneratorService } from './outcome-generator.service';
-export type { OutcomeMetrics, OutcomeRecord } from './outcome-generator.service';
+export { OutcomeDataSourceService } from './outcome-data-source.service';
+export { OutcomeBenchmarkService } from './outcome-benchmark.service';
+export type {
+  OutcomeMetrics,
+  OutcomeRecord,
+  BenchmarkReturns,
+  HistoricalDataPoint,
+} from './outcome-generator.types';
 
 export { BacktestRunnerService } from './backtest-runner.service';
 export type { BacktestParams, BacktestResult } from './backtest-runner.service';

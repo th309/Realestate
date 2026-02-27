@@ -26,6 +26,8 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 
 // Import backtest services (for performance tracking)
 import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
+import { OutcomeDataSourceService } from './backtest/outcome-data-source.service';
+import { OutcomeBenchmarkService } from './backtest/outcome-benchmark.service';
 import { BacktestRunnerService } from './backtest/backtest-runner.service';
 import { ConfidenceCalculatorService } from './backtest/confidence-calculator.service';
 import { AlertService } from './backtest/alert.service';
@@ -52,7 +54,12 @@ import { InheritanceService } from './inheritance.service';
 import { PerformanceTrackingService } from './performance-tracking.service';
 
 @Module({
-  imports: [SupabaseModule, ConfigModule, FeaturesModule, MetricResolutionModule],
+  imports: [
+    SupabaseModule,
+    ConfigModule,
+    FeaturesModule,
+    MetricResolutionModule,
+  ],
   providers: [
     // Core scoring service (simplified z-score formula system)
     ScoringService,
@@ -67,6 +74,8 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     PerformanceTrackingService,
 
     // Backtest services (for performance tracking per spec)
+    OutcomeDataSourceService,
+    OutcomeBenchmarkService,
     OutcomeGeneratorService,
     BacktestRunnerService,
     ConfidenceCalculatorService,

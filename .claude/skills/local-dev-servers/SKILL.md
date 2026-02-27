@@ -1,6 +1,6 @@
 ---
 name: local-dev-servers
-description: Use when starting, restarting, or troubleshooting local development servers, when ports 3000 or 3001 are blocked or unresponsive, or after .env/config/dependency changes that require a server restart
+description: Use when starting, restarting, monitoring, or troubleshooting local development servers, when ports 3000 or 3001 are blocked or unresponsive, or after .env/config/dependency changes that require a server restart
 ---
 
 # Local Dev Server Management
@@ -68,6 +68,55 @@ taskkill //IM node.exe //F 2>/dev/null; sleep 2; cd D:/projects/rei-platform && 
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null && echo " Frontend OK" || echo " Frontend DOWN"
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/docs 2>/dev/null && echo " Backend OK" || echo " Backend DOWN"
 ```
+
+## Continuous Monitoring (Keep Servers Alive)
+
+**Always start monitoring after launching servers.** This polls both servers every 15 seconds and auto-restarts any that go down.
+
+After starting servers (via `dev:fresh`, manual start, or single server), launch this monitor in the background:
+
+```bash
+# Run with run_in_background: true
+while true; do
+  fe=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null)
+  be=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/docs 2>/dev/null)
+  ts=$(date +"%H:%M:%S")
+
+  if [ "$fe" = "200" ] && [ "$be" = "200" ]; then
+    echo "[$ts] OK | Frontend:3000=UP | Backend:3001=UP"
+  else
+    if [ "$fe" != "200" ]; then
+      echo "[$ts] ALERT | Frontend:3000=DOWN (HTTP $fe) - RESTARTING..."
+      for pid in $(netstat -ano 2>/dev/null | grep ':3000 ' | grep LISTENING | awk '{print $5}' | sort -u); do
+        [ -n "$pid" ] && [ "$pid" != "0" ] && taskkill //PID "$pid" //F 2>/dev/null
+      done
+      cd D:/projects/rei-platform && nohup npm run dev -w web > /dev/null 2>&1 &
+      echo "[$ts] Frontend restart triggered"
+    fi
+    if [ "$be" != "200" ]; then
+      echo "[$ts] ALERT | Backend:3001=DOWN (HTTP $be) - RESTARTING..."
+      for pid in $(netstat -ano 2>/dev/null | grep ':3001 ' | grep LISTENING | awk '{print $5}' | sort -u); do
+        [ -n "$pid" ] && [ "$pid" != "0" ] && taskkill //PID "$pid" //F 2>/dev/null
+      done
+      cd D:/projects/rei-platform && nohup npm run start:dev -w backend > /dev/null 2>&1 &
+      echo "[$ts] Backend restart triggered"
+    fi
+  fi
+
+  sleep 15
+done
+```
+
+**Usage notes:**
+- Launch with `run_in_background: true` — this is a long-running loop
+- Wait ~15s after initial server start before launching the monitor (give servers time to boot)
+- The monitor clears the port before restarting to avoid EADDRINUSE
+- Check monitor output with `tail` on the output file to see recent status
+
+**When to use monitoring:**
+- User says "start servers", "keep servers up", "monitor servers"
+- After any server start — always attach monitoring automatically
+- User reports intermittent crashes or flaky dev environment
 
 ## When Restart Is Needed
 

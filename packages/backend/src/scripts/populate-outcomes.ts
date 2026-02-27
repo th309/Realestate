@@ -26,7 +26,7 @@ import { AppModule } from '../app.module';
 import { OutcomeGeneratorService } from '../scoring/backtest/outcome-generator.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import type { GeographyType, ScoreType } from '../scoring/scoring.types';
-import type { OutcomeRecord } from '../scoring/backtest/outcome-generator.service';
+import type { OutcomeRecord } from '../scoring/backtest/outcome-generator.types';
 
 interface CliArgs {
   scoreDate: string | null;
@@ -91,12 +91,20 @@ function formatElapsed(ms: number): string {
 async function main() {
   const args = parseArgs();
 
-  console.log('╔══════════════════════════════════════════════════════════════════╗');
-  console.log('║  PROPERTYIQ OUTCOME POPULATION                                    ║');
-  console.log('╚══════════════════════════════════════════════════════════════════╝');
+  console.log(
+    '╔══════════════════════════════════════════════════════════════════╗',
+  );
+  console.log(
+    '║  PROPERTYIQ OUTCOME POPULATION                                    ║',
+  );
+  console.log(
+    '╚══════════════════════════════════════════════════════════════════╝',
+  );
   console.log('');
   console.log(`  Score Date:   ${args.scoreDate || 'All available dates'}`);
-  console.log(`  Date Range:   ${args.startDate || 'earliest'} to ${args.endDate || '1Y ago'}`);
+  console.log(
+    `  Date Range:   ${args.startDate || 'earliest'} to ${args.endDate || '1Y ago'}`,
+  );
   console.log(`  Geography:    ${args.geography}`);
   console.log(`  Score Type:   ${args.scoreType}`);
   console.log(`  Batch Size:   ${args.batchSize}`);
@@ -146,11 +154,13 @@ async function main() {
     }
 
     // Get unique dates
-    const uniqueDates = [...new Set(dates?.map((d: { score_date: string }) => d.score_date) || [])];
+    const uniqueDates = [
+      ...new Set(dates?.map((d: { score_date: string }) => d.score_date) || []),
+    ];
 
     // Filter by start date if specified
     if (args.startDate) {
-      scoreDates = uniqueDates.filter(d => d >= args.startDate!);
+      scoreDates = uniqueDates.filter((d) => d >= args.startDate!);
     } else {
       scoreDates = uniqueDates;
     }
@@ -179,9 +189,13 @@ async function main() {
     process.exit(0);
   }
 
-  console.log('══════════════════════════════════════════════════════════════════');
+  console.log(
+    '══════════════════════════════════════════════════════════════════',
+  );
   console.log('  STARTING OUTCOME POPULATION');
-  console.log('══════════════════════════════════════════════════════════════════');
+  console.log(
+    '══════════════════════════════════════════════════════════════════',
+  );
   console.log('');
 
   const overallStartTime = Date.now();
@@ -199,17 +213,28 @@ async function main() {
     for (const geography of geographies) {
       for (const scoreType of scoreTypes) {
         try {
-          // Get all geographies with scores at this date
-          const { data: scores, error: scoresError } = await client
-            .from('propertyiq_scores')
-            .select('location_id, score')
-            .eq('geography', geography)
-            .eq('score_type', scoreType)
-            .eq('score_date', scoreDate)
-            .not('score', 'is', null)
-            .limit(args.batchSize * 10); // Get more to process in batches
+          // Get all geographies with scores at this date (paginated)
+          const scores: Array<{ location_id: string; score: number }> = [];
+          let rangeStart = 0;
+          const pageSize = 1000;
 
-          if (scoresError || !scores) {
+          while (true) {
+            const { data: page, error: pageError } = await client
+              .from('propertyiq_scores')
+              .select('location_id, score')
+              .eq('geography', geography)
+              .eq('score_type', scoreType)
+              .eq('score_date', scoreDate)
+              .not('score', 'is', null)
+              .range(rangeStart, rangeStart + pageSize - 1);
+
+            if (pageError || !page || page.length === 0) break;
+            scores.push(...page);
+            if (page.length < pageSize) break;
+            rangeStart += pageSize;
+          }
+
+          if (scores.length === 0) {
             console.log(`    ${geography}/${scoreType}: No scores found`);
             continue;
           }
@@ -224,12 +249,13 @@ async function main() {
 
             for (const score of batch) {
               try {
-                const outcome = await outcomeService.generateOutcomesWithBenchmarks(
-                  score.location_id,
-                  geography as GeographyType,
-                  scoreType,
-                  scoreDate,
-                );
+                const outcome =
+                  await outcomeService.generateOutcomesWithBenchmarks(
+                    score.location_id,
+                    geography,
+                    scoreType,
+                    scoreDate,
+                  );
                 outcome.scoreValue = score.score;
                 outcomes.push(outcome);
                 batchProcessed++;
@@ -248,7 +274,9 @@ async function main() {
           totalErrors += batchErrors;
 
           if (batchProcessed > 0) {
-            console.log(`    ${geography}/${scoreType}: ${batchProcessed} outcomes (${batchErrors} errors)`);
+            console.log(
+              `    ${geography}/${scoreType}: ${batchProcessed} outcomes (${batchErrors} errors)`,
+            );
           }
         } catch (err) {
           console.error(`    ${geography}/${scoreType}: Error - ${err}`);
@@ -264,9 +292,13 @@ async function main() {
 
   const totalElapsed = formatElapsed(Date.now() - overallStartTime);
 
-  console.log('══════════════════════════════════════════════════════════════════');
+  console.log(
+    '══════════════════════════════════════════════════════════════════',
+  );
   console.log('  OUTCOME POPULATION COMPLETE');
-  console.log('══════════════════════════════════════════════════════════════════');
+  console.log(
+    '══════════════════════════════════════════════════════════════════',
+  );
   console.log('');
   console.log(`  Total dates processed:    ${datesProcessed}`);
   console.log(`  Total outcomes generated: ${totalProcessed.toLocaleString()}`);
@@ -277,7 +309,12 @@ async function main() {
   // Show summary of outcomes
   console.log('  Outcomes by horizon availability:');
   for (const horizon of ['1y', '3y', '5y'] as const) {
-    const colName = horizon === '1y' ? 'outcome_1y_value' : horizon === '3y' ? 'outcome_3y_value' : 'outcome_5y_value';
+    const colName =
+      horizon === '1y'
+        ? 'outcome_1y_value'
+        : horizon === '3y'
+          ? 'outcome_3y_value'
+          : 'outcome_5y_value';
     const { count } = await client
       .from('propertyiq_backtest_outcomes')
       .select('*', { count: 'exact', head: true })
@@ -291,7 +328,9 @@ async function main() {
     .from('propertyiq_backtest_outcomes')
     .select('*', { count: 'exact', head: true })
     .not('excess_vs_state_1y', 'is', null);
-  console.log(`    With excess returns: ${withBenchmarks?.toLocaleString() || 0} records`);
+  console.log(
+    `    With excess returns: ${withBenchmarks?.toLocaleString() || 0} records`,
+  );
 
   console.log('');
 

@@ -5,9 +5,9 @@
  * Includes trendline to visualize correlation.
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from "react";
 import {
   ScatterChart,
   Scatter,
@@ -17,8 +17,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-} from 'recharts';
-import { fetchAPI } from '@/lib/data';
+} from "recharts";
+import { fetchAPI } from "@/lib/data";
 
 interface ScatterPoint {
   geographyId: string;
@@ -34,7 +34,7 @@ interface ScatterPoint {
 interface Props {
   scoreType?: string;
   geography?: string;
-  horizon: '1y' | '3y';
+  horizon: "1y" | "3y";
 }
 
 export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
@@ -49,9 +49,9 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
 
       try {
         const params = new URLSearchParams();
-        if (scoreType) params.append('score_type', scoreType);
-        if (geography) params.append('geography', geography);
-        params.append('limit', '500');
+        if (scoreType) params.append("score_type", scoreType);
+        if (geography) params.append("geography", geography);
+        params.append("limit", "2000");
 
         const queryString = params.toString();
         const endpoint = `/api/admin/scores/validation/scatter?${queryString}`;
@@ -59,7 +59,9 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
         const result = await fetchAPI<ScatterPoint[]>(endpoint);
         setData(result || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch scatter data');
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch scatter data",
+        );
       } finally {
         setLoading(false);
       }
@@ -72,12 +74,13 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
   const chartData = useMemo(() => {
     return data
       .filter((p) => {
-        const returnValue = horizon === '1y' ? p.excessVsState1y : p.excessVsState3y;
+        const returnValue =
+          horizon === "1y" ? p.excessVsState1y : p.excessVsState3y;
         return p.score != null && returnValue != null;
       })
       .map((p) => ({
         x: p.score,
-        y: horizon === '1y' ? p.excessVsState1y : p.excessVsState3y,
+        y: horizon === "1y" ? p.excessVsState1y : p.excessVsState3y,
         id: p.geographyId,
         name: p.geographyName,
         date: p.scoreDate,
@@ -99,7 +102,10 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
 
     // Calculate R-squared
     const meanY = sumY / n;
-    const ssTotal = chartData.reduce((a, p) => a + Math.pow((p.y ?? 0) - meanY, 2), 0);
+    const ssTotal = chartData.reduce(
+      (a, p) => a + Math.pow((p.y ?? 0) - meanY, 2),
+      0,
+    );
     const ssResidual = chartData.reduce((a, p) => {
       const predicted = slope * p.x + intercept;
       return a + Math.pow((p.y ?? 0) - predicted, 2);
@@ -121,7 +127,9 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
   if (error) {
     return (
       <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-on-surface mb-2">Score vs Return</h3>
+        <h3 className="text-sm font-semibold text-on-surface mb-2">
+          Score vs Return
+        </h3>
         <p className="text-sm text-error">{error}</p>
       </div>
     );
@@ -130,8 +138,12 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
   if (chartData.length === 0) {
     return (
       <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-on-surface mb-2">Score vs Return</h3>
-        <p className="text-sm text-on-surface-variant">No scatter data available.</p>
+        <h3 className="text-sm font-semibold text-on-surface mb-2">
+          Score vs Return
+        </h3>
+        <p className="text-sm text-on-surface-variant">
+          No scatter data available.
+        </p>
       </div>
     );
   }
@@ -141,7 +153,7 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-on-surface">
-            Score vs Excess Return ({horizon === '1y' ? '1-Year' : '3-Year'})
+            Score vs Excess Return ({horizon === "1y" ? "1-Year" : "3-Year"})
           </h3>
           <p className="text-xs text-on-surface-variant">
             Each point is a location's score vs its excess return
@@ -150,7 +162,9 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
         {trendline && (
           <div className="text-right">
             <p className="text-xs text-on-surface-variant">R-squared</p>
-            <p className={`text-lg font-semibold ${trendline.rSquared > 0.1 ? 'text-green-600' : 'text-amber-600'}`}>
+            <p
+              className={`text-lg font-semibold ${trendline.rSquared > 0.1 ? "text-green-600" : "text-amber-600"}`}
+            >
               {trendline.rSquared.toFixed(3)}
             </p>
           </div>
@@ -160,43 +174,56 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.5} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--outline-variant)"
+              opacity={0.5}
+            />
             <XAxis
               type="number"
               dataKey="x"
               name="Score"
               domain={[0, 100]}
-              tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
-              label={{ value: 'Score', position: 'bottom', fontSize: 11, fill: 'var(--on-surface-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
+              label={{
+                value: "Score",
+                position: "bottom",
+                fontSize: 11,
+                fill: "var(--on-surface-variant)",
+              }}
             />
             <YAxis
               type="number"
               dataKey="y"
               name="Excess Return"
-              tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: 'var(--outline-variant)' }}
+              axisLine={{ stroke: "var(--outline-variant)" }}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'var(--surface-container)',
-                border: '1px solid var(--outline-variant)',
-                borderRadius: '8px',
-                fontSize: '12px',
+                backgroundColor: "var(--surface-container)",
+                border: "1px solid var(--outline-variant)",
+                borderRadius: "8px",
+                fontSize: "12px",
               }}
               formatter={(value: number, name: string) => {
-                if (name === 'Score') return [value.toFixed(1), name];
-                return [`${value?.toFixed(2)}%`, 'Excess Return'];
+                if (name === "Score") return [value.toFixed(1), name];
+                return [`${value?.toFixed(2)}%`, "Excess Return"];
               }}
               labelFormatter={(_, payload) => {
                 const item = payload?.[0]?.payload;
-                return item ? `${item.name} (${item.date})` : '';
+                return item ? `${item.name} (${item.date})` : "";
               }}
             />
-            <ReferenceLine y={0} stroke="var(--outline)" strokeDasharray="3 3" />
+            <ReferenceLine
+              y={0}
+              stroke="var(--outline)"
+              strokeDasharray="3 3"
+            />
             <Scatter
               name="Locations"
               data={chartData}
@@ -226,7 +253,10 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
           <span>Locations ({chartData.length})</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-0.5 bg-[#ef4444]" style={{ borderStyle: 'dashed' }} />
+          <div
+            className="w-6 h-0.5 bg-[#ef4444]"
+            style={{ borderStyle: "dashed" }}
+          />
           <span>Trendline</span>
         </div>
       </div>
