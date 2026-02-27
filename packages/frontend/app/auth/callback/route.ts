@@ -1,18 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sendWelcomeEmail } from "@/app/api/auth/send-welcome-email";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const code = searchParams.get('code');
-  const type = searchParams.get('type');
-  const next = searchParams.get('next') ?? '/map';
-  const tosAccepted = searchParams.get('tos') === '1';
+  const code = searchParams.get("code");
+  const type = searchParams.get("type");
+  const next = searchParams.get("next") ?? "/map";
+  const tosAccepted = searchParams.get("tos") === "1";
 
   // Use forwarded headers to get the real external origin.
   // Behind reverse proxies (Railway, etc.), request.nextUrl.origin
   // resolves to the container's internal address (e.g. 0.0.0.0:8080).
-  const forwardedHost = request.headers.get('x-forwarded-host');
-  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
   const origin = forwardedHost
     ? `${forwardedProto}://${forwardedHost}`
     : request.nextUrl.origin;
@@ -22,12 +23,32 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && data.user) {
+      // Check if this is a first-time signup (no existing profile row)
+      const { data: existingProfile } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("id", data.user.id)
+        .single();
+
       // Record ToS acceptance for new signups
       await recordTosAcceptance(supabase, data.user, tosAccepted);
 
-      if (type === 'recovery') {
+      // Send welcome email for first-time signups (non-blocking)
+      if (!existingProfile) {
+        const userName =
+          (data.user.user_metadata?.full_name as string) ||
+          data.user.email?.split("@")[0] ||
+          "there";
+        sendWelcomeEmail({
+          to: data.user.email!,
+          name: userName,
+          loginUrl: `${origin}/map`,
+        });
+      }
+
+      if (type === "recovery") {
         return NextResponse.redirect(
-          `${origin}/account?tab=profile&reset=true`
+          `${origin}/account?tab=profile&reset=true`,
         );
       }
       return NextResponse.redirect(`${origin}${next}`);
@@ -36,7 +57,7 @@ export async function GET(request: NextRequest) {
 
   // Auth code exchange failed or no code provided
   return NextResponse.redirect(
-    `${origin}/auth/sign-in?error=auth_callback_failed`
+    `${origin}/auth/sign-in?error=auth_callback_failed`,
   );
 }
 
@@ -64,16 +85,19 @@ async function recordTosAcceptance(
   try {
     const now = new Date().toISOString();
     const { error } = await supabase
-      .from('user_profiles')
+      .from("user_profiles")
       .upsert(
         { id: user.id, tos_accepted_at: now },
-        { onConflict: 'id', ignoreDuplicates: false },
+        { onConflict: "id", ignoreDuplicates: false },
       );
 
     if (error) {
-      console.error('[auth/callback] Failed to record ToS acceptance:', error.message);
+      console.error(
+        "[auth/callback] Failed to record ToS acceptance:",
+        error.message,
+      );
     }
   } catch (err) {
-    console.error('[auth/callback] Failed to record ToS acceptance:', err);
+    console.error("[auth/callback] Failed to record ToS acceptance:", err);
   }
 }
