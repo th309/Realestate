@@ -73,7 +73,7 @@ export default function Layout({
               style={{ borderTop: "1px solid #e5e5e5" }}
             >
               <Text className="text-xs text-gray-400 m-0 leading-5">
-                PropertyIQ Inc. &bull; Austin, TX
+                PropertyIQ
               </Text>
               {unsubscribeUrl && (
                 <Text className="text-xs text-gray-400 m-0 mt-1">
