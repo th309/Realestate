@@ -39,6 +39,7 @@ import { AnalyticsEventsModule } from './analytics-events/analytics-events.modul
 import { SupportModule } from './support/support.module';
 import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { PricingModule } from './pricing/pricing.module';
+import { UserAnalyticsModule } from './user-analytics/user-analytics.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -83,8 +84,9 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     SupportModule,
     MetricResolutionModule,
     PricingModule,
+    UserAnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
 })
-export class AppModule { }
+export class AppModule {}
