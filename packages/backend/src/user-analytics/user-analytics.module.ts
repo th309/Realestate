@@ -8,6 +8,15 @@ import { EventIngestionController } from './event-ingestion.controller';
 import { EventIngestionService } from './event-ingestion.service';
 import { SessionManagerService } from './session-manager.service';
 import { IdentityStitchingService } from './identity-stitching.service';
+import { OverviewAnalyticsService } from './overview-analytics.service';
+import { OverviewDataFetcherService } from './overview-data-fetcher.service';
+import { JourneyAnalyticsService } from './journey-analytics.service';
+import { RetentionAnalyticsService } from './retention-analytics.service';
+import { AcquisitionAnalyticsService } from './acquisition-analytics.service';
+import { ConversionAnalyticsService } from './conversion-analytics.service';
+import { DailyRollupService } from './daily-rollup.service';
+import { FunnelEngineService } from './funnel-engine.service';
+import { PageClassifierService } from './page-classifier.service';
 
 @Module({
   imports: [
@@ -21,12 +30,28 @@ import { IdentityStitchingService } from './identity-stitching.service';
     EventIngestionService,
     SessionManagerService,
     IdentityStitchingService,
+    OverviewAnalyticsService,
+    OverviewDataFetcherService,
+    JourneyAnalyticsService,
+    RetentionAnalyticsService,
+    AcquisitionAnalyticsService,
+    ConversionAnalyticsService,
+    DailyRollupService,
+    FunnelEngineService,
+    PageClassifierService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [
     EventIngestionService,
     SessionManagerService,
     IdentityStitchingService,
+    OverviewAnalyticsService,
+    JourneyAnalyticsService,
+    RetentionAnalyticsService,
+    AcquisitionAnalyticsService,
+    ConversionAnalyticsService,
+    FunnelEngineService,
+    PageClassifierService,
   ],
 })
 export class UserAnalyticsModule {}
