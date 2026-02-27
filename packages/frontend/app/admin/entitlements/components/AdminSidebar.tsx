@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Layers,
@@ -11,38 +11,40 @@ import {
   BarChart3,
   Zap,
   BookOpen,
-} from 'lucide-react';
+} from "lucide-react";
 
 const NAV_ITEMS = [
   {
-    label: 'Overview',
-    href: '/admin/entitlements',
+    label: "Overview",
+    href: "/admin/entitlements",
     icon: LayoutDashboard,
   },
   {
-    label: 'Configure',
+    label: "Configure",
     items: [
-      { label: 'Tiers', href: '/admin/entitlements/tiers', icon: Layers },
-      { label: 'Trial', href: '/admin/entitlements/trial', icon: Clock },
-      { label: 'Users', href: '/admin/entitlements/users', icon: Users },
+      { label: "Tiers", href: "/admin/entitlements/tiers", icon: Layers },
+      { label: "Trial", href: "/admin/entitlements/trial", icon: Clock },
+      { label: "Users", href: "/admin/entitlements/users", icon: Users },
     ],
   },
   {
-    label: 'Insights',
+    label: "Insights",
+    items: [{ label: "Analytics", href: "/admin/analytics", icon: BarChart3 }],
+  },
+  {
+    label: "Automate",
     items: [
-      { label: 'Analytics', href: '/admin/entitlements/analytics', icon: BarChart3 },
+      { label: "Rules", href: "/admin/entitlements/automations", icon: Zap },
     ],
   },
   {
-    label: 'Automate',
+    label: "Learn",
     items: [
-      { label: 'Rules', href: '/admin/entitlements/automations', icon: Zap },
-    ],
-  },
-  {
-    label: 'Learn',
-    items: [
-      { label: 'Playbook', href: '/admin/entitlements/playbook', icon: BookOpen },
+      {
+        label: "Playbook",
+        href: "/admin/entitlements/playbook",
+        icon: BookOpen,
+      },
     ],
   },
 ];
@@ -62,14 +64,15 @@ export function AdminSidebar() {
       <nav className="flex-1 overflow-y-auto p-2">
         {NAV_ITEMS.map((section, idx) => (
           <div key={idx} className="mb-4">
-            {'href' in section ? (
+            {"href" in section ? (
               <Link
-                href={section.href || '#'}
+                href={section.href || "#"}
                 className={`
                   flex items-center gap-3 px-3 py-2 rounded-lg text-sm
-                  ${pathname === section.href
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-on-surface-variant hover:bg-surface-container-high'
+                  ${
+                    pathname === section.href
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-on-surface-variant hover:bg-surface-container-high"
                   }
                 `}
               >
@@ -88,9 +91,10 @@ export function AdminSidebar() {
                       href={item.href}
                       className={`
                         flex items-center gap-3 px-3 py-2 rounded-lg text-sm
-                        ${pathname === item.href
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-on-surface-variant hover:bg-surface-container-high'
+                        ${
+                          pathname === item.href
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-on-surface-variant hover:bg-surface-container-high"
                         }
                       `}
                     >

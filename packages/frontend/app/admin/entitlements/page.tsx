@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ArrowUpRight,
   Users,
@@ -11,8 +11,8 @@ import {
   AlertCircle,
   Eye,
   MousePointerClick,
-} from 'lucide-react';
-import { fetchAPIRaw } from '@/lib/data';
+} from "lucide-react";
+import { fetchAPIRaw } from "@/lib/data";
 
 interface OverviewStats {
   paywallViews: number;
@@ -71,9 +71,9 @@ export default function EntitlementsOverviewPage() {
       setError(null);
 
       const [analyticsRes, trialStatsRes, userStatsRes] = await Promise.all([
-        fetchAPIRaw('/api/admin/analytics/paywall?days=30'),
-        fetchAPIRaw('/api/admin/trial/stats'),
-        fetchAPIRaw('/api/admin/users/stats'),
+        fetchAPIRaw("/api/admin/analytics/paywall?days=30"),
+        fetchAPIRaw("/api/admin/trial/stats"),
+        fetchAPIRaw("/api/admin/users/stats"),
       ]);
 
       let paywallViews = 0;
@@ -115,8 +115,8 @@ export default function EntitlementsOverviewPage() {
         expiringSoon,
       });
     } catch (err) {
-      console.error('Failed to fetch overview stats:', err);
-      setError('Failed to load overview data');
+      console.error("Failed to fetch overview stats:", err);
+      setError("Failed to load overview data");
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,9 @@ export default function EntitlementsOverviewPage() {
           className="p-2 rounded-lg hover:bg-surface-container-high transition-colors"
           title="Refresh data"
         >
-          <RefreshCw className={`w-4 h-4 text-on-surface-variant ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-4 h-4 text-on-surface-variant ${loading ? "animate-spin" : ""}`}
+          />
         </button>
       </div>
 
@@ -156,37 +158,37 @@ export default function EntitlementsOverviewPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <StatCard
           label="Paywall Views"
-          value={stats?.paywallViews.toLocaleString() ?? '0'}
+          value={stats?.paywallViews.toLocaleString() ?? "0"}
           icon={Eye}
           loading={loading}
         />
         <StatCard
           label="Upgrade Clicks"
-          value={stats?.upgradeClicks.toLocaleString() ?? '0'}
+          value={stats?.upgradeClicks.toLocaleString() ?? "0"}
           icon={MousePointerClick}
           loading={loading}
         />
         <StatCard
           label="Conversions"
-          value={stats?.conversions.toLocaleString() ?? '0'}
+          value={stats?.conversions.toLocaleString() ?? "0"}
           icon={DollarSign}
           loading={loading}
         />
         <StatCard
           label="Active Trials"
-          value={stats?.activeTrials.toLocaleString() ?? '0'}
+          value={stats?.activeTrials.toLocaleString() ?? "0"}
           icon={TrendingUp}
           loading={loading}
         />
         <StatCard
           label="Total Users"
-          value={stats?.totalUsers.toLocaleString() ?? '0'}
+          value={stats?.totalUsers.toLocaleString() ?? "0"}
           icon={Users}
           loading={loading}
         />
         <StatCard
           label="Expiring Soon"
-          value={stats?.expiringSoon.toLocaleString() ?? '0'}
+          value={stats?.expiringSoon.toLocaleString() ?? "0"}
           icon={AlertCircle}
           loading={loading}
         />
@@ -195,31 +197,39 @@ export default function EntitlementsOverviewPage() {
       {/* Quick Stats */}
       {stats && stats.paywallViews > 0 && (
         <div className="bg-surface-container rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-medium text-on-surface mb-4">Quick Insights</h2>
+          <h2 className="text-lg font-medium text-on-surface mb-4">
+            Quick Insights
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-surface-container-high rounded-lg">
               <div className="text-2xl font-semibold text-on-surface">
                 {stats.paywallViews > 0
                   ? `${((stats.upgradeClicks / stats.paywallViews) * 100).toFixed(1)}%`
-                  : '0%'}
+                  : "0%"}
               </div>
-              <div className="text-sm text-on-surface-variant">Click-through Rate</div>
+              <div className="text-sm text-on-surface-variant">
+                Click-through Rate
+              </div>
             </div>
             <div className="p-4 bg-surface-container-high rounded-lg">
               <div className="text-2xl font-semibold text-on-surface">
                 {stats.upgradeClicks > 0
                   ? `${((stats.conversions / stats.upgradeClicks) * 100).toFixed(1)}%`
-                  : '0%'}
+                  : "0%"}
               </div>
-              <div className="text-sm text-on-surface-variant">Click-to-Convert Rate</div>
+              <div className="text-sm text-on-surface-variant">
+                Click-to-Convert Rate
+              </div>
             </div>
             <div className="p-4 bg-surface-container-high rounded-lg">
               <div className="text-2xl font-semibold text-on-surface">
                 {stats.paywallViews > 0
                   ? `${((stats.conversions / stats.paywallViews) * 100).toFixed(1)}%`
-                  : '0%'}
+                  : "0%"}
               </div>
-              <div className="text-sm text-on-surface-variant">Overall Conversion</div>
+              <div className="text-sm text-on-surface-variant">
+                Overall Conversion
+              </div>
             </div>
           </div>
         </div>
@@ -228,10 +238,26 @@ export default function EntitlementsOverviewPage() {
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Configure Tiers', href: '/admin/entitlements/tiers', desc: 'Manage feature access by tier' },
-          { label: 'View Analytics', href: '/admin/entitlements/analytics', desc: 'Detailed conversion metrics' },
-          { label: 'Manage Users', href: '/admin/entitlements/users', desc: 'User overrides and trials' },
-          { label: 'Trial Settings', href: '/admin/entitlements/trial', desc: 'Configure trial periods' },
+          {
+            label: "Configure Tiers",
+            href: "/admin/entitlements/tiers",
+            desc: "Manage feature access by tier",
+          },
+          {
+            label: "View Analytics",
+            href: "/admin/analytics",
+            desc: "Detailed conversion metrics",
+          },
+          {
+            label: "Manage Users",
+            href: "/admin/entitlements/users",
+            desc: "User overrides and trials",
+          },
+          {
+            label: "Trial Settings",
+            href: "/admin/entitlements/trial",
+            desc: "Configure trial periods",
+          },
         ].map((link) => (
           <a
             key={link.href}
@@ -243,7 +269,9 @@ export default function EntitlementsOverviewPage() {
             "
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium text-on-surface">{link.label}</span>
+              <span className="text-sm font-medium text-on-surface">
+                {link.label}
+              </span>
               <ArrowUpRight className="w-4 h-4 text-on-surface-variant" />
             </div>
             <span className="text-xs text-on-surface-variant">{link.desc}</span>

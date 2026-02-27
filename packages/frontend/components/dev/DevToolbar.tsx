@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import {
   ChevronUp,
   ChevronDown,
@@ -13,39 +13,39 @@ import {
   Users,
   Clock,
   BarChart3,
-} from 'lucide-react';
-import { useEntitlements } from '@/lib/entitlements';
-import type { UserTier, ResourceType, AccessInfo } from '@/lib/entitlements';
+} from "lucide-react";
+import { useEntitlements } from "@/lib/entitlements";
+import type { UserTier, ResourceType, AccessInfo } from "@/lib/entitlements";
 
-const TIERS: UserTier[] = ['free', 'pro', 'enterprise', 'admin'];
+const TIERS: UserTier[] = ["free", "pro", "enterprise", "admin"];
 
 const TIER_COLORS: Record<UserTier, string> = {
-  free: 'bg-outline-variant text-on-surface-variant',
-  pro: 'bg-primary text-on-primary',
-  enterprise: 'bg-tertiary text-on-tertiary',
-  admin: 'bg-error text-on-error',
+  free: "bg-outline-variant text-on-surface-variant",
+  pro: "bg-primary text-on-primary",
+  enterprise: "bg-tertiary text-on-tertiary",
+  admin: "bg-error text-on-error",
 };
 
 const ACCESS_COLORS: Record<string, string> = {
-  full: 'bg-green-500',
-  preview: 'bg-amber-500',
-  none: 'bg-red-500',
+  full: "bg-green-500",
+  preview: "bg-amber-500",
+  none: "bg-red-500",
 };
 
 const ADMIN_LINKS = [
-  { label: 'Overview', href: '/admin/entitlements', icon: LayoutDashboard },
-  { label: 'Tiers', href: '/admin/entitlements/tiers', icon: Layers },
-  { label: 'Users', href: '/admin/entitlements/users', icon: Users },
-  { label: 'Trial', href: '/admin/entitlements/trial', icon: Clock },
-  { label: 'Analytics', href: '/admin/entitlements/analytics', icon: BarChart3 },
+  { label: "Overview", href: "/admin/entitlements", icon: LayoutDashboard },
+  { label: "Tiers", href: "/admin/entitlements/tiers", icon: Layers },
+  { label: "Users", href: "/admin/entitlements/users", icon: Users },
+  { label: "Trial", href: "/admin/entitlements/trial", icon: Clock },
+  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
 ];
 
 function useDevToolbarActive(): boolean {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    const isDev = process.env.NODE_ENV === 'development';
-    const sessionFlag = sessionStorage.getItem('devtools-active') === 'true';
+    const isDev = process.env.NODE_ENV === "development";
+    const sessionFlag = sessionStorage.getItem("devtools-active") === "true";
 
     if (isDev || sessionFlag) {
       setActive(true);
@@ -53,10 +53,10 @@ function useDevToolbarActive(): boolean {
     }
 
     const params = new URLSearchParams(window.location.search);
-    const key = params.get('devtools');
+    const key = params.get("devtools");
     const expectedKey = process.env.NEXT_PUBLIC_DEVTOOLS_KEY;
     if (expectedKey && key === expectedKey) {
-      sessionStorage.setItem('devtools-active', 'true');
+      sessionStorage.setItem("devtools-active", "true");
       setActive(true);
     }
   }, []);
@@ -67,7 +67,7 @@ function useDevToolbarActive(): boolean {
 export function DevToolbar() {
   const active = useDevToolbarActive();
   const [expanded, setExpanded] = useState(false);
-  const [checkerInput, setCheckerInput] = useState('');
+  const [checkerInput, setCheckerInput] = useState("");
 
   const {
     tier,
@@ -85,18 +85,18 @@ export function DevToolbar() {
   const displayTier = simulatedTier || tier;
 
   const accessEntries = useMemo(
-    () => Object.entries(access).filter(([, info]) => info.level !== 'full').slice(0, 8),
-    [access]
+    () =>
+      Object.entries(access)
+        .filter(([, info]) => info.level !== "full")
+        .slice(0, 8),
+    [access],
   );
 
-  const allAccessEntries = useMemo(
-    () => Object.entries(access),
-    [access]
-  );
+  const allAccessEntries = useMemo(() => Object.entries(access), [access]);
 
   const checkerResult = useMemo<AccessInfo | null>(() => {
-    if (!checkerInput.includes(':')) return null;
-    const [type, id] = checkerInput.split(':') as [ResourceType, string];
+    if (!checkerInput.includes(":")) return null;
+    const [type, id] = checkerInput.split(":") as [ResourceType, string];
     if (!type || !id) return null;
     return getAccess(type, id);
   }, [checkerInput, getAccess]);
@@ -110,7 +110,10 @@ export function DevToolbar() {
   if (!active) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50" data-testid="dev-toolbar">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50"
+      data-testid="dev-toolbar"
+    >
       {/* Expanded Panel */}
       {expanded && (
         <div className="bg-surface-container-highest/95 backdrop-blur-sm border-t border-outline-variant">
@@ -129,7 +132,7 @@ export function DevToolbar() {
                       className={`flex-1 px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
                         displayTier === t
                           ? TIER_COLORS[t]
-                          : 'bg-surface text-on-surface-variant hover:bg-surface-container'
+                          : "bg-surface text-on-surface-variant hover:bg-surface-container"
                       }`}
                       data-testid={`tier-btn-${t}`}
                     >
@@ -148,8 +151,8 @@ export function DevToolbar() {
                     onClick={() => setSimulatedAuth(false)}
                     className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${
                       simulatedAuth === false
-                        ? 'bg-outline-variant text-on-surface'
-                        : 'bg-surface text-on-surface-variant hover:bg-surface-container'
+                        ? "bg-outline-variant text-on-surface"
+                        : "bg-surface text-on-surface-variant hover:bg-surface-container"
                     }`}
                     data-testid="auth-btn-anon"
                   >
@@ -159,8 +162,8 @@ export function DevToolbar() {
                     onClick={() => setSimulatedAuth(true)}
                     className={`flex-1 px-3 py-1.5 text-xs font-medium transition-colors ${
                       simulatedAuth === true
-                        ? 'bg-primary text-on-primary'
-                        : 'bg-surface text-on-surface-variant hover:bg-surface-container'
+                        ? "bg-primary text-on-primary"
+                        : "bg-surface text-on-surface-variant hover:bg-surface-container"
                     }`}
                     data-testid="auth-btn-authed"
                   >
@@ -186,30 +189,54 @@ export function DevToolbar() {
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <span className="text-on-surface-variant">Tier:</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${TIER_COLORS[displayTier]}`}>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${TIER_COLORS[displayTier]}`}
+                >
                   {displayTier}
                 </span>
-                {loading && <span className="text-xs text-on-surface-variant">(loading...)</span>}
+                {loading && (
+                  <span className="text-xs text-on-surface-variant">
+                    (loading...)
+                  </span>
+                )}
               </div>
               {trial && (
                 <div className="text-sm">
-                  <span className="text-on-surface-variant">Trial:</span>{' '}
-                  <span className={trial.active ? 'text-green-600' : 'text-on-surface-variant'}>
-                    {trial.active ? `Active (${trial.daysRemaining}d left)` : 'Inactive'}
+                  <span className="text-on-surface-variant">Trial:</span>{" "}
+                  <span
+                    className={
+                      trial.active
+                        ? "text-green-600"
+                        : "text-on-surface-variant"
+                    }
+                  >
+                    {trial.active
+                      ? `Active (${trial.daysRemaining}d left)`
+                      : "Inactive"}
                   </span>
                 </div>
               )}
               <div className="max-h-[180px] overflow-y-auto space-y-1">
                 {allAccessEntries.map(([key, info]) => (
                   <div key={key} className="flex items-center gap-2 text-xs">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ACCESS_COLORS[info.level]}`} />
-                    <span className="text-on-surface-variant truncate flex-1 font-mono">{key}</span>
-                    <span className="text-on-surface-variant">{info.level}</span>
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${ACCESS_COLORS[info.level]}`}
+                    />
+                    <span className="text-on-surface-variant truncate flex-1 font-mono">
+                      {key}
+                    </span>
+                    <span className="text-on-surface-variant">
+                      {info.level}
+                    </span>
                     {info.limit && (
-                      <span className="text-on-surface-variant/60">({info.limit})</span>
+                      <span className="text-on-surface-variant/60">
+                        ({info.limit})
+                      </span>
                     )}
-                    {info.tierRequired && info.level !== 'full' && (
-                      <span className="text-on-surface-variant/60">→{info.tierRequired}</span>
+                    {info.tierRequired && info.level !== "full" && (
+                      <span className="text-on-surface-variant/60">
+                        →{info.tierRequired}
+                      </span>
                     )}
                   </div>
                 ))}
@@ -252,16 +279,28 @@ export function DevToolbar() {
                   />
                 </div>
                 {checkerResult && (
-                  <div className="mt-2 px-2 py-1.5 bg-surface rounded-lg border border-outline-variant/50" data-testid="resource-checker-result">
+                  <div
+                    className="mt-2 px-2 py-1.5 bg-surface rounded-lg border border-outline-variant/50"
+                    data-testid="resource-checker-result"
+                  >
                     <div className="flex items-center gap-2 text-xs">
-                      <div className={`w-2 h-2 rounded-full ${ACCESS_COLORS[checkerResult.level]}`} />
-                      <span className="font-medium text-on-surface capitalize">{checkerResult.level}</span>
+                      <div
+                        className={`w-2 h-2 rounded-full ${ACCESS_COLORS[checkerResult.level]}`}
+                      />
+                      <span className="font-medium text-on-surface capitalize">
+                        {checkerResult.level}
+                      </span>
                       {checkerResult.limit && (
-                        <span className="text-on-surface-variant">(limit: {checkerResult.limit})</span>
+                        <span className="text-on-surface-variant">
+                          (limit: {checkerResult.limit})
+                        </span>
                       )}
-                      {checkerResult.tierRequired && checkerResult.level !== 'full' && (
-                        <span className="text-on-surface-variant">requires {checkerResult.tierRequired}</span>
-                      )}
+                      {checkerResult.tierRequired &&
+                        checkerResult.level !== "full" && (
+                          <span className="text-on-surface-variant">
+                            requires {checkerResult.tierRequired}
+                          </span>
+                        )}
                     </div>
                   </div>
                 )}
@@ -284,8 +323,15 @@ export function DevToolbar() {
         </button>
 
         {/* Auth Status */}
-        <span className="text-xs text-on-surface-variant" data-testid="auth-status">
-          {simulatedAuth === null ? 'Real Auth' : simulatedAuth ? 'Authed' : 'Anon'}
+        <span
+          className="text-xs text-on-surface-variant"
+          data-testid="auth-status"
+        >
+          {simulatedAuth === null
+            ? "Real Auth"
+            : simulatedAuth
+              ? "Authed"
+              : "Anon"}
         </span>
 
         {/* Separator */}
@@ -295,14 +341,19 @@ export function DevToolbar() {
         <div className="flex-1 flex items-center gap-2 overflow-hidden">
           {accessEntries.length > 0 ? (
             accessEntries.map(([key, info]) => (
-              <span key={key} className="text-[10px] text-on-surface-variant whitespace-nowrap font-mono">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${ACCESS_COLORS[info.level]}`} />
+              <span
+                key={key}
+                className="text-[10px] text-on-surface-variant whitespace-nowrap font-mono"
+              >
+                <span
+                  className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${ACCESS_COLORS[info.level]}`}
+                />
                 {key.length > 20 ? `...${key.slice(-18)}` : key}
               </span>
             ))
           ) : (
             <span className="text-[10px] text-on-surface-variant/50">
-              {loading ? 'Loading...' : 'All resources: full access'}
+              {loading ? "Loading..." : "All resources: full access"}
             </span>
           )}
         </div>
@@ -321,9 +372,13 @@ export function DevToolbar() {
           onClick={() => setExpanded(!expanded)}
           className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
           data-testid="expand-toggle"
-          title={expanded ? 'Collapse' : 'Expand'}
+          title={expanded ? "Collapse" : "Expand"}
         >
-          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          {expanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronUp className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>

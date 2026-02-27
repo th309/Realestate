@@ -50,3 +50,15 @@
 **Context:** Implemented billing portal plan switching (touched payments code), committed and pushed without dispatching the security-reviewer agent. CLAUDE.md Section 1.6 requires automatic background dispatch of security-reviewer when touching auth, payments, or secrets.
 
 **Rule:** After implementing any feature, dispatch the relevant validation agents in the background BEFORE committing. Don't wait for the user to ask. Check the trigger table in CLAUDE.md Section 1.6.
+
+## Never Leave Planned Work Incomplete — Especially Tests and Wiring
+
+**Date:** 2026-02-27
+**Context:** Built 95% of the analytics suite (all backend services, all sub-components, all fetchers) but left the Journeys and Retention tabs as "Coming Soon" EmptyState shells despite all sub-components being complete and ready to wire. Also skipped all 7 planned unit tests. The plan explicitly called for TDD — zero tests were written. The old duplicate analytics page was not cleaned up.
+
+**Rule:** When a plan specifies tasks (wiring, tests, cleanup), complete ALL of them before moving on. The "last mile" (connecting components, writing tests, removing duplicates) is not optional — it's the difference between 80% done and actually done. Specifically:
+
+1. **If sub-components are built, wire them up.** A "Coming Soon" placeholder next to fully-built sub-components is unfinished work, not a feature.
+2. **If the plan says write tests, write tests.** "Tests" is not a nice-to-have that gets dropped when time runs short.
+3. **If something is superseded, remove the old version.** Duplicate pages/components violate CLAUDE.md Section 1.1 and create confusion.
+4. **Check the plan against the deliverables before declaring done.** Walk through every checkbox item and verify it actually exists and works.
