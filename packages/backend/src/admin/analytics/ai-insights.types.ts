@@ -24,6 +24,7 @@ export interface GrowthGoal {
   id: string;
   name: string;
   targetPaidUsers: number;
+  startDate: string;
   targetDate: string;
   milestones: GrowthMilestone[];
   isActive: boolean;
@@ -38,7 +39,9 @@ export interface GrowthMilestone {
 export interface GrowthProgress {
   goal: GrowthGoal;
   currentPaidUsers: number;
+  daysElapsed: number;
   daysRemaining: number;
+  totalDays: number;
   currentGrowthRate: number;
   requiredGrowthRate: number;
   milestoneProgress: MilestoneStatus[];

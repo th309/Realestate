@@ -54,32 +54,25 @@ export class GrowthProgressService {
 
     const currentPaidUsers = paidUsers || 0;
     const now = new Date();
+    const startDate = new Date(goal.start_date);
     const targetDate = new Date(goal.target_date);
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    const daysElapsed = Math.max(
+      1,
+      Math.ceil((now.getTime() - startDate.getTime()) / msPerDay),
+    );
     const daysRemaining = Math.max(
       0,
-      Math.ceil((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      Math.ceil((targetDate.getTime() - now.getTime()) / msPerDay),
+    );
+    const totalDays = Math.max(
+      1,
+      Math.ceil((targetDate.getTime() - startDate.getTime()) / msPerDay),
     );
 
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    let recentPaidQuery = client
-      .from('user_profiles')
-      .select('*', { count: 'exact', head: true })
-      .in('subscription_tier', ['pro', 'enterprise'])
-      .eq('subscription_status', 'active')
-      .gte('created_at', thirtyDaysAgo.toISOString());
-
-    if (excludedUserIds.length > 0) {
-      recentPaidQuery = recentPaidQuery.not(
-        'id',
-        'in',
-        `(${excludedUserIds.join(',')})`,
-      );
-    }
-
-    const { count: newPaidLast30d } = await recentPaidQuery;
-
-    const currentGrowthRate = (newPaidLast30d || 0) / 30;
+    // Growth rate based on entire period since start date, not just last 30d
+    const currentGrowthRate = currentPaidUsers / daysElapsed;
     const usersNeeded = goal.target_paid_users - currentPaidUsers;
     const requiredGrowthRate =
       daysRemaining > 0 ? usersNeeded / daysRemaining : 0;
@@ -103,12 +96,15 @@ export class GrowthProgressService {
         id: goal.id,
         name: goal.name,
         targetPaidUsers: goal.target_paid_users,
+        startDate: goal.start_date,
         targetDate: goal.target_date,
         milestones: goal.milestones,
         isActive: goal.is_active,
       },
       currentPaidUsers,
+      daysElapsed,
       daysRemaining,
+      totalDays,
       currentGrowthRate: Math.round(currentGrowthRate * 100) / 100,
       requiredGrowthRate: Math.round(requiredGrowthRate * 100) / 100,
       milestoneProgress,
@@ -142,12 +138,15 @@ export class GrowthProgressService {
         id: '',
         name: 'No active goal',
         targetPaidUsers: 0,
+        startDate: '',
         targetDate: '',
         milestones: [],
         isActive: false,
       },
       currentPaidUsers: 0,
+      daysElapsed: 0,
       daysRemaining: 0,
+      totalDays: 0,
       currentGrowthRate: 0,
       requiredGrowthRate: 0,
       milestoneProgress: [],

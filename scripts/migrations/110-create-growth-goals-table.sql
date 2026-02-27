@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS growth_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(100) NOT NULL DEFAULT 'primary',
   target_paid_users INTEGER NOT NULL,
+  start_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   target_date TIMESTAMPTZ NOT NULL,
   milestones JSONB NOT NULL DEFAULT '[]'::jsonb,
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -20,11 +21,12 @@ GRANT SELECT ON growth_goals TO anon;
 GRANT SELECT ON growth_goals TO authenticated;
 
 -- Seed the initial goal: 2,000 paid users by Feb 2, 2027
-INSERT INTO growth_goals (name, target_paid_users, target_date, milestones, is_active)
+INSERT INTO growth_goals (name, target_paid_users, start_date, target_date, milestones, is_active)
 VALUES (
   'primary',
   2000,
-  '2027-02-02T00:00:00Z',
+  '2026-03-01T00:00:00Z',
+  '2027-02-28T00:00:00Z',
   '[
     {"target": 10, "label": "First 10"},
     {"target": 25, "label": "Early Adopters"},

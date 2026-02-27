@@ -60,12 +60,15 @@ export interface GrowthProgress {
     id: string;
     name: string;
     targetPaidUsers: number;
+    startDate: string;
     targetDate: string;
     milestones: { target: number; label: string }[];
     isActive: boolean;
   };
   currentPaidUsers: number;
+  daysElapsed: number;
   daysRemaining: number;
+  totalDays: number;
   currentGrowthRate: number;
   requiredGrowthRate: number;
   milestoneProgress: GrowthMilestone[];

@@ -32,7 +32,9 @@ export function GrowthProgressWidget() {
   const {
     goal,
     currentPaidUsers,
+    daysElapsed,
     daysRemaining,
+    totalDays,
     currentGrowthRate,
     requiredGrowthRate,
     milestoneProgress,
@@ -59,12 +61,23 @@ export function GrowthProgressWidget() {
               {goal.name}
             </h3>
             <p className="text-label-small text-on-surface-variant">
-              Target: {goal.targetPaidUsers} paid users by{" "}
+              Target: {goal.targetPaidUsers} paid users &middot;{" "}
+              {new Date(goal.startDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                timeZone: "UTC",
+              })}
+              {" → "}
               {new Date(goal.targetDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
-              })}
+                timeZone: "UTC",
+              })}{" "}
+              <span className="text-on-surface-variant/60">
+                (day {daysElapsed} of {totalDays})
+              </span>
             </p>
           </div>
         </div>
@@ -104,7 +117,7 @@ export function GrowthProgressWidget() {
       {/* Growth rate footer */}
       <div className="flex items-center gap-4 pt-3 border-t border-outline-variant text-label-small">
         <span className="text-on-surface-variant">
-          Current rate:{" "}
+          Current:{" "}
           <span
             className={
               onTrack
@@ -112,13 +125,13 @@ export function GrowthProgressWidget() {
                 : "text-on-surface font-medium"
             }
           >
-            {currentGrowthRate.toFixed(1)}%/mo
+            {currentGrowthRate.toFixed(2)} users/day
           </span>
         </span>
         <span className="text-on-surface-variant">
           Required:{" "}
           <span className="font-medium text-on-surface">
-            {requiredGrowthRate.toFixed(1)}%/mo
+            {requiredGrowthRate.toFixed(2)} users/day
           </span>
         </span>
         {!onTrack && (
@@ -177,7 +190,7 @@ function MilestoneChip({
   }
 
   const projectedLabel = milestone.projectedDate
-    ? `Est. ${new Date(milestone.projectedDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+    ? `Est. ${new Date(milestone.projectedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
     : "Pending";
 
   return (

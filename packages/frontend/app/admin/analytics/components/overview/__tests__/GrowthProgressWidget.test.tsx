@@ -29,6 +29,7 @@ const ACTIVE_GOAL = {
     id: "goal-1",
     name: "Q1 Growth Target",
     targetPaidUsers: 100,
+    startDate: "2026-03-01",
     targetDate: "2026-06-30",
     milestones: [
       { target: 25, label: "25 users" },
@@ -38,7 +39,9 @@ const ACTIVE_GOAL = {
     isActive: true,
   },
   currentPaidUsers: 42,
+  daysElapsed: 30,
   daysRemaining: 120,
+  totalDays: 150,
   currentGrowthRate: 8.5,
   requiredGrowthRate: 12.0,
   milestoneProgress: [
@@ -155,7 +158,7 @@ describe("GrowthProgressWidget", () => {
       expect(screen.getByText("Q1 Growth Target")).toBeInTheDocument();
     });
 
-    it("renders target user count and deadline", () => {
+    it("renders target user count and date range", () => {
       mockUseQuery.mockReturnValue({ data: ACTIVE_GOAL, isLoading: false });
 
       render(<GrowthProgressWidget />);
@@ -164,7 +167,8 @@ describe("GrowthProgressWidget", () => {
       const subtitle = screen.getByText((_content, element) => {
         return (
           element?.tagName === "P" &&
-          (element.textContent?.includes("100 paid users by") ?? false)
+          (element.textContent?.includes("100 paid users") ?? false) &&
+          (element.textContent?.includes("day 30 of 150") ?? false)
         );
       });
       expect(subtitle).toBeInTheDocument();
@@ -304,7 +308,7 @@ describe("GrowthProgressWidget", () => {
 
       render(<GrowthProgressWidget />);
 
-      expect(screen.getByText("8.5%/mo")).toBeInTheDocument();
+      expect(screen.getByText("8.50 users/day")).toBeInTheDocument();
     });
 
     it("shows required growth rate", () => {
@@ -312,7 +316,7 @@ describe("GrowthProgressWidget", () => {
 
       render(<GrowthProgressWidget />);
 
-      expect(screen.getByText("12.0%/mo")).toBeInTheDocument();
+      expect(screen.getByText("12.00 users/day")).toBeInTheDocument();
     });
 
     it("shows acceleration multiplier when behind target", () => {
@@ -337,7 +341,7 @@ describe("GrowthProgressWidget", () => {
 
       render(<GrowthProgressWidget />);
 
-      const rateEl = screen.getByText("15.0%/mo");
+      const rateEl = screen.getByText("15.00 users/day");
       expect(rateEl.className).toContain("text-green-600");
     });
   });
