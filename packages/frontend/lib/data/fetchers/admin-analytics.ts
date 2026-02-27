@@ -12,6 +12,7 @@ import type {
   RetentionData,
   AcquisitionData,
   ConversionData,
+  GrowthProgress,
   AnalyticsFilters,
   FunnelStep,
   Annotation,
@@ -115,6 +116,12 @@ export async function createFunnelDefinition(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, steps }),
   });
+}
+
+export async function fetchGrowthProgress(): Promise<GrowthProgress> {
+  const res = await fetchAPIRaw("/api/admin/analytics/growth-progress");
+  if (!res.ok) throw new Error(`Growth progress fetch failed: ${res.status}`);
+  return res.json();
 }
 
 export async function evaluateFunnel(

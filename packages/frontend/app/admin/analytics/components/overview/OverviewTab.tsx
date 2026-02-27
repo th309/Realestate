@@ -15,6 +15,7 @@ import { KpiCardRow } from "./KpiCardRow";
 import { QuickFunnel } from "./QuickFunnel";
 import { DauChart } from "./DauChart";
 import { TopPagesTable } from "./TopPagesTable";
+import { GrowthProgressWidget } from "./GrowthProgressWidget";
 import { SkeletonLoader } from "../shared/SkeletonLoader";
 import { EmptyState } from "../shared/EmptyState";
 
@@ -63,6 +64,7 @@ export function OverviewTab({
 
   return (
     <div className="space-y-6">
+      <GrowthProgressWidget />
       <KpiCardRow
         kpis={data.kpis}
         sparklines={data.sparklines}

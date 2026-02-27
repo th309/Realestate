@@ -212,6 +212,11 @@ Remember: the founder is a solo developer who will execute your recommendations 
   private buildAnalyticsSection(snapshot: InsightsDataSnapshot): string {
     const sections: string[] = [];
 
+    if (snapshot.overview) {
+      sections.push(
+        `\n=== SITE OVERVIEW (KPIs & Traffic) ===\n${JSON.stringify(snapshot.overview, null, 2)}`,
+      );
+    }
     if (snapshot.journeys) {
       sections.push(
         `\n=== USER JOURNEY INTELLIGENCE ===\n${JSON.stringify(snapshot.journeys, null, 2)}`,

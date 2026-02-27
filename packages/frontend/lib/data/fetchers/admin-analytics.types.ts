@@ -47,12 +47,28 @@ export interface PageMetric {
   conversionRate: number;
 }
 
-export interface GoalProgress {
-  id: string;
-  name: string;
-  targetValue: number;
-  currentValue: number;
-  progressPercent: number;
+export interface GrowthMilestone {
+  target: number;
+  label: string;
+  reached: boolean;
+  reachedAt?: string;
+  projectedDate?: string;
+}
+
+export interface GrowthProgress {
+  goal: {
+    id: string;
+    name: string;
+    targetPaidUsers: number;
+    targetDate: string;
+    milestones: { target: number; label: string }[];
+    isActive: boolean;
+  };
+  currentPaidUsers: number;
+  daysRemaining: number;
+  currentGrowthRate: number;
+  requiredGrowthRate: number;
+  milestoneProgress: GrowthMilestone[];
 }
 
 export interface OverviewData {
@@ -68,7 +84,7 @@ export interface OverviewData {
   quickFunnel: FunnelStep[];
   topPages: PageMetric[];
   activeUsersChart: AnalyticsTimeSeriesPoint[];
-  goalProgress: GoalProgress[];
+  goalProgress: GrowthProgress[];
   annotations: Annotation[];
 }
 

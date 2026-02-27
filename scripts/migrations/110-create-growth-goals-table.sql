@@ -14,6 +14,11 @@ CREATE TABLE IF NOT EXISTS growth_goals (
 -- Ensure only one active goal at a time
 CREATE UNIQUE INDEX idx_growth_goals_active ON growth_goals (is_active) WHERE is_active = true;
 
+-- Grant PostgREST API roles access (required for Supabase JS client queries)
+GRANT ALL ON growth_goals TO service_role;
+GRANT SELECT ON growth_goals TO anon;
+GRANT SELECT ON growth_goals TO authenticated;
+
 -- Seed the initial goal: 2,000 paid users by Feb 2, 2027
 INSERT INTO growth_goals (name, target_paid_users, target_date, milestones, is_active)
 VALUES (

@@ -7,32 +7,50 @@
  * LLM involvement — purely data-driven.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { GrowthProgress, MilestoneStatus } from './ai-insights.types';
 
 @Injectable()
 export class GrowthProgressService {
+  private readonly logger = new Logger(GrowthProgressService.name);
+
   constructor(private readonly supabase: SupabaseService) {}
 
   async getGrowthProgress(): Promise<GrowthProgress> {
     const client = this.supabase.getClient();
 
-    const { data: goal } = await client
+    const { data: goal, error } = await client
       .from('growth_goals')
       .select('*')
       .eq('is_active', true)
       .single();
 
+    if (error) {
+      this.logger.error(
+        `Failed to query growth_goals: ${error.message} (code: ${error.code})`,
+      );
+    }
+
     if (!goal) {
       return this.emptyGrowthProgress();
     }
 
-    const { count: paidUsers } = await client
+    // Exclude admin users and test accounts from paid user counts —
+    // admins and internal testers are not real customers.
+    const excludedUserIds = await this.getExcludedUserIds(client);
+
+    let paidQuery = client
       .from('user_profiles')
       .select('*', { count: 'exact', head: true })
       .in('subscription_tier', ['pro', 'enterprise'])
       .eq('subscription_status', 'active');
+
+    if (excludedUserIds.length > 0) {
+      paidQuery = paidQuery.not('id', 'in', `(${excludedUserIds.join(',')})`);
+    }
+
+    const { count: paidUsers } = await paidQuery;
 
     const currentPaidUsers = paidUsers || 0;
     const now = new Date();
@@ -43,12 +61,23 @@ export class GrowthProgressService {
     );
 
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const { count: newPaidLast30d } = await client
+
+    let recentPaidQuery = client
       .from('user_profiles')
       .select('*', { count: 'exact', head: true })
       .in('subscription_tier', ['pro', 'enterprise'])
       .eq('subscription_status', 'active')
       .gte('created_at', thirtyDaysAgo.toISOString());
+
+    if (excludedUserIds.length > 0) {
+      recentPaidQuery = recentPaidQuery.not(
+        'id',
+        'in',
+        `(${excludedUserIds.join(',')})`,
+      );
+    }
+
+    const { count: newPaidLast30d } = await recentPaidQuery;
 
     const currentGrowthRate = (newPaidLast30d || 0) / 30;
     const usersNeeded = goal.target_paid_users - currentPaidUsers;
@@ -84,6 +113,27 @@ export class GrowthProgressService {
       requiredGrowthRate: Math.round(requiredGrowthRate * 100) / 100,
       milestoneProgress,
     };
+  }
+
+  /**
+   * Returns user IDs that should be excluded from paid user counts:
+   * admin users (founders/staff) and explicitly flagged test accounts.
+   */
+  private async getExcludedUserIds(
+    client: ReturnType<SupabaseService['getClient']>,
+  ): Promise<string[]> {
+    const ids = new Set<string>();
+
+    // Exclude all admin users (super_admin, admin)
+    const { data: admins } = await client.from('admin_users').select('id');
+
+    if (admins) {
+      for (const admin of admins) {
+        ids.add(admin.id);
+      }
+    }
+
+    return Array.from(ids);
   }
 
   private emptyGrowthProgress(): GrowthProgress {
