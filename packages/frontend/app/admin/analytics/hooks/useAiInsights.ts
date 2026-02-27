@@ -130,7 +130,22 @@ export function useAiInsights({
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== "AbortError") {
-          setError(err.message || "Failed to stream insights");
+          // If we already received substantial content, treat a late network
+          // error (e.g. ERR_CONNECTION_RESET at end of stream) as a graceful
+          // close rather than a failure — the report is already delivered.
+          const isLateDisconnect =
+            accumulated.length > 200 &&
+            (err.message.includes("network") ||
+              err.message.includes("Failed to fetch") ||
+              err.message.includes("aborted") ||
+              err.name === "TypeError");
+          if (!isLateDisconnect) {
+            setError(err.message || "Failed to stream insights");
+          }
+          // Finalize chat history even on late disconnect so Save works
+          if (isLateDisconnect && !appendToChat && accumulated) {
+            setChatHistory([{ role: "assistant", content: accumulated }]);
+          }
         }
       } finally {
         setIsStreaming(false);

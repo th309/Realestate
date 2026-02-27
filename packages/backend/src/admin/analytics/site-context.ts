@@ -42,7 +42,8 @@ const STAGE_CONTEXT: Record<PlatformStage, string> = {
 - Paywall events and feature usage are from development testing
 - Revenue figures reflect test subscriptions, not organic growth
 - The platform has done NO meaningful marketing or outreach yet
-- There is no existing blog, social media presence, or content marketing
+- There is no existing social media presence or paid marketing
+- The platform HAS a blog at /blog — use it for content marketing
 - PRIORITY: Build awareness, get first 10-25 real users, validate product-market fit
 - Focus on manual outreach, community engagement, and content creation before automation`,
 
@@ -53,14 +54,14 @@ const STAGE_CONTEXT: Record<PlatformStage, string> = {
 - Focus on repeatable acquisition channels and converting free users to trials/paid
 - Start building SEO and content foundation for long-term organic growth`,
 
-  'growing': `PropertyIQ is in GROWTH stage with meaningful user traction.
+  growing: `PropertyIQ is in GROWTH stage with meaningful user traction.
 - Data now reflects real user behavior with enough volume for basic analysis
 - Conversion funnels and feature usage patterns are statistically meaningful
 - PRIORITY: Optimize conversion rates, reduce churn, scale working acquisition channels
 - A/B test pricing, onboarding flows, and paywall placement
 - Invest in content marketing and SEO for compounding organic traffic`,
 
-  'scaling': `PropertyIQ is in SCALING stage with strong user momentum.
+  scaling: `PropertyIQ is in SCALING stage with strong user momentum.
 - Data volumes are sufficient for detailed cohort analysis and A/B testing
 - Funnel optimization and retention improvements have high leverage
 - PRIORITY: Maximize LTV, reduce CAC, expand into adjacent markets
@@ -158,12 +159,21 @@ ENTERPRISE (contact sales):
    - Shows outperformance/underperformance percentages
 
 === SITE PAGES (user-facing) ===
-/ (landing page), /pricing, /map (interactive map), /market (market explorer),
-/market/[id] (market detail), /reports (dashboard), /reports/builder (create reports),
-/reports/[id] (view report), /graphs (time-series analysis), /scores (methodology),
-/dashboard, /alerts, /data (data sources), /help, /contact, /about,
+/ (landing page), /pricing, /upgrade/success (post-upgrade confirmation),
+/map (interactive color-coded map with metric overlays),
+/market (market explorer & rankings), /market/[id] (market detail page),
+/markets (SEO-friendly market pages), /markets/[slug] (individual market landing page),
+/compare/[slug] (market comparison tool),
+/reports (report dashboard), /reports/builder (create AI reports),
+/reports/[id] (view report), /reports/sample (sample report preview),
+/shared/report/[token] (publicly shareable report link),
+/graphs (time-series analysis), /metrics/[metricId] (individual metric explorer),
+/scores (scoring overview), /scores/methodology, /scores/accuracy,
+/blog (blog with published articles), /blog/[slug] (individual blog post),
+/dashboard (user dashboard), /alerts (watchlist & alerts),
+/data (data sources & methodology), /help, /contact, /about, /about/terms,
 /account, /account/billing, /account/notifications,
-/auth/sign-up, /auth/sign-in
+/auth/sign-up, /auth/sign-in, /auth/forgot-password
 
 === DATA SOURCES ===
 - Zillow ZHVI: Home values, forecasts (State/Metro/County/City/ZIP, monthly)
