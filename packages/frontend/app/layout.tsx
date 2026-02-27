@@ -5,6 +5,7 @@ import { Header } from "@/src/components/layout/Header";
 import { Providers } from "./providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
 import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
+import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
@@ -39,12 +40,13 @@ const dmSans = DM_Sans({
 
 // SEO: Comprehensive metadata for all pages
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.propertyiq.app'),
+  metadataBase: new URL("https://www.propertyiq.app"),
   title: {
     default: "PropertyIQ - AI-Powered Real Estate Market Intelligence Platform",
-    template: "%s | PropertyIQ"
+    template: "%s | PropertyIQ",
   },
-  description: "PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, market scores, rental demand data, and investment ROI projections across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.",
+  description:
+    "PropertyIQ helps homebuyers, renters, real estate investors, and agents make smarter property decisions with AI-powered market analysis, market scores, rental demand data, and investment ROI projections across 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.",
   keywords: [
     // Primary audiences
     "real estate market analysis",
@@ -65,7 +67,7 @@ export const metadata: Metadata = {
     // AI/Tech
     "AI real estate analysis",
     "predictive housing analytics",
-    "automated market reports"
+    "automated market reports",
   ],
   authors: [{ name: "PropertyIQ" }],
   creator: "PropertyIQ",
@@ -76,9 +78,9 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
   openGraph: {
@@ -87,36 +89,38 @@ export const metadata: Metadata = {
     url: "https://www.propertyiq.app",
     siteName: "PropertyIQ",
     title: "PropertyIQ - AI-Powered Real Estate Market Intelligence",
-    description: "Make smarter real estate decisions with AI-powered market analysis for homebuyers, renters, investors, and real estate professionals.",
+    description:
+      "Make smarter real estate decisions with AI-powered market analysis for homebuyers, renters, investors, and real estate professionals.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PropertyIQ - Real Estate Market Intelligence Platform"
-      }
-    ]
+        alt: "PropertyIQ - Real Estate Market Intelligence Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "PropertyIQ - AI Real Estate Market Intelligence",
-    description: "AI-powered market analysis for homebuyers, renters, investors & agents. Market scores, ROI projections, and rental demand data.",
+    description:
+      "AI-powered market analysis for homebuyers, renters, investors & agents. Market scores, ROI projections, and rental demand data.",
     images: ["/twitter-image.png"],
-    creator: "@propertyiq"
+    creator: "@propertyiq",
   },
   alternates: {
-    canonical: "https://www.propertyiq.app"
+    canonical: "https://www.propertyiq.app",
   },
-  category: "Real Estate Technology"
+  category: "Real Estate Technology",
 };
 
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#6750a4" },
-    { media: "(prefers-color-scheme: dark)", color: "#d0bcff" }
+    { media: "(prefers-color-scheme: dark)", color: "#d0bcff" },
   ],
   width: "device-width",
-  initialScale: 1
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -139,24 +143,32 @@ export default function RootLayout({
                   Coming Soon
                 </span>
                 <span className="text-on-surface-variant">
-                  PropertyIQ is launching shortly. Become a beta tester and get 3 months of Pro access in exchange for your feedback &mdash; reach out at{' '}
-                  <a href="mailto:betatesters@propertyiq.app" className="text-primary hover:text-primary/80 font-semibold underline underline-offset-2">
+                  PropertyIQ is launching shortly. Become a beta tester and get
+                  3 months of Pro access in exchange for your feedback &mdash;
+                  reach out at{" "}
+                  <a
+                    href="mailto:betatesters@propertyiq.app"
+                    className="text-primary hover:text-primary/80 font-semibold underline underline-offset-2"
+                  >
                     betatesters@propertyiq.app
                   </a>
                 </span>
               </span>
             </p>
           </div>
-          <main className="flex-1 min-h-0 flex flex-col">
-            {children}
-          </main>
+          <AnalyticsProvider>
+            <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+          </AnalyticsProvider>
           <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4 pb-12">
             <p className="text-center text-xs text-on-surface-variant">
-              Data is provided for informational purposes only. While we strive for accuracy, we do not guarantee the completeness or correctness of the information and accept no liability for its use.
+              Data is provided for informational purposes only. While we strive
+              for accuracy, we do not guarantee the completeness or correctness
+              of the information and accept no liability for its use.
             </p>
           </footer>
           <DevToolbarLoader />
-          {/* <QuinnFloatingButton /> */} {/* PAUSED: Quinn development on hold */}
+          {/* <QuinnFloatingButton /> */}{" "}
+          {/* PAUSED: Quinn development on hold */}
         </Providers>
       </body>
     </html>

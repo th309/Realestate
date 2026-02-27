@@ -11,15 +11,25 @@
  * with the sendBeacon API used during page unload.
  */
 
-import { getAnonymousSessionId } from '@/lib/entitlements/session';
+import { getAnonymousSessionId } from "@/lib/entitlements/session";
+import { getVisitorId } from "./visitor-identity";
+import { getSessionContext } from "./session-context";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const BATCH_INTERVAL = 5000; // 5 seconds
 const MAX_BATCH_SIZE = 50;
 
+function generateClientEventId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
 interface AnalyticsEvent {
+  client_event_id: string;
   event_type: string;
   event_name: string;
+  event_category: string;
+  event_action: string;
+  visitor_id: string;
   properties: Record<string, unknown>;
   user_tier?: string;
   page_path?: string;
@@ -30,42 +40,55 @@ interface AnalyticsEvent {
 let eventQueue: AnalyticsEvent[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
+let sessionContextAttached = false;
 
 function getSessionId(): string {
   return getAnonymousSessionId();
 }
 
 function getPagePath(): string {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === "undefined") return "";
   return window.location.pathname;
 }
 
 function getUserTier(): string | undefined {
-  // Read from entitlements context if available, stored in sessionStorage
-  if (typeof window === 'undefined') return undefined;
-  return sessionStorage.getItem('piq-user-tier') || undefined;
+  if (typeof window === "undefined") return undefined;
+  return sessionStorage.getItem("piq-user-tier") || undefined;
 }
 
 /**
  * Track an analytics event
  *
- * @param eventName - Event name (e.g., 'paywall.view', 'feature.market_save')
+ * @param eventName - Dot-separated name (e.g., 'pageview.view', 'feature.map_filter')
+ *   The part before the dot becomes event_category, the part after becomes event_action.
  * @param properties - Additional event properties
  */
 export function trackEvent(
   eventName: string,
   properties: Record<string, unknown> = {},
 ): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
-  // Parse event type from name (e.g., 'paywall.view' -> type='paywall', name='view')
-  const [eventType, ...rest] = eventName.split('.');
-  const name = rest.join('.') || eventName;
+  // Parse category.action from name (e.g., 'pageview.view' -> category='pageview', action='view')
+  const [eventCategory, ...rest] = eventName.split(".");
+  const eventAction = rest.join(".") || eventName;
+
+  // Attach session context on first event of each session
+  let enrichedProperties = { ...properties };
+  if (!sessionContextAttached) {
+    const ctx = getSessionContext();
+    enrichedProperties = { ...enrichedProperties, ...ctx };
+    sessionContextAttached = true;
+  }
 
   const event: AnalyticsEvent = {
-    event_type: eventType,
-    event_name: name,
-    properties,
+    client_event_id: generateClientEventId(),
+    event_type: eventCategory,
+    event_name: eventAction,
+    event_category: eventCategory,
+    event_action: eventAction,
+    visitor_id: getVisitorId(),
+    properties: enrichedProperties,
     user_tier: getUserTier(),
     page_path: getPagePath(),
     session_id: getSessionId(),
@@ -74,12 +97,10 @@ export function trackEvent(
 
   eventQueue.push(event);
 
-  // Flush if batch is full
   if (eventQueue.length >= MAX_BATCH_SIZE) {
     flush();
   }
 
-  // Initialize periodic flush and unload handler
   if (!initialized) {
     initialize();
   }
@@ -89,8 +110,8 @@ export function trackEvent(
  * Set the user tier for auto-inclusion in events
  */
 export function setUserTier(tier: string): void {
-  if (typeof window === 'undefined') return;
-  sessionStorage.setItem('piq-user-tier', tier);
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("piq-user-tier", tier);
 }
 
 /**
@@ -105,16 +126,16 @@ export function flush(): void {
   const payload = JSON.stringify({ events });
 
   // Try sendBeacon first (works during page unload)
-  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
-    const blob = new Blob([payload], { type: 'application/json' });
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: "application/json" });
     const sent = navigator.sendBeacon(`${API_URL}/api/analytics/events`, blob);
     if (sent) return;
   }
 
   // Fallback to fetch (fire and forget)
   fetch(`${API_URL}/api/analytics/events`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: payload,
     keepalive: true,
   }).catch(() => {
@@ -123,19 +144,19 @@ export function flush(): void {
 }
 
 function initialize(): void {
-  if (initialized || typeof window === 'undefined') return;
+  if (initialized || typeof window === "undefined") return;
   initialized = true;
 
   // Periodic flush
   flushTimer = setInterval(flush, BATCH_INTERVAL);
 
   // Flush on page unload
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
+  window.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
       flush();
     }
   });
 
   // Also flush on beforeunload as a fallback
-  window.addEventListener('beforeunload', flush);
+  window.addEventListener("beforeunload", flush);
 }
