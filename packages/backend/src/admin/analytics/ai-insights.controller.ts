@@ -74,6 +74,7 @@ export class AiInsightsController {
         provider,
         prompt: query.prompt,
         history,
+        focusArea: query.focusArea,
       });
 
       for await (const chunk of stream) {

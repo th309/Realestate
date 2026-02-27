@@ -17,6 +17,7 @@ import { ConversionAnalyticsService } from './conversion-analytics.service';
 import { DailyRollupService } from './daily-rollup.service';
 import { FunnelEngineService } from './funnel-engine.service';
 import { PageClassifierService } from './page-classifier.service';
+import { UserAnalyticsController } from './user-analytics.controller';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { PageClassifierService } from './page-classifier.service';
     ConfigModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
   ],
-  controllers: [EventIngestionController],
+  controllers: [EventIngestionController, UserAnalyticsController],
   providers: [
     EventIngestionService,
     SessionManagerService,

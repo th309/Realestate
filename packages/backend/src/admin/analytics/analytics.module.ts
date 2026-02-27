@@ -7,10 +7,14 @@ import { AiInsightsService } from './ai-insights.service';
 import { AiProviderService } from './ai-provider.service';
 import { AiInsightsPersistenceController } from './ai-insights-persistence.controller';
 import { AiInsightsPersistenceService } from './ai-insights-persistence.service';
+import { InsightsDataFetcherService } from './insights-data-fetcher.service';
+import { InsightsSupabaseQueriesService } from './insights-supabase-queries.service';
+import { GrowthProgressService } from './growth-progress.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
+import { UserAnalyticsModule } from '../../user-analytics/user-analytics.module';
 
 @Module({
-  imports: [SupabaseModule, ConfigModule],
+  imports: [SupabaseModule, ConfigModule, UserAnalyticsModule],
   controllers: [
     PaywallAnalyticsController,
     AiInsightsController,
@@ -21,6 +25,9 @@ import { SupabaseModule } from '../../supabase/supabase.module';
     AiInsightsService,
     AiProviderService,
     AiInsightsPersistenceService,
+    InsightsDataFetcherService,
+    InsightsSupabaseQueriesService,
+    GrowthProgressService,
   ],
   exports: [PaywallAnalyticsService, AiInsightsService],
 })

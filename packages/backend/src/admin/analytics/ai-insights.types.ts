@@ -16,6 +16,8 @@ export interface AiInsightsQueryDto {
   prompt?: string;
   /** Conversation history for multi-turn chat (JSON string) */
   history?: string;
+  /** Optional focus area to activate a specialist persona */
+  focusArea?: string;
 }
 
 export interface GrowthGoal {
@@ -67,6 +69,16 @@ export interface InsightsDataSnapshot {
   userAggregates: UserAggregates;
   /** Growth goal progress */
   growthProgress: GrowthProgress;
+  /** Overview KPIs and traffic data from UserAnalyticsModule */
+  overview: Record<string, unknown> | null;
+  /** User navigation path data from JourneyAnalyticsService */
+  journeys: Record<string, unknown> | null;
+  /** Cohort retention and churn signals from RetentionAnalyticsService */
+  retention: Record<string, unknown> | null;
+  /** Traffic source and channel data from AcquisitionAnalyticsService */
+  acquisition: Record<string, unknown> | null;
+  /** Funnel and upgrade path data from ConversionAnalyticsService */
+  conversion: Record<string, unknown> | null;
 }
 
 export interface RevenueSnapshot {
