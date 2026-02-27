@@ -107,6 +107,21 @@ data/zillow/*.csv
 # Machine-specific Claude Code settings
 .claude/settings.local.json
 
+# AI tool skill directories
+.agent/
+.agents/
+.claude/skills/
+.claude/beta-test/
+.kiro/
+.windsurf/
+.zencoder/
+.playwright-mcp/
+skills-lock.json
+
+# Loose QA artifacts at repo root
+*.png
+markets-page-snapshot.md
+
 # ML model files (too large for GitHub, download at runtime)
 packages/backend/propertyiq-ml/models/
 packages/backend/propertyiq-ml/data/*.parquet
