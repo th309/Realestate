@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, FormEvent } from "react";
+import { Suspense, useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface PasswordRequirement {
   label: string;
@@ -70,6 +71,11 @@ function SignUpContent() {
   const [tosAccepted, setTosAccepted] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
+  // Track signup form shown once on mount
+  useEffect(() => {
+    trackEvent("conversion.signup_start", { redirect_to: redirectTo });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const requirements = getPasswordRequirements(password);
 
   const handleSignUp = async (e: FormEvent) => {
@@ -108,6 +114,7 @@ function SignUpContent() {
     // With autoconfirm enabled, signup returns a session immediately.
     // Record ToS acceptance and redirect to dashboard.
     if (session) {
+      trackEvent("conversion.signup_complete", { method: "email" });
       const supabase = createSupabaseBrowserClient();
       await supabase
         .from("user_profiles")

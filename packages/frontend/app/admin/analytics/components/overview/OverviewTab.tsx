@@ -7,7 +7,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchOverviewAnalytics } from "@/lib/data/fetchers/admin-analytics";
-import type { AnalyticsFilters } from "@/lib/data/fetchers/admin-analytics.types";
+import type {
+  AnalyticsFilters,
+  Annotation,
+} from "@/lib/data/fetchers/admin-analytics.types";
 import { KpiCardRow } from "./KpiCardRow";
 import { QuickFunnel } from "./QuickFunnel";
 import { DauChart } from "./DauChart";
@@ -15,11 +18,21 @@ import { TopPagesTable } from "./TopPagesTable";
 import { SkeletonLoader } from "../shared/SkeletonLoader";
 import { EmptyState } from "../shared/EmptyState";
 
+/** Merge annotations from the tab's API response with page-level annotations, deduping by id. */
+function mergeAnnotations(
+  fromResponse: Annotation[],
+  fromPage: Annotation[],
+): Annotation[] {
+  const seen = new Set(fromResponse.map((a) => a.id));
+  return [...fromResponse, ...fromPage.filter((a) => !seen.has(a.id))];
+}
+
 interface OverviewTabProps {
   days: number;
   filters: AnalyticsFilters;
   compare: boolean;
   onDrillDown: (key: string, value: string) => void;
+  annotations?: Annotation[];
 }
 
 export function OverviewTab({
@@ -27,6 +40,7 @@ export function OverviewTab({
   filters,
   compare,
   onDrillDown,
+  annotations: pageAnnotations = [],
 }: OverviewTabProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "overview", days, filters],
@@ -56,7 +70,10 @@ export function OverviewTab({
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QuickFunnel steps={data.quickFunnel} />
-        <DauChart data={data.activeUsersChart} annotations={data.annotations} />
+        <DauChart
+          data={data.activeUsersChart}
+          annotations={mergeAnnotations(data.annotations, pageAnnotations)}
+        />
       </div>
       <TopPagesTable
         pages={data.topPages}

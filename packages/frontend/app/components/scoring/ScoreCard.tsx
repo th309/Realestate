@@ -15,18 +15,30 @@
  * Material Design 3 compliant with semantic color roles.
  */
 
-'use client';
+"use client";
 
-import { memo, useState } from 'react';
-import { ScoreBadge, ScoreType, TrendDirection, ScoreAccess, ScoreStatus } from './ScoreBadge';
-import { ComponentBar } from './ComponentBar';
-import { ConfidenceDisplay } from './ConfidenceDisplay';
-import dynamic from 'next/dynamic';
+import { memo, useState } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
+import {
+  ScoreBadge,
+  ScoreType,
+  TrendDirection,
+  ScoreAccess,
+  ScoreStatus,
+} from "./ScoreBadge";
+import { ComponentBar } from "./ComponentBar";
+import { ConfidenceDisplay } from "./ConfidenceDisplay";
+import dynamic from "next/dynamic";
 
 // Dynamically import the history chart to avoid SSR issues with recharts
 const ScoreHistoryChart = dynamic(
-  () => import('./ScoreHistoryChart').then((mod) => mod.ScoreHistoryChart),
-  { ssr: false, loading: () => <div className="h-48 bg-outline-variant/20 rounded animate-pulse" /> }
+  () => import("./ScoreHistoryChart").then((mod) => mod.ScoreHistoryChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-48 bg-outline-variant/20 rounded animate-pulse" />
+    ),
+  },
 );
 
 // Types for score card data
@@ -37,7 +49,7 @@ interface MetricDetail {
   formatted: string;
   isInherited: boolean;
   sourceGeographyType?: string;
-  impact: 'positive' | 'negative' | 'neutral';
+  impact: "positive" | "negative" | "neutral";
 }
 
 interface ComponentDetail {
@@ -52,7 +64,7 @@ interface ComponentDetail {
 }
 
 interface ConfidenceInfo {
-  level: 'a' | 'b' | 'c' | 'f';
+  level: "a" | "b" | "c" | "f";
   percentage: number;
   metricsAvailable: number;
   metricsTotal: number;
@@ -76,7 +88,7 @@ interface UpgradeCta {
 interface ValidationInfo {
   hasOutcomes: boolean;
   excessReturn3Y?: number;
-  predictedVsActual?: 'outperformed' | 'underperformed' | 'matched';
+  predictedVsActual?: "outperformed" | "underperformed" | "matched";
 }
 
 interface ScoreCardProps {
@@ -106,7 +118,13 @@ interface ScoreCardProps {
 /**
  * Sparkline chart for score history
  */
-function HistorySparkline({ data, className = '' }: { data: HistoryPoint[]; className?: string }) {
+function HistorySparkline({
+  data,
+  className = "",
+}: {
+  data: HistoryPoint[];
+  className?: string;
+}) {
   const validPoints = data.filter((p) => p.score !== null);
   if (validPoints.length < 2) return null;
 
@@ -119,20 +137,26 @@ function HistorySparkline({ data, className = '' }: { data: HistoryPoint[]; clas
   const height = 32;
   const padding = 4;
 
-  const points = validPoints.map((p, i) => {
-    const x = padding + (i / (validPoints.length - 1)) * (width - 2 * padding);
-    const y = height - padding - ((p.score as number - min) / range) * (height - 2 * padding);
-    return `${x},${y}`;
-  }).join(' ');
+  const points = validPoints
+    .map((p, i) => {
+      const x =
+        padding + (i / (validPoints.length - 1)) * (width - 2 * padding);
+      const y =
+        height -
+        padding -
+        (((p.score as number) - min) / range) * (height - 2 * padding);
+      return `${x},${y}`;
+    })
+    .join(" ");
 
   const lastScore = scores[scores.length - 1];
   const firstScore = scores[0];
   const isUp = lastScore > firstScore;
   const strokeColor = isUp
-    ? 'var(--color-emerald-500, #10b981)'
+    ? "var(--color-emerald-500, #10b981)"
     : lastScore < firstScore
-      ? 'var(--color-rose-500, #f43f5e)'
-      : 'var(--color-gray-500, #6b7280)';
+      ? "var(--color-rose-500, #f43f5e)"
+      : "var(--color-gray-500, #6b7280)";
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -146,7 +170,9 @@ function HistorySparkline({ data, className = '' }: { data: HistoryPoint[]; clas
           strokeLinejoin="round"
         />
       </svg>
-      <span className="text-xs text-on-surface-variant">{validPoints.length}mo</span>
+      <span className="text-xs text-on-surface-variant">
+        {validPoints.length}mo
+      </span>
     </div>
   );
 }
@@ -154,10 +180,20 @@ function HistorySparkline({ data, className = '' }: { data: HistoryPoint[]; clas
 /**
  * Close button icon
  */
-function CloseIcon({ className = '' }: { className?: string }) {
+function CloseIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className={`w-5 h-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    <svg
+      className={`w-5 h-5 ${className}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 18L18 6M6 6l12 12"
+      />
     </svg>
   );
 }
@@ -178,21 +214,22 @@ export const ScoreCard = memo(function ScoreCard({
   upgradeCta,
   onUpgradeClick,
   onClose,
-  className = '',
+  className = "",
   geographyType,
   geographyId,
   validation,
   showHistoryButton = false,
 }: ScoreCardProps) {
   const [showExtendedHistory, setShowExtendedHistory] = useState(false);
-  const isTeaser = access === 'teaser';
+  const isTeaser = access === "teaser";
 
   // Map score type for history chart
-  const scoreTypeForChart = type === 'market_health' ? 'markethealth' : type;
+  const scoreTypeForChart = type === "market_health" ? "markethealth" : type;
 
   return (
-    <div className={`relative bg-surface-container-low rounded-xl shadow-sm border border-outline-variant overflow-hidden ${className}`}>
-
+    <div
+      className={`relative bg-surface-container-low rounded-xl shadow-sm border border-outline-variant overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="p-4 border-b border-outline-variant">
         <div className="flex items-start justify-between gap-3">
@@ -210,7 +247,9 @@ export const ScoreCard = memo(function ScoreCard({
             />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-on-surface">{label}</h3>
+                <h3 className="text-lg font-semibold text-on-surface">
+                  {label}
+                </h3>
                 {/* Validation badge */}
                 {validation?.hasOutcomes && (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-container text-on-primary-container">
@@ -218,16 +257,27 @@ export const ScoreCard = memo(function ScoreCard({
                   </span>
                 )}
               </div>
-              {statusMessage && <p className="text-xs text-on-surface-variant">{statusMessage}</p>}
+              {statusMessage && (
+                <p className="text-xs text-on-surface-variant">
+                  {statusMessage}
+                </p>
+              )}
               {dataCompleteness !== undefined && dataCompleteness < 100 && (
-                <p className="text-xs text-amber-600">Based on {dataCompleteness.toFixed(0)}% of data</p>
+                <p className="text-xs text-amber-600">
+                  Based on {dataCompleteness.toFixed(0)}% of data
+                </p>
               )}
               {/* 3Y Excess Return summary */}
               {validation?.hasOutcomes && validation.excessReturn3Y != null && (
-                <p className={`text-xs font-medium ${
-                  validation.excessReturn3Y > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  3Y Excess: {validation.excessReturn3Y > 0 ? '+' : ''}{validation.excessReturn3Y.toFixed(1)}% vs state
+                <p
+                  className={`text-xs font-medium ${
+                    validation.excessReturn3Y > 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  3Y Excess: {validation.excessReturn3Y > 0 ? "+" : ""}
+                  {validation.excessReturn3Y.toFixed(1)}% vs state
                 </p>
               )}
             </div>
@@ -246,14 +296,24 @@ export const ScoreCard = memo(function ScoreCard({
         {/* History, confidence, and View History button row */}
         <div className="flex items-center justify-between mt-3 gap-4">
           <div className="flex items-center gap-3">
-            {history && history.length > 0 && <HistorySparkline data={history} />}
+            {history && history.length > 0 && (
+              <HistorySparkline data={history} />
+            )}
             {/* View History button */}
             {showHistoryButton && geographyType && geographyId && (
               <button
-                onClick={() => setShowExtendedHistory(!showExtendedHistory)}
+                onClick={() => {
+                  if (!showExtendedHistory) {
+                    trackEvent("feature.score_expand", {
+                      score_type: type,
+                      geography_type: geographyType,
+                    });
+                  }
+                  setShowExtendedHistory(!showExtendedHistory);
+                }}
                 className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
               >
-                {showExtendedHistory ? 'Hide History' : 'View History'}
+                {showExtendedHistory ? "Hide History" : "View History"}
               </button>
             )}
           </div>
@@ -278,7 +338,9 @@ export const ScoreCard = memo(function ScoreCard({
           <ScoreHistoryChart
             geographyType={geographyType}
             geographyId={geographyId}
-            scoreType={scoreTypeForChart as 'homeready' | 'investoredge' | 'markethealth'}
+            scoreType={
+              scoreTypeForChart as "homeready" | "investoredge" | "markethealth"
+            }
           />
         </div>
       )}
@@ -286,7 +348,9 @@ export const ScoreCard = memo(function ScoreCard({
       {/* Components breakdown — visible to users with breakdown access */}
       {components.length > 0 && !isTeaser && (
         <div className="p-4 space-y-3">
-          <h4 className="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Components</h4>
+          <h4 className="text-sm font-medium text-on-surface-variant uppercase tracking-wide">
+            Components
+          </h4>
           {components.map((component) => (
             <ComponentBar
               key={component.name}
@@ -307,8 +371,12 @@ export const ScoreCard = memo(function ScoreCard({
       {isTeaser && upgradeCta && (
         <div className="p-4 border-t border-outline-variant">
           <div className="text-center py-4">
-            <p className="text-sm font-medium text-on-surface mb-1">{upgradeCta.headline}</p>
-            <p className="text-xs text-on-surface-variant mb-3">{upgradeCta.description}</p>
+            <p className="text-sm font-medium text-on-surface mb-1">
+              {upgradeCta.headline}
+            </p>
+            <p className="text-xs text-on-surface-variant mb-3">
+              {upgradeCta.description}
+            </p>
             <button
               onClick={onUpgradeClick}
               className="px-4 py-2 bg-primary text-on-primary rounded-full font-medium text-sm hover:bg-primary/90 transition-colors"

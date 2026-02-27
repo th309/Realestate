@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ReactNode } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface Props {
   children: ReactNode;
@@ -22,10 +23,10 @@ interface State {
  */
 function formatSectionName(sectionId: string): string {
   return sectionId
-    .replace(/[-_]/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+    .replace(/[-_]/g, " ")
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 /**
@@ -33,7 +34,7 @@ function formatSectionName(sectionId: string): string {
  */
 function DefaultSectionErrorFallback({
   sectionId,
-  error
+  error,
 }: {
   sectionId: string;
   error?: Error;
@@ -71,9 +72,7 @@ function DefaultSectionErrorFallback({
             Unable to load {formatSectionName(sectionId)}
           </p>
           {error?.message && (
-            <p className="text-sm text-error/70 mt-1">
-              {error.message}
-            </p>
+            <p className="text-sm text-error/70 mt-1">{error.message}</p>
           )}
         </div>
         <button
@@ -146,9 +145,15 @@ export class SectionErrorBoundary extends Component<Props, State> {
     // Log error with section context for debugging
     console.error(
       `[SectionErrorBoundary] Error in section "${sectionId}":`,
-      error
+      error,
     );
-    console.error('Component stack:', errorInfo.componentStack);
+    console.error("Component stack:", errorInfo.componentStack);
+
+    // Track error as analytics event
+    trackEvent("frustration.error_shown", {
+      section_id: sectionId,
+      error_message: error?.message,
+    });
 
     // Call optional error callback (e.g., for error tracking services)
     onError?.(error, errorInfo);
@@ -160,8 +165,10 @@ export class SectionErrorBoundary extends Component<Props, State> {
 
     if (hasError) {
       // Use custom fallback if provided, otherwise use default
-      return fallback ?? (
-        <DefaultSectionErrorFallback sectionId={sectionId} error={error} />
+      return (
+        fallback ?? (
+          <DefaultSectionErrorFallback sectionId={sectionId} error={error} />
+        )
       );
     }
 

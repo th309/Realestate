@@ -24,6 +24,7 @@ import { useEntitlements } from "@/lib/entitlements";
 import { useAuth } from "@/lib/auth";
 import { fetchPricingSummary, type PricingTier } from "@/lib/data";
 import { startCheckout } from "@/lib/data";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 export default function PricingPage() {
   return (
@@ -50,6 +51,17 @@ function PricingContent() {
     "month",
   );
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  // Track pricing page view once on mount
+  const pricingViewFired = useRef(false);
+  useEffect(() => {
+    if (!pricingViewFired.current) {
+      pricingViewFired.current = true;
+      trackEvent("conversion.pricing_view", {
+        from: searchParams.get("from") || "direct",
+      });
+    }
+  }, [searchParams]);
 
   // Auto-trigger checkout when returning from sign-in with a stored intent
   const autoCheckoutTriggered = useRef(false);
@@ -108,6 +120,10 @@ function PricingContent() {
   const returnContext = searchParams.get("from") || "/map";
 
   const handleUpgrade = async (planSlug: string) => {
+    trackEvent("conversion.pricing_tier_click", {
+      event_label: planSlug,
+      billing_interval: billingInterval,
+    });
     // If not authenticated, save checkout intent and redirect to sign-in
     if (!user) {
       sessionStorage.setItem(

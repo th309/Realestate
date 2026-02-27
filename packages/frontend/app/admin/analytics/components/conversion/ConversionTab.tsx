@@ -10,26 +10,36 @@
  * 3. Grid: TierMigrationFlow (left) + RevenueMetrics (right)
  */
 
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { fetchConversionAnalytics } from '@/lib/data/fetchers/admin-analytics';
-import type { AnalyticsFilters } from '@/lib/data/fetchers/admin-analytics.types';
-import { EmptyState, SkeletonLoader } from '../shared';
-import { FullFunnel } from './FullFunnel';
-import { FeatureCorrelationChart } from './FeatureCorrelationChart';
-import { PaywallEffectiveness } from './PaywallEffectiveness';
-import { TierMigrationFlow } from './TierMigrationFlow';
-import { RevenueMetrics } from './RevenueMetrics';
+import { useQuery } from "@tanstack/react-query";
+import { fetchConversionAnalytics } from "@/lib/data/fetchers/admin-analytics";
+import type {
+  AnalyticsFilters,
+  Annotation,
+} from "@/lib/data/fetchers/admin-analytics.types";
+import { EmptyState, SkeletonLoader } from "../shared";
+import { FullFunnel } from "./FullFunnel";
+import { FeatureCorrelationChart } from "./FeatureCorrelationChart";
+import { PaywallEffectiveness } from "./PaywallEffectiveness";
+import { TierMigrationFlow } from "./TierMigrationFlow";
+import { RevenueMetrics } from "./RevenueMetrics";
 
 interface ConversionTabProps {
   days: number;
   filters: AnalyticsFilters;
   compare: boolean;
   onDrillDown: (key: string, value: string) => void;
+  annotations?: Annotation[];
 }
 
-function PanelCard({ title, children }: { title: string; children: React.ReactNode }) {
+function PanelCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 space-y-3">
       <p className="text-sm font-medium text-on-surface">{title}</p>
@@ -38,9 +48,13 @@ function PanelCard({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-export function ConversionTab({ days, filters, onDrillDown }: ConversionTabProps) {
+export function ConversionTab({
+  days,
+  filters,
+  onDrillDown,
+}: ConversionTabProps) {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['analytics', 'conversion', days, filters],
+    queryKey: ["analytics", "conversion", days, filters],
     queryFn: () => fetchConversionAnalytics(days, filters),
     staleTime: 5 * 60 * 1000,
   });
@@ -69,16 +83,21 @@ export function ConversionTab({ days, filters, onDrillDown }: ConversionTabProps
   }
 
   const handleFunnelDrillDown = (stepName: string) => {
-    onDrillDown('funnelStep', stepName);
+    onDrillDown("funnelStep", stepName);
   };
 
   return (
     <div className="space-y-6">
       {/* Row 1: Full Funnel */}
       <div className="space-y-3">
-        <h2 className="text-base font-medium text-on-surface">Conversion Funnel</h2>
+        <h2 className="text-base font-medium text-on-surface">
+          Conversion Funnel
+        </h2>
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6">
-          <FullFunnel steps={data.fullFunnel} onStepClick={handleFunnelDrillDown} />
+          <FullFunnel
+            steps={data.fullFunnel}
+            onStepClick={handleFunnelDrillDown}
+          />
         </div>
       </div>
 

@@ -10,8 +10,9 @@
  * Use ScoreDisplay directly when you already have the score value.
  */
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { ScoreDisplay, ScoreDisplayProps } from "./ScoreDisplay";
 import {
   useScoreData,
@@ -85,6 +86,18 @@ export function ScoreWidget({
   className = "",
 }: ScoreWidgetProps) {
   const { data, loading, error } = useScoreData(geographyType, geographyId);
+
+  // Track score view once per mount
+  const hasFiredRef = useRef(false);
+  useEffect(() => {
+    if (!hasFiredRef.current && !loading && data) {
+      hasFiredRef.current = true;
+      trackEvent("feature.score_view", {
+        geography_type: geographyType,
+        score_type: scoreType,
+      });
+    }
+  }, [loading, data, geographyType, scoreType]);
 
   // Extract score and confidence for the requested type
   const scoreData = React.useMemo(() => {

@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Download, Loader2 } from 'lucide-react';
-import { PDFCoverPage, PDFTableOfContents, PDFPrintFooter } from './PDFLayout';
-import { usePDFExport } from './usePDFExport';
+import React from "react";
+import { Download, Loader2 } from "lucide-react";
+import { PDFCoverPage, PDFTableOfContents, PDFPrintFooter } from "./PDFLayout";
+import { usePDFExport } from "./usePDFExport";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 interface PDFExportProps {
   title: string;
@@ -49,10 +50,19 @@ export function PDFExportButton({
 
       {/* Export button - replaces the existing Download button */}
       <button
-        onClick={() => exportPDF({ title, filename: `${title.replace(/\s+/g, '-').toLowerCase()}.pdf` })}
+        onClick={() => {
+          trackEvent("feature.report_export", {
+            report_title: title,
+            format: "pdf",
+          });
+          exportPDF({
+            title,
+            filename: `${title.replace(/\s+/g, "-").toLowerCase()}.pdf`,
+          });
+        }}
         disabled={exporting}
         className="report-btn-primary"
-        title={error || 'Download PDF'}
+        title={error || "Download PDF"}
       >
         {exporting ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -60,7 +70,7 @@ export function PDFExportButton({
           <Download className="w-4 h-4" />
         )}
         <span className="hidden sm:inline">
-          {exporting ? 'Preparing...' : 'Download'}
+          {exporting ? "Preparing..." : "Download"}
         </span>
       </button>
     </>

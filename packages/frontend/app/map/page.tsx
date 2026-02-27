@@ -50,6 +50,7 @@ import {
 } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
 import { fetchGeographySearch } from "@/lib/data";
+import { trackEvent } from "@/lib/analytics/tracker";
 
 const VIEW_MODE_STORAGE_KEY = "propertyiq-view-mode";
 
@@ -226,6 +227,11 @@ function MapPageInner() {
     (geography: SelectedGeography | null) => {
       setSelectedGeography(geography);
       if (geography) {
+        trackEvent("feature.region_select", {
+          region_id: geography.id,
+          region_name: geography.name,
+          geo_level: geography.geoLevel,
+        });
         setRightPanelOpen(true);
         // Persist to localStorage so other pages (graphs, reports) can pick it up
         try {
@@ -704,7 +710,13 @@ function MapPageInner() {
           viewMode={viewMode}
           mobileMenuOpen={mobileMenuOpen}
           onToggleCategory={toggleCategory}
-          onSelectMetric={setSelectedMetric}
+          onSelectMetric={(id: string) => {
+            trackEvent("feature.map_filter", {
+              metric_id: id,
+              geo_level: geoLevel,
+            });
+            setSelectedMetric(id);
+          }}
           onGeoLevelChange={handleGeoLevelChange}
           onStateChange={setSelectedState}
           onForecastHorizonChange={setForecastHorizon}

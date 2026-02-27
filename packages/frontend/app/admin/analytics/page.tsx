@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { AnalyticsDateRange } from "./components/AnalyticsDateRange";
 import { AnalyticsFilterBar } from "./components/AnalyticsFilterBar";
 import { AnalyticsTabNav } from "./components/AnalyticsTabNav";
 import { DrillDownChips } from "./components/DrillDownChips";
-import type { AnalyticsFilters } from "@/lib/data/fetchers/admin-analytics.types";
+import { ExportCsvButton } from "./components/ExportCsvButton";
+import { AnnotationPopover } from "./components/AnnotationPopover";
+import {
+  fetchAnnotations,
+  createAnnotation,
+} from "@/lib/data/fetchers/admin-analytics";
+import type {
+  AnalyticsFilters,
+  Annotation,
+} from "@/lib/data/fetchers/admin-analytics.types";
 
 type TabId =
   | "overview"
@@ -41,6 +51,21 @@ const ConversionTab = dynamic(() =>
   })),
 );
 
+/** Derive the effective date window from days or custom range. */
+function computeDateWindow(
+  days: number,
+  customRange: { start: string; end: string } | null,
+): { startDate: string; endDate: string } {
+  if (customRange) {
+    return { startDate: customRange.start, endDate: customRange.end };
+  }
+  const endDate = new Date().toISOString().slice(0, 10);
+  const startDate = new Date(Date.now() - days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  return { startDate, endDate };
+}
+
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [days, setDays] = useState(30);
@@ -59,6 +84,28 @@ export default function AnalyticsPage() {
     ...drillDownFilters,
   };
 
+  const { startDate, endDate } = useMemo(
+    () => computeDateWindow(days, customRange),
+    [days, customRange],
+  );
+
+  // Fetch annotations for the active date window
+  const { data: annotations = [], refetch: refetchAnnotations } = useQuery<
+    Annotation[]
+  >({
+    queryKey: ["analytics", "annotations", startDate, endDate],
+    queryFn: () => fetchAnnotations(startDate, endDate),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const handleSaveAnnotation = useCallback(
+    async (date: string, label: string, description?: string) => {
+      await createAnnotation(date, label, description);
+      refetchAnnotations();
+    },
+    [refetchAnnotations],
+  );
+
   const handleDrillDown = (key: string, value: string) => {
     setDrillDownFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -76,6 +123,7 @@ export default function AnalyticsPage() {
     filters: effectiveFilters,
     compare: compareEnabled,
     onDrillDown: handleDrillDown,
+    annotations,
   };
 
   return (
@@ -100,6 +148,16 @@ export default function AnalyticsPage() {
           >
             Compare
           </button>
+
+          {/* Action icon buttons */}
+          <div className="flex items-center gap-1 border-l border-outline-variant pl-3">
+            <ExportCsvButton
+              activeTab={activeTab}
+              days={days}
+              filters={effectiveFilters}
+            />
+            <AnnotationPopover onSave={handleSaveAnnotation} />
+          </div>
         </div>
       </div>
 

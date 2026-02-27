@@ -5,20 +5,29 @@
  * retention curves by tier, churn signals, and engagement trend.
  */
 
-'use client';
+"use client";
 
-import type { AnalyticsFilters } from '@/lib/data/fetchers/admin-analytics.types';
-import { EmptyState } from '../shared/EmptyState';
-import { SkeletonLoader } from '../shared/SkeletonLoader';
+import type {
+  AnalyticsFilters,
+  Annotation,
+} from "@/lib/data/fetchers/admin-analytics.types";
+import { EmptyState } from "../shared/EmptyState";
+import { SkeletonLoader } from "../shared/SkeletonLoader";
 
 interface RetentionTabProps {
   days: number;
   filters: AnalyticsFilters;
   compare: boolean;
   onDrillDown: (key: string, value: string) => void;
+  annotations?: Annotation[];
 }
 
-export function RetentionTab({ days, filters, compare, onDrillDown }: RetentionTabProps) {
+export function RetentionTab({
+  days,
+  filters,
+  compare,
+  onDrillDown,
+}: RetentionTabProps) {
   const loading = false;
 
   if (loading) {

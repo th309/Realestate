@@ -15,6 +15,17 @@ const PRESETS = [
   { label: "90d", value: 90 },
 ] as const;
 
+/** Format a YYYY-MM-DD date string as "Jan 5" or "Jan 5, 2025" (if not current year). */
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  const currentYear = new Date().getFullYear();
+  const opts: Intl.DateTimeFormatOptions =
+    date.getFullYear() === currentYear
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" };
+  return date.toLocaleDateString("en-US", opts);
+}
+
 interface AnalyticsDateRangeProps {
   days: number;
   onDaysChange: (days: number) => void;
@@ -77,7 +88,9 @@ export function AnalyticsDateRange({
             : "bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container"
         }`}
       >
-        Custom
+        {showCustom && customRange
+          ? `${formatShortDate(customRange.start)} – ${formatShortDate(customRange.end)}`
+          : "Custom"}
       </button>
 
       {showCustom && customRange && (
