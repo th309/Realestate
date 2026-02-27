@@ -4,6 +4,7 @@ import {
   Req,
   RawBodyRequest,
   BadRequestException,
+  ServiceUnavailableException,
   Logger,
   HttpCode,
 } from '@nestjs/common';
@@ -16,14 +17,43 @@ import { SupabaseEmailHookPayload } from './auth-hooks.types';
 @Controller('api/auth')
 export class AuthHooksController {
   private readonly logger = new Logger(AuthHooksController.name);
-  private readonly webhook: Webhook;
+  private readonly webhook: Webhook | null;
 
   constructor(
     private readonly authHooksService: AuthHooksService,
     private readonly config: ConfigService,
   ) {
-    const secret = this.config.getOrThrow<string>('SUPABASE_WEBHOOK_SECRET');
-    this.webhook = new Webhook(secret);
+    this.webhook = this.initWebhook();
+  }
+
+  /**
+   * Supabase provides webhook secrets in the format "v1,whsec_<base64>".
+   * The standardwebhooks library expects "whsec_<base64>" (no version prefix).
+   * Strip the version prefix before constructing the Webhook.
+   */
+  private initWebhook(): Webhook | null {
+    const raw = this.config.get<string>('SUPABASE_WEBHOOK_SECRET');
+    if (!raw) {
+      this.logger.warn(
+        'SUPABASE_WEBHOOK_SECRET not set — email hook endpoint will be unavailable',
+      );
+      return null;
+    }
+
+    // Strip Supabase version prefix (e.g. "v1,") if present
+    const secret = raw.replace(/^v\d+,/, '');
+
+    try {
+      const wh = new Webhook(secret);
+      this.logger.log('Webhook signature verification initialized');
+      return wh;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Failed to initialize webhook verifier: ${message} — email hook endpoint will be unavailable`,
+      );
+      return null;
+    }
   }
 
   /** Supabase auth email hook — no auth guard (verified by webhook signature) */
@@ -49,6 +79,12 @@ export class AuthHooksController {
       !headers['webhook-signature']
     ) {
       throw new BadRequestException('Missing required webhook headers');
+    }
+
+    if (!this.webhook) {
+      throw new ServiceUnavailableException(
+        'Webhook verification is not configured — SUPABASE_WEBHOOK_SECRET is missing or invalid',
+      );
     }
 
     let payload: SupabaseEmailHookPayload;
