@@ -17,6 +17,7 @@ WORKDIR /app
 # 2. Install Node dependencies (monorepo) - cached unless package*.json or lockfile change
 COPY package.json package-lock.json ./
 COPY packages/backend/package.json ./packages/backend/
+COPY packages/emails/package.json ./packages/emails/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/quinn-widget/package.json ./packages/quinn-widget/
 
