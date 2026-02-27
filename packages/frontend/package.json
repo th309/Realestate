@@ -59,6 +59,8 @@
     "reading-time": "^1.5.0",
     "recharts": "^2.15.0",
     "remark-gfm": "^4.0.0",
+    "@propertyiq/emails": "*",
+    "resend": "^6.9.2",
     "shapefile": "^0.6.6"
   },
   "devDependencies": {

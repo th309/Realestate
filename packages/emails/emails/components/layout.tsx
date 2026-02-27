@@ -9,7 +9,6 @@ import {
   Link,
   Font,
   Tailwind,
-  pixelBasedPreset,
 } from "@react-email/components";
 
 interface LayoutProps {
@@ -29,7 +28,6 @@ export default function Layout({
     <Html lang="en">
       <Tailwind
         config={{
-          presets: [pixelBasedPreset],
           theme: {
             extend: {
               colors: {

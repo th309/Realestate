@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ContactFormNotification } from '@propertyiq/emails';
+import React from 'react';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../email/email.service';
 
@@ -23,7 +25,8 @@ export class SupportService {
   async createTicket(dto: CreateTicketDto) {
     const contactEmail = dto.emailOverride || dto.userEmail;
 
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from('support_tickets')
       .insert({
         user_id: dto.userId,
@@ -51,21 +54,18 @@ export class SupportService {
   ): Promise<void> {
     const senderName = dto.name || 'Anonymous';
     const subject = `New Contact Form Submission: ${dto.issueType}`;
-    const html = `
-      <h2>New Contact Form Submission</h2>
-      <table style="border-collapse:collapse;width:100%;max-width:500px;">
-        <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${this.escapeHtml(senderName)}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${this.escapeHtml(contactEmail)}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;">Issue Type</td><td style="padding:8px;">${this.escapeHtml(dto.issueType)}</td></tr>
-      </table>
-      <h3>Message</h3>
-      <p style="white-space:pre-wrap;">${this.escapeHtml(dto.description)}</p>
-    `;
+
+    const react = React.createElement(ContactFormNotification, {
+      name: senderName,
+      email: contactEmail,
+      issueType: dto.issueType,
+      description: dto.description,
+    });
 
     const sent = await this.emailService.sendEmail({
       to: 'info@propertyiq.app',
       subject,
-      html,
+      react,
       emailType: 'contact_form_submission',
       metadata: {
         senderName,
@@ -77,13 +77,5 @@ export class SupportService {
     if (!sent) {
       this.logger.warn('Failed to send contact form notification email');
     }
-  }
-
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
   }
 }

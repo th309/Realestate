@@ -1,6 +1,8 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { WeeklyDigest } from '@propertyiq/emails';
+import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
 
@@ -51,12 +53,28 @@ export class DigestService {
         const digestData = await this.buildDigestData(user.id);
         if (!digestData.hasContent) continue;
 
-        const html = this.renderDigestEmail(digestData);
+        const react = React.createElement(WeeklyDigest, {
+          name: user.email.split('@')[0],
+          watchlist: digestData.watchlist.map((m) => ({
+            name: m.geography_name || m.geography_id,
+            geoType: m.geography_type,
+            geoId: m.geography_id,
+          })),
+          alerts: digestData.alerts.map((a) => ({
+            marketName: a.alert?.geography_name || 'Market',
+            metricId: a.alert?.metric_id || '',
+            condition: a.alert?.condition || '',
+            threshold: a.alert?.threshold || 0,
+            currentValue: a.metric_value || 0,
+          })),
+          dashboardUrl: 'https://propertyiq.app/dashboard',
+          preferencesUrl: 'https://propertyiq.app/account/notifications',
+        });
 
         const success = await this.emailService.sendEmail({
           to: user.email,
           subject: `PropertyIQ Weekly Digest — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-          html,
+          react,
           userId: user.id,
           emailType: 'digest',
           metadata: {
@@ -126,95 +144,5 @@ export class DigestService {
       alertCount: userAlertHistory.length,
       hasContent: (watchlist?.length || 0) > 0 || userAlertHistory.length > 0,
     };
-  }
-
-  private renderDigestEmail(data: {
-    watchlist: Array<{
-      geography_name?: string;
-      geography_id: string;
-      geography_type: string;
-    }>;
-    alerts: Array<{
-      alert?: {
-        geography_name?: string;
-        metric_id?: string;
-        condition?: string;
-        threshold?: number;
-      };
-      metric_value?: number;
-    }>;
-    watchlistCount: number;
-    alertCount: number;
-    hasContent: boolean;
-  }): string {
-    const watchlistSection =
-      data.watchlist.length > 0
-        ? `
-        <h2 style="font-size: 18px; color: #1a1a1a; margin-top: 24px;">Your Markets</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          ${data.watchlist
-            .map(
-              (m) => `
-            <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding: 12px 0;">
-                <strong style="color: #1a1a1a;">${m.geography_name || m.geography_id}</strong>
-                <br><span style="font-size: 12px; color: #666;">${m.geography_type}</span>
-              </td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-        : '';
-
-    const alertsSection =
-      data.alerts.length > 0
-        ? `
-        <h2 style="font-size: 18px; color: #1a1a1a; margin-top: 24px;">Triggered Alerts (Past 7 Days)</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          ${data.alerts
-            .map(
-              (a) => `
-            <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding: 12px 0;">
-                <strong style="color: #1a1a1a;">${a.alert?.geography_name || 'Market'}</strong>
-                <br><span style="font-size: 12px; color: #666;">${a.alert?.metric_id} ${a.alert?.condition} ${a.alert?.threshold} — Current: ${a.metric_value}</span>
-              </td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-      `
-        : '';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #6750A4;">
-          <h1 style="font-size: 24px; color: #6750A4; margin: 0;">PropertyIQ</h1>
-          <p style="font-size: 14px; color: #666; margin: 4px 0 0;">Weekly Market Digest</p>
-        </div>
-
-        ${watchlistSection}
-        ${alertsSection}
-
-        <div style="margin-top: 32px; padding: 16px; background: #f5f3ff; border-radius: 8px; text-align: center;">
-          <a href="https://propertyiq.io/dashboard" style="color: #6750A4; font-weight: 600; text-decoration: none;">
-            View Your Dashboard →
-          </a>
-        </div>
-
-        <hr style="margin-top: 32px; border: none; border-top: 1px solid #eee;">
-        <p style="font-size: 11px; color: #999; text-align: center;">
-          You're receiving this because you have a PropertyIQ Pro subscription.
-          <a href="https://propertyiq.io/account/notifications" style="color: #999;">Manage preferences</a>
-        </p>
-      </body>
-      </html>
-    `;
   }
 }
