@@ -108,18 +108,14 @@ export async function queryLandingPagePerformance(
       page,
       sessions: stats.totalSessions,
       bounceRate:
-        stats.totalSessions > 0
-          ? Math.round((stats.bounces / stats.totalSessions) * 1000) / 10
-          : 0,
+        stats.totalSessions > 0 ? stats.bounces / stats.totalSessions : 0,
       avgTime:
         stats.totalSessions > 0
           ? Math.round(stats.totalDuration / stats.totalSessions)
           : 0,
       signups: stats.signups,
       conversionRate:
-        stats.totalSessions > 0
-          ? Math.round((stats.signups / stats.totalSessions) * 1000) / 10
-          : 0,
+        stats.totalSessions > 0 ? stats.signups / stats.totalSessions : 0,
     }))
     .sort((a, b) => b.sessions - a.sessions);
 }

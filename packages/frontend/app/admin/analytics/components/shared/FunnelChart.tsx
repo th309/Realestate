@@ -66,11 +66,11 @@ export function FunnelChart({ steps }: FunnelChartProps) {
                   <>
                     <span className="text-outline">|</span>
                     <span className="tabular-nums">
-                      {step.rateFromPrevious.toFixed(1)}% from prev
+                      {(step.rateFromPrevious * 100).toFixed(1)}% from prev
                     </span>
                     <span className="text-outline">|</span>
                     <span className="tabular-nums">
-                      {step.rateFromFirst.toFixed(1)}% overall
+                      {(step.rateFromFirst * 100).toFixed(1)}% overall
                     </span>
                   </>
                 )}
@@ -89,7 +89,11 @@ export function FunnelChart({ steps }: FunnelChartProps) {
             {index < steps.length - 1 && (
               <div className="flex justify-center py-0.5">
                 <span className="text-xs text-on-surface-variant">
-                  {((1 - steps[index + 1].count / step.count) * 100).toFixed(1)}
+                  {step.count === 0
+                    ? "100.0"
+                    : ((1 - steps[index + 1].count / step.count) * 100).toFixed(
+                        1,
+                      )}
                   % drop-off
                 </span>
               </div>

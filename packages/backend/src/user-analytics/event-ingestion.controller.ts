@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Body, HttpCode, Logger } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, Logger } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { EventIngestionService } from './event-ingestion.service';
 import { SessionManagerService } from './session-manager.service';
@@ -26,7 +26,7 @@ export class EventIngestionController {
     return { success: true, ...result };
   }
 
-  @Put('heartbeat')
+  @Post('heartbeat')
   @Throttle({ default: { limit: 200, ttl: 60000 } })
   @HttpCode(204)
   async heartbeat(@Body() body: { session_id?: string; visitor_id?: string }) {

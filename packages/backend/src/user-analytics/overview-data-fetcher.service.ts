@@ -142,9 +142,11 @@ export class OverviewDataFetcherService {
         name: stage.name,
         count: stageCounts[i],
         rateFromPrevious:
-          i === 0 || stageCounts[i - 1] === 0
+          i === 0
             ? 1
-            : stageCounts[i] / stageCounts[i - 1],
+            : stageCounts[i - 1] === 0
+              ? 0
+              : stageCounts[i] / stageCounts[i - 1],
         rateFromFirst:
           stageCounts[0] === 0 ? 0 : stageCounts[i] / stageCounts[0],
       }),

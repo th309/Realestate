@@ -5,9 +5,12 @@ import {
   Query,
   Body,
   Param,
+  Res,
+  Header,
   UseGuards,
   Logger,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { OverviewAnalyticsService } from './overview-analytics.service';
 import { JourneyAnalyticsService } from './journey-analytics.service';
@@ -108,6 +111,74 @@ export class UserAnalyticsController {
     if (endDate) q = q.lte('annotation_date', endDate);
     const { data } = await q;
     return data || [];
+  }
+
+  @Get('export')
+  @Header('Content-Type', 'text/csv')
+  async exportCsv(
+    @Query() query: AnalyticsQueryDto,
+    @Query('section') section: string,
+    @Res() res: Response,
+  ) {
+    const { days, filters } = this.parseFilters(query);
+
+    let data: any;
+    switch (section) {
+      case 'overview':
+        data = await this.overview.getOverview(days, filters);
+        break;
+      case 'journeys':
+        data = await this.journeys.getJourneys(days, filters);
+        break;
+      case 'retention':
+        data = await this.retention.getRetention(days, filters);
+        break;
+      case 'acquisition':
+        data = await this.acquisition.getAcquisition(days, filters);
+        break;
+      case 'conversion':
+        data = await this.conversion.getConversion(days, filters);
+        break;
+      default:
+        data = await this.overview.getOverview(days, filters);
+    }
+
+    const csv = this.jsonToCsv(data as Record<string, unknown>);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=analytics-${section || 'overview'}-${days}d.csv`,
+    );
+    res.send(csv);
+  }
+
+  private jsonToCsv(data: Record<string, unknown>): string {
+    const rows: string[] = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (Array.isArray(value) && value.length > 0) {
+        const headers = Object.keys(value[0]);
+        rows.push(`\n# ${key}`);
+        rows.push(headers.join(','));
+        for (const item of value) {
+          rows.push(
+            headers
+              .map((h) => {
+                const v = (item as Record<string, unknown>)[h];
+                const str = String(v ?? '');
+                return str.includes(',') ? `"${str}"` : str;
+              })
+              .join(','),
+          );
+        }
+      } else if (value !== null && typeof value === 'object') {
+        rows.push(`\n# ${key}`);
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+          rows.push(`${k},${v}`);
+        }
+      } else {
+        rows.push(`${key},${value}`);
+      }
+    }
+    return rows.join('\n');
   }
 
   @Post('funnels')
