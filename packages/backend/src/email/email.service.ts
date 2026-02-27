@@ -1,12 +1,15 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
 interface SendEmailOptions {
   to: string;
   subject: string;
-  html: string;
+  html?: string;
+  react?: React.ReactElement;
   userId?: string;
   emailType: string;
   metadata?: Record<string, unknown>;
@@ -17,6 +20,7 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly resendApiKey: string | undefined;
   private readonly fromEmail: string;
+  private readonly resend: Resend | null;
 
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
@@ -25,39 +29,30 @@ export class EmailService {
     this.resendApiKey = this.config.get('RESEND_API_KEY');
     this.fromEmail =
       this.config.get('EMAIL_FROM') || 'PropertyIQ <noreply@propertyiq.io>';
+    this.resend = this.resendApiKey ? new Resend(this.resendApiKey) : null;
   }
 
   async sendEmail(options: SendEmailOptions): Promise<boolean> {
     try {
-      if (this.resendApiKey) {
-        // Use Resend API
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: this.fromEmail,
-            to: [options.to],
-            subject: options.subject,
-            html: options.html,
-          }),
+      if (this.resend) {
+        const { error } = await this.resend.emails.send({
+          from: this.fromEmail,
+          to: [options.to],
+          subject: options.subject,
+          react: options.react,
+          html: options.react ? undefined : options.html,
         });
 
-        if (!response.ok) {
-          const error = await response.text();
-          this.logger.error(`Resend API error: ${error}`);
+        if (error) {
+          this.logger.error(`Resend SDK error: ${JSON.stringify(error)}`);
           return false;
         }
       } else {
-        // Dev mode: log only
         this.logger.log(
           `[DEV] Would send email to ${options.to}: ${options.subject}`,
         );
       }
 
-      // Log the send
       await this.logEmail(options);
       return true;
     } catch (error) {
