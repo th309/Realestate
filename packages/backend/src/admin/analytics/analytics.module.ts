@@ -7,12 +7,10 @@ import { AiInsightsService } from './ai-insights.service';
 import { AiProviderService } from './ai-provider.service';
 import { AiInsightsPersistenceController } from './ai-insights-persistence.controller';
 import { AiInsightsPersistenceService } from './ai-insights-persistence.service';
-import { RecommendationExecutorService } from './recommendation-executor.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
-import { FeaturesModule } from '../features/features.module';
 
 @Module({
-  imports: [SupabaseModule, ConfigModule, FeaturesModule],
+  imports: [SupabaseModule, ConfigModule],
   controllers: [
     PaywallAnalyticsController,
     AiInsightsController,
@@ -23,7 +21,6 @@ import { FeaturesModule } from '../features/features.module';
     AiInsightsService,
     AiProviderService,
     AiInsightsPersistenceService,
-    RecommendationExecutorService,
   ],
   exports: [PaywallAnalyticsService, AiInsightsService],
 })
