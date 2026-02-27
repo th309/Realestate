@@ -40,6 +40,7 @@ import { SupportModule } from './support/support.module';
 import { MetricResolutionModule } from './metric-resolution/metric-resolution.module';
 import { PricingModule } from './pricing/pricing.module';
 import { UserAnalyticsModule } from './user-analytics/user-analytics.module';
+import { AuthHooksModule } from './auth-hooks/auth-hooks.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -85,6 +86,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     MetricResolutionModule,
     PricingModule,
     UserAnalyticsModule,
+    AuthHooksModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
