@@ -9,6 +9,7 @@ import { AnalyticsTabNav } from "./components/AnalyticsTabNav";
 import { DrillDownChips } from "./components/DrillDownChips";
 import { ExportCsvButton } from "./components/ExportCsvButton";
 import { AnnotationPopover } from "./components/AnnotationPopover";
+import { AiInsightsPanel } from "./components/AiInsightsPanel";
 import {
   fetchAnnotations,
   createAnnotation,
@@ -184,6 +185,13 @@ export default function AnalyticsPage() {
         {activeTab === "acquisition" && <AcquisitionTab {...tabProps} />}
         {activeTab === "conversion" && <ConversionTab {...tabProps} />}
       </div>
+
+      {/* AI Marketing Insights */}
+      <AiInsightsPanel
+        days={days}
+        filters={effectiveFilters}
+        focusArea={activeTab}
+      />
     </div>
   );
 }
