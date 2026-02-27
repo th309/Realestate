@@ -62,3 +62,45 @@
 2. **If the plan says write tests, write tests.** "Tests" is not a nice-to-have that gets dropped when time runs short.
 3. **If something is superseded, remove the old version.** Duplicate pages/components violate CLAUDE.md Section 1.1 and create confusion.
 4. **Check the plan against the deliverables before declaring done.** Walk through every checkbox item and verify it actually exists and works.
+
+## Verify Deploys Holistically Before Pushing — Not One Fix at a Time
+
+**Date:** 2026-02-27
+**Context:** Backend Railway deploy was blocked by a `next@15.1.2` CVE. Fixed it, pushed. Then it failed because `@propertyiq/emails` workspace package couldn't resolve. Fixed it, pushed. Then it failed because the emails package wasn't built. Fixed it, pushed. Then it crashed because `STRIPE_WEBHOOK_SECRET` was missing in the dev environment. Four separate deploy cycles, each taking 15+ minutes, when all four issues could have been caught in one local investigation.
+
+**Rule:** When fixing a deploy failure, don't just fix the immediate error and push. Trace the FULL deploy path locally before pushing:
+
+1. **Simulate the build environment.** Read the Dockerfile/Railpack config. Mentally walk through each step. What gets copied? What gets installed? What gets built?
+2. **Check all workspace dependencies.** If a package depends on another workspace package, verify that package is included in the build AND gets built first.
+3. **Check runtime requirements.** After build succeeds, check what the app needs at startup — env vars, secrets, connections. Use Railway MCP tools to verify env vars exist in the TARGET environment (not just production).
+4. **Compare environments.** When deploying to dev/staging, compare its env vars against production. Missing vars in non-production environments are a common failure mode.
+5. **One push, not four.** Batch all fixes into a single commit. The user should never have to wait for multiple deploy cycles for issues that were all discoverable upfront.
+
+**Wrong behavior:**
+
+- Fix error #1, push, wait 15 min, see error #2, fix, push, wait 15 min...
+
+**Correct behavior:**
+
+- Fix error #1, then ask: "What ELSE will break?" Check Dockerfile, workspace deps, build order, env vars across environments. Fix everything. Push once.
+
+## Check Actual Runtime Data Before Reading Code — Use Your Tools
+
+**Date:** 2026-02-27
+**Context:** Backend crashed with `Base64Coder: incorrect characters for decoding` in the `standardwebhooks` Webhook constructor. Instead of immediately checking the actual `SUPABASE_WEBHOOK_SECRET` value in Railway (one MCP tool call), spent time reading source code, theorizing about base64 encoding, and building elaborate try/catch fallback logic. The root cause was that Supabase formats secrets as `v1,whsec_<base64>` — the `v1,` prefix contains a comma which is invalid base64. This was visible in the env var value the entire time.
+
+**Rule:** When an error involves config, secrets, or environment variables, the FIRST action is to check the actual value in the deployed environment using available tools (Railway MCP, Supabase MCP, etc.). Don't read code and theorize — look at the data. The error message said "incorrect characters for decoding" — the immediate question should have been "what characters?" not "how should we handle various formats?"
+
+**Wrong behavior:**
+
+- Read controller source code
+- Theorize about what format the secret might be in
+- Build defensive code to handle multiple formats
+- Eventually check the env var after multiple rounds
+
+**Correct behavior:**
+
+- Error says "incorrect characters for decoding" in Webhook constructor
+- Immediately check: what is the actual value of `SUPABASE_WEBHOOK_SECRET` in Railway?
+- See `v1,whsec_...` — comma is the invalid character
+- Fix: strip the `v1,` prefix. Done.
