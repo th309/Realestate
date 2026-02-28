@@ -56,5 +56,5 @@ docs
 *.xlsx
 *.xml
 
-# Note: propertyiq-analytics and quinn-widget are included because npm workspaces
-# needs all package.json files. The extra files add minimal overhead.
+# Experiments (not deployed)
+experiments
