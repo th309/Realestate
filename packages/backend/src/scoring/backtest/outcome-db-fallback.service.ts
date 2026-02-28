@@ -130,14 +130,14 @@ export class OutcomeDbFallbackService {
     const requestedYear = parseInt(date.slice(0, 4), 10);
     const client = this.supabase.getClient();
 
-    const { data, error } = await client
+    const { data, error } = (await client
       .from(route.table)
       .select(`median_gross_rent, ${route.dateColumn}`)
       .eq(route.idColumn, geographyId)
       .lte(route.dateColumn, requestedYear)
       .not('median_gross_rent', 'is', null)
       .order(route.dateColumn, { ascending: false })
-      .limit(1);
+      .limit(1)) as { data: Record<string, any>[] | null; error: any };
 
     if (error || !data?.length) return null;
     const rent = data[0].median_gross_rent as number;

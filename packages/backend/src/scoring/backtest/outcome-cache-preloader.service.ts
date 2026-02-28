@@ -28,32 +28,67 @@ export class OutcomeCachePreloaderService {
   ) {}
 
   /**
-   * Bulk-load ALL Zillow ZHVI + ZORI data for a geography type into the cache.
-   * One full table scan replaces thousands of individual per-location queries.
+   * Bulk-load Zillow ZHVI + ZORI data for a geography type into the cache.
+   * Runs two separate passes (ZHVI first, then ZORI) to keep each query
+   * simple enough for PostgreSQL to handle on large tables like zillow_zip.
    */
   async preloadHistoricalData(geographyType: GeographyType): Promise<number> {
-    const client = this.supabase.getClient();
     const table = getZillowTable(geographyType);
     const idCol = getZillowIdColumn(geographyType);
-    let loaded = 0;
-    const pageSize = 1000;
     const geoDateSets = new Map<string, Set<string>>();
 
-    // Use cursor-based (keyset) pagination to avoid slow OFFSET scans.
-    // Order by (id, period_date) and filter with gt() on each page.
+    // Pass 1: ZHVI (primary price data)
+    console.log(`      ZHVI pass...`);
+    const zhviCount = await this.loadMetricPass(
+      table,
+      idCol,
+      'zhvi',
+      geographyType,
+      geoDateSets,
+    );
+
+    // Pass 2: ZORI (rent data — merge into existing points)
+    console.log(`      ZORI pass...`);
+    const zoriCount = await this.loadMetricPass(
+      table,
+      idCol,
+      'zori',
+      geographyType,
+      geoDateSets,
+    );
+
+    this.cache.flushDateIndex(geoDateSets, 'historical');
+
+    const total = zhviCount + zoriCount;
+    console.log(
+      `    Preloaded ${total.toLocaleString()} points (${zhviCount.toLocaleString()} ZHVI + ${zoriCount.toLocaleString()} ZORI) + ${this.cache.stateCodeCache.size} state codes for ${geographyType}`,
+    );
+    return total;
+  }
+
+  /** Load a single metric (zhvi or zori) using keyset pagination. */
+  private async loadMetricPass(
+    table: string,
+    idCol: string,
+    metric: 'zhvi' | 'zori',
+    geographyType: GeographyType,
+    geoDateSets: Map<string, Set<string>>,
+  ): Promise<number> {
+    const client = this.supabase.getClient();
+    let loaded = 0;
+    const pageSize = 1000;
     let cursorId = '';
     let cursorDate = '';
 
     while (true) {
       let query = client
         .from(table)
-        .select(`${idCol}, period_date, value, state_code, metric_name`)
-        .in('metric_name', ['zhvi', 'zori'])
+        .select(`${idCol}, period_date, value, state_code`)
+        .eq('metric_name', metric)
         .order(idCol, { ascending: true })
         .order('period_date', { ascending: true })
         .limit(pageSize);
 
-      // Keyset cursor: skip rows before (cursorId, cursorDate)
       if (cursorId) {
         query = query.or(
           `${idCol}.gt.${cursorId},and(${idCol}.eq.${cursorId},period_date.gt.${cursorDate})`,
@@ -70,28 +105,16 @@ export class OutcomeCachePreloaderService {
         const geoId = row[idCol] as string;
         const date = row.period_date as string;
         const indexKey = `${geographyType}:${geoId}`;
-
         const histKey = `${indexKey}:${date}`;
-        const metricName = row.metric_name as string;
-        const existing = this.cache.historicalCache.get(histKey);
 
+        const existing = this.cache.historicalCache.get(histKey);
         if (existing) {
-          // Merge ZORI into existing ZHVI point (or vice versa)
-          if (metricName === 'zori') {
-            existing[0].zori = row.value as number;
-          } else {
-            existing[0].zhvi = row.value as number;
-          }
+          if (metric === 'zori') existing[0].zori = row.value as number;
+          else existing[0].zhvi = row.value as number;
         } else {
-          const point: HistoricalDataPoint = {
-            date,
-            source: 'zillow',
-          };
-          if (metricName === 'zori') {
-            point.zori = row.value as number;
-          } else {
-            point.zhvi = row.value as number;
-          }
+          const point: HistoricalDataPoint = { date, source: 'zillow' };
+          if (metric === 'zori') point.zori = row.value as number;
+          else point.zhvi = row.value as number;
           this.cache.historicalCache.set(histKey, [point]);
           loaded++;
         }
@@ -103,25 +126,19 @@ export class OutcomeCachePreloaderService {
         }
       }
 
-      // Advance cursor to last row of this page
       const lastRow = data[data.length - 1];
       cursorId = lastRow[idCol] as string;
       cursorDate = lastRow.period_date as string;
 
-      if (loaded % 50000 === 0) {
+      if (loaded % 50000 === 0 && loaded > 0) {
         console.log(
-          `    ... ${loaded.toLocaleString()} rows loaded from ${table}`,
+          `      ... ${loaded.toLocaleString()} ${metric} rows from ${table}`,
         );
       }
 
       if (data.length < pageSize) break;
     }
 
-    this.cache.flushDateIndex(geoDateSets, 'historical');
-
-    console.log(
-      `    Preloaded ${loaded.toLocaleString()} historical points (ZHVI + ZORI) + ${this.cache.stateCodeCache.size} state codes for ${geographyType}`,
-    );
     return loaded;
   }
 

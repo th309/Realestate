@@ -1,0 +1,389 @@
+{
+  "generated_at": "2026-02-28 16:45:01 UTC",
+  "description": "Isotonic calibration lookup tables mapping raw score percentile to calibrated excess-return percentile.",
+  "lookup_grid_step": 5,
+  "tables": {
+    "homeready_metro": [
+      {
+        "raw": 0.0,
+        "calibrated": 0.0
+      },
+      {
+        "raw": 5.0,
+        "calibrated": 35.2
+      },
+      {
+        "raw": 10.0,
+        "calibrated": 38.3
+      },
+      {
+        "raw": 15.0,
+        "calibrated": 41.9
+      },
+      {
+        "raw": 20.0,
+        "calibrated": 44.8
+      },
+      {
+        "raw": 25.0,
+        "calibrated": 44.8
+      },
+      {
+        "raw": 30.0,
+        "calibrated": 46.5
+      },
+      {
+        "raw": 35.0,
+        "calibrated": 47.7
+      },
+      {
+        "raw": 40.0,
+        "calibrated": 48.2
+      },
+      {
+        "raw": 45.0,
+        "calibrated": 48.5
+      },
+      {
+        "raw": 50.0,
+        "calibrated": 50.7
+      },
+      {
+        "raw": 55.0,
+        "calibrated": 51.9
+      },
+      {
+        "raw": 60.0,
+        "calibrated": 52.2
+      },
+      {
+        "raw": 65.0,
+        "calibrated": 52.9
+      },
+      {
+        "raw": 70.0,
+        "calibrated": 53.3
+      },
+      {
+        "raw": 75.0,
+        "calibrated": 55.4
+      },
+      {
+        "raw": 80.0,
+        "calibrated": 56.7
+      },
+      {
+        "raw": 85.0,
+        "calibrated": 59.1
+      },
+      {
+        "raw": 90.0,
+        "calibrated": 61.5
+      },
+      {
+        "raw": 95.0,
+        "calibrated": 62.8
+      },
+      {
+        "raw": 100.0,
+        "calibrated": 100.0
+      }
+    ],
+    "investoredge_metro": [
+      {
+        "raw": 0.0,
+        "calibrated": 0.0
+      },
+      {
+        "raw": 5.0,
+        "calibrated": 36.8
+      },
+      {
+        "raw": 10.0,
+        "calibrated": 41.0
+      },
+      {
+        "raw": 15.0,
+        "calibrated": 43.1
+      },
+      {
+        "raw": 20.0,
+        "calibrated": 45.8
+      },
+      {
+        "raw": 25.0,
+        "calibrated": 47.1
+      },
+      {
+        "raw": 30.0,
+        "calibrated": 48.4
+      },
+      {
+        "raw": 35.0,
+        "calibrated": 48.4
+      },
+      {
+        "raw": 40.0,
+        "calibrated": 50.5
+      },
+      {
+        "raw": 45.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 50.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 55.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 60.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 65.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 70.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 75.0,
+        "calibrated": 54.1
+      },
+      {
+        "raw": 80.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 85.0,
+        "calibrated": 57.1
+      },
+      {
+        "raw": 90.0,
+        "calibrated": 57.1
+      },
+      {
+        "raw": 95.0,
+        "calibrated": 57.1
+      },
+      {
+        "raw": 100.0,
+        "calibrated": 100.0
+      }
+    ],
+    "homeready_county": [
+      {
+        "raw": 0.0,
+        "calibrated": 0.0
+      },
+      {
+        "raw": 5.0,
+        "calibrated": 39.4
+      },
+      {
+        "raw": 10.0,
+        "calibrated": 41.3
+      },
+      {
+        "raw": 15.0,
+        "calibrated": 44.6
+      },
+      {
+        "raw": 20.0,
+        "calibrated": 44.8
+      },
+      {
+        "raw": 25.0,
+        "calibrated": 45.6
+      },
+      {
+        "raw": 30.0,
+        "calibrated": 46.1
+      },
+      {
+        "raw": 35.0,
+        "calibrated": 47.6
+      },
+      {
+        "raw": 40.0,
+        "calibrated": 49.1
+      },
+      {
+        "raw": 45.0,
+        "calibrated": 49.1
+      },
+      {
+        "raw": 50.0,
+        "calibrated": 49.6
+      },
+      {
+        "raw": 55.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 60.0,
+        "calibrated": 51.4
+      },
+      {
+        "raw": 65.0,
+        "calibrated": 52.3
+      },
+      {
+        "raw": 70.0,
+        "calibrated": 53.4
+      },
+      {
+        "raw": 75.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 80.0,
+        "calibrated": 55.7
+      },
+      {
+        "raw": 85.0,
+        "calibrated": 56.8
+      },
+      {
+        "raw": 90.0,
+        "calibrated": 58.4
+      },
+      {
+        "raw": 95.0,
+        "calibrated": 60.1
+      },
+      {
+        "raw": 100.0,
+        "calibrated": 100.0
+      }
+    ],
+    "investoredge_county": [
+      {
+        "raw": 0.0,
+        "calibrated": 0.0
+      },
+      {
+        "raw": 5.0,
+        "calibrated": 40.4
+      },
+      {
+        "raw": 10.0,
+        "calibrated": 41.7
+      },
+      {
+        "raw": 15.0,
+        "calibrated": 43.6
+      },
+      {
+        "raw": 20.0,
+        "calibrated": 44.8
+      },
+      {
+        "raw": 25.0,
+        "calibrated": 45.8
+      },
+      {
+        "raw": 30.0,
+        "calibrated": 46.5
+      },
+      {
+        "raw": 35.0,
+        "calibrated": 46.8
+      },
+      {
+        "raw": 40.0,
+        "calibrated": 48.1
+      },
+      {
+        "raw": 45.0,
+        "calibrated": 49.1
+      },
+      {
+        "raw": 50.0,
+        "calibrated": 49.6
+      },
+      {
+        "raw": 55.0,
+        "calibrated": 50.5
+      },
+      {
+        "raw": 60.0,
+        "calibrated": 51.0
+      },
+      {
+        "raw": 65.0,
+        "calibrated": 53.1
+      },
+      {
+        "raw": 70.0,
+        "calibrated": 53.1
+      },
+      {
+        "raw": 75.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 80.0,
+        "calibrated": 55.4
+      },
+      {
+        "raw": 85.0,
+        "calibrated": 56.6
+      },
+      {
+        "raw": 90.0,
+        "calibrated": 58.5
+      },
+      {
+        "raw": 95.0,
+        "calibrated": 60.7
+      },
+      {
+        "raw": 100.0,
+        "calibrated": 100.0
+      }
+    ]
+  },
+  "diagnostics": [
+    {
+      "score_type": "homeready",
+      "geo_level": "metro",
+      "target_column": "excess_div_3y",
+      "n_samples": 53930,
+      "mad_before_calibration": 18.7,
+      "mad_after_calibration": 18.78,
+      "mad_improvement": -0.08
+    },
+    {
+      "score_type": "investoredge",
+      "geo_level": "metro",
+      "target_column": "excess_div_3y",
+      "n_samples": 53930,
+      "mad_before_calibration": 20.54,
+      "mad_after_calibration": 19.84,
+      "mad_improvement": 0.71
+    },
+    {
+      "score_type": "homeready",
+      "geo_level": "county",
+      "target_column": "excess_div_3y",
+      "n_samples": 184060,
+      "mad_before_calibration": 20.17,
+      "mad_after_calibration": 20.11,
+      "mad_improvement": 0.06
+    },
+    {
+      "score_type": "investoredge",
+      "geo_level": "county",
+      "target_column": "excess_div_3y",
+      "n_samples": 184060,
+      "mad_before_calibration": 20.17,
+      "mad_after_calibration": 20.05,
+      "mad_improvement": 0.13
+    }
+  ]
+}

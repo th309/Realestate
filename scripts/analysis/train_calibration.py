@@ -333,9 +333,12 @@ def train_isotonic_model(
     predicted_calibrated = iso_reg.predict(score_percentiles)
     after_mad = compute_calibration_mad(predicted_calibrated, excess_percentiles)
 
-    # Build the lookup table
+    # Build the lookup table (NaN → identity fallback for edge grid points)
     lookup_table = [
-        {"raw": float(raw), "calibrated": round(float(cal), 1)}
+        {
+            "raw": float(raw),
+            "calibrated": round(float(cal), 1) if not np.isnan(cal) else float(raw),
+        }
         for raw, cal in zip(grid, calibrated)
     ]
 

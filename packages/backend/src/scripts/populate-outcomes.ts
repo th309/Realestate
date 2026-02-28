@@ -189,12 +189,11 @@ async function main() {
 
             if (batchNum % 10 === 0 || batchNum === totalBatches) {
               const pct = ((batchNum / totalBatches) * 100).toFixed(0);
-              process.stdout.write(
-                `\r      batch ${batchNum}/${totalBatches} (${pct}%) — ${processed} ok, ${errors} err`,
+              console.log(
+                `      batch ${batchNum}/${totalBatches} (${pct}%) — ${processed} ok, ${errors} err`,
               );
             }
           }
-          process.stdout.write('\n');
 
           totalProcessed += processed;
           totalErrors += errors;
@@ -260,6 +259,15 @@ async function fetchScoresForDate(
 
   return scores;
 }
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  process.exit(1);
+});
 
 main().catch((err) => {
   console.error('Fatal error:', err);
