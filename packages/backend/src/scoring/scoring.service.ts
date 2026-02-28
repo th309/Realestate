@@ -18,6 +18,7 @@ import { Injectable, Inject, Optional } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { GeographyChainService } from '../metric-resolution/geography-chain.service';
+import { CalibrationService } from './calibration/calibration.service';
 import {
   FORMULA_WEIGHTS,
   scoreToGrade,
@@ -79,8 +80,9 @@ export type {
 export class ScoringService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    private readonly calibrationService: CalibrationService,
     @Optional() private readonly geoChainService?: GeographyChainService,
-  ) { }
+  ) {}
 
   // ============================================================================
   // Score Calculation
@@ -93,12 +95,18 @@ export class ScoringService {
     geography: GeographyLevel,
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
-    const targetDate = periodDate || (await getLatestRealtorDate(this.supabase, geography));
+    const targetDate =
+      periodDate || (await getLatestRealtorDate(this.supabase, geography));
     if (!targetDate) {
       return { calculated: 0, errors: 0, scoreDate: '' };
     }
 
-    const locations = await fetchAllMetrics(this.supabase, geography, targetDate, this.geoChainService);
+    const locations = await fetchAllMetrics(
+      this.supabase,
+      geography,
+      targetDate,
+      this.geoChainService,
+    );
     if (locations.length === 0) {
       return { calculated: 0, errors: 0, scoreDate: targetDate };
     }
@@ -110,21 +118,34 @@ export class ScoringService {
     const allMetricNames = getAllMetricNames(geography);
     const zScores = calculateZScores(locations, allMetricNames);
 
-    const scoreTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+    const scoreTypes: ScoreType[] = [
+      'homeready',
+      'investoredge',
+      'markethealth',
+    ];
     const allResults: ScoreResult[] = [];
 
     for (const scoreType of scoreTypes) {
       const formula = FORMULA_WEIGHTS[geography][scoreType];
       const rawScores = applyFormula(locations, zScores, formula);
-      const normalizedScores = normalizeScores(rawScores);
+      const rawNormalized = normalizeScores(rawScores);
+      const normalizedScores = rawNormalized.map((score) =>
+        this.calibrationService.calibrate(score, scoreType, geography),
+      );
 
       for (let i = 0; i < locations.length; i++) {
         const location = locations[i];
         const score = normalizedScores[i];
         const grade = scoreToGrade(score);
-        const { confidence, level } = calculateConfidence(location, geography, scoreType);
+        const { confidence, level } = calculateConfidence(
+          location,
+          geography,
+          scoreType,
+        );
 
-        let result = allResults.find(r => r.location_id === location.location_id);
+        let result = allResults.find(
+          (r) => r.location_id === location.location_id,
+        );
         if (!result) {
           result = {
             location_id: location.location_id,
@@ -133,20 +154,44 @@ export class ScoringService {
             median_price: location.median_price ?? null,
             score_date: targetDate,
             scores: {
-              homeready: { score: 0, grade: 'F', confidence: 0, confidence_level: 'F' },
-              investoredge: { score: 0, grade: 'F', confidence: 0, confidence_level: 'F' },
-              markethealth: { score: 0, grade: 'F', confidence: 0, confidence_level: 'F' },
+              homeready: {
+                score: 0,
+                grade: 'F',
+                confidence: 0,
+                confidence_level: 'F',
+              },
+              investoredge: {
+                score: 0,
+                grade: 'F',
+                confidence: 0,
+                confidence_level: 'F',
+              },
+              markethealth: {
+                score: 0,
+                grade: 'F',
+                confidence: 0,
+                confidence_level: 'F',
+              },
             },
             z_scores: zScores[location.location_id] || {},
           };
           allResults.push(result);
         }
 
-        result.scores[scoreType] = { score, grade, confidence, confidence_level: level };
+        result.scores[scoreType] = {
+          score,
+          grade,
+          confidence,
+          confidence_level: level,
+        };
       }
     }
 
-    const { calculated, errors } = await saveScoresBatch(this.supabase, allResults, targetDate);
+    const { calculated, errors } = await saveScoresBatch(
+      this.supabase,
+      allResults,
+      targetDate,
+    );
     return { calculated, errors, scoreDate: targetDate };
   }
 
@@ -165,10 +210,16 @@ export class ScoringService {
     periodDate?: string,
     options?: { historyMonths?: number; components?: boolean },
   ): Promise<ScoreResult | null> {
-    const targetDate = periodDate || (await getLatestScoreDate(this.supabase, geography));
+    const targetDate =
+      periodDate || (await getLatestScoreDate(this.supabase, geography));
     if (!targetDate) return null;
 
-    const result = await getScoreForDate(this.supabase, locationId, geography, targetDate);
+    const result = await getScoreForDate(
+      this.supabase,
+      locationId,
+      geography,
+      targetDate,
+    );
     if (!result) return null;
 
     // Attach component breakdowns if requested
@@ -178,19 +229,36 @@ export class ScoringService {
       for (const key of Object.keys(zs)) {
         rawValues[key] = null;
       }
-      for (const scoreType of ['homeready', 'investoredge', 'markethealth'] as const) {
+      for (const scoreType of [
+        'homeready',
+        'investoredge',
+        'markethealth',
+      ] as const) {
         const scoreData = result.scores[scoreType];
         if (scoreData && scoreData.score > 0) {
-          scoreData.components = calculateComponentBreakdown(scoreType, geography, zs, rawValues);
+          scoreData.components = calculateComponentBreakdown(
+            scoreType,
+            geography,
+            zs,
+            rawValues,
+          );
         }
       }
     }
 
     const rawMonths = options?.historyMonths ?? 0;
-    const historyMonths = Math.min(Math.max(0, rawMonths), SCORE_HISTORY_MONTHS_MAX);
+    const historyMonths = Math.min(
+      Math.max(0, rawMonths),
+      SCORE_HISTORY_MONTHS_MAX,
+    );
     if (historyMonths <= 0) return result;
 
-    const dates = await getScoreDatesForLocation(this.supabase, locationId, geography, (historyMonths + 1) * 3);
+    const dates = await getScoreDatesForLocation(
+      this.supabase,
+      locationId,
+      geography,
+      (historyMonths + 1) * 3,
+    );
     if (!dates.length || dates[0] !== targetDate) return result;
 
     const historyByDate: Array<{ date: string; result: ScoreResult }> = [];
@@ -207,7 +275,10 @@ export class ScoringService {
       const curr = result.scores[key];
       const prev = priorResult.scores[key];
       const change =
-        curr && prev && typeof curr.score === 'number' && typeof prev.score === 'number'
+        curr &&
+        prev &&
+        typeof curr.score === 'number' &&
+        typeof prev.score === 'number'
           ? Number((curr.score - prev.score).toFixed(1))
           : 0;
       (curr as SingleScoreResult).trend_change = change;
@@ -216,8 +287,14 @@ export class ScoringService {
         date,
         score: r.scores[key]?.score ?? null,
       }));
-      const trend: 'up' | 'down' | 'stable' = change > 0.01 ? 'up' : change < -0.01 ? 'down' : 'stable';
-      (curr as SingleScoreResult).history = { data, months: historyMonths, trend, change };
+      const trend: 'up' | 'down' | 'stable' =
+        change > 0.01 ? 'up' : change < -0.01 ? 'down' : 'stable';
+      (curr as SingleScoreResult).history = {
+        data,
+        months: historyMonths,
+        trend,
+        change,
+      };
     }
     return result;
   }
@@ -229,16 +306,28 @@ export class ScoringService {
     locationId: string,
     geography: GeographyLevel,
     options: { historyYears?: number; includeOutcomes?: boolean } = {},
-  ): Promise<(ScoreResult & { extendedHistory?: any; validation?: any }) | null> {
+  ): Promise<
+    (ScoreResult & { extendedHistory?: any; validation?: any }) | null
+  > {
     const { historyYears = 3, includeOutcomes = false } = options;
     const targetDate = await getLatestScoreDate(this.supabase, geography);
     if (!targetDate) return null;
 
-    const result = await getScoreForDate(this.supabase, locationId, geography, targetDate);
+    const result = await getScoreForDate(
+      this.supabase,
+      locationId,
+      geography,
+      targetDate,
+    );
     if (!result) return null;
 
     const monthsToFetch = Math.min(historyYears * 12, 60);
-    const allDates = await getScoreDatesForLocation(this.supabase, locationId, geography, monthsToFetch);
+    const allDates = await getScoreDatesForLocation(
+      this.supabase,
+      locationId,
+      geography,
+      monthsToFetch,
+    );
     if (allDates.length === 0) return result;
 
     const historyByDate: Array<{ date: string; result: ScoreResult }> = [];
@@ -250,17 +339,26 @@ export class ScoringService {
 
     let outcomes: Map<string, any> = new Map();
     if (includeOutcomes) {
-      outcomes = await getOutcomesForLocation(this.supabase, locationId, geography);
+      outcomes = await getOutcomesForLocation(
+        this.supabase,
+        locationId,
+        geography,
+      );
     }
 
     for (const key of ['homeready', 'investoredge', 'markethealth'] as const) {
       const curr = result.scores[key];
-      const oldest = historyByDate[historyByDate.length - 1]?.result.scores[key];
+      const oldest =
+        historyByDate[historyByDate.length - 1]?.result.scores[key];
       const scoreChange =
-        curr && oldest && typeof curr.score === 'number' && typeof oldest.score === 'number'
+        curr &&
+        oldest &&
+        typeof curr.score === 'number' &&
+        typeof oldest.score === 'number'
           ? Number((curr.score - oldest.score).toFixed(1))
           : 0;
-      const trend: 'up' | 'down' | 'stable' = scoreChange > 2 ? 'up' : scoreChange < -2 ? 'down' : 'stable';
+      const trend: 'up' | 'down' | 'stable' =
+        scoreChange > 2 ? 'up' : scoreChange < -2 ? 'down' : 'stable';
 
       const historyData = historyByDate.map(({ date, result: r }) => {
         const outcomeData = outcomes.get(date);
@@ -275,7 +373,12 @@ export class ScoringService {
         };
       });
 
-      (curr as any).extendedHistory = { data: historyData, years: historyYears, trend, scoreChange };
+      (curr as any).extendedHistory = {
+        data: historyData,
+        years: historyYears,
+        trend,
+        scoreChange,
+      };
 
       if (includeOutcomes) {
         const latestOutcome = outcomes.get(allDates[allDates.length - 1]);
@@ -284,8 +387,11 @@ export class ScoringService {
             hasOutcomes: true,
             excessReturn3Y: latestOutcome.excessVsState3y,
             predictedVsActual:
-              latestOutcome.excessVsState3y > 2 ? 'outperformed'
-                : latestOutcome.excessVsState3y < -2 ? 'underperformed' : 'matched',
+              latestOutcome.excessVsState3y > 2
+                ? 'outperformed'
+                : latestOutcome.excessVsState3y < -2
+                  ? 'underperformed'
+                  : 'matched',
           };
         } else {
           (curr as any).validation = { hasOutcomes: false };
@@ -305,10 +411,20 @@ export class ScoringService {
     limit: number = 10,
     periodDate?: string,
   ) {
-    return queryTopMarkets(this.supabase, geography, scoreType, limit, periodDate);
+    return queryTopMarkets(
+      this.supabase,
+      geography,
+      scoreType,
+      limit,
+      periodDate,
+    );
   }
 
-  async searchMarkets(query: string, geography?: GeographyLevel, limit: number = 20) {
+  async searchMarkets(
+    query: string,
+    geography?: GeographyLevel,
+    limit: number = 20,
+  ) {
     return querySearchMarkets(this.supabase, query, geography, limit);
   }
 
@@ -319,7 +435,8 @@ export class ScoringService {
     page: number = 0,
     pageSize: number = 1000,
   ) {
-    const targetDate = periodDate || (await getLatestScoreDate(this.supabase, geography));
+    const targetDate =
+      periodDate || (await getLatestScoreDate(this.supabase, geography));
     if (!targetDate) {
       return { data: [], total: 0, page, pageSize, hasMore: false };
     }
@@ -332,8 +449,12 @@ export class ScoringService {
       .eq('score_date', targetDate);
 
     const { data } = await fetchScoresPage(
-      this.supabase, geography, scoreType, targetDate,
-      page * pageSize, (page + 1) * pageSize - 1,
+      this.supabase,
+      geography,
+      scoreType,
+      targetDate,
+      page * pageSize,
+      (page + 1) * pageSize - 1,
     );
 
     return {
@@ -352,12 +473,18 @@ export class ScoringService {
     pageSize: number = 1000,
     concurrency: number = 4,
   ) {
-    const targetDate = periodDate || (await getLatestScoreDate(this.supabase, geography));
+    const targetDate =
+      periodDate || (await getLatestScoreDate(this.supabase, geography));
     if (!targetDate) {
       return { data: [], total: 0, pageSize };
     }
     const { data, total } = await fetchAllScoresBatched(
-      this.supabase, geography, scoreType, targetDate, pageSize, concurrency,
+      this.supabase,
+      geography,
+      scoreType,
+      targetDate,
+      pageSize,
+      concurrency,
     );
     return { data, total: total || data.length, pageSize };
   }
@@ -368,14 +495,22 @@ export class ScoringService {
     periodDate?: string,
     pageSize: number = 1000,
   ) {
-    const targetDate = periodDate || (await getLatestScoreDate(this.supabase, geography));
+    const targetDate =
+      periodDate || (await getLatestScoreDate(this.supabase, geography));
     if (!targetDate) return;
 
     let page = 0;
     while (true) {
       const from = page * pageSize;
       const to = from + pageSize - 1;
-      const { data } = await fetchScoresPage(this.supabase, geography, scoreType, targetDate, from, to);
+      const { data } = await fetchScoresPage(
+        this.supabase,
+        geography,
+        scoreType,
+        targetDate,
+        from,
+        to,
+      );
       if (!data || data.length === 0) break;
       yield data;
       if (data.length < pageSize) break;
@@ -387,11 +522,23 @@ export class ScoringService {
   // Delegates to scoring-distribution.ts
   // ============================================================================
 
-  async getScoreDistribution(geography: GeographyLevel, scoreType: ScoreType, periodDate?: string) {
-    return queryScoreDistribution(this.supabase, geography, scoreType, periodDate);
+  async getScoreDistribution(
+    geography: GeographyLevel,
+    scoreType: ScoreType,
+    periodDate?: string,
+  ) {
+    return queryScoreDistribution(
+      this.supabase,
+      geography,
+      scoreType,
+      periodDate,
+    );
   }
 
-  async getAllScoreDistributions(geography: GeographyLevel, periodDate?: string) {
+  async getAllScoreDistributions(
+    geography: GeographyLevel,
+    periodDate?: string,
+  ) {
     return queryAllScoreDistributions(this.supabase, geography, periodDate);
   }
 
@@ -407,19 +554,34 @@ export class ScoringService {
     geography: GeographyLevel,
     metricName: string,
     periodDate?: string,
-  ): Promise<{ count: number; min: number; max: number; mean: number; std: number } | null> {
-    const targetDate = periodDate || (await getLatestRealtorDate(this.supabase, geography));
+  ): Promise<{
+    count: number;
+    min: number;
+    max: number;
+    mean: number;
+    std: number;
+  } | null> {
+    const targetDate =
+      periodDate || (await getLatestRealtorDate(this.supabase, geography));
     if (!targetDate) return null;
 
-    const locations = await fetchAllMetrics(this.supabase, geography, targetDate, this.geoChainService);
+    const locations = await fetchAllMetrics(
+      this.supabase,
+      geography,
+      targetDate,
+      this.geoChainService,
+    );
     const values = locations
-      .map(l => (l as any)[metricName])
-      .filter(v => v !== null && v !== undefined && !isNaN(v));
+      .map((l) => (l as any)[metricName])
+      .filter((v) => v !== null && v !== undefined && !isNaN(v));
 
     if (values.length === 0) return null;
 
-    const mean = values.reduce((a: number, b: number) => a + b, 0) / values.length;
-    const variance = values.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const mean =
+      values.reduce((a: number, b: number) => a + b, 0) / values.length;
+    const variance =
+      values.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) /
+      values.length;
 
     return {
       count: values.length,

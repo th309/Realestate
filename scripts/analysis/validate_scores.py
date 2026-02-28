@@ -66,6 +66,7 @@ def _get_connection_string() -> str:
     return (
         f"postgresql://{user}:{password}"
         f"@{host}:{port}/postgres?sslmode=require"
+        f"&options=-c%20statement_timeout%3D300000"
     )
 
 
@@ -358,6 +359,7 @@ def run_insample_metrics(
 def run_oos_metrics(
     oos_path: Optional[str],
     insample_results: dict,
+    score_type: str = "homeready",
 ) -> dict:
     """
     Step 5.2: Load optimized_weights.json (Phase 3 output) and summarise
@@ -369,19 +371,39 @@ def run_oos_metrics(
     with open(oos_path, "r") as f:
         oos_data = json.load(f)
 
-    # The Phase 3 output may contain per-fold results with keys like:
-    #   fold_results[].oos_ic, fold_results[].oos_quintile_spread,
-    #   fold_results[].oos_hit_rate
-    # We also support a flat structure with oos_* keys directly.
+    # Support multiple JSON structures from optimize_weights.py:
+    # 1. Top-level with score_type sub-keys: { "homeready": { "per_window_results": [...] } }
+    # 2. Legacy fold_results / cv_folds at top level
+    # 3. Flat structure with oos_* keys
 
-    fold_results = oos_data.get("fold_results", [])
-    if not fold_results and "cv_folds" in oos_data:
-        fold_results = oos_data["cv_folds"]
+    # First, try score-type-specific section (optimize_weights.py output)
+    score_section = oos_data.get(score_type, {})
+
+    fold_results = (
+        score_section.get("per_window_results", [])
+        or score_section.get("fold_results", [])
+        or score_section.get("cv_folds", [])
+        or oos_data.get("fold_results", [])
+        or oos_data.get("cv_folds", [])
+    )
 
     if fold_results:
-        oos_ics = [f.get("oos_ic", f.get("ic", 0)) for f in fold_results if f.get("oos_ic", f.get("ic")) is not None]
-        oos_spreads = [f.get("oos_quintile_spread", f.get("quintile_spread", 0)) for f in fold_results if f.get("oos_quintile_spread", f.get("quintile_spread")) is not None]
-        oos_hit_rates = [f.get("oos_hit_rate", f.get("hit_rate", 0)) for f in fold_results if f.get("oos_hit_rate", f.get("hit_rate")) is not None]
+        # Map test_* keys (from optimize_weights) and oos_* keys (legacy)
+        oos_ics = [
+            f.get("oos_ic", f.get("test_ic", f.get("ic", 0)))
+            for f in fold_results
+            if f.get("oos_ic", f.get("test_ic", f.get("ic"))) is not None
+        ]
+        oos_spreads = [
+            f.get("oos_quintile_spread", f.get("test_quintile_spread", f.get("quintile_spread", 0)))
+            for f in fold_results
+            if f.get("oos_quintile_spread", f.get("test_quintile_spread", f.get("quintile_spread"))) is not None
+        ]
+        oos_hit_rates = [
+            f.get("oos_hit_rate", f.get("test_hit_rate", f.get("hit_rate", 0)))
+            for f in fold_results
+            if f.get("oos_hit_rate", f.get("test_hit_rate", f.get("hit_rate"))) is not None
+        ]
     else:
         # Flat structure fallback
         oos_ics = [oos_data.get("oos_ic", 0)]
@@ -391,6 +413,9 @@ def run_oos_metrics(
     avg_oos_ic = float(np.mean(oos_ics)) if oos_ics else 0.0
     avg_oos_spread = float(np.mean(oos_spreads)) if oos_spreads else 0.0
     avg_oos_hit = float(np.mean(oos_hit_rates)) if oos_hit_rates else 0.0
+    # Normalize hit rate: optimize_weights stores as fraction (0.63), validate expects % (63.0)
+    if avg_oos_hit > 0 and avg_oos_hit < 1:
+        avg_oos_hit *= 100
 
     # Compute IC_IR for OOS
     if len(oos_ics) > 1:
@@ -574,14 +599,56 @@ def validate_score_type(
     if df_sub.empty:
         return {"error": f"No data for score_type={score_type}"}
 
+    # Fall back to appreciation excess if total-return target has <5% coverage
+    n_with_target = int(df_sub[target].notna().sum())
+    if n_with_target < len(df_sub) * 0.05 and target != "excess_div_3y":
+        logger.warning(
+            "%s target '%s' has only %d/%d rows (%.1f%%). "
+            "Falling back to excess_div_3y (appreciation excess).",
+            score_type, target, n_with_target, len(df_sub),
+            100 * n_with_target / len(df_sub),
+        )
+        target = "excess_div_3y"
+        n_with_target = int(df_sub[target].notna().sum())
+
     logger.info(
         "Validating %s  (n=%d, target=%s)", score_type, len(df_sub), target
     )
 
     insample = run_insample_metrics(df_sub, target)
-    oos = run_oos_metrics(oos_path, insample)
+    oos = run_oos_metrics(oos_path, insample, score_type=score_type)
     stability = run_time_stability(df_sub, target)
     calibration = run_calibration_check(df_sub, target)
+
+    # Post-calibration check (if calibration tables exist)
+    calibration_after = None
+    cal_tables_path = Path(__file__).resolve().parent / "output" / "calibration_tables.json"
+    if cal_tables_path.exists():
+        with open(cal_tables_path, "r") as f:
+            cal_data = json.load(f)
+        # Handle both wrapped (analysis output) and bare (backend) formats
+        cal_tables = cal_data.get("tables", cal_data) if isinstance(cal_data, dict) else cal_data
+        # Determine geo_level from data
+        geo_level = "metro"
+        if "geography_type" in df_sub.columns and not df_sub.empty:
+            geo_level = df_sub["geography_type"].iloc[0]
+        cal_key = f"{score_type}_{geo_level}"
+        if cal_key in cal_tables:
+            table = cal_tables[cal_key]
+            raw_lookup = np.array([p["raw"] for p in table])
+            cal_lookup = np.array([p["calibrated"] for p in table])
+
+            # Apply calibration to scores via interpolation
+            cal_df = df_sub.copy()
+            cal_df["score_value"] = np.interp(
+                cal_df["score_value"].values, raw_lookup, cal_lookup
+            )
+            calibration_after = run_calibration_check(cal_df, target)
+            logger.info(
+                "  Post-calibration MAD: %.2f pp (was %.2f pp)",
+                calibration_after.get("mean_absolute_deviation", 0),
+                calibration.get("mean_absolute_deviation", 0),
+            )
 
     return {
         "score_type": score_type,
@@ -592,6 +659,7 @@ def validate_score_type(
         "oos": oos,
         "time_stability": stability,
         "calibration": calibration,
+        "calibration_after_isotonic": calibration_after,
     }
 
 
@@ -766,6 +834,29 @@ def generate_markdown_report(results: dict, output_path: str) -> None:
             ok = cal.get("well_calibrated", False)
             w(f"**Mean Absolute Deviation from diagonal:** {mad:.2f} pp")
             w(f"**Well-calibrated (< 15 pp):** {'Yes' if ok else 'No'}")
+            w()
+
+        # ---- Post-calibration (if available) ----
+        cal_after = st_result.get("calibration_after_isotonic")
+        if cal_after and "error" not in cal_after:
+            w(f"### 5.4b Post-Isotonic Calibration")
+            w()
+            w(f"| Decile | Predicted Pctile | Actual Pctile | Deviation | N |")
+            w(f"|:------:|-----------------:|--------------:|----------:|----:|")
+            for row in cal_after.get("decile_calibration", []):
+                w(
+                    f"| {row['decile']} "
+                    f"| {row['predicted_percentile']:.1f} "
+                    f"| {row['actual_percentile']:.1f} "
+                    f"| {row['deviation']:.1f} "
+                    f"| {row['n']:,} |"
+                )
+            w()
+            mad_after = cal_after.get("mean_absolute_deviation", 0)
+            ok_after = cal_after.get("well_calibrated", False)
+            mad_before = cal.get("mean_absolute_deviation", 0)
+            w(f"**Post-calibration MAD:** {mad_after:.2f} pp (was {mad_before:.2f} pp)")
+            w(f"**Well-calibrated (< 15 pp):** {'Yes' if ok_after else 'No'}")
             w()
 
     # ---- Overall Summary ----

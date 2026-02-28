@@ -182,6 +182,27 @@ export function getRealtorRoute(geographyType: string): TableRoute | null {
   }
 }
 
+export function getCensusRoute(geographyType: string): TableRoute | null {
+  switch (geographyType) {
+    case 'metro':
+      return {
+        table: 'census_metro',
+        idColumn: 'cbsa_code',
+        dateColumn: 'year',
+      };
+    case 'county':
+      return {
+        table: 'census_county',
+        idColumn: 'fips_code',
+        dateColumn: 'year',
+      };
+    case 'zip':
+      return { table: 'census_zip', idColumn: 'zcta', dateColumn: 'year' };
+    default:
+      return null;
+  }
+}
+
 /** Calculate percentage return and CAGR between two values */
 export function calculateReturn(
   startValue: number | undefined,

@@ -6,7 +6,9 @@
  * - Score lookups from propertyiq_scores (v2 schema)
  * - Geography-to-state-code resolution
  * - Benchmark data (state/national) for comparison
- * - Table routing for Zillow, Redfin, and Realtor sources
+ *
+ * Uses OutcomeCacheService for in-memory caching of repeated lookups.
+ * Delegates rare DB fallback queries to OutcomeDbFallbackService.
  */
 
 import { Injectable } from '@nestjs/common';
@@ -16,16 +18,16 @@ import type {
   HistoricalDataPoint,
   BenchmarkData,
 } from './outcome-generator.types';
-import {
-  getZillowTable,
-  getZillowIdColumn,
-  getRedfinRoute,
-  getRealtorRoute,
-} from './outcome-generator.types';
+import { OutcomeCacheService } from './outcome-cache.service';
+import { OutcomeDbFallbackService } from './outcome-db-fallback.service';
 
 @Injectable()
 export class OutcomeDataSourceService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly cache: OutcomeCacheService,
+    private readonly dbFallback: OutcomeDbFallbackService,
+  ) {}
 
   async getHistoricalScore(
     geographyId: string,
@@ -34,7 +36,6 @@ export class OutcomeDataSourceService {
     date: string,
   ): Promise<number | null> {
     const client = this.supabase.getClient();
-
     const { data, error } = await client
       .from('propertyiq_scores')
       .select('score')
@@ -55,7 +56,6 @@ export class OutcomeDataSourceService {
     limit: number,
   ): Promise<Array<{ id: string }>> {
     const client = this.supabase.getClient();
-
     const { data, error } = await client
       .from('propertyiq_scores')
       .select('location_id')
@@ -71,98 +71,109 @@ export class OutcomeDataSourceService {
 
   /**
    * Get historical price data with multi-source fallback:
-   * Zillow ZHVI → Redfin median_sale_price → Realtor median_listing_price
+   * Zillow cache → Redfin cache → Realtor cache → DB fallback
    */
   async getHistoricalData(
     geographyId: string,
     geographyType: GeographyType,
     date: string,
   ): Promise<HistoricalDataPoint[] | null> {
-    const client = this.supabase.getClient();
-    const zillowTable = getZillowTable(geographyType);
-    const zillowIdCol = getZillowIdColumn(geographyType);
+    // 1. Try preloaded Zillow cache (includes both ZHVI and ZORI)
+    const cached = this.cache.lookupHistorical(
+      geographyType,
+      geographyId,
+      date,
+    );
+    if (cached !== undefined) {
+      // Lazy-fill: mutates the cached HistoricalDataPoint in-place so subsequent
+      // lookups for the same key benefit from the ACS result without re-querying.
+      if (cached && cached[0] && cached[0].zori == null) {
+        const acsRent = await this.dbFallback.getAcsRentData(
+          geographyId,
+          geographyType,
+          date,
+        );
+        if (acsRent != null) {
+          cached[0].zori = acsRent;
+        }
+      }
+      return cached;
+    }
 
-    // 1. Try Zillow ZHVI (primary source)
-    const { data: zillowData } = await client
-      .from(zillowTable)
-      .select('period_date, value')
-      .eq(zillowIdCol, geographyId)
-      .eq('metric_name', 'zhvi')
-      .lte('period_date', date)
-      .order('period_date', { ascending: false })
-      .limit(1);
+    // 2. Not in Zillow cache — try Redfin cache
+    const redfinCached = this.cache.lookupRedfin(
+      geographyType,
+      geographyId,
+      date,
+    );
+    if (redfinCached !== undefined && redfinCached !== null) {
+      const result: HistoricalDataPoint[] = [
+        { date: redfinCached.date, zhvi: redfinCached.price, source: 'redfin' },
+      ];
+      // Backfill rent from ACS since Redfin has no rent data
+      const acsRent = await this.dbFallback.getAcsRentData(
+        geographyId,
+        geographyType,
+        date,
+      );
+      if (acsRent != null) {
+        result[0].zori = acsRent;
+      }
+      this.cache.historicalCache.set(
+        `${geographyType}:${geographyId}:${date}`,
+        result,
+      );
+      return result;
+    }
 
-    if (zillowData && zillowData.length > 0) {
-      return [
+    // 3. Try Realtor cache
+    const realtorCached = this.cache.lookupRealtor(
+      geographyType,
+      geographyId,
+      date,
+    );
+    if (realtorCached !== undefined && realtorCached !== null) {
+      const result: HistoricalDataPoint[] = [
         {
-          date: zillowData[0].period_date,
-          zhvi: zillowData[0].value,
-          source: 'zillow',
+          date: realtorCached.date,
+          zhvi: realtorCached.price,
+          source: 'realtor',
         },
       ];
-    }
-
-    // 2. Fallback: Redfin median_sale_price
-    const redfinRoute = getRedfinRoute(geographyType);
-    if (redfinRoute) {
-      const { data: redfinData } = (await client
-        .from(redfinRoute.table)
-        .select('*')
-        .eq(redfinRoute.idColumn, geographyId)
-        .eq('property_type', 'All Residential')
-        .lte(redfinRoute.dateColumn, date)
-        .order(redfinRoute.dateColumn, { ascending: false })
-        .limit(1)) as { data: Record<string, any>[] | null };
-
-      if (
-        redfinData &&
-        redfinData.length > 0 &&
-        redfinData[0].median_sale_price != null
-      ) {
-        return [
-          {
-            date: redfinData[0][redfinRoute.dateColumn],
-            zhvi: redfinData[0].median_sale_price,
-            source: 'redfin',
-          },
-        ];
+      // Backfill rent from ACS since Realtor has no rent data
+      const acsRent = await this.dbFallback.getAcsRentData(
+        geographyId,
+        geographyType,
+        date,
+      );
+      if (acsRent != null) {
+        result[0].zori = acsRent;
       }
+      this.cache.historicalCache.set(
+        `${geographyType}:${geographyId}:${date}`,
+        result,
+      );
+      return result;
     }
 
-    // 3. Fallback: Realtor median_listing_price
-    const realtorRoute = getRealtorRoute(geographyType);
-    if (realtorRoute) {
-      const { data: realtorData } = (await client
-        .from(realtorRoute.table)
-        .select('*')
-        .eq(realtorRoute.idColumn, geographyId)
-        .lte(realtorRoute.dateColumn, date)
-        .order(realtorRoute.dateColumn, { ascending: false })
-        .limit(1)) as { data: Record<string, any>[] | null };
-
-      if (
-        realtorData &&
-        realtorData.length > 0 &&
-        realtorData[0].median_listing_price != null
-      ) {
-        return [
-          {
-            date: realtorData[0][realtorRoute.dateColumn],
-            zhvi: realtorData[0].median_listing_price,
-            source: 'realtor',
-          },
-        ];
-      }
-    }
-
-    return null;
+    // 4. All caches missed — fall back to individual DB queries
+    return this.dbFallback.getHistoricalDataFromDb(
+      geographyId,
+      geographyType,
+      date,
+    );
   }
 
   async getStateCode(
     geographyId: string,
     geographyType: GeographyType,
   ): Promise<string | null> {
+    const cacheKey = `${geographyType}:${geographyId}`;
+    if (this.cache.stateCodeCache.has(cacheKey))
+      return this.cache.stateCodeCache.get(cacheKey)!;
+
     const client = this.supabase.getClient();
+    let result: string | null = null;
 
     switch (geographyType) {
       case 'metro': {
@@ -172,7 +183,8 @@ export class OutcomeDataSourceService {
           .eq('cbsa_code', geographyId)
           .limit(1)
           .single();
-        return data?.state_code || null;
+        result = data?.state_code || null;
+        break;
       }
       case 'county': {
         const { data } = await client
@@ -181,7 +193,8 @@ export class OutcomeDataSourceService {
           .eq('fips_code', geographyId)
           .limit(1)
           .single();
-        return data?.state_code || null;
+        result = data?.state_code || null;
+        break;
       }
       case 'zip': {
         const { data } = await client
@@ -190,11 +203,13 @@ export class OutcomeDataSourceService {
           .eq('region_name', geographyId)
           .limit(1)
           .single();
-        return data?.state_code || null;
+        result = data?.state_code || null;
+        break;
       }
-      default:
-        return null;
     }
+
+    this.cache.stateCodeCache.set(cacheKey, result);
+    return result;
   }
 
   async getBenchmarkData(
@@ -203,40 +218,46 @@ export class OutcomeDataSourceService {
     date: string,
     metric: 'zhvi' | 'zori' = 'zhvi',
   ): Promise<BenchmarkData | null> {
+    // Try preloaded cache with nearest-date matching
+    const cached = this.cache.lookupBenchmark(
+      level,
+      stateCode ?? 'US',
+      date,
+      metric,
+    );
+    if (cached !== undefined) return cached;
+
     const client = this.supabase.getClient();
+    const filter =
+      level === 'national'
+        ? { column: 'region_name', value: 'United States' }
+        : stateCode
+          ? { column: 'state_code', value: stateCode }
+          : null;
 
-    if (level === 'national') {
-      const { data, error } = await client
-        .from('zillow_state')
-        .select('value')
-        .eq('region_name', 'United States')
-        .eq('metric_name', metric)
-        .lte('period_date', date)
-        .order('period_date', { ascending: false })
-        .limit(1);
+    const bmCacheKey = `${level}:${stateCode ?? 'US'}:${date}:${metric}`;
 
-      if (error || !data || data.length === 0) return null;
-      return metric === 'zhvi'
-        ? { zhvi: data[0].value }
-        : { zori: data[0].value };
+    if (!filter) {
+      this.cache.benchmarkCache.set(bmCacheKey, null);
+      return null;
     }
 
-    if (level === 'state' && stateCode) {
-      const { data, error } = await client
-        .from('zillow_state')
-        .select('value')
-        .eq('state_code', stateCode)
-        .eq('metric_name', metric)
-        .lte('period_date', date)
-        .order('period_date', { ascending: false })
-        .limit(1);
+    const { data, error } = await client
+      .from('zillow_state')
+      .select('value')
+      .eq(filter.column, filter.value)
+      .eq('metric_name', metric)
+      .lte('period_date', date)
+      .order('period_date', { ascending: false })
+      .limit(1);
 
-      if (error || !data || data.length === 0) return null;
-      return metric === 'zhvi'
-        ? { zhvi: data[0].value }
-        : { zori: data[0].value };
+    let result: BenchmarkData | null = null;
+    if (!error && data?.length) {
+      result =
+        metric === 'zhvi' ? { zhvi: data[0].value } : { zori: data[0].value };
     }
 
-    return null;
+    this.cache.benchmarkCache.set(bmCacheKey, result);
+    return result;
   }
 }

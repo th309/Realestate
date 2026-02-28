@@ -1,70 +1,76 @@
 {
-  "generated_at": "2026-02-13 14:06:07 UTC",
+  "generated_at": "2026-02-28 14:25:49 UTC",
   "geo_level": "county",
-  "total_rows": 288768,
+  "total_rows": 563443,
   "score_types": [
     {
       "score_type": "homeready",
       "target_column": "excess_div_3y",
-      "n_total": 144384,
-      "n_with_target": 74308,
+      "n_total": 188461,
+      "n_with_target": 184060,
       "insample": {
-        "n": 74308,
-        "pearson_r": 0.2993,
-        "spearman_r": 0.2708,
+        "n": 184060,
+        "pearson_r": 0.2227,
+        "spearman_r": 0.2008,
         "quintile_table": [
           {
             "quintile": 1,
-            "avg_score": 11.13,
-            "avg_excess_return": -2.2812,
-            "count": 14890,
-            "beat_median_rate": 32.2
+            "avg_score": 10.76,
+            "avg_excess_return": -1.2887,
+            "count": 36816,
+            "beat_median_rate": 39.3
           },
           {
             "quintile": 2,
-            "avg_score": 31.66,
-            "avg_excess_return": -0.8296,
-            "count": 14864,
-            "beat_median_rate": 43.8
+            "avg_score": 30.98,
+            "avg_excess_return": -0.5819,
+            "count": 36939,
+            "beat_median_rate": 45.1
           },
           {
             "quintile": 3,
-            "avg_score": 51.09,
-            "avg_excess_return": -0.1298,
-            "count": 14839,
-            "beat_median_rate": 52.6
+            "avg_score": 50.66,
+            "avg_excess_return": -0.2155,
+            "count": 36827,
+            "beat_median_rate": 49.4
           },
           {
             "quintile": 4,
-            "avg_score": 69.65,
-            "avg_excess_return": 0.2063,
-            "count": 14908,
-            "beat_median_rate": 57.9
+            "avg_score": 69.9,
+            "avg_excess_return": 0.0483,
+            "count": 36729,
+            "beat_median_rate": 54.0
           },
           {
             "quintile": 5,
-            "avg_score": 89.67,
-            "avg_excess_return": 0.5535,
-            "count": 14807,
-            "beat_median_rate": 63.2
+            "avg_score": 89.76,
+            "avg_excess_return": 0.3791,
+            "count": 36749,
+            "beat_median_rate": 61.9
           }
         ],
         "decile_spread": {
-          "top_decile_avg_excess": 0.6066,
-          "bottom_decile_avg_excess": -2.8804,
-          "decile_spread": 3.487
+          "top_decile_avg_excess": 0.4571,
+          "bottom_decile_avg_excess": -1.6067,
+          "decile_spread": 2.0639
         },
         "ic_statistics": {
-          "mean_ic": 0.2588,
-          "std_ic": 0.0728,
-          "ir": 3.5544,
-          "hit_rate": 100.0,
-          "n_periods": 26
+          "mean_ic": 0.19,
+          "std_ic": 0.0874,
+          "ir": 2.1723,
+          "hit_rate": 96.8,
+          "n_periods": 62
         }
       },
       "oos": {
-        "error": "oos_results_not_found",
-        "path": null
+        "avg_oos_quintile_spread": 1.248,
+        "avg_oos_ic": 0.1372,
+        "oos_ic_ir": 2.4778,
+        "avg_oos_hit_rate": 55.3,
+        "degradation_ic": 0.2778,
+        "degradation_spread": 0.3953,
+        "n_folds": 4,
+        "source_file": "scripts\\analysis\\output\\optimized_weights_county.json"
       },
       "time_stability": {
         "by_year": [
@@ -79,164 +85,356 @@
           },
           {
             "year": 2021,
-            "n": 33952,
-            "mean_ic": 0.2923,
+            "n": 33957,
+            "mean_ic": 0.2926,
             "n_periods": 12,
-            "quintile_spread": 3.2146,
-            "decile_spread": 3.9085,
+            "quintile_spread": 3.2177,
+            "decile_spread": 3.9136,
             "failed": false
           },
           {
             "year": 2022,
-            "n": 36356,
-            "mean_ic": 0.2448,
+            "n": 36358,
+            "mean_ic": 0.2418,
             "n_periods": 12,
-            "quintile_spread": 2.5742,
-            "decile_spread": 3.2289,
+            "quintile_spread": 2.4022,
+            "decile_spread": 3.0893,
             "failed": false
           },
           {
             "year": 2023,
-            "n": 3033,
-            "mean_ic": 0.2273,
-            "n_periods": 1,
-            "quintile_spread": 2.1708,
-            "decile_spread": 2.2624,
+            "n": 36493,
+            "mean_ic": 0.1926,
+            "n_periods": 12,
+            "quintile_spread": 1.6541,
+            "decile_spread": 2.0536,
             "failed": false
           },
           {
             "year": 2024,
-            "n": 0,
-            "skipped": true
+            "n": 36616,
+            "mean_ic": 0.1539,
+            "n_periods": 12,
+            "quintile_spread": 0.9493,
+            "decile_spread": 1.1372,
+            "failed": false
+          },
+          {
+            "year": 2025,
+            "n": 36618,
+            "mean_ic": 0.0985,
+            "n_periods": 12,
+            "quintile_spread": 0.4305,
+            "decile_spread": 0.5172,
+            "failed": false
+          },
+          {
+            "year": 2026,
+            "n": 3051,
+            "mean_ic": -0.0313,
+            "n_periods": 1,
+            "quintile_spread": -0.0031,
+            "decile_spread": 0.009,
+            "failed": true
           }
         ],
-        "failure_years": [],
-        "all_years_pass": true
+        "failure_years": [
+          "2026"
+        ],
+        "all_years_pass": false
       },
       "calibration": {
         "decile_calibration": [
           {
             "decile": 1,
             "predicted_percentile": 5.0,
-            "actual_percentile": 20.3,
-            "deviation": 15.3,
-            "n": 7461
+            "actual_percentile": 30.9,
+            "deviation": 25.93,
+            "n": 18428
           },
           {
             "decile": 2,
             "predicted_percentile": 15.0,
-            "actual_percentile": 32.7,
-            "deviation": 17.67,
-            "n": 7429
+            "actual_percentile": 40.0,
+            "deviation": 25.03,
+            "n": 18388
           },
           {
             "decile": 3,
             "predicted_percentile": 25.0,
-            "actual_percentile": 40.2,
-            "deviation": 15.19,
-            "n": 7466
+            "actual_percentile": 43.1,
+            "deviation": 18.08,
+            "n": 18557
           },
           {
             "decile": 4,
             "predicted_percentile": 35.0,
-            "actual_percentile": 46.1,
-            "deviation": 11.13,
-            "n": 7398
+            "actual_percentile": 45.8,
+            "deviation": 10.81,
+            "n": 18382
           },
           {
             "decile": 5,
             "predicted_percentile": 45.0,
-            "actual_percentile": 50.7,
-            "deviation": 5.73,
-            "n": 7404
+            "actual_percentile": 47.9,
+            "deviation": 2.93,
+            "n": 18320
           },
           {
             "decile": 6,
             "predicted_percentile": 55.0,
-            "actual_percentile": 54.3,
-            "deviation": 0.74,
-            "n": 7435
+            "actual_percentile": 50.8,
+            "deviation": 4.22,
+            "n": 18507
           },
           {
             "decile": 7,
             "predicted_percentile": 65.0,
-            "actual_percentile": 55.9,
-            "deviation": 9.14,
-            "n": 7482
+            "actual_percentile": 52.4,
+            "deviation": 12.61,
+            "n": 18376
           },
           {
             "decile": 8,
             "predicted_percentile": 75.0,
-            "actual_percentile": 56.7,
-            "deviation": 18.27,
-            "n": 7426
+            "actual_percentile": 54.7,
+            "deviation": 20.32,
+            "n": 18353
           },
           {
             "decile": 9,
             "predicted_percentile": 85.0,
-            "actual_percentile": 60.5,
-            "deviation": 24.45,
-            "n": 7409
+            "actual_percentile": 57.8,
+            "deviation": 27.23,
+            "n": 18430
           },
           {
             "decile": 10,
             "predicted_percentile": 95.0,
-            "actual_percentile": 60.7,
-            "deviation": 34.29,
-            "n": 7398
+            "actual_percentile": 61.6,
+            "deviation": 33.36,
+            "n": 18319
           }
         ],
-        "mean_absolute_deviation": 15.19,
+        "mean_absolute_deviation": 18.05,
         "well_calibrated": false
       }
     },
     {
       "score_type": "investoredge",
-      "target_column": "excess_total_div_3y",
-      "n_total": 144384,
-      "n_with_target": 0,
+      "target_column": "excess_div_3y",
+      "n_total": 188456,
+      "n_with_target": 184060,
       "insample": {
-        "error": "insufficient_data",
-        "n": 0
+        "n": 184060,
+        "pearson_r": 0.2194,
+        "spearman_r": 0.2022,
+        "quintile_table": [
+          {
+            "quintile": 1,
+            "avg_score": 10.76,
+            "avg_excess_return": -1.244,
+            "count": 36902,
+            "beat_median_rate": 39.4
+          },
+          {
+            "quintile": 2,
+            "avg_score": 30.94,
+            "avg_excess_return": -0.5887,
+            "count": 36815,
+            "beat_median_rate": 44.9
+          },
+          {
+            "quintile": 3,
+            "avg_score": 50.57,
+            "avg_excess_return": -0.2623,
+            "count": 36859,
+            "beat_median_rate": 48.9
+          },
+          {
+            "quintile": 4,
+            "avg_score": 69.85,
+            "avg_excess_return": 0.0448,
+            "count": 36815,
+            "beat_median_rate": 54.1
+          },
+          {
+            "quintile": 5,
+            "avg_score": 89.74,
+            "avg_excess_return": 0.3935,
+            "count": 36669,
+            "beat_median_rate": 62.3
+          }
+        ],
+        "decile_spread": {
+          "top_decile_avg_excess": 0.4978,
+          "bottom_decile_avg_excess": -1.529,
+          "decile_spread": 2.0269
+        },
+        "ic_statistics": {
+          "mean_ic": 0.1925,
+          "std_ic": 0.0851,
+          "ir": 2.2632,
+          "hit_rate": 98.4,
+          "n_periods": 62
+        }
       },
       "oos": {
-        "error": "oos_results_not_found",
-        "path": null
+        "avg_oos_quintile_spread": 1.2482,
+        "avg_oos_ic": 0.1372,
+        "oos_ic_ir": 2.4782,
+        "avg_oos_hit_rate": 55.3,
+        "degradation_ic": 0.2872,
+        "degradation_spread": 0.3842,
+        "n_folds": 4,
+        "source_file": "scripts\\analysis\\output\\optimized_weights_county.json"
       },
       "time_stability": {
         "by_year": [
           {
             "year": 2020,
-            "n": 0,
-            "skipped": true
+            "n": 967,
+            "mean_ic": 0.0663,
+            "n_periods": 1,
+            "quintile_spread": 0.7433,
+            "decile_spread": 1.3449,
+            "failed": false
           },
           {
             "year": 2021,
-            "n": 0,
-            "skipped": true
+            "n": 33957,
+            "mean_ic": 0.2946,
+            "n_periods": 12,
+            "quintile_spread": 3.2334,
+            "decile_spread": 4.0081,
+            "failed": false
           },
           {
             "year": 2022,
-            "n": 0,
-            "skipped": true
+            "n": 36358,
+            "mean_ic": 0.2419,
+            "n_periods": 12,
+            "quintile_spread": 2.3533,
+            "decile_spread": 2.984,
+            "failed": false
           },
           {
             "year": 2023,
-            "n": 0,
-            "skipped": true
+            "n": 36493,
+            "mean_ic": 0.1873,
+            "n_periods": 12,
+            "quintile_spread": 1.554,
+            "decile_spread": 1.9569,
+            "failed": false
           },
           {
             "year": 2024,
-            "n": 0,
-            "skipped": true
+            "n": 36616,
+            "mean_ic": 0.1626,
+            "n_periods": 12,
+            "quintile_spread": 0.9402,
+            "decile_spread": 1.1143,
+            "failed": false
+          },
+          {
+            "year": 2025,
+            "n": 36618,
+            "mean_ic": 0.1039,
+            "n_periods": 12,
+            "quintile_spread": 0.423,
+            "decile_spread": 0.5159,
+            "failed": false
+          },
+          {
+            "year": 2026,
+            "n": 3051,
+            "mean_ic": -0.0145,
+            "n_periods": 1,
+            "quintile_spread": 0.0017,
+            "decile_spread": 0.0137,
+            "failed": true
           }
         ],
-        "failure_years": [],
-        "all_years_pass": true
+        "failure_years": [
+          "2026"
+        ],
+        "all_years_pass": false
       },
       "calibration": {
-        "error": "insufficient_data",
-        "n": 0
+        "decile_calibration": [
+          {
+            "decile": 1,
+            "predicted_percentile": 5.0,
+            "actual_percentile": 32.0,
+            "deviation": 26.99,
+            "n": 18507
+          },
+          {
+            "decile": 2,
+            "predicted_percentile": 15.0,
+            "actual_percentile": 40.1,
+            "deviation": 25.12,
+            "n": 18395
+          },
+          {
+            "decile": 3,
+            "predicted_percentile": 25.0,
+            "actual_percentile": 43.0,
+            "deviation": 18.04,
+            "n": 18397
+          },
+          {
+            "decile": 4,
+            "predicted_percentile": 35.0,
+            "actual_percentile": 45.5,
+            "deviation": 10.49,
+            "n": 18418
+          },
+          {
+            "decile": 5,
+            "predicted_percentile": 45.0,
+            "actual_percentile": 48.0,
+            "deviation": 3.0,
+            "n": 18316
+          },
+          {
+            "decile": 6,
+            "predicted_percentile": 55.0,
+            "actual_percentile": 49.9,
+            "deviation": 5.1,
+            "n": 18543
+          },
+          {
+            "decile": 7,
+            "predicted_percentile": 65.0,
+            "actual_percentile": 52.6,
+            "deviation": 12.44,
+            "n": 18304
+          },
+          {
+            "decile": 8,
+            "predicted_percentile": 75.0,
+            "actual_percentile": 54.9,
+            "deviation": 20.15,
+            "n": 18511
+          },
+          {
+            "decile": 9,
+            "predicted_percentile": 85.0,
+            "actual_percentile": 57.9,
+            "deviation": 27.12,
+            "n": 18415
+          },
+          {
+            "decile": 10,
+            "predicted_percentile": 95.0,
+            "actual_percentile": 62.6,
+            "deviation": 32.45,
+            "n": 18254
+          }
+        ],
+        "mean_absolute_deviation": 18.09,
+        "well_calibrated": false
       }
     }
   ]

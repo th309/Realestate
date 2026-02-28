@@ -130,7 +130,11 @@ def get_db_connection():
         f"user={user} password={password} sslmode=require"
     )
     print(f"[DB] Connecting to {host}:{port} via Supabase pooler ...")
-    return psycopg2.connect(conn_str)
+    conn = psycopg2.connect(conn_str)
+    # Increase statement timeout for large county/zip queries (5 minutes)
+    conn.cursor().execute("SET statement_timeout = '300000'")
+    conn.commit()
+    return conn
 
 
 # ---------------------------------------------------------------------------

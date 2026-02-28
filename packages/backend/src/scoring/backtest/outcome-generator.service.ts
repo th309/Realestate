@@ -36,22 +36,25 @@ export class OutcomeGeneratorService {
     scoreType: ScoreType,
     scoreDate: string,
     horizons: string[] = ['6m', '1y', '3y', '5y'],
-    options?: { includeBenchmarks?: boolean },
+    options?: { includeBenchmarks?: boolean; knownScore?: number },
   ): Promise<OutcomeRecord> {
     const record: OutcomeRecord = {
       geographyId,
       geographyType,
       scoreType,
       scoreDate,
-      scoreValue: null,
+      scoreValue: options?.knownScore ?? null,
     };
 
-    record.scoreValue = await this.dataSource.getHistoricalScore(
-      geographyId,
-      geographyType,
-      scoreType,
-      scoreDate,
-    );
+    // Skip DB lookup if caller already has the score value
+    if (record.scoreValue == null) {
+      record.scoreValue = await this.dataSource.getHistoricalScore(
+        geographyId,
+        geographyType,
+        scoreType,
+        scoreDate,
+      );
+    }
 
     const stateCode = await this.dataSource.getStateCode(
       geographyId,
@@ -125,6 +128,7 @@ export class OutcomeGeneratorService {
     scoreType: ScoreType,
     scoreDate: string,
     horizons: string[] = ['1y', '3y', '5y'],
+    knownScore?: number,
   ): Promise<OutcomeRecord> {
     return this.generateOutcomes(
       geographyId,
@@ -132,9 +136,7 @@ export class OutcomeGeneratorService {
       scoreType,
       scoreDate,
       horizons,
-      {
-        includeBenchmarks: true,
-      },
+      { includeBenchmarks: true, knownScore },
     );
   }
 
@@ -170,57 +172,60 @@ export class OutcomeGeneratorService {
 
   async saveOutcomes(outcomes: OutcomeRecord[]): Promise<void> {
     const client = this.supabase.getClient();
+    const now = new Date().toISOString();
 
-    for (const outcome of outcomes) {
-      const benchmarks = outcome.benchmarks ?? {};
+    const rows = outcomes.map((outcome) => {
+      const b = outcome.benchmarks ?? {};
+      return {
+        geography_id: outcome.geographyId,
+        geography_type: outcome.geographyType,
+        score_type: outcome.scoreType,
+        score_date: outcome.scoreDate,
+        score_value: outcome.scoreValue,
+        state_code: outcome.stateCode,
+        outcome_6m_value: outcome.outcome6m?.priceChange,
+        outcome_1y_value: outcome.outcome1y?.priceChange,
+        outcome_3y_value: outcome.outcome3y?.priceCagr,
+        outcome_5y_value: outcome.outcome5y?.priceCagr,
+        outcome_metrics: {
+          outcome_6m: outcome.outcome6m,
+          outcome_1y: outcome.outcome1y,
+          outcome_3y: outcome.outcome3y,
+          outcome_5y: outcome.outcome5y,
+        },
+        state_return_1y: b.stateReturn1y,
+        state_return_3y_cagr: b.stateReturn3yCagr,
+        state_return_5y_cagr: b.stateReturn5yCagr,
+        national_return_1y: b.nationalReturn1y,
+        national_return_3y_cagr: b.nationalReturn3yCagr,
+        national_return_5y_cagr: b.nationalReturn5yCagr,
+        excess_vs_state_1y: b.excessVsState1y,
+        excess_vs_state_3y: b.excessVsState3y,
+        excess_vs_state_5y: b.excessVsState5y,
+        excess_vs_national_1y: b.excessVsNational1y,
+        excess_vs_national_3y: b.excessVsNational3y,
+        excess_vs_national_5y: b.excessVsNational5y,
+        rent_return_1y: b.rentReturn1y,
+        rent_return_3y_cagr: b.rentReturn3yCagr,
+        state_rent_return_1y: b.stateRentReturn1y,
+        state_rent_return_3y_cagr: b.stateRentReturn3yCagr,
+        national_rent_return_1y: b.nationalRentReturn1y,
+        national_rent_return_3y_cagr: b.nationalRentReturn3yCagr,
+        updated_at: now,
+      };
+    });
 
+    // Batch upsert in chunks of 200
+    for (let i = 0; i < rows.length; i += 200) {
+      const batch = rows.slice(i, i + 200);
       const { error } = await client
         .from('propertyiq_backtest_outcomes')
-        .upsert(
-          {
-            geography_id: outcome.geographyId,
-            geography_type: outcome.geographyType,
-            score_type: outcome.scoreType,
-            score_date: outcome.scoreDate,
-            score_value: outcome.scoreValue,
-            state_code: outcome.stateCode,
-            outcome_6m_value: outcome.outcome6m?.priceChange,
-            outcome_1y_value: outcome.outcome1y?.priceChange,
-            outcome_3y_value: outcome.outcome3y?.priceCagr,
-            outcome_5y_value: outcome.outcome5y?.priceCagr,
-            outcome_metrics: {
-              outcome_6m: outcome.outcome6m,
-              outcome_1y: outcome.outcome1y,
-              outcome_3y: outcome.outcome3y,
-              outcome_5y: outcome.outcome5y,
-            },
-            state_return_1y: benchmarks.stateReturn1y,
-            state_return_3y_cagr: benchmarks.stateReturn3yCagr,
-            state_return_5y_cagr: benchmarks.stateReturn5yCagr,
-            national_return_1y: benchmarks.nationalReturn1y,
-            national_return_3y_cagr: benchmarks.nationalReturn3yCagr,
-            national_return_5y_cagr: benchmarks.nationalReturn5yCagr,
-            excess_vs_state_1y: benchmarks.excessVsState1y,
-            excess_vs_state_3y: benchmarks.excessVsState3y,
-            excess_vs_state_5y: benchmarks.excessVsState5y,
-            excess_vs_national_1y: benchmarks.excessVsNational1y,
-            excess_vs_national_3y: benchmarks.excessVsNational3y,
-            excess_vs_national_5y: benchmarks.excessVsNational5y,
-            rent_return_1y: benchmarks.rentReturn1y,
-            rent_return_3y_cagr: benchmarks.rentReturn3yCagr,
-            state_rent_return_1y: benchmarks.stateRentReturn1y,
-            state_rent_return_3y_cagr: benchmarks.stateRentReturn3yCagr,
-            national_rent_return_1y: benchmarks.nationalRentReturn1y,
-            national_rent_return_3y_cagr: benchmarks.nationalRentReturn3yCagr,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'geography_id,geography_type,score_type,score_date' },
-        );
+        .upsert(batch, {
+          onConflict: 'geography_id,geography_type,score_type,score_date',
+        });
 
       if (error) {
-        this.logger.error(
-          `Error saving outcome for ${outcome.geographyId}: ${error.message}`,
-        );
+        this.logger.error(`Error saving outcome batch: ${error.message}`);
       }
     }
   }

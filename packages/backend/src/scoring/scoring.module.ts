@@ -18,6 +18,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScoringService } from './scoring.service';
+import { CalibrationService } from './calibration/calibration.service';
 import { ScoringController } from './scoring.controller';
 import { ScoreAccessService } from './scoring.guard';
 import { SupabaseModule } from '../supabase/supabase.module';
@@ -27,7 +28,10 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 // Import backtest services (for performance tracking)
 import { OutcomeGeneratorService } from './backtest/outcome-generator.service';
 import { OutcomeDataSourceService } from './backtest/outcome-data-source.service';
+import { OutcomeDbFallbackService } from './backtest/outcome-db-fallback.service';
 import { OutcomeBenchmarkService } from './backtest/outcome-benchmark.service';
+import { OutcomeCacheService } from './backtest/outcome-cache.service';
+import { OutcomeCachePreloaderService } from './backtest/outcome-cache-preloader.service';
 import { BacktestRunnerService } from './backtest/backtest-runner.service';
 import { ConfidenceCalculatorService } from './backtest/confidence-calculator.service';
 import { AlertService } from './backtest/alert.service';
@@ -64,6 +68,9 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     // Core scoring service (simplified z-score formula system)
     ScoringService,
 
+    // Score calibration (isotonic)
+    CalibrationService,
+
     // Score access control service
     ScoreAccessService,
 
@@ -74,6 +81,9 @@ import { PerformanceTrackingService } from './performance-tracking.service';
     PerformanceTrackingService,
 
     // Backtest services (for performance tracking per spec)
+    OutcomeCacheService,
+    OutcomeCachePreloaderService,
+    OutcomeDbFallbackService,
     OutcomeDataSourceService,
     OutcomeBenchmarkService,
     OutcomeGeneratorService,
@@ -103,6 +113,7 @@ import { PerformanceTrackingService } from './performance-tracking.service';
   ],
   exports: [
     ScoringService,
+    CalibrationService,
     InheritanceService,
     PerformanceTrackingService,
     ScoreAccessService,

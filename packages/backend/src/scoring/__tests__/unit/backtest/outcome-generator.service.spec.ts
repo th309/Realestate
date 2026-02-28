@@ -9,6 +9,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OutcomeGeneratorService } from '../../../backtest/outcome-generator.service';
 import { OutcomeDataSourceService } from '../../../backtest/outcome-data-source.service';
 import { OutcomeBenchmarkService } from '../../../backtest/outcome-benchmark.service';
+import { OutcomeCacheService } from '../../../backtest/outcome-cache.service';
+import { OutcomeDbFallbackService } from '../../../backtest/outcome-db-fallback.service';
 import type {
   OutcomeRecord,
   OutcomeMetrics,
@@ -24,12 +26,25 @@ describe('OutcomeGeneratorService', () => {
       getClient: jest.fn(),
     } as unknown as jest.Mocked<SupabaseService>;
 
+    // Mock cache: all lookups return undefined (not preloaded) to exercise DB paths
+    const mockCache = {
+      lookupHistorical: jest.fn().mockReturnValue(undefined),
+      lookupBenchmark: jest.fn().mockReturnValue(undefined),
+      lookupRedfin: jest.fn().mockReturnValue(undefined),
+      lookupRealtor: jest.fn().mockReturnValue(undefined),
+      historicalCache: new Map(),
+      benchmarkCache: new Map(),
+      stateCodeCache: new Map(),
+    } as unknown as jest.Mocked<OutcomeCacheService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OutcomeGeneratorService,
         OutcomeDataSourceService,
         OutcomeBenchmarkService,
+        OutcomeDbFallbackService,
         { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: OutcomeCacheService, useValue: mockCache },
       ],
     }).compile();
 

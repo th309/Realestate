@@ -15,171 +15,15 @@
  *   npx tsx scripts/redfin-sales-import/import-redfin-sales.ts --geo=zip --limit=1000
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { downloadAndDecompress, downloadToDiskThenStream, needsStreaming } from './download';
-import { parseTsv, parseTsvStream } from './parser';
-import { loadEnv, createSupabaseAdminClient, testConnection, upsertBatch, BATCH_SIZE } from './db-client';
-import type { RedfinS3Dataset, RedfinGeoLevel, ImportResult, RedfinSalesRecord } from './types';
-import { REDFIN_S3_DATASETS } from './types';
-
-const MAX_AUTO_BATCH_SIZE = 5000;
-const GEO_BATCH_SIZES: Record<RedfinGeoLevel, number> = {
-  national: 5000,
-  state: 5000,
-  metro: 3000,
-  county: 2000,
-  city: 2000,
-  zip: 1000,
-  neighborhood: 1000,
-};
-
-function getAutoBatchSize(geoLevel: RedfinGeoLevel): number {
-  const preferred = GEO_BATCH_SIZES[geoLevel] ?? BATCH_SIZE;
-  return Math.max(1, Math.min(preferred, MAX_AUTO_BATCH_SIZE));
-}
-
-// ---------------------------------------------------------------------------
-// Single dataset import (in-memory mode for small files)
-// ---------------------------------------------------------------------------
-
-async function importDatasetInMemory(
-  supabase: SupabaseClient,
-  dataset: RedfinS3Dataset,
-  rowLimit?: number,
-  batchSize: number = BATCH_SIZE,
-): Promise<ImportResult> {
-  const startTime = Date.now();
-  const result: ImportResult = {
-    geoLevel: dataset.geoLevel,
-    tableName: dataset.tableName,
-    totalRows: 0,
-    inserted: 0,
-    errors: 0,
-    durationMs: 0,
-  };
-
-  try {
-    let tsv = await downloadAndDecompress(dataset);
-    let records = parseTsv(tsv, dataset.geoLevel);
-    tsv = '';
-    if (global.gc) global.gc();
-    result.totalRows = records.length;
-
-    if (rowLimit && records.length > rowLimit) {
-      console.log(`    Limiting to ${rowLimit} rows (from ${records.length})`);
-      records = records.slice(0, rowLimit);
-    }
-
-    if (records.length === 0) {
-      console.log(`    No records to insert for ${dataset.geoLevel}`);
-      result.durationMs = Date.now() - startTime;
-      return result;
-    }
-
-    const totalBatches = Math.ceil(records.length / batchSize);
-    console.log(`    Upserting ${records.length} records in ${totalBatches} batches into ${dataset.tableName}...`);
-
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
-      const batchNum = Math.floor(i / batchSize) + 1;
-      const batchResult = await upsertBatch(supabase, dataset.tableName, batch, batchNum, totalBatches);
-      result.inserted += batchResult.inserted;
-      result.errors += batchResult.errors;
-    }
-  } catch (error: any) {
-    console.error(`    Fatal error importing ${dataset.geoLevel}: ${error.message}`);
-    result.errors++;
-  }
-
-  result.durationMs = Date.now() - startTime;
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Single dataset import (streaming mode for large files)
-// ---------------------------------------------------------------------------
-
-async function importDatasetStreaming(
-  supabase: SupabaseClient,
-  dataset: RedfinS3Dataset,
-  rowLimit?: number,
-  batchSize: number = BATCH_SIZE,
-): Promise<ImportResult> {
-  const startTime = Date.now();
-  const result: ImportResult = {
-    geoLevel: dataset.geoLevel,
-    tableName: dataset.tableName,
-    totalRows: 0,
-    inserted: 0,
-    errors: 0,
-    durationMs: 0,
-  };
-
-  let cleanup = () => {};
-  try {
-    // Phase 1: Download compressed file to disk (decouples S3 from processing)
-    const downloaded = await downloadToDiskThenStream(dataset);
-    cleanup = downloaded.cleanup;
-    const stream = downloaded.stream;
-
-    // Phase 2: Stream-parse from disk and upsert each batch immediately
-    // Never holds more than BATCH_SIZE records in memory at a time
-    console.log(`    Stream-parsing from disk + upserting (batch size: ${batchSize})...`);
-
-    let batchNum = 0;
-    let limitReached = false;
-
-    for await (const { batch, rawCount, filteredCount } of parseTsvStream(stream, dataset.geoLevel, batchSize)) {
-      batchNum++;
-      result.totalRows = filteredCount;
-
-      let recordsToInsert = batch;
-      if (rowLimit && result.inserted + batch.length > rowLimit) {
-        const remaining = rowLimit - result.inserted;
-        if (remaining <= 0) break;
-        recordsToInsert = batch.slice(0, remaining);
-        limitReached = true;
-      }
-
-      const batchResult = await upsertBatch(supabase, dataset.tableName, recordsToInsert, batchNum, -1);
-      result.inserted += batchResult.inserted;
-      result.errors += batchResult.errors;
-
-      if (limitReached) {
-        console.log(`    Row limit ${rowLimit} reached after ${batchNum} batches`);
-        break;
-      }
-    }
-
-    console.log(`    Complete: ${result.totalRows.toLocaleString()} rows parsed, ${result.inserted.toLocaleString()} inserted, ${batchNum} batches`);
-  } catch (error: any) {
-    console.error(`    Fatal error importing ${dataset.geoLevel}: ${error.message}`);
-    result.errors++;
-  } finally {
-    cleanup();
-  }
-
-  result.durationMs = Date.now() - startTime;
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Unified dataset import (picks mode automatically)
-// ---------------------------------------------------------------------------
-
-async function importDataset(
-  supabase: SupabaseClient,
-  dataset: RedfinS3Dataset,
-  rowLimit?: number,
-): Promise<ImportResult> {
-  const batchSize = getAutoBatchSize(dataset.geoLevel);
-  console.log(`    Auto batch size selected: ${batchSize} (cap: ${MAX_AUTO_BATCH_SIZE})`);
-
-  if (needsStreaming(dataset.geoLevel)) {
-    return importDatasetStreaming(supabase, dataset, rowLimit, batchSize);
-  }
-  return importDatasetInMemory(supabase, dataset, rowLimit, batchSize);
-}
+import {
+  loadEnv,
+  createSupabaseAdminClient,
+  testConnection,
+} from "./db-client";
+import { importDataset } from "./dataset-importer";
+import { initCountyFipsLookup } from "./county-fips-lookup";
+import type { RedfinGeoLevel, ImportResult } from "./types";
+import { REDFIN_S3_DATASETS } from "./types";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -193,27 +37,41 @@ interface CliOptions {
 function parseCliArgs(): CliOptions {
   const args = process.argv.slice(2);
   const options: CliOptions = { geoFilters: [] };
-  const validLevels: RedfinGeoLevel[] = ['national', 'state', 'metro', 'county', 'city', 'zip', 'neighborhood'];
+  const validLevels: RedfinGeoLevel[] = [
+    "national",
+    "state",
+    "metro",
+    "county",
+    "city",
+    "zip",
+    "neighborhood",
+  ];
 
   for (const arg of args) {
-    if (arg.startsWith('--geo=')) {
-      const value = arg.split('=')[1] as RedfinGeoLevel;
+    if (arg.startsWith("--geo=")) {
+      const value = arg.split("=")[1] as RedfinGeoLevel;
       if (!validLevels.includes(value)) {
-        console.error(`Invalid --geo value: ${value}. Valid options: ${validLevels.join(', ')}`);
+        console.error(
+          `Invalid --geo value: ${value}. Valid options: ${validLevels.join(", ")}`,
+        );
         process.exit(1);
       }
       options.geoFilters.push(value);
-    } else if (arg.startsWith('--limit=')) {
-      const value = parseInt(arg.split('=')[1], 10);
+    } else if (arg.startsWith("--limit=")) {
+      const value = parseInt(arg.split("=")[1], 10);
       if (isNaN(value) || value <= 0) {
-        console.error(`Invalid --limit value: ${arg.split('=')[1]}. Must be a positive integer.`);
+        console.error(
+          `Invalid --limit value: ${arg.split("=")[1]}. Must be a positive integer.`,
+        );
         process.exit(1);
       }
       options.rowLimit = value;
-    } else if (arg.startsWith('--batch=')) {
-      console.error('Manual --batch override is disabled. This importer auto-selects batch sizes (max 5000) per geography.');
+    } else if (arg.startsWith("--batch=")) {
+      console.error(
+        "Manual --batch override is disabled. This importer auto-selects batch sizes (max 5000) per geography.",
+      );
       process.exit(1);
-    } else if (arg === '--help' || arg === '-h') {
+    } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Redfin S3 Market Tracker Sales Import
 
@@ -238,34 +96,36 @@ Options:
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  console.log('='.repeat(70));
-  console.log('  Redfin S3 Market Tracker Sales Import');
-  console.log('='.repeat(70));
+  console.log("=".repeat(70));
+  console.log("  Redfin S3 Market Tracker Sales Import");
+  console.log("=".repeat(70));
 
   // 1. Load env and parse CLI
   loadEnv();
   const options = parseCliArgs();
 
   if (options.geoFilters.length > 0) {
-    console.log(`  Geo filter: ${options.geoFilters.join(', ')}`);
+    console.log(`  Geo filter: ${options.geoFilters.join(", ")}`);
   }
   if (options.rowLimit) {
     console.log(`  Row limit: ${options.rowLimit}`);
   }
-  // 2. Create Supabase client
-  const supabase = createSupabaseAdminClient();
 
-  // 3. Test connection
+  // 2. Load county FIPS lookup (used by parser for county-level imports)
+  initCountyFipsLookup();
+
+  // 3. Create Supabase client and test connection
+  const supabase = createSupabaseAdminClient();
   const connected = await testConnection(supabase);
   if (!connected) {
-    console.error('  Aborting: database connection failed.');
+    console.error("  Aborting: database connection failed.");
     process.exit(1);
   }
 
   // 4. Determine which datasets to import
   let datasets = REDFIN_S3_DATASETS;
   if (options.geoFilters.length > 0) {
-    datasets = datasets.filter(d => options.geoFilters.includes(d.geoLevel));
+    datasets = datasets.filter((d) => options.geoFilters.includes(d.geoLevel));
   }
 
   console.log(`\n  Importing ${datasets.length} dataset(s)\n`);
@@ -274,43 +134,49 @@ async function main(): Promise<void> {
   const results: ImportResult[] = [];
 
   for (const [index, dataset] of datasets.entries()) {
-    console.log(`\n[${index + 1}/${datasets.length}] ${dataset.geoLevel.toUpperCase()} -> ${dataset.tableName}`);
-    console.log('-'.repeat(50));
+    console.log(
+      `\n[${index + 1}/${datasets.length}] ${dataset.geoLevel.toUpperCase()} -> ${dataset.tableName}`,
+    );
+    console.log("-".repeat(50));
 
     const result = await importDataset(supabase, dataset, options.rowLimit);
     results.push(result);
 
-    console.log(`  Done: ${result.inserted.toLocaleString()} inserted, ${result.errors} errors, ${(result.durationMs / 1000).toFixed(1)}s`);
+    console.log(
+      `  Done: ${result.inserted.toLocaleString()} inserted, ${result.errors} errors, ${(result.durationMs / 1000).toFixed(1)}s`,
+    );
 
     // Brief pause between datasets to avoid overwhelming the API
     if (index < datasets.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 
   // 6. Print summary
-  console.log('\n' + '='.repeat(70));
-  console.log('  Import Summary');
-  console.log('='.repeat(70));
-  console.log('');
+  console.log("\n" + "=".repeat(70));
+  console.log("  Import Summary");
+  console.log("=".repeat(70));
+  console.log("");
 
   const totalInserted = results.reduce((sum, r) => sum + r.inserted, 0);
   const totalErrors = results.reduce((sum, r) => sum + r.errors, 0);
   const totalDuration = results.reduce((sum, r) => sum + r.durationMs, 0);
 
   for (const result of results) {
-    const status = result.errors > 0 ? 'ERRORS' : 'OK';
+    const status = result.errors > 0 ? "ERRORS" : "OK";
     console.log(
       `  ${result.geoLevel.padEnd(14)} | ${result.tableName.padEnd(22)} | ` +
-      `${result.totalRows.toLocaleString().padStart(10)} rows | ` +
-      `${result.inserted.toLocaleString().padStart(10)} inserted | ` +
-      `${(result.durationMs / 1000).toFixed(1).padStart(6)}s | ${status}`
+        `${result.totalRows.toLocaleString().padStart(10)} rows | ` +
+        `${result.inserted.toLocaleString().padStart(10)} inserted | ` +
+        `${(result.durationMs / 1000).toFixed(1).padStart(6)}s | ${status}`,
     );
   }
 
-  console.log('');
-  console.log(`  Total: ${totalInserted.toLocaleString()} inserted, ${totalErrors} errors, ${(totalDuration / 1000).toFixed(1)}s`);
-  console.log('='.repeat(70));
+  console.log("");
+  console.log(
+    `  Total: ${totalInserted.toLocaleString()} inserted, ${totalErrors} errors, ${(totalDuration / 1000).toFixed(1)}s`,
+  );
+  console.log("=".repeat(70));
 
   if (totalErrors > 0) {
     process.exit(1);
@@ -318,6 +184,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });
