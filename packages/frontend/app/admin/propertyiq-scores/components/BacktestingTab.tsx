@@ -11,16 +11,16 @@
  * Material Design 3 compliant.
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { fetchAPIRaw } from '@/lib/data';
-import { ConfidenceMatrix } from './ConfidenceMatrix';
-import { ConfidenceTrendChart } from './ConfidenceTrendChart';
-import { ComponentAnalysis } from './ComponentAnalysis';
+import { useState, useEffect } from "react";
+import { fetchAPIRaw } from "@/lib/data";
+import { ConfidenceMatrix } from "./ConfidenceMatrix";
+import { ConfidenceTrendChart } from "./ConfidenceTrendChart";
+import { ComponentAnalysis } from "./ComponentAnalysis";
 
 interface Geography {
-  type: 'state' | 'metro' | 'county' | 'zip';
+  type: "state" | "metro" | "county" | "zip";
   id: string;
   name: string;
 }
@@ -29,7 +29,7 @@ interface BacktestingTabProps {
   geography: Geography | null;
 }
 
-type SubTabId = 'summary' | 'components' | 'trends' | 'results';
+type SubTabId = "summary" | "components" | "trends" | "results";
 
 interface SubTab {
   id: SubTabId;
@@ -37,10 +37,10 @@ interface SubTab {
 }
 
 const SUB_TABS: SubTab[] = [
-  { id: 'summary', label: 'Confidence Summary' },
-  { id: 'components', label: 'Component Analysis' },
-  { id: 'trends', label: 'Trends' },
-  { id: 'results', label: 'Results' },
+  { id: "summary", label: "Confidence Summary" },
+  { id: "components", label: "Component Analysis" },
+  { id: "trends", label: "Trends" },
+  { id: "results", label: "Results" },
 ];
 
 interface BacktestResult {
@@ -71,21 +71,21 @@ interface ConfidenceData {
 }
 
 export function BacktestingTab({ geography }: BacktestingTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTabId>('summary');
+  const [activeSubTab, setActiveSubTab] = useState<SubTabId>("summary");
   const [results, setResults] = useState<BacktestResult[]>([]);
   const [confidence, setConfidence] = useState<ConfidenceData[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
-  const [selectedScoreType, setSelectedScoreType] = useState<string>('all');
-  const [selectedHorizon, setSelectedHorizon] = useState<string>('all');
+  const [selectedScoreType, setSelectedScoreType] = useState<string>("all");
+  const [selectedHorizon, setSelectedHorizon] = useState<string>("all");
 
   // Trend configuration
-  const [trendScoreType, setTrendScoreType] = useState('homeready');
-  const [trendHorizon, setTrendHorizon] = useState('1y');
-  const [trendGeoType, setTrendGeoType] = useState('metro');
+  const [trendScoreType, setTrendScoreType] = useState("homeready");
+  const [trendHorizon, setTrendHorizon] = useState("1y");
+  const [trendGeoType, setTrendGeoType] = useState("metro");
 
   useEffect(() => {
-    if (activeSubTab === 'results') {
+    if (activeSubTab === "results") {
       fetchData();
     }
   }, [geography, activeSubTab]);
@@ -93,13 +93,16 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const geoFilter = geography?.id
-        ? `&geographyType=${geography.type}`
-        : '';
+      const geoFilter = geography?.id ? `&geographyType=${geography.type}` : "";
 
       const [resultsRes, confidenceRes] = await Promise.all([
-        fetchAPIRaw(`/api/admin/backtests?limit=50${geoFilter}`, { credentials: 'include' }),
-        fetchAPIRaw(`/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ''}`, { credentials: 'include' }),
+        fetchAPIRaw(`/api/admin/backtests?limit=50${geoFilter}`, {
+          credentials: "include",
+        }),
+        fetchAPIRaw(
+          `/api/admin/confidence${geoFilter ? `?${geoFilter.substring(1)}` : ""}`,
+          { credentials: "include" },
+        ),
       ]);
 
       if (resultsRes.ok) {
@@ -112,7 +115,7 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
         setConfidence(data.confidence || []);
       }
     } catch (error) {
-      console.error('Error fetching backtest data:', error);
+      console.error("Error fetching backtest data:", error);
     } finally {
       setLoading(false);
     }
@@ -124,12 +127,13 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
     setRunning(true);
     try {
       const response = await fetchAPIRaw(`/api/admin/backtests/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           geographyType: geography.type,
-          scoreType: selectedScoreType === 'all' ? undefined : selectedScoreType,
+          scoreType:
+            selectedScoreType === "all" ? undefined : selectedScoreType,
         }),
       });
 
@@ -137,33 +141,37 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
         await fetchData();
       }
     } catch (error) {
-      console.error('Error running backtest:', error);
+      console.error("Error running backtest:", error);
     } finally {
       setRunning(false);
     }
   };
 
   const filteredResults = results.filter((r) => {
-    if (selectedScoreType !== 'all' && r.scoreType !== selectedScoreType) return false;
-    if (selectedHorizon !== 'all' && r.outcomeHorizon !== selectedHorizon) return false;
+    if (selectedScoreType !== "all" && r.scoreType !== selectedScoreType)
+      return false;
+    if (selectedHorizon !== "all" && r.outcomeHorizon !== selectedHorizon)
+      return false;
     return true;
   });
 
   const renderSubTabContent = () => {
     switch (activeSubTab) {
-      case 'summary':
+      case "summary":
         return <ConfidenceMatrix />;
 
-      case 'components':
+      case "components":
         return <ComponentAnalysis geography={geography} />;
 
-      case 'trends':
+      case "trends":
         return (
           <div className="space-y-6">
             {/* Trend configuration */}
             <div className="flex flex-wrap gap-4 p-4 bg-surface-container rounded-lg">
               <div>
-                <label className="block text-sm font-medium text-on-surface mb-1">Score Type</label>
+                <label className="block text-sm font-medium text-on-surface mb-1">
+                  Score Type
+                </label>
                 <select
                   value={trendScoreType}
                   onChange={(e) => setTrendScoreType(e.target.value)}
@@ -175,7 +183,9 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface mb-1">Horizon</label>
+                <label className="block text-sm font-medium text-on-surface mb-1">
+                  Horizon
+                </label>
                 <select
                   value={trendHorizon}
                   onChange={(e) => setTrendHorizon(e.target.value)}
@@ -188,7 +198,9 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface mb-1">Geography Type</label>
+                <label className="block text-sm font-medium text-on-surface mb-1">
+                  Geography Type
+                </label>
                 <select
                   value={trendGeoType}
                   onChange={(e) => setTrendGeoType(e.target.value)}
@@ -211,13 +223,15 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
           </div>
         );
 
-      case 'results':
+      case "results":
         return (
           <div className="space-y-6">
             {/* Controls */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-surface-container rounded-xl">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-on-surface-variant">Score Type:</label>
+                <label className="text-sm text-on-surface-variant">
+                  Score Type:
+                </label>
                 <select
                   value={selectedScoreType}
                   onChange={(e) => setSelectedScoreType(e.target.value)}
@@ -231,7 +245,9 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm text-on-surface-variant">Horizon:</label>
+                <label className="text-sm text-on-surface-variant">
+                  Horizon:
+                </label>
                 <select
                   value={selectedHorizon}
                   onChange={(e) => setSelectedHorizon(e.target.value)}
@@ -252,28 +268,40 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                 disabled={running || !geography?.id}
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-on-primary disabled:opacity-50"
               >
-                {running ? 'Running...' : 'Run Backtest'}
+                {running ? "Running..." : "Run Backtest"}
               </button>
             </div>
 
             {/* Confidence Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['market_health', 'homeready', 'investoredge'].map((scoreType) => {
-                const conf = confidence.find((c) => c.scoreType === scoreType);
-                return (
-                  <ConfidenceCard key={scoreType} scoreType={scoreType} data={conf} />
-                );
-              })}
+              {["market_health", "homeready", "investoredge"].map(
+                (scoreType) => {
+                  const conf = confidence.find(
+                    (c) => c.scoreType === scoreType,
+                  );
+                  return (
+                    <ConfidenceCard
+                      key={scoreType}
+                      scoreType={scoreType}
+                      data={conf}
+                    />
+                  );
+                },
+              )}
             </div>
 
             {/* Results Table */}
             <div className="bg-surface-container rounded-xl overflow-hidden">
               <div className="p-4 border-b border-outline-variant">
-                <h3 className="font-medium text-on-surface">Recent Backtest Results</h3>
+                <h3 className="font-medium text-on-surface">
+                  Recent Backtest Results
+                </h3>
               </div>
 
               {loading ? (
-                <div className="p-8 text-center text-on-surface-variant">Loading...</div>
+                <div className="p-8 text-center text-on-surface-variant">
+                  Loading...
+                </div>
               ) : filteredResults.length === 0 ? (
                 <div className="p-8 text-center text-on-surface-variant">
                   No backtest results found. Run a backtest to see results.
@@ -308,7 +336,10 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                     </thead>
                     <tbody className="divide-y divide-outline-variant">
                       {filteredResults.map((result) => (
-                        <tr key={result.runId} className="hover:bg-surface-container-low">
+                        <tr
+                          key={result.runId}
+                          className="hover:bg-surface-container-low"
+                        >
                           <td className="px-4 py-3 text-sm text-on-surface">
                             {formatScoreType(result.scoreType)}
                           </td>
@@ -319,13 +350,22 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
                             {result.outcomeHorizon}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-mono">
-                            <MetricBadge value={result.rSquared} format="percent" />
+                            <MetricBadge
+                              value={result.rSquared}
+                              format="percent"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-mono">
-                            <MetricBadge value={result.pearsonCorrelation} format="decimal" />
+                            <MetricBadge
+                              value={result.spearmanCorrelation}
+                              format="decimal"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-mono">
-                            <MetricBadge value={result.hitRate} format="percent" />
+                            <MetricBadge
+                              value={result.hitRate}
+                              format="percent"
+                            />
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-on-surface-variant">
                             {result.sampleCount.toLocaleString()}
@@ -358,8 +398,8 @@ export function BacktestingTab({ geography }: BacktestingTabProps) {
               border-b-2 transition-colors
               ${
                 activeSubTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline'
+                  ? "border-primary text-primary"
+                  : "border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline"
               }
             `}
           >
@@ -382,13 +422,13 @@ function ConfidenceCard({
   data: ConfidenceData | undefined;
 }) {
   const statusColors = {
-    healthy: 'bg-green-100 text-green-800 border-green-200',
-    monitor: 'bg-amber-100 text-amber-800 border-amber-200',
-    review: 'bg-orange-100 text-orange-800 border-orange-200',
-    broken: 'bg-red-100 text-red-800 border-red-200',
+    healthy: "bg-green-100 text-green-800 border-green-200",
+    monitor: "bg-amber-100 text-amber-800 border-amber-200",
+    review: "bg-orange-100 text-orange-800 border-orange-200",
+    broken: "bg-red-100 text-red-800 border-red-200",
   };
 
-  const status = (data?.status || 'unknown') as keyof typeof statusColors;
+  const status = (data?.status || "unknown") as keyof typeof statusColors;
 
   return (
     <div className="p-4 rounded-xl bg-surface-container">
@@ -398,7 +438,7 @@ function ConfidenceCard({
         </span>
         {data && (
           <span
-            className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}
+            className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[status] || "bg-gray-100 text-gray-800"}`}
           >
             {status}
           </span>
@@ -426,7 +466,9 @@ function ConfidenceCard({
           </div>
         </>
       ) : (
-        <div className="text-sm text-on-surface-variant">No confidence data</div>
+        <div className="text-sm text-on-surface-variant">
+          No confidence data
+        </div>
       )}
     </div>
   );
@@ -437,19 +479,20 @@ function MetricBadge({
   format,
 }: {
   value: number | null;
-  format: 'percent' | 'decimal';
+  format: "percent" | "decimal";
 }) {
   if (value === null) {
     return <span className="text-on-surface-variant">--</span>;
   }
 
-  const displayValue = format === 'percent' ? `${(value * 100).toFixed(1)}%` : value.toFixed(3);
+  const displayValue =
+    format === "percent" ? `${(value * 100).toFixed(1)}%` : value.toFixed(3);
 
   const getColor = () => {
-    const threshold = format === 'percent' ? value : value;
-    if (threshold >= 0.7) return 'text-green-600';
-    if (threshold >= 0.5) return 'text-amber-600';
-    return 'text-red-600';
+    const threshold = format === "percent" ? value : value;
+    if (threshold >= 0.7) return "text-green-600";
+    if (threshold >= 0.5) return "text-amber-600";
+    return "text-red-600";
   };
 
   return <span className={getColor()}>{displayValue}</span>;
@@ -457,9 +500,9 @@ function MetricBadge({
 
 function formatScoreType(type: string): string {
   const labels: Record<string, string> = {
-    market_health: 'Market Health',
-    homeready: 'HomeReady',
-    investoredge: 'InvestorEdge',
+    market_health: "Market Health",
+    homeready: "HomeReady",
+    investoredge: "InvestorEdge",
   };
   return labels[type] || type;
 }

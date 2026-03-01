@@ -24,7 +24,7 @@ export interface ValidationSummary {
   avgExcessVsState3y: number;
   correlation1y: number;
   correlation3y: number;
-  hitRate1y: number;  // % of scores >70 that beat benchmark
+  hitRate1y: number; // % of scores >70 that beat benchmark
   hitRate3y: number;
   dataRange: {
     startDate: string;
@@ -98,9 +98,7 @@ export class ValidationService {
     const client = this.supabase.getClient();
 
     // Build query
-    let query = client
-      .from('propertyiq_backtest_outcomes')
-      .select('*');
+    let query = client.from('propertyiq_backtest_outcomes').select('*');
 
     if (geographyType) {
       query = query.eq('geography_type', geographyType);
@@ -118,7 +116,7 @@ export class ValidationService {
 
     // Filter to records with outcomes
     const withOutcomes = data.filter(
-      (d) => d.outcome_1y_value != null || d.outcome_3y_value != null
+      (d) => d.outcome_1y_value != null || d.outcome_3y_value != null,
     );
 
     if (withOutcomes.length === 0) {
@@ -135,32 +133,44 @@ export class ValidationService {
     const avgReturn1y = this.avg(with1y.map((d) => d.outcome_1y_value));
     const avgReturn3y = this.avg(with3y.map((d) => d.outcome_3y_value));
 
-    const withExcess1y = withOutcomes.filter((d) => d.excess_vs_state_1y != null);
-    const withExcess3y = withOutcomes.filter((d) => d.excess_vs_state_3y != null);
+    const withExcess1y = withOutcomes.filter(
+      (d) => d.excess_vs_state_1y != null,
+    );
+    const withExcess3y = withOutcomes.filter(
+      (d) => d.excess_vs_state_3y != null,
+    );
 
-    const avgExcessVsState1y = this.avg(withExcess1y.map((d) => d.excess_vs_state_1y));
-    const avgExcessVsState3y = this.avg(withExcess3y.map((d) => d.excess_vs_state_3y));
+    const avgExcessVsState1y = this.avg(
+      withExcess1y.map((d) => d.excess_vs_state_1y),
+    );
+    const avgExcessVsState3y = this.avg(
+      withExcess3y.map((d) => d.excess_vs_state_3y),
+    );
 
     // Calculate correlations
     const correlation1y = this.calculateCorrelation(
       with1y.map((d) => d.score_value),
-      with1y.map((d) => d.outcome_1y_value)
+      with1y.map((d) => d.outcome_1y_value),
     );
     const correlation3y = this.calculateCorrelation(
       with3y.map((d) => d.score_value),
-      with3y.map((d) => d.outcome_3y_value)
+      with3y.map((d) => d.outcome_3y_value),
     );
 
     // Calculate hit rates (scores > 70 that beat benchmark)
     const highScores1y = withExcess1y.filter((d) => d.score_value >= 70);
     const highScores3y = withExcess3y.filter((d) => d.score_value >= 70);
 
-    const hitRate1y = highScores1y.length > 0
-      ? highScores1y.filter((d) => d.excess_vs_state_1y > 0).length / highScores1y.length
-      : 0;
-    const hitRate3y = highScores3y.length > 0
-      ? highScores3y.filter((d) => d.excess_vs_state_3y > 0).length / highScores3y.length
-      : 0;
+    const hitRate1y =
+      highScores1y.length > 0
+        ? highScores1y.filter((d) => d.excess_vs_state_1y > 0).length /
+          highScores1y.length
+        : 0;
+    const hitRate3y =
+      highScores3y.length > 0
+        ? highScores3y.filter((d) => d.excess_vs_state_3y > 0).length /
+          highScores3y.length
+        : 0;
 
     // Get date range
     const dates = withOutcomes.map((d) => d.score_date).sort();
@@ -212,19 +222,35 @@ export class ValidationService {
         scoreMax: parseFloat(row.score_max),
         avgScore: parseFloat(row.avg_score),
         count: row.sample_count,
-        avgReturn1y: row.avg_return_1y != null ? parseFloat(row.avg_return_1y) : null,
-        avgReturn3y: row.avg_return_3y != null ? parseFloat(row.avg_return_3y) : null,
-        avgExcessVsState1y: row.avg_excess_vs_state_1y != null ? parseFloat(row.avg_excess_vs_state_1y) : null,
-        avgExcessVsState3y: row.avg_excess_vs_state_3y != null ? parseFloat(row.avg_excess_vs_state_3y) : null,
-        avgExcessVsNational1y: row.avg_excess_vs_national_1y != null ? parseFloat(row.avg_excess_vs_national_1y) : null,
-        avgExcessVsNational3y: row.avg_excess_vs_national_3y != null ? parseFloat(row.avg_excess_vs_national_3y) : null,
+        avgReturn1y:
+          row.avg_return_1y != null ? parseFloat(row.avg_return_1y) : null,
+        avgReturn3y:
+          row.avg_return_3y != null ? parseFloat(row.avg_return_3y) : null,
+        avgExcessVsState1y:
+          row.avg_excess_vs_state_1y != null
+            ? parseFloat(row.avg_excess_vs_state_1y)
+            : null,
+        avgExcessVsState3y:
+          row.avg_excess_vs_state_3y != null
+            ? parseFloat(row.avg_excess_vs_state_3y)
+            : null,
+        avgExcessVsNational1y:
+          row.avg_excess_vs_national_1y != null
+            ? parseFloat(row.avg_excess_vs_national_1y)
+            : null,
+        avgExcessVsNational3y:
+          row.avg_excess_vs_national_3y != null
+            ? parseFloat(row.avg_excess_vs_national_3y)
+            : null,
       }));
     }
 
     // Fallback: client-side query if RPC fails
     let query = client
       .from('propertyiq_backtest_outcomes')
-      .select('score_value,outcome_1y_value,outcome_3y_value,rent_return_1y,rent_return_3y_cagr,excess_vs_state_1y,excess_vs_state_3y,excess_vs_national_1y,excess_vs_national_3y')
+      .select(
+        'score_value,outcome_1y_value,outcome_3y_value,rent_return_1y,rent_return_3y_cagr,excess_vs_state_1y,excess_vs_state_3y,excess_vs_national_1y,excess_vs_national_3y',
+      )
       .not('score_value', 'is', null)
       .limit(50000);
 
@@ -235,7 +261,8 @@ export class ValidationService {
       query = query.eq('score_type', scoreType);
     }
 
-    const excessCol = horizon === '1y' ? 'excess_vs_state_1y' : 'excess_vs_state_3y';
+    const excessCol =
+      horizon === '1y' ? 'excess_vs_state_1y' : 'excess_vs_state_3y';
     query = query.not(excessCol, 'is', null);
 
     const { data, error } = await query;
@@ -248,7 +275,13 @@ export class ValidationService {
     const quintileSize = Math.ceil(sorted.length / 5);
 
     const quintiles: QuintileData[] = [];
-    const labels = ['Bottom 20%', 'Lower 20%', 'Middle 20%', 'Upper 20%', 'Top 20%'];
+    const labels = [
+      'Bottom 20%',
+      'Lower 20%',
+      'Middle 20%',
+      'Upper 20%',
+      'Top 20%',
+    ];
 
     for (let i = 0; i < 5; i++) {
       const start = i * quintileSize;
@@ -268,10 +301,18 @@ export class ValidationService {
         count: quintileSlice.length,
         avgReturn1y: this.avg(quintileSlice.map((d) => d.outcome_1y_value)),
         avgReturn3y: this.avg(quintileSlice.map((d) => d.outcome_3y_value)),
-        avgExcessVsState1y: this.avg(quintileSlice.map((d) => d.excess_vs_state_1y)),
-        avgExcessVsState3y: this.avg(quintileSlice.map((d) => d.excess_vs_state_3y)),
-        avgExcessVsNational1y: this.avg(quintileSlice.map((d) => d.excess_vs_national_1y)),
-        avgExcessVsNational3y: this.avg(quintileSlice.map((d) => d.excess_vs_national_3y)),
+        avgExcessVsState1y: this.avg(
+          quintileSlice.map((d) => d.excess_vs_state_1y),
+        ),
+        avgExcessVsState3y: this.avg(
+          quintileSlice.map((d) => d.excess_vs_state_3y),
+        ),
+        avgExcessVsNational1y: this.avg(
+          quintileSlice.map((d) => d.excess_vs_national_1y),
+        ),
+        avgExcessVsNational3y: this.avg(
+          quintileSlice.map((d) => d.excess_vs_national_3y),
+        ),
       });
     }
 
@@ -291,7 +332,9 @@ export class ValidationService {
     // Build query — include geography_type so we know which name table to use
     let query = client
       .from('propertyiq_backtest_outcomes')
-      .select('geography_id, geography_type, score_date, score_value, outcome_1y_value, outcome_3y_value, excess_vs_state_1y, excess_vs_state_3y')
+      .select(
+        'geography_id, geography_type, score_date, score_value, outcome_1y_value, outcome_3y_value, excess_vs_state_1y, excess_vs_state_3y',
+      )
       .not('score_value', 'is', null)
       .limit(limit);
 
@@ -440,13 +483,19 @@ export class ValidationService {
 
       const scores = records.map((r) => r.score_value);
       const returns = records.map((r) => r.outcome_1y_value);
-      const excesses = records.map((r) => r.excess_vs_state_1y).filter((e) => e != null);
+      const excesses = records
+        .map((r) => r.excess_vs_state_1y)
+        .filter((e) => e != null);
 
       // High scores (>70) that beat benchmark
-      const highScores = records.filter((r) => r.score_value >= 70 && r.excess_vs_state_1y != null);
-      const hitRate = highScores.length > 0
-        ? highScores.filter((r) => r.excess_vs_state_1y > 0).length / highScores.length
-        : 0;
+      const highScores = records.filter(
+        (r) => r.score_value >= 70 && r.excess_vs_state_1y != null,
+      );
+      const hitRate =
+        highScores.length > 0
+          ? highScores.filter((r) => r.excess_vs_state_1y > 0).length /
+            highScores.length
+          : 0;
 
       results.push({
         date,
@@ -496,7 +545,8 @@ export class ValidationService {
         const nameMap = await this.resolveGeographyNames([
           { id: topData[0].geography_id, type: geoType },
         ]);
-        topName = nameMap.get(topData[0].geography_id) || topData[0].geography_id;
+        topName =
+          nameMap.get(topData[0].geography_id) || topData[0].geography_id;
       }
 
       results.push({
@@ -525,11 +575,15 @@ export class ValidationService {
   // ========================================================================
 
   private avg(values: (number | null | undefined)[]): number {
-    const valid = values.filter((v) => v != null) as number[];
+    const valid = values.filter((v) => v != null);
     if (valid.length === 0) return 0;
     return valid.reduce((a, b) => a + b, 0) / valid.length;
   }
 
+  /**
+   * Spearman rank correlation (ρ) — monotonic relationship between scores and outcomes.
+   * Ranks both arrays, then computes Pearson r on the ranks.
+   */
   private calculateCorrelation(x: number[], y: number[]): number {
     if (x.length !== y.length || x.length < 2) return 0;
 
@@ -540,18 +594,39 @@ export class ValidationService {
 
     if (pairs.length < 2) return 0;
 
-    const n = pairs.length;
-    const sumX = pairs.reduce((a, [xi]) => a + xi, 0);
-    const sumY = pairs.reduce((a, [, yi]) => a + yi, 0);
-    const sumXY = pairs.reduce((a, [xi, yi]) => a + xi * yi, 0);
-    const sumX2 = pairs.reduce((a, [xi]) => a + xi * xi, 0);
-    const sumY2 = pairs.reduce((a, [, yi]) => a + yi * yi, 0);
+    const xClean = pairs.map(([xi]) => xi);
+    const yClean = pairs.map(([, yi]) => yi);
+
+    // Convert to ranks, then apply Pearson on ranks
+    const xRanks = this.rankValues(xClean);
+    const yRanks = this.rankValues(yClean);
+
+    const n = xRanks.length;
+    const sumX = xRanks.reduce((a, b) => a + b, 0);
+    const sumY = yRanks.reduce((a, b) => a + b, 0);
+    const sumXY = xRanks.reduce((a, xi, i) => a + xi * yRanks[i], 0);
+    const sumX2 = xRanks.reduce((a, xi) => a + xi * xi, 0);
+    const sumY2 = yRanks.reduce((a, yi) => a + yi * yi, 0);
 
     const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    const denominator = Math.sqrt(
+      (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
+    );
 
     if (denominator === 0) return 0;
     return numerator / denominator;
+  }
+
+  private rankValues(values: number[]): number[] {
+    const indexed = values.map((v, i) => ({ value: v, index: i }));
+    indexed.sort((a, b) => a.value - b.value);
+
+    const ranks = new Array(values.length);
+    for (let i = 0; i < indexed.length; i++) {
+      ranks[indexed[i].index] = i + 1;
+    }
+
+    return ranks;
   }
 
   private emptyValidationSummary(): ValidationSummary {

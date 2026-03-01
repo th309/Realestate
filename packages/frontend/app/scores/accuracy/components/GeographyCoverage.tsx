@@ -6,9 +6,9 @@
  * Client component.
  */
 
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -17,11 +17,17 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { MapPin, Building2, Mail } from 'lucide-react';
-import { useValidationGeography } from '@/lib/data';
+} from "recharts";
+import { MapPin, Building2, Mail } from "lucide-react";
+import { useValidationGeography } from "@/lib/data";
 
-function AnimatedCounter({ end, duration = 1500 }: { end: number; duration?: number }) {
+function AnimatedCounter({
+  end,
+  duration = 1500,
+}: {
+  end: number;
+  duration?: number;
+}) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -64,14 +70,18 @@ const GEO_ICONS = {
 };
 
 const GEO_LABELS: Record<string, string> = {
-  metro: 'Metro Areas',
-  county: 'Counties',
-  zip: 'ZIP Codes',
+  metro: "Metro Areas",
+  county: "Counties",
+  zip: "ZIP Codes",
 };
 
 export function GeographyCoverage() {
-  const { data: rawData, isLoading, error } = useValidationGeography({
-    scoreType: 'homeready',
+  const {
+    data: rawData,
+    isLoading,
+    error,
+  } = useValidationGeography({
+    scoreType: "homeready",
   });
 
   if (isLoading) {
@@ -79,7 +89,10 @@ export function GeographyCoverage() {
       <section>
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface-container rounded-2xl p-5 border border-outline-variant">
+            <div
+              key={i}
+              className="bg-surface-container rounded-2xl p-5 border border-outline-variant"
+            >
               <div className="h-8 w-20 bg-outline-variant/30 rounded animate-pulse mb-2" />
               <div className="h-4 w-24 bg-outline-variant/20 rounded animate-pulse" />
             </div>
@@ -92,7 +105,9 @@ export function GeographyCoverage() {
   if (error || !rawData) {
     return (
       <section>
-        <p className="text-sm text-on-surface-variant">Geography data unavailable.</p>
+        <p className="text-sm text-on-surface-variant">
+          Geography data unavailable.
+        </p>
       </section>
     );
   }
@@ -115,7 +130,8 @@ export function GeographyCoverage() {
         Validated Everywhere, Not Just Big Metros
       </h2>
       <p className="text-on-surface-variant mt-2 max-w-2xl">
-        Our model works across all geography levels &mdash; not just the 380 largest metros.
+        Our model works across all geography levels &mdash; not just the 380
+        largest metros.
       </p>
 
       {/* Counter cards */}
@@ -137,7 +153,7 @@ export function GeographyCoverage() {
                 {GEO_LABELS[g.geographyType] || g.geographyType}
               </p>
               <p className="text-xs text-on-surface-variant/70 mt-0.5">
-                r = {g.avgCorrelation1y.toFixed(2)} (1Y)
+                ρ = {g.avgCorrelation1y.toFixed(2)} (1Y)
               </p>
             </div>
           );
@@ -151,33 +167,50 @@ export function GeographyCoverage() {
         </h3>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--outline-variant)" opacity={0.5} />
+            <BarChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--outline-variant)"
+                opacity={0.5}
+              />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--outline-variant)' }}
+                axisLine={{ stroke: "var(--outline-variant)" }}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--on-surface-variant)' }}
+                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: 'var(--outline-variant)' }}
+                axisLine={{ stroke: "var(--outline-variant)" }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'var(--surface-container)',
-                  border: '1px solid var(--outline-variant)',
-                  borderRadius: '8px',
-                  fontSize: '12px',
+                  backgroundColor: "var(--surface-container)",
+                  border: "1px solid var(--outline-variant)",
+                  borderRadius: "8px",
+                  fontSize: "12px",
                 }}
                 formatter={(value: number, name: string) => [
                   value.toFixed(3),
-                  name === 'correlation1y' ? '1-Year Corr' : '3-Year Corr',
+                  name === "correlation1y" ? "1-Year Corr" : "3-Year Corr",
                 ]}
               />
-              <Bar dataKey="correlation1y" name="1-Year" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="correlation3y" name="3-Year" fill="var(--secondary)" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="correlation1y"
+                name="1-Year"
+                fill="var(--primary)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="correlation3y"
+                name="3-Year"
+                fill="var(--secondary)"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
