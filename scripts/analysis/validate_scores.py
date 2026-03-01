@@ -1043,17 +1043,6 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     oos_path = args.oos_results
-    if oos_path is None:
-        # Default location
-        default_oos = script_dir / "output" / "optimized_weights.json"
-        if default_oos.exists():
-            oos_path = str(default_oos)
-            logger.info("Found OOS results at default path: %s", oos_path)
-        else:
-            logger.warning(
-                "No OOS results file found at %s. OOS metrics will be skipped.",
-                default_oos,
-            )
 
     # Connect to database
     logger.info("Connecting to database...")
@@ -1108,14 +1097,15 @@ def main() -> None:
                     geo_level, stype, benchmark,
                 )
                 logger.info("=" * 60)
-                # Look for geo-level-specific OOS results
+                # Resolve OOS results: explicit path > per-geo file > generic file
                 geo_oos_path = oos_path
-                if oos_path and geo_level != "metro":
-                    geo_specific = str(
-                        Path(oos_path).parent / f"optimized_weights_{geo_level}.json"
-                    )
-                    if Path(geo_specific).exists():
-                        geo_oos_path = geo_specific
+                if geo_oos_path is None:
+                    geo_specific = output_dir / f"optimized_weights_{geo_level}.json"
+                    generic = output_dir / "optimized_weights.json"
+                    if geo_specific.exists():
+                        geo_oos_path = str(geo_specific)
+                    elif generic.exists():
+                        geo_oos_path = str(generic)
                 result = validate_score_type(df, stype, geo_oos_path, benchmark=benchmark)
                 score_results.append(result)
 
