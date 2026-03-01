@@ -1,42 +1,71 @@
 ---
 name: piq-validation-report
-description: "Generate the PropertyIQ monthly validation report from backtest pipeline output. Use this skill whenever asked to create, update, regenerate, or review a PropertyIQ validation report, score validation report, backtest report, or monthly PIQ report. Also trigger when the user mentions validation metrics like IC, quintile spread, OOS results, or degradation in the context of PropertyIQ scores. This skill enforces strict rules about what numbers can appear, what claims are permitted, and how metrics must be sourced — preventing fabrication and inconsistency across monthly runs."
+description: "Generate the PropertyIQ monthly validation report. Use this skill whenever asked to create, update, regenerate, or review the PropertyIQ validation report, score validation report, backtest report, or monthly PIQ report. This skill runs the backtest pipeline, reads the output JSON, and writes a complete validation_report.md. It enforces strict rules about what numbers can appear, what claims are permitted, and how metrics must be sourced — preventing fabrication and inconsistency across monthly runs."
 ---
 
 # PropertyIQ Validation Report Generator
 
-## Overview
+## What This Skill Does
 
-This skill generates the monthly PropertyIQ score validation report from structured JSON output files. The report summarizes how well PropertyIQ scores (HomeReady, InvestorEdge) predicted real estate excess returns in a walk-forward backtest.
-
-**Critical context:** The model predicts **3-year excess returns vs state median**. Every number, claim, and table in the report must be consistent with this fact. Violations of this principle were found in prior reports (1Y raw returns as headlines, mixed benchmarks, fabricated editorial claims). This skill exists to prevent those errors from recurring.
+Runs the PropertyIQ backtest pipeline and generates a validation report from the results. The report summarizes how well PropertyIQ scores predicted real estate excess returns.
 
 ## Before You Start
 
-Read the reference files in this skill's `references/` directory:
+1. Read `references/report-template.md` in this skill's directory — it defines the exact report structure
+2. Read `references/data-dictionary.md` in this skill's directory — it defines every metric and its JSON source path
+3. Make sure you have database access (DATABASE_URL env var or Supabase credentials)
 
-1. **`references/data-dictionary.md`** — Defines every metric, where it comes from, and what it means
-2. **`references/report-template.md`** — The exact section structure, table formats, and permitted language
+## Step 1: Run the Pipeline
 
-Read both files completely before generating any content.
+Run these from the repo root. They generate the JSON files the report is built from.
 
-## Required Inputs
+```bash
+# Generate optimized weights + OOS metrics for all geo levels
+python scripts/analysis/optimize_weights.py --score-type both --output-dir scripts/analysis/output
 
-The report is generated from these files. Verify all exist before starting:
+# Generate in-sample validation metrics for both benchmarks
+python scripts/analysis/validate_scores.py --benchmark both --output-dir scripts/analysis/output
+```
 
-| File | Location | Contains |
-|------|----------|----------|
-| Validation JSON (state) | `scripts/analysis/output/validation_results_state.json` | IS metrics against state benchmark |
-| Optimized weights (metro) | `scripts/analysis/output/optimized_weights.json` | OOS metrics, feature weights, window results |
-| Optimized weights (county) | `scripts/analysis/output/optimized_weights_county.json` | County-level OOS metrics |
-| Optimized weights (zip) | `scripts/analysis/output/optimized_weights_zip.json` | ZIP-level OOS metrics |
-| Validation JSON (division) | `scripts/analysis/output/validation_results_division.json` | IS metrics against division benchmark (for Section 5) |
+Wait for both to complete. Verify these files exist before proceeding:
 
-If any file is missing, state which file is missing and stop. Do not estimate or fabricate values.
+- `scripts/analysis/output/optimized_weights.json`
+- `scripts/analysis/output/optimized_weights_county.json`
+- `scripts/analysis/output/optimized_weights_zip.json`
+- `scripts/analysis/output/validation_results_state.json`
+- `scripts/analysis/output/validation_results_division.json`
 
-## Absolute Rules
+If any file is missing, check the pipeline output for errors. Do not proceed without all five files.
 
-These rules override everything else. No exceptions.
+## Step 2: Read the JSON Output
+
+Load all five JSON files. Extract every metric you need using the paths documented in `references/data-dictionary.md`. Do not estimate, interpolate, or fabricate any value. If a field is missing from the JSON, write "N/A" in the report.
+
+## Step 3: Write the Report
+
+Write `scripts/analysis/output/validation_report.md` following the exact structure in `references/report-template.md`. Fill in every `{placeholder}` with data from the JSON files.
+
+For dollar conversions, query the latest median home values from the database or use the most recent Zillow ZHVI values available. Cite the source month/year.
+
+## Step 4: Run the Post-Generation Checklist
+
+Before you're done, verify every item. If any check fails, fix the report.
+
+- [ ] All numeric values traceable to the JSON files (spot-check at least 5 values against the raw JSON)
+- [ ] Benchmark labeled as "state" everywhere describing the model's target
+- [ ] No 1Y returns in headline metrics, executive summary, or dollar impact
+- [ ] Dollar values derived from 3Y excess return spreads, not raw return spreads
+- [ ] Degradation ratio uses state benchmark for both IS and OOS columns
+- [ ] Section numbering sequential with no gaps or duplicates
+- [ ] InvestorEdge described as "excess total return vs state" (not absolute rent + excess appreciation)
+- [ ] Every quintile table column says "Excess Return (vs State)" or "Total Excess Return (vs State)"
+- [ ] Known Limitations section updated with any new WATCH/WARN flags from the robustness checklist
+- [ ] Median home value source and date cited in the dollar impact section
+- [ ] The "Cost of Choosing Wrong" section (2.3) uses 3Y excess returns only, no ROE
+
+## The Five Absolute Rules
+
+These override everything else. If you find yourself about to violate one, stop and fix it.
 
 ### Rule 1: The Model Predicts 3Y Excess Returns vs State
 
@@ -45,139 +74,67 @@ These rules override everything else. No exceptions.
 | HomeReady | `excess_vs_state_3y` | State median appreciation CAGR | 3 years |
 | InvestorEdge | `excess_vs_state_3y + (rent_return_3y_cagr - state_rent_return_3y_cagr)` | State median total return CAGR | 3 years |
 
-**NEVER** describe the model as predicting 1Y returns, raw returns, returns vs Census Division, or returns vs national median. Division metrics appear in Section 5 (within-state validation) as a comparison to the primary state benchmark.
+**NEVER** describe the model as predicting 1Y returns, raw returns, returns vs Census Division, or returns vs national median. Division metrics appear only in Section 5 (within-state validation) as a comparison.
 
 ### Rule 2: Every Number Must Have a Source
 
-Every numeric value must come from the JSON output files listed above, or from a documented external source (e.g., Zillow ZHVI with month/year cited). If you cannot trace a number to a source file and field path, do not include it.
+Every numeric value comes from the pipeline JSON output or a documented external source (e.g., Zillow ZHVI with month/year). No exceptions.
 
-**Examples of what this means:**
-- OOS IC → `optimized_weights.json` → `summary.avg_test_ic`
-- IS Spearman r → `validation_results_state.json` → `[score_type].insample.spearman_r`
-- Quintile spread → JSON → `insample.quintile_table` or `summary.avg_test_quintile_spread`
-- Sample size → JSON → `n_with_target` or `summary.n_test`
-
-### Rule 3: Dollar Values Come from Excess Spreads Only
+### Rule 3: Dollar Values Come from Excess Spreads
 
 ```
 CORRECT:  dollar_alpha = (Q5_excess - Q1_excess) / 100 × median_home_value
 WRONG:    dollar_alpha = (Q5_raw_return - Q1_raw_return) / 100 × median_home_value
 ```
 
-The model adds value over random selection within a state. Dollar impact measures that marginal value, not the total market return.
+### Rule 4: Same Benchmark for IS and OOS Comparison
 
-### Rule 4: Same Benchmark for IS and OOS
-
-Degradation = `1 - (OOS IC on state) / (IS IC on state)`
-
-Never divide OOS IC computed against one benchmark by IS IC computed against a different benchmark.
+Degradation = `1 - (OOS IC on state) / (IS IC on state)`. Never mix benchmarks.
 
 ### Rule 5: No Editorial Beyond the Data
 
-| Permitted | Prohibited |
-|-----------|------------|
-| "OOS IC = 0.159" | "This is a strong signal" |
-| "Metro IE OOS IC (0.24) exceeds Metro HR (0.16)" | "InvestorEdge is the best model" |
-| "County degradation is 52%, above 50% threshold" | "County results are concerning" |
-| "Historically outperformed" | "Will outperform" |
+State facts and flag thresholds. No superlatives ("strongest," "best"). No forward-looking claims ("will outperform"). No emotional framing ("concerning").
 
-State facts and flag thresholds. No superlatives, no forward-looking claims, no emotional framing.
+## Prohibited Content (Anywhere in the Report)
 
-## Prohibited Content (Anywhere in Report)
+1. 1Y returns as headline metrics
+2. Raw returns (beta) presented as model performance — always use excess returns (alpha)
+3. ROE, leveraged returns, "on $X down payment" calculations
+4. "Census Division" as the model's benchmark (it trains on state)
+5. Fabricated confidence intervals — only report CIs from the JSON
+6. Superlatives — "strongest," "best," "most powerful," "exceptional"
+7. Forward-looking language — "will outperform," "expected to"
+8. Mixed-benchmark degradation — OOS(state) / IS(division) is meaningless
 
-1. **1Y returns as headline metrics** — banned from executive summary, quintile tables, dollar impact
-2. **Raw returns (beta) presented as model performance** — always use excess returns (alpha)
-3. **ROE, leveraged returns, "on $X down payment" calculations** — adds unvalidated assumptions
-4. **"Census Division" as the model's benchmark** — the model trains on state
-5. **Fabricated confidence intervals** — only report CIs that appear in the JSON
-6. **Superlatives** — "strongest," "best," "most powerful," "exceptional"
-7. **Forward-looking language** — "will outperform," "expected to"
-8. **Mixed-benchmark degradation** — OOS(state) / IS(division) is meaningless
+## Report Section Order
 
-## Report Generation Workflow
+The report has exactly these sections. See `references/report-template.md` for full templates with placeholders.
 
-### Step 1: Load and Validate Inputs
+1. **Executive Summary** — OOS results table, dollar impact range, limitations list. Max 20 lines.
+2. **What the Scores Predict** — What alpha vs beta means. No marketing.
+   - 2.1 HomeReady 3Y Excess Return Quintiles (in-sample, all data)
+   - 2.2 InvestorEdge 3Y Excess Total Return Quintiles
+   - 2.3 The Cost of Choosing Wrong (3Y excess dollars, no ROE)
+3. **Out-of-Sample Results** — The most important section.
+   - 3.1 Methodology (dynamic windows: 24mo train, 12mo test, 1yr slide from Jan 2020)
+   - 3.2 OOS Results Table
+   - 3.3 OOS Quintile Tables
+   - 3.4 Dollar Impact (from OOS excess spreads)
+   - 3.5 IC Degradation (same benchmark both columns)
+4. **In-Sample Metrics** — Summary table + quintile tables per geo × score type
+5. **Within-State Validation** — State vs Division benchmark comparison (required)
+6. **Model Stability** — Feature weights + IC by year
+7. **Calibration** — Decile tables + MAD. Always include the standard interpretation paragraph.
+8. **Robustness Checklist** — Pass/fail matrix
+9. **Known Limitations** — Each item cites a specific metric
+10. **Appendix** — Coverage, data sources, source file listing, methodology notes
 
-```python
-import json
-from pathlib import Path
+## Edge Cases
 
-base = Path("scripts/analysis/output")
-required = [
-    base / "validation_results_state.json",
-    base / "optimized_weights.json",
-]
+**InvestorEdge falls back to appreciation-only:** If `target_column` in the JSON shows `excess_state_3y` instead of `excess_total_state_3y`, note: "InvestorEdge at [geo level] uses appreciation excess only due to insufficient rent data coverage."
 
-for f in required:
-    if not f.exists():
-        raise FileNotFoundError(f"Missing required file: {f}")
+**Partial walk-forward window:** The dynamic window generator may produce windows where only some test-period scores have complete 3Y outcomes. The pipeline handles this (skips rows, runs if ≥20 remain). Report the actual N per window from the JSON.
 
-with open(base / "validation_results_state.json") as f:
-    val_state = json.load(f)
+**Bootstrap not significant:** Report "Not Significant." Add to limitations.
 
-with open(base / "optimized_weights.json") as f:
-    oos_metro = json.load(f)
-```
-
-Load county and ZIP weight files similarly. Check that all expected keys exist.
-
-### Step 2: Extract Metrics
-
-For each score_type × geo_level combination, extract:
-
-**From validation JSON (in-sample):**
-- `insample.spearman_r` → IS Spearman correlation
-- `insample.mean_ic` → IS mean Information Coefficient
-- `insample.ic_ir` → IC Information Ratio
-- `insample.ic_hit_rate` → % of periods with positive IC
-- `insample.quintile_table` → 5-row quintile breakdown
-- `insample.decile_spread` → top decile minus bottom decile excess return
-- `n_with_target` → sample size
-
-**From optimized_weights JSON (out-of-sample):**
-- `summary.avg_test_ic` → OOS IC (averaged across windows)
-- `summary.avg_test_quintile_spread` → OOS quintile spread in pp
-- `summary.avg_test_hit_rate` → OOS hit rate
-- `summary.bootstrap_significant` → boolean
-- `summary.bootstrap_ci` → [lower, upper] 95% CI
-- `stable_features` → list of features with weights and directions
-- `window_results` → per-window detail
-
-### Step 3: Generate Report
-
-Follow the exact template in `references/report-template.md`. Fill in values from the extracted metrics. Do not add sections, rearrange sections, or add commentary not specified in the template.
-
-### Step 4: Post-Generation Checklist
-
-Before presenting the report, verify every item:
-
-- [ ] All numeric values traceable to JSON files (spot-check at least 5)
-- [ ] Benchmark labeled as "state" everywhere describing the model's target
-- [ ] No 1Y returns in headline metrics or executive summary
-- [ ] Dollar values derived from excess return spreads, not raw return spreads
-- [ ] Degradation ratio uses same benchmark for IS and OOS
-- [ ] Section numbering sequential with no gaps or duplicates
-- [ ] InvestorEdge described as "excess total return vs state"
-- [ ] Every quintile table column says "Excess Return (vs State)" or "Total Excess Return (vs State)"
-- [ ] Known Limitations updated with any new WATCH/WARN flags
-- [ ] Median home value source and date cited in dollar impact section
-
-If any check fails, fix it before presenting the report.
-
-## Output
-
-Write the final report to: `scripts/analysis/output/validation_report.md`
-
-The report is a Markdown file. See `references/report-template.md` for exact structure.
-
-## Handling Edge Cases
-
-**Missing geo-level weights file:** Report the gap. Show "N/A" for that geo level's OOS metrics. Do not estimate from other geo levels.
-
-**InvestorEdge falls back to appreciation-only:** If `target_column` in the JSON shows `excess_state_3y` instead of `excess_total_state_3y`, note this explicitly: "InvestorEdge at [geo level] uses appreciation excess only due to insufficient rent data coverage."
-
-**Limited walk-forward windows:** Windows are generated dynamically (24-month train, 12-month test, 1-year slide from Jan 2020) and require complete 3Y outcomes in the test period. The number of usable windows grows automatically each year. Report the exact count: "OOS metrics averaged across {N} walk-forward windows." If only 1 window ran, note this as a limitation.
-
-**Bootstrap not significant:** Report "Not Significant" in the table. In limitations, note which combination failed and recommend monitoring.
-
-**Quintile monotonicity breaks:** Flag in robustness checklist. Allow 1 adjacent swap as PASS; 2+ swaps as FAIL. Note the specific break in the quintile table with a footnote.
+**Quintile monotonicity breaks:** 1 adjacent swap = PASS. 2+ swaps = FAIL. Note the specific break.
