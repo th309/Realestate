@@ -91,14 +91,15 @@ MIN_COEF_WINDOW_FRAC = 0.50
 BOOTSTRAP_ITERATIONS = 1000
 BOOTSTRAP_CI = 0.95
 
-# Walk-forward windows: (train_start, train_end, test_start, test_end)
+# Walk-forward windows: NON-OVERLAPPING test periods only.
+# Each test period must not share any months with another test period.
+# Add new windows as more 3Y outcome data becomes available.
 WALK_FORWARD_WINDOWS = [
-    # Primary 24-month train / 12-month test
+    # 24-month train / 12-month test, strictly non-overlapping tests
     (date(2020, 12, 1), date(2022, 11, 1), date(2022, 12, 1), date(2023, 11, 1)),
     (date(2021, 12, 1), date(2023, 11, 1), date(2023, 12, 1), date(2024, 11, 1)),
-    # 6-month shifted windows for additional test periods
-    (date(2021, 6, 1), date(2023, 5, 1), date(2023, 6, 1), date(2024, 5, 1)),
-    (date(2021, 3, 1), date(2023, 2, 1), date(2023, 3, 1), date(2024, 2, 1)),
+    # Add next window when 3Y outcomes exist through Nov 2025:
+    # (date(2022, 12, 1), date(2024, 11, 1), date(2024, 12, 1), date(2025, 11, 1)),
 ]
 
 
@@ -124,7 +125,7 @@ def get_db_connection():
     host = "aws-1-us-east-1.pooler.supabase.com"
     port = 6543
     user = f"postgres.{SUPABASE_PROJECT_REF}"
-    password = os.environ.get("SUPABASE_DB_PASSWORD", "IHatedoingpt12")
+    password = os.environ.get("SUPABASE_DB_PASSWORD", "")
     conn_str = (
         f"host={host} port={port} dbname=postgres "
         f"user={user} password={password} sslmode=require"
@@ -162,10 +163,14 @@ def load_feature_matrix(
         target_expr = "bo.excess_vs_state_3y"
         target_alias = "target"
     else:
-        # investoredge: 3Y total return excess = appreciation excess + rent yield excess
-        target_expr = """CASE WHEN bo.rent_return_3y_cagr IS NOT NULL
-            THEN (bo.excess_vs_state_3y + bo.rent_return_3y_cagr)
-            ELSE bo.excess_vs_state_3y END"""
+        # investoredge: 3Y total return excess = appreciation excess + rent excess
+        # Both components benchmarked against state to measure true alpha
+        target_expr = """CASE
+            WHEN bo.rent_return_3y_cagr IS NOT NULL
+                 AND bo.state_rent_return_3y_cagr IS NOT NULL
+            THEN bo.excess_vs_state_3y + (bo.rent_return_3y_cagr - bo.state_rent_return_3y_cagr)
+            ELSE bo.excess_vs_state_3y
+            END"""
         target_alias = "target"
 
     geo_filter = f"AND bo.geography_type = '{geo_level}'"
@@ -211,8 +216,15 @@ def load_feature_matrix(
     z_cols = [c for c in candidate_metrics if c in df.columns]
     df.dropna(subset=z_cols, how="all", inplace=True)
 
-    # Fill remaining NaN z-scores with 0 (neutral)
+    # Fill remaining NaN z-scores with 0 (neutral assumption: missing = average)
+    # WARNING: If missingness correlates with market characteristics, this biases results
     df[z_cols] = df[z_cols].fillna(0.0)
+
+    # Log missing data rates for audit trail
+    for col in z_cols:
+        missing_rate = (df[col] == 0.0).mean()  # includes true zeros + filled NaNs
+        if missing_rate > 0.3:
+            print(f"    [WARN] {col}: {missing_rate:.0%} zero/missing — may bias results")
 
     # Ensure score_date is a proper date
     df["score_date"] = pd.to_datetime(df["score_date"]).dt.date

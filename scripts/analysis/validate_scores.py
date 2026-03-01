@@ -62,7 +62,7 @@ def _get_connection_string() -> str:
     host = "aws-1-us-east-1.pooler.supabase.com"
     port = 6543
     user = f"postgres.{project_ref}"
-    password = os.environ.get("SUPABASE_DB_PASSWORD", "IHatedoingpt12")
+    password = os.environ.get("SUPABASE_DB_PASSWORD", "")
     return (
         f"postgresql://{user}:{password}"
         f"@{host}:{port}/postgres?sslmode=require"
@@ -98,6 +98,7 @@ def load_backtest_data(conn_string: str, geo_level: str = "metro") -> pd.DataFra
         bo.excess_vs_state_3y::float,
         bo.rent_return_1y::float     AS rent_return_1y,
         bo.rent_return_3y_cagr::float AS rent_return_3y_cagr,
+        bo.state_rent_return_3y_cagr::float,
         cdm.division_id,
         cdm.division_name
     FROM propertyiq_backtest_outcomes bo
@@ -188,39 +189,35 @@ def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
         mask = df[horizon_col].notna()
         df.loc[mask, new_col] = df.loc[mask, horizon_col] - medians.reindex(df.index)
 
-    # --- Total return (appreciation + rent) for InvestorEdge ---
-    df["total_return_3y"] = np.where(
-        df["outcome_3y"].notna() & df["rent_return_3y_cagr"].notna(),
-        df["outcome_3y"] + df["rent_return_3y_cagr"],
-        np.nan,
-    )
+    # --- Total return excess vs state (matches training target in optimize_weights) ---
+    # excess = (appreciation - state appreciation) + (rent - state rent)
+    # This matches: excess_vs_state_3y + (rent_return_3y_cagr - state_rent_return_3y_cagr)
+    if "state_rent_return_3y_cagr" not in df.columns:
+        # If column missing from query, fall back to appreciation-only excess
+        logger.warning("state_rent_return_3y_cagr not in data — InvestorEdge will use appreciation excess only")
+        df["excess_total_state_3y"] = df["excess_state_3y"]
+        df["excess_total_div_3y"] = df["excess_div_3y"]
+    else:
+        # Rent excess vs state = rent_return - state_rent_return
+        df["rent_excess_state_3y"] = np.where(
+            df["rent_return_3y_cagr"].notna() & df["state_rent_return_3y_cagr"].notna(),
+            df["rent_return_3y_cagr"] - df["state_rent_return_3y_cagr"],
+            0.0,  # No rent data = no rent alpha, fall back to appreciation excess only
+        )
 
-    # --- Total return excess vs division ---
-    tr_col = "total_return_3y"
-    group_key = ["score_type", "score_date", "division_id"]
-    tr_medians = (
-        df.dropna(subset=[tr_col, "division_id"])
-        .groupby(group_key)[tr_col]
-        .transform("median")
-    )
-    df["excess_total_div_3y"] = np.nan
-    mask = df[tr_col].notna() & df["division_id"].notna()
-    df.loc[mask, "excess_total_div_3y"] = (
-        df.loc[mask, tr_col] - tr_medians.reindex(df.index)
-    )
+        # Total excess vs state = appreciation excess + rent excess
+        df["excess_total_state_3y"] = np.where(
+            df["excess_state_3y"].notna(),
+            df["excess_state_3y"] + df["rent_excess_state_3y"],
+            np.nan,
+        )
 
-    # --- Total return excess vs state ---
-    group_key = ["score_type", "score_date", "state_code"]
-    tr_state_medians = (
-        df.dropna(subset=[tr_col, "state_code"])
-        .groupby(group_key)[tr_col]
-        .transform("median")
-    )
-    df["excess_total_state_3y"] = np.nan
-    mask = df[tr_col].notna() & df["state_code"].notna()
-    df.loc[mask, "excess_total_state_3y"] = (
-        df.loc[mask, tr_col] - tr_state_medians.reindex(df.index)
-    )
+        # Total excess vs division = appreciation excess + rent excess (same rent excess)
+        df["excess_total_div_3y"] = np.where(
+            df["excess_div_3y"].notna(),
+            df["excess_div_3y"] + df["rent_excess_state_3y"],
+            np.nan,
+        )
 
     return df
 
@@ -1031,9 +1028,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--benchmark",
-        choices=["division", "state", "both"],
-        default="both",
-        help="Benchmark level for excess returns (default: both)",
+        choices=["state", "division", "both"],
+        default="state",
+        help="Benchmark level for excess returns (default: state, matches training target)",
     )
     args = parser.parse_args()
 
@@ -1075,7 +1072,7 @@ def main() -> None:
 
     # Determine benchmarks to run
     if args.benchmark == "both":
-        benchmarks = ["division", "state"]
+        benchmarks = ["state", "division"]  # state first = primary (matches training target)
     else:
         benchmarks = [args.benchmark]
 
