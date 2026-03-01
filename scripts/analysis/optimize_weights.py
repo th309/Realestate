@@ -62,25 +62,29 @@ INVESTOREDGE_CANDIDATE_METRICS = HOMEREADY_CANDIDATE_METRICS + [
 CURRENT_WEIGHTS = {
     "homeready": {
         "metrics": [
-            {"name": "hotness_score", "weight": 0.706, "direction": 1},
-            {"name": "pending_ratio", "weight": 0.152, "direction": 1},
-            {"name": "unemployment_rate_yoy", "weight": 0.057, "direction": -1},
-            {"name": "population_yoy", "weight": 0.054, "direction": -1},
-            {"name": "demand_score", "weight": 0.031, "direction": 1},
+            {"name": "median_days_on_market", "weight": 0.3096, "direction": -1},
+            {"name": "affordability_ratio", "weight": 0.1671, "direction": 1},
+            {"name": "pending_ratio", "weight": 0.1484, "direction": 1},
+            {"name": "supply_score", "weight": 0.1477, "direction": -1},
+            {"name": "population_yoy", "weight": 0.0889, "direction": 1},
+            {"name": "demand_score", "weight": 0.0845, "direction": 1},
+            {"name": "price_reduced_share", "weight": 0.0374, "direction": -1},
+            {"name": "unemployment_rate_yoy", "weight": 0.0164, "direction": -1},
         ],
-        "version": "v1.0",
+        "version": "v2.0",
     },
     "investoredge": {
         "metrics": [
-            {"name": "hotness_score", "weight": 0.317, "direction": 1},
-            {"name": "median_gross_rent", "weight": 0.315, "direction": -1},
-            {"name": "affordability_ratio", "weight": 0.188, "direction": -1},
-            {"name": "pending_ratio", "weight": 0.080, "direction": 1},
-            {"name": "homeownership_rate", "weight": 0.047, "direction": 1},
-            {"name": "population_yoy", "weight": 0.035, "direction": -1},
-            {"name": "unemployment_rate_yoy", "weight": 0.018, "direction": -1},
+            {"name": "median_days_on_market", "weight": 0.2887, "direction": -1},
+            {"name": "affordability_ratio", "weight": 0.177, "direction": 1},
+            {"name": "pending_ratio", "weight": 0.1564, "direction": 1},
+            {"name": "supply_score", "weight": 0.1287, "direction": -1},
+            {"name": "population_yoy", "weight": 0.0837, "direction": 1},
+            {"name": "demand_score", "weight": 0.0657, "direction": 1},
+            {"name": "median_gross_rent", "weight": 0.0575, "direction": -1},
+            {"name": "homeownership_rate", "weight": 0.0423, "direction": 1},
         ],
-        "version": "v1.0",
+        "version": "v2.0",
     },
 }
 

@@ -6,8 +6,8 @@
  * a unified record set for z-score calculation.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GeoLevel } from './score-formula-weights';
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { GeoLevel } from "./score-formula-weights";
 
 // ---------------------------------------------------------------------------
 // Geography configuration
@@ -25,31 +25,31 @@ export interface ScoreGeoConfig {
 
 export const SCORE_GEO_CONFIGS: ScoreGeoConfig[] = [
   {
-    geoLevel: 'metro',
-    realtorTable: 'realtor_metro',
-    censusTable: 'census_metro',
-    economicTable: 'economic_metro',
-    idColumn: 'cbsa_code',
-    nameColumn: 'cbsa_title',
-    priceColumn: 'median_listing_price',
+    geoLevel: "metro",
+    realtorTable: "realtor_metro",
+    censusTable: "census_metro",
+    economicTable: "economic_metro",
+    idColumn: "cbsa_code",
+    nameColumn: "cbsa_title",
+    priceColumn: "median_listing_price",
   },
   {
-    geoLevel: 'county',
-    realtorTable: 'realtor_county',
-    censusTable: 'census_county',
-    economicTable: 'economic_county',
-    idColumn: 'county_fips',
-    nameColumn: 'county_name',
-    priceColumn: 'median_listing_price',
+    geoLevel: "county",
+    realtorTable: "realtor_county",
+    censusTable: "census_county",
+    economicTable: "economic_county",
+    idColumn: "county_fips",
+    nameColumn: "county_name",
+    priceColumn: "median_listing_price",
   },
   {
-    geoLevel: 'zip',
-    realtorTable: 'realtor_zip',
+    geoLevel: "zip",
+    realtorTable: "realtor_zip",
     censusTable: null,
     economicTable: null,
-    idColumn: 'postal_code',
-    nameColumn: 'postal_code',
-    priceColumn: 'median_listing_price',
+    idColumn: "postal_code",
+    nameColumn: "postal_code",
+    priceColumn: "median_listing_price",
   },
 ];
 
@@ -63,11 +63,53 @@ export async function getLatestPeriodDate(
 ): Promise<string | null> {
   const { data } = await supabase
     .from(tableName)
-    .select('period_date')
-    .order('period_date', { ascending: false })
+    .select("period_date")
+    .order("period_date", { ascending: false })
     .limit(1);
 
   return data?.[0]?.period_date || null;
+}
+
+/**
+ * Get all distinct period dates from a table, optionally filtered by a start date.
+ * Returns dates sorted ascending.
+ */
+export async function getAllPeriodDates(
+  supabase: SupabaseClient,
+  tableName: string,
+  startDate?: string,
+): Promise<string[]> {
+  const dates = new Set<string>();
+  const pageSize = 1000;
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from(tableName)
+      .select("period_date")
+      .order("period_date", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+
+    if (startDate) {
+      query = query.gte("period_date", startDate);
+    }
+
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    for (const row of data) {
+      dates.add(row.period_date);
+    }
+
+    offset += pageSize;
+    hasMore = data.length === pageSize;
+  }
+
+  return Array.from(dates).sort();
 }
 
 async function fetchAllRecordsWithPagination(
@@ -85,11 +127,13 @@ async function fetchAllRecordsWithPagination(
     const { data, error } = await supabase
       .from(tableName)
       .select(columns)
-      .eq('period_date', periodDate)
+      .eq("period_date", periodDate)
       .range(offset, offset + pageSize - 1);
 
     if (error) {
-      console.error(`  Error fetching from ${tableName} at offset ${offset}: ${error.message}`);
+      console.error(
+        `  Error fetching from ${tableName} at offset ${offset}: ${error.message}`,
+      );
       break;
     }
 
@@ -115,8 +159,10 @@ async function fetchCensusData(
 
   const { data } = await supabase
     .from(tableName)
-    .select(`${idColumn}, population_yoy, median_gross_rent, homeownership_rate`)
-    .eq('year', year);
+    .select(
+      `${idColumn}, population_yoy, median_gross_rent, homeownership_rate`,
+    )
+    .eq("year", year);
 
   if (data) {
     for (const row of data) {
@@ -139,7 +185,7 @@ async function fetchEconomicData(
   const { data } = await supabase
     .from(tableName)
     .select(`${idColumn}, unemployment_rate_yoy`)
-    .eq('period_date', periodDate);
+    .eq("period_date", periodDate);
 
   if (data) {
     for (const row of data) {
@@ -165,13 +211,24 @@ export async function fetchAllDataForGeo(
   periodDate: string,
 ): Promise<any[]> {
   const realtorCols = [
-    config.idColumn, config.nameColumn, config.priceColumn,
-    'hotness_score', 'demand_score', 'pending_ratio',
-    'price_reduced_share', 'active_listing_count_yy', 'price_reduced_count_yy',
-  ].join(', ');
+    config.idColumn,
+    config.nameColumn,
+    config.priceColumn,
+    "hotness_score",
+    "demand_score",
+    "supply_score",
+    "pending_ratio",
+    "price_reduced_share",
+    "median_days_on_market",
+    "active_listing_count_yy",
+    "price_reduced_count_yy",
+  ].join(", ");
 
   const realtorData = await fetchAllRecordsWithPagination(
-    supabase, config.realtorTable, realtorCols, periodDate,
+    supabase,
+    config.realtorTable,
+    realtorCols,
+    periodDate,
   );
 
   if (realtorData.length === 0) return [];
@@ -191,7 +248,12 @@ export async function fetchAllDataForGeo(
   // Merge census data
   if (config.censusTable) {
     const year = new Date(periodDate).getFullYear();
-    const censusData = await fetchCensusData(supabase, config.censusTable, config.idColumn, year);
+    const censusData = await fetchCensusData(
+      supabase,
+      config.censusTable,
+      config.idColumn,
+      year,
+    );
     for (const [id, census] of censusData) {
       const location = locationsMap.get(id);
       if (location) {
@@ -204,12 +266,29 @@ export async function fetchAllDataForGeo(
 
   // Merge economic data
   if (config.economicTable) {
-    const economicData = await fetchEconomicData(supabase, config.economicTable, config.idColumn, periodDate);
+    const economicData = await fetchEconomicData(
+      supabase,
+      config.economicTable,
+      config.idColumn,
+      periodDate,
+    );
     for (const [id, economic] of economicData) {
       const location = locationsMap.get(id);
       if (location) {
         location.unemployment_rate_yoy = economic.unemployment_rate_yoy;
       }
+    }
+  }
+
+  // Compute affordability_ratio from median_price and median_gross_rent
+  for (const location of locationsMap.values()) {
+    if (
+      location.median_price != null &&
+      location.median_gross_rent != null &&
+      location.median_gross_rent > 0
+    ) {
+      location.affordability_ratio =
+        location.median_price / (location.median_gross_rent * 12);
     }
   }
 

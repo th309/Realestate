@@ -5,12 +5,15 @@
  * Saves to propertyiq_scores_v2 (normalized schema).
  * Handles large datasets with pagination.
  *
- * Usage: npx tsx scripts/calculate-all-scores.ts
+ * Usage:
+ *   npx tsx scripts/calculate-all-scores.ts              # Latest period only
+ *   npx tsx scripts/calculate-all-scores.ts --backfill   # All periods from 2020-01-01
+ *   npx tsx scripts/calculate-all-scores.ts --from 2022-06-01  # Custom start date
  */
 
-import { createClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
+import { createClient } from "@supabase/supabase-js";
+import * as dotenv from "dotenv";
+import * as path from "path";
 
 import {
   type ScoreType,
@@ -18,26 +21,32 @@ import {
   FORMULA_WEIGHTS,
   scoreToGrade,
   getConfidenceLevel,
-} from './calculations/score-formula-weights';
-import { calculateZScores, applyFormulaAndNormalize } from './calculations/score-zscore-engine';
+} from "./calculations/score-formula-weights";
+import {
+  calculateZScores,
+  applyFormulaAndNormalize,
+} from "./calculations/score-zscore-engine";
 import {
   type ScoreGeoConfig,
   SCORE_GEO_CONFIGS,
   getLatestPeriodDate,
+  getAllPeriodDates,
   fetchAllDataForGeo,
-} from './calculations/score-data-fetcher';
+} from "./calculations/score-data-fetcher";
 
 // ---------------------------------------------------------------------------
 // Supabase client initialization
 // ---------------------------------------------------------------------------
 
-dotenv.config({ path: path.resolve(process.cwd(), 'packages/backend/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), "packages/backend/.env") });
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY");
   process.exit(1);
 }
 
@@ -57,8 +66,10 @@ async function insertScoresBatch(
   for (let i = 0; i < records.length; i += batchSize) {
     const batch = records.slice(i, i + batchSize);
     const { error } = await supabase
-      .from('propertyiq_scores_v2')
-      .upsert(batch, { onConflict: 'geography,location_id,score_type,score_date' });
+      .from("propertyiq_scores_v2")
+      .upsert(batch, {
+        onConflict: "geography,location_id,score_type,score_date",
+      });
 
     if (error) {
       errors += batch.length;
@@ -82,20 +93,30 @@ async function calculateScoresForGeo(
   const data = await fetchAllDataForGeo(supabase, config, periodDate);
   if (data.length === 0) return { processed: 0, errors: 0 };
 
-  const validData = data.filter(d =>
-    d.hotness_score != null || d.pending_ratio != null || d.demand_score != null
+  const validData = data.filter(
+    (d) =>
+      d.hotness_score != null ||
+      d.pending_ratio != null ||
+      d.demand_score != null,
   );
   if (validData.length === 0) return { processed: 0, errors: 0 };
 
   const formulas = FORMULA_WEIGHTS[config.geoLevel];
-  const scoreTypes: ScoreType[] = ['homeready', 'investoredge', 'markethealth'];
+  const scoreTypes: ScoreType[] = ["homeready", "investoredge", "markethealth"];
   const allScoreRecords: any[] = [];
 
   for (const scoreType of scoreTypes) {
     const formula = formulas[scoreType];
     const metricNames = Object.keys(formula);
-    const zScores = calculateZScores(validData, metricNames, 'id');
-    const scores = applyFormulaAndNormalize(validData, zScores, formula, 'id', config.geoLevel, scoreType);
+    const zScores = calculateZScores(validData, metricNames, "id");
+    const scores = applyFormulaAndNormalize(
+      validData,
+      zScores,
+      formula,
+      "id",
+      config.geoLevel,
+      scoreType,
+    );
 
     for (const record of validData) {
       const scoreData = scores.get(record.id);
@@ -124,77 +145,77 @@ async function calculateScoresForGeo(
 // Main orchestration
 // ---------------------------------------------------------------------------
 
-async function main() {
-  console.log('PROPERTYIQ SCORE CALCULATION - Z-SCORE METHODOLOGY\n');
-
-  const periodDate = await getLatestPeriodDate(supabase, 'realtor_metro');
-  if (!periodDate) {
-    console.error('No realtor data found');
-    process.exit(1);
-  }
-
-  console.log(`Period date: ${periodDate}\n`);
-  console.log('CALCULATING SCORES FOR ALL GEOGRAPHIES\n');
-
+async function calculateAllForPeriod(
+  periodDate: string,
+): Promise<{ processed: number; errors: number }> {
   let totalProcessed = 0;
   let totalErrors = 0;
 
   for (const config of SCORE_GEO_CONFIGS) {
-    const startTime = Date.now();
-    process.stdout.write(`  ${config.geoLevel.padEnd(8)}: fetching data... `);
-
     const result = await calculateScoresForGeo(config, periodDate);
     totalProcessed += result.processed;
     totalErrors += result.errors;
-
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`${result.processed} scores saved (${elapsed}s)`);
   }
 
-  console.log(`\n  Total: ${totalProcessed} scores saved`);
-  if (totalErrors > 0) console.log(`  Errors: ${totalErrors}`);
+  return { processed: totalProcessed, errors: totalErrors };
+}
 
-  // Summary counts
-  console.log('\nSUMMARY\n');
+async function main() {
+  const args = process.argv.slice(2);
+  const isBackfill = args.includes("--backfill");
+  const fromIdx = args.indexOf("--from");
+  const startDate =
+    fromIdx !== -1 ? args[fromIdx + 1] : isBackfill ? "2020-01-01" : null;
 
-  const { count: v2Count } = await supabase
-    .from('propertyiq_scores_v2')
-    .select('*', { count: 'exact', head: true });
+  console.log("PROPERTYIQ SCORE CALCULATION - Z-SCORE METHODOLOGY\n");
 
-  console.log(`  propertyiq_scores_v2: ${v2Count?.toLocaleString()} total records`);
+  let periodDates: string[];
 
-  console.log('\n  Current period breakdown:');
-  for (const geoLevel of ['metro', 'county', 'zip'] as GeoLevel[]) {
-    const { count } = await supabase
-      .from('propertyiq_scores_v2')
-      .select('*', { count: 'exact', head: true })
-      .eq('geography', geoLevel)
-      .eq('score_date', periodDate);
-    console.log(`    ${geoLevel.padEnd(8)}: ${count?.toLocaleString() || 0}`);
-  }
-
-  // Top 5 per score type
-  console.log('\nTOP 5 MARKETS BY SCORE');
-  for (const scoreType of ['homeready', 'investoredge', 'markethealth']) {
-    const { data: topMarkets } = await supabase
-      .from('propertyiq_scores_v2')
-      .select('location_name, score, grade')
-      .eq('geography', 'metro')
-      .eq('score_type', scoreType)
-      .eq('score_date', periodDate)
-      .order('score', { ascending: false })
-      .limit(5);
-
-    console.log(`\n  ${scoreType.toUpperCase()} (Metro):`);
-    if (topMarkets) {
-      for (const m of topMarkets) {
-        const name = (m.location_name || '').substring(0, 40).padEnd(40);
-        console.log(`     ${m.score.toFixed(1)} ${m.grade.padEnd(3)} ${name}`);
-      }
+  if (startDate) {
+    console.log(`Backfill mode: fetching all periods from ${startDate}...\n`);
+    periodDates = await getAllPeriodDates(supabase, "realtor_metro", startDate);
+    console.log(`Found ${periodDates.length} periods to process\n`);
+  } else {
+    const latest = await getLatestPeriodDate(supabase, "realtor_metro");
+    if (!latest) {
+      console.error("No realtor data found");
+      process.exit(1);
     }
+    periodDates = [latest];
+    console.log(`Period date: ${latest}\n`);
   }
 
-  console.log('\nScore calculation complete. Saved to propertyiq_scores_v2.');
+  let grandTotal = 0;
+  let grandErrors = 0;
+  const overallStart = Date.now();
+
+  for (let i = 0; i < periodDates.length; i++) {
+    const pd = periodDates[i];
+    const tag =
+      periodDates.length > 1 ? `[${i + 1}/${periodDates.length}] ` : "";
+    process.stdout.write(`${tag}${pd}: `);
+
+    const { processed, errors } = await calculateAllForPeriod(pd);
+    grandTotal += processed;
+    grandErrors += errors;
+
+    console.log(
+      `${processed.toLocaleString()} scores${errors ? ` (${errors} errors)` : ""}`,
+    );
+  }
+
+  const elapsed = ((Date.now() - overallStart) / 1000).toFixed(0);
+  console.log(
+    `\nDone: ${grandTotal.toLocaleString()} scores saved in ${elapsed}s`,
+  );
+  if (grandErrors > 0) console.log(`Errors: ${grandErrors.toLocaleString()}`);
+
+  const { count } = await supabase
+    .from("propertyiq_scores_v2")
+    .select("*", { count: "exact", head: true });
+  console.log(
+    `Total records in propertyiq_scores_v2: ${count?.toLocaleString()}`,
+  );
 }
 
 main().catch(console.error);

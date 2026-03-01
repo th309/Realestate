@@ -42,25 +42,25 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   metro: {
     // HomeReady (Metro): Predicts 3Y excess appreciation vs census division median
     homeready: {
-      median_days_on_market: { weight: 0.204, direction: -1 },
-      demand_score: { weight: 0.203, direction: 1 },
-      hotness_score: { weight: 0.169, direction: -1 },
-      affordability_ratio: { weight: 0.128, direction: 1 },
-      price_reduced_share: { weight: 0.099, direction: -1 },
-      pending_ratio: { weight: 0.072, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.065, direction: -1 },
-      population_yoy: { weight: 0.060, direction: 1 },
+      median_days_on_market: { weight: 0.3096, direction: -1 },
+      affordability_ratio: { weight: 0.1671, direction: 1 },
+      pending_ratio: { weight: 0.1484, direction: 1 },
+      supply_score: { weight: 0.1477, direction: -1 },
+      population_yoy: { weight: 0.0889, direction: 1 },
+      demand_score: { weight: 0.0845, direction: 1 },
+      price_reduced_share: { weight: 0.0374, direction: -1 },
+      unemployment_rate_yoy: { weight: 0.0164, direction: -1 },
     },
     // InvestorEdge (Metro): Predicts 3Y excess total return vs division median
     investoredge: {
-      median_days_on_market: { weight: 0.226, direction: -1 },
-      median_gross_rent: { weight: 0.200, direction: 1 },
-      supply_score: { weight: 0.160, direction: -1 },
-      demand_score: { weight: 0.101, direction: 1 },
-      pending_ratio: { weight: 0.098, direction: 1 },
-      population_yoy: { weight: 0.089, direction: 1 },
-      homeownership_rate: { weight: 0.064, direction: -1 },
-      price_reduced_share: { weight: 0.061, direction: -1 },
+      median_days_on_market: { weight: 0.2887, direction: -1 },
+      affordability_ratio: { weight: 0.177, direction: 1 },
+      pending_ratio: { weight: 0.1564, direction: 1 },
+      supply_score: { weight: 0.1287, direction: -1 },
+      population_yoy: { weight: 0.0837, direction: 1 },
+      demand_score: { weight: 0.0657, direction: 1 },
+      median_gross_rent: { weight: 0.0575, direction: -1 },
+      homeownership_rate: { weight: 0.0423, direction: 1 },
     },
     // MarketHealth (Metro): Current market conditions (not optimized - concurrent indicator)
     markethealth: {
@@ -71,30 +71,30 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   },
 
   // ===================
-  // COUNTY LEVEL FORMULAS (OOS IC: HR=0.20, IE=0.20)
+  // COUNTY LEVEL FORMULAS (OOS IC: HR=0.11, IE=0.11)
   // ===================
   county: {
     // HomeReady (County): Predicts 3Y excess appreciation vs state median
     homeready: {
-      median_days_on_market: { weight: 0.227, direction: -1 },
-      pending_ratio: { weight: 0.207, direction: 1 },
-      population_yoy: { weight: 0.192, direction: 1 },
-      demand_score: { weight: 0.114, direction: 1 },
-      affordability_ratio: { weight: 0.109, direction: 1 },
-      supply_score: { weight: 0.080, direction: -1 },
-      price_reduced_share: { weight: 0.048, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.024, direction: 1 },
+      median_days_on_market: { weight: 0.2595, direction: -1 },
+      pending_ratio: { weight: 0.2194, direction: 1 },
+      population_yoy: { weight: 0.1945, direction: 1 },
+      affordability_ratio: { weight: 0.0903, direction: -1 },
+      demand_score: { weight: 0.0874, direction: 1 },
+      unemployment_rate_yoy: { weight: 0.0759, direction: 1 },
+      supply_score: { weight: 0.0393, direction: -1 },
+      price_reduced_share: { weight: 0.0337, direction: 1 },
     },
     // InvestorEdge (County): Predicts 3Y excess total return vs state median
     investoredge: {
-      median_days_on_market: { weight: 0.220, direction: -1 },
-      population_yoy: { weight: 0.192, direction: 1 },
-      pending_ratio: { weight: 0.189, direction: 1 },
-      demand_score: { weight: 0.118, direction: 1 },
-      affordability_ratio: { weight: 0.105, direction: 1 },
-      supply_score: { weight: 0.081, direction: -1 },
-      median_gross_rent: { weight: 0.050, direction: 1 },
-      homeownership_rate: { weight: 0.046, direction: -1 },
+      median_days_on_market: { weight: 0.2497, direction: -1 },
+      pending_ratio: { weight: 0.2115, direction: 1 },
+      population_yoy: { weight: 0.1904, direction: 1 },
+      affordability_ratio: { weight: 0.0884, direction: -1 },
+      median_gross_rent: { weight: 0.0719, direction: 1 },
+      demand_score: { weight: 0.0641, direction: 1 },
+      homeownership_rate: { weight: 0.0623, direction: 1 },
+      unemployment_rate_yoy: { weight: 0.0617, direction: 1 },
     },
     // MarketHealth (County): Current market conditions (not optimized)
     markethealth: {
@@ -105,25 +105,25 @@ export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   },
 
   // ===================
-  // ZIP LEVEL FORMULAS (OOS IC: HR=0.15, IE=0.17)
+  // ZIP LEVEL FORMULAS (OOS IC: HR=0.14, IE=0.15)
   // ===================
   zip: {
     // HomeReady (ZIP): Predicts 3Y excess appreciation vs metro median
     homeready: {
-      demand_score: { weight: 0.458, direction: 1 },
-      median_days_on_market: { weight: 0.269, direction: -1 },
-      pending_ratio: { weight: 0.232, direction: 1 },
-      affordability_ratio: { weight: 0.042, direction: 1 },
+      demand_score: { weight: 0.3024, direction: 1 },
+      pending_ratio: { weight: 0.2918, direction: 1 },
+      median_days_on_market: { weight: 0.2049, direction: -1 },
+      hotness_score: { weight: 0.1393, direction: 1 },
+      affordability_ratio: { weight: 0.0312, direction: 1 },
+      price_reduced_share: { weight: 0.0304, direction: 1 },
     },
     // InvestorEdge (ZIP): Predicts 3Y excess total return vs metro median
     investoredge: {
-      demand_score: { weight: 0.293, direction: 1 },
-      median_days_on_market: { weight: 0.216, direction: -1 },
-      homeownership_rate: { weight: 0.191, direction: 1 },
-      pending_ratio: { weight: 0.181, direction: 1 },
-      hotness_score: { weight: 0.048, direction: 1 },
-      median_gross_rent: { weight: 0.041, direction: 1 },
-      price_reduced_share: { weight: 0.029, direction: 1 },
+      pending_ratio: { weight: 0.2384, direction: 1 },
+      homeownership_rate: { weight: 0.2267, direction: 1 },
+      median_days_on_market: { weight: 0.1943, direction: -1 },
+      demand_score: { weight: 0.1912, direction: 1 },
+      hotness_score: { weight: 0.1494, direction: 1 },
     },
     // MarketHealth (ZIP): Current market conditions (not optimized)
     markethealth: {
@@ -165,19 +165,19 @@ export const MODEL_CORRELATIONS: Record<
   Record<ScoreType, number>
 > = {
   metro: {
-    homeready: 0.26,     // OOS IC from walk-forward CV
-    investoredge: 0.52,  // OOS IC from walk-forward CV
-    markethealth: 0.56,  // Kept from v1.0 (concurrent indicator)
+    homeready: 0.159, // OOS IC from walk-forward elastic net CV
+    investoredge: 0.18, // OOS IC from walk-forward elastic net CV
+    markethealth: 0.56, // Kept from v1.0 (concurrent indicator)
   },
   county: {
-    homeready: 0.20,     // OOS IC from walk-forward CV
-    investoredge: 0.20,  // OOS IC from walk-forward CV
-    markethealth: 0.29,  // Kept from v1.0
+    homeready: 0.113, // OOS IC from walk-forward elastic net CV
+    investoredge: 0.108, // OOS IC from walk-forward elastic net CV
+    markethealth: 0.29, // Kept from v1.0
   },
   zip: {
-    homeready: 0.15,     // OOS IC from walk-forward CV
-    investoredge: 0.17,  // OOS IC from walk-forward CV
-    markethealth: 0.26,  // Kept from v1.0
+    homeready: 0.138, // OOS IC from walk-forward elastic net CV
+    investoredge: 0.152, // OOS IC from walk-forward elastic net CV
+    markethealth: 0.26, // Kept from v1.0
   },
 };
 
@@ -289,8 +289,12 @@ export const COMPONENT_GROUPS: Record<
   homeready: {
     metro: {
       affordability: ['affordability_ratio'],
-      market_timing: ['demand_score', 'hotness_score', 'pending_ratio'],
-      stability: ['median_days_on_market', 'price_reduced_share'],
+      market_timing: ['demand_score', 'pending_ratio'],
+      stability: [
+        'median_days_on_market',
+        'supply_score',
+        'price_reduced_share',
+      ],
       growth_potential: ['unemployment_rate_yoy', 'population_yoy'],
     },
     county: {
@@ -301,9 +305,9 @@ export const COMPONENT_GROUPS: Record<
     },
     zip: {
       affordability: ['affordability_ratio'],
-      market_timing: ['demand_score', 'pending_ratio'],
-      stability: ['median_days_on_market'],
-      growth_potential: [], // no growth metrics at ZIP level
+      market_timing: ['demand_score', 'hotness_score', 'pending_ratio'],
+      stability: ['median_days_on_market', 'price_reduced_share'],
+      growth_potential: [],
     },
   },
 
@@ -315,7 +319,7 @@ export const COMPONENT_GROUPS: Record<
       cash_flow: ['median_gross_rent'],
       rent_demand: ['demand_score', 'pending_ratio'],
       appreciation: ['population_yoy'],
-      entry_point: ['homeownership_rate', 'price_reduced_share'],
+      entry_point: ['affordability_ratio', 'homeownership_rate'],
       risk: ['median_days_on_market', 'supply_score'],
     },
     county: {
@@ -323,13 +327,11 @@ export const COMPONENT_GROUPS: Record<
       rent_demand: ['demand_score', 'pending_ratio'],
       appreciation: ['population_yoy'],
       entry_point: ['affordability_ratio', 'homeownership_rate'],
-      risk: ['median_days_on_market', 'supply_score'],
+      risk: ['median_days_on_market', 'unemployment_rate_yoy'],
     },
     zip: {
-      cash_flow: ['median_gross_rent'],
       rent_demand: ['demand_score', 'hotness_score', 'pending_ratio'],
       appreciation: ['homeownership_rate'],
-      entry_point: ['price_reduced_share'],
       risk: ['median_days_on_market'],
     },
   },
@@ -377,25 +379,90 @@ export interface CalibrationEntry {
 
 export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
   homeready: [
-    { quintile: 1, scoreRange: [0, 20], label: 'Bottom 20%', avgExcessReturn: -1.74 },
-    { quintile: 2, scoreRange: [20, 40], label: 'Below Average', avgExcessReturn: -0.41 },
-    { quintile: 3, scoreRange: [40, 60], label: 'Average', avgExcessReturn: 0.06 },
-    { quintile: 4, scoreRange: [60, 80], label: 'Above Average', avgExcessReturn: 0.32 },
-    { quintile: 5, scoreRange: [80, 100], label: 'Top 20%', avgExcessReturn: 1.11 },
+    {
+      quintile: 1,
+      scoreRange: [0, 20],
+      label: 'Bottom 20%',
+      avgExcessReturn: -1.74,
+    },
+    {
+      quintile: 2,
+      scoreRange: [20, 40],
+      label: 'Below Average',
+      avgExcessReturn: -0.41,
+    },
+    {
+      quintile: 3,
+      scoreRange: [40, 60],
+      label: 'Average',
+      avgExcessReturn: 0.06,
+    },
+    {
+      quintile: 4,
+      scoreRange: [60, 80],
+      label: 'Above Average',
+      avgExcessReturn: 0.32,
+    },
+    {
+      quintile: 5,
+      scoreRange: [80, 100],
+      label: 'Top 20%',
+      avgExcessReturn: 1.11,
+    },
   ],
   investoredge: [
-    { quintile: 1, scoreRange: [0, 20], label: 'Bottom 20%', avgExcessReturn: -1.76 },
-    { quintile: 2, scoreRange: [20, 40], label: 'Below Average', avgExcessReturn: -0.12 },
-    { quintile: 3, scoreRange: [40, 60], label: 'Average', avgExcessReturn: 0.02 },
-    { quintile: 4, scoreRange: [60, 80], label: 'Above Average', avgExcessReturn: 0.55 },
-    { quintile: 5, scoreRange: [80, 100], label: 'Top 20%', avgExcessReturn: 0.69 },
+    {
+      quintile: 1,
+      scoreRange: [0, 20],
+      label: 'Bottom 20%',
+      avgExcessReturn: -1.76,
+    },
+    {
+      quintile: 2,
+      scoreRange: [20, 40],
+      label: 'Below Average',
+      avgExcessReturn: -0.12,
+    },
+    {
+      quintile: 3,
+      scoreRange: [40, 60],
+      label: 'Average',
+      avgExcessReturn: 0.02,
+    },
+    {
+      quintile: 4,
+      scoreRange: [60, 80],
+      label: 'Above Average',
+      avgExcessReturn: 0.55,
+    },
+    {
+      quintile: 5,
+      scoreRange: [80, 100],
+      label: 'Top 20%',
+      avgExcessReturn: 0.69,
+    },
   ],
   markethealth: [
-    { quintile: 1, scoreRange: [0, 20], label: 'Coldest 20%', avgExcessReturn: -1.50 },
-    { quintile: 2, scoreRange: [20, 40], label: 'Cool', avgExcessReturn: -0.30 },
-    { quintile: 3, scoreRange: [40, 60], label: 'Neutral', avgExcessReturn: 0.00 },
-    { quintile: 4, scoreRange: [60, 80], label: 'Warm', avgExcessReturn: 0.40 },
-    { quintile: 5, scoreRange: [80, 100], label: 'Hottest 20%', avgExcessReturn: 0.80 },
+    {
+      quintile: 1,
+      scoreRange: [0, 20],
+      label: 'Coldest 20%',
+      avgExcessReturn: -1.5,
+    },
+    { quintile: 2, scoreRange: [20, 40], label: 'Cool', avgExcessReturn: -0.3 },
+    {
+      quintile: 3,
+      scoreRange: [40, 60],
+      label: 'Neutral',
+      avgExcessReturn: 0.0,
+    },
+    { quintile: 4, scoreRange: [60, 80], label: 'Warm', avgExcessReturn: 0.4 },
+    {
+      quintile: 5,
+      scoreRange: [80, 100],
+      label: 'Hottest 20%',
+      avgExcessReturn: 0.8,
+    },
   ],
 };
 
