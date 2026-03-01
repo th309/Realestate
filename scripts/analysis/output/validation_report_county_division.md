@@ -1,6 +1,6 @@
 # PropertyIQ Score Validation Report
 
-**Generated:** 2026-03-01 13:38:13 UTC
+**Generated:** 2026-03-01 19:00:08 UTC
 **Data rows:** 563,443
 **Benchmark:** Excess returns vs **Census Division** median
 
@@ -51,13 +51,13 @@
 
 | Metric | Value |
 |--------|------:|
-| Avg OOS quintile spread | 1.4058 |
-| Avg OOS IC | 0.1129 |
-| OOS IC IR | 0.0000 |
-| Avg OOS hit rate | 57.6% |
-| IC degradation (IS -> OOS) | 0.5150 |
-| Spread degradation | 0.4789 |
-| # folds | 1 |
+| Avg OOS quintile spread | 1.4311 |
+| Avg OOS IC | 0.1360 |
+| OOS IC IR | 1.8893 |
+| Avg OOS hit rate | 58.6% |
+| IC degradation (IS -> OOS) | 0.4157 |
+| Spread degradation | 0.4696 |
+| # folds | 2 |
 
 ### 5.3 Time Stability
 
@@ -112,7 +112,7 @@
 ---
 ## INVESTOREDGE Score Validation
 
-- **Target:** excess_div_3y
+- **Target:** excess_total_div_3y
 - **Total observations:** 188,456
 - **With target outcome:** 76,311
 
@@ -121,7 +121,7 @@
 | Metric | Value |
 |--------|-------|
 | Sample size | 76,311 |
-| Pearson r | 0.1299 |
+| Pearson r | 0.0000 |
 | Spearman r | 0.2435 |
 
 #### Quintile Analysis
@@ -156,13 +156,13 @@
 
 | Metric | Value |
 |--------|------:|
-| Avg OOS quintile spread | 1.3179 |
-| Avg OOS IC | 0.1076 |
-| OOS IC IR | 0.0000 |
-| Avg OOS hit rate | 56.3% |
-| IC degradation (IS -> OOS) | 0.5384 |
-| Spread degradation | 0.5093 |
-| # folds | 1 |
+| Avg OOS quintile spread | 1.4976 |
+| Avg OOS IC | 0.1319 |
+| OOS IC IR | 2.2411 |
+| Avg OOS hit rate | 57.9% |
+| IC degradation (IS -> OOS) | 0.4341 |
+| Spread degradation | 0.4424 |
+| # folds | 2 |
 
 ### 5.3 Time Stability
 
@@ -220,4 +220,4 @@
 | Score Type | Pearson r | Spearman r | Decile Spread | Mean IC | IC IR | Hit Rate | Calibration MAD |
 |------------|----------:|-----------:|--------------:|--------:|------:|---------:|----------------:|
 | homeready | 0.1323 | 0.2438 | 2.6980 | 0.2327 | 3.5762 | 100.0% | 15.73 |
-| investoredge | 0.1299 | 0.2435 | 2.6857 | 0.2330 | 3.5453 | 100.0% | 16.04 |
+| investoredge | 0.0000 | 0.2435 | 2.6857 | 0.2330 | 3.5453 | 100.0% | 16.04 |

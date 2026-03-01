@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-01 13:38:13 UTC",
+  "generated_at": "2026-03-01 19:00:07 UTC",
   "geo_level": "county",
   "benchmark": "state",
   "benchmark_label": "State",
@@ -66,14 +66,14 @@
         }
       },
       "oos": {
-        "avg_oos_quintile_spread": 1.4058,
-        "avg_oos_ic": 0.1129,
-        "oos_ic_ir": 0.0,
-        "avg_oos_hit_rate": 57.6,
-        "degradation_ic": 0.4329,
-        "degradation_spread": 0.2876,
-        "n_folds": 1,
-        "source_file": "scripts\\analysis\\output\\optimized_weights_county.json"
+        "avg_oos_quintile_spread": 1.4311,
+        "avg_oos_ic": 0.136,
+        "oos_ic_ir": 1.8893,
+        "avg_oos_hit_rate": 58.6,
+        "degradation_ic": 0.3168,
+        "degradation_spread": 0.2748,
+        "n_folds": 2,
+        "source_file": "D:\\projects\\rei-platform\\scripts\\analysis\\output\\optimized_weights_county.json"
       },
       "time_stability": {
         "by_year": [
@@ -290,12 +290,12 @@
     {
       "score_type": "investoredge",
       "benchmark": "state",
-      "target_column": "excess_state_3y",
+      "target_column": "excess_total_state_3y",
       "n_total": 188456,
       "n_with_target": 76311,
       "insample": {
         "n": 76311,
-        "pearson_r": 0.1008,
+        "pearson_r": 0.0,
         "spearman_r": 0.216,
         "quintile_table": [
           {
@@ -348,14 +348,14 @@
         }
       },
       "oos": {
-        "avg_oos_quintile_spread": 1.3179,
-        "avg_oos_ic": 0.1076,
-        "oos_ic_ir": 0.0,
-        "avg_oos_hit_rate": 56.3,
-        "degradation_ic": 0.4675,
-        "degradation_spread": 0.3379,
-        "n_folds": 1,
-        "source_file": "scripts\\analysis\\output\\optimized_weights_county.json"
+        "avg_oos_quintile_spread": 1.4976,
+        "avg_oos_ic": 0.1319,
+        "oos_ic_ir": 2.2411,
+        "avg_oos_hit_rate": 57.9,
+        "degradation_ic": 0.3473,
+        "degradation_spread": 0.2476,
+        "n_folds": 2,
+        "source_file": "D:\\projects\\rei-platform\\scripts\\analysis\\output\\optimized_weights_county.json"
       },
       "time_stability": {
         "by_year": [

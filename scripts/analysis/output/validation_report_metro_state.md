@@ -1,6 +1,6 @@
 # PropertyIQ Score Validation Report
 
-**Generated:** 2026-03-01 13:37:55 UTC
+**Generated:** 2026-03-01 18:59:46 UTC
 **Data rows:** 169,990
 **Benchmark:** Excess returns vs **State** median
 
@@ -51,13 +51,13 @@
 
 | Metric | Value |
 |--------|------:|
-| Avg OOS quintile spread | 1.4558 |
-| Avg OOS IC | 0.1589 |
-| OOS IC IR | 0.0000 |
-| Avg OOS hit rate | 61.1% |
-| IC degradation (IS -> OOS) | 0.2516 |
-| Spread degradation | 0.3105 |
-| # folds | 1 |
+| Avg OOS quintile spread | 1.5320 |
+| Avg OOS IC | 0.1820 |
+| OOS IC IR | 4.3441 |
+| Avg OOS hit rate | 60.4% |
+| IC degradation (IS -> OOS) | 0.1425 |
+| Spread degradation | 0.2744 |
+| # folds | 2 |
 
 ### 5.3 Time Stability
 
@@ -114,64 +114,64 @@
 
 - **Target:** excess_total_state_3y
 - **Total observations:** 57,240
-- **With target outcome:** 22,508
+- **With target outcome:** 23,859
 
 ### 5.1 In-Sample Metrics
 
 | Metric | Value |
 |--------|-------|
-| Sample size | 22,508 |
-| Pearson r | 0.0972 |
-| Spearman r | 0.1705 |
+| Sample size | 23,859 |
+| Pearson r | 0.0000 |
+| Spearman r | 0.1763 |
 
 #### Quintile Analysis
 
 | Quintile | Avg Score | Avg Excess Return | Count | Beat-Median Rate |
 |:--------:|----------:|------------------:|------:|-----------------:|
-| Q1 | 10.6 | -0.7502 | 4,524 | 30.2% |
-| Q2 | 31.1 | 1.2557 | 4,481 | 46.1% |
-| Q3 | 51.0 | 1.7080 | 4,522 | 56.3% |
-| Q4 | 70.6 | 1.5166 | 4,495 | 56.5% |
-| Q5 | 90.1 | 1.0797 | 4,486 | 52.3% |
+| Q1 | 10.0 | -1.0458 | 4,788 | 34.9% |
+| Q2 | 30.0 | -0.1563 | 4,762 | 46.5% |
+| Q3 | 50.0 | 0.2050 | 4,788 | 52.4% |
+| Q4 | 70.0 | 0.2592 | 4,758 | 54.3% |
+| Q5 | 90.0 | 0.3612 | 4,763 | 53.9% |
 
 #### Decile Spread
 
 | Metric | Value |
 |--------|------:|
-| Top decile avg excess | 0.6912 |
-| Bottom decile avg excess | -1.6804 |
-| **Decile spread** | **2.3716** |
+| Top decile avg excess | 0.3797 |
+| Bottom decile avg excess | -1.3720 |
+| **Decile spread** | **1.7518** |
 
 #### Information Coefficient (IC)
 
 | Metric | Value |
 |--------|------:|
-| Mean IC | 0.1682 |
-| Std IC | 0.0958 |
-| IR (IC/std) | 1.7563 |
-| Hit rate | 92.3% |
+| Mean IC | 0.1763 |
+| Std IC | 0.0327 |
+| IR (IC/std) | 5.3878 |
+| Hit rate | 100.0% |
 | Periods | 26 |
 
 ### 5.2 Out-of-Sample Metrics
 
 | Metric | Value |
 |--------|------:|
-| Avg OOS quintile spread | 4.6020 |
-| Avg OOS IC | 0.2358 |
-| OOS IC IR | 0.0000 |
-| Avg OOS hit rate | 62.5% |
-| IC degradation (IS -> OOS) | -0.4020 |
-| Spread degradation | -0.9404 |
-| # folds | 1 |
+| Avg OOS quintile spread | 1.3631 |
+| Avg OOS IC | 0.1719 |
+| OOS IC IR | 4.7316 |
+| Avg OOS hit rate | 59.4% |
+| IC degradation (IS -> OOS) | 0.0250 |
+| Spread degradation | 0.2219 |
+| # folds | 2 |
 
 ### 5.3 Time Stability
 
 | Year | N | Mean IC | Quintile Spread | Decile Spread | Status |
 |:----:|----:|--------:|----------------:|--------------:|:------:|
-| 2020 | 859 | 0.2948 | 4.3814 | 5.4348 | PASS |
-| 2021 | 10,094 | 0.1893 | 2.4837 | 2.6707 | PASS |
-| 2022 | 10,636 | 0.1419 | 1.1448 | 1.8675 | PASS |
-| 2023 | 919 | 0.1042 | 1.1553 | 2.7586 | PASS |
+| 2020 | 865 | 0.2341 | 2.3443 | 3.4183 | PASS |
+| 2021 | 11,008 | 0.1898 | 1.6618 | 1.9854 | PASS |
+| 2022 | 11,064 | 0.1623 | 1.1181 | 1.4441 | PASS |
+| 2023 | 922 | 0.1253 | 0.9297 | 1.0333 | PASS |
 | 2024 | 0 | - | - | - | skipped |
 | 2025 | 0 | - | - | - | skipped |
 | 2026 | 0 | - | - | - | skipped |
@@ -182,34 +182,34 @@
 
 | Decile | Predicted Pctile | Actual Pctile | Deviation | N |
 |:------:|-----------------:|--------------:|----------:|----:|
-| 1 | 5.0 | 26.0 | 21.0 | 2,260 |
-| 2 | 15.0 | 34.7 | 19.7 | 2,264 |
-| 3 | 25.0 | 41.8 | 16.8 | 2,251 |
-| 4 | 35.0 | 52.5 | 17.5 | 2,230 |
-| 5 | 45.0 | 56.2 | 11.2 | 2,265 |
-| 6 | 55.0 | 58.7 | 3.7 | 2,257 |
-| 7 | 65.0 | 55.6 | 9.4 | 2,252 |
-| 8 | 75.0 | 59.2 | 15.8 | 2,243 |
-| 9 | 85.0 | 57.3 | 27.7 | 2,241 |
-| 10 | 95.0 | 51.7 | 43.3 | 2,245 |
+| 1 | 5.0 | 28.3 | 23.3 | 2,390 |
+| 2 | 15.0 | 37.1 | 22.1 | 2,398 |
+| 3 | 25.0 | 45.7 | 20.7 | 2,381 |
+| 4 | 35.0 | 51.6 | 16.6 | 2,381 |
+| 5 | 45.0 | 53.3 | 8.3 | 2,403 |
+| 6 | 55.0 | 53.7 | 1.3 | 2,385 |
+| 7 | 65.0 | 54.2 | 10.8 | 2,381 |
+| 8 | 75.0 | 56.6 | 18.4 | 2,377 |
+| 9 | 85.0 | 55.6 | 29.4 | 2,394 |
+| 10 | 95.0 | 54.8 | 40.2 | 2,369 |
 
-**Mean Absolute Deviation from diagonal:** 18.61 pp
+**Mean Absolute Deviation from diagonal:** 19.11 pp
 **Well-calibrated (< 15 pp):** No
 
 ### 5.4b Post-Isotonic Calibration
 
 | Decile | Predicted Pctile | Actual Pctile | Deviation | N |
 |:------:|-----------------:|--------------:|----------:|----:|
-| 1 | 6.2 | 26.0 | 19.8 | 2,260 |
-| 2 | 18.8 | 34.7 | 15.9 | 2,264 |
-| 3 | 31.2 | 41.8 | 10.6 | 2,251 |
-| 4 | 43.8 | 52.5 | 8.7 | 2,230 |
-| 5 | 56.2 | 57.3 | 1.0 | 5,502 |
-| 6 | 68.8 | 55.4 | 13.3 | 1,272 |
-| 7 | 81.2 | 56.7 | 24.6 | 5,620 |
-| 8 | 93.8 | 51.7 | 42.0 | 1,109 |
+| 1 | 6.2 | 28.3 | 22.1 | 2,390 |
+| 2 | 18.8 | 37.1 | 18.3 | 2,398 |
+| 3 | 31.2 | 45.7 | 14.4 | 2,381 |
+| 4 | 43.8 | 51.6 | 7.9 | 2,381 |
+| 5 | 56.2 | 53.9 | 2.4 | 6,006 |
+| 6 | 68.8 | 53.2 | 15.5 | 1,163 |
+| 7 | 81.2 | 55.6 | 25.7 | 5,973 |
+| 8 | 93.8 | 56.7 | 37.1 | 1,167 |
 
-**Post-calibration MAD:** 17.00 pp (was 18.61 pp)
+**Post-calibration MAD:** 17.91 pp (was 19.11 pp)
 **Well-calibrated (< 15 pp):** No
 
 ---
@@ -218,4 +218,4 @@
 | Score Type | Pearson r | Spearman r | Decile Spread | Mean IC | IC IR | Hit Rate | Calibration MAD |
 |------------|----------:|-----------:|--------------:|--------:|------:|---------:|----------------:|
 | homeready | 0.1722 | 0.2124 | 2.1114 | 0.2123 | 5.5029 | 100.0% | 17.73 |
-| investoredge | 0.0972 | 0.1705 | 2.3716 | 0.1682 | 1.7563 | 92.3% | 18.61 |
+| investoredge | 0.0000 | 0.1763 | 1.7518 | 0.1763 | 5.3878 | 100.0% | 19.11 |

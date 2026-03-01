@@ -1,0 +1,3131 @@
+{
+  "metro": {
+    "generated": "2026-03-01T18:57:04.197177Z",
+    "windows_used": 20,
+    "oos": {
+      "homeready": {
+        "ic": 0.18203727743068082,
+        "qs": 1.531970036862217,
+        "hr": 0.6037152006915656,
+        "bs_sig": true,
+        "bs_ci": [
+          1.3146566364205254,
+          1.7580389851898208
+        ],
+        "bs_n": 11987,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 10142,
+            "test_rows": 11065,
+            "train_ic": 0.2758740408733094,
+            "test_ic": 0.21166792424145095,
+            "train_qs": 2.5193230769230768,
+            "test_qs": 1.569763443289652,
+            "train_hr": 0.6400394477317555,
+            "test_hr": 0.5987347492092182,
+            "alpha": 0.000707673764235256,
+            "l1": 0.9
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 21207,
+            "test_rows": 922,
+            "train_ic": 0.23801094798560427,
+            "test_ic": 0.15240663061991072,
+            "train_qs": 2.0203221881631688,
+            "test_qs": 1.4941766304347825,
+            "train_hr": 0.6090544682857817,
+            "test_hr": 0.6086956521739131,
+            "alpha": 0.005546313290365759,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "median_days_on_market",
+            "weight": 0.2667,
+            "dir": -1
+          },
+          {
+            "name": "affordability_ratio",
+            "weight": 0.1618,
+            "dir": 1
+          },
+          {
+            "name": "demand_score",
+            "weight": 0.1526,
+            "dir": 1
+          },
+          {
+            "name": "hotness_score",
+            "weight": 0.124,
+            "dir": -1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.1214,
+            "dir": 1
+          },
+          {
+            "name": "population_yoy",
+            "weight": 0.077,
+            "dir": 1
+          },
+          {
+            "name": "supply_score",
+            "weight": 0.0577,
+            "dir": -1
+          },
+          {
+            "name": "price_reduced_share",
+            "weight": 0.0388,
+            "dir": -1
+          }
+        ],
+        "selection": {
+          "initial": 11,
+          "after_en": 8,
+          "after_stab": 8
+        },
+        "stability": {
+          "median_days_on_market": {
+            "mean": -0.6141364247507036,
+            "std": 0.04037332205716726,
+            "cv": 0.06573998940635381,
+            "flips": 0,
+            "stable": true
+          },
+          "affordability_ratio": {
+            "mean": 0.3726826108017861,
+            "std": 0.05992201664463148,
+            "cv": 0.16078565220876762,
+            "flips": 0,
+            "stable": true
+          },
+          "demand_score": {
+            "mean": 0.35163990347375496,
+            "std": 0.14340807125978947,
+            "cv": 0.40782650047136326,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.27962526540821664,
+            "std": 0.013417067680257438,
+            "cv": 0.04798231540583523,
+            "flips": 0,
+            "stable": true
+          },
+          "hotness_score": {
+            "mean": -0.28569618860985224,
+            "std": 0.19804311137415936,
+            "cv": 0.6931947966747564,
+            "flips": 0,
+            "stable": true
+          },
+          "population_yoy": {
+            "mean": 0.17740474285323543,
+            "std": 0.016139129275935027,
+            "cv": 0.09097349381062891,
+            "flips": 0,
+            "stable": true
+          },
+          "supply_score": {
+            "mean": -0.13303023955438306,
+            "std": 0.08476440416359389,
+            "cv": 0.6371814742838376,
+            "flips": 0,
+            "stable": true
+          },
+          "price_reduced_share": {
+            "mean": -0.08937002515247866,
+            "std": 0.02157411267957795,
+            "cv": 0.24140211041419402,
+            "flips": 0,
+            "stable": true
+          }
+        }
+      },
+      "investoredge": {
+        "ic": 0.17189221014788342,
+        "qs": 1.363053701155751,
+        "hr": 0.5941062583536442,
+        "bs_sig": true,
+        "bs_ci": [
+          1.304987735711306,
+          1.7335184334584899
+        ],
+        "bs_n": 11986,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 10143,
+            "test_rows": 11064,
+            "train_ic": 0.27237557493966635,
+            "test_ic": 0.19758062691584527,
+            "train_qs": 2.616444230769231,
+            "test_qs": 1.5293889240506329,
+            "train_hr": 0.6400394477317555,
+            "test_hr": 0.6066907775768535,
+            "alpha": 0.006367389056859643,
+            "l1": 0.1
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 21207,
+            "test_rows": 922,
+            "train_ic": 0.2314185925434291,
+            "test_ic": 0.14620379337992154,
+            "train_qs": 2.019482834237208,
+            "test_qs": 1.1967184782608693,
+            "train_hr": 0.6149493044093374,
+            "test_hr": 0.5815217391304348,
+            "alpha": 0.006384356761180664,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "median_days_on_market",
+            "weight": 0.2379,
+            "dir": -1
+          },
+          {
+            "name": "hotness_score",
+            "weight": 0.1843,
+            "dir": -1
+          },
+          {
+            "name": "demand_score",
+            "weight": 0.1765,
+            "dir": 1
+          },
+          {
+            "name": "affordability_ratio",
+            "weight": 0.15,
+            "dir": 1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.1269,
+            "dir": 1
+          },
+          {
+            "name": "population_yoy",
+            "weight": 0.0683,
+            "dir": 1
+          },
+          {
+            "name": "homeownership_rate",
+            "weight": 0.0561,
+            "dir": 1
+          }
+        ],
+        "selection": {
+          "initial": 15,
+          "after_en": 8,
+          "after_stab": 7
+        },
+        "stability": {
+          "median_days_on_market": {
+            "mean": -0.6041917405161166,
+            "std": 0.03473726598045207,
+            "cv": 0.057493778300872794,
+            "flips": 0,
+            "stable": true
+          },
+          "affordability_ratio": {
+            "mean": 0.3793996564439097,
+            "std": 0.0641205384092636,
+            "cv": 0.16900526218252693,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.3187405484628769,
+            "std": 0.02302999376623402,
+            "cv": 0.07225310327567651,
+            "flips": 0,
+            "stable": true
+          },
+          "demand_score": {
+            "mean": 0.4438251035724206,
+            "std": 0.06557792487743702,
+            "cv": 0.14775623178948108,
+            "flips": 0,
+            "stable": true
+          },
+          "hotness_score": {
+            "mean": -0.4558609887637478,
+            "std": 0.08124074512548629,
+            "cv": 0.17821385713614926,
+            "flips": 0,
+            "stable": true
+          },
+          "population_yoy": {
+            "mean": 0.17181084801651364,
+            "std": 0.013424906846761217,
+            "cv": 0.07813771366445313,
+            "flips": 0,
+            "stable": true
+          },
+          "supply_score": {
+            "mean": -0.015462772984972265,
+            "std": 0.015462772984972265,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "homeownership_rate": {
+            "mean": 0.14109430334730572,
+            "std": 0.020009110132824054,
+            "cv": 0.14181373491438087,
+            "flips": 0,
+            "stable": true
+          }
+        }
+      }
+    },
+    "is_state": {
+      "generated": "2026-03-01 18:59:46 UTC",
+      "total_rows": 169990,
+      "homeready": {
+        "target": "excess_state_3y",
+        "n_total": 57240,
+        "n_target": 23859,
+        "pearson": 0.1722,
+        "spearman": 0.2124,
+        "mean_ic": 0.2123,
+        "std_ic": 0.0386,
+        "ir": 5.5029,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.4442,
+        "decile_bot": -1.6672,
+        "decile_spread": 2.1114,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 9.97,
+            "excess": -1.1986,
+            "n": 4772,
+            "beat": 32.9
+          },
+          {
+            "q": 2,
+            "score": 29.98,
+            "excess": -0.0668,
+            "n": 4783,
+            "beat": 45.4
+          },
+          {
+            "q": 3,
+            "score": 49.94,
+            "excess": 0.1157,
+            "n": 4764,
+            "beat": 51.1
+          },
+          {
+            "q": 4,
+            "score": 69.92,
+            "excess": 0.3152,
+            "n": 4783,
+            "beat": 54.5
+          },
+          {
+            "q": 5,
+            "score": 89.94,
+            "excess": 0.4542,
+            "n": 4757,
+            "beat": 58.1
+          }
+        ],
+        "oos_ic": 0.182,
+        "oos_qs": 1.532,
+        "oos_hr": 60.4,
+        "deg_ic": 0.1425,
+        "deg_sp": 0.2744,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 17.73,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 24.8,
+            "dev": 19.81,
+            "n": 2392
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 36.4,
+            "dev": 21.4,
+            "n": 2380
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 45.1,
+            "dev": 20.09,
+            "n": 2405
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 51.6,
+            "dev": 16.6,
+            "n": 2378
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 51.8,
+            "dev": 6.76,
+            "n": 2382
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 53.5,
+            "dev": 1.48,
+            "n": 2382
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 55.7,
+            "dev": 9.26,
+            "n": 2404
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.1,
+            "dev": 18.85,
+            "n": 2379
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 58.7,
+            "dev": 26.25,
+            "n": 2376
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 58.2,
+            "dev": 36.76,
+            "n": 2381
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 865,
+            "ic": 0.2755,
+            "qs": 2.0482,
+            "ds": 3.4531,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 11007,
+            "ic": 0.2271,
+            "qs": 1.9295,
+            "ds": 2.5059,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 11065,
+            "ic": 0.1944,
+            "qs": 1.3507,
+            "ds": 1.6384,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 922,
+            "ic": 0.1872,
+            "qs": 1.5273,
+            "ds": 2.0891,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_state_3y",
+        "n_total": 57240,
+        "n_target": 23859,
+        "pearson": 0.0,
+        "spearman": 0.1763,
+        "mean_ic": 0.1763,
+        "std_ic": 0.0327,
+        "ir": 5.3878,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.3797,
+        "decile_bot": -1.372,
+        "decile_spread": 1.7518,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.02,
+            "excess": -1.0458,
+            "n": 4788,
+            "beat": 34.9
+          },
+          {
+            "q": 2,
+            "score": 30.03,
+            "excess": -0.1563,
+            "n": 4762,
+            "beat": 46.5
+          },
+          {
+            "q": 3,
+            "score": 50.01,
+            "excess": 0.205,
+            "n": 4788,
+            "beat": 52.4
+          },
+          {
+            "q": 4,
+            "score": 69.96,
+            "excess": 0.2592,
+            "n": 4758,
+            "beat": 54.3
+          },
+          {
+            "q": 5,
+            "score": 89.96,
+            "excess": 0.3612,
+            "n": 4763,
+            "beat": 53.9
+          }
+        ],
+        "oos_ic": 0.1719,
+        "oos_qs": 1.3631,
+        "oos_hr": 59.4,
+        "deg_ic": 0.025,
+        "deg_sp": 0.2219,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 19.11,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 28.3,
+            "dev": 23.3,
+            "n": 2390
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 37.1,
+            "dev": 22.07,
+            "n": 2398
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 45.7,
+            "dev": 20.66,
+            "n": 2381
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 51.6,
+            "dev": 16.61,
+            "n": 2381
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 53.3,
+            "dev": 8.34,
+            "n": 2403
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 53.7,
+            "dev": 1.33,
+            "n": 2385
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 54.2,
+            "dev": 10.81,
+            "n": 2381
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.6,
+            "dev": 18.4,
+            "n": 2377
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 55.6,
+            "dev": 29.35,
+            "n": 2394
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 54.8,
+            "dev": 40.19,
+            "n": 2369
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 865,
+            "ic": 0.2341,
+            "qs": 2.3443,
+            "ds": 3.4183,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 11008,
+            "ic": 0.1898,
+            "qs": 1.6618,
+            "ds": 1.9854,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 11064,
+            "ic": 0.1623,
+            "qs": 1.1181,
+            "ds": 1.4441,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 922,
+            "ic": 0.1253,
+            "qs": 0.9297,
+            "ds": 1.0333,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    },
+    "is_div": {
+      "generated": "2026-03-01 18:59:47 UTC",
+      "total_rows": 169990,
+      "homeready": {
+        "target": "excess_div_3y",
+        "n_total": 57240,
+        "n_target": 23859,
+        "pearson": 0.2322,
+        "spearman": 0.2694,
+        "mean_ic": 0.269,
+        "std_ic": 0.0677,
+        "ir": 3.9706,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.7577,
+        "decile_bot": -2.2449,
+        "decile_spread": 3.0026,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 9.97,
+            "excess": -1.6882,
+            "n": 4772,
+            "beat": 32.0
+          },
+          {
+            "q": 2,
+            "score": 29.98,
+            "excess": -0.3352,
+            "n": 4783,
+            "beat": 45.1
+          },
+          {
+            "q": 3,
+            "score": 49.94,
+            "excess": -0.102,
+            "n": 4764,
+            "beat": 50.9
+          },
+          {
+            "q": 4,
+            "score": 69.92,
+            "excess": 0.2972,
+            "n": 4783,
+            "beat": 56.1
+          },
+          {
+            "q": 5,
+            "score": 89.94,
+            "excess": 0.7114,
+            "n": 4757,
+            "beat": 64.9
+          }
+        ],
+        "oos_ic": 0.182,
+        "oos_qs": 1.532,
+        "oos_hr": 60.4,
+        "deg_ic": 0.3233,
+        "deg_sp": 0.4898,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 15.69,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 21.3,
+            "dev": 16.33,
+            "n": 2392
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 35.7,
+            "dev": 20.69,
+            "n": 2380
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 44.1,
+            "dev": 19.05,
+            "n": 2405
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 46.8,
+            "dev": 11.76,
+            "n": 2378
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 49.6,
+            "dev": 4.59,
+            "n": 2382
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 52.7,
+            "dev": 2.26,
+            "n": 2382
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.4,
+            "dev": 11.62,
+            "n": 2404
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 57.4,
+            "dev": 17.64,
+            "n": 2379
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 62.4,
+            "dev": 22.6,
+            "n": 2376
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 64.7,
+            "dev": 30.32,
+            "n": 2381
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 865,
+            "ic": 0.3875,
+            "qs": 3.5167,
+            "ds": 5.1182,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 11007,
+            "ic": 0.2878,
+            "qs": 2.847,
+            "ds": 3.528,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 11065,
+            "ic": 0.2413,
+            "qs": 1.8828,
+            "ds": 2.3549,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 922,
+            "ic": 0.257,
+            "qs": 2.096,
+            "ds": 2.8339,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_div_3y",
+        "n_total": 57240,
+        "n_target": 23859,
+        "pearson": 0.0,
+        "spearman": 0.2042,
+        "mean_ic": 0.2038,
+        "std_ic": 0.0617,
+        "ir": 3.3021,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.4181,
+        "decile_bot": -1.9483,
+        "decile_spread": 2.3665,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.02,
+            "excess": -1.4999,
+            "n": 4788,
+            "beat": 34.5
+          },
+          {
+            "q": 2,
+            "score": 30.03,
+            "excess": -0.2903,
+            "n": 4762,
+            "beat": 48.0
+          },
+          {
+            "q": 3,
+            "score": 50.01,
+            "excess": 0.0811,
+            "n": 4788,
+            "beat": 52.9
+          },
+          {
+            "q": 4,
+            "score": 69.96,
+            "excess": 0.1535,
+            "n": 4758,
+            "beat": 54.2
+          },
+          {
+            "q": 5,
+            "score": 89.96,
+            "excess": 0.4456,
+            "n": 4763,
+            "beat": 59.4
+          }
+        ],
+        "oos_ic": 0.1719,
+        "oos_qs": 1.3631,
+        "oos_hr": 59.4,
+        "deg_ic": 0.1566,
+        "deg_sp": 0.424,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 18.21,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 23.3,
+            "dev": 18.32,
+            "n": 2390
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 36.2,
+            "dev": 21.25,
+            "n": 2398
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 46.0,
+            "dev": 20.98,
+            "n": 2381
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 50.2,
+            "dev": 15.22,
+            "n": 2381
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 53.6,
+            "dev": 8.56,
+            "n": 2403
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 51.3,
+            "dev": 3.71,
+            "n": 2385
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 51.6,
+            "dev": 13.45,
+            "n": 2381
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.1,
+            "dev": 18.93,
+            "n": 2377
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 60.0,
+            "dev": 25.01,
+            "n": 2394
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 58.4,
+            "dev": 36.62,
+            "n": 2369
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 865,
+            "ic": 0.3287,
+            "qs": 3.6484,
+            "ds": 4.9317,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 11008,
+            "ic": 0.2303,
+            "qs": 2.4657,
+            "ds": 2.8473,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 11064,
+            "ic": 0.1713,
+            "qs": 1.358,
+            "ds": 1.779,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 922,
+            "ic": 0.1511,
+            "qs": 1.1357,
+            "ds": 1.374,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    }
+  },
+  "county": {
+    "generated": "2026-03-01T18:57:50.772828Z",
+    "windows_used": 20,
+    "oos": {
+      "homeready": {
+        "ic": 0.13596564736143105,
+        "qs": 1.4311480189987837,
+        "hr": 0.5864310280181477,
+        "bs_sig": true,
+        "bs_ci": [
+          1.5504769665674234,
+          1.990445017677707
+        ],
+        "bs_n": 40305,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 34076,
+            "test_rows": 37206,
+            "train_ic": 0.264378036086907,
+            "test_ic": 0.18685320264053457,
+            "train_qs": 2.648521452677916,
+            "test_qs": 1.829056134928101,
+            "train_hr": 0.6468085106382979,
+            "test_hr": 0.6138959817228867,
+            "alpha": 0.026408467571169485,
+            "l1": 0.1
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 71282,
+            "test_rows": 3099,
+            "train_ic": 0.23926013534088347,
+            "test_ic": 0.08507809208232753,
+            "train_qs": 2.4057505962401797,
+            "test_qs": 1.0332399030694668,
+            "train_hr": 0.6311728395061729,
+            "test_hr": 0.5589660743134087,
+            "alpha": 0.02098356415854172,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "median_days_on_market",
+            "weight": 0.2617,
+            "dir": -1
+          },
+          {
+            "name": "population_yoy",
+            "weight": 0.2367,
+            "dir": 1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.229,
+            "dir": 1
+          },
+          {
+            "name": "affordability_ratio",
+            "weight": 0.1185,
+            "dir": -1
+          },
+          {
+            "name": "demand_score",
+            "weight": 0.1065,
+            "dir": 1
+          },
+          {
+            "name": "supply_score",
+            "weight": 0.0476,
+            "dir": -1
+          }
+        ],
+        "selection": {
+          "initial": 11,
+          "after_en": 8,
+          "after_stab": 6
+        },
+        "stability": {
+          "demand_score": {
+            "mean": 0.17400479919982503,
+            "std": 0.009414171716822947,
+            "cv": 0.05410294290798166,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.43214787137595867,
+            "std": 0.024395261336861457,
+            "cv": 0.05645118940233803,
+            "flips": 0,
+            "stable": true
+          },
+          "price_reduced_share": {
+            "mean": 0.031974058116387524,
+            "std": 0.031974058116387524,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "supply_score": {
+            "mean": -0.04884496334461659,
+            "std": 0.027775231769509096,
+            "cv": 0.5686406513102711,
+            "flips": 0,
+            "stable": true
+          },
+          "median_days_on_market": {
+            "mean": -0.48142189772045296,
+            "std": 0.026440106908805744,
+            "cv": 0.05492086470100433,
+            "flips": 0,
+            "stable": true
+          },
+          "population_yoy": {
+            "mean": 0.4437022377037365,
+            "std": 0.07443971748098396,
+            "cv": 0.16776953360935706,
+            "flips": 0,
+            "stable": true
+          },
+          "unemployment_rate_yoy": {
+            "mean": 0.0770155544533542,
+            "std": 0.0770155544533542,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "affordability_ratio": {
+            "mean": -0.2102502991541808,
+            "std": 0.05255851514565407,
+            "cv": 0.2499806913811421,
+            "flips": 0,
+            "stable": true
+          }
+        }
+      },
+      "investoredge": {
+        "ic": 0.13185235815095597,
+        "qs": 1.4976005048221022,
+        "hr": 0.5793769359347926,
+        "bs_sig": true,
+        "bs_ci": [
+          1.4546280067609478,
+          1.9078360417442004
+        ],
+        "bs_n": 40305,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 34071,
+            "test_rows": 37206,
+            "train_ic": 0.25962032824217796,
+            "test_ic": 0.17345347283789322,
+            "train_qs": 2.7230283093630763,
+            "test_qs": 1.7545384894503429,
+            "train_hr": 0.6360434399765189,
+            "test_hr": 0.5981722886708776,
+            "alpha": 0.02636837954735756,
+            "l1": 0.1
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 71277,
+            "test_rows": 3099,
+            "train_ic": 0.2350310924463388,
+            "test_ic": 0.09025124346401872,
+            "train_qs": 2.3687909294984215,
+            "test_qs": 1.2406625201938613,
+            "train_hr": 0.6190810242020344,
+            "test_hr": 0.5605815831987075,
+            "alpha": 0.032003530603739616,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "median_days_on_market",
+            "weight": 0.2262,
+            "dir": -1
+          },
+          {
+            "name": "population_yoy",
+            "weight": 0.2134,
+            "dir": 1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.2091,
+            "dir": 1
+          },
+          {
+            "name": "affordability_ratio",
+            "weight": 0.1073,
+            "dir": -1
+          },
+          {
+            "name": "homeownership_rate",
+            "weight": 0.0888,
+            "dir": 1
+          },
+          {
+            "name": "median_gross_rent",
+            "weight": 0.0852,
+            "dir": 1
+          },
+          {
+            "name": "demand_score",
+            "weight": 0.07,
+            "dir": 1
+          }
+        ],
+        "selection": {
+          "initial": 15,
+          "after_en": 8,
+          "after_stab": 7
+        },
+        "stability": {
+          "median_days_on_market": {
+            "mean": -0.4819886457931697,
+            "std": 0.017593970454572144,
+            "cv": 0.036502873269180794,
+            "flips": 0,
+            "stable": true
+          },
+          "population_yoy": {
+            "mean": 0.4501006241824831,
+            "std": 0.08179563163956793,
+            "cv": 0.18172743436677785,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.4386257353751036,
+            "std": 0.03770291619817562,
+            "cv": 0.08595691761207963,
+            "flips": 0,
+            "stable": true
+          },
+          "affordability_ratio": {
+            "mean": -0.2169593815385722,
+            "std": 0.059312677903265124,
+            "cv": 0.273381484970357,
+            "flips": 0,
+            "stable": true
+          },
+          "median_gross_rent": {
+            "mean": 0.1687598618325353,
+            "std": 0.037775827022275055,
+            "cv": 0.22384367119096701,
+            "flips": 0,
+            "stable": true
+          },
+          "homeownership_rate": {
+            "mean": 0.1659571990919603,
+            "std": 0.04174243157999604,
+            "cv": 0.251525283677906,
+            "flips": 0,
+            "stable": true
+          },
+          "demand_score": {
+            "mean": 0.13937180960655698,
+            "std": 0.017632239915618637,
+            "cv": 0.12651224064173375,
+            "flips": 0,
+            "stable": true
+          },
+          "unemployment_rate_yoy": {
+            "mean": 0.06445930825166071,
+            "std": 0.06445930825166071,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          }
+        }
+      }
+    },
+    "is_state": {
+      "generated": "2026-03-01 19:00:07 UTC",
+      "total_rows": 563443,
+      "homeready": {
+        "target": "excess_state_3y",
+        "n_total": 188461,
+        "n_target": 76316,
+        "pearson": 0.1008,
+        "spearman": 0.2134,
+        "mean_ic": 0.199,
+        "std_ic": 0.0721,
+        "ir": 2.7593,
+        "hit_rate": 92.3,
+        "n_periods": 26,
+        "decile_top": 0.4156,
+        "decile_bot": -1.5578,
+        "decile_spread": 1.9734,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.29,
+            "excess": -1.2414,
+            "n": 15270,
+            "beat": 36.3
+          },
+          {
+            "q": 2,
+            "score": 30.8,
+            "excess": -0.5079,
+            "n": 15302,
+            "beat": 45.5
+          },
+          {
+            "q": 3,
+            "score": 50.59,
+            "excess": 0.018,
+            "n": 15274,
+            "beat": 51.5
+          },
+          {
+            "q": 4,
+            "score": 69.5,
+            "excess": 0.1951,
+            "n": 15273,
+            "beat": 54.4
+          },
+          {
+            "q": 5,
+            "score": 89.77,
+            "excess": 0.4129,
+            "n": 15197,
+            "beat": 60.3
+          }
+        ],
+        "oos_ic": 0.136,
+        "oos_qs": 1.4311,
+        "oos_hr": 58.6,
+        "deg_ic": 0.3168,
+        "deg_sp": 0.2748,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 17.45,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 24.2,
+            "dev": 19.25,
+            "n": 7678
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 38.3,
+            "dev": 23.32,
+            "n": 7592
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 43.1,
+            "dev": 18.13,
+            "n": 7669
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 47.5,
+            "dev": 12.51,
+            "n": 7633
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 50.6,
+            "dev": 5.59,
+            "n": 7608
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 52.9,
+            "dev": 2.08,
+            "n": 7666
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.7,
+            "dev": 11.3,
+            "n": 7626
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 55.0,
+            "dev": 20.05,
+            "n": 7647
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 57.9,
+            "dev": 27.14,
+            "n": 7589
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 59.9,
+            "dev": 35.13,
+            "n": 7608
+          }
+        ],
+        "ts_pass": false,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 967,
+            "ic": -0.0122,
+            "qs": 0.2083,
+            "ds": 0.5631,
+            "fail": true,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 35044,
+            "ic": 0.2246,
+            "qs": 1.8894,
+            "ds": 2.2726,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 37206,
+            "ic": 0.1962,
+            "qs": 1.4961,
+            "ds": 1.8805,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 3099,
+            "ic": 0.1368,
+            "qs": 1.3036,
+            "ds": 1.476,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_state_3y",
+        "n_total": 188456,
+        "n_target": 76311,
+        "pearson": 0.0,
+        "spearman": 0.216,
+        "mean_ic": 0.202,
+        "std_ic": 0.0713,
+        "ir": 2.8343,
+        "hit_rate": 96.2,
+        "n_periods": 26,
+        "decile_top": 0.4813,
+        "decile_bot": -1.5092,
+        "decile_spread": 1.9905,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.29,
+            "excess": -1.2277,
+            "n": 15272,
+            "beat": 36.7
+          },
+          {
+            "q": 2,
+            "score": 30.76,
+            "excess": -0.461,
+            "n": 15261,
+            "beat": 45.1
+          },
+          {
+            "q": 3,
+            "score": 50.5,
+            "excess": -0.0897,
+            "n": 15305,
+            "beat": 50.7
+          },
+          {
+            "q": 4,
+            "score": 69.46,
+            "excess": 0.2138,
+            "n": 15280,
+            "beat": 54.7
+          },
+          {
+            "q": 5,
+            "score": 89.76,
+            "excess": 0.4455,
+            "n": 15193,
+            "beat": 60.8
+          }
+        ],
+        "oos_ic": 0.1319,
+        "oos_qs": 1.4976,
+        "oos_hr": 57.9,
+        "deg_ic": 0.3473,
+        "deg_sp": 0.2476,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 17.46,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 25.7,
+            "dev": 20.68,
+            "n": 7677
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 38.2,
+            "dev": 23.23,
+            "n": 7595
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 43.3,
+            "dev": 18.28,
+            "n": 7670
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 47.0,
+            "dev": 12.04,
+            "n": 7591
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 50.4,
+            "dev": 5.41,
+            "n": 7627
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 51.6,
+            "dev": 3.38,
+            "n": 7678
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.5,
+            "dev": 11.53,
+            "n": 7654
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.0,
+            "dev": 19.01,
+            "n": 7626
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 57.2,
+            "dev": 27.78,
+            "n": 7588
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 61.8,
+            "dev": 33.23,
+            "n": 7605
+          }
+        ],
+        "ts_pass": false,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 967,
+            "ic": -0.0012,
+            "qs": 0.2543,
+            "ds": 0.7803,
+            "fail": true,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 35039,
+            "ic": 0.2275,
+            "qs": 1.9686,
+            "ds": 2.3538,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 37206,
+            "ic": 0.1994,
+            "qs": 1.4693,
+            "ds": 1.6882,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 3099,
+            "ic": 0.1318,
+            "qs": 1.1276,
+            "ds": 1.4459,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    },
+    "is_div": {
+      "generated": "2026-03-01 19:00:08 UTC",
+      "total_rows": 563443,
+      "homeready": {
+        "target": "excess_div_3y",
+        "n_total": 188461,
+        "n_target": 76316,
+        "pearson": 0.1323,
+        "spearman": 0.2438,
+        "mean_ic": 0.2327,
+        "std_ic": 0.0651,
+        "ir": 3.5762,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.5733,
+        "decile_bot": -2.1247,
+        "decile_spread": 2.698,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.29,
+            "excess": -1.7014,
+            "n": 15270,
+            "beat": 35.3
+          },
+          {
+            "q": 2,
+            "score": 30.8,
+            "excess": -0.8404,
+            "n": 15302,
+            "beat": 43.0
+          },
+          {
+            "q": 3,
+            "score": 50.59,
+            "excess": -0.1747,
+            "n": 15274,
+            "beat": 50.4
+          },
+          {
+            "q": 4,
+            "score": 69.5,
+            "excess": 0.1384,
+            "n": 15273,
+            "beat": 56.4
+          },
+          {
+            "q": 5,
+            "score": 89.77,
+            "excess": 0.5248,
+            "n": 15197,
+            "beat": 64.6
+          }
+        ],
+        "oos_ic": 0.136,
+        "oos_qs": 1.4311,
+        "oos_hr": 58.6,
+        "deg_ic": 0.4157,
+        "deg_sp": 0.4696,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 15.73,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 23.4,
+            "dev": 18.44,
+            "n": 7678
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 35.9,
+            "dev": 20.91,
+            "n": 7592
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 40.7,
+            "dev": 15.7,
+            "n": 7669
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 44.3,
+            "dev": 9.32,
+            "n": 7633
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 48.3,
+            "dev": 3.3,
+            "n": 7608
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 52.4,
+            "dev": 2.57,
+            "n": 7666
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 54.1,
+            "dev": 10.92,
+            "n": 7626
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.4,
+            "dev": 18.56,
+            "n": 7647
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 60.0,
+            "dev": 25.0,
+            "n": 7589
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 62.4,
+            "dev": 32.56,
+            "n": 7608
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 967,
+            "ic": 0.061,
+            "qs": 0.6802,
+            "ds": 1.0841,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 35044,
+            "ic": 0.2614,
+            "qs": 2.6116,
+            "ds": 3.1495,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 37206,
+            "ic": 0.2227,
+            "qs": 1.9355,
+            "ds": 2.4835,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 3099,
+            "ic": 0.179,
+            "qs": 1.7919,
+            "ds": 1.958,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_div_3y",
+        "n_total": 188456,
+        "n_target": 76311,
+        "pearson": 0.0,
+        "spearman": 0.2435,
+        "mean_ic": 0.233,
+        "std_ic": 0.0657,
+        "ir": 3.5453,
+        "hit_rate": 100.0,
+        "n_periods": 26,
+        "decile_top": 0.6332,
+        "decile_bot": -2.0525,
+        "decile_spread": 2.6857,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 10.29,
+            "excess": -1.6744,
+            "n": 15272,
+            "beat": 35.6
+          },
+          {
+            "q": 2,
+            "score": 30.76,
+            "excess": -0.7555,
+            "n": 15261,
+            "beat": 43.3
+          },
+          {
+            "q": 3,
+            "score": 50.5,
+            "excess": -0.3149,
+            "n": 15305,
+            "beat": 49.2
+          },
+          {
+            "q": 4,
+            "score": 69.46,
+            "excess": 0.1463,
+            "n": 15280,
+            "beat": 56.4
+          },
+          {
+            "q": 5,
+            "score": 89.76,
+            "excess": 0.5493,
+            "n": 15193,
+            "beat": 65.1
+          }
+        ],
+        "oos_ic": 0.1319,
+        "oos_qs": 1.4976,
+        "oos_hr": 57.9,
+        "deg_ic": 0.4341,
+        "deg_sp": 0.4424,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 16.04,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 24.9,
+            "dev": 19.95,
+            "n": 7677
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 35.8,
+            "dev": 20.84,
+            "n": 7595
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 41.2,
+            "dev": 16.21,
+            "n": 7670
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 44.7,
+            "dev": 9.69,
+            "n": 7591
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 48.2,
+            "dev": 3.18,
+            "n": 7627
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 50.3,
+            "dev": 4.67,
+            "n": 7678
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.8,
+            "dev": 11.16,
+            "n": 7654
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 56.6,
+            "dev": 18.4,
+            "n": 7626
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 59.6,
+            "dev": 25.43,
+            "n": 7588
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 64.1,
+            "dev": 30.88,
+            "n": 7605
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2020,
+            "n": 967,
+            "ic": 0.0719,
+            "qs": 0.7425,
+            "ds": 1.3569,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2021,
+            "n": 35039,
+            "ic": 0.2638,
+            "qs": 2.666,
+            "ds": 3.1966,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 37206,
+            "ic": 0.2209,
+            "qs": 1.8956,
+            "ds": 2.2662,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 3099,
+            "ic": 0.1691,
+            "qs": 1.5623,
+            "ds": 1.9739,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2025,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          },
+          {
+            "yr": 2026,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    }
+  },
+  "zip": {
+    "generated": "2026-03-01T18:59:15.020838Z",
+    "windows_used": 20,
+    "oos": {
+      "homeready": {
+        "ic": 0.14855046360687107,
+        "qs": 1.2432374190049233,
+        "hr": 0.5837844709297144,
+        "bs_sig": true,
+        "bs_ci": [
+          1.2621082516541324,
+          1.358297520959191
+        ],
+        "bs_n": 121669,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 74245,
+            "test_rows": 97434,
+            "train_ic": 0.16972097957038754,
+            "test_ic": 0.16503015782772543,
+            "train_qs": 1.4792424068960872,
+            "test_qs": 1.3650432720927843,
+            "train_hr": 0.5927671897097447,
+            "test_hr": 0.5936056656060762,
+            "alpha": 0.0331276831844761,
+            "l1": 0.1
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 171679,
+            "test_rows": 24235,
+            "train_ic": 0.16742747071198116,
+            "test_ic": 0.13207076938601675,
+            "train_qs": 1.4515684694917723,
+            "test_qs": 1.1214315659170622,
+            "train_hr": 0.5950779088393767,
+            "test_hr": 0.5739632762533526,
+            "alpha": 0.02129742650329011,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "demand_score",
+            "weight": 0.443,
+            "dir": 1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.345,
+            "dir": 1
+          },
+          {
+            "name": "median_days_on_market",
+            "weight": 0.212,
+            "dir": -1
+          }
+        ],
+        "selection": {
+          "initial": 11,
+          "after_en": 6,
+          "after_stab": 3
+        },
+        "stability": {
+          "hotness_score": {
+            "mean": 0.055861178172365356,
+            "std": 0.055861178172365356,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "demand_score": {
+            "mean": 0.28190421695559276,
+            "std": 0.039299198844682776,
+            "cv": 0.13940621133338144,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.24892864834408984,
+            "std": 0.014806899303946519,
+            "cv": 0.05948250393212755,
+            "flips": 0,
+            "stable": true
+          },
+          "price_reduced_share": {
+            "mean": 0.012198945819872806,
+            "std": 0.012198945819872806,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "median_days_on_market": {
+            "mean": -0.13619081317022144,
+            "std": 0.028187031035069428,
+            "cv": 0.2069671982928773,
+            "flips": 0,
+            "stable": true
+          },
+          "affordability_ratio": {
+            "mean": 0.012533516401391408,
+            "std": 0.012533516401391408,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          }
+        }
+      },
+      "investoredge": {
+        "ic": 0.14259027012440062,
+        "qs": 1.1967185418142678,
+        "hr": 0.5695106561918533,
+        "bs_sig": true,
+        "bs_ci": [
+          1.1131181595709705,
+          1.2176736128462233
+        ],
+        "bs_n": 121672,
+        "windows": [
+          {
+            "w": 1,
+            "train": "2020-01-01 to 2021-12-01",
+            "test": "2022-01-01 to 2022-12-01",
+            "train_rows": 74248,
+            "test_rows": 97437,
+            "train_ic": 0.1436470610821877,
+            "test_ic": 0.13326304397751643,
+            "train_qs": 1.5122806273569247,
+            "test_qs": 1.1787658849489404,
+            "train_hr": 0.5591622331470133,
+            "test_hr": 0.5621696515625801,
+            "alpha": 0.0771858228338807,
+            "l1": 0.1
+          },
+          {
+            "w": 2,
+            "train": "2021-01-01 to 2022-12-01",
+            "test": "2023-01-01 to 2023-12-01",
+            "train_rows": 171685,
+            "test_rows": 24235,
+            "train_ic": 0.1539484057350559,
+            "test_ic": 0.15191749627128484,
+            "train_qs": 1.417311040568483,
+            "test_qs": 1.2146711986795955,
+            "train_hr": 0.5744823368378135,
+            "test_hr": 0.5768516608211265,
+            "alpha": 0.05852816218884569,
+            "l1": 0.1
+          }
+        ],
+        "weights": [
+          {
+            "name": "homeownership_rate",
+            "weight": 0.2722,
+            "dir": 1
+          },
+          {
+            "name": "pending_ratio",
+            "weight": 0.2506,
+            "dir": 1
+          },
+          {
+            "name": "demand_score",
+            "weight": 0.2099,
+            "dir": 1
+          },
+          {
+            "name": "median_days_on_market",
+            "weight": 0.1711,
+            "dir": -1
+          },
+          {
+            "name": "hotness_score",
+            "weight": 0.0962,
+            "dir": 1
+          }
+        ],
+        "selection": {
+          "initial": 15,
+          "after_en": 7,
+          "after_stab": 5
+        },
+        "stability": {
+          "hotness_score": {
+            "mean": 0.09175095818085609,
+            "std": 0.03851340544015748,
+            "cv": 0.4197602532307214,
+            "flips": 0,
+            "stable": true
+          },
+          "demand_score": {
+            "mean": 0.1991745046311505,
+            "std": 0.03593385399912406,
+            "cv": 0.18041392429050923,
+            "flips": 0,
+            "stable": true
+          },
+          "pending_ratio": {
+            "mean": 0.23531644016373499,
+            "std": 0.03862906504593144,
+            "cv": 0.164157952666006,
+            "flips": 0,
+            "stable": true
+          },
+          "price_reduced_share": {
+            "mean": 0.019078440866868225,
+            "std": 0.019078440866868225,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "median_days_on_market": {
+            "mean": -0.15724477608931142,
+            "std": 0.005999665484948888,
+            "cv": 0.03815494310310961,
+            "flips": 0,
+            "stable": true
+          },
+          "median_gross_rent": {
+            "mean": -0.08698545009352991,
+            "std": 0.08698545009352991,
+            "cv": 1.0,
+            "flips": 1,
+            "stable": "False"
+          },
+          "homeownership_rate": {
+            "mean": 0.22900431327685922,
+            "std": 0.04945545887775843,
+            "cv": 0.21595863488373815,
+            "flips": 0,
+            "stable": true
+          }
+        }
+      }
+    },
+    "is_state": {
+      "generated": "2026-03-01 19:00:33 UTC",
+      "total_rows": 770286,
+      "homeready": {
+        "target": "excess_state_3y",
+        "n_total": 371683,
+        "n_target": 196852,
+        "pearson": 0.0851,
+        "spearman": 0.1619,
+        "mean_ic": 0.1449,
+        "std_ic": 0.0533,
+        "ir": 2.7198,
+        "hit_rate": 100.0,
+        "n_periods": 9,
+        "decile_top": 0.3764,
+        "decile_bot": -1.4016,
+        "decile_spread": 1.778,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 11.75,
+            "excess": -1.0494,
+            "n": 39459,
+            "beat": 39.7
+          },
+          {
+            "q": 2,
+            "score": 31.57,
+            "excess": -0.3234,
+            "n": 39324,
+            "beat": 46.7
+          },
+          {
+            "q": 3,
+            "score": 50.97,
+            "excess": -0.1061,
+            "n": 39334,
+            "beat": 50.8
+          },
+          {
+            "q": 4,
+            "score": 70.38,
+            "excess": 0.1608,
+            "n": 39471,
+            "beat": 54.1
+          },
+          {
+            "q": 5,
+            "score": 90.0,
+            "excess": 0.3241,
+            "n": 39264,
+            "beat": 58.5
+          }
+        ],
+        "oos_ic": 0.1486,
+        "oos_qs": 1.2432,
+        "oos_hr": 58.4,
+        "deg_ic": -0.0252,
+        "deg_sp": 0.3008,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 19.3,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 32.7,
+            "dev": 27.69,
+            "n": 19709
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 41.0,
+            "dev": 26.0,
+            "n": 19750
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 44.6,
+            "dev": 19.59,
+            "n": 19781
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 48.2,
+            "dev": 13.2,
+            "n": 19543
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 50.1,
+            "dev": 5.05,
+            "n": 19659
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 51.7,
+            "dev": 3.31,
+            "n": 19675
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.2,
+            "dev": 11.84,
+            "n": 19717
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 54.3,
+            "dev": 20.75,
+            "n": 19754
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 56.0,
+            "dev": 29.01,
+            "n": 19730
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 58.4,
+            "dev": 36.61,
+            "n": 19534
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2021,
+            "n": 75180,
+            "ic": 0.1345,
+            "qs": 1.5017,
+            "ds": 1.9152,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 97437,
+            "ic": 0.1605,
+            "qs": 1.354,
+            "ds": 1.7969,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 24235,
+            "ic": 0.1238,
+            "qs": 1.0504,
+            "ds": 1.2468,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_state_3y",
+        "n_total": 371683,
+        "n_target": 196852,
+        "pearson": 0.0,
+        "spearman": 0.1413,
+        "mean_ic": 0.1253,
+        "std_ic": 0.0486,
+        "ir": 2.5753,
+        "hit_rate": 100.0,
+        "n_periods": 9,
+        "decile_top": 0.2823,
+        "decile_bot": -1.5916,
+        "decile_spread": 1.8739,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 11.39,
+            "excess": -1.0707,
+            "n": 39469,
+            "beat": 40.1
+          },
+          {
+            "q": 2,
+            "score": 31.47,
+            "excess": -0.2324,
+            "n": 39281,
+            "beat": 48.2
+          },
+          {
+            "q": 3,
+            "score": 51.01,
+            "excess": -0.0452,
+            "n": 39373,
+            "beat": 51.2
+          },
+          {
+            "q": 4,
+            "score": 70.55,
+            "excess": 0.1391,
+            "n": 39513,
+            "beat": 53.7
+          },
+          {
+            "q": 5,
+            "score": 90.18,
+            "excess": 0.2154,
+            "n": 39216,
+            "beat": 56.5
+          }
+        ],
+        "oos_ic": 0.1426,
+        "oos_qs": 1.1967,
+        "oos_hr": 57.0,
+        "deg_ic": -0.138,
+        "deg_sp": 0.3614,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 19.96,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 28.6,
+            "dev": 23.58,
+            "n": 19812
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 43.6,
+            "dev": 28.59,
+            "n": 19657
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 47.0,
+            "dev": 22.05,
+            "n": 19776
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 49.2,
+            "dev": 14.25,
+            "n": 19505
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 50.5,
+            "dev": 5.47,
+            "n": 19789
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 52.1,
+            "dev": 2.9,
+            "n": 19584
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.1,
+            "dev": 11.94,
+            "n": 19733
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 53.7,
+            "dev": 21.27,
+            "n": 19780
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 54.8,
+            "dev": 30.23,
+            "n": 19591
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 55.7,
+            "dev": 39.32,
+            "n": 19625
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2021,
+            "n": 75180,
+            "ic": 0.1112,
+            "qs": 1.4625,
+            "ds": 2.1238,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 97437,
+            "ic": 0.1359,
+            "qs": 1.1859,
+            "ds": 1.7531,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 24235,
+            "ic": 0.1388,
+            "qs": 1.1604,
+            "ds": 1.6145,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    },
+    "is_div": {
+      "generated": "2026-03-01 19:00:37 UTC",
+      "total_rows": 770286,
+      "homeready": {
+        "target": "excess_div_3y",
+        "n_total": 371683,
+        "n_target": 196852,
+        "pearson": 0.1022,
+        "spearman": 0.1837,
+        "mean_ic": 0.1674,
+        "std_ic": 0.052,
+        "ir": 3.2203,
+        "hit_rate": 100.0,
+        "n_periods": 9,
+        "decile_top": 0.5589,
+        "decile_bot": -1.5902,
+        "decile_spread": 2.149,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 11.75,
+            "excess": -1.2576,
+            "n": 39459,
+            "beat": 38.9
+          },
+          {
+            "q": 2,
+            "score": 31.57,
+            "excess": -0.4773,
+            "n": 39324,
+            "beat": 45.7
+          },
+          {
+            "q": 3,
+            "score": 50.97,
+            "excess": -0.2152,
+            "n": 39334,
+            "beat": 50.2
+          },
+          {
+            "q": 4,
+            "score": 70.38,
+            "excess": 0.1306,
+            "n": 39471,
+            "beat": 54.4
+          },
+          {
+            "q": 5,
+            "score": 90.0,
+            "excess": 0.4314,
+            "n": 39264,
+            "beat": 60.8
+          }
+        ],
+        "oos_ic": 0.1486,
+        "oos_qs": 1.2432,
+        "oos_hr": 58.4,
+        "deg_ic": 0.1126,
+        "deg_sp": 0.4215,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 18.6,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 32.9,
+            "dev": 27.93,
+            "n": 19709
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 40.0,
+            "dev": 24.95,
+            "n": 19750
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 43.7,
+            "dev": 18.72,
+            "n": 19781
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 47.3,
+            "dev": 12.29,
+            "n": 19543
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 49.3,
+            "dev": 4.31,
+            "n": 19659
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 51.0,
+            "dev": 3.95,
+            "n": 19675
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 53.4,
+            "dev": 11.57,
+            "n": 19717
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 54.8,
+            "dev": 20.18,
+            "n": 19754
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 56.8,
+            "dev": 28.24,
+            "n": 19730
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 61.2,
+            "dev": 33.82,
+            "n": 19534
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2021,
+            "n": 75180,
+            "ic": 0.1659,
+            "qs": 1.9621,
+            "ds": 2.4673,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 97437,
+            "ic": 0.1734,
+            "qs": 1.5673,
+            "ds": 2.0418,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 24235,
+            "ic": 0.1494,
+            "qs": 1.315,
+            "ds": 1.5718,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      },
+      "investoredge": {
+        "target": "excess_total_div_3y",
+        "n_total": 371683,
+        "n_target": 196852,
+        "pearson": 0.0,
+        "spearman": 0.157,
+        "mean_ic": 0.1482,
+        "std_ic": 0.0335,
+        "ir": 4.422,
+        "hit_rate": 100.0,
+        "n_periods": 9,
+        "decile_top": 0.3961,
+        "decile_bot": -1.7869,
+        "decile_spread": 2.183,
+        "quintiles": [
+          {
+            "q": 1,
+            "score": 11.39,
+            "excess": -1.2588,
+            "n": 39469,
+            "beat": 39.6
+          },
+          {
+            "q": 2,
+            "score": 31.47,
+            "excess": -0.3733,
+            "n": 39281,
+            "beat": 47.3
+          },
+          {
+            "q": 3,
+            "score": 51.01,
+            "excess": -0.1356,
+            "n": 39373,
+            "beat": 51.0
+          },
+          {
+            "q": 4,
+            "score": 70.55,
+            "excess": 0.0952,
+            "n": 39513,
+            "beat": 53.7
+          },
+          {
+            "q": 5,
+            "score": 90.18,
+            "excess": 0.2846,
+            "n": 39216,
+            "beat": 58.4
+          }
+        ],
+        "oos_ic": 0.1426,
+        "oos_qs": 1.1967,
+        "oos_hr": 57.0,
+        "deg_ic": 0.0379,
+        "deg_sp": 0.4518,
+        "n_folds": 2,
+        "oos_error": null,
+        "cal_mad": 19.52,
+        "cal_ok": false,
+        "cal_table": [
+          {
+            "d": 1,
+            "pred": 5.0,
+            "actual": 29.8,
+            "dev": 24.78,
+            "n": 19812
+          },
+          {
+            "d": 2,
+            "pred": 15.0,
+            "actual": 43.2,
+            "dev": 28.19,
+            "n": 19657
+          },
+          {
+            "d": 3,
+            "pred": 25.0,
+            "actual": 46.0,
+            "dev": 20.95,
+            "n": 19776
+          },
+          {
+            "d": 4,
+            "pred": 35.0,
+            "actual": 48.1,
+            "dev": 13.12,
+            "n": 19505
+          },
+          {
+            "d": 5,
+            "pred": 45.0,
+            "actual": 50.3,
+            "dev": 5.26,
+            "n": 19789
+          },
+          {
+            "d": 6,
+            "pred": 55.0,
+            "actual": 51.6,
+            "dev": 3.36,
+            "n": 19584
+          },
+          {
+            "d": 7,
+            "pred": 65.0,
+            "actual": 52.6,
+            "dev": 12.39,
+            "n": 19733
+          },
+          {
+            "d": 8,
+            "pred": 75.0,
+            "actual": 54.3,
+            "dev": 20.66,
+            "n": 19780
+          },
+          {
+            "d": 9,
+            "pred": 85.0,
+            "actual": 55.6,
+            "dev": 29.39,
+            "n": 19591
+          },
+          {
+            "d": 10,
+            "pred": 95.0,
+            "actual": 57.9,
+            "dev": 37.14,
+            "n": 19625
+          }
+        ],
+        "ts_pass": true,
+        "ts_years": [
+          {
+            "yr": 2021,
+            "n": 75180,
+            "ic": 0.1477,
+            "qs": 1.8315,
+            "ds": 2.5577,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2022,
+            "n": 97437,
+            "ic": 0.1459,
+            "qs": 1.3602,
+            "ds": 1.9628,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2023,
+            "n": 24235,
+            "ic": 0.16,
+            "qs": 1.4115,
+            "ds": 1.9155,
+            "fail": false,
+            "skip": false
+          },
+          {
+            "yr": 2024,
+            "n": 0,
+            "ic": null,
+            "qs": null,
+            "ds": null,
+            "fail": null,
+            "skip": true
+          }
+        ]
+      }
+    }
+  }
+}
