@@ -410,6 +410,7 @@ export class ScoringService {
     scoreType: ScoreType,
     limit: number = 10,
     periodDate?: string,
+    state?: string,
   ) {
     return queryTopMarkets(
       this.supabase,
@@ -417,6 +418,7 @@ export class ScoringService {
       scoreType,
       limit,
       periodDate,
+      state,
     );
   }
 

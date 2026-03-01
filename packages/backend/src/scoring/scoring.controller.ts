@@ -36,6 +36,7 @@ import { ScoreAccessService } from './scoring.guard';
 import { AdminGuard } from '../common/guards/admin-auth.guard';
 import { GeographyLevel, ScoreType } from './formula-weights';
 import { parseHistoryMonths } from '../common/history.constants';
+import { normalizeStateToCode } from '../common/geo';
 import { SCORE_HISTORY_MONTHS_MAX } from './scoring.types';
 
 @ApiTags('scores')
@@ -162,11 +163,17 @@ export class ScoringController {
     required: false,
     description: 'Score date (YYYY-MM-DD), defaults to latest',
   })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'Two-letter state code (e.g. IL) to filter within',
+  })
   async getTopMarkets(
     @Query('geography') geography: string,
     @Query('score_type') scoreType: string,
     @Query('limit') limitStr?: string,
     @Query('date') date?: string,
+    @Query('state') state?: string,
   ): Promise<
     {
       location_id: string;
@@ -192,11 +199,17 @@ export class ScoringController {
     const validScoreType = this.validateScoreType(scoreType);
     const limit = Math.min(Math.max(parseInt(limitStr || '10', 10), 1), 100);
 
+    // Normalize state to 2-letter code if provided
+    const normalizedState = state
+      ? normalizeStateToCode(state.trim())
+      : undefined;
+
     return this.scoringService.getTopMarkets(
       geoLevel,
       validScoreType,
       limit,
       date,
+      normalizedState,
     );
   }
 

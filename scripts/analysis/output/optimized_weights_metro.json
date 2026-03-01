@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-28T14:21:18.660538Z",
+  "generated_at": "2026-03-01T12:47:29.455761Z",
   "geo_level": "metro",
   "methodology": "walk_forward_elastic_net",
   "walk_forward_windows": [
@@ -96,53 +96,58 @@
     "metrics": [
       {
         "name": "median_days_on_market",
-        "weight": 0.33,
+        "weight": 0.3096,
         "direction": -1
       },
       {
-        "name": "pending_ratio",
-        "weight": 0.1953,
+        "name": "affordability_ratio",
+        "weight": 0.1671,
         "direction": 1
       },
       {
-        "name": "affordability_ratio",
-        "weight": 0.1845,
+        "name": "pending_ratio",
+        "weight": 0.1484,
         "direction": 1
       },
       {
         "name": "supply_score",
-        "weight": 0.1337,
+        "weight": 0.1477,
         "direction": -1
       },
       {
-        "name": "demand_score",
-        "weight": 0.0787,
+        "name": "population_yoy",
+        "weight": 0.0889,
         "direction": 1
       },
       {
-        "name": "population_yoy",
-        "weight": 0.0666,
+        "name": "demand_score",
+        "weight": 0.0845,
         "direction": 1
+      },
+      {
+        "name": "price_reduced_share",
+        "weight": 0.0374,
+        "direction": -1
       },
       {
         "name": "unemployment_rate_yoy",
-        "weight": 0.0112,
+        "weight": 0.0164,
         "direction": -1
       }
     ],
     "version": "v2.0",
     "comparison": {
       "current_v1": {
-        "mean_ic": 0.10386314672055375,
-        "mean_quintile_spread": 0.6969696079717185,
-        "mean_hit_rate": 0.5516044061302682
+        "mean_ic": 0.09622141767494005,
+        "mean_quintile_spread": 0.6940918478260869,
+        "mean_hit_rate": 0.5706521739130435
       },
       "proposed_v2": {
-        "mean_ic": 0.15126974080291944,
-        "mean_quintile_spread": 1.1889517566182994,
-        "mean_hit_rate": 0.6099137931034483,
-        "bootstrap_qs_ci_lower": 1.1110806550754944,
-        "bootstrap_qs_ci_upper": 1.2595562245642673,
+        "mean_ic": 0.15887849803269483,
+        "mean_quintile_spread": 1.4558304347826088,
+        "mean_hit_rate": 0.6114130434782609,
+        "bootstrap_qs_ci_lower": 0.9337605842391307,
+        "bootstrap_qs_ci_upper": 1.8861414062500002,
         "bootstrap_significant": true
       }
     },
@@ -151,97 +156,26 @@
         "window": 1,
         "train_period": "2020-12-01 to 2022-11-01",
         "test_period": "2022-12-01 to 2023-11-01",
-        "train_rows": 19140,
-        "test_rows": 10440,
-        "best_alpha": 0.010471127536666527,
+        "train_rows": 20285,
+        "test_rows": 1844,
+        "best_alpha": 0.01735791957951938,
         "best_l1_ratio": 0.1,
         "raw_coefs": {
-          "demand_score": 0.1836154556677649,
-          "pending_ratio": 0.4165876584879743,
-          "supply_score": -0.30829378372049815,
-          "median_days_on_market": -0.6719328224405493,
-          "population_yoy": 0.18023030836070214,
-          "unemployment_rate_yoy": -0.04402427789118008,
-          "affordability_ratio": 0.3821347619600708
+          "median_days_on_market": -0.5687481253217137,
+          "affordability_ratio": 0.30705128907587587,
+          "pending_ratio": 0.27261125648614176,
+          "supply_score": -0.27136357942060385,
+          "demand_score": 0.15521677933919587,
+          "population_yoy": 0.16329683700941752,
+          "price_reduced_share": -0.06876659526844142,
+          "unemployment_rate_yoy": -0.03008586841576086
         },
-        "train_ic": 0.2890245687463178,
-        "train_quintile_spread": 2.6373792013286073,
-        "train_hit_rate": 0.630355276907001,
-        "test_ic": 0.17074261028577603,
-        "test_quintile_spread": 1.5042538677855433,
-        "test_hit_rate": 0.6139846743295019
-      },
-      {
-        "window": 2,
-        "train_period": "2021-12-01 to 2023-11-01",
-        "test_period": "2023-12-01 to 2024-11-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.009492671014284528,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "demand_score": 0.09906665383413055,
-          "pending_ratio": 0.29565141632129166,
-          "supply_score": -0.17835062692209294,
-          "median_days_on_market": -0.5351675199768674,
-          "population_yoy": 0.05703564981370769,
-          "unemployment_rate_yoy": 0.0,
-          "affordability_ratio": 0.28489375119034943
-        },
-        "train_ic": 0.2126442825278419,
-        "train_quintile_spread": 1.8709740517245044,
-        "train_hit_rate": 0.6094348659003831,
-        "test_ic": 0.13221719775968954,
-        "test_quintile_spread": 0.8529432921102875,
-        "test_hit_rate": 0.60727969348659
-      },
-      {
-        "window": 3,
-        "train_period": "2021-06-01 to 2023-05-01",
-        "test_period": "2023-06-01 to 2024-05-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.01422985166093289,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "demand_score": 0.14422084979787733,
-          "pending_ratio": 0.3612335930651844,
-          "supply_score": -0.24388001488876254,
-          "median_days_on_market": -0.6139662479303158,
-          "population_yoy": 0.10629305922298696,
-          "unemployment_rate_yoy": -0.010189691948940883,
-          "affordability_ratio": 0.3382730449811079
-        },
-        "train_ic": 0.24801306363683612,
-        "train_quintile_spread": 2.2068101776267,
-        "train_hit_rate": 0.6135057471264368,
-        "test_ic": 0.1469415791271246,
-        "test_quintile_spread": 1.1090423090698676,
-        "test_hit_rate": 0.6087164750957854
-      },
-      {
-        "window": 4,
-        "train_period": "2021-03-01 to 2023-02-01",
-        "test_period": "2023-03-01 to 2024-02-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.010069881401361483,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "demand_score": 0.16409707502663562,
-          "pending_ratio": 0.39401641738515214,
-          "supply_score": -0.27397356802629363,
-          "median_days_on_market": -0.6575929695617926,
-          "population_yoy": 0.15672833751474197,
-          "unemployment_rate_yoy": -0.029638956797665473,
-          "affordability_ratio": 0.3810243848881306
-        },
-        "train_ic": 0.2727238019885258,
-        "train_quintile_spread": 2.493725172507957,
-        "train_hit_rate": 0.6230842911877394,
-        "test_ic": 0.15517757603908752,
-        "test_quintile_spread": 1.2895675575074994,
-        "test_hit_rate": 0.6096743295019157
+        "train_ic": 0.24131390544268438,
+        "train_quintile_spread": 2.07981397584422,
+        "train_hit_rate": 0.6137540054227262,
+        "test_ic": 0.15887849803269483,
+        "test_quintile_spread": 1.4558304347826088,
+        "test_hit_rate": 0.6114130434782609
       }
     ],
     "feature_selection": {
@@ -259,157 +193,158 @@
         "inventory_yoy"
       ],
       "after_elastic_net": [
-        "demand_score",
-        "pending_ratio",
-        "price_reduced_share",
-        "supply_score",
         "median_days_on_market",
+        "affordability_ratio",
+        "pending_ratio",
+        "supply_score",
+        "demand_score",
         "population_yoy",
-        "unemployment_rate_yoy",
-        "affordability_ratio"
+        "price_reduced_share",
+        "unemployment_rate_yoy"
       ],
       "after_stability_check": [
-        "demand_score",
+        "median_days_on_market",
+        "affordability_ratio",
         "pending_ratio",
         "supply_score",
-        "median_days_on_market",
+        "demand_score",
         "population_yoy",
-        "unemployment_rate_yoy",
-        "affordability_ratio"
+        "price_reduced_share",
+        "unemployment_rate_yoy"
       ]
     },
     "stability_info": {
-      "demand_score": {
-        "mean_coef": 0.1433104024532337,
-        "std_coef": 0.032619342812996235,
-        "cv": 0.22761322454342323,
+      "median_days_on_market": {
+        "mean_coef": -0.5687481253217137,
+        "std_coef": 0.0,
+        "cv": 0.0,
+        "sign_flips": 0,
+        "has_mixed_signs": false,
+        "stable": true
+      },
+      "affordability_ratio": {
+        "mean_coef": 0.30705128907587587,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "pending_ratio": {
-        "mean_coef": 0.3587555142353487,
-        "std_coef": 0.042398462867782656,
-        "cv": 0.11818205208120834,
+        "mean_coef": 0.27261125648614176,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
-      },
-      "price_reduced_share": {
-        "mean_coef": -0.01894955649873737,
-        "std_coef": 0.020013151781220484,
-        "cv": 1.056127713730608,
-        "sign_flips": 2,
-        "has_mixed_signs": true,
-        "stable": "False"
       },
       "supply_score": {
-        "mean_coef": -0.2495465783368751,
-        "std_coef": 0.05043005913848918,
-        "cv": 0.20208675861069583,
+        "mean_coef": -0.27136357942060385,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
-      "median_days_on_market": {
-        "mean_coef": -0.6234763798422037,
-        "std_coef": 0.0562367003661398,
-        "cv": 0.09019860604883348,
+      "demand_score": {
+        "mean_coef": 0.15521677933919587,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "population_yoy": {
-        "mean_coef": 0.12260707960746375,
-        "std_coef": 0.04861446145420675,
-        "cv": 0.39650615290609476,
+        "mean_coef": 0.16329683700941752,
+        "std_coef": 0.0,
+        "cv": 0.0,
+        "sign_flips": 0,
+        "has_mixed_signs": false,
+        "stable": true
+      },
+      "price_reduced_share": {
+        "mean_coef": -0.06876659526844142,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "unemployment_rate_yoy": {
-        "mean_coef": -0.019282852895417195,
-        "std_coef": 0.016701230890049063,
-        "cv": 0.8661182544216948,
-        "sign_flips": 2,
-        "has_mixed_signs": false,
-        "stable": true
-      },
-      "affordability_ratio": {
-        "mean_coef": 0.34537410408277336,
-        "std_coef": 0.04029430696387036,
-        "cv": 0.1166685819450242,
+        "mean_coef": -0.03008586841576086,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       }
     },
     "bootstrap": {
-      "mean_quintile_spread": 1.1835705242804444,
-      "ci_lower": 1.1110806550754944,
-      "ci_upper": 1.2595562245642673,
+      "mean_quintile_spread": 1.4233761472826088,
+      "ci_lower": 0.9337605842391307,
+      "ci_upper": 1.8861414062500002,
       "ci_level": 0.95,
       "significant": true,
-      "n_samples": 41760,
+      "n_samples": 1844,
       "n_valid_bootstraps": 1000
     }
   },
   "investoredge": {
     "metrics": [
       {
-        "name": "median_days_on_market",
-        "weight": 0.2804,
-        "direction": -1
-      },
-      {
         "name": "affordability_ratio",
-        "weight": 0.1977,
+        "weight": 0.3391,
         "direction": 1
       },
       {
+        "name": "median_days_on_market",
+        "weight": 0.1825,
+        "direction": -1
+      },
+      {
         "name": "pending_ratio",
-        "weight": 0.1695,
+        "weight": 0.1183,
+        "direction": 1
+      },
+      {
+        "name": "supply_score",
+        "weight": 0.1115,
+        "direction": -1
+      },
+      {
+        "name": "demand_score",
+        "weight": 0.1046,
         "direction": 1
       },
       {
         "name": "median_gross_rent",
-        "weight": 0.1279,
+        "weight": 0.0902,
         "direction": -1
       },
       {
-        "name": "supply_score",
-        "weight": 0.0954,
+        "name": "homeownership_rate",
+        "weight": 0.029,
         "direction": -1
       },
       {
         "name": "population_yoy",
-        "weight": 0.058,
+        "weight": 0.0248,
         "direction": 1
-      },
-      {
-        "name": "demand_score",
-        "weight": 0.0409,
-        "direction": 1
-      },
-      {
-        "name": "unemployment_rate_yoy",
-        "weight": 0.0302,
-        "direction": -1
       }
     ],
     "version": "v2.0",
     "comparison": {
       "current_v1": {
-        "mean_ic": 0.06442669481976687,
-        "mean_quintile_spread": 0.3287056313591387,
-        "mean_hit_rate": 0.5211925287356323
+        "mean_ic": -0.014803314657720288,
+        "mean_quintile_spread": -0.8566439177061316,
+        "mean_hit_rate": 0.4483695652173913
       },
       "proposed_v2": {
-        "mean_ic": 0.18503745612922876,
-        "mean_quintile_spread": 1.3357355149415078,
-        "mean_hit_rate": 0.632183908045977,
-        "bootstrap_qs_ci_lower": 1.2388649237517788,
-        "bootstrap_qs_ci_upper": 1.3964259909112007,
+        "mean_ic": 0.23581493457392028,
+        "mean_quintile_spread": 4.601966637793396,
+        "mean_hit_rate": 0.625,
+        "bootstrap_qs_ci_lower": 3.498644362470785,
+        "bootstrap_qs_ci_upper": 5.621904546544211,
         "bootstrap_significant": true
       }
     },
@@ -418,101 +353,26 @@
         "window": 1,
         "train_period": "2020-12-01 to 2022-11-01",
         "test_period": "2022-12-01 to 2023-11-01",
-        "train_rows": 19140,
-        "test_rows": 10440,
-        "best_alpha": 0.009094293361595866,
+        "train_rows": 20285,
+        "test_rows": 1844,
+        "best_alpha": 0.017726210410497524,
         "best_l1_ratio": 0.1,
         "raw_coefs": {
-          "median_days_on_market": -0.7112140188541196,
-          "affordability_ratio": 0.48280815107031166,
-          "pending_ratio": 0.45049001416577855,
-          "median_gross_rent": -0.2564677299427507,
-          "supply_score": -0.2878338406099699,
-          "population_yoy": 0.19497545233746463,
-          "demand_score": 0.14506869371605602,
-          "unemployment_rate_yoy": -0.09221053428261392
+          "affordability_ratio": 1.6923510742128305,
+          "median_days_on_market": -0.9111271078635421,
+          "pending_ratio": 0.5906528843652935,
+          "supply_score": -0.5565764900956963,
+          "demand_score": 0.5222162870421316,
+          "median_gross_rent": -0.44996547576512924,
+          "homeownership_rate": -0.14469912773790977,
+          "population_yoy": 0.12358960949919946
         },
-        "train_ic": 0.3082521186829609,
-        "train_quintile_spread": 2.772895526876017,
-        "train_hit_rate": 0.6455067920585162,
-        "test_ic": 0.21177595802783278,
-        "test_quintile_spread": 1.6893356440617213,
-        "test_hit_rate": 0.6350574712643678
-      },
-      {
-        "window": 2,
-        "train_period": "2021-12-01 to 2023-11-01",
-        "test_period": "2023-12-01 to 2024-11-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.014489353229156435,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "median_days_on_market": -0.5860641406446611,
-          "affordability_ratio": 0.4278258489243226,
-          "pending_ratio": 0.32742867117424523,
-          "median_gross_rent": -0.3458795438082752,
-          "supply_score": -0.14587142033116818,
-          "population_yoy": 0.06447215451128403,
-          "demand_score": 0.032394108526510985,
-          "unemployment_rate_yoy": -0.034511195952727246
-        },
-        "train_ic": 0.2643267543721334,
-        "train_quintile_spread": 2.1514662484570066,
-        "train_hit_rate": 0.646551724137931,
-        "test_ic": 0.14339460299004692,
-        "test_quintile_spread": 0.9167203792817806,
-        "test_hit_rate": 0.6163793103448276
-      },
-      {
-        "window": 3,
-        "train_period": "2021-06-01 to 2023-05-01",
-        "test_period": "2023-06-01 to 2024-05-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.010733467391303415,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "median_days_on_market": -0.6662752638634052,
-          "affordability_ratio": 0.4708701153365036,
-          "pending_ratio": 0.4015350294972222,
-          "median_gross_rent": -0.32064621648501823,
-          "supply_score": -0.22153137455347008,
-          "population_yoy": 0.12075610860949973,
-          "demand_score": 0.09296184936762293,
-          "unemployment_rate_yoy": -0.07123660156768766
-        },
-        "train_ic": 0.28229140286095655,
-        "train_quintile_spread": 2.410003979222547,
-        "train_hit_rate": 0.6417624521072797,
-        "test_ic": 0.18461166676647697,
-        "test_quintile_spread": 1.2645381412380514,
-        "test_hit_rate": 0.6364942528735632
-      },
-      {
-        "window": 4,
-        "train_period": "2021-03-01 to 2023-02-01",
-        "test_period": "2023-03-01 to 2024-02-01",
-        "train_rows": 20880,
-        "test_rows": 10440,
-        "best_alpha": 0.008745595227069055,
-        "best_l1_ratio": 0.1,
-        "raw_coefs": {
-          "median_days_on_market": -0.7032800311261016,
-          "affordability_ratio": 0.4986542600655407,
-          "pending_ratio": 0.4322655713633542,
-          "median_gross_rent": -0.29331307787210276,
-          "supply_score": -0.25253797541456124,
-          "population_yoy": 0.17188384008760327,
-          "demand_score": 0.11856759530676392,
-          "unemployment_rate_yoy": -0.08932181750966826
-        },
-        "train_ic": 0.297703373975923,
-        "train_quintile_spread": 2.661356711995928,
-        "train_hit_rate": 0.6429597701149425,
-        "test_ic": 0.20036759673255833,
-        "test_quintile_spread": 1.472347895184478,
-        "test_hit_rate": 0.6408045977011494
+        "train_ic": 0.3188967126976292,
+        "train_quintile_spread": 5.76955941396637,
+        "train_hit_rate": 0.676854818831649,
+        "test_ic": 0.23581493457392028,
+        "test_quintile_spread": 4.601966637793396,
+        "test_hit_rate": 0.625
       }
     ],
     "feature_selection": {
@@ -534,130 +394,130 @@
         "zori_yoy"
       ],
       "after_elastic_net": [
-        "median_days_on_market",
         "affordability_ratio",
+        "median_days_on_market",
         "pending_ratio",
-        "median_gross_rent",
         "supply_score",
-        "population_yoy",
         "demand_score",
-        "unemployment_rate_yoy"
+        "median_gross_rent",
+        "homeownership_rate",
+        "population_yoy"
       ],
       "after_stability_check": [
-        "median_days_on_market",
         "affordability_ratio",
+        "median_days_on_market",
         "pending_ratio",
-        "median_gross_rent",
         "supply_score",
-        "population_yoy",
         "demand_score",
-        "unemployment_rate_yoy"
+        "median_gross_rent",
+        "homeownership_rate",
+        "population_yoy"
       ]
     },
     "stability_info": {
-      "median_days_on_market": {
-        "mean_coef": -0.6667083636220719,
-        "std_coef": 0.04955279630528058,
-        "cv": 0.07432454579701346,
+      "affordability_ratio": {
+        "mean_coef": 1.6923510742128305,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
-      "affordability_ratio": {
-        "mean_coef": 0.4700395938491696,
-        "std_coef": 0.026289376194124862,
-        "cv": 0.05593013128711201,
+      "median_days_on_market": {
+        "mean_coef": -0.9111271078635421,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "pending_ratio": {
-        "mean_coef": 0.40292982155015,
-        "std_coef": 0.04697054207611004,
-        "cv": 0.11657251353450375,
-        "sign_flips": 0,
-        "has_mixed_signs": false,
-        "stable": true
-      },
-      "median_gross_rent": {
-        "mean_coef": -0.3040766420270367,
-        "std_coef": 0.03318318933668492,
-        "cv": 0.1091277156820696,
+        "mean_coef": 0.5906528843652935,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "supply_score": {
-        "mean_coef": -0.22694365272729236,
-        "std_coef": 0.05235619341331506,
-        "cv": 0.23070128987581362,
-        "sign_flips": 0,
-        "has_mixed_signs": false,
-        "stable": true
-      },
-      "population_yoy": {
-        "mean_coef": 0.1380218888864629,
-        "std_coef": 0.05024442935328112,
-        "cv": 0.36403232674646474,
+        "mean_coef": -0.5565764900956963,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
       "demand_score": {
-        "mean_coef": 0.09724806172923846,
-        "std_coef": 0.04173051107406996,
-        "cv": 0.42911406491840987,
+        "mean_coef": 0.5222162870421316,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       },
-      "unemployment_rate_yoy": {
-        "mean_coef": -0.07182003732817427,
-        "std_coef": 0.022991165246868363,
-        "cv": 0.32012187826932753,
+      "median_gross_rent": {
+        "mean_coef": -0.44996547576512924,
+        "std_coef": 0.0,
+        "cv": 0.0,
+        "sign_flips": 0,
+        "has_mixed_signs": false,
+        "stable": true
+      },
+      "homeownership_rate": {
+        "mean_coef": -0.14469912773790977,
+        "std_coef": 0.0,
+        "cv": 0.0,
+        "sign_flips": 0,
+        "has_mixed_signs": false,
+        "stable": true
+      },
+      "population_yoy": {
+        "mean_coef": 0.12358960949919946,
+        "std_coef": 0.0,
+        "cv": 0.0,
         "sign_flips": 0,
         "has_mixed_signs": false,
         "stable": true
       }
     },
     "bootstrap": {
-      "mean_quintile_spread": 1.317988486453258,
-      "ci_lower": 1.2388649237517788,
-      "ci_upper": 1.3964259909112007,
+      "mean_quintile_spread": 4.557227202347675,
+      "ci_lower": 3.498644362470785,
+      "ci_upper": 5.621904546544211,
       "ci_level": 0.95,
       "significant": true,
-      "n_samples": 41760,
+      "n_samples": 1844,
       "n_valid_bootstraps": 1000
     }
   },
   "summary": {
     "homeready": {
       "current_v1": {
-        "mean_ic": 0.10386314672055375,
-        "mean_quintile_spread": 0.6969696079717185,
-        "mean_hit_rate": 0.5516044061302682
+        "mean_ic": 0.09622141767494005,
+        "mean_quintile_spread": 0.6940918478260869,
+        "mean_hit_rate": 0.5706521739130435
       },
       "proposed_v2": {
-        "mean_ic": 0.15126974080291944,
-        "mean_quintile_spread": 1.1889517566182994,
-        "mean_hit_rate": 0.6099137931034483,
-        "bootstrap_qs_ci_lower": 1.1110806550754944,
-        "bootstrap_qs_ci_upper": 1.2595562245642673,
+        "mean_ic": 0.15887849803269483,
+        "mean_quintile_spread": 1.4558304347826088,
+        "mean_hit_rate": 0.6114130434782609,
+        "bootstrap_qs_ci_lower": 0.9337605842391307,
+        "bootstrap_qs_ci_upper": 1.8861414062500002,
         "bootstrap_significant": true
       }
     },
     "investoredge": {
       "current_v1": {
-        "mean_ic": 0.06442669481976687,
-        "mean_quintile_spread": 0.3287056313591387,
-        "mean_hit_rate": 0.5211925287356323
+        "mean_ic": -0.014803314657720288,
+        "mean_quintile_spread": -0.8566439177061316,
+        "mean_hit_rate": 0.4483695652173913
       },
       "proposed_v2": {
-        "mean_ic": 0.18503745612922876,
-        "mean_quintile_spread": 1.3357355149415078,
-        "mean_hit_rate": 0.632183908045977,
-        "bootstrap_qs_ci_lower": 1.2388649237517788,
-        "bootstrap_qs_ci_upper": 1.3964259909112007,
+        "mean_ic": 0.23581493457392028,
+        "mean_quintile_spread": 4.601966637793396,
+        "mean_hit_rate": 0.625,
+        "bootstrap_qs_ci_lower": 3.498644362470785,
+        "bootstrap_qs_ci_upper": 5.621904546544211,
         "bootstrap_significant": true
       }
     }

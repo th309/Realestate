@@ -5,15 +5,15 @@
  * Supports single, batch, and top-ranked score fetching.
  */
 
-import type { ScoreResponse, BatchScoreResponse } from '../types';
-import { fetchAPI, fetchAPIWithParams } from './base';
+import type { ScoreResponse, BatchScoreResponse } from "../types";
+import { fetchAPI, fetchAPIWithParams } from "./base";
 
 // ============================================================================
 // TOP MARKETS TYPES
 // ============================================================================
 
-export type TopMarketsGeo = 'metro' | 'county' | 'zip';
-export type TopMarketsScoreType = 'homeready' | 'investoredge' | 'markethealth';
+export type TopMarketsGeo = "metro" | "county" | "zip";
+export type TopMarketsScoreType = "homeready" | "investoredge" | "markethealth";
 
 export interface TopMarketEntry {
   location_id: string;
@@ -37,16 +37,23 @@ export async function fetchTopMarkets(
   geography: TopMarketsGeo,
   scoreType: TopMarketsScoreType,
   limit: number = 10,
+  state?: string,
 ): Promise<TopMarketEntry[]> {
   try {
-    const data = await fetchAPIWithParams<TopMarketEntry[]>('/api/scores/top', {
+    const params: Record<string, string> = {
       geography,
       score_type: scoreType,
       limit: String(limit),
-    });
+    };
+    if (state) params.state = state;
+
+    const data = await fetchAPIWithParams<TopMarketEntry[]>(
+      "/api/scores/top",
+      params,
+    );
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Failed to fetch top markets:', error);
+    console.error("Failed to fetch top markets:", error);
     return [];
   }
 }
@@ -60,15 +67,15 @@ export async function fetchTopMarkets(
  */
 export async function fetchScore(
   geographyType: string,
-  geographyId: string
+  geographyId: string,
 ): Promise<ScoreResponse | null> {
   try {
     const response = await fetchAPI<ScoreResponse>(
-      `/api/scores/${geographyType}/${geographyId}`
+      `/api/scores/${geographyType}/${geographyId}`,
     );
     return response;
   } catch (error) {
-    console.error('Failed to fetch score:', error);
+    console.error("Failed to fetch score:", error);
     return null;
   }
 }
@@ -82,15 +89,15 @@ export async function fetchScore(
  */
 export async function fetchBatchScores(
   geographyType: string,
-  ids: string[]
+  ids: string[],
 ): Promise<BatchScoreResponse | null> {
   try {
     const response = await fetchAPI<BatchScoreResponse>(
-      `/api/scores/batch/${geographyType}?ids=${ids.join(',')}`
+      `/api/scores/batch/${geographyType}?ids=${ids.join(",")}`,
     );
     return response;
   } catch (error) {
-    console.error('Failed to fetch batch scores:', error);
+    console.error("Failed to fetch batch scores:", error);
     return null;
   }
 }
@@ -109,21 +116,21 @@ export async function fetchScoreExpanded(
   options?: {
     expanded?: boolean;
     historyMonths?: number;
-  }
+  },
 ): Promise<ScoreResponse | null> {
   try {
     const params = new URLSearchParams();
-    if (options?.expanded) params.append('expanded', 'true');
+    if (options?.expanded) params.append("expanded", "true");
     if (options?.historyMonths && options.historyMonths > 0) {
-      params.append('historyMonths', options.historyMonths.toString());
+      params.append("historyMonths", options.historyMonths.toString());
     }
 
     const queryString = params.toString();
-    const endpoint = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/api/scores/${geographyType}/${encodeURIComponent(geographyId)}${queryString ? `?${queryString}` : ""}`;
 
     return await fetchAPI<ScoreResponse>(endpoint);
   } catch (error) {
-    console.error('Failed to fetch expanded score:', error);
+    console.error("Failed to fetch expanded score:", error);
     return null;
   }
 }

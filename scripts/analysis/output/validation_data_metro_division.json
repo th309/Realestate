@@ -1,10 +1,13 @@
 {
-  "generated_at": "2026-03-01 12:57:04 UTC",
+  "generated_at": "2026-03-01 13:37:54 UTC",
   "geo_level": "metro",
+  "benchmark": "division",
+  "benchmark_label": "Census Division",
   "total_rows": 169990,
   "score_types": [
     {
       "score_type": "homeready",
+      "benchmark": "division",
       "target_column": "excess_div_3y",
       "n_total": 57240,
       "n_with_target": 23859,
@@ -284,6 +287,7 @@
     },
     {
       "score_type": "investoredge",
+      "benchmark": "division",
       "target_column": "excess_total_div_3y",
       "n_total": 57240,
       "n_with_target": 22508,

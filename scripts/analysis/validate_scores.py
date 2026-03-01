@@ -130,14 +130,16 @@ def load_backtest_data(conn_string: str, geo_level: str = "metro") -> pd.DataFra
 
 def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    For each row compute excess return vs the Census-division median for the
-    same score_date.  Falls back to national median when division is unknown.
+    For each row compute excess return vs multiple benchmarks for the same
+    score_date.
 
     Adds columns:
-      - excess_div_1y, excess_div_3y          (appreciation excess vs division)
+      - excess_div_1y, excess_div_3y          (appreciation excess vs Census Division)
+      - excess_state_1y, excess_state_3y      (appreciation excess vs state median)
       - excess_nat_1y, excess_nat_3y          (appreciation excess vs national)
       - total_return_3y                       (outcome_3y + rent CAGR)
       - excess_total_div_3y                   (total return excess vs division)
+      - excess_total_state_3y                 (total return excess vs state)
     """
     df = df.copy()
 
@@ -154,6 +156,21 @@ def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
         )
         df[new_col] = np.nan
         mask = df[horizon_col].notna() & df["division_id"].notna()
+        df.loc[mask, new_col] = df.loc[mask, horizon_col] - medians.reindex(df.index)
+
+    # --- Appreciation excess vs state median ---
+    for horizon_col, new_col in [
+        ("outcome_1y", "excess_state_1y"),
+        ("outcome_3y", "excess_state_3y"),
+    ]:
+        group_key = ["score_type", "score_date", "state_code"]
+        medians = (
+            df.dropna(subset=[horizon_col, "state_code"])
+            .groupby(group_key)[horizon_col]
+            .transform("median")
+        )
+        df[new_col] = np.nan
+        mask = df[horizon_col].notna() & df["state_code"].notna()
         df.loc[mask, new_col] = df.loc[mask, horizon_col] - medians.reindex(df.index)
 
     # --- Appreciation excess vs national median ---
@@ -192,6 +209,19 @@ def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[mask, tr_col] - tr_medians.reindex(df.index)
     )
 
+    # --- Total return excess vs state ---
+    group_key = ["score_type", "score_date", "state_code"]
+    tr_state_medians = (
+        df.dropna(subset=[tr_col, "state_code"])
+        .groupby(group_key)[tr_col]
+        .transform("median")
+    )
+    df["excess_total_state_3y"] = np.nan
+    mask = df[tr_col].notna() & df["state_code"].notna()
+    df.loc[mask, "excess_total_state_3y"] = (
+        df.loc[mask, tr_col] - tr_state_medians.reindex(df.index)
+    )
+
     return df
 
 
@@ -199,19 +229,30 @@ def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
 # Target column selection
 # ---------------------------------------------------------------------------
 
-def target_col_for_score(score_type: str) -> str:
+def target_col_for_score(score_type: str, benchmark: str = "division") -> str:
     """
-    Return the primary excess-return column for a given score type.
+    Return the excess-return column for a given score type and benchmark level.
 
-    HomeReady  -> 3Y appreciation CAGR excess vs division median
-    InvestorEdge -> 3Y total return CAGR excess vs division median
+    benchmark = "division": excess vs Census Division median (9 regions)
+    benchmark = "state":    excess vs state median (within-state ranking)
+
+    HomeReady  -> 3Y appreciation CAGR excess
+    InvestorEdge -> 3Y total return CAGR excess (falls back to appreciation)
     """
-    if score_type == "homeready":
-        return "excess_div_3y"
-    elif score_type == "investoredge":
-        return "excess_total_div_3y"
-    else:
-        raise ValueError(f"Unknown score type: {score_type}")
+    if benchmark == "state":
+        if score_type == "homeready":
+            return "excess_state_3y"
+        elif score_type == "investoredge":
+            return "excess_total_state_3y"
+        else:
+            raise ValueError(f"Unknown score type: {score_type}")
+    else:  # division (default)
+        if score_type == "homeready":
+            return "excess_div_3y"
+        elif score_type == "investoredge":
+            return "excess_total_div_3y"
+        else:
+            raise ValueError(f"Unknown score type: {score_type}")
 
 
 # ---------------------------------------------------------------------------
@@ -591,9 +632,10 @@ def validate_score_type(
     df: pd.DataFrame,
     score_type: str,
     oos_path: Optional[str],
+    benchmark: str = "division",
 ) -> dict:
-    """Run all validation steps for a single score type."""
-    target = target_col_for_score(score_type)
+    """Run all validation steps for a single score type and benchmark."""
+    target = target_col_for_score(score_type, benchmark)
     df_sub = df[df["score_type"] == score_type].copy()
 
     if df_sub.empty:
@@ -601,18 +643,20 @@ def validate_score_type(
 
     # Fall back to appreciation excess if total-return target has <5% coverage
     n_with_target = int(df_sub[target].notna().sum())
-    if n_with_target < len(df_sub) * 0.05 and target != "excess_div_3y":
+    fallback_col = "excess_state_3y" if benchmark == "state" else "excess_div_3y"
+    if n_with_target < len(df_sub) * 0.05 and target != fallback_col:
         logger.warning(
             "%s target '%s' has only %d/%d rows (%.1f%%). "
-            "Falling back to excess_div_3y (appreciation excess).",
+            "Falling back to %s (appreciation excess).",
             score_type, target, n_with_target, len(df_sub),
-            100 * n_with_target / len(df_sub),
+            100 * n_with_target / len(df_sub), fallback_col,
         )
-        target = "excess_div_3y"
+        target = fallback_col
         n_with_target = int(df_sub[target].notna().sum())
 
     logger.info(
-        "Validating %s  (n=%d, target=%s)", score_type, len(df_sub), target
+        "Validating %s [%s benchmark]  (n=%d, target=%s)",
+        score_type, benchmark, len(df_sub), target,
     )
 
     insample = run_insample_metrics(df_sub, target)
@@ -652,6 +696,7 @@ def validate_score_type(
 
     return {
         "score_type": score_type,
+        "benchmark": benchmark,
         "target_column": target,
         "n_total": len(df_sub),
         "n_with_target": int(df_sub[target].notna().sum()),
@@ -689,10 +734,14 @@ def generate_markdown_report(results: dict, output_path: str) -> None:
     def w(text: str = ""):
         lines.append(text)
 
+    benchmark = results.get("benchmark", "division")
+    benchmark_label = results.get("benchmark_label", "Census Division")
+
     w("# PropertyIQ Score Validation Report")
     w()
     w(f"**Generated:** {results['generated_at']}")
     w(f"**Data rows:** {results['total_rows']:,}")
+    w(f"**Benchmark:** Excess returns vs **{benchmark_label}** median")
     w()
 
     for st_result in results["score_types"]:
@@ -980,6 +1029,12 @@ def main() -> None:
         default=None,
         help="Path to optimized_weights.json (Phase 3 OOS output)",
     )
+    parser.add_argument(
+        "--benchmark",
+        choices=["division", "state", "both"],
+        default="both",
+        help="Benchmark level for excess returns (default: both)",
+    )
     args = parser.parse_args()
 
     # Resolve paths
@@ -1018,6 +1073,12 @@ def main() -> None:
     else:
         geo_levels = [args.geo_level]
 
+    # Determine benchmarks to run
+    if args.benchmark == "both":
+        benchmarks = ["division", "state"]
+    else:
+        benchmarks = [args.benchmark]
+
     all_geo_results = []
     for geo_level in geo_levels:
         logger.info("=" * 70)
@@ -1031,52 +1092,67 @@ def main() -> None:
             logger.warning("No data for %s. Skipping.", geo_level)
             continue
 
-        # Compute excess returns (division-relative benchmarks)
-        logger.info("Computing excess returns vs division medians...")
+        # Compute excess returns (all benchmarks)
+        logger.info("Computing excess returns vs division + state medians...")
         df = compute_excess_returns(df_raw)
 
-        # Run validation for each score type
-        score_results: list[dict] = []
-        for stype in score_types:
-            logger.info("=" * 60)
-            logger.info("Running validation for: %s / %s", geo_level, stype)
-            logger.info("=" * 60)
-            # Look for geo-level-specific OOS results
-            geo_oos_path = oos_path
-            if oos_path and geo_level != "metro":
-                geo_specific = str(Path(oos_path).parent / f"optimized_weights_{geo_level}.json")
-                if Path(geo_specific).exists():
-                    geo_oos_path = geo_specific
-            result = validate_score_type(df, stype, geo_oos_path)
-            score_results.append(result)
+        for benchmark in benchmarks:
+            benchmark_label = "Census Division" if benchmark == "division" else "State"
+            logger.info("-" * 60)
+            logger.info("BENCHMARK: %s (%s)", benchmark.upper(), benchmark_label)
+            logger.info("-" * 60)
 
-        # Assemble results for this geo level
-        results = {
-            "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "geo_level": geo_level,
-            "total_rows": len(df_raw),
-            "score_types": score_results,
-        }
+            # Run validation for each score type
+            score_results: list[dict] = []
+            for stype in score_types:
+                logger.info("=" * 60)
+                logger.info(
+                    "Running validation for: %s / %s [%s benchmark]",
+                    geo_level, stype, benchmark,
+                )
+                logger.info("=" * 60)
+                # Look for geo-level-specific OOS results
+                geo_oos_path = oos_path
+                if oos_path and geo_level != "metro":
+                    geo_specific = str(
+                        Path(oos_path).parent / f"optimized_weights_{geo_level}.json"
+                    )
+                    if Path(geo_specific).exists():
+                        geo_oos_path = geo_specific
+                result = validate_score_type(df, stype, geo_oos_path, benchmark=benchmark)
+                score_results.append(result)
 
-        # Write JSON output per geo level
-        json_path = output_dir / f"validation_data_{geo_level}.json"
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2, default=str)
-        logger.info("JSON data written to %s", json_path)
+            # Assemble results for this geo level + benchmark
+            results = {
+                "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "geo_level": geo_level,
+                "benchmark": benchmark,
+                "benchmark_label": benchmark_label,
+                "total_rows": len(df_raw),
+                "score_types": score_results,
+            }
 
-        # Write Markdown report per geo level
-        md_path = output_dir / f"validation_report_{geo_level}.md"
-        generate_markdown_report(results, str(md_path))
+            # Write JSON output per geo level + benchmark
+            suffix = f"_{benchmark}" if len(benchmarks) > 1 else ""
+            json_path = output_dir / f"validation_data_{geo_level}{suffix}.json"
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, indent=2, default=str)
+            logger.info("JSON data written to %s", json_path)
 
-        # Print console summary
-        print_console_summary(results)
-        all_geo_results.append(results)
+            # Write Markdown report per geo level + benchmark
+            md_path = output_dir / f"validation_report_{geo_level}{suffix}.md"
+            generate_markdown_report(results, str(md_path))
 
-    # Save combined results if multiple geo levels
+            # Print console summary
+            print_console_summary(results)
+            all_geo_results.append(results)
+
+    # Save combined results if multiple geo levels / benchmarks
     if len(all_geo_results) > 1:
         combined = {
             "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
             "geo_levels": geo_levels,
+            "benchmarks": benchmarks,
             "results": all_geo_results,
         }
         combined_path = output_dir / "validation_data_all.json"

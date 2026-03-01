@@ -5,12 +5,13 @@
  * Automatically includes Supabase JWT auth headers when available.
  */
 
-import { getAuthHeaders } from './auth-headers';
+import { getAuthHeaders } from "./auth-headers";
 
 /**
  * API base URL - uses environment variable or falls back to localhost for development
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 /**
  * Generic fetch wrapper with error handling
@@ -20,7 +21,7 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
   const authHeaders = await getAuthHeaders();
   try {
     const response = await fetch(url, {
-      credentials: 'include',
+      credentials: "include",
       headers: { ...authHeaders },
     });
     if (!response.ok) {
@@ -29,8 +30,10 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
     return response.json();
   } catch (error) {
     // Provide more context for debugging
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      console.warn(`[fetchAPI] Network error for ${endpoint} - backend may be unreachable`);
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      console.warn(
+        `[fetchAPI] Network error for ${endpoint} - backend may be unreachable`,
+      );
     }
     throw error;
   }
@@ -41,7 +44,7 @@ export async function fetchAPI<T>(endpoint: string): Promise<T> {
  */
 export async function fetchAPIWithParams<T>(
   endpoint: string,
-  params?: Record<string, string | number | undefined>
+  params?: Record<string, string | number | undefined>,
 ): Promise<T> {
   const url = new URL(`${API_URL}${endpoint}`);
 
@@ -55,7 +58,8 @@ export async function fetchAPIWithParams<T>(
 
   const authHeaders = await getAuthHeaders();
   const response = await fetch(url.toString(), {
-    credentials: 'include',
+    credentials: "include",
+    cache: "no-store",
     headers: { ...authHeaders },
   });
   if (!response.ok) {
@@ -79,15 +83,17 @@ export async function fetchWithRetry(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(url, {
-        credentials: 'include',
+        credentials: "include",
         headers: { ...authHeaders },
       });
 
       // Only retry on 5xx server errors
       if (response.status >= 500 && attempt < maxRetries) {
         const delay = 500 * Math.pow(2, attempt); // 500ms, 1000ms
-        console.warn(`[fetchWithRetry] ${response.status} from ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.warn(
+          `[fetchWithRetry] ${response.status} from ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
 
@@ -97,14 +103,19 @@ export async function fetchWithRetry(
 
       if (attempt < maxRetries) {
         const delay = 500 * Math.pow(2, attempt);
-        console.warn(`[fetchWithRetry] Network error for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.warn(
+          `[fetchWithRetry] Network error for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
     }
   }
 
-  throw lastError ?? new Error(`Failed to fetch ${url} after ${maxRetries + 1} attempts`);
+  throw (
+    lastError ??
+    new Error(`Failed to fetch ${url} after ${maxRetries + 1} attempts`)
+  );
 }
 
 /**
@@ -121,7 +132,7 @@ export async function fetchAPIRaw(
   const url = `${API_URL}${endpoint}`;
   const authHeaders = await getAuthHeaders();
   return fetch(url, {
-    credentials: 'include',
+    credentials: "include",
     ...init,
     headers: {
       ...authHeaders,

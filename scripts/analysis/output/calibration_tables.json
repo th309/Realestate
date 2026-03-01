@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-28 16:45:01 UTC",
+  "generated_at": "2026-03-01 12:51:44 UTC",
   "description": "Isotonic calibration lookup tables mapping raw score percentile to calibrated excess-return percentile.",
   "lookup_grid_step": 5,
   "tables": {
@@ -10,79 +10,79 @@
       },
       {
         "raw": 5.0,
-        "calibrated": 35.2
+        "calibrated": 33.0
       },
       {
         "raw": 10.0,
-        "calibrated": 38.3
+        "calibrated": 37.7
       },
       {
         "raw": 15.0,
-        "calibrated": 41.9
+        "calibrated": 40.6
       },
       {
         "raw": 20.0,
-        "calibrated": 44.8
+        "calibrated": 45.7
       },
       {
         "raw": 25.0,
-        "calibrated": 44.8
+        "calibrated": 46.3
       },
       {
         "raw": 30.0,
-        "calibrated": 46.5
+        "calibrated": 46.3
       },
       {
         "raw": 35.0,
-        "calibrated": 47.7
-      },
-      {
-        "raw": 40.0,
-        "calibrated": 48.2
-      },
-      {
-        "raw": 45.0,
         "calibrated": 48.5
       },
       {
+        "raw": 40.0,
+        "calibrated": 49.4
+      },
+      {
+        "raw": 45.0,
+        "calibrated": 49.4
+      },
+      {
         "raw": 50.0,
-        "calibrated": 50.7
+        "calibrated": 50.3
       },
       {
         "raw": 55.0,
-        "calibrated": 51.9
+        "calibrated": 51.6
       },
       {
         "raw": 60.0,
-        "calibrated": 52.2
+        "calibrated": 52.1
       },
       {
         "raw": 65.0,
-        "calibrated": 52.9
+        "calibrated": 53.7
       },
       {
         "raw": 70.0,
-        "calibrated": 53.3
+        "calibrated": 54.8
       },
       {
         "raw": 75.0,
-        "calibrated": 55.4
+        "calibrated": 55.8
       },
       {
         "raw": 80.0,
-        "calibrated": 56.7
+        "calibrated": 57.8
       },
       {
         "raw": 85.0,
-        "calibrated": 59.1
+        "calibrated": 59.7
       },
       {
         "raw": 90.0,
-        "calibrated": 61.5
+        "calibrated": 60.4
       },
       {
         "raw": 95.0,
-        "calibrated": 62.8
+        "calibrated": 60.4
       },
       {
         "raw": 100.0,
@@ -96,79 +96,79 @@
       },
       {
         "raw": 5.0,
-        "calibrated": 36.8
+        "calibrated": 34.6
       },
       {
         "raw": 10.0,
-        "calibrated": 41.0
+        "calibrated": 38.8
       },
       {
         "raw": 15.0,
-        "calibrated": 43.1
+        "calibrated": 41.6
       },
       {
         "raw": 20.0,
-        "calibrated": 45.8
+        "calibrated": 43.8
       },
       {
         "raw": 25.0,
-        "calibrated": 47.1
+        "calibrated": 47.5
       },
       {
         "raw": 30.0,
-        "calibrated": 48.4
+        "calibrated": 50.2
       },
       {
         "raw": 35.0,
-        "calibrated": 48.4
+        "calibrated": 50.7
       },
       {
         "raw": 40.0,
-        "calibrated": 50.5
+        "calibrated": 53.0
       },
       {
         "raw": 45.0,
-        "calibrated": 51.4
+        "calibrated": 53.9
       },
       {
         "raw": 50.0,
-        "calibrated": 51.4
-      },
-      {
-        "raw": 55.0,
-        "calibrated": 51.4
-      },
-      {
-        "raw": 60.0,
-        "calibrated": 51.4
-      },
-      {
-        "raw": 65.0,
-        "calibrated": 51.4
-      },
-      {
-        "raw": 70.0,
-        "calibrated": 51.4
-      },
-      {
-        "raw": 75.0,
-        "calibrated": 54.1
-      },
-      {
-        "raw": 80.0,
         "calibrated": 54.5
       },
       {
+        "raw": 55.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 60.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 65.0,
+        "calibrated": 54.5
+      },
+      {
+        "raw": 70.0,
+        "calibrated": 54.8
+      },
+      {
+        "raw": 75.0,
+        "calibrated": 55.0
+      },
+      {
+        "raw": 80.0,
+        "calibrated": 55.0
+      },
+      {
         "raw": 85.0,
-        "calibrated": 57.1
+        "calibrated": 55.0
       },
       {
         "raw": 90.0,
-        "calibrated": 57.1
+        "calibrated": 55.0
       },
       {
         "raw": 95.0,
-        "calibrated": 57.1
+        "calibrated": 55.0
       },
       {
         "raw": 100.0,
@@ -182,79 +182,79 @@
       },
       {
         "raw": 5.0,
-        "calibrated": 39.4
+        "calibrated": 36.1
       },
       {
         "raw": 10.0,
-        "calibrated": 41.3
+        "calibrated": 37.3
       },
       {
         "raw": 15.0,
-        "calibrated": 44.6
+        "calibrated": 44.0
       },
       {
         "raw": 20.0,
-        "calibrated": 44.8
+        "calibrated": 44.0
       },
       {
         "raw": 25.0,
-        "calibrated": 45.6
+        "calibrated": 44.7
       },
       {
         "raw": 30.0,
-        "calibrated": 46.1
+        "calibrated": 45.1
       },
       {
         "raw": 35.0,
-        "calibrated": 47.6
+        "calibrated": 46.7
       },
       {
         "raw": 40.0,
-        "calibrated": 49.1
+        "calibrated": 49.8
       },
       {
         "raw": 45.0,
-        "calibrated": 49.1
+        "calibrated": 49.9
       },
       {
         "raw": 50.0,
-        "calibrated": 49.6
+        "calibrated": 50.5
       },
       {
         "raw": 55.0,
-        "calibrated": 51.4
+        "calibrated": 52.5
       },
       {
         "raw": 60.0,
-        "calibrated": 51.4
+        "calibrated": 52.5
       },
       {
         "raw": 65.0,
-        "calibrated": 52.3
+        "calibrated": 53.3
       },
       {
         "raw": 70.0,
-        "calibrated": 53.4
+        "calibrated": 54.6
       },
       {
         "raw": 75.0,
-        "calibrated": 54.5
+        "calibrated": 55.2
       },
       {
         "raw": 80.0,
-        "calibrated": 55.7
+        "calibrated": 57.0
       },
       {
         "raw": 85.0,
-        "calibrated": 56.8
+        "calibrated": 58.0
       },
       {
         "raw": 90.0,
-        "calibrated": 58.4
+        "calibrated": 59.8
       },
       {
         "raw": 95.0,
-        "calibrated": 60.1
+        "calibrated": 60.5
       },
       {
         "raw": 100.0,
@@ -268,79 +268,79 @@
       },
       {
         "raw": 5.0,
-        "calibrated": 40.4
+        "calibrated": 37.4
       },
       {
         "raw": 10.0,
-        "calibrated": 41.7
+        "calibrated": 39.1
       },
       {
         "raw": 15.0,
-        "calibrated": 43.6
+        "calibrated": 41.6
       },
       {
         "raw": 20.0,
-        "calibrated": 44.8
+        "calibrated": 43.9
       },
       {
         "raw": 25.0,
-        "calibrated": 45.8
+        "calibrated": 45.2
       },
       {
         "raw": 30.0,
-        "calibrated": 46.5
+        "calibrated": 46.0
       },
       {
         "raw": 35.0,
-        "calibrated": 46.8
+        "calibrated": 47.0
       },
       {
         "raw": 40.0,
-        "calibrated": 48.1
+        "calibrated": 48.2
       },
       {
         "raw": 45.0,
-        "calibrated": 49.1
+        "calibrated": 49.5
       },
       {
         "raw": 50.0,
-        "calibrated": 49.6
+        "calibrated": 50.1
       },
       {
         "raw": 55.0,
-        "calibrated": 50.5
+        "calibrated": 50.4
       },
       {
         "raw": 60.0,
-        "calibrated": 51.0
+        "calibrated": 51.8
       },
       {
         "raw": 65.0,
-        "calibrated": 53.1
+        "calibrated": 54.1
       },
       {
         "raw": 70.0,
-        "calibrated": 53.1
+        "calibrated": 54.1
       },
       {
         "raw": 75.0,
-        "calibrated": 54.5
+        "calibrated": 55.5
       },
       {
         "raw": 80.0,
-        "calibrated": 55.4
+        "calibrated": 56.7
       },
       {
         "raw": 85.0,
-        "calibrated": 56.6
+        "calibrated": 57.8
       },
       {
         "raw": 90.0,
-        "calibrated": 58.5
+        "calibrated": 59.8
       },
       {
         "raw": 95.0,
-        "calibrated": 60.7
+        "calibrated": 61.6
       },
       {
         "raw": 100.0,
@@ -353,37 +353,37 @@
       "score_type": "homeready",
       "geo_level": "metro",
       "target_column": "excess_div_3y",
-      "n_samples": 53930,
-      "mad_before_calibration": 18.7,
-      "mad_after_calibration": 18.78,
-      "mad_improvement": -0.08
+      "n_samples": 23859,
+      "mad_before_calibration": 18.66,
+      "mad_after_calibration": 17.82,
+      "mad_improvement": 0.84
     },
     {
       "score_type": "investoredge",
       "geo_level": "metro",
-      "target_column": "excess_div_3y",
-      "n_samples": 53930,
-      "mad_before_calibration": 20.54,
-      "mad_after_calibration": 19.84,
-      "mad_improvement": 0.71
+      "target_column": "excess_total_div_3y",
+      "n_samples": 22508,
+      "mad_before_calibration": 20.29,
+      "mad_after_calibration": 19.18,
+      "mad_improvement": 1.11
     },
     {
       "score_type": "homeready",
       "geo_level": "county",
       "target_column": "excess_div_3y",
-      "n_samples": 184060,
-      "mad_before_calibration": 20.17,
-      "mad_after_calibration": 20.11,
-      "mad_improvement": 0.06
+      "n_samples": 76316,
+      "mad_before_calibration": 19.08,
+      "mad_after_calibration": 19.14,
+      "mad_improvement": -0.06
     },
     {
       "score_type": "investoredge",
       "geo_level": "county",
       "target_column": "excess_div_3y",
-      "n_samples": 184060,
-      "mad_before_calibration": 20.17,
-      "mad_after_calibration": 20.05,
-      "mad_improvement": 0.13
+      "n_samples": 76311,
+      "mad_before_calibration": 19.22,
+      "mad_after_calibration": 19.1,
+      "mad_improvement": 0.12
     }
   ]
 }

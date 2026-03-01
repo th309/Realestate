@@ -1,7 +1,8 @@
 # PropertyIQ Score Validation Report
 
-**Generated:** 2026-03-01 12:57:04 UTC
+**Generated:** 2026-03-01 13:37:54 UTC
 **Data rows:** 169,990
+**Benchmark:** Excess returns vs **Census Division** median
 
 ---
 ## HOMEREADY Score Validation

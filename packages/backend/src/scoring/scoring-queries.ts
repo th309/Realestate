@@ -222,6 +222,7 @@ export async function getTopMarkets(
   scoreType: ScoreType,
   limit: number = 10,
   periodDate?: string,
+  state?: string,
 ): Promise<
   Array<{
     location_id: string;
@@ -234,6 +235,74 @@ export async function getTopMarkets(
     periodDate || (await getLatestScoreDate(supabase, geography));
   if (!targetDate) return [];
 
+  // State-filtered path: look up matching location_ids via crosswalk, then query scores
+  if (state) {
+    const crosswalkCol =
+      geography === 'metro'
+        ? 'cbsa_code'
+        : geography === 'county'
+          ? 'county_fips'
+          : 'zip_code';
+
+    const { data: crosswalkRows, error: cwError } = await supabase
+      .from('geography_crosswalk')
+      .select(crosswalkCol)
+      .eq('state_abbrev', state.toUpperCase());
+
+    if (cwError || !crosswalkRows?.length) return [];
+
+    const locationIds = [
+      ...new Set(
+        crosswalkRows.map((r: any) => r[crosswalkCol]).filter(Boolean),
+      ),
+    ];
+
+    // Fallback: crosswalk has no mapping for this geo level in this state
+    // (e.g. CT has county_fips/zip but no cbsa_code). Search scores by name.
+    if (locationIds.length === 0) {
+      const { data: fallbackData } = await supabase
+        .from('propertyiq_scores')
+        .select('location_id, location_name, score, grade')
+        .eq('geography', geography)
+        .eq('score_type', scoreType)
+        .eq('score_date', targetDate)
+        .ilike('location_name', `%, ${state.toUpperCase()}%`)
+        .order('score', { ascending: false })
+        .limit(limit);
+
+      return fallbackData ?? [];
+    }
+
+    // Batch the .in() filter to stay within PostgREST URL limits
+    const BATCH_SIZE = 500;
+    type TopRow = {
+      location_id: string;
+      location_name: string;
+      score: number;
+      grade: string;
+    };
+    const allResults: TopRow[] = [];
+
+    for (let i = 0; i < locationIds.length; i += BATCH_SIZE) {
+      const batch = locationIds.slice(i, i + BATCH_SIZE);
+      const { data } = await supabase
+        .from('propertyiq_scores')
+        .select('location_id, location_name, score, grade')
+        .eq('geography', geography)
+        .eq('score_type', scoreType)
+        .eq('score_date', targetDate)
+        .in('location_id', batch)
+        .order('score', { ascending: false })
+        .limit(limit);
+
+      if (data) allResults.push(...data);
+    }
+
+    allResults.sort((a, b) => b.score - a.score);
+    return allResults.slice(0, limit);
+  }
+
+  // Unfiltered path — simple national ranking
   const { data } = await supabase
     .from('propertyiq_scores')
     .select('location_id, location_name, score, grade')
