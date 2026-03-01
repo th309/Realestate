@@ -95,16 +95,53 @@ MIN_COEF_WINDOW_FRAC = 0.50
 BOOTSTRAP_ITERATIONS = 1000
 BOOTSTRAP_CI = 0.95
 
-# Walk-forward windows: NON-OVERLAPPING test periods only.
-# Each test period must not share any months with another test period.
-# Add new windows as more 3Y outcome data becomes available.
-WALK_FORWARD_WINDOWS = [
-    # 24-month train / 12-month test, strictly non-overlapping tests
-    (date(2020, 12, 1), date(2022, 11, 1), date(2022, 12, 1), date(2023, 11, 1)),
-    (date(2021, 12, 1), date(2023, 11, 1), date(2023, 12, 1), date(2024, 11, 1)),
-    # Add next window when 3Y outcomes exist through Nov 2025:
-    # (date(2022, 12, 1), date(2024, 11, 1), date(2024, 12, 1), date(2025, 11, 1)),
-]
+# Walk-forward window configuration
+WALK_FORWARD_TRAIN_MONTHS = 24   # Training window length
+WALK_FORWARD_TEST_MONTHS = 12    # Test window length
+WALK_FORWARD_SLIDE_MONTHS = 12   # Slide step (= test length for non-overlapping tests)
+WALK_FORWARD_START = date(2020, 1, 1)  # Earliest backtest score date
+
+
+def generate_walk_forward_windows(
+    start: date = WALK_FORWARD_START,
+    train_months: int = WALK_FORWARD_TRAIN_MONTHS,
+    test_months: int = WALK_FORWARD_TEST_MONTHS,
+    slide_months: int = WALK_FORWARD_SLIDE_MONTHS,
+    max_windows: int = 20,
+) -> list:
+    """
+    Generate walk-forward windows dynamically.
+
+    Produces (train_start, train_end, test_start, test_end) tuples by sliding
+    forward from `start`. Windows are generated regardless of data availability —
+    the training loop skips windows with insufficient rows (< 20 test rows with
+    complete 3Y outcomes).
+
+    Non-overlapping test periods are guaranteed when slide_months == test_months.
+
+    Example with defaults (Jan 2020 start, 24mo train, 12mo test, 12mo slide):
+      Window 1: Train Jan 2020–Dec 2021 | Test Jan 2022–Dec 2022
+      Window 2: Train Jan 2021–Dec 2022 | Test Jan 2023–Dec 2023
+      Window 3: Train Jan 2022–Dec 2023 | Test Jan 2024–Dec 2024
+      ...continues as data accrues
+    """
+    from dateutil.relativedelta import relativedelta
+
+    windows = []
+    cursor = start
+    for _ in range(max_windows):
+        train_start = cursor
+        train_end = cursor + relativedelta(months=train_months) - relativedelta(months=1)
+        test_start = cursor + relativedelta(months=train_months)
+        test_end = test_start + relativedelta(months=test_months) - relativedelta(months=1)
+
+        windows.append((train_start, train_end, test_start, test_end))
+        cursor += relativedelta(months=slide_months)
+
+    return windows
+
+
+WALK_FORWARD_WINDOWS = generate_walk_forward_windows()
 
 
 # ---------------------------------------------------------------------------
