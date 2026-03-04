@@ -54,10 +54,23 @@ export function TourOverlay({
     window.addEventListener("resize", updateSpotlight);
     window.addEventListener("scroll", updateSpotlight, true);
 
+    // Poll for target element if not found (handles post-navigation render delays)
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let attempts = 0;
+    pollInterval = setInterval(() => {
+      attempts++;
+      const el = document.querySelector(targetSelector);
+      if (el || attempts > 20) {
+        if (el) updateSpotlight();
+        if (pollInterval) clearInterval(pollInterval);
+      }
+    }, 200);
+
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", updateSpotlight);
       window.removeEventListener("scroll", updateSpotlight, true);
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, [targetSelector, visible]);
 

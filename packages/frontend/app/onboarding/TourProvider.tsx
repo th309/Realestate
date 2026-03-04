@@ -70,7 +70,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         if (preferredMarket) {
           return `/market/${preferredMarket.geoId}`;
         }
-        return `/markets/${DEFAULT_DEMO_MARKET.slug}`;
+        return `/market/${DEFAULT_DEMO_MARKET.geoId}`;
       }
       return step.route;
     },

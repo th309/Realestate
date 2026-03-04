@@ -9,7 +9,7 @@ export interface TourStep {
 }
 
 export const DEFAULT_DEMO_MARKET = {
-  slug: "dallas-fort-worth-tx",
+  geoId: "19100",
   name: "Dallas-Fort Worth, TX",
 };
 

@@ -22,6 +22,16 @@ export function useTourState() {
 
   const completeMutation = useMutation({
     mutationFn: completeOnboarding,
+    onMutate: () => {
+      // Optimistically update cache to prevent re-triggering
+      queryClient.setQueryData(
+        ONBOARDING_QUERY_KEY,
+        (old: OnboardingState | null | undefined) =>
+          old
+            ? { ...old, onboarding_completed_at: new Date().toISOString() }
+            : old,
+      );
+    },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ONBOARDING_QUERY_KEY }),
   });

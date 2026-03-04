@@ -81,12 +81,27 @@ export function TourTooltip({
     window.addEventListener("resize", calculatePosition);
     window.addEventListener("scroll", calculatePosition, true);
 
+    // Poll for target element if not found (handles post-navigation render delays)
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    if (!isCentered && step.targetSelector) {
+      let attempts = 0;
+      pollInterval = setInterval(() => {
+        attempts++;
+        const el = document.querySelector(step.targetSelector!);
+        if (el || attempts > 20) {
+          if (el) calculatePosition();
+          if (pollInterval) clearInterval(pollInterval);
+        }
+      }, 200);
+    }
+
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", calculatePosition);
       window.removeEventListener("scroll", calculatePosition, true);
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [calculatePosition]);
+  }, [calculatePosition, isCentered, step.targetSelector]);
 
   const maxWidthClass = step.highlight ? "max-w-lg" : "max-w-md";
   const accentBorder = step.highlight ? "border-l-4 border-primary" : "";
