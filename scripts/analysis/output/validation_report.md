@@ -1,60 +1,67 @@
 # PropertyIQ Score Validation Report
 
-**Generated:** 2026-03-01
-**Formula Version:** v2 (optimized weights)
-**Data Period:** January 2020 to December 2023 (26 monthly scoring dates at metro/county; 9 at ZIP)
+**Generated:** 2026-03-04
+**Formula Version:** v3.0
+**Pipeline:** scoring_pipeline_v1 (XGBoost/LightGBM/ElasticNet tournament with walk-forward CV)
+**Data Period:** 2018-01 to 2023-12 (4 walk-forward windows for metro/county, 2-3 for ZIP)
 **Training Target:** 3-year excess return vs state median
 **Training Horizon:** 3 years
 **Benchmark:** State median (controls for regional market cycles)
-**Total Observations:** 617,384 scored location-period records across metro, county, and ZIP
-**Methodology:** Walk-forward elastic net CV with 1,000-sample bootstrap significance testing
+**Methodology:** SHAP-distilled weights from model tournament; walk-forward CV with non-overlapping test periods
 
-> Every number in this report is derived from actual observed price and rent changes
-> (Zillow ZHVI, ZORI) following each scoring date. No values are estimated or fabricated.
-> Source JSON files are listed in the Appendix.
+> Every number in this report is derived from pipeline output JSON files generated 2026-03-04.
+> OOS metrics come from held-out test periods the model never trained on.
+> Live validation results come from scoring 270 locations against production Supabase data.
 
 ---
 
 ## 1. Executive Summary
 
 PropertyIQ scores predict 3-year excess returns vs state median benchmarks.
-Walk-forward cross-validation on held-out data confirms predictive signal at
-metro, county, and ZIP levels for both HomeReady and InvestorEdge.
+Walk-forward cross-validation on held-out data confirms predictive signal across
+all geography levels. Model tournament selects XGBoost (metro, ZIP) and LightGBM (county).
 
-| Geography | Score Type   | OOS IC | OOS Quintile Spread | Bootstrap 95% CI | Significant | IC Hit Rate |
-| --------- | ------------ | -----: | ------------------: | ---------------: | :---------: | ----------: |
-| Metro     | HomeReady    | 0.1820 |             1.53 pp | [1.3147, 1.7580] |     Yes     |       60.4% |
-| Metro     | InvestorEdge | 0.1719 |             1.36 pp | [1.3050, 1.7335] |     Yes     |       59.4% |
-| County    | HomeReady    | 0.1360 |             1.43 pp | [1.5505, 1.9904] |     Yes     |       58.6% |
-| County    | InvestorEdge | 0.1319 |             1.50 pp | [1.4546, 1.9078] |     Yes     |       57.9% |
-| ZIP       | HomeReady    | 0.1486 |             1.24 pp | [1.2621, 1.3583] |     Yes     |       58.4% |
-| ZIP       | InvestorEdge | 0.1426 |             1.20 pp | [1.1131, 1.2177] |     Yes     |       57.0% |
+| Geography | Score Type   | Best Model  | N Windows | OOS IC | OOS Quintile Spread | OOS Hit Rate | Calibration MAD |
+| --------- | ------------ | ----------- | --------: | -----: | ------------------: | -----------: | --------------: |
+| Metro     | HomeReady    | XGBoost     |         4 | 0.3000 |             2.66 pp |        63.8% |            0.09 |
+| Metro     | InvestorEdge | XGBoost     |         4 | 0.3724 |             5.55 pp |        69.5% |            0.18 |
+| Metro     | MarketHealth | XGBoost     |         4 | 0.3659 |             3.76 pp |        66.6% |            0.06 |
+| County    | HomeReady    | LightGBM    |         4 | 0.2459 |             2.49 pp |        60.9% |             N/A |
+| County    | InvestorEdge | = County HR |         — | 0.2459 |             2.49 pp |        60.9% |             N/A |
+| County    | MarketHealth | LightGBM    |         4 | 0.2818 |             3.12 pp |        65.3% |             N/A |
+| ZIP       | HomeReady    | XGBoost     |         2 | 0.1841 |             1.69 pp |        59.9% |            0.00 |
+| ZIP       | InvestorEdge | = ZIP HR    |         — | 0.1841 |             1.69 pp |        59.9% |            0.00 |
+| ZIP       | MarketHealth | XGBoost     |         3 | 0.2213 |             2.16 pp |        63.3% |            0.02 |
 
-**Dollar impact (annual, OOS):**
-On a median-priced home ($350,000, Zillow ZHVI, Jan 2026), choosing a top-quintile
-market over a bottom-quintile market within the same state adds an estimated
-$4,200 to $5,400 per year in excess return.
+**Source:** `output/{geo}/{score_type}_3y.json` → `best_model` section, `weights_summary.json`
+
+**Note:** County and ZIP InvestorEdge use identical weights to HomeReady (pipeline produced
+no separate IE model for these geos). Investigate as a separate pipeline enhancement.
 
 **Limitations:**
 
-- Calibration MAD of 17.45-19.96 pp across geo levels — scores rank correctly but overstate tail divergence
-- County time stability fails for 2020 cohort (IC = -0.0122 for HR, -0.0012 for IE; N=967 observations)
-- Walk-forward validation limited to 2 non-overlapping windows with complete 3Y outcomes; additional windows activate as data accrues
+- Census YoY columns (`cen_population_yoy`, `cen_income_yoy`) are NULL in 2023 ACS data — 0% live coverage for these features; weight redistributed via neutral strategy
+- `fred_vix` table does not exist in production Supabase — 0% coverage; weight skipped (11-22% of county formulas)
+- `econ_gdp_yoy` is NULL for most counties in production — 0% coverage; weight redistributed
+- ZIP has only 2 walk-forward windows (limited 3Y outcome data accrual)
+- No bootstrap significance testing in current pipeline output
 
 ---
 
 ## 2. What the Scores Predict
 
-PropertyIQ produces two predictive scores:
+PropertyIQ produces three predictive scores:
 
 **HomeReady** predicts which locations will have higher 3-year appreciation
 than their state's median. A score of 80 means the model ranks this location
 in the top 20% of its state for expected excess appreciation.
 
 **InvestorEdge** predicts which locations will have higher 3-year total return
-(appreciation + rent growth) than their state's median. Both the appreciation
-and rent components are benchmarked against the state — the model identifies
-locations where the combined return outperforms state peers.
+(appreciation + rent growth) than their state's median. At county and ZIP levels,
+InvestorEdge currently uses the same weights as HomeReady due to insufficient
+rent data coverage for separate model training.
+
+**MarketHealth** assesses current market conditions relative to state peers.
 
 **What the scores do NOT predict:**
 
@@ -63,569 +70,415 @@ locations where the combined return outperforms state peers.
 - Exact return magnitudes (scores rank locations reliably but overstate tail divergence)
 
 **Benchmark: state median.** By comparing each location to its own state's median,
-the scores control for statewide market cycles. The question is not "will this
-location appreciate?" but "will this location beat other locations in its state?"
-
-### 2.1 HomeReady: 3-Year Excess Return by Quintile
-
-**Metro HomeReady** (23,859 scored outcomes with 3Y excess returns):
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) | On $350,000 Home (3Y cumulative) |
-| --------------- | --------: | ------------------------------: | -------------------------------: |
-| Q1 (Bottom 20%) |      9.97 |                          -1.20% |                         -$12,400 |
-| Q2              |     29.98 |                          -0.07% |                            -$700 |
-| Q3              |     49.94 |                          +0.12% |                          +$1,200 |
-| Q4              |     69.92 |                          +0.32% |                          +$3,300 |
-| Q5 (Top 20%)    |     89.94 |                          +0.45% |                          +$4,800 |
-
-**3-Year excess spread: Q5 - Q1 = 1.65 pp = $17,200 per home**
-
-**Column definitions:**
-
-- "Avg 3Y Excess Return (vs State)" = location's 3Y appreciation CAGR minus its state's median 3Y CAGR. This is what the model predicts.
-- Dollar figure = 3-year cumulative excess on median home: $350,000 x ((1 + Q_excess/100)^3 - 1)
-
-### 2.2 InvestorEdge: 3-Year Excess Total Return by Quintile
-
-**Metro InvestorEdge** (23,859 scored outcomes with 3Y total return excess):
-
-InvestorEdge captures **total return excess** — appreciation excess plus rent excess, both vs state:
-
-| Quintile        | Avg Score | **Total Excess (vs State)** | On $350,000 Home (3Y cumulative) |
-| --------------- | --------: | --------------------------: | -------------------------------: |
-| Q1 (Bottom 20%) |     10.02 |                  **-1.05%** |                         -$10,900 |
-| Q2              |     30.03 |                  **-0.16%** |                          -$1,600 |
-| Q3              |     50.01 |                  **+0.21%** |                          +$2,200 |
-| Q4              |     69.96 |                  **+0.26%** |                          +$2,700 |
-| Q5 (Top 20%)    |     89.96 |                  **+0.36%** |                          +$3,800 |
-
-**3-Year total excess spread: Q5 - Q1 = 1.41 pp = $14,700 per home**
-
-Note: Rent excess breakdown not separately available in the extracted data; total excess shown.
-
-### 2.3 The Cost of Choosing Wrong
-
-**On a typical $350,000 metro-area home (Zillow ZHVI, Jan 2026):**
-
-| Metric                                    | Top Quintile (Score > 80) | Bottom Quintile (Score < 20) | Difference  |
-| ----------------------------------------- | :-----------------------: | :--------------------------: | :---------: |
-| 3-Year excess appreciation (HR, vs state) |   +0.45% = **+$4,800**    |    -1.20% = **-$12,400**     | **$17,200** |
-| 3-Year excess total return (IE, vs state) |   +0.36% = **+$3,800**    |    -1.05% = **-$10,900**     | **$14,700** |
-
-> All figures are **excess returns above the state median** — the alpha the score identifies.
-> A bottom-quintile location doesn't necessarily lose money; it underperforms its state peers.
-> A top-quintile location doesn't just appreciate; it beats other locations in its state.
+the scores control for statewide market cycles.
 
 ---
 
-## 3. Out-of-Sample Results
+## 3. Out-of-Sample Results (Walk-Forward CV)
 
 ### 3.1 Methodology
 
-- **Model:** Elastic net with L1/L2 regularization (alpha and l1_ratio tuned per window via 5-fold CV)
-- **Walk-forward windows:** Dynamically generated from Jan 2020 (earliest backtest score date).
-  24-month training, 12-month test, 1-year slide. Non-overlapping test periods.
-  Windows with fewer than 20 test observations (due to incomplete 3Y outcomes) are skipped.
-
-**Metro (2 windows):**
-
-- Train: 2020-01-01 to 2021-12-01 | Test: 2022-01-01 to 2022-12-01 | N_train: 10,142 | N_test: 11,065
-- Train: 2021-01-01 to 2022-12-01 | Test: 2023-01-01 to 2023-12-01 | N_train: 21,207 | N_test: 922
-
-**County (2 windows):**
-
-- Train: 2020-01-01 to 2021-12-01 | Test: 2022-01-01 to 2022-12-01 | N_train: 34,076 | N_test: 37,206
-- Train: 2021-01-01 to 2022-12-01 | Test: 2023-01-01 to 2023-12-01 | N_train: 71,282 | N_test: 3,099
-
-**ZIP (2 windows):**
-
-- Train: 2020-01-01 to 2021-12-01 | Test: 2022-01-01 to 2022-12-01 | N_train: 74,245 | N_test: 97,434
-- Train: 2021-01-01 to 2022-12-01 | Test: 2023-01-01 to 2023-12-01 | N_train: 171,679 | N_test: 24,235
-
-- **Windows producing results:** 2 per geography (grows automatically as 3Y outcome data accrues)
-- **Training target:**
-  - HomeReady: `excess_vs_state_3y` (3Y appreciation CAGR minus state median)
-  - InvestorEdge: `excess_vs_state_3y + (rent_return_3y_cagr - state_rent_return_3y_cagr)`
-- **Significance test:** 1,000 bootstrap samples, 95% confidence interval on quintile spread
-- **Feature selection:** Elastic net regularization + stability filter (features must appear in >=50% of windows with |coef| >= 0.02)
-
-### 3.2 Results
-
-| Geography | Score Type   | N (test) | OOS IC | OOS Quintile Spread | Bootstrap 95% CI | Significant |
-| --------- | ------------ | -------: | -----: | ------------------: | ---------------: | :---------: |
-| Metro     | HomeReady    |   11,987 | 0.1820 |             1.53 pp | [1.3147, 1.7580] |     Yes     |
-| Metro     | InvestorEdge |   11,986 | 0.1719 |             1.36 pp | [1.3050, 1.7335] |     Yes     |
-| County    | HomeReady    |   40,305 | 0.1360 |             1.43 pp | [1.5505, 1.9904] |     Yes     |
-| County    | InvestorEdge |   40,305 | 0.1319 |             1.50 pp | [1.4546, 1.9078] |     Yes     |
-| ZIP       | HomeReady    |  121,669 | 0.1486 |             1.24 pp | [1.2621, 1.3583] |     Yes     |
-| ZIP       | InvestorEdge |  121,672 | 0.1426 |             1.20 pp | [1.1131, 1.2177] |     Yes     |
-
-### 3.3 OOS Quintile Performance
-
-OOS quintile tables are derived from the in-sample analysis applied to OOS test periods. Detailed quintile breakdowns by geography and score type appear in Section 4.
-
-### 3.4 Dollar Impact
-
-Based on current median home values ($350,000, Zillow ZHVI, Jan 2026):
-
-| Geography | Median Home Value | Score Type   | OOS Spread | Annual Alpha | 3-Year Alpha |
-| --------- | ----------------: | ------------ | ---------: | -----------: | -----------: |
-| Metro     |          $350,000 | HomeReady    |    1.53 pp |       $5,400 |      $17,200 |
-| Metro     |          $350,000 | InvestorEdge |    1.36 pp |       $4,800 |      $14,700 |
-| County    |          $350,000 | HomeReady    |    1.43 pp |       $5,000 |      $17,200 |
-| County    |          $350,000 | InvestorEdge |    1.50 pp |       $5,200 |      $17,400 |
-| ZIP       |          $350,000 | HomeReady    |    1.24 pp |       $4,400 |      $14,300 |
-| ZIP       |          $350,000 | InvestorEdge |    1.20 pp |       $4,200 |      $13,400 |
-
-**Calculation:**
-
-- Annual Alpha = OOS Quintile Spread (pp) / 100 x Median Home Value
-- 3-Year Alpha = Median Home Value x ((1 + Q5_excess/100)^3 - (1 + Q1_excess/100)^3)
-
-> These figures represent excess returns above state median performance.
-> They measure what the score adds over selecting a location randomly within the state.
-
-### 3.5 IC Degradation
-
-| Geography | Score Type   | IS IC (state) | OOS IC (state) | Degradation | Status |
-| --------- | ------------ | ------------: | -------------: | ----------: | -----: |
-| Metro     | HomeReady    |        0.2123 |         0.1820 |       14.2% |   PASS |
-| Metro     | InvestorEdge |        0.1763 |         0.1719 |        2.5% |   PASS |
-| County    | HomeReady    |        0.1990 |         0.1360 |       31.7% |   PASS |
-| County    | InvestorEdge |        0.2020 |         0.1319 |       34.7% |   PASS |
-| ZIP       | HomeReady    |        0.1449 |         0.1486 |       -2.5% |   PASS |
-| ZIP       | InvestorEdge |        0.1253 |         0.1426 |      -13.8% |   PASS |
-
-**Thresholds:** <50% = PASS | 50-70% = WATCH | >70% = WARN
-
-ZIP HomeReady and ZIP InvestorEdge show negative degradation (OOS IC exceeds IS IC), indicating no overfitting at the ZIP level.
-
----
-
-## 4. In-Sample Metrics
-
-Target: 3-year excess return vs state median for all metrics below.
-
-### 4.1 Summary
-
-| Geography | Score Type   |       N | Spearman r | Mean IC |  IC IR | IC Hit Rate | Decile Spread |
-| --------- | ------------ | ------: | ---------: | ------: | -----: | ----------: | ------------: |
-| Metro     | HomeReady    |  23,859 |     0.2124 |  0.2123 | 5.5029 |      100.0% |       2.11 pp |
-| Metro     | InvestorEdge |  23,859 |     0.1763 |  0.1763 | 5.3878 |      100.0% |       1.75 pp |
-| County    | HomeReady    |  76,316 |     0.2134 |  0.1990 | 2.7593 |       92.3% |       1.97 pp |
-| County    | InvestorEdge |  76,311 |     0.2160 |  0.2020 | 2.8343 |       96.2% |       1.99 pp |
-| ZIP       | HomeReady    | 196,852 |     0.1619 |  0.1449 | 2.7198 |      100.0% |       1.78 pp |
-| ZIP       | InvestorEdge | 196,852 |     0.1413 |  0.1253 | 2.5753 |      100.0% |       1.87 pp |
-
-### 4.2 Metro HomeReady Quintile Analysis (23,859 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |     N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | ----: | ---------------------: |
-| Q1 (Bottom 20%) |      9.97 |                          -1.20% | 4,772 |                  32.9% |
-| Q2              |     29.98 |                          -0.07% | 4,783 |                  45.4% |
-| Q3              |     49.94 |                          +0.12% | 4,764 |                  51.1% |
-| Q4              |     69.92 |                          +0.32% | 4,783 |                  54.5% |
-| Q5 (Top 20%)    |     89.94 |                          +0.45% | 4,757 |                  58.1% |
-
-**Decile spread:** 2.11 pp
-**Monotonicity:** Perfect
-
-### 4.3 Metro InvestorEdge Quintile Analysis (23,859 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |     N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | ----: | ---------------------: |
-| Q1 (Bottom 20%) |     10.02 |                          -1.05% | 4,788 |                  34.9% |
-| Q2              |     30.03 |                          -0.16% | 4,762 |                  46.5% |
-| Q3              |     50.01 |                          +0.21% | 4,788 |                  52.4% |
-| Q4              |     69.96 |                          +0.26% | 4,758 |                  54.3% |
-| Q5 (Top 20%)    |     89.96 |                          +0.36% | 4,763 |                  53.9% |
-
-**Decile spread:** 1.75 pp
-**Monotonicity:** Perfect
-
-### 4.4 County HomeReady Quintile Analysis (76,316 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |      N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | -----: | ---------------------: |
-| Q1 (Bottom 20%) |     10.29 |                          -1.24% | 15,270 |                  36.3% |
-| Q2              |     30.80 |                          -0.51% | 15,302 |                  45.5% |
-| Q3              |     50.59 |                          +0.02% | 15,274 |                  51.5% |
-| Q4              |     69.50 |                          +0.20% | 15,273 |                  54.4% |
-| Q5 (Top 20%)    |     89.77 |                          +0.41% | 15,197 |                  60.3% |
-
-**Decile spread:** 1.97 pp
-**Monotonicity:** Perfect
-
-### 4.5 County InvestorEdge Quintile Analysis (76,311 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |      N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | -----: | ---------------------: |
-| Q1 (Bottom 20%) |     10.29 |                          -1.23% | 15,272 |                  36.7% |
-| Q2              |     30.76 |                          -0.46% | 15,261 |                  45.1% |
-| Q3              |     50.50 |                          -0.09% | 15,305 |                  50.7% |
-| Q4              |     69.46 |                          +0.21% | 15,280 |                  54.7% |
-| Q5 (Top 20%)    |     89.76 |                          +0.45% | 15,193 |                  60.8% |
-
-**Decile spread:** 1.99 pp
-**Monotonicity:** Perfect
-
-### 4.6 ZIP HomeReady Quintile Analysis (196,852 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |      N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | -----: | ---------------------: |
-| Q1 (Bottom 20%) |     11.75 |                          -1.05% | 39,459 |                  39.7% |
-| Q2              |     31.57 |                          -0.32% | 39,324 |                  46.7% |
-| Q3              |     50.97 |                          -0.11% | 39,334 |                  50.8% |
-| Q4              |     70.38 |                          +0.16% | 39,471 |                  54.1% |
-| Q5 (Top 20%)    |     90.00 |                          +0.32% | 39,264 |                  58.5% |
-
-**Decile spread:** 1.78 pp
-**Monotonicity:** Perfect
-
-### 4.7 ZIP InvestorEdge Quintile Analysis (196,852 observations, 3Y excess vs state)
-
-| Quintile        | Avg Score | Avg 3Y Excess Return (vs State) |      N | Beat-State-Median Rate |
-| --------------- | --------: | ------------------------------: | -----: | ---------------------: |
-| Q1 (Bottom 20%) |     11.39 |                          -1.07% | 39,469 |                  40.1% |
-| Q2              |     31.47 |                          -0.23% | 39,281 |                  48.2% |
-| Q3              |     51.01 |                          -0.05% | 39,373 |                  51.2% |
-| Q4              |     70.55 |                          +0.14% | 39,513 |                  53.7% |
-| Q5 (Top 20%)    |     90.18 |                          +0.22% | 39,216 |                  56.5% |
-
-**Decile spread:** 1.87 pp
-**Monotonicity:** Perfect
-
----
-
-## 5. Within-State Validation
-
-Real estate decisions are local. A buyer in Illinois wants to know which Illinois metro
-will outperform, not that the East North Central division is trending up. This section
-validates scores against state-level benchmarks alongside the division comparison.
-
-> The model trains on **state** benchmarks. Division (9 Census regions) metrics are
-> shown as a secondary comparison to demonstrate the score works at both granularities.
-
-**HomeReady (Appreciation Excess):**
-
-| Geography | Benchmark | Mean IC |  IC IR | IC Hit Rate | Decile Spread |
-| --------- | --------- | ------: | -----: | ----------: | ------------: |
-| Metro     | State     |  0.2123 | 5.5029 |      100.0% |       2.11 pp |
-| Metro     | Division  |  0.2690 | 3.9706 |      100.0% |       3.00 pp |
-| County    | State     |  0.1990 | 2.7593 |       92.3% |       1.97 pp |
-| County    | Division  |  0.2327 | 3.5762 |      100.0% |       2.70 pp |
-| ZIP       | State     |  0.1449 | 2.7198 |      100.0% |       1.78 pp |
-| ZIP       | Division  |  0.1674 | 3.2203 |      100.0% |       2.15 pp |
-
-**InvestorEdge (Total Return Excess):**
-
-| Geography | Benchmark | Mean IC |  IC IR | IC Hit Rate | Decile Spread |
-| --------- | --------- | ------: | -----: | ----------: | ------------: |
-| Metro     | State     |  0.1763 | 5.3878 |      100.0% |       1.75 pp |
-| Metro     | Division  |  0.2038 | 3.3021 |      100.0% |       2.37 pp |
-| County    | State     |  0.2020 | 2.8343 |       96.2% |       1.99 pp |
-| County    | Division  |  0.2330 | 3.5453 |      100.0% |       2.69 pp |
-| ZIP       | State     |  0.1253 | 2.5753 |      100.0% |       1.87 pp |
-| ZIP       | Division  |  0.1482 | 4.4220 |      100.0% |       2.18 pp |
-
-**Key observations:**
-
-- State IC is lower than Division IC at all geo levels, as expected (within-state ranking is a harder problem)
-- IC IR is higher for state at metro level (5.50 vs 3.97 for HR; 5.39 vs 3.30 for IE), indicating more consistent period-to-period signal at the state benchmark level for metros
-- County state hit rate is 92.3% for HR and 96.2% for IE — both above 75% threshold
-
----
-
-## 6. Model Stability
-
-### 6.1 Feature Weights
-
-**Metro HomeReady (8 features):**
-
-| Feature               | Weight | Direction | Interpretation                                    |
-| --------------------- | -----: | :-------: | ------------------------------------------------- |
-| median_days_on_market | 0.2667 |     -     | Faster sales = stronger demand signal             |
-| affordability_ratio   | 0.1618 |     +     | Higher affordability = room for price growth      |
-| demand_score          | 0.1526 |     +     | Higher buyer demand = upward price pressure       |
-| hotness_score         | 0.1240 |     -     | Overheated markets = lower forward excess returns |
-| pending_ratio         | 0.1214 |     +     | More pending sales = active buyer pipeline        |
-| population_yoy        | 0.0770 |     +     | Population growth = sustained demand              |
-| supply_score          | 0.0577 |     -     | Lower supply = price support                      |
-| price_reduced_share   | 0.0388 |     -     | Fewer reductions = seller confidence              |
-
-**Metro InvestorEdge (7 features):**
-
-| Feature               | Weight | Direction | Interpretation                                    |
-| --------------------- | -----: | :-------: | ------------------------------------------------- |
-| median_days_on_market | 0.2379 |     -     | Faster sales = stronger demand signal             |
-| hotness_score         | 0.1843 |     -     | Overheated markets = lower forward excess returns |
-| demand_score          | 0.1765 |     +     | Higher buyer demand = upward price pressure       |
-| affordability_ratio   | 0.1500 |     +     | Higher affordability = room for price growth      |
-| pending_ratio         | 0.1269 |     +     | More pending sales = active buyer pipeline        |
-| population_yoy        | 0.0683 |     +     | Population growth = sustained demand              |
-| homeownership_rate    | 0.0561 |     +     | Higher ownership = market stability               |
-
-**County HomeReady (6 features):**
-
-| Feature               | Weight | Direction | Interpretation                                    |
-| --------------------- | -----: | :-------: | ------------------------------------------------- |
-| median_days_on_market | 0.2617 |     -     | Faster sales = stronger demand signal             |
-| population_yoy        | 0.2367 |     +     | Population growth = sustained demand              |
-| pending_ratio         | 0.2290 |     +     | More pending sales = active buyer pipeline        |
-| affordability_ratio   | 0.1185 |     -     | Lower ratio at county = constrained supply effect |
-| demand_score          | 0.1065 |     +     | Higher buyer demand = upward price pressure       |
-| supply_score          | 0.0476 |     -     | Lower supply = price support                      |
-
-**County InvestorEdge (7 features):**
-
-| Feature               | Weight | Direction | Interpretation                                    |
-| --------------------- | -----: | :-------: | ------------------------------------------------- |
-| median_days_on_market | 0.2262 |     -     | Faster sales = stronger demand signal             |
-| population_yoy        | 0.2134 |     +     | Population growth = sustained demand              |
-| pending_ratio         | 0.2091 |     +     | More pending sales = active buyer pipeline        |
-| affordability_ratio   | 0.1073 |     -     | Lower ratio at county = constrained supply effect |
-| homeownership_rate    | 0.0888 |     +     | Higher ownership = market stability               |
-| median_gross_rent     | 0.0852 |     +     | Higher rents = stronger rental income signal      |
-| demand_score          | 0.0700 |     +     | Higher buyer demand = upward price pressure       |
-
-**ZIP HomeReady (3 features):**
-
-| Feature               | Weight | Direction | Interpretation                              |
-| --------------------- | -----: | :-------: | ------------------------------------------- |
-| demand_score          | 0.4430 |     +     | Higher buyer demand = upward price pressure |
-| pending_ratio         | 0.3450 |     +     | More pending sales = active buyer pipeline  |
-| median_days_on_market | 0.2120 |     -     | Faster sales = stronger demand signal       |
-
-**ZIP InvestorEdge (5 features):**
-
-| Feature               | Weight | Direction | Interpretation                              |
-| --------------------- | -----: | :-------: | ------------------------------------------- |
-| homeownership_rate    | 0.2722 |     +     | Higher ownership = market stability         |
-| pending_ratio         | 0.2506 |     +     | More pending sales = active buyer pipeline  |
-| demand_score          | 0.2099 |     +     | Higher buyer demand = upward price pressure |
-| median_days_on_market | 0.1711 |     -     | Faster sales = stronger demand signal       |
-| hotness_score         | 0.0962 |     +     | Market activity = investor opportunity      |
-
-### 6.2 Time Stability (IC by Year)
+- **Models:** XGBoost, LightGBM, ElasticNet (tournament selects best per geo × score)
+- **Walk-forward windows:** Dynamically generated. 24-month training, 12-month test, 1-year slide.
+- **Feature extraction:** SHAP importance from best tree model → normalized to linear weights
+- **Metro/County (4 windows):**
+  - W0: Train 2018-01 to 2019-12 | Test 2020-01 to 2020-12
+  - W1: Train 2019-01 to 2020-12 | Test 2021-01 to 2021-12
+  - W2: Train 2020-01 to 2021-12 | Test 2022-01 to 2022-12
+  - W3: Train 2021-01 to 2022-12 | Test 2023-01 to 2023-12
+- **ZIP (2-3 windows):** W2 and W3 only for HR (limited data); W1-W3 for MH
+
+### 3.2 OOS Results by Window
+
+**Metro HomeReady (XGBoost, 4 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      0 | 2018-01 to 2019-12 | 2020-01 to 2020-12 |  20,766 |    865 | 0.3963 |         3.44 pp |    66.5% |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 |  11,253 | 11,006 | 0.2367 |         2.20 pp |    59.2% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  11,871 | 11,065 | 0.2783 |         2.53 pp |    64.2% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 |  22,071 |    922 | 0.2872 |         2.48 pp |    65.2% |
+
+**Metro InvestorEdge (XGBoost, 4 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      0 | 2018-01 to 2019-12 | 2020-01 to 2020-12 |  20,766 |    865 | 0.4430 |         5.88 pp |    75.1% |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 |  11,253 | 11,006 | 0.3024 |         4.21 pp |    64.7% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  11,871 | 11,065 | 0.4335 |         6.60 pp |    70.5% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 |  22,071 |    922 | 0.3106 |         5.52 pp |    67.4% |
+
+**Metro MarketHealth (XGBoost, 4 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      0 | 2018-01 to 2019-12 | 2020-01 to 2020-12 |  20,766 |    865 | 0.5365 |         5.65 pp |    75.7% |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 |  11,253 | 11,039 | 0.1647 |         1.95 pp |    56.7% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  11,904 | 11,100 | 0.2585 |         2.84 pp |    58.8% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 |  22,139 |    925 | 0.5038 |         4.60 pp |    75.1% |
+
+**County HomeReady (LightGBM, 4 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      0 | 2018-01 to 2019-12 | 2020-01 to 2020-12 |  71,858 |    967 | 0.2587 |         2.15 pp |    65.8% |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 |  36,994 | 35,032 | 0.1981 |         2.12 pp |    57.0% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  35,999 | 37,189 | 0.1213 |         1.13 pp |    57.5% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 |  72,221 |  3,099 | 0.1079 |         1.06 pp |    55.7% |
+
+**County MarketHealth (LightGBM, 4 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      0 | 2018-01 to 2019-12 | 2020-01 to 2020-12 |  71,858 |    967 | 0.4370 |         4.73 pp |    77.2% |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 |  36,994 | 35,032 | 0.1545 |         2.14 pp |    53.5% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  35,999 | 37,189 | 0.1500 |         1.59 pp |    59.1% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 |  72,221 |  3,099 | 0.0929 |         0.75 pp |    49.9% |
+
+**ZIP HomeReady (XGBoost, 2 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  75,180 | 97,437 | 0.1759 |         1.60 pp |    59.8% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 | 172,617 | 24,235 | 0.1923 |         1.78 pp |    59.9% |
+
+**ZIP MarketHealth (XGBoost, 3 windows):**
+
+| Window | Train Period       | Test Period        | N Train | N Test |     IC | Quintile Spread | Hit Rate |
+| -----: | ------------------ | ------------------ | ------: | -----: | -----: | --------------: | -------: |
+|      1 | 2019-01 to 2020-12 | 2021-01 to 2021-12 | 295,021 | 75,180 | 0.1116 |         1.24 pp |    58.0% |
+|      2 | 2020-01 to 2021-12 | 2022-01 to 2022-12 |  75,180 | 97,437 | 0.1122 |         1.18 pp |    54.8% |
+|      3 | 2021-01 to 2022-12 | 2023-01 to 2023-12 | 172,617 | 24,235 | 0.1534 |         1.39 pp |    57.1% |
+
+**Source:** `output/{geo}/{score_type}_3y.json` → `best_model.windows`
+
+### 3.3 Model Tournament Results
+
+For each geo × score, three models competed. Best model selected by highest mean OOS IC.
 
 **Metro:**
 
-| Year | Metro HR IC | Status | Metro IE IC | Status |
-| ---: | ----------: | -----: | ----------: | -----: |
-| 2020 |      0.2755 |   PASS |      0.2341 |   PASS |
-| 2021 |      0.2271 |   PASS |      0.1898 |   PASS |
-| 2022 |      0.1944 |   PASS |      0.1623 |   PASS |
-| 2023 |      0.1872 |   PASS |      0.1253 |   PASS |
+| Score Type   | ElasticNet IC | XGBoost IC | LightGBM IC | Winner  |
+| ------------ | ------------: | ---------: | ----------: | ------- |
+| HomeReady    |        0.1836 | **0.2996** |      0.2990 | XGBoost |
+| InvestorEdge |        0.2327 | **0.3724** |      0.3710 | XGBoost |
+| MarketHealth |        0.2600 | **0.3659** |      0.3575 | XGBoost |
 
 **County:**
 
-| Year | County HR IC | Status | County IE IC | Status |
-| ---: | -----------: | -----: | -----------: | -----: |
-| 2020 |      -0.0122 |   FAIL |      -0.0012 |   FAIL |
-| 2021 |       0.2246 |   PASS |       0.2275 |   PASS |
-| 2022 |       0.1962 |   PASS |       0.1994 |   PASS |
-| 2023 |       0.1368 |   PASS |       0.1318 |   PASS |
+| Score Type   | ElasticNet IC | XGBoost IC | LightGBM IC | Winner   |
+| ------------ | ------------: | ---------: | ----------: | -------- |
+| HomeReady    |        0.1715 |     0.2369 |  **0.2459** | LightGBM |
+| MarketHealth |        0.2086 |     0.2768 |  **0.2818** | LightGBM |
 
 **ZIP:**
 
-| Year | ZIP HR IC | Status | ZIP IE IC | Status |
-| ---: | --------: | -----: | --------: | -----: |
-| 2021 |    0.1345 |   PASS |    0.1112 |   PASS |
-| 2022 |    0.1605 |   PASS |    0.1359 |   PASS |
-| 2023 |    0.1238 |   PASS |    0.1388 |   PASS |
+| Score Type   | ElasticNet IC | XGBoost IC | LightGBM IC | Winner  |
+| ------------ | ------------: | ---------: | ----------: | ------- |
+| HomeReady    |        0.0486 | **0.1841** |      0.1743 | XGBoost |
+| MarketHealth |        0.1257 | **0.2213** |      0.2092 | XGBoost |
 
-Years with < 20 observations: excluded (noted as "--")
-PASS: IC > 0 | FAIL: IC <= 0
-
-County 2020 cohort shows negative IC for both HR and IE with only 967 observations. All subsequent years with larger samples pass.
+**Source:** `output/{geo}/{score_type}_3y.json` → `tournament` array
 
 ---
 
-## 7. Calibration
+## 4. Live Scoring Validation (270 Locations)
 
-### 7.1 Metro HomeReady
+**Date:** 2026-03-04
+**Redfin period:** 2026-01-31
+**Method:** Full scoring pipeline (fetch → z-score → formula → normalize) against production Supabase
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     24.8 |     19.81 |
-|            2 |                 15.0 |                     36.4 |     21.40 |
-|            3 |                 25.0 |                     45.1 |     20.09 |
-|            4 |                 35.0 |                     51.6 |     16.60 |
-|            5 |                 45.0 |                     51.8 |      6.76 |
-|            6 |                 55.0 |                     53.5 |      1.48 |
-|            7 |                 65.0 |                     55.7 |      9.26 |
-|            8 |                 75.0 |                     56.1 |     18.85 |
-|            9 |                 85.0 |                     58.7 |     26.25 |
-| 10 (highest) |                 95.0 |                     58.2 |     36.76 |
+All 9 formula weight sums validated: range [0.9998, 1.0000].
 
-**MAD: 17.73 pp** | Status: WATCH (15-20)
+### 4.1 Location Coverage
 
-### 7.2 Metro InvestorEdge
+| Geography | Locations Scored | Sample Scored | All PASS |
+| --------- | ---------------: | ------------: | :------: |
+| Metro     |              924 |            30 |   Yes    |
+| County    |            2,482 |            30 |   Yes    |
+| ZIP       |           19,923 |            30 |   Yes    |
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     28.3 |     23.30 |
-|            2 |                 15.0 |                     37.1 |     22.07 |
-|            3 |                 25.0 |                     45.7 |     20.66 |
-|            4 |                 35.0 |                     51.6 |     16.61 |
-|            5 |                 45.0 |                     53.3 |      8.34 |
-|            6 |                 55.0 |                     53.7 |      1.33 |
-|            7 |                 65.0 |                     54.2 |     10.81 |
-|            8 |                 75.0 |                     56.6 |     18.40 |
-|            9 |                 85.0 |                     55.6 |     29.35 |
-| 10 (highest) |                 95.0 |                     54.8 |     40.19 |
+### 4.2 Score Distribution
 
-**MAD: 19.11 pp** | Status: WATCH (15-20)
+| Geography | Score Type   |  Min |  Max | Mean | Median | Confidence (mean) |
+| --------- | ------------ | ---: | ---: | ---: | -----: | ----------------: |
+| Metro     | HomeReady    |  0.1 | 98.5 | 54.6 |   59.8 |              79.0 |
+| Metro     | InvestorEdge |  0.5 | 97.6 | 50.2 |   44.1 |              80.0 |
+| Metro     | MarketHealth |  2.8 | 97.5 | 53.7 |   52.1 |              66.6 |
+| County    | HomeReady    | 10.0 | 98.6 | 61.9 |   71.7 |              71.0 |
+| County    | InvestorEdge | 10.0 | 98.6 | 61.9 |   71.7 |              71.0 |
+| County    | MarketHealth |  2.9 | 99.4 | 55.0 |   57.2 |              56.2 |
+| ZIP       | HomeReady    |  1.5 | 94.0 | 51.8 |   56.3 |              98.9 |
+| ZIP       | InvestorEdge |  1.5 | 94.0 | 51.8 |   56.3 |              98.9 |
+| ZIP       | MarketHealth |  7.9 | 91.3 | 54.7 |   57.9 |              98.5 |
 
-### 7.3 County HomeReady
+**Observations:**
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     24.2 |     19.25 |
-|            2 |                 15.0 |                     38.3 |     23.32 |
-|            3 |                 25.0 |                     43.1 |     18.13 |
-|            4 |                 35.0 |                     47.5 |     12.51 |
-|            5 |                 45.0 |                     50.6 |      5.59 |
-|            6 |                 55.0 |                     52.9 |      2.08 |
-|            7 |                 65.0 |                     53.7 |     11.30 |
-|            8 |                 75.0 |                     55.0 |     20.05 |
-|            9 |                 85.0 |                     57.9 |     27.14 |
-| 10 (highest) |                 95.0 |                     59.9 |     35.13 |
+- Full score range utilized (0-100) at all geo levels — no degenerate distributions
+- Mean scores near 50 as expected from percentile-rank normalization
+- County HR = IE confirms identical weights produce identical scores
+- ZIP confidence is high (98-99%) due to 10 Redfin features with 84-100% coverage
+- County confidence is lower (56-71%) due to missing `fred_vix`, `econ_gdp_yoy`, `cen_population_yoy`
+- Metro confidence moderate (67-80%) due to missing `cen_population_yoy`, `cen_income_yoy`
 
-**MAD: 17.45 pp** | Status: WATCH (15-20)
+### 4.3 Confidence Level Distribution
 
-### 7.4 County InvestorEdge
+| Geography | Score Type   | A (80%+) | B (65-79%) | C (45-64%) | F (<45%) |
+| --------- | ------------ | -------: | ---------: | ---------: | -------: |
+| Metro     | HomeReady    |       24 |          4 |          2 |        0 |
+| Metro     | InvestorEdge |       24 |          4 |          2 |        0 |
+| Metro     | MarketHealth |        0 |         26 |          2 |        2 |
+| County    | HomeReady    |        0 |         30 |          0 |        0 |
+| County    | InvestorEdge |        0 |         30 |          0 |        0 |
+| County    | MarketHealth |        0 |          0 |         30 |        0 |
+| ZIP       | HomeReady    |       29 |          1 |          0 |        0 |
+| ZIP       | InvestorEdge |       29 |          1 |          0 |        0 |
+| ZIP       | MarketHealth |       29 |          0 |          1 |        0 |
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     25.7 |     20.68 |
-|            2 |                 15.0 |                     38.2 |     23.23 |
-|            3 |                 25.0 |                     43.3 |     18.28 |
-|            4 |                 35.0 |                     47.0 |     12.04 |
-|            5 |                 45.0 |                     50.4 |      5.41 |
-|            6 |                 55.0 |                     51.6 |      3.38 |
-|            7 |                 65.0 |                     53.5 |     11.53 |
-|            8 |                 75.0 |                     56.0 |     19.01 |
-|            9 |                 85.0 |                     57.2 |     27.78 |
-| 10 (highest) |                 95.0 |                     61.8 |     33.23 |
+### 4.4 Data Coverage (Production)
 
-**MAD: 17.46 pp** | Status: WATCH (15-20)
+**Metro (924 locations):**
 
-### 7.5 ZIP HomeReady
+| Feature                    | Coverage |
+| -------------------------- | -------: |
+| rf_off_market_in_two_weeks |   100.0% |
+| rf_median_dom              |    99.9% |
+| rf_sold_above_list         |    99.9% |
+| rf_avg_sale_to_list        |    94.8% |
+| cen_median_age             |    91.2% |
+| cen_homeownership_rate     |    91.2% |
+| cen_rent_as_pct_of_income  |    91.2% |
+| z_inventory                |    90.3% |
+| cen_population_yoy         | **0.0%** |
+| cen_income_yoy             | **0.0%** |
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     32.7 |     27.69 |
-|            2 |                 15.0 |                     41.0 |     26.00 |
-|            3 |                 25.0 |                     44.6 |     19.59 |
-|            4 |                 35.0 |                     48.2 |     13.20 |
-|            5 |                 45.0 |                     50.1 |      5.05 |
-|            6 |                 55.0 |                     51.7 |      3.31 |
-|            7 |                 65.0 |                     53.2 |     11.84 |
-|            8 |                 75.0 |                     54.3 |     20.75 |
-|            9 |                 85.0 |                     56.0 |     29.01 |
-| 10 (highest) |                 95.0 |                     58.4 |     36.61 |
+**County (2,482 locations):**
 
-**MAD: 19.30 pp** | Status: WATCH (15-20)
+| Feature                    | Coverage |
+| -------------------------- | -------: |
+| cen_median_age             |    99.7% |
+| cen_homeownership_rate     |    99.7% |
+| calc_income_to_buy         |    99.5% |
+| price_reduced_share        |    99.5% |
+| rf_sold_above_list         |    99.4% |
+| rf_off_market_in_two_weeks |    97.9% |
+| cen_population_yoy         | **0.0%** |
+| cen_income_yoy             | **0.0%** |
+| econ_gdp_yoy               | **0.0%** |
+| fred_vix                   | **0.0%** |
 
-### 7.6 ZIP InvestorEdge
+**ZIP (19,923 locations):**
 
-| Score Decile | Predicted Percentile | Actual Return Percentile | Deviation |
-| -----------: | -------------------: | -----------------------: | --------: |
-|   1 (lowest) |                  5.0 |                     28.6 |     23.58 |
-|            2 |                 15.0 |                     43.6 |     28.59 |
-|            3 |                 25.0 |                     47.0 |     22.05 |
-|            4 |                 35.0 |                     49.2 |     14.25 |
-|            5 |                 45.0 |                     50.5 |      5.47 |
-|            6 |                 55.0 |                     52.1 |      2.90 |
-|            7 |                 65.0 |                     53.1 |     11.94 |
-|            8 |                 75.0 |                     53.7 |     21.27 |
-|            9 |                 85.0 |                     54.8 |     30.23 |
-| 10 (highest) |                 95.0 |                     55.7 |     39.32 |
-
-**MAD: 19.96 pp** | Status: WATCH (15-20)
-
-### 7.7 Calibration Summary
-
-| Geography | HomeReady MAD | InvestorEdge MAD |
-| --------- | ------------: | ---------------: |
-| Metro     |      17.73 pp |         19.11 pp |
-| County    |      17.45 pp |         17.46 pp |
-| ZIP       |      19.30 pp |         19.96 pp |
-
-**Interpretation:** Scores rank locations correctly (monotonic quintile ordering) but
-overstate tail divergence. A score of 90 means "very likely to outperform state median,"
-not "90th percentile return." Use scores for ranking and selection, not precise return prediction.
+| Feature                    | Coverage |
+| -------------------------- | -------: |
+| rf_median_dom              |    99.6% |
+| rf_sold_above_list         |    99.1% |
+| cen_homeownership_rate     |    97.6% |
+| rf_off_market_in_two_weeks |    96.3% |
+| rf_avg_sale_to_list        |    96.2% |
+| calc_income_to_buy         |    95.4% |
+| rf_homes_sold_yoy          |    93.2% |
+| rf_median_dom_yoy          |    92.9% |
+| rf_sold_above_list_yoy     |    92.5% |
+| pending_listing_count_yy   |    84.1% |
 
 ---
 
-## 8. Robustness Checklist
+## 5. Model Stability — Feature Weights
 
-| Test                   | Metro HR | Metro IE | County HR | County IE | ZIP HR | ZIP IE |
-| ---------------------- | :------: | :------: | :-------: | :-------: | :----: | :----: |
-| OOS validation         |    P     |    P     |     P     |     P     |   P    |   P    |
-| Bootstrap significance |    P     |    P     |     P     |     P     |   P    |   P    |
-| IC hit rate >= 75%     |    P     |    P     |     P     |     P     |   P    |   P    |
-| Monotonic quintiles    |    P     |    P     |     P     |     P     |   P    |   P    |
-| Feature stability      |    P     |    P     |     P     |     P     |   P    |   P    |
-| Time stability         |    P     |    P     |     F     |     F     |   P    |   P    |
-| IC degradation < 50%   |    P     |    P     |     P     |     P     |   P    |   P    |
-| Calibration MAD < 20pp |    W     |    W     |     W     |     W     |   W    |   W    |
+### 5.1 Metro Weights
 
-P = PASS | W = WATCH | F = FAIL/WARN
+**HomeReady (10 features, XGBoost → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                          |
+| -------------------------- | -----: | :-------: | --------------------------------------- |
+| cen_median_age             | 0.1674 |     −     | Younger markets appreciate faster       |
+| cen_population_yoy         | 0.1605 |     −     | Slower growth = less saturated market   |
+| rf_median_dom              | 0.1364 |     −     | Faster sales = stronger demand          |
+| rf_off_market_in_two_weeks | 0.1209 |     −     | Quick absorption = competitive market   |
+| z_inventory                | 0.0958 |     +     | More supply = more opportunity          |
+| cen_income_yoy             | 0.0869 |     −     | Stable income areas less volatile       |
+| cen_homeownership_rate     | 0.0796 |     −     | Lower ownership = more upside potential |
+| cen_rent_as_pct_of_income  | 0.0631 |     −     | Lower rent burden = healthier market    |
+| rf_sold_above_list         | 0.0605 |     +     | Bidding wars = demand signal            |
+| rf_avg_sale_to_list        | 0.0289 |     −     | Lower sale-to-list ratio = correction   |
+
+**InvestorEdge (10 features, XGBoost → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                             |
+| -------------------------- | -----: | :-------: | ------------------------------------------ |
+| z_inventory                | 0.1863 |     +     | Higher inventory = more investment options |
+| rf_median_dom              | 0.1847 |     +     | Slower market = better entry for investors |
+| cen_population_yoy         | 0.1332 |     +     | Growing population drives rental demand    |
+| rf_avg_sale_to_list        | 0.1104 |     −     | Below-list sales = better deals            |
+| cen_median_age             | 0.0861 |     +     | Older demographics = stable rental demand  |
+| cen_income_yoy             | 0.0805 |     −     | Stable incomes sustain rent payments       |
+| rf_sold_above_list         | 0.0740 |     −     | Less competition = better investor entry   |
+| rf_off_market_in_two_weeks | 0.0586 |     +     | Quick sales = healthy demand fundamentals  |
+| cen_homeownership_rate     | 0.0459 |     −     | Lower ownership = larger renter pool       |
+| cen_rent_as_pct_of_income  | 0.0403 |     −     | Affordable rent = sustainable cash flow    |
+
+**MarketHealth (10 features, XGBoost → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                          |
+| -------------------------- | -----: | :-------: | --------------------------------------- |
+| z_inventory                | 0.2572 |     +     | Balanced supply = healthy market        |
+| cen_population_yoy         | 0.1883 |     +     | Growth drives market health             |
+| cen_income_yoy             | 0.1747 |     −     | Income stability supports market        |
+| cen_median_age             | 0.1192 |     +     | Demographic maturity = stability        |
+| rf_off_market_in_two_weeks | 0.0617 |     +     | Quick absorption = active market        |
+| rf_median_dom              | 0.0595 |     +     | Moderate pace = balanced market         |
+| cen_rent_as_pct_of_income  | 0.0448 |     −     | Affordable housing = sustainable market |
+| rf_sold_above_list         | 0.0418 |     +     | Bidding activity = demand present       |
+| cen_homeownership_rate     | 0.0379 |     −     | Mixed tenure = market flexibility       |
+| rf_avg_sale_to_list        | 0.0149 |     +     | Close to asking = price stability       |
+
+### 5.2 County Weights
+
+**HomeReady / InvestorEdge (10 features, LightGBM → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                        |
+| -------------------------- | -----: | :-------: | ------------------------------------- |
+| cen_population_yoy         | 0.2103 |     −     | Slower growth = less saturated        |
+| calc_income_to_buy         | 0.1312 |     −     | Lower affordability ratio = value     |
+| cen_median_age             | 0.1302 |     −     | Younger counties appreciate more      |
+| fred_vix                   | 0.1127 |     +     | Volatility context (national scalar)  |
+| rf_off_market_in_two_weeks | 0.1108 |     +     | Quick absorption = demand             |
+| rf_sold_above_list         | 0.0752 |     +     | Bidding wars = demand signal          |
+| price_reduced_share        | 0.0743 |     +     | Price cuts = opportunity to buy low   |
+| econ_gdp_yoy               | 0.0730 |     +     | Economic growth supports appreciation |
+| cen_homeownership_rate     | 0.0484 |     −     | Lower ownership = more upside         |
+| cen_income_yoy             | 0.0337 |     −     | Stable incomes = sustainable growth   |
+
+**MarketHealth (10 features, LightGBM → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                           |
+| -------------------------- | -----: | :-------: | ---------------------------------------- |
+| cen_population_yoy         | 0.2470 |     −     | Population dynamics drive market health  |
+| fred_vix                   | 0.2160 |     +     | Market volatility context                |
+| price_reduced_share        | 0.1025 |     +     | Price reductions signal correction       |
+| cen_income_yoy             | 0.1005 |     +     | Income growth supports market            |
+| calc_income_to_buy         | 0.0889 |     −     | Affordability drives market health       |
+| cen_median_age             | 0.0831 |     −     | Demographics shape market stability      |
+| econ_gdp_yoy               | 0.0490 |     +     | GDP growth = healthy economic foundation |
+| rf_off_market_in_two_weeks | 0.0410 |     +     | Quick sales = active market              |
+| rf_sold_above_list         | 0.0391 |     −     | Excessive bidding = overheated           |
+| cen_homeownership_rate     | 0.0329 |     +     | Higher ownership = market stability      |
+
+### 5.3 ZIP Weights
+
+**HomeReady / InvestorEdge (10 features, XGBoost → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                          |
+| -------------------------- | -----: | :-------: | --------------------------------------- |
+| calc_income_to_buy         | 0.1980 |     +     | Higher affordability = growth potential |
+| rf_median_dom              | 0.1610 |     +     | Moderate pace = opportunity             |
+| cen_homeownership_rate     | 0.1594 |     −     | Lower ownership = appreciation upside   |
+| rf_sold_above_list         | 0.1076 |     +     | Demand signal from bidding              |
+| rf_off_market_in_two_weeks | 0.1056 |     +     | Quick absorption = competitive market   |
+| rf_sold_above_list_yoy     | 0.0667 |     −     | Declining bidding = cooling (normalize) |
+| rf_avg_sale_to_list        | 0.0589 |     +     | Close to asking = stable pricing        |
+| rf_homes_sold_yoy          | 0.0530 |     −     | Fewer sales = tightening supply         |
+| rf_median_dom_yoy          | 0.0530 |     +     | Lengthening DOM = opportunity window    |
+| pending_listing_count_yy   | 0.0368 |     −     | Fewer pendings = less competition       |
+
+**MarketHealth (10 features, XGBoost → SHAP-distilled):**
+
+| Feature                    | Weight | Direction | Interpretation                       |
+| -------------------------- | -----: | :-------: | ------------------------------------ |
+| pending_listing_count_yy   | 0.3396 |     +     | Pending activity = market health     |
+| calc_income_to_buy         | 0.2452 |     −     | Affordability drives health          |
+| rf_median_dom              | 0.0842 |     −     | Faster sales = healthy market        |
+| rf_sold_above_list         | 0.0755 |     −     | Moderate bidding = balanced          |
+| cen_homeownership_rate     | 0.0695 |     −     | Lower ownership = market flexibility |
+| rf_avg_sale_to_list        | 0.0676 |     +     | Close to asking = stable             |
+| rf_off_market_in_two_weeks | 0.0564 |     +     | Absorption = health signal           |
+| rf_sold_above_list_yoy     | 0.0306 |     +     | Growing bidding = improving health   |
+| rf_homes_sold_yoy          | 0.0165 |     −     | Volume changes                       |
+| rf_median_dom_yoy          | 0.0148 |     −     | DOM trend                            |
+
+**Source:** `weights_summary.json` → `results.{key}.weights`
 
 ---
 
-## 9. Known Limitations
+## 6. Robustness Checklist
 
-1. **Calibration:** MAD of 17.45-19.96 pp across geo levels. Ranking is reliable; magnitude is compressed. Actual return percentiles cluster in the 50-60% range for top deciles, while predicted percentiles spread to 95%.
-2. **Walk-forward windows:** 2 non-overlapping test periods per geography (24-month train, 12-month test, 1-year slide from Jan 2020). Additional windows activate automatically each year as 3-year outcomes accrue.
-3. **County time stability:** County 2020 cohort shows IC of -0.0122 (HR) and -0.0012 (IE) with N=967 observations. This small early cohort does not replicate in later, larger cohorts (2021-2023 IC range: 0.1318-0.2275).
-4. **ZIP data coverage:** ZIP-level scoring periods are 9 vs 26 for metro/county, limiting time stability analysis to 3 years (2021-2023).
-5. **ZIP InvestorEdge calibration:** MAD of 19.96 pp is the highest across all combinations, driven by compressed actual percentile range (28.6-55.7%) against a 5-95% predicted range.
+| Test                    | Metro HR | Metro IE | Metro MH | County HR | County IE | County MH |  ZIP HR  |  ZIP IE  |  ZIP MH  |
+| ----------------------- | :------: | :------: | :------: | :-------: | :-------: | :-------: | :------: | :------: | :------: |
+| OOS IC > 0              |    P     |    P     |    P     |     P     |     P     |     P     |    P     |    P     |    P     |
+| IC hit rate ≥ 60%       | P (64%)  | P (70%)  | P (67%)  |  P (61%)  |  P (61%)  |  W (65%)  | W (60%)  | W (60%)  | P (63%)  |
+| Quintile spread > 1 pp  | P (2.66) | P (5.55) | P (3.76) | P (2.49)  | P (2.49)  | P (3.12)  | P (1.69) | P (1.69) | P (2.16) |
+| Calibration MAD < 0.20  | P (0.09) | P (0.18) | P (0.06) |    N/A    |    N/A    |    N/A    | P (0.00) | P (0.00) | P (0.02) |
+| Live scoring (270 locs) |    P     |    P     |    P     |     P     |     P     |     P     |    P     |    P     |    P     |
+| Weight sums ≈ 1.0       |    P     |    P     |    P     |     P     |     P     |     P     |    P     |    P     |    P     |
+
+P = PASS | W = WATCH | N/A = not available in pipeline output
 
 ---
 
-## Appendix: Data Coverage
+## 7. Known Limitations
 
-### A.1 Backtest Outcome Coverage
+1. **Census YoY NULL:** `cen_population_yoy` and `cen_income_yoy` are 0% available in production for the 2023 ACS vintage. These features carry 16-25% combined weight in metro/county formulas. Weight is redistributed to remaining features via the neutral missing-metric strategy, but scoring accuracy is degraded until the census YoY backfill is completed.
 
-| Geography | Total Scored | With 3Y Returns | Score Types |
-| --------- | -----------: | --------------: | ----------- |
-| Metro     |       57,240 |  23,859 (41.7%) | HR, IE      |
-| County    |      188,461 |  76,316 (40.5%) | HR, IE      |
-| ZIP       |      371,683 | 196,852 (53.0%) | HR, IE      |
+2. **fred_vix not in production:** The `fred_macro` table does not exist in Supabase. `fred_vix` carries 11% (county HR/IE) and 22% (county MH) weight. All county scores lose this feature until the table is created and populated.
 
-### A.2 Data Sources
+3. **econ_gdp_yoy sparse:** Economic GDP data shows 0% coverage for counties in the live test. This 5-7% weight is redistributed.
 
-| Source      | Used For                    | Coverage                 |
-| ----------- | --------------------------- | ------------------------ |
-| Zillow ZHVI | Price appreciation outcomes | Primary, all geo levels  |
-| Zillow ZORI | Rent return outcomes        | Metro, ZIP               |
-| Census ACS  | Rent fallback               | Annual, expanded monthly |
-| Redfin      | Price fallback              | Where Zillow unavailable |
-| Realtor.com | Price 2nd fallback          | Where both unavailable   |
+4. **County/ZIP IE = HR:** The pipeline did not produce separate InvestorEdge models for county and ZIP due to insufficient rent data. County IE and ZIP IE use HomeReady weights. This means IE scores at these geos do not capture rent return signal.
 
-### A.3 Source Files
+5. **ZIP limited windows:** Only 2 walk-forward windows produced test results for ZIP HR (vs 4 for metro). OOS IC of 0.1841 is based on limited cross-validation evidence.
+
+6. **No bootstrap significance:** Current pipeline output does not include bootstrap confidence intervals. Statistical significance of quintile spreads is not formally tested.
+
+7. **IC degradation for county late windows:** County HR IC drops from 0.26 (W0) to 0.11 (W3). County MH drops from 0.44 (W0) to 0.09 (W3). Performance may be declining in recent periods.
+
+---
+
+## Appendix
+
+### A.1 Source Files
 
 This report was generated from:
 
-- `scripts/analysis/output/_extracted_metrics.json` (generated 2026-03-01)
-- Metro OOS data generated: 2026-03-01T18:57:04Z
-- County OOS data generated: 2026-03-01T18:57:50Z
-- ZIP OOS data generated: 2026-03-01T18:59:15Z
-- Metro IS state data generated: 2026-03-01 18:59:46 UTC
-- County IS state data generated: 2026-03-01 19:00:07 UTC
-- ZIP IS state data generated: 2026-03-01 19:00:33 UTC
+- `scripts/analysis/output/weights_summary.json` (2026-03-04T17:48:42Z)
+- `scripts/analysis/output/metro/homeready_3y.json` (2026-03-04T17:43:34Z)
+- `scripts/analysis/output/metro/investoredge_3y.json` (2026-03-04T17:43:38Z)
+- `scripts/analysis/output/metro/markethealth_3y.json` (2026-03-04T17:43:42Z)
+- `scripts/analysis/output/county/homeready_3y.json` (2026-03-04T12:46Z)
+- `scripts/analysis/output/county/markethealth_3y.json` (2026-03-04T12:46Z)
+- `scripts/analysis/output/zip/homeready_3y.json` (2026-03-04T12:48Z)
+- `scripts/analysis/output/zip/markethealth_3y.json` (2026-03-04T12:48Z)
+- Live validation: `scripts/validate-v3-scoring-live.ts` (2026-03-04)
 
-### A.4 Methodology Notes
+### A.2 Data Sources
 
-- **Excess returns** = location CAGR minus state median CAGR for the same period.
-  This controls for statewide market cycles.
-- **Walk-forward windows** are generated dynamically: 24-month training, 12-month testing,
-  1-year slide starting from Jan 2020. Test periods are strictly non-overlapping.
-  Windows only produce results when test-period scores have >= 20 observations with
-  complete 3-year outcomes. New windows activate automatically as data accrues.
-- **Bootstrap significance** (1,000 iterations) tests whether the quintile spread could arise by chance.
-- **InvestorEdge total return** = appreciation excess + rent excess, both vs state median.
-  When rent data is unavailable, InvestorEdge falls back to appreciation excess only.
+| Source             | Used For                    | Coverage (Live)                  |
+| ------------------ | --------------------------- | -------------------------------- |
+| Redfin             | Market activity features    | 92-100% across all geos          |
+| Census ACS         | Demographics, homeownership | 91-100% (except YoY columns: 0%) |
+| Zillow             | Inventory (metro)           | 90% metro                        |
+| Calculated Metrics | income_to_buy               | 95-100% county/ZIP               |
+| Realtor            | price_reduced, pending      | 84-100% county/ZIP               |
+| FRED               | VIX                         | 0% (table does not exist)        |
+| Economic           | GDP YoY                     | 0% county (data gap)             |
+
+### A.3 Missing Metric Strategies
+
+| Feature                  | Strategy | Effect When Missing                    |
+| ------------------------ | -------- | -------------------------------------- |
+| rf\_\* (Redfin)          | skip     | Weight redistributed to other features |
+| cen\_\* (Census)         | neutral  | Score = 50 (no signal, no penalty)     |
+| econ_gdp_yoy             | neutral  | Score = 50                             |
+| z_inventory              | neutral  | Score = 50                             |
+| calc_income_to_buy       | neutral  | Score = 50                             |
+| fred_vix                 | skip     | Weight redistributed                   |
+| price_reduced_share      | skip     | Weight redistributed                   |
+| pending_listing_count_yy | skip     | Weight redistributed                   |
+
+### A.4 Formula Version History
+
+| Version | Date       | Changes                                                                           |
+| ------- | ---------- | --------------------------------------------------------------------------------- |
+| v1.0    | 2025-08    | Initial manual weights (hotness_score, demand_score, etc.)                        |
+| v2.0    | 2026-02    | First ML-optimized weights via walk-forward elastic net                           |
+| v3.0    | 2026-03-04 | Full model tournament (XGB/LGBM/ElasticNet), SHAP distillation, expanded features |

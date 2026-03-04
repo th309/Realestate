@@ -32,103 +32,138 @@ export interface GeographyFormulas {
 
 /**
  * Fixed formula weights for all geography levels and score types.
- * v2.0: Optimized via walk-forward elastic net CV on excess returns vs division/state/metro benchmarks.
- * All bootstrap tests significant (95% CI excludes 0).
+ * v3.0: Optimized via walk-forward CV with model tournament (XGBoost/LightGBM/ElasticNet).
+ * Features: Redfin market activity, Census demographics, Realtor listings, calculated affordability,
+ * FRED macro (VIX), Zillow inventory (metro only), economic GDP (county only).
+ *
+ * County/ZIP InvestorEdge = HomeReady weights (no separate IE model at these geos).
  */
 export const FORMULA_WEIGHTS: Record<GeographyLevel, GeographyFormulas> = {
   // ===================
-  // METRO LEVEL FORMULAS (OOS IC: HR=0.26, IE=0.52)
+  // METRO (OOS IC: HR=0.30, IE=0.37, MH=0.37) — XGBoost all three
   // ===================
   metro: {
-    // HomeReady (Metro): Predicts 3Y excess appreciation vs census division median
     homeready: {
-      median_days_on_market: { weight: 0.3096, direction: -1 },
-      affordability_ratio: { weight: 0.1671, direction: 1 },
-      pending_ratio: { weight: 0.1484, direction: 1 },
-      supply_score: { weight: 0.1477, direction: -1 },
-      population_yoy: { weight: 0.0889, direction: 1 },
-      demand_score: { weight: 0.0845, direction: 1 },
-      price_reduced_share: { weight: 0.0374, direction: -1 },
-      unemployment_rate_yoy: { weight: 0.0164, direction: -1 },
+      cen_median_age: { weight: 0.1674, direction: -1 },
+      cen_population_yoy: { weight: 0.1605, direction: -1 },
+      rf_median_dom: { weight: 0.1364, direction: -1 },
+      rf_off_market_in_two_weeks: { weight: 0.1209, direction: -1 },
+      z_inventory: { weight: 0.0958, direction: 1 },
+      cen_income_yoy: { weight: 0.0869, direction: -1 },
+      cen_homeownership_rate: { weight: 0.0796, direction: -1 },
+      cen_rent_as_pct_of_income: { weight: 0.0631, direction: -1 },
+      rf_sold_above_list: { weight: 0.0605, direction: 1 },
+      rf_avg_sale_to_list: { weight: 0.0289, direction: -1 },
     },
-    // InvestorEdge (Metro): Predicts 3Y excess total return vs division median
     investoredge: {
-      median_days_on_market: { weight: 0.2887, direction: -1 },
-      affordability_ratio: { weight: 0.177, direction: 1 },
-      pending_ratio: { weight: 0.1564, direction: 1 },
-      supply_score: { weight: 0.1287, direction: -1 },
-      population_yoy: { weight: 0.0837, direction: 1 },
-      demand_score: { weight: 0.0657, direction: 1 },
-      median_gross_rent: { weight: 0.0575, direction: -1 },
-      homeownership_rate: { weight: 0.0423, direction: 1 },
+      z_inventory: { weight: 0.1863, direction: 1 },
+      rf_median_dom: { weight: 0.1847, direction: 1 },
+      cen_population_yoy: { weight: 0.1332, direction: 1 },
+      rf_avg_sale_to_list: { weight: 0.1104, direction: -1 },
+      cen_median_age: { weight: 0.0861, direction: 1 },
+      cen_income_yoy: { weight: 0.0805, direction: -1 },
+      rf_sold_above_list: { weight: 0.074, direction: -1 },
+      rf_off_market_in_two_weeks: { weight: 0.0586, direction: 1 },
+      cen_homeownership_rate: { weight: 0.0459, direction: -1 },
+      cen_rent_as_pct_of_income: { weight: 0.0403, direction: -1 },
     },
-    // MarketHealth (Metro): Current market conditions (not optimized - concurrent indicator)
     markethealth: {
-      hotness_score: { weight: 0.416, direction: 1 },
-      demand_score: { weight: 0.345, direction: 1 },
-      pending_ratio: { weight: 0.239, direction: 1 },
+      z_inventory: { weight: 0.2572, direction: 1 },
+      cen_population_yoy: { weight: 0.1883, direction: 1 },
+      cen_income_yoy: { weight: 0.1747, direction: -1 },
+      cen_median_age: { weight: 0.1192, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.0617, direction: 1 },
+      rf_median_dom: { weight: 0.0595, direction: 1 },
+      cen_rent_as_pct_of_income: { weight: 0.0448, direction: -1 },
+      rf_sold_above_list: { weight: 0.0418, direction: 1 },
+      cen_homeownership_rate: { weight: 0.0379, direction: -1 },
+      rf_avg_sale_to_list: { weight: 0.0149, direction: 1 },
     },
   },
 
   // ===================
-  // COUNTY LEVEL FORMULAS (OOS IC: HR=0.11, IE=0.11)
+  // COUNTY (OOS IC: HR=0.25, MH=0.28) — LightGBM both; IE duplicates HR
   // ===================
   county: {
-    // HomeReady (County): Predicts 3Y excess appreciation vs state median
     homeready: {
-      median_days_on_market: { weight: 0.2595, direction: -1 },
-      pending_ratio: { weight: 0.2194, direction: 1 },
-      population_yoy: { weight: 0.1945, direction: 1 },
-      affordability_ratio: { weight: 0.0903, direction: -1 },
-      demand_score: { weight: 0.0874, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.0759, direction: 1 },
-      supply_score: { weight: 0.0393, direction: -1 },
-      price_reduced_share: { weight: 0.0337, direction: 1 },
+      cen_population_yoy: { weight: 0.2103, direction: -1 },
+      calc_income_to_buy: { weight: 0.1312, direction: -1 },
+      cen_median_age: { weight: 0.1302, direction: -1 },
+      fred_vix: { weight: 0.1127, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.1108, direction: 1 },
+      rf_sold_above_list: { weight: 0.0752, direction: 1 },
+      price_reduced_share: { weight: 0.0743, direction: 1 },
+      econ_gdp_yoy: { weight: 0.073, direction: 1 },
+      cen_homeownership_rate: { weight: 0.0484, direction: -1 },
+      cen_income_yoy: { weight: 0.0337, direction: -1 },
     },
-    // InvestorEdge (County): Predicts 3Y excess total return vs state median
+    // InvestorEdge (County): duplicates HomeReady (no separate IE model at county level)
     investoredge: {
-      median_days_on_market: { weight: 0.2497, direction: -1 },
-      pending_ratio: { weight: 0.2115, direction: 1 },
-      population_yoy: { weight: 0.1904, direction: 1 },
-      affordability_ratio: { weight: 0.0884, direction: -1 },
-      median_gross_rent: { weight: 0.0719, direction: 1 },
-      demand_score: { weight: 0.0641, direction: 1 },
-      homeownership_rate: { weight: 0.0623, direction: 1 },
-      unemployment_rate_yoy: { weight: 0.0617, direction: 1 },
+      cen_population_yoy: { weight: 0.2103, direction: -1 },
+      calc_income_to_buy: { weight: 0.1312, direction: -1 },
+      cen_median_age: { weight: 0.1302, direction: -1 },
+      fred_vix: { weight: 0.1127, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.1108, direction: 1 },
+      rf_sold_above_list: { weight: 0.0752, direction: 1 },
+      price_reduced_share: { weight: 0.0743, direction: 1 },
+      econ_gdp_yoy: { weight: 0.073, direction: 1 },
+      cen_homeownership_rate: { weight: 0.0484, direction: -1 },
+      cen_income_yoy: { weight: 0.0337, direction: -1 },
     },
-    // MarketHealth (County): Current market conditions (not optimized)
     markethealth: {
-      hotness_score: { weight: 0.533, direction: 1 },
-      demand_score: { weight: 0.254, direction: 1 },
-      pending_ratio: { weight: 0.213, direction: 1 },
+      cen_population_yoy: { weight: 0.247, direction: -1 },
+      fred_vix: { weight: 0.216, direction: 1 },
+      price_reduced_share: { weight: 0.1025, direction: 1 },
+      cen_income_yoy: { weight: 0.1005, direction: 1 },
+      calc_income_to_buy: { weight: 0.0889, direction: -1 },
+      cen_median_age: { weight: 0.0831, direction: -1 },
+      econ_gdp_yoy: { weight: 0.049, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.041, direction: 1 },
+      rf_sold_above_list: { weight: 0.0391, direction: -1 },
+      cen_homeownership_rate: { weight: 0.0329, direction: 1 },
     },
   },
 
   // ===================
-  // ZIP LEVEL FORMULAS (OOS IC: HR=0.14, IE=0.15)
+  // ZIP (OOS IC: HR=0.18, MH=0.22) — XGBoost both; IE duplicates HR
   // ===================
   zip: {
-    // HomeReady (ZIP): Predicts 3Y excess appreciation vs metro median
     homeready: {
-      demand_score: { weight: 0.3024, direction: 1 },
-      pending_ratio: { weight: 0.2918, direction: 1 },
-      median_days_on_market: { weight: 0.2049, direction: -1 },
-      hotness_score: { weight: 0.1393, direction: 1 },
-      affordability_ratio: { weight: 0.0312, direction: 1 },
-      price_reduced_share: { weight: 0.0304, direction: 1 },
+      calc_income_to_buy: { weight: 0.198, direction: 1 },
+      rf_median_dom: { weight: 0.161, direction: 1 },
+      cen_homeownership_rate: { weight: 0.1594, direction: -1 },
+      rf_sold_above_list: { weight: 0.1076, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.1056, direction: 1 },
+      rf_sold_above_list_yoy: { weight: 0.0667, direction: -1 },
+      rf_avg_sale_to_list: { weight: 0.0589, direction: 1 },
+      rf_homes_sold_yoy: { weight: 0.053, direction: -1 },
+      rf_median_dom_yoy: { weight: 0.053, direction: 1 },
+      pending_listing_count_yy: { weight: 0.0368, direction: -1 },
     },
-    // InvestorEdge (ZIP): Predicts 3Y excess total return vs metro median
+    // InvestorEdge (ZIP): duplicates HomeReady (no separate IE model at ZIP level)
     investoredge: {
-      pending_ratio: { weight: 0.2384, direction: 1 },
-      homeownership_rate: { weight: 0.2267, direction: 1 },
-      median_days_on_market: { weight: 0.1943, direction: -1 },
-      demand_score: { weight: 0.1912, direction: 1 },
-      hotness_score: { weight: 0.1494, direction: 1 },
+      calc_income_to_buy: { weight: 0.198, direction: 1 },
+      rf_median_dom: { weight: 0.161, direction: 1 },
+      cen_homeownership_rate: { weight: 0.1594, direction: -1 },
+      rf_sold_above_list: { weight: 0.1076, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.1056, direction: 1 },
+      rf_sold_above_list_yoy: { weight: 0.0667, direction: -1 },
+      rf_avg_sale_to_list: { weight: 0.0589, direction: 1 },
+      rf_homes_sold_yoy: { weight: 0.053, direction: -1 },
+      rf_median_dom_yoy: { weight: 0.053, direction: 1 },
+      pending_listing_count_yy: { weight: 0.0368, direction: -1 },
     },
-    // MarketHealth (ZIP): Current market conditions (not optimized)
     markethealth: {
-      hotness_score: { weight: 0.699, direction: 1 },
-      demand_score: { weight: 0.301, direction: 1 },
+      pending_listing_count_yy: { weight: 0.3396, direction: 1 },
+      calc_income_to_buy: { weight: 0.2452, direction: -1 },
+      rf_median_dom: { weight: 0.0842, direction: -1 },
+      rf_sold_above_list: { weight: 0.0755, direction: -1 },
+      cen_homeownership_rate: { weight: 0.0695, direction: -1 },
+      rf_avg_sale_to_list: { weight: 0.0676, direction: 1 },
+      rf_off_market_in_two_weeks: { weight: 0.0564, direction: 1 },
+      rf_sold_above_list_yoy: { weight: 0.0306, direction: 1 },
+      rf_homes_sold_yoy: { weight: 0.0165, direction: -1 },
+      rf_median_dom_yoy: { weight: 0.0148, direction: -1 },
     },
   },
 };
@@ -158,26 +193,26 @@ export const GRADE_THRESHOLDS: Array<{ min: number; grade: string }> = [
 /**
  * Model correlation values from walk-forward OOS validation.
  * Used in confidence calculation (Model Strength factor = correlation × 125, capped at 100).
- * v2.0: Updated from walk-forward elastic net OOS IC (Spearman rank correlation).
+ * v3.0: Updated from walk-forward model tournament OOS IC (mean Spearman rank correlation).
  */
 export const MODEL_CORRELATIONS: Record<
   GeographyLevel,
   Record<ScoreType, number>
 > = {
   metro: {
-    homeready: 0.159, // OOS IC from walk-forward elastic net CV
-    investoredge: 0.18, // OOS IC from walk-forward elastic net CV
-    markethealth: 0.56, // Kept from v1.0 (concurrent indicator)
+    homeready: 0.2996, // XGBoost walk-forward OOS IC
+    investoredge: 0.3724, // XGBoost walk-forward OOS IC
+    markethealth: 0.3659, // XGBoost walk-forward OOS IC
   },
   county: {
-    homeready: 0.113, // OOS IC from walk-forward elastic net CV
-    investoredge: 0.108, // OOS IC from walk-forward elastic net CV
-    markethealth: 0.29, // Kept from v1.0
+    homeready: 0.2459, // LightGBM walk-forward OOS IC
+    investoredge: 0.2459, // Duplicates HR (no separate IE model at county)
+    markethealth: 0.2818, // LightGBM walk-forward OOS IC
   },
   zip: {
-    homeready: 0.138, // OOS IC from walk-forward elastic net CV
-    investoredge: 0.152, // OOS IC from walk-forward elastic net CV
-    markethealth: 0.26, // Kept from v1.0
+    homeready: 0.1841, // XGBoost walk-forward OOS IC
+    investoredge: 0.1841, // Duplicates HR (no separate IE model at ZIP)
+    markethealth: 0.2213, // XGBoost walk-forward OOS IC
   },
 };
 
@@ -288,78 +323,143 @@ export const COMPONENT_GROUPS: Record<
   // -----------------------------------------------------------------------
   homeready: {
     metro: {
-      affordability: ['affordability_ratio'],
-      market_timing: ['demand_score', 'pending_ratio'],
-      stability: [
-        'median_days_on_market',
-        'supply_score',
-        'price_reduced_share',
+      affordability: ['cen_rent_as_pct_of_income', 'cen_homeownership_rate'],
+      market_timing: [
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list',
+        'rf_avg_sale_to_list',
       ],
-      growth_potential: ['unemployment_rate_yoy', 'population_yoy'],
+      stability: ['rf_median_dom', 'z_inventory'],
+      growth_potential: [
+        'cen_population_yoy',
+        'cen_income_yoy',
+        'cen_median_age',
+      ],
     },
     county: {
-      affordability: ['affordability_ratio'],
-      market_timing: ['demand_score', 'pending_ratio', 'price_reduced_share'],
-      stability: ['median_days_on_market', 'supply_score'],
-      growth_potential: ['population_yoy', 'unemployment_rate_yoy'],
+      affordability: [
+        'calc_income_to_buy',
+        'cen_homeownership_rate',
+        'cen_income_yoy',
+      ],
+      market_timing: [
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list',
+        'price_reduced_share',
+      ],
+      stability: ['econ_gdp_yoy', 'cen_median_age', 'fred_vix'],
+      growth_potential: ['cen_population_yoy'],
     },
     zip: {
-      affordability: ['affordability_ratio'],
-      market_timing: ['demand_score', 'hotness_score', 'pending_ratio'],
-      stability: ['median_days_on_market', 'price_reduced_share'],
-      growth_potential: [],
+      affordability: ['calc_income_to_buy', 'cen_homeownership_rate'],
+      market_timing: [
+        'rf_sold_above_list',
+        'rf_off_market_in_two_weeks',
+        'rf_avg_sale_to_list',
+        'rf_sold_above_list_yoy',
+        'pending_listing_count_yy',
+      ],
+      stability: ['rf_median_dom', 'rf_median_dom_yoy', 'rf_homes_sold_yoy'],
     },
   },
 
   // -----------------------------------------------------------------------
   // InvestorEdge: cash_flow, rent_demand, appreciation, entry_point, risk
+  // County/ZIP duplicate HomeReady weights
   // -----------------------------------------------------------------------
   investoredge: {
     metro: {
-      cash_flow: ['median_gross_rent'],
-      rent_demand: ['demand_score', 'pending_ratio'],
-      appreciation: ['population_yoy'],
-      entry_point: ['affordability_ratio', 'homeownership_rate'],
-      risk: ['median_days_on_market', 'supply_score'],
+      cash_flow: ['cen_rent_as_pct_of_income'],
+      rent_demand: ['rf_off_market_in_two_weeks', 'rf_sold_above_list'],
+      appreciation: ['cen_population_yoy', 'cen_median_age'],
+      entry_point: ['cen_homeownership_rate', 'cen_income_yoy'],
+      risk: ['rf_median_dom', 'rf_avg_sale_to_list', 'z_inventory'],
     },
     county: {
-      cash_flow: ['median_gross_rent'],
-      rent_demand: ['demand_score', 'pending_ratio'],
-      appreciation: ['population_yoy'],
-      entry_point: ['affordability_ratio', 'homeownership_rate'],
-      risk: ['median_days_on_market', 'unemployment_rate_yoy'],
+      rent_demand: ['rf_off_market_in_two_weeks', 'rf_sold_above_list'],
+      appreciation: ['cen_population_yoy', 'econ_gdp_yoy'],
+      entry_point: [
+        'calc_income_to_buy',
+        'cen_homeownership_rate',
+        'cen_income_yoy',
+      ],
+      risk: ['cen_median_age', 'fred_vix', 'price_reduced_share'],
     },
     zip: {
-      rent_demand: ['demand_score', 'hotness_score', 'pending_ratio'],
-      appreciation: ['homeownership_rate'],
-      risk: ['median_days_on_market'],
+      rent_demand: [
+        'rf_sold_above_list',
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list_yoy',
+        'pending_listing_count_yy',
+      ],
+      entry_point: ['calc_income_to_buy', 'cen_homeownership_rate'],
+      risk: [
+        'rf_median_dom',
+        'rf_avg_sale_to_list',
+        'rf_median_dom_yoy',
+        'rf_homes_sold_yoy',
+      ],
     },
   },
 
   // -----------------------------------------------------------------------
   // MarketHealth: demand_strength, supply_balance
-  // MarketHealth has only 2-3 metrics, so we group into 2 components.
-  // price_stability and economic_foundation are omitted since no metrics map.
   // -----------------------------------------------------------------------
   markethealth: {
     metro: {
-      demand_strength: ['hotness_score', 'demand_score'],
-      supply_balance: ['pending_ratio'],
+      demand_strength: [
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list',
+        'rf_avg_sale_to_list',
+        'cen_population_yoy',
+      ],
+      supply_balance: [
+        'z_inventory',
+        'rf_median_dom',
+        'cen_median_age',
+        'cen_income_yoy',
+        'cen_homeownership_rate',
+        'cen_rent_as_pct_of_income',
+      ],
     },
     county: {
-      demand_strength: ['hotness_score', 'demand_score'],
-      supply_balance: ['pending_ratio'],
+      demand_strength: [
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list',
+        'cen_population_yoy',
+        'cen_income_yoy',
+        'econ_gdp_yoy',
+      ],
+      supply_balance: [
+        'fred_vix',
+        'price_reduced_share',
+        'calc_income_to_buy',
+        'cen_median_age',
+        'cen_homeownership_rate',
+      ],
     },
     zip: {
-      demand_strength: ['hotness_score', 'demand_score'],
-      supply_balance: [], // no supply metric at ZIP for markethealth
+      demand_strength: [
+        'rf_off_market_in_two_weeks',
+        'rf_sold_above_list',
+        'rf_avg_sale_to_list',
+        'rf_sold_above_list_yoy',
+        'pending_listing_count_yy',
+      ],
+      supply_balance: [
+        'calc_income_to_buy',
+        'rf_median_dom',
+        'cen_homeownership_rate',
+        'rf_homes_sold_yoy',
+        'rf_median_dom_yoy',
+      ],
     },
   },
 };
 
 /**
  * Calibration table: maps score quintiles to average historical excess return.
- * Built from v2.0 backtest data (metro level, 3Y excess vs Census Division median).
+ * PROVISIONAL: Built from v2.0 backtest data — needs recalibration for v3.0 weights.
  * Used for frontend tooltips, dollar impact calculations, and interpretation.
  *
  * Score semantics (percentile rank normalization):
@@ -469,4 +569,4 @@ export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
 /**
  * Current formula version identifier.
  */
-export const FORMULA_VERSION = 'v2.0';
+export const FORMULA_VERSION = 'v3.0';

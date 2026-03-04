@@ -5,32 +5,32 @@
  * Server component — static marketing content.
  */
 
-import { Home, Building2, ShieldAlert } from 'lucide-react';
+import { Home, Building2, ShieldAlert } from "lucide-react";
 
 const IMPACTS = [
   {
     icon: Home,
-    iconClass: 'bg-primary/10 text-primary',
-    title: 'Single Home',
-    value: '+$11,978/yr',
+    iconClass: "bg-primary/10 text-primary",
+    title: "Single Home",
+    value: "+$13,320/yr",
     description:
-      'Top-quintile scored markets (Q5) earned $11,978 more in annual appreciation than bottom-quintile markets (Q1) on a $240K home.',
+      "Top-quintile scored markets (Q5) earned $13,320 more in annual appreciation than bottom-quintile markets (Q1) on a $240K home.",
   },
   {
     icon: Building2,
-    iconClass: 'bg-secondary/10 text-secondary',
-    title: '3-Property Portfolio',
-    value: '+$35,934/yr',
+    iconClass: "bg-secondary/10 text-secondary",
+    title: "3-Property Portfolio",
+    value: "+$39,960/yr",
     description:
-      'A 3-property portfolio in top-scored markets generates nearly $36K more per year in equity versus bottom-scored markets.',
+      "A 3-property portfolio in top-scored markets generates nearly $40K more per year in equity versus bottom-scored markets.",
   },
   {
     icon: ShieldAlert,
-    iconClass: 'bg-error/10 text-error',
-    title: 'Avoid Losses',
-    value: '-0.23%',
+    iconClass: "bg-error/10 text-error",
+    title: "Avoid Losses",
+    value: "Negative Returns",
     description:
-      'Bottom-quintile markets actually LOST value (-0.23%) during a period when the overall market gained +2.1%. Our scores flagged these.',
+      "Bottom-quintile markets delivered negative excess returns while top-quintile markets thrived. Our scores flagged the underperformers.",
   },
 ];
 
@@ -44,8 +44,8 @@ export function DollarImpactSection() {
         Score-Driven Investing: The Dollar Difference
       </h2>
       <p className="text-on-surface-variant mt-2 max-w-2xl">
-        PropertyIQ Scores don&apos;t just rank markets &mdash; they predict real dollar outcomes.
-        Here&apos;s what the data shows.
+        PropertyIQ Scores don&apos;t just rank markets &mdash; they predict real
+        dollar outcomes. Here&apos;s what the data shows.
       </p>
 
       <div className="grid md:grid-cols-3 gap-4 mt-8">
@@ -62,7 +62,9 @@ export function DollarImpactSection() {
               <p className="text-xs text-on-surface-variant mt-3 uppercase tracking-wider font-medium">
                 {impact.title}
               </p>
-              <p className="text-2xl font-bold text-on-surface mt-1">{impact.value}</p>
+              <p className="text-2xl font-bold text-on-surface mt-1">
+                {impact.value}
+              </p>
               <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
                 {impact.description}
               </p>

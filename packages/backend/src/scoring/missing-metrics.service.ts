@@ -1,141 +1,20 @@
-/**
- * Missing Metrics Handler Service
- *
- * Handles missing data scenarios in PropertyIQ scoring:
- * - Defines strategies for each metric when data is missing
- * - Implements weight redistribution logic
- * - Determines when scores become unavailable due to insufficient data
- *
- * Strategies:
- * - skip: Exclude metric, redistribute weight to remaining metrics
- * - neutral: Use neutral score (50) for missing metric
- * - penalize: Use low score (25) for missing metric
- * - required: If missing, skip entire component
- */
+/** Missing Metrics Handler — weight redistribution and availability checks. */
 
 import { Injectable } from '@nestjs/common';
-import { NullStrategy, SCORING_CONSTANTS } from './scoring.types';
+import { SCORING_CONSTANTS } from './scoring.types';
+import type {
+  MissingMetricResult,
+  ComponentAvailability,
+  ScoreAvailability,
+} from './missing-metrics.constants';
+import {
+  METRIC_MISSING_STRATEGIES,
+  REQUIRED_METRICS_BY_COMPONENT,
+} from './missing-metrics.constants';
 
-export interface MissingMetricResult {
-  strategy: NullStrategy;
-  score: number | null;
-  includeInWeight: boolean;
-  message?: string;
-}
-
-export interface ComponentAvailability {
-  available: boolean;
-  reason?: string;
-  availableWeight: number;
-  totalWeight: number;
-  completeness: number;
-}
-
-export interface ScoreAvailability {
-  available: boolean;
-  status: 'complete' | 'partial' | 'unavailable';
-  reason?: string;
-  completeness: number;
-  missingComponents: string[];
-}
-
-// Strategy configuration for each metric
-export const METRIC_MISSING_STRATEGIES: Record<string, NullStrategy> = {
-  // Market Health metrics
-  pending_ratio: 'neutral',
-  median_days_on_market: 'neutral',
-  hotness_score: 'skip',
-  demand_score: 'skip',
-  months_of_supply: 'neutral',
-  active_listing_count_yy: 'neutral',
-  new_listing_count_yy: 'skip',
-  price_reduced_share: 'neutral',
-  sale_to_list_ratio: 'neutral',
-  zhvi_yoy: 'neutral',
-  unemployment_rate: 'neutral',
-  employment_yoy: 'skip',
-
-  // HomeReady metrics - Affordability (critical)
-  zhvi: 'penalize',
-  zori: 'penalize',
-  homeowner_income: 'neutral',
-  renter_income: 'neutral',
-  affordable_price: 'skip',
-
-  // HomeReady metrics - Market Timing
-  pending_listing_count_yy: 'skip',
-
-  // HomeReady metrics - Stability
-  zhvi_volatility: 'neutral',
-  volatility_36m: 'neutral',
-  inventory: 'neutral',
-  months_supply: 'neutral',
-  dom: 'neutral',
-  price_cuts: 'skip',
-
-  // HomeReady metrics - Growth Potential
-  zhvi_5y_cagr: 'neutral',
-  population_yoy: 'skip',
-  median_household_income_yoy: 'skip',
-
-  // HomeReady metrics - Livability
-  homeownership_rate: 'neutral',
-  median_age: 'skip',
-  population_growth: 'neutral',
-  median_income: 'skip',
-
-  // InvestorEdge metrics - Cash Flow (critical)
-  cap_rate: 'penalize',
-  cap_rate_proxy: 'penalize',
-  grm: 'penalize',
-  rent_yield: 'penalize',
-  gross_yield: 'neutral',
-  rent_to_price_ratio: 'neutral',
-
-  // InvestorEdge metrics - Rent Demand
-  zori_yoy: 'neutral',
-  renter_share: 'skip',
-
-  // InvestorEdge metrics - Appreciation
-  zhvi_3y_cagr: 'neutral',
-
-  // InvestorEdge metrics - Entry Point
-  overvalued_pct: 'neutral',
-
-  // InvestorEdge metrics - Risk
-  vacancy_rate: 'neutral',
-  inventory_volatility: 'skip',
-  inventory_surplus_pct: 'skip',
-  large_multi_permits_yoy: 'skip',
-
-  // Calculated metrics
-  rent_price_ratio: 'neutral',
-  price_rent_ratio: 'neutral',
-};
-
-// Metrics that are required for each component
-// If any required metric is missing, the entire component is skipped
-export const REQUIRED_METRICS_BY_COMPONENT: Record<string, string[]> = {
-  // HomeReady
-  affordability: ['zhvi', 'zori'], // Need price and rent data
-  market_timing: [],
-  stability: [],
-  growth_potential: [],
-  livability: [],
-
-  // InvestorEdge
-  cash_flow: ['zhvi', 'zori'], // Need price and rent for yield calculations
-  rent_demand: ['zori'],
-  appreciation: ['zhvi'],
-  entry_point: [],
-  risk: [],
-
-  // Market Health
-  demand_strength: [],
-  supply_balance: [],
-  price_stability: [],
-  economic_foundation: [],
-};
+// Re-export types and constants for existing consumers
+export type { MissingMetricResult, ComponentAvailability, ScoreAvailability };
+export { METRIC_MISSING_STRATEGIES, REQUIRED_METRICS_BY_COMPONENT };
 
 @Injectable()
 export class MissingMetricsService {
@@ -219,7 +98,8 @@ export class MissingMetricsService {
       }
     }
 
-    const completeness = totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
+    const completeness =
+      totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
 
     // Component is unavailable if less than 50% of weighted metrics available
     const minCompleteness = SCORING_CONSTANTS.SCORE_AVAILABLE_MIN_COMPLETENESS;
@@ -252,7 +132,9 @@ export class MissingMetricsService {
     let totalWeight = 0;
     const missingComponents: string[] = [];
 
-    for (const [component, availability] of Object.entries(componentAvailability)) {
+    for (const [component, availability] of Object.entries(
+      componentAvailability,
+    )) {
       const weight = componentWeights[component] || 0;
       totalWeight += weight;
 
@@ -263,7 +145,8 @@ export class MissingMetricsService {
       }
     }
 
-    const completeness = totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
+    const completeness =
+      totalWeight > 0 ? (availableWeight / totalWeight) * 100 : 0;
     const minCompleteness = SCORING_CONSTANTS.SCORE_AVAILABLE_MIN_COMPLETENESS;
 
     if (completeness < minCompleteness) {

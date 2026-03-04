@@ -43,11 +43,7 @@ import {
   calculateComponentBreakdown,
   calculateConfidence,
 } from './scoring-engine';
-import {
-  getLatestRealtorDate,
-  fetchAllMetrics,
-  inheritCountyData,
-} from './scoring-data-fetcher';
+import { getLatestRedfinDate, fetchAllMetrics } from './scoring-data-fetcher';
 import {
   getLatestScoreDate,
   getScoreDatesForLocation,
@@ -96,7 +92,7 @@ export class ScoringService {
     periodDate?: string,
   ): Promise<{ calculated: number; errors: number; scoreDate: string }> {
     const targetDate =
-      periodDate || (await getLatestRealtorDate(this.supabase, geography));
+      periodDate || (await getLatestRedfinDate(this.supabase, geography));
     if (!targetDate) {
       return { calculated: 0, errors: 0, scoreDate: '' };
     }
@@ -105,14 +101,9 @@ export class ScoringService {
       this.supabase,
       geography,
       targetDate,
-      this.geoChainService,
     );
     if (locations.length === 0) {
       return { calculated: 0, errors: 0, scoreDate: targetDate };
-    }
-
-    if (geography === 'zip') {
-      await inheritCountyData(this.supabase, locations);
     }
 
     const allMetricNames = getAllMetricNames(geography);
@@ -549,7 +540,7 @@ export class ScoringService {
   // ============================================================================
 
   async debugGetLatestDate(geography: GeographyLevel): Promise<string | null> {
-    return getLatestRealtorDate(this.supabase, geography);
+    return getLatestRedfinDate(this.supabase, geography);
   }
 
   async debugGetMetricStats(
@@ -564,14 +555,13 @@ export class ScoringService {
     std: number;
   } | null> {
     const targetDate =
-      periodDate || (await getLatestRealtorDate(this.supabase, geography));
+      periodDate || (await getLatestRedfinDate(this.supabase, geography));
     if (!targetDate) return null;
 
     const locations = await fetchAllMetrics(
       this.supabase,
       geography,
       targetDate,
-      this.geoChainService,
     );
     const values = locations
       .map((l) => (l as any)[metricName])

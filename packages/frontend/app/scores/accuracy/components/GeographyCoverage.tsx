@@ -153,7 +153,7 @@ export function GeographyCoverage() {
                 {GEO_LABELS[g.geographyType] || g.geographyType}
               </p>
               <p className="text-xs text-on-surface-variant/70 mt-0.5">
-                ρ = {g.avgCorrelation1y.toFixed(2)} (1Y)
+                IC = {g.avgCorrelation3y.toFixed(2)} (3Y)
               </p>
             </div>
           );
@@ -200,14 +200,14 @@ export function GeographyCoverage() {
                 ]}
               />
               <Bar
-                dataKey="correlation1y"
-                name="1-Year"
+                dataKey="correlation3y"
+                name="3-Year"
                 fill="var(--primary)"
                 radius={[4, 4, 0, 0]}
               />
               <Bar
-                dataKey="correlation3y"
-                name="3-Year"
+                dataKey="correlation1y"
+                name="1-Year"
                 fill="var(--secondary)"
                 radius={[4, 4, 0, 0]}
               />
@@ -217,11 +217,11 @@ export function GeographyCoverage() {
         <div className="mt-2 flex justify-center gap-6 text-xs text-on-surface-variant">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-[var(--primary)]" />
-            <span>1-Year Correlation</span>
+            <span>3-Year Correlation</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded bg-[var(--secondary)]" />
-            <span>3-Year Correlation</span>
+            <span>1-Year Correlation</span>
           </div>
         </div>
       </div>

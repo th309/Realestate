@@ -1,0 +1,41 @@
+{
+  "selected_features": [
+    "cen_income_yoy",
+    "cen_median_age",
+    "cen_homeownership_rate",
+    "cen_population_yoy",
+    "cen_rent_as_pct_of_income",
+    "rf_off_market_in_two_weeks",
+    "rf_median_dom",
+    "z_inventory",
+    "rf_sold_above_list",
+    "rf_avg_sale_to_list"
+  ],
+  "mi_scores": {
+    "cen_income_yoy": 0.18945135981598682,
+    "cen_median_age": 0.17273258610128117,
+    "cen_homeownership_rate": 0.17065097428424636,
+    "cen_population_yoy": 0.15388665104868782,
+    "cen_rent_as_pct_of_income": 0.1309991353493407,
+    "rf_off_market_in_two_weeks": 0.056615561058680264,
+    "rf_median_dom": 0.05249798371761916,
+    "z_inventory": 0.052347989248989535,
+    "rf_sold_above_list": 0.05051863212452723,
+    "rf_avg_sale_to_list": 0.049893465831647
+  },
+  "all_stages": {
+    "initial_candidates": 105,
+    "after_coverage": 62,
+    "after_geo_consistency": 62,
+    "after_correlation": 62,
+    "after_mi_ranking": 10,
+    "coverage_threshold": 0.5,
+    "geo_coverage_threshold": 0.7,
+    "correlation_threshold": 0.95,
+    "mi_top_k": 10
+  },
+  "_meta": {
+    "geo_level": "metro",
+    "generated_at": "2026-03-04T17:43:29.441805+00:00"
+  }
+}

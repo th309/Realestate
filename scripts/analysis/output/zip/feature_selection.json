@@ -1,0 +1,41 @@
+{
+  "selected_features": [
+    "rf_sold_above_list",
+    "rf_off_market_in_two_weeks",
+    "rf_median_dom",
+    "rf_avg_sale_to_list",
+    "cen_homeownership_rate",
+    "rf_sold_above_list_yoy",
+    "rf_homes_sold_yoy",
+    "rf_median_dom_yoy",
+    "calc_income_to_buy",
+    "pending_listing_count_yy"
+  ],
+  "mi_scores": {
+    "rf_sold_above_list": 0.03745633913798052,
+    "rf_off_market_in_two_weeks": 0.03579760197769488,
+    "rf_median_dom": 0.03405139030775928,
+    "rf_avg_sale_to_list": 0.03385338160123741,
+    "cen_homeownership_rate": 0.03085772157937683,
+    "rf_sold_above_list_yoy": 0.028749695604766146,
+    "rf_homes_sold_yoy": 0.028416230713919077,
+    "rf_median_dom_yoy": 0.025835792331164065,
+    "calc_income_to_buy": 0.02463758611310496,
+    "pending_listing_count_yy": 0.01827518374076398
+  },
+  "all_stages": {
+    "initial_candidates": 42,
+    "after_coverage": 24,
+    "after_geo_consistency": 20,
+    "after_correlation": 20,
+    "after_mi_ranking": 10,
+    "coverage_threshold": 0.5,
+    "geo_coverage_threshold": 0.7,
+    "correlation_threshold": 0.95,
+    "mi_top_k": 10
+  },
+  "_meta": {
+    "geo_level": "zip",
+    "generated_at": "2026-03-04T17:48:06.834361+00:00"
+  }
+}

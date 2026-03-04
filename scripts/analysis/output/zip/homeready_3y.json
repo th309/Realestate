@@ -1,0 +1,262 @@
+{
+  "tournament": [
+    {
+      "model_name": "elasticnet",
+      "n_windows": 2,
+      "mean_ic": 0.0486,
+      "std_ic": 0.0289,
+      "information_ratio": 1.6799,
+      "mean_quintile_spread": 0.4981,
+      "mean_hit_rate": 0.5184,
+      "mean_calibration_mad": 0.0727,
+      "feature_importances": {
+        "cen_homeownership_rate": 0.4715,
+        "rf_off_market_in_two_weeks": 0.1773,
+        "rf_sold_above_list": 0.1673,
+        "rf_median_dom": 0.0911,
+        "rf_sold_above_list_yoy": 0.0651,
+        "rf_median_dom_yoy": 0.0278,
+        "pending_listing_count_yy": 0.0,
+        "calc_income_to_buy": 0.0,
+        "rf_avg_sale_to_list": 0.0,
+        "rf_homes_sold_yoy": 0.0
+      },
+      "windows": [
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 75180,
+          "test_rows": 97437,
+          "ic": 0.0197,
+          "quintile_spread": 0.3736,
+          "hit_rate": 0.5057
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 172617,
+          "test_rows": 24235,
+          "ic": 0.0775,
+          "quintile_spread": 0.6227,
+          "hit_rate": 0.5311
+        }
+      ],
+      "is_best": false
+    },
+    {
+      "model_name": "xgboost",
+      "n_windows": 2,
+      "mean_ic": 0.1841,
+      "std_ic": 0.0116,
+      "information_ratio": 15.8994,
+      "mean_quintile_spread": 1.6885,
+      "mean_hit_rate": 0.5988,
+      "mean_calibration_mad": 0.0,
+      "feature_importances": {
+        "rf_off_market_in_two_weeks": 0.1464,
+        "cen_homeownership_rate": 0.1385,
+        "rf_avg_sale_to_list": 0.1103,
+        "rf_median_dom": 0.1054,
+        "rf_sold_above_list": 0.1005,
+        "rf_median_dom_yoy": 0.0993,
+        "rf_sold_above_list_yoy": 0.0939,
+        "calc_income_to_buy": 0.0915,
+        "rf_homes_sold_yoy": 0.0639,
+        "pending_listing_count_yy": 0.0502
+      },
+      "windows": [
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 75180,
+          "test_rows": 97437,
+          "ic": 0.1725,
+          "quintile_spread": 1.6179,
+          "hit_rate": 0.5934
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 172617,
+          "test_rows": 24235,
+          "ic": 0.1956,
+          "quintile_spread": 1.7591,
+          "hit_rate": 0.6041
+        }
+      ],
+      "is_best": true
+    },
+    {
+      "model_name": "lightgbm",
+      "n_windows": 2,
+      "mean_ic": 0.1829,
+      "std_ic": 0.0126,
+      "information_ratio": 14.5039,
+      "mean_quintile_spread": 1.6739,
+      "mean_hit_rate": 0.5964,
+      "mean_calibration_mad": 0.0009,
+      "feature_importances": {
+        "cen_homeownership_rate": 0.1837,
+        "rf_median_dom": 0.179,
+        "rf_avg_sale_to_list": 0.1426,
+        "rf_median_dom_yoy": 0.1311,
+        "calc_income_to_buy": 0.08,
+        "rf_off_market_in_two_weeks": 0.0741,
+        "pending_listing_count_yy": 0.0568,
+        "rf_sold_above_list": 0.0557,
+        "rf_homes_sold_yoy": 0.0526,
+        "rf_sold_above_list_yoy": 0.0444
+      },
+      "windows": [
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 75180,
+          "test_rows": 97437,
+          "ic": 0.1703,
+          "quintile_spread": 1.6035,
+          "hit_rate": 0.5947
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 172617,
+          "test_rows": 24235,
+          "ic": 0.1955,
+          "quintile_spread": 1.7443,
+          "hit_rate": 0.5981
+        }
+      ],
+      "is_best": false
+    }
+  ],
+  "best_model": {
+    "model_name": "xgboost",
+    "n_windows": 2,
+    "mean_ic": 0.1841,
+    "std_ic": 0.0116,
+    "information_ratio": 15.8994,
+    "mean_quintile_spread": 1.6885,
+    "mean_hit_rate": 0.5988,
+    "mean_calibration_mad": 0.0,
+    "feature_importances": {
+      "rf_off_market_in_two_weeks": 0.1464,
+      "cen_homeownership_rate": 0.1385,
+      "rf_avg_sale_to_list": 0.1103,
+      "rf_median_dom": 0.1054,
+      "rf_sold_above_list": 0.1005,
+      "rf_median_dom_yoy": 0.0993,
+      "rf_sold_above_list_yoy": 0.0939,
+      "calc_income_to_buy": 0.0915,
+      "rf_homes_sold_yoy": 0.0639,
+      "pending_listing_count_yy": 0.0502
+    },
+    "windows": [
+      {
+        "window": 2,
+        "train": "2020-01-01 to 2021-12-31",
+        "test": "2022-01-01 to 2022-12-31",
+        "train_rows": 75180,
+        "test_rows": 97437,
+        "ic": 0.1725,
+        "quintile_spread": 1.6179,
+        "hit_rate": 0.5934
+      },
+      {
+        "window": 3,
+        "train": "2021-01-01 to 2022-12-31",
+        "test": "2023-01-01 to 2023-12-31",
+        "train_rows": 172617,
+        "test_rows": 24235,
+        "ic": 0.1956,
+        "quintile_spread": 1.7591,
+        "hit_rate": 0.6041
+      }
+    ],
+    "is_best": true
+  },
+  "weights": {
+    "weights": {
+      "rf_sold_above_list": {
+        "weight": 0.1076,
+        "direction": 1
+      },
+      "rf_off_market_in_two_weeks": {
+        "weight": 0.1056,
+        "direction": 1
+      },
+      "rf_median_dom": {
+        "weight": 0.161,
+        "direction": 1
+      },
+      "rf_avg_sale_to_list": {
+        "weight": 0.0589,
+        "direction": 1
+      },
+      "cen_homeownership_rate": {
+        "weight": 0.1594,
+        "direction": -1
+      },
+      "rf_sold_above_list_yoy": {
+        "weight": 0.0667,
+        "direction": -1
+      },
+      "rf_homes_sold_yoy": {
+        "weight": 0.053,
+        "direction": -1
+      },
+      "rf_median_dom_yoy": {
+        "weight": 0.053,
+        "direction": 1
+      },
+      "calc_income_to_buy": {
+        "weight": 0.198,
+        "direction": 1
+      },
+      "pending_listing_count_yy": {
+        "weight": 0.0368,
+        "direction": -1
+      }
+    },
+    "raw_shap_importance": {
+      "rf_sold_above_list": 0.099422,
+      "rf_off_market_in_two_weeks": 0.097611,
+      "rf_median_dom": 0.14883,
+      "rf_avg_sale_to_list": 0.054401,
+      "cen_homeownership_rate": 0.147292,
+      "rf_sold_above_list_yoy": 0.061639,
+      "rf_homes_sold_yoy": 0.048957,
+      "rf_median_dom_yoy": 0.04897,
+      "calc_income_to_buy": 0.183036,
+      "pending_listing_count_yy": 0.034041
+    },
+    "n_samples": 2000
+  },
+  "features_used": [
+    "rf_sold_above_list",
+    "rf_off_market_in_two_weeks",
+    "rf_median_dom",
+    "rf_avg_sale_to_list",
+    "cen_homeownership_rate",
+    "rf_sold_above_list_yoy",
+    "rf_homes_sold_yoy",
+    "rf_median_dom_yoy",
+    "calc_income_to_buy",
+    "pending_listing_count_yy"
+  ],
+  "n_rows": 196852,
+  "elapsed_seconds": 8.5,
+  "_meta": {
+    "geo_level": "zip",
+    "score_type": "homeready",
+    "horizon": "3y",
+    "generated_at": "2026-03-04T17:48:15.384249+00:00",
+    "pipeline": "scoring_pipeline_v1"
+  }
+}

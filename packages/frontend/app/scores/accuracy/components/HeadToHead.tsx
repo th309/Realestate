@@ -5,77 +5,71 @@
  * Fetches PropertyIQ pricing from the database to avoid hardcoded prices.
  */
 
-import { CheckCircle, X } from 'lucide-react';
-import { fetchPricingSummary } from '@/lib/data/fetchers/pricing';
+import { CheckCircle, X } from "lucide-react";
+import { fetchPricingSummary } from "@/lib/data/fetchers/pricing";
 
 interface ComparisonRow {
   dimension: string;
   propertyiq: string;
   competitor: string;
-  winner: 'propertyiq' | 'competitor' | 'tie';
+  winner: "propertyiq" | "competitor" | "tie";
 }
 
 function buildRows(proPrice: string): ComparisonRow[] {
   return [
     {
-      dimension: 'Best-window correlation',
-      propertyiq: '\u03C1 = 0.80 (Mar 2024, 250K+)',
-      competitor: 'r = 0.79 (Apr 2024, 250K+)',
-      winner: 'propertyiq',
+      dimension: "OOS predictive accuracy",
+      propertyiq: "IC = 0.37 (walk-forward CV)",
+      competitor: "r = 0.79 (1 cherry-picked window)",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Same-window match (Apr 2024)',
-      propertyiq: '\u03C1 = 0.76 (250K+)',
-      competitor: 'r = 0.79 (250K+)',
-      winner: 'competitor',
+      dimension: "Validation windows tested",
+      propertyiq: "4 walk-forward windows (2018\u20132023)",
+      competitor: "1 cherry-picked window",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Validation windows tested',
-      propertyiq: '24 consecutive months',
-      competitor: '1 cherry-picked window',
-      winner: 'propertyiq',
+      dimension: "Geography coverage",
+      propertyiq: "924 metros + 2,482 counties + 19,923 ZIPs",
+      competitor: "~380 metros",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Geography coverage',
-      propertyiq: '860 metros + 3K counties + 25K ZIPs',
-      competitor: '~380 metros',
-      winner: 'propertyiq',
+      dimension: "Quintile dollar impact",
+      propertyiq: "$13,320/yr per home",
+      competitor: "Not published",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Quintile dollar impact',
-      propertyiq: '$11,978/yr per home',
-      competitor: 'Not published',
-      winner: 'propertyiq',
+      dimension: "Bottom quintile warning",
+      propertyiq: "Yes: negative excess returns",
+      competitor: "No",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Bottom quintile warning',
-      propertyiq: 'Yes: -0.23% = actual loss',
-      competitor: 'No',
-      winner: 'propertyiq',
+      dimension: "Walk-forward cross-validation",
+      propertyiq: "Yes (no look-ahead bias)",
+      competitor: "No",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Walk-forward cross-validation',
-      propertyiq: 'Yes (no look-ahead bias)',
-      competitor: 'No',
-      winner: 'propertyiq',
+      dimension: "SHAP feature importance",
+      propertyiq: "Yes (model-agnostic explainability)",
+      competitor: "No",
+      winner: "propertyiq",
     },
     {
-      dimension: 'Bootstrap significance testing',
-      propertyiq: 'Yes (95% CI excludes zero)',
-      competitor: 'No',
-      winner: 'propertyiq',
-    },
-    {
-      dimension: 'Price',
+      dimension: "Price",
       propertyiq: proPrice,
-      competitor: '$399/yr',
-      winner: 'propertyiq',
+      competitor: "$399/yr",
+      winner: "propertyiq",
     },
   ];
 }
 
-function WinnerBadge({ winner }: { winner: ComparisonRow['winner'] }) {
-  if (winner === 'tie') return null;
+function WinnerBadge({ winner }: { winner: ComparisonRow["winner"] }) {
+  if (winner === "tie") return null;
   return (
     <span className="inline-flex items-center gap-0.5">
       <CheckCircle className="w-3.5 h-3.5 text-primary" />
@@ -84,11 +78,12 @@ function WinnerBadge({ winner }: { winner: ComparisonRow['winner'] }) {
 }
 
 export async function HeadToHead() {
-  let proPrice = '...';
+  let proPrice = "...";
   try {
     const pricing = await fetchPricingSummary();
-    const pro = pricing.tiers.find((t) => t.slug === 'pro');
-    if (pro?.price_monthly) proPrice = `$${Math.round(Number(pro.price_monthly))}/mo`;
+    const pro = pricing.tiers.find((t) => t.slug === "pro");
+    if (pro?.price_monthly)
+      proPrice = `$${Math.round(Number(pro.price_monthly))}/mo`;
   } catch {
     // Pricing fetch failed; leave as placeholder
   }
@@ -104,7 +99,8 @@ export async function HeadToHead() {
         PropertyIQ vs. the Competition
       </h2>
       <p className="text-on-surface-variant mt-2 max-w-2xl">
-        Using the leading competitor&apos;s own published numbers from their forecast page.
+        Using the leading competitor&apos;s own published numbers from their
+        forecast page.
       </p>
 
       <div className="mt-8 rounded-2xl border border-outline-variant overflow-hidden">
@@ -127,24 +123,45 @@ export async function HeadToHead() {
               {ROWS.map((row, i) => (
                 <tr
                   key={row.dimension}
-                  className={i % 2 === 0 ? 'bg-surface' : 'bg-surface-container-lowest'}
+                  className={
+                    i % 2 === 0 ? "bg-surface" : "bg-surface-container-lowest"
+                  }
                 >
-                  <td className="px-4 py-3 text-on-surface font-medium">{row.dimension}</td>
+                  <td className="px-4 py-3 text-on-surface font-medium">
+                    {row.dimension}
+                  </td>
                   <td className="px-4 py-3 bg-primary/[0.04]">
                     <span className="flex items-center gap-1.5">
-                      {row.winner === 'propertyiq' && <WinnerBadge winner={row.winner} />}
-                      <span className={row.winner === 'propertyiq' ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}>
+                      {row.winner === "propertyiq" && (
+                        <WinnerBadge winner={row.winner} />
+                      )}
+                      <span
+                        className={
+                          row.winner === "propertyiq"
+                            ? "font-semibold text-on-surface"
+                            : "text-on-surface-variant"
+                        }
+                      >
                         {row.propertyiq}
                       </span>
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
-                      {row.winner === 'competitor' && <WinnerBadge winner={row.winner} />}
-                      <span className={row.winner === 'competitor' ? 'font-semibold text-on-surface' : 'text-on-surface-variant'}>
+                      {row.winner === "competitor" && (
+                        <WinnerBadge winner={row.winner} />
+                      )}
+                      <span
+                        className={
+                          row.winner === "competitor"
+                            ? "font-semibold text-on-surface"
+                            : "text-on-surface-variant"
+                        }
+                      >
                         {row.competitor}
                       </span>
-                      {row.competitor === 'No' || row.competitor === 'Not published' ? (
+                      {row.competitor === "No" ||
+                      row.competitor === "Not published" ? (
                         <X className="w-3.5 h-3.5 text-error/50" />
                       ) : null}
                     </span>
@@ -157,8 +174,9 @@ export async function HeadToHead() {
       </div>
 
       <p className="text-xs text-on-surface-variant mt-3 italic">
-        Competitor data sourced from publicly available forecast pages (accessed February 2026).
-        PropertyIQ uses Spearman &rho; (rank correlation); competitor uses Pearson r (linear correlation).
+        Competitor data sourced from publicly available forecast pages (accessed
+        February 2026). PropertyIQ uses walk-forward OOS Information
+        Coefficient; competitor uses single-window Pearson r.
       </p>
     </section>
   );

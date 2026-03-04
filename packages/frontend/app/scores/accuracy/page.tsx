@@ -1,25 +1,25 @@
-import { Target } from 'lucide-react';
-import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
-import { HeroStats } from './components/HeroStats';
-import { DollarImpactSection } from './components/DollarImpactSection';
-import { AlphaCallout } from './components/AlphaCallout';
-import { InteractiveScatter } from './components/InteractiveScatter';
-import { QuintilePerformance } from './components/QuintilePerformance';
-import { PearsonVsSpearman } from './components/PearsonVsSpearman';
-import { HeadToHead } from './components/HeadToHead';
-import { GeographyCoverage } from './components/GeographyCoverage';
-import { MethodologyFooter } from './components/MethodologyFooter';
-import { CTABanner } from './components/CTABanner';
-import type { Metadata } from 'next';
+import { Target } from "lucide-react";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { HeroStats } from "./components/HeroStats";
+import { DollarImpactSection } from "./components/DollarImpactSection";
+import { AlphaCallout } from "./components/AlphaCallout";
+import { InteractiveScatter } from "./components/InteractiveScatter";
+import { QuintilePerformance } from "./components/QuintilePerformance";
+import { PearsonVsSpearman } from "./components/PearsonVsSpearman";
+import { HeadToHead } from "./components/HeadToHead";
+import { GeographyCoverage } from "./components/GeographyCoverage";
+import { MethodologyFooter } from "./components/MethodologyFooter";
+import { CTABanner } from "./components/CTABanner";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Forecast Accuracy — PropertyIQ Scores Beat the Competition',
+  title: "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
   description:
-    'Spearman \u03C1 = 0.80, validated across 24 monthly windows, 860+ metros, 28,000+ markets. See how PropertyIQ Scores predict real-world returns.',
+    "OOS IC = 0.37, walk-forward validated across 4 windows, 924 metros, 23,000+ locations. See how PropertyIQ Scores predict real-world returns.",
   openGraph: {
-    title: 'Forecast Accuracy — PropertyIQ',
+    title: "Forecast Accuracy — PropertyIQ",
     description:
-      '0.80 correlation. 24 months. Zero cherry-picking. See the proof behind PropertyIQ Scores.',
+      "0.37 OOS correlation. 4 walk-forward windows. Zero cherry-picking. See the proof behind PropertyIQ Scores.",
   },
 };
 
@@ -30,8 +30,8 @@ export default function AccuracyPage() {
       <section>
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[
-            { label: 'Scores', href: '/scores' },
-            { label: 'Forecast Accuracy' },
+            { label: "Scores", href: "/scores" },
+            { label: "Forecast Accuracy" },
           ]}
           title="Forecast Accuracy"
           description="How well do PropertyIQ Scores predict real-world market returns?"

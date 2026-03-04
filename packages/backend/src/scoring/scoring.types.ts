@@ -109,22 +109,32 @@ export interface LocationMetrics {
   location_id: string;
   location_name: string;
   median_price?: number;
-  // Realtor metrics
-  hotness_score?: number;
-  demand_score?: number;
-  supply_score?: number;
-  pending_ratio?: number;
+  // Redfin market activity metrics
+  rf_median_dom?: number;
+  rf_off_market_in_two_weeks?: number;
+  rf_sold_above_list?: number;
+  rf_avg_sale_to_list?: number;
+  rf_homes_sold_yoy?: number;
+  rf_sold_above_list_yoy?: number;
+  rf_avg_sale_to_list_yoy?: number;
+  rf_median_dom_yoy?: number;
+  // Census demographic metrics
+  cen_median_age?: number;
+  cen_population_yoy?: number;
+  cen_income_yoy?: number;
+  cen_homeownership_rate?: number;
+  cen_rent_as_pct_of_income?: number;
+  // Economic metrics
+  econ_gdp_yoy?: number;
+  // Zillow inventory (metro only)
+  z_inventory?: number;
+  // Calculated affordability metrics
+  calc_income_to_buy?: number;
+  // FRED macro indicators (national-level, same for all locations)
+  fred_vix?: number;
+  // Realtor listing metrics
   price_reduced_share?: number;
-  median_days_on_market?: number;
-  active_listing_count_yy?: number;
-  price_reduced_count_yy?: number;
-  // Census/Economic metrics (may be inherited for ZIP)
-  population_yoy?: number;
-  unemployment_rate_yoy?: number;
-  median_gross_rent?: number;
-  homeownership_rate?: number;
-  affordability_ratio?: number;
-  rent_price_ratio?: number;
+  pending_listing_count_yy?: number;
   // Track inherited metrics
   _inherited?: string[];
 }

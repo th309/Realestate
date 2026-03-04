@@ -1,0 +1,342 @@
+{
+  "tournament": [
+    {
+      "model_name": "elasticnet",
+      "n_windows": 4,
+      "mean_ic": 0.1715,
+      "std_ic": 0.061,
+      "information_ratio": 2.8125,
+      "mean_quintile_spread": 1.616,
+      "mean_hit_rate": 0.59,
+      "mean_calibration_mad": 0.0893,
+      "feature_importances": {
+        "cen_population_yoy": 0.2928,
+        "cen_median_age": 0.2231,
+        "rf_off_market_in_two_weeks": 0.1283,
+        "rf_sold_above_list": 0.0926,
+        "cen_income_yoy": 0.0854,
+        "calc_income_to_buy": 0.0689,
+        "cen_homeownership_rate": 0.0472,
+        "econ_gdp_yoy": 0.0285,
+        "price_reduced_share": 0.0242,
+        "fred_vix": 0.009
+      },
+      "windows": [
+        {
+          "window": 0,
+          "train": "2018-01-01 to 2019-12-31",
+          "test": "2020-01-01 to 2020-12-31",
+          "train_rows": 71858,
+          "test_rows": 967,
+          "ic": 0.2587,
+          "quintile_spread": 2.1548,
+          "hit_rate": 0.658
+        },
+        {
+          "window": 1,
+          "train": "2019-01-01 to 2020-12-31",
+          "test": "2021-01-01 to 2021-12-31",
+          "train_rows": 36994,
+          "test_rows": 35032,
+          "ic": 0.1981,
+          "quintile_spread": 2.118,
+          "hit_rate": 0.5698
+        },
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 35999,
+          "test_rows": 37189,
+          "ic": 0.1213,
+          "quintile_spread": 1.1296,
+          "hit_rate": 0.575
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 72221,
+          "test_rows": 3099,
+          "ic": 0.1079,
+          "quintile_spread": 1.0617,
+          "hit_rate": 0.5574
+        }
+      ],
+      "is_best": false
+    },
+    {
+      "model_name": "xgboost",
+      "n_windows": 4,
+      "mean_ic": 0.2401,
+      "std_ic": 0.0477,
+      "information_ratio": 5.0296,
+      "mean_quintile_spread": 2.3753,
+      "mean_hit_rate": 0.6055,
+      "mean_calibration_mad": 0.076,
+      "feature_importances": {
+        "cen_median_age": 0.1274,
+        "cen_homeownership_rate": 0.1253,
+        "cen_population_yoy": 0.1249,
+        "calc_income_to_buy": 0.1108,
+        "rf_off_market_in_two_weeks": 0.1081,
+        "econ_gdp_yoy": 0.1052,
+        "cen_income_yoy": 0.0936,
+        "rf_sold_above_list": 0.0906,
+        "fred_vix": 0.0589,
+        "price_reduced_share": 0.0551
+      },
+      "windows": [
+        {
+          "window": 0,
+          "train": "2018-01-01 to 2019-12-31",
+          "test": "2020-01-01 to 2020-12-31",
+          "train_rows": 71858,
+          "test_rows": 967,
+          "ic": 0.2955,
+          "quintile_spread": 2.4956,
+          "hit_rate": 0.6114
+        },
+        {
+          "window": 1,
+          "train": "2019-01-01 to 2020-12-31",
+          "test": "2021-01-01 to 2021-12-31",
+          "train_rows": 36994,
+          "test_rows": 35032,
+          "ic": 0.1714,
+          "quintile_spread": 2.0654,
+          "hit_rate": 0.5784
+        },
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 35999,
+          "test_rows": 37189,
+          "ic": 0.2219,
+          "quintile_spread": 1.8693,
+          "hit_rate": 0.581
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 72221,
+          "test_rows": 3099,
+          "ic": 0.2718,
+          "quintile_spread": 3.071,
+          "hit_rate": 0.6511
+        }
+      ],
+      "is_best": false
+    },
+    {
+      "model_name": "lightgbm",
+      "n_windows": 4,
+      "mean_ic": 0.2459,
+      "std_ic": 0.0585,
+      "information_ratio": 4.2018,
+      "mean_quintile_spread": 2.4929,
+      "mean_hit_rate": 0.6089,
+      "mean_calibration_mad": 0.0551,
+      "feature_importances": {
+        "cen_median_age": 0.1748,
+        "cen_homeownership_rate": 0.1599,
+        "cen_population_yoy": 0.1466,
+        "econ_gdp_yoy": 0.1459,
+        "cen_income_yoy": 0.1431,
+        "calc_income_to_buy": 0.1329,
+        "price_reduced_share": 0.0294,
+        "rf_sold_above_list": 0.0268,
+        "fred_vix": 0.0204,
+        "rf_off_market_in_two_weeks": 0.0202
+      },
+      "windows": [
+        {
+          "window": 0,
+          "train": "2018-01-01 to 2019-12-31",
+          "test": "2020-01-01 to 2020-12-31",
+          "train_rows": 71858,
+          "test_rows": 967,
+          "ic": 0.3144,
+          "quintile_spread": 2.8549,
+          "hit_rate": 0.6373
+        },
+        {
+          "window": 1,
+          "train": "2019-01-01 to 2020-12-31",
+          "test": "2021-01-01 to 2021-12-31",
+          "train_rows": 36994,
+          "test_rows": 35032,
+          "ic": 0.1561,
+          "quintile_spread": 1.9017,
+          "hit_rate": 0.5712
+        },
+        {
+          "window": 2,
+          "train": "2020-01-01 to 2021-12-31",
+          "test": "2022-01-01 to 2022-12-31",
+          "train_rows": 35999,
+          "test_rows": 37189,
+          "ic": 0.2378,
+          "quintile_spread": 1.9278,
+          "hit_rate": 0.5938
+        },
+        {
+          "window": 3,
+          "train": "2021-01-01 to 2022-12-31",
+          "test": "2023-01-01 to 2023-12-31",
+          "train_rows": 72221,
+          "test_rows": 3099,
+          "ic": 0.2755,
+          "quintile_spread": 3.2871,
+          "hit_rate": 0.6333
+        }
+      ],
+      "is_best": true
+    }
+  ],
+  "best_model": {
+    "model_name": "lightgbm",
+    "n_windows": 4,
+    "mean_ic": 0.2459,
+    "std_ic": 0.0585,
+    "information_ratio": 4.2018,
+    "mean_quintile_spread": 2.4929,
+    "mean_hit_rate": 0.6089,
+    "mean_calibration_mad": 0.0551,
+    "feature_importances": {
+      "cen_median_age": 0.1748,
+      "cen_homeownership_rate": 0.1599,
+      "cen_population_yoy": 0.1466,
+      "econ_gdp_yoy": 0.1459,
+      "cen_income_yoy": 0.1431,
+      "calc_income_to_buy": 0.1329,
+      "price_reduced_share": 0.0294,
+      "rf_sold_above_list": 0.0268,
+      "fred_vix": 0.0204,
+      "rf_off_market_in_two_weeks": 0.0202
+    },
+    "windows": [
+      {
+        "window": 0,
+        "train": "2018-01-01 to 2019-12-31",
+        "test": "2020-01-01 to 2020-12-31",
+        "train_rows": 71858,
+        "test_rows": 967,
+        "ic": 0.3144,
+        "quintile_spread": 2.8549,
+        "hit_rate": 0.6373
+      },
+      {
+        "window": 1,
+        "train": "2019-01-01 to 2020-12-31",
+        "test": "2021-01-01 to 2021-12-31",
+        "train_rows": 36994,
+        "test_rows": 35032,
+        "ic": 0.1561,
+        "quintile_spread": 1.9017,
+        "hit_rate": 0.5712
+      },
+      {
+        "window": 2,
+        "train": "2020-01-01 to 2021-12-31",
+        "test": "2022-01-01 to 2022-12-31",
+        "train_rows": 35999,
+        "test_rows": 37189,
+        "ic": 0.2378,
+        "quintile_spread": 1.9278,
+        "hit_rate": 0.5938
+      },
+      {
+        "window": 3,
+        "train": "2021-01-01 to 2022-12-31",
+        "test": "2023-01-01 to 2023-12-31",
+        "train_rows": 72221,
+        "test_rows": 3099,
+        "ic": 0.2755,
+        "quintile_spread": 3.2871,
+        "hit_rate": 0.6333
+      }
+    ],
+    "is_best": true
+  },
+  "weights": {
+    "weights": {
+      "cen_population_yoy": {
+        "weight": 0.2103,
+        "direction": -1
+      },
+      "cen_income_yoy": {
+        "weight": 0.0337,
+        "direction": -1
+      },
+      "econ_gdp_yoy": {
+        "weight": 0.073,
+        "direction": 1
+      },
+      "cen_homeownership_rate": {
+        "weight": 0.0484,
+        "direction": -1
+      },
+      "cen_median_age": {
+        "weight": 0.1302,
+        "direction": -1
+      },
+      "rf_sold_above_list": {
+        "weight": 0.0752,
+        "direction": 1
+      },
+      "price_reduced_share": {
+        "weight": 0.0743,
+        "direction": 1
+      },
+      "calc_income_to_buy": {
+        "weight": 0.1312,
+        "direction": -1
+      },
+      "rf_off_market_in_two_weeks": {
+        "weight": 0.1108,
+        "direction": 1
+      },
+      "fred_vix": {
+        "weight": 0.1127,
+        "direction": 1
+      }
+    },
+    "raw_shap_importance": {
+      "cen_population_yoy": 0.330772,
+      "cen_income_yoy": 0.053051,
+      "econ_gdp_yoy": 0.114875,
+      "cen_homeownership_rate": 0.076143,
+      "cen_median_age": 0.204811,
+      "rf_sold_above_list": 0.118287,
+      "price_reduced_share": 0.116881,
+      "calc_income_to_buy": 0.206293,
+      "rf_off_market_in_two_weeks": 0.174292,
+      "fred_vix": 0.177181
+    },
+    "n_samples": 2000
+  },
+  "features_used": [
+    "cen_population_yoy",
+    "cen_income_yoy",
+    "econ_gdp_yoy",
+    "cen_homeownership_rate",
+    "cen_median_age",
+    "rf_sold_above_list",
+    "price_reduced_share",
+    "calc_income_to_buy",
+    "rf_off_market_in_two_weeks",
+    "fred_vix"
+  ],
+  "n_rows": 249529,
+  "elapsed_seconds": 9.7,
+  "_meta": {
+    "geo_level": "county",
+    "score_type": "homeready",
+    "horizon": "3y",
+    "generated_at": "2026-03-04T17:46:29.539011+00:00",
+    "pipeline": "scoring_pipeline_v1"
+  }
+}

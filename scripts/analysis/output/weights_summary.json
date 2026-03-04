@@ -1,0 +1,342 @@
+{
+  "generated_at": "2026-03-04T17:48:42.454224+00:00",
+  "pipeline": "scoring_pipeline_v1",
+  "results": {
+    "metro/homeready/3y": {
+      "model": "xgboost",
+      "mean_ic": 0.2996,
+      "mean_quintile_spread": 2.6633,
+      "mean_hit_rate": 0.6378,
+      "weights": {
+        "cen_income_yoy": {
+          "weight": 0.0869,
+          "direction": -1
+        },
+        "cen_median_age": {
+          "weight": 0.1674,
+          "direction": -1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0796,
+          "direction": -1
+        },
+        "cen_population_yoy": {
+          "weight": 0.1605,
+          "direction": -1
+        },
+        "cen_rent_as_pct_of_income": {
+          "weight": 0.0631,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.1209,
+          "direction": -1
+        },
+        "rf_median_dom": {
+          "weight": 0.1364,
+          "direction": -1
+        },
+        "z_inventory": {
+          "weight": 0.0958,
+          "direction": 1
+        },
+        "rf_sold_above_list": {
+          "weight": 0.0605,
+          "direction": 1
+        },
+        "rf_avg_sale_to_list": {
+          "weight": 0.0289,
+          "direction": -1
+        }
+      }
+    },
+    "metro/investoredge/3y": {
+      "model": "xgboost",
+      "mean_ic": 0.3724,
+      "mean_quintile_spread": 5.5534,
+      "mean_hit_rate": 0.6945,
+      "weights": {
+        "cen_income_yoy": {
+          "weight": 0.0805,
+          "direction": -1
+        },
+        "cen_median_age": {
+          "weight": 0.0861,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0459,
+          "direction": -1
+        },
+        "cen_population_yoy": {
+          "weight": 0.1332,
+          "direction": 1
+        },
+        "cen_rent_as_pct_of_income": {
+          "weight": 0.0403,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.0586,
+          "direction": 1
+        },
+        "rf_median_dom": {
+          "weight": 0.1847,
+          "direction": 1
+        },
+        "z_inventory": {
+          "weight": 0.1863,
+          "direction": 1
+        },
+        "rf_sold_above_list": {
+          "weight": 0.074,
+          "direction": -1
+        },
+        "rf_avg_sale_to_list": {
+          "weight": 0.1104,
+          "direction": -1
+        }
+      }
+    },
+    "metro/markethealth/3y": {
+      "model": "xgboost",
+      "mean_ic": 0.3659,
+      "mean_quintile_spread": 3.762,
+      "mean_hit_rate": 0.6658,
+      "weights": {
+        "cen_income_yoy": {
+          "weight": 0.1747,
+          "direction": -1
+        },
+        "cen_median_age": {
+          "weight": 0.1192,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0379,
+          "direction": -1
+        },
+        "cen_population_yoy": {
+          "weight": 0.1883,
+          "direction": 1
+        },
+        "cen_rent_as_pct_of_income": {
+          "weight": 0.0448,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.0617,
+          "direction": 1
+        },
+        "rf_median_dom": {
+          "weight": 0.0595,
+          "direction": 1
+        },
+        "z_inventory": {
+          "weight": 0.2572,
+          "direction": 1
+        },
+        "rf_sold_above_list": {
+          "weight": 0.0418,
+          "direction": 1
+        },
+        "rf_avg_sale_to_list": {
+          "weight": 0.0149,
+          "direction": 1
+        }
+      }
+    },
+    "county/homeready/3y": {
+      "model": "lightgbm",
+      "mean_ic": 0.2459,
+      "mean_quintile_spread": 2.4929,
+      "mean_hit_rate": 0.6089,
+      "weights": {
+        "cen_population_yoy": {
+          "weight": 0.2103,
+          "direction": -1
+        },
+        "cen_income_yoy": {
+          "weight": 0.0337,
+          "direction": -1
+        },
+        "econ_gdp_yoy": {
+          "weight": 0.073,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0484,
+          "direction": -1
+        },
+        "cen_median_age": {
+          "weight": 0.1302,
+          "direction": -1
+        },
+        "rf_sold_above_list": {
+          "weight": 0.0752,
+          "direction": 1
+        },
+        "price_reduced_share": {
+          "weight": 0.0743,
+          "direction": 1
+        },
+        "calc_income_to_buy": {
+          "weight": 0.1312,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.1108,
+          "direction": 1
+        },
+        "fred_vix": {
+          "weight": 0.1127,
+          "direction": 1
+        }
+      }
+    },
+    "county/markethealth/3y": {
+      "model": "lightgbm",
+      "mean_ic": 0.2818,
+      "mean_quintile_spread": 3.1207,
+      "mean_hit_rate": 0.6527,
+      "weights": {
+        "cen_population_yoy": {
+          "weight": 0.247,
+          "direction": -1
+        },
+        "cen_income_yoy": {
+          "weight": 0.1005,
+          "direction": 1
+        },
+        "econ_gdp_yoy": {
+          "weight": 0.049,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0329,
+          "direction": 1
+        },
+        "cen_median_age": {
+          "weight": 0.0831,
+          "direction": -1
+        },
+        "rf_sold_above_list": {
+          "weight": 0.0391,
+          "direction": -1
+        },
+        "price_reduced_share": {
+          "weight": 0.1025,
+          "direction": 1
+        },
+        "calc_income_to_buy": {
+          "weight": 0.0889,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.041,
+          "direction": 1
+        },
+        "fred_vix": {
+          "weight": 0.216,
+          "direction": 1
+        }
+      }
+    },
+    "zip/homeready/3y": {
+      "model": "xgboost",
+      "mean_ic": 0.1841,
+      "mean_quintile_spread": 1.6885,
+      "mean_hit_rate": 0.5988,
+      "weights": {
+        "rf_sold_above_list": {
+          "weight": 0.1076,
+          "direction": 1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.1056,
+          "direction": 1
+        },
+        "rf_median_dom": {
+          "weight": 0.161,
+          "direction": 1
+        },
+        "rf_avg_sale_to_list": {
+          "weight": 0.0589,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.1594,
+          "direction": -1
+        },
+        "rf_sold_above_list_yoy": {
+          "weight": 0.0667,
+          "direction": -1
+        },
+        "rf_homes_sold_yoy": {
+          "weight": 0.053,
+          "direction": -1
+        },
+        "rf_median_dom_yoy": {
+          "weight": 0.053,
+          "direction": 1
+        },
+        "calc_income_to_buy": {
+          "weight": 0.198,
+          "direction": 1
+        },
+        "pending_listing_count_yy": {
+          "weight": 0.0368,
+          "direction": -1
+        }
+      }
+    },
+    "zip/markethealth/3y": {
+      "model": "xgboost",
+      "mean_ic": 0.2213,
+      "mean_quintile_spread": 2.1559,
+      "mean_hit_rate": 0.6333,
+      "weights": {
+        "rf_sold_above_list": {
+          "weight": 0.0755,
+          "direction": -1
+        },
+        "rf_off_market_in_two_weeks": {
+          "weight": 0.0564,
+          "direction": 1
+        },
+        "rf_median_dom": {
+          "weight": 0.0842,
+          "direction": -1
+        },
+        "rf_avg_sale_to_list": {
+          "weight": 0.0676,
+          "direction": 1
+        },
+        "cen_homeownership_rate": {
+          "weight": 0.0695,
+          "direction": -1
+        },
+        "rf_sold_above_list_yoy": {
+          "weight": 0.0306,
+          "direction": 1
+        },
+        "rf_homes_sold_yoy": {
+          "weight": 0.0165,
+          "direction": -1
+        },
+        "rf_median_dom_yoy": {
+          "weight": 0.0148,
+          "direction": -1
+        },
+        "calc_income_to_buy": {
+          "weight": 0.2452,
+          "direction": -1
+        },
+        "pending_listing_count_yy": {
+          "weight": 0.3396,
+          "direction": 1
+        }
+      }
+    }
+  }
+}

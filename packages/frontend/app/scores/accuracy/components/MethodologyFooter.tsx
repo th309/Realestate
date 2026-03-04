@@ -5,29 +5,29 @@
  * Server component.
  */
 
-import Link from 'next/link';
-import { FileText, ArrowRight } from 'lucide-react';
+import Link from "next/link";
+import { FileText, ArrowRight } from "lucide-react";
 
 const METHODS = [
   {
-    title: 'Walk-Forward Cross-Validation',
+    title: "Walk-Forward Cross-Validation",
     description:
-      'Four overlapping train/test windows (2020\u20132025) ensure the model never sees future data. No look-ahead bias.',
+      "Four walk-forward windows (2018\u20132023) with non-overlapping test periods ensure the model never sees future data. No look-ahead bias.",
   },
   {
-    title: 'Excess Return Measurement',
+    title: "Excess Return Measurement",
     description:
-      'Returns measured as excess over state benchmarks, isolating local alpha from broad market beta.',
+      "Returns measured as excess over state benchmarks, isolating local alpha from broad market beta.",
   },
   {
-    title: 'Bootstrap Significance Testing',
+    title: "SHAP Feature Distillation",
     description:
-      '1,000 bootstrap samples per window. 95% confidence intervals exclude zero for all primary coefficients.',
+      "XGBoost/LightGBM SHAP values distilled to interpretable linear weights. 10 features per formula, fully transparent.",
   },
   {
-    title: 'Elastic Net Regularization',
+    title: "Model Tournament",
     description:
-      'L1/L2 penalty prevents overfitting across 40+ features. Coefficients are stable and interpretable.',
+      "XGBoost, LightGBM, and ElasticNet compete per geography. Best model selected by highest mean OOS Information Coefficient.",
   },
 ];
 
@@ -54,7 +54,9 @@ export function MethodologyFooter() {
               key={method.title}
               className="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant"
             >
-              <h3 className="text-sm font-semibold text-on-surface">{method.title}</h3>
+              <h3 className="text-sm font-semibold text-on-surface">
+                {method.title}
+              </h3>
               <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">
                 {method.description}
               </p>
