@@ -13,7 +13,7 @@ const resend = process.env.RESEND_API_KEY
   : null;
 
 const EMAIL_FROM = process.env.EMAIL_FROM || "Troy <troy@propertyiq.app>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.propertyiq.app";
 
 interface InviteEmailParams {
   to: string;
