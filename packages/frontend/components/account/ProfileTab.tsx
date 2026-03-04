@@ -1,17 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Lock, Upload, Camera, ChevronDown, ChevronUp, Check, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import {
+  Lock,
+  Upload,
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  AlertTriangle,
+} from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 // --- OAuth provider helpers ---------------------------------------------------
 
 const PROVIDERS = [
-  { id: 'google', label: 'Google', icon: GoogleIcon },
-  { id: 'apple', label: 'Apple', icon: AppleIcon },
-  { id: 'github', label: 'GitHub', icon: GithubIcon },
+  { id: "google", label: "Google", icon: GoogleIcon },
+  { id: "apple", label: "Apple", icon: AppleIcon },
+  { id: "github", label: "GitHub", icon: GithubIcon },
 ] as const;
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -66,12 +74,12 @@ function PersonalInfoSection({ user }: { user: User }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(
-    user.user_metadata?.display_name || ''
+    user.user_metadata?.display_name || "",
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    user.user_metadata?.avatar_url || null
+    user.user_metadata?.avatar_url || null,
   );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,40 +106,47 @@ function PersonalInfoSection({ user }: { user: User }) {
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const ext = file.name.split('.').pop();
+      const ext = file.name.split(".").pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from("avatars")
         .upload(path, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = data.publicUrl;
 
-      const { error: profileError } = await updateProfile({ avatar_url: publicUrl });
+      const { error: profileError } = await updateProfile({
+        avatar_url: publicUrl,
+      });
       if (profileError) throw profileError;
 
       setAvatarUrl(publicUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload avatar');
+      setError(err instanceof Error ? err.message : "Failed to upload avatar");
     } finally {
       setUploading(false);
       // Reset file input so the same file can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const initials =
-    (user.user_metadata?.display_name || user.email || '?').charAt(0).toUpperCase();
+  const initials = (user.user_metadata?.display_name || user.email || "?")
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <section>
-      <h3 className="text-sm font-semibold text-on-surface mb-4">Personal Information</h3>
+      <h3 className="text-sm font-semibold text-on-surface mb-4">
+        Personal Information
+      </h3>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-error/10 text-error text-sm">{error}</div>
+        <div className="mb-4 p-3 rounded-lg bg-error/10 text-error text-sm">
+          {error}
+        </div>
       )}
 
       {/* Avatar */}
@@ -144,15 +159,23 @@ function PersonalInfoSection({ user }: { user: User }) {
         >
           {avatarUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            <img
+              src={avatarUrl}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full bg-primary flex items-center justify-center">
-              <span className="text-xl font-semibold text-on-primary">{initials}</span>
+              <span className="text-xl font-semibold text-on-primary">
+                {initials}
+              </span>
             </div>
           )}
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             {uploading ? (
-              <span className="text-white text-xs font-medium">Uploading...</span>
+              <span className="text-white text-xs font-medium">
+                Uploading...
+              </span>
             ) : (
               <Camera className="w-5 h-5 text-white" />
             )}
@@ -190,7 +213,7 @@ function PersonalInfoSection({ user }: { user: User }) {
               disabled={saving}
               className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex-shrink-0"
             >
-              {saving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+              {saving ? "Saving..." : saved ? "Saved!" : "Save"}
             </button>
           </div>
         </div>
@@ -203,7 +226,7 @@ function PersonalInfoSection({ user }: { user: User }) {
           <div className="relative">
             <input
               type="email"
-              value={user.email || ''}
+              value={user.email || ""}
               disabled
               className="w-full px-3 py-2.5 pr-10 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface/60 cursor-not-allowed"
             />
@@ -218,7 +241,13 @@ function PersonalInfoSection({ user }: { user: User }) {
 // --- Security Section ---------------------------------------------------------
 
 function SecuritySection({ user }: { user: User }) {
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const searchParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  const [showPasswordForm, setShowPasswordForm] = useState(
+    searchParams?.get("reset") === "true",
+  );
 
   return (
     <section>
@@ -252,7 +281,7 @@ function SecuritySection({ user }: { user: User }) {
         <div className="space-y-2">
           {PROVIDERS.map((provider) => {
             const linked = user.identities?.some(
-              (id) => id.provider === provider.id
+              (id) => id.provider === provider.id,
             );
             const Icon = provider.icon;
 
@@ -288,8 +317,8 @@ function SecuritySection({ user }: { user: User }) {
 
 function PasswordForm({ onClose }: { onClose: () => void }) {
   const { updatePassword } = useAuth();
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -299,11 +328,11 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
     setError(null);
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
@@ -315,8 +344,8 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
       setError(err.message);
     } else {
       setSuccess(true);
-      setNewPassword('');
-      setConfirmPassword('');
+      setNewPassword("");
+      setConfirmPassword("");
       setTimeout(() => {
         setSuccess(false);
         onClose();
@@ -327,7 +356,9 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="mt-3 space-y-3 max-w-sm">
       {error && (
-        <div className="p-3 rounded-lg bg-error/10 text-error text-sm">{error}</div>
+        <div className="p-3 rounded-lg bg-error/10 text-error text-sm">
+          {error}
+        </div>
       )}
       {success && (
         <div className="p-3 rounded-lg bg-primary/10 text-primary text-sm flex items-center gap-2">
@@ -371,7 +402,7 @@ function PasswordForm({ onClose }: { onClose: () => void }) {
         disabled={saving}
         className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
       >
-        {saving ? 'Updating...' : 'Update Password'}
+        {saving ? "Updating..." : "Update Password"}
       </button>
     </form>
   );
@@ -384,7 +415,9 @@ function AccountActionsSection() {
 
   return (
     <section>
-      <h3 className="text-sm font-semibold text-on-surface mb-4">Account Actions</h3>
+      <h3 className="text-sm font-semibold text-on-surface mb-4">
+        Account Actions
+      </h3>
 
       <button
         type="button"
@@ -399,13 +432,13 @@ function AccountActionsSection() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
             <p className="text-sm text-on-surface">
-              Contact support at{' '}
+              Contact support at{" "}
               <a
                 href="mailto:support@propertyiq.app"
                 className="font-medium text-primary hover:underline"
               >
                 support@propertyiq.app
-              </a>{' '}
+              </a>{" "}
               to delete your account and all associated data.
             </p>
           </div>
