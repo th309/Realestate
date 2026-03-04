@@ -1026,7 +1026,7 @@ function ReportsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface" data-tour="reports-section">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <Breadcrumbs items={[{ label: "Reports" }]} className="mb-6" />
         {/* Header */}

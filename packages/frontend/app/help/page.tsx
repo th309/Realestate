@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { RestartTutorialSection } from "./RestartTutorialSection";
 
 interface FaqItem {
   question: string;
@@ -83,6 +84,11 @@ export default function HelpPage() {
           description="Find answers to common questions about PropertyIQ"
           icon={<HelpCircle className="w-5 h-5" />}
         />
+
+        {/* Platform Tutorial */}
+        <div className="mt-12">
+          <RestartTutorialSection />
+        </div>
 
         {/* FAQ Section */}
         <div className="mt-12 space-y-6">

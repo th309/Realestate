@@ -101,7 +101,7 @@ export default function ScoresPage() {
 
       {/* Score Cards */}
       <section>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6" data-tour="score-cards">
           {scoreCards.map((card) => {
             const Icon = card.icon;
             return (

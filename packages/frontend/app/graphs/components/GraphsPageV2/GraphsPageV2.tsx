@@ -1,43 +1,46 @@
-'use client';
+"use client";
 
-import React, { useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useSearchParams } from 'next/navigation';
-import { useGraphsState, type TimeFrame } from '../../hooks/useGraphsState';
-import { useMyMarkets } from '../../hooks/useMyMarkets';
-import { useScatterData } from '../../hooks/useScatterData';
-import { useWaterfallData } from '../../hooks/useWaterfallData';
-import { useRadarData } from '../../hooks/useRadarData';
-import { useBarRankingData } from '../../hooks/useBarRankingData';
-import { useBarRaceData } from '../../hooks/useBarRaceData';
-import { useScatterRaceData } from '../../hooks/useScatterRaceData';
-import { useRadarRaceData } from '../../hooks/useRadarRaceData';
-import { useRegionTimeSeriesData, useNationalTimeSeriesData } from '../../hooks/useRegionTimeSeriesData';
-import { useTimeSeriesData, getMetricTitle, getMetricFormat } from '@/lib/data';
-import type { GeoLevel, ScoreType } from '@/lib/data';
-import { MarketSearchBar } from '../MarketSearchBar';
-import { MetricPicker } from '../MetricPicker';
-import { AnimatedTimeSeriesChart } from '../AnimatedTimeSeriesChart';
-import { ChartTypePills } from '../ChartTypePills';
-import { Sidebar } from '../Sidebar';
-import { ScatterPlot } from '@/lib/visualizations/d3/ScatterPlot';
-import { WaterfallChart } from '@/lib/visualizations/d3/WaterfallChart';
-import { RadarChart } from '@/lib/visualizations/d3/RadarChart';
-import { HorizontalBarChart } from '@/lib/visualizations/d3/HorizontalBarChart';
-import type { FormatType } from '@/lib/visualizations/d3/utils/scales';
-import { ShareButton } from '../ShareButton';
-import { SaveGraphButton } from '../SaveGraphButton';
-import { SaveTemplateModal } from '../SaveTemplateModal';
-import { TemplatePicker } from '../TemplatePicker';
-import { Breadcrumbs } from '@/components/navigation';
+import React, { useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
+import { useGraphsState, type TimeFrame } from "../../hooks/useGraphsState";
+import { useMyMarkets } from "../../hooks/useMyMarkets";
+import { useScatterData } from "../../hooks/useScatterData";
+import { useWaterfallData } from "../../hooks/useWaterfallData";
+import { useRadarData } from "../../hooks/useRadarData";
+import { useBarRankingData } from "../../hooks/useBarRankingData";
+import { useBarRaceData } from "../../hooks/useBarRaceData";
+import { useScatterRaceData } from "../../hooks/useScatterRaceData";
+import { useRadarRaceData } from "../../hooks/useRadarRaceData";
+import {
+  useRegionTimeSeriesData,
+  useNationalTimeSeriesData,
+} from "../../hooks/useRegionTimeSeriesData";
+import { useTimeSeriesData, getMetricTitle, getMetricFormat } from "@/lib/data";
+import type { GeoLevel, ScoreType } from "@/lib/data";
+import { MarketSearchBar } from "../MarketSearchBar";
+import { MetricPicker } from "../MetricPicker";
+import { AnimatedTimeSeriesChart } from "../AnimatedTimeSeriesChart";
+import { ChartTypePills } from "../ChartTypePills";
+import { Sidebar } from "../Sidebar";
+import { ScatterPlot } from "@/lib/visualizations/d3/ScatterPlot";
+import { WaterfallChart } from "@/lib/visualizations/d3/WaterfallChart";
+import { RadarChart } from "@/lib/visualizations/d3/RadarChart";
+import { HorizontalBarChart } from "@/lib/visualizations/d3/HorizontalBarChart";
+import type { FormatType } from "@/lib/visualizations/d3/utils/scales";
+import { ShareButton } from "../ShareButton";
+import { SaveGraphButton } from "../SaveGraphButton";
+import { SaveTemplateModal } from "../SaveTemplateModal";
+import { TemplatePicker } from "../TemplatePicker";
+import { Breadcrumbs } from "@/components/navigation";
 
-const TIME_FRAMES: TimeFrame[] = ['1Y', '3Y', '5Y', '10Y', 'Max'];
+const TIME_FRAMES: TimeFrame[] = ["1Y", "3Y", "5Y", "10Y", "Max"];
 
 /** Convert TimeFrame to a startDate ISO string (bypasses the 6-month historyMonths cap) */
 function tfToStartDate(tf: TimeFrame): string | undefined {
-  if (tf === 'Max') return undefined;
+  if (tf === "Max") return undefined;
   const now = new Date();
-  const months = { '1Y': 12, '3Y': 36, '5Y': 60, '10Y': 120 }[tf];
+  const months = { "1Y": 12, "3Y": 36, "5Y": 60, "10Y": 120 }[tf];
   now.setMonth(now.getMonth() - months);
   return now.toISOString().slice(0, 10);
 }
@@ -51,10 +54,10 @@ function tfToStartDate(tf: TimeFrame): string | undefined {
  * and `percent_abs` registry formats.
  */
 function toScatterFormat(fmt: string): FormatType {
-  if (fmt === 'currency') return 'currency';
-  if (fmt === 'percent' || fmt === 'percent_abs') return 'percentAbs';
-  if (fmt === 'days') return 'days';
-  return 'number';
+  if (fmt === "currency") return "currency";
+  if (fmt === "percent" || fmt === "percent_abs") return "percentAbs";
+  if (fmt === "days") return "days";
+  return "number";
 }
 
 /**
@@ -64,29 +67,29 @@ function toScatterFormat(fmt: string): FormatType {
  * majority of points into a small area on linear scale.
  * All values must be positive for log to work.
  */
-function autoScaleType(values: number[]): 'linear' | 'log' {
-  if (values.length < 4) return 'linear';
+function autoScaleType(values: number[]): "linear" | "log" {
+  if (values.length < 4) return "linear";
 
   const min = Math.min(...values);
-  if (min <= 0) return 'linear'; // log can't handle zero or negative
+  if (min <= 0) return "linear"; // log can't handle zero or negative
 
   const max = Math.max(...values);
   const ratio = max / min;
 
   // Need at least ~10× range before log makes sense
-  if (ratio < 10) return 'linear';
+  if (ratio < 10) return "linear";
 
   // Check skewness — if median is < 30% of mean, data is heavily right-skewed
   const sorted = [...values].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
 
-  if (median < mean * 0.3) return 'log';
+  if (median < mean * 0.3) return "log";
 
   // Also use log if range spans > 2 orders of magnitude regardless
-  if (ratio > 100) return 'log';
+  if (ratio > 100) return "log";
 
-  return 'linear';
+  return "linear";
 }
 
 // ── Inline helper components ─────────────────────────────────────────────────
@@ -97,7 +100,7 @@ function LoadingSpinner({ label }: { label?: string }) {
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
         <span className="text-sm text-on-surface-variant">
-          {label || 'Loading data...'}
+          {label || "Loading data..."}
         </span>
       </div>
     </div>
@@ -130,7 +133,10 @@ function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
 
 function ProGatedMessage({ feature }: { feature: string }) {
   return (
-    <div data-testid="graphs-score-gate" className="w-full h-full flex items-center justify-center">
+    <div
+      data-testid="graphs-score-gate"
+      className="w-full h-full flex items-center justify-center"
+    >
       <div className="text-center max-w-sm">
         <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-primary/10 flex items-center justify-center">
           <svg
@@ -213,7 +219,10 @@ export function GraphsPageV2() {
   } = graphsState;
 
   const searchParams = useSearchParams();
-  const { markets: savedMarkets, loading: marketsLoading } = useMyMarkets({ userType, maxMarkets: 6 });
+  const { markets: savedMarkets, loading: marketsLoading } = useMyMarkets({
+    userType,
+    maxMarkets: 6,
+  });
   const [saveTemplateOpen, setSaveTemplateOpen] = React.useState(false);
   const urlMarketApplied = useRef(false);
 
@@ -228,11 +237,15 @@ export function GraphsPageV2() {
 
     // Priority 0: Market passed via URL params (mid, mname, mtype)
     if (!urlMarketApplied.current) {
-      const mid = searchParams.get('mid');
-      const mname = searchParams.get('mname');
-      const mtype = searchParams.get('mtype') as 'metro' | 'county' | 'zip' | null;
-      const mstate = searchParams.get('mstate');
-      if (mid && mname && mtype && ['metro', 'county', 'zip'].includes(mtype)) {
+      const mid = searchParams.get("mid");
+      const mname = searchParams.get("mname");
+      const mtype = searchParams.get("mtype") as
+        | "metro"
+        | "county"
+        | "zip"
+        | null;
+      const mstate = searchParams.get("mstate");
+      if (mid && mname && mtype && ["metro", "county", "zip"].includes(mtype)) {
         urlMarketApplied.current = true;
         addMarket({
           id: mid,
@@ -247,10 +260,14 @@ export function GraphsPageV2() {
 
     // Priority 1: Last geography the user viewed on the maps page
     try {
-      const lastGeo = localStorage.getItem('propertyiq-last-geography');
+      const lastGeo = localStorage.getItem("propertyiq-last-geography");
       if (lastGeo) {
         const geo = JSON.parse(lastGeo);
-        if (geo?.id && geo?.name && ['metro', 'county', 'zip'].includes(geo.type)) {
+        if (
+          geo?.id &&
+          geo?.name &&
+          ["metro", "county", "zip"].includes(geo.type)
+        ) {
           addMarket({
             id: geo.id,
             name: geo.name,
@@ -273,7 +290,7 @@ export function GraphsPageV2() {
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
-  const geoLevel: GeoLevel = (markets[0]?.type as GeoLevel) || 'metro';
+  const geoLevel: GeoLevel = (markets[0]?.type as GeoLevel) || "metro";
   const startDate = tfToStartDate(timeFrame);
 
   // ── TIMELINE DATA (up to 3 market lines) ────────────────────────────────────
@@ -281,21 +298,21 @@ export function GraphsPageV2() {
   const primaryTS = useTimeSeriesData(
     activeMetric,
     geoLevel,
-    markets[0]?.id || '',
+    markets[0]?.id || "",
     {
       startDate,
-      enabled: chartType === 'timeseries' && !!markets[0],
-    }
+      enabled: chartType === "timeseries" && !!markets[0],
+    },
   );
 
   const comparisonTS = useTimeSeriesData(
     activeMetric,
     (markets[1]?.type as GeoLevel) || geoLevel,
-    markets[1]?.id || '',
+    markets[1]?.id || "",
     {
       startDate,
-      enabled: chartType === 'timeseries' && !!markets[1],
-    }
+      enabled: chartType === "timeseries" && !!markets[1],
+    },
   );
 
   // Third market line — uses the baselineData/baselineLabel props on the chart
@@ -304,11 +321,12 @@ export function GraphsPageV2() {
   const thirdMarketTS = useTimeSeriesData(
     activeMetric,
     (markets[2]?.type as GeoLevel) || geoLevel,
-    markets[2]?.id || '',
+    markets[2]?.id || "",
     {
       startDate,
-      enabled: chartType === 'timeseries' && !!markets[2] && baselineType === 'none',
-    }
+      enabled:
+        chartType === "timeseries" && !!markets[2] && baselineType === "none",
+    },
   );
 
   // ── BASELINE DATA ──────────────────────────────────────────────────────────
@@ -316,65 +334,71 @@ export function GraphsPageV2() {
   // State baseline (single API call to state-level data)
   const stateTS = useTimeSeriesData(
     activeMetric,
-    'state',
-    markets[0]?.state || '',
+    "state",
+    markets[0]?.state || "",
     {
       startDate,
-      enabled: chartType === 'timeseries' && baselineType === 'state' && !!markets[0]?.state,
-    }
+      enabled:
+        chartType === "timeseries" &&
+        baselineType === "state" &&
+        !!markets[0]?.state,
+    },
   );
 
   // Census region baseline (averages all states in the region)
   const regionTS = useRegionTimeSeriesData(
     activeMetric,
-    markets[0]?.state || '',
+    markets[0]?.state || "",
     {
       startDate,
-      enabled: chartType === 'timeseries' && baselineType === 'region' && !!markets[0],
-    }
+      enabled:
+        chartType === "timeseries" && baselineType === "region" && !!markets[0],
+    },
   );
 
   // National baseline (averages all 50 states + DC)
-  const nationalTS = useNationalTimeSeriesData(
-    activeMetric,
-    {
-      startDate,
-      enabled: chartType === 'timeseries' && baselineType === 'national' && !!markets[0],
-    }
-  );
+  const nationalTS = useNationalTimeSeriesData(activeMetric, {
+    startDate,
+    enabled:
+      chartType === "timeseries" && baselineType === "national" && !!markets[0],
+  });
 
   // Determine what goes into the baseline (3rd) line slot:
   // - If baselineType is set, use baseline data
   // - Else if there's a 3rd market, use that market's data
   const baselineLabel = useMemo(() => {
-    if (baselineType === 'state' && markets[0]?.state) return `${markets[0].state} Avg`;
-    if (baselineType === 'region' && regionTS.regionLabel) return `${regionTS.regionLabel} Avg`;
-    if (baselineType === 'national') return 'National Avg';
-    if (baselineType === 'none' && markets[2]) return markets[2].name;
+    if (baselineType === "state" && markets[0]?.state)
+      return `${markets[0].state} Avg`;
+    if (baselineType === "region" && regionTS.regionLabel)
+      return `${regionTS.regionLabel} Avg`;
+    if (baselineType === "national") return "National Avg";
+    if (baselineType === "none" && markets[2]) return markets[2].name;
     return undefined;
   }, [baselineType, markets, regionTS.regionLabel]);
 
   const resolvedBaselineData = useMemo(() => {
-    if (baselineType === 'state') return stateTS.data;
-    if (baselineType === 'region') return regionTS.data;
-    if (baselineType === 'national') return nationalTS.data;
-    if (baselineType === 'none' && markets[2]) return thirdMarketTS.data;
+    if (baselineType === "state") return stateTS.data;
+    if (baselineType === "region") return regionTS.data;
+    if (baselineType === "national") return nationalTS.data;
+    if (baselineType === "none" && markets[2]) return thirdMarketTS.data;
     return undefined;
-  }, [baselineType, stateTS.data, regionTS.data, nationalTS.data, thirdMarketTS.data, markets]);
+  }, [
+    baselineType,
+    stateTS.data,
+    regionTS.data,
+    nationalTS.data,
+    thirdMarketTS.data,
+    markets,
+  ]);
 
   // ── SCATTER DATA ──────────────────────────────────────────────────────────
 
-  const scatterData = useScatterData(
-    scatterXMetric,
-    scatterYMetric,
-    geoLevel,
-    {
-      primaryId: markets[0]?.id,
-      primaryName: markets[0]?.name,
-      primaryState: markets[0]?.state,
-      scope,
-    }
-  );
+  const scatterData = useScatterData(scatterXMetric, scatterYMetric, geoLevel, {
+    primaryId: markets[0]?.id,
+    primaryName: markets[0]?.name,
+    primaryState: markets[0]?.state,
+    scope,
+  });
 
   const xLabel = getMetricTitle(scatterXMetric);
   const yLabel = getMetricTitle(scatterYMetric);
@@ -383,15 +407,15 @@ export function GraphsPageV2() {
 
   // Resolve 'auto' scale types based on actual data distribution
   const effectiveXScaleType = useMemo(() => {
-    if (scatterXScaleType !== 'auto') return scatterXScaleType;
-    if (scatterData.data.length === 0) return 'linear' as const;
-    return autoScaleType(scatterData.data.map(d => d.x));
+    if (scatterXScaleType !== "auto") return scatterXScaleType;
+    if (scatterData.data.length === 0) return "linear" as const;
+    return autoScaleType(scatterData.data.map((d) => d.x));
   }, [scatterXScaleType, scatterData.data]);
 
   const effectiveYScaleType = useMemo(() => {
-    if (scatterYScaleType !== 'auto') return scatterYScaleType;
-    if (scatterData.data.length === 0) return 'linear' as const;
-    return autoScaleType(scatterData.data.map(d => d.y));
+    if (scatterYScaleType !== "auto") return scatterYScaleType;
+    if (scatterData.data.length === 0) return "linear" as const;
+    return autoScaleType(scatterData.data.map((d) => d.y));
   }, [scatterYScaleType, scatterData.data]);
 
   // ── SCATTER RACE DATA ─────────────────────────────────────────────────────
@@ -402,7 +426,7 @@ export function GraphsPageV2() {
     geoLevel,
     markets[0] || null,
     scope,
-    chartType === 'scatter' && raceMode,
+    chartType === "scatter" && raceMode,
   );
 
   // ── WATERFALL DATA ─────────────────────────────────────────────────────────
@@ -417,7 +441,10 @@ export function GraphsPageV2() {
   // ── RADAR DATA ─────────────────────────────────────────────────────────────
 
   const radarMarkets = useMemo(
-    () => markets.slice(0, 3).map(m => ({ id: m.id, name: m.name, state: m.state })),
+    () =>
+      markets
+        .slice(0, 3)
+        .map((m) => ({ id: m.id, name: m.name, state: m.state })),
     [markets],
   );
 
@@ -430,14 +457,14 @@ export function GraphsPageV2() {
 
   // ── RADAR RACE DATA ──────────────────────────────────────────────────────
 
-  const RADAR_RACE_COLORS = ['#0891b2', '#3b82f6', '#ea580c'];
+  const RADAR_RACE_COLORS = ["#0891b2", "#3b82f6", "#ea580c"];
 
   const radarRaceData = useRadarRaceData(
     radarData.dimensions,
     geoLevel,
     radarMarkets,
     RADAR_RACE_COLORS,
-    chartType === 'radar' && raceMode,
+    chartType === "radar" && raceMode,
   );
 
   // ── BAR RANKING DATA ──────────────────────────────────────────────────────
@@ -460,7 +487,7 @@ export function GraphsPageV2() {
     scope,
     barSort,
     barCount,
-    chartType === 'bar' && raceMode,
+    chartType === "bar" && raceMode,
   );
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -469,7 +496,7 @@ export function GraphsPageV2() {
     <div className="h-[calc(100dvh-64px)] bg-surface flex flex-col overflow-hidden">
       {/* ── COMPACT HEADER ── */}
       <header className="flex-shrink-0 bg-surface-container-lowest border-b border-outline-variant/40 px-4 md:px-6 py-3">
-        <Breadcrumbs items={[{ label: 'Graphs' }]} className="mb-2" />
+        <Breadcrumbs items={[{ label: "Graphs" }]} className="mb-2" />
         <div className="max-w-[1600px] mx-auto flex items-center gap-3 flex-wrap">
           <MarketSearchBar
             primaryMarket={primaryMarket}
@@ -480,27 +507,31 @@ export function GraphsPageV2() {
           />
           <div className="flex items-center gap-1.5 ml-auto">
             <ShareButton graphState={graphsState} />
-            <SaveGraphButton graphState={graphsState} onSaveTemplate={() => setSaveTemplateOpen(true)} />
+            <SaveGraphButton
+              graphState={graphsState}
+              onSaveTemplate={() => setSaveTemplateOpen(true)}
+            />
           </div>
         </div>
       </header>
 
       {/* ── MAIN CONTENT: sidebar + chart ── */}
       <main className="flex-1 flex min-h-0 max-w-[1600px] mx-auto w-full px-4 md:px-5 py-3 gap-4 overflow-hidden">
-
         {/* ── LEFT SIDEBAR (desktop) ── */}
         <div className="hidden md:flex flex-shrink-0 min-h-0">
           <Sidebar state={graphsState} />
         </div>
 
         {/* ── CHART AREA ── */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0 min-h-0">
+        <div
+          className="flex-1 flex flex-col gap-2 min-w-0 min-h-0"
+          data-tour="chart-area"
+        >
           {/* Hero chart canvas */}
           <div className="flex-1 min-h-0 bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-sm p-4 md:p-6">
             <AnimatePresence mode="wait">
-
               {/* ── TIMESERIES ── */}
-              {chartType === 'timeseries' && (
+              {chartType === "timeseries" && (
                 <motion.div
                   key="timeseries"
                   {...chartMotion}
@@ -508,7 +539,7 @@ export function GraphsPageV2() {
                 >
                   <AnimatedTimeSeriesChart
                     primaryData={primaryTS.data}
-                    primaryLabel={markets[0]?.name || 'Primary'}
+                    primaryLabel={markets[0]?.name || "Primary"}
                     comparisonData={markets[1] ? comparisonTS.data : undefined}
                     comparisonLabel={markets[1]?.name}
                     baselineData={resolvedBaselineData}
@@ -523,14 +554,22 @@ export function GraphsPageV2() {
               )}
 
               {/* ── SCATTER ── */}
-              {chartType === 'scatter' && (
+              {chartType === "scatter" && (
                 <motion.div
                   key="scatter"
                   {...chartMotion}
                   className="w-full h-full"
                 >
-                  {(raceMode ? scatterRaceData.isLoading : scatterData.isLoading) ? (
-                    <LoadingSpinner label={raceMode ? 'Building scatter animation...' : 'Loading scatter data...'} />
+                  {(
+                    raceMode ? scatterRaceData.isLoading : scatterData.isLoading
+                  ) ? (
+                    <LoadingSpinner
+                      label={
+                        raceMode
+                          ? "Building scatter animation..."
+                          : "Loading scatter data..."
+                      }
+                    />
                   ) : scatterData.error ? (
                     <ErrorMessage error={scatterData.error.message} />
                   ) : !raceMode && scatterData.data.length === 0 ? (
@@ -562,7 +601,7 @@ export function GraphsPageV2() {
                         selectMarket({
                           id: point.id,
                           name: point.label,
-                          type: geoLevel as 'metro' | 'county' | 'zip',
+                          type: geoLevel as "metro" | "county" | "zip",
                           score: null,
                         });
                       }}
@@ -572,7 +611,7 @@ export function GraphsPageV2() {
               )}
 
               {/* ── WATERFALL ── */}
-              {chartType === 'waterfall' && (
+              {chartType === "waterfall" && (
                 <motion.div
                   key="waterfall"
                   {...chartMotion}
@@ -606,7 +645,7 @@ export function GraphsPageV2() {
               )}
 
               {/* ── RADAR ── */}
-              {chartType === 'radar' && (
+              {chartType === "radar" && (
                 <motion.div
                   key="radar"
                   {...chartMotion}
@@ -617,8 +656,16 @@ export function GraphsPageV2() {
                       title="Select markets to compare"
                       subtitle="Add up to 3 markets for radar comparison"
                     />
-                  ) : (raceMode ? radarRaceData.isLoading : radarData.isLoading) ? (
-                    <LoadingSpinner label={raceMode ? 'Building radar animation...' : 'Building radar profile...'} />
+                  ) : (
+                      raceMode ? radarRaceData.isLoading : radarData.isLoading
+                    ) ? (
+                    <LoadingSpinner
+                      label={
+                        raceMode
+                          ? "Building radar animation..."
+                          : "Building radar profile..."
+                      }
+                    />
                   ) : radarData.error ? (
                     <ErrorMessage error={radarData.error.message} />
                   ) : radarData.datasets.length === 0 ? (
@@ -643,14 +690,20 @@ export function GraphsPageV2() {
               )}
 
               {/* ── BAR RANKING / RACE ── */}
-              {chartType === 'bar' && (
+              {chartType === "bar" && (
                 <motion.div
                   key="bar"
                   {...chartMotion}
                   className="w-full h-full"
                 >
                   {(raceMode ? barRaceData.isLoading : barData.isLoading) ? (
-                    <LoadingSpinner label={raceMode ? 'Building race data...' : 'Loading rankings...'} />
+                    <LoadingSpinner
+                      label={
+                        raceMode
+                          ? "Building race data..."
+                          : "Loading rankings..."
+                      }
+                    />
                   ) : barData.error ? (
                     <ErrorMessage error={barData.error.message} />
                   ) : !raceMode && barData.data.length === 0 ? (
@@ -666,24 +719,35 @@ export function GraphsPageV2() {
                   ) : (
                     <HorizontalBarChart
                       data={barData.data}
-                      benchmarkValue={raceMode ? undefined : (barData.benchmarkValue ?? undefined)}
-                      benchmarkLabel={raceMode ? undefined : barData.benchmarkLabel}
-                      formatValue={raceMode ? barRaceData.formatValue : barData.formatValue}
+                      benchmarkValue={
+                        raceMode
+                          ? undefined
+                          : (barData.benchmarkValue ?? undefined)
+                      }
+                      benchmarkLabel={
+                        raceMode ? undefined : barData.benchmarkLabel
+                      }
+                      formatValue={
+                        raceMode ? barRaceData.formatValue : barData.formatValue
+                      }
                       raceFrames={raceMode ? barRaceData.raceFrames : undefined}
                       autoPlay={raceMode}
-                      onBarClick={raceMode ? undefined : (entry) => {
-                        selectMarket({
-                          id: entry.id,
-                          name: entry.label,
-                          type: geoLevel as 'metro' | 'county' | 'zip',
-                          score: null,
-                        });
-                      }}
+                      onBarClick={
+                        raceMode
+                          ? undefined
+                          : (entry) => {
+                              selectMarket({
+                                id: entry.id,
+                                name: entry.label,
+                                type: geoLevel as "metro" | "county" | "zip",
+                                score: null,
+                              });
+                            }
+                      }
                     />
                   )}
                 </motion.div>
               )}
-
             </AnimatePresence>
           </div>
 
@@ -698,7 +762,7 @@ export function GraphsPageV2() {
             <ChartTypePills activeType={chartType} onChange={setChartType} />
 
             {/* Chart-type-specific mobile controls */}
-            {chartType === 'timeseries' && (
+            {chartType === "timeseries" && (
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <MetricPicker
                   value={activeMetric}
@@ -706,15 +770,16 @@ export function GraphsPageV2() {
                   geoLevel={geoLevel}
                 />
                 <div className="flex items-center gap-1">
-                  {TIME_FRAMES.map(tf => (
+                  {TIME_FRAMES.map((tf) => (
                     <button
                       key={tf}
                       onClick={() => setTimeFrame(tf)}
                       className={`
                         px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150
-                        ${timeFrame === tf
-                          ? 'bg-primary text-on-primary'
-                          : 'text-on-surface-variant hover:bg-surface-container-high'
+                        ${
+                          timeFrame === tf
+                            ? "bg-primary text-on-primary"
+                            : "text-on-surface-variant hover:bg-surface-container-high"
                         }
                       `}
                     >
@@ -725,7 +790,7 @@ export function GraphsPageV2() {
               </div>
             )}
 
-            {chartType === 'scatter' && (
+            {chartType === "scatter" && (
               <div className="flex items-center gap-2 flex-wrap">
                 <MetricPicker
                   value={scatterXMetric}
@@ -741,17 +806,26 @@ export function GraphsPageV2() {
               </div>
             )}
 
-            {chartType === 'waterfall' && (
+            {chartType === "waterfall" && (
               <div className="flex items-center gap-1.5 overflow-x-auto">
-                {(['investment', 'affordability', 'momentum', 'benchmark', 'score'] as const).map(preset => (
+                {(
+                  [
+                    "investment",
+                    "affordability",
+                    "momentum",
+                    "benchmark",
+                    "score",
+                  ] as const
+                ).map((preset) => (
                   <button
                     key={preset}
                     onClick={() => graphsState.setWaterfallPreset(preset)}
                     className={`
                       px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150
-                      ${waterfallPreset === preset
-                        ? 'bg-primary text-on-primary'
-                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                      ${
+                        waterfallPreset === preset
+                          ? "bg-primary text-on-primary"
+                          : "text-on-surface-variant hover:bg-surface-container-high"
                       }
                     `}
                   >
@@ -761,27 +835,32 @@ export function GraphsPageV2() {
               </div>
             )}
 
-            {chartType === 'radar' && (
+            {chartType === "radar" && (
               <div className="flex items-center gap-1.5 overflow-x-auto">
-                {(['homebuyer', 'investor', 'market_health', 'custom'] as const).map(preset => (
+                {(
+                  ["homebuyer", "investor", "market_health", "custom"] as const
+                ).map((preset) => (
                   <button
                     key={preset}
                     onClick={() => graphsState.setRadarPreset(preset)}
                     className={`
                       px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150
-                      ${radarPreset === preset
-                        ? 'bg-primary text-on-primary'
-                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                      ${
+                        radarPreset === preset
+                          ? "bg-primary text-on-primary"
+                          : "text-on-surface-variant hover:bg-surface-container-high"
                       }
                     `}
                   >
-                    {preset === 'market_health' ? 'Health' : preset.charAt(0).toUpperCase() + preset.slice(1)}
+                    {preset === "market_health"
+                      ? "Health"
+                      : preset.charAt(0).toUpperCase() + preset.slice(1)}
                   </button>
                 ))}
               </div>
             )}
 
-            {chartType === 'bar' && (
+            {chartType === "bar" && (
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <MetricPicker
                   value={barMetric}
@@ -790,13 +869,19 @@ export function GraphsPageV2() {
                 />
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => graphsState.setBarSort(barSort === 'desc' ? 'asc' : 'desc')}
+                    onClick={() =>
+                      graphsState.setBarSort(
+                        barSort === "desc" ? "asc" : "desc",
+                      )
+                    }
                     className="px-2.5 py-1 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-all duration-150"
                   >
-                    {barSort === 'desc' ? 'Highest' : 'Lowest'}
+                    {barSort === "desc" ? "Highest" : "Lowest"}
                   </button>
                   <button
-                    onClick={() => graphsState.setBarCount(barCount === 10 ? 25 : 10)}
+                    onClick={() =>
+                      graphsState.setBarCount(barCount === 10 ? 25 : 10)
+                    }
                     className="px-2.5 py-1 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-all duration-150"
                   >
                     Top {barCount}

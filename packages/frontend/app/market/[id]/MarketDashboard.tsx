@@ -633,28 +633,30 @@ export function MarketDashboard({
             </div>
 
             {/* AI Market Analysis / Market Overview (handles entitlement internally) */}
-            <AIMarketAnalysis
-              geoType={geographyType}
-              geoId={geographyId}
-              marketName={geography.name}
-              view={activeView}
-              metrics={Object.fromEntries(
-                Object.entries(displayData).map(([key, card]) => [
-                  key,
-                  {
-                    value: card.value,
-                    formattedValue: card.formattedValue,
-                    percentChange: card.percentChange,
-                  },
-                ]),
-              )}
-              scores={{
-                homeready: scores?.homeready ?? null,
-                investoredge: scores?.investoredge ?? null,
-                markethealth: scores?.markethealth ?? null,
-              }}
-              lastUpdated={lastUpdated ?? new Date().toISOString()}
-            />
+            <div data-tour="ai-assessment">
+              <AIMarketAnalysis
+                geoType={geographyType}
+                geoId={geographyId}
+                marketName={geography.name}
+                view={activeView}
+                metrics={Object.fromEntries(
+                  Object.entries(displayData).map(([key, card]) => [
+                    key,
+                    {
+                      value: card.value,
+                      formattedValue: card.formattedValue,
+                      percentChange: card.percentChange,
+                    },
+                  ]),
+                )}
+                scores={{
+                  homeready: scores?.homeready ?? null,
+                  investoredge: scores?.investoredge ?? null,
+                  markethealth: scores?.markethealth ?? null,
+                }}
+                lastUpdated={lastUpdated ?? new Date().toISOString()}
+              />
+            </div>
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-3 pt-2">

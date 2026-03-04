@@ -643,7 +643,7 @@ function MapPageInner() {
             </button>
 
             {/* Search Bar - Flexible Width */}
-            <div className="flex-1 max-w-xl">
+            <div className="flex-1 max-w-xl" data-tour="search-bar">
               <SearchWidget
                 searchRef={searchRef}
                 searchQuery={searchQuery}
@@ -695,42 +695,50 @@ function MapPageInner() {
           />
         )}
 
-        <Sidebar
-          pathname={pathname}
-          navItems={NAV_ITEMS}
-          metricCategories={metricCategories}
-          expandedCategories={expandedCategories}
-          selectedMetric={selectedMetric}
-          geoLevel={geoLevel}
-          selectedState={selectedState}
-          forecastHorizon={forecastHorizon}
-          rentIndexType={rentIndexType}
-          renterDemandType={renterDemandType}
-          sidebarWidth={sidebarWidth}
-          viewMode={viewMode}
-          mobileMenuOpen={mobileMenuOpen}
-          onToggleCategory={toggleCategory}
-          onSelectMetric={(id: string) => {
-            trackEvent("feature.map_filter", {
-              metric_id: id,
-              geo_level: geoLevel,
-            });
-            setSelectedMetric(id);
-          }}
-          onGeoLevelChange={handleGeoLevelChange}
-          onStateChange={setSelectedState}
-          onForecastHorizonChange={setForecastHorizon}
-          onRentIndexTypeChange={setRentIndexType}
-          onRenterDemandTypeChange={setRenterDemandType}
-          onMouseDown={handleMouseDown}
-          onViewModeChange={handleViewModeChange}
-          onCloseMobileMenu={() => setMobileMenuOpen(false)}
-          scoreData={sidebarScoreData}
-          onScoreCardClick={() => selectedGeography && setRightPanelOpen(true)}
-        />
+        <div data-tour="metric-sidebar">
+          <Sidebar
+            pathname={pathname}
+            navItems={NAV_ITEMS}
+            metricCategories={metricCategories}
+            expandedCategories={expandedCategories}
+            selectedMetric={selectedMetric}
+            geoLevel={geoLevel}
+            selectedState={selectedState}
+            forecastHorizon={forecastHorizon}
+            rentIndexType={rentIndexType}
+            renterDemandType={renterDemandType}
+            sidebarWidth={sidebarWidth}
+            viewMode={viewMode}
+            mobileMenuOpen={mobileMenuOpen}
+            onToggleCategory={toggleCategory}
+            onSelectMetric={(id: string) => {
+              trackEvent("feature.map_filter", {
+                metric_id: id,
+                geo_level: geoLevel,
+              });
+              setSelectedMetric(id);
+            }}
+            onGeoLevelChange={handleGeoLevelChange}
+            onStateChange={setSelectedState}
+            onForecastHorizonChange={setForecastHorizon}
+            onRentIndexTypeChange={setRentIndexType}
+            onRenterDemandTypeChange={setRenterDemandType}
+            onMouseDown={handleMouseDown}
+            onViewModeChange={handleViewModeChange}
+            onCloseMobileMenu={() => setMobileMenuOpen(false)}
+            scoreData={sidebarScoreData}
+            onScoreCardClick={() =>
+              selectedGeography && setRightPanelOpen(true)
+            }
+          />
+        </div>
 
         {/* Map */}
-        <main className="flex-1 relative" style={{ minHeight: "100%" }}>
+        <main
+          className="flex-1 relative"
+          data-tour="map-area"
+          style={{ minHeight: "100%" }}
+        >
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
               <p className="text-on-error-container font-medium">{mapError}</p>
