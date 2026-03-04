@@ -3,6 +3,7 @@
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/lib/auth";
+import { TourProvider } from "@/app/onboarding";
 import { EntitlementsProvider, PaywallProvider } from "@/lib/entitlements";
 
 /**
@@ -107,9 +108,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <EntitlementsProvider>
-          <PaywallProvider>{children}</PaywallProvider>
-        </EntitlementsProvider>
+        <TourProvider>
+          <EntitlementsProvider>
+            <PaywallProvider>{children}</PaywallProvider>
+          </EntitlementsProvider>
+        </TourProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
