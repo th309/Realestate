@@ -2,11 +2,16 @@
  * Beta Tester Invite Email
  *
  * Sends invite email via Resend SDK with React Email template.
+ * Checks Supabase auth to determine if the tester already has an account.
+ * - Has account: email with feedback link only
+ * - No account: email with sign-up link + feedback link
+ *
  * Falls back to console logging in dev.
  */
 
 import { Resend } from "resend";
 import { BetaInvite } from "@propertyiq/emails";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -21,13 +26,51 @@ interface InviteEmailParams {
   token: string;
 }
 
+async function hasSupabaseAccount(email: string): Promise<boolean> {
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+    });
+
+    if (error) {
+      console.error("Error checking user account:", error);
+      // Default to including sign-up link if we can't check
+      return false;
+    }
+
+    // listUsers doesn't support email filter directly, so query user_profiles
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .ilike("email", email)
+      .limit(1)
+      .maybeSingle();
+
+    return !!profile;
+  } catch (error) {
+    console.error("Account lookup failed:", error);
+    return false;
+  }
+}
+
 export async function sendInviteEmail(
   params: InviteEmailParams,
 ): Promise<{ sent: boolean; error?: string }> {
   const testingUrl = `${APP_URL}/betatest/${params.token}`;
 
+  // Check if tester already has an account
+  const accountExists = await hasSupabaseAccount(params.to);
+  const signUpUrl = accountExists ? undefined : `${APP_URL}/auth/sign-up`;
+
   if (!resend) {
-    console.log(`[DEV] Would send beta invite to ${params.to}: ${testingUrl}`);
+    console.log(
+      `[DEV] Would send beta invite to ${params.to}: ${testingUrl}` +
+        (signUpUrl
+          ? ` (includes sign-up link: ${signUpUrl})`
+          : " (existing user)"),
+    );
     return { sent: true };
   }
 
@@ -36,7 +79,7 @@ export async function sendInviteEmail(
       from: EMAIL_FROM,
       to: [params.to],
       subject: "You're invited to beta test PropertyIQ",
-      react: BetaInvite({ name: params.name, testingUrl }),
+      react: BetaInvite({ name: params.name, testingUrl, signUpUrl }),
     });
 
     if (error) {
