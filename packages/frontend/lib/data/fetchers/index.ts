@@ -168,6 +168,15 @@ export {
   type ContactFormData,
 } from "./support";
 
+// Onboarding
+export {
+  fetchOnboardingState,
+  completeOnboarding,
+  resetOnboarding,
+  saveOnboardingPreferences,
+} from "./onboarding";
+export type { OnboardingState } from "./onboarding";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

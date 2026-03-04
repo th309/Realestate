@@ -251,6 +251,13 @@ export {
   submitContactForm,
   type SupportTicket,
   type ContactFormData,
+
+  // Onboarding
+  fetchOnboardingState,
+  completeOnboarding,
+  resetOnboarding,
+  saveOnboardingPreferences,
+  type OnboardingState,
 } from "./fetchers";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
