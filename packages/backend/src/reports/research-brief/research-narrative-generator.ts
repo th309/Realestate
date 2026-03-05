@@ -68,7 +68,7 @@ export async function generateNarrative(
   try {
     const response = await deepseek.chat.completions.create({
       model,
-      max_tokens: 16000,
+      max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
     });
 
