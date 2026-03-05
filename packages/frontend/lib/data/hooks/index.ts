@@ -84,6 +84,9 @@ export {
 // Insights (AI-generated market narratives)
 export { useInsight } from "./useInsight";
 
+// User quiz preferences
+export { usePreferences, type UsePreferencesResult } from "./usePreferences";
+
 // Validation data hooks
 export {
   useValidationSummary,

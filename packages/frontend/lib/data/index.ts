@@ -262,6 +262,14 @@ export {
   // Insights
   fetchInsight,
   type InsightData,
+
+  // User quiz preferences
+  fetchPreferences,
+  upsertPreferences,
+  type UserPreferences,
+  type UpsertPreferencesPayload,
+  type UserGoal,
+  type Timeline,
 } from "./fetchers";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
@@ -326,6 +334,10 @@ export {
 
   // Insights
   useInsight,
+
+  // User quiz preferences
+  usePreferences,
+  type UsePreferencesResult,
 
   // Validation data hooks
   useValidationSummary,

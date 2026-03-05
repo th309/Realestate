@@ -180,6 +180,16 @@ export type { OnboardingState } from "./onboarding";
 // Insights (AI-generated market narratives)
 export { fetchInsight, type InsightData } from "./insights";
 
+// User quiz preferences
+export {
+  fetchPreferences,
+  upsertPreferences,
+  type UserPreferences,
+  type UpsertPreferencesPayload,
+  type UserGoal,
+  type Timeline,
+} from "./preferences";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";
