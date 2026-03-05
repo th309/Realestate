@@ -48,6 +48,10 @@ const FEATURES = [
   "weekly_digest",
   "benchmarking",
   "recommendations",
+  "onboarding_quiz",
+  "market_match",
+  "personalized_dashboard",
+  "markets_to_watch",
 ];
 
 /** Read simulated tier from sessionStorage */
