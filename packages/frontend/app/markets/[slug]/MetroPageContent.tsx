@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { MetroSlugEntry } from "@/lib/data/metro-slugs";
 import { METRO_SLUG_DATA } from "@/lib/data/metro-slug-data";
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
 import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
+import { MarketOverviewSection } from "./MarketOverviewSection";
+import { LeadMagnetModal } from "./components/LeadMagnetModal";
 
 interface MetroPageContentProps {
   metro: MetroSlugEntry;
 }
 
 export function MetroPageContent({ metro }: MetroPageContentProps) {
+  const [showLeadMagnet, setShowLeadMagnet] = useState(false);
   const nearbyMetros = METRO_SLUG_DATA.filter(
     (m) => m.state === metro.state && m.cbsaCode !== metro.cbsaCode,
   ).slice(0, 5);
@@ -80,6 +84,12 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
         </div>
       </section>
 
+      {/* AI Market Overview */}
+      <MarketOverviewSection
+        metroName={metro.shortName}
+        cbsaCode={metro.cbsaCode}
+      />
+
       {/* CTAs */}
       <section className="flex flex-wrap gap-4 mb-10">
         <Link
@@ -94,6 +104,12 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
         >
           Full Market Dashboard
         </Link>
+        <button
+          onClick={() => setShowLeadMagnet(true)}
+          className="px-6 py-3 bg-tertiary-container text-on-tertiary-container rounded-full font-medium hover:bg-tertiary-container/80 transition-colors"
+        >
+          Get Free Market Report
+        </button>
       </section>
 
       {/* Newsletter Signup */}
@@ -135,6 +151,14 @@ export function MetroPageContent({ metro }: MetroPageContentProps) {
           }),
         }}
       />
+
+      {/* Lead Magnet Modal */}
+      {showLeadMagnet && (
+        <LeadMagnetModal
+          metroName={metro.shortName}
+          onClose={() => setShowLeadMagnet(false)}
+        />
+      )}
     </div>
   );
 }

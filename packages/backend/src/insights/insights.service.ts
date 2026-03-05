@@ -180,7 +180,7 @@ export class InsightsService {
 
     const buildPrompt = PROMPT_BUILDERS[insightType];
     const prompt = buildPrompt(context);
-    const maxTokens = insightType === 'market_overview' ? 400 : 200;
+    const maxTokens = insightType === 'market_overview' ? 1200 : 200;
 
     const response = await this.aiClient.chat.completions.create({
       model: this.aiModel,

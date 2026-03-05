@@ -131,13 +131,14 @@ Rules:
 }
 
 /**
- * Market Overview — 3-4 sentence paragraph for landing pages, covering
- * scores, key metrics, and overall market positioning.
+ * Market Overview — 500-800 word structured market analysis for landing pages.
+ * Sections: Market Overview → Key Trends → Who Is This Market For → Outlook.
+ * Uses markdown headers (##) for section delineation.
  */
 export function buildMarketOverviewPrompt(ctx: InsightContext): string {
-  const topComponents = formatTopComponents(ctx.score_components, 3);
+  const topComponents = formatTopComponents(ctx.score_components, 5);
 
-  return `You are a real estate analyst writing a market overview paragraph for a landing page.
+  return `You are a real estate analyst writing an in-depth market analysis for a landing page.
 
 Data for ${ctx.region_name}:
 - HomeReady Score: ${ctx.scores.homeready ?? 'N/A'}/100
@@ -149,11 +150,19 @@ Data for ${ctx.region_name}:
 ${formatBenchmarks(ctx.benchmarks)}
 
 Rules:
-- Write 3-4 sentences
-- Open with the overall market positioning (strong, moderate, weak)
-- Mention the most important score and its key driver
-- Include at least one specific metric value and its benchmark comparison
-- Close with a forward-looking statement grounded in the data
+- Write 500-800 words total
+- Use these exact markdown section headers in order:
+  ## Market Overview
+  ## Key Trends
+  ## Who Is This Market For
+  ## Outlook
+- "Market Overview": 2-3 paragraphs positioning the market (strong, moderate, weak), referencing scores and how they compare to benchmarks
+- "Key Trends": Identify 3-4 data-driven trends from the metrics (price movement, inventory, affordability, etc.)
+- "Who Is This Market For": Describe which buyer/investor profiles this market suits based on the scores (first-time buyers, investors, move-up buyers, etc.)
+- "Outlook": A forward-looking paragraph grounded in the trend data — avoid speculation beyond what the numbers support
+- Reference specific metric values and benchmark comparisons throughout
 - ${DATA_GROUNDING_RULE}
-- Be informative but accessible to a general audience`;
+- Be informative but accessible to a general audience
+- Do NOT use bullet points — write in flowing paragraphs
+- Do NOT include a title or introduction before the first ## header`;
 }
