@@ -371,6 +371,15 @@ export async function generateReportAsync(
           })
         : 'No recent news available for this market.';
 
+      // Fetch user onboarding profile for personalized narratives
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select(
+          'investment_goal, experience_level, preferred_markets, full_name',
+        )
+        .eq('id', userId)
+        .single();
+
       aiNarratives = await deps.claudeService.generateNarratives(
         template.config.ai_config.narrative_sections,
         buildNarrativeTemplateVars(
@@ -383,6 +392,7 @@ export async function generateReportAsync(
           priorities,
           priorityWeightedWinner,
           comparisons,
+          userProfile,
         ),
       );
     }

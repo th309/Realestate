@@ -11,6 +11,11 @@
 import { formatCurrency, formatPriorityName } from './reports-score-context';
 import type { PriorityWeightedResult } from './reports-market-comparison';
 import type { GenerateReportDto } from './dto/generate-report.dto';
+import {
+  computeComponentExtremes,
+  computeKeyTension,
+  computeUserGoalSummary,
+} from './reports-narrative-cross-section';
 
 /**
  * Build the full template-variable map that Claude uses for AI narrative
@@ -27,6 +32,12 @@ export function buildNarrativeTemplateVars(
   priorities: string[],
   priorityWeightedWinner: PriorityWeightedResult | null,
   comparisons: Record<string, any>,
+  userProfile?: {
+    investment_goal?: string | null;
+    experience_level?: string | null;
+    preferred_markets?: any[] | null;
+    full_name?: string | null;
+  } | null,
 ): Record<string, any> {
   return {
     geography_name: dto.primary_geography.name,
@@ -186,6 +197,28 @@ export function buildNarrativeTemplateVars(
         metrics: comparisons[g.id]?.current,
         scores: comparisons[g.id]?.scores,
       })) || [],
+
+    // User onboarding profile (for tone/depth personalization)
+    user_name: userProfile?.full_name || null,
+    user_investment_goal: userProfile?.investment_goal || null,
+    user_experience_level: userProfile?.experience_level || null,
+
+    // Cross-section context for narrative coherence
+    overall_score:
+      dto.user_type === 'investor'
+        ? scores?.scores.investoredge
+          ? Math.round(scores.scores.investoredge.score)
+          : 'N/A'
+        : scores?.scores.homeready
+          ? Math.round(scores.scores.homeready.score)
+          : 'N/A',
+    overall_grade:
+      dto.user_type === 'investor'
+        ? scores?.scores.investoredge?.grade || 'N/A'
+        : scores?.scores.homeready?.grade || 'N/A',
+    ...computeComponentExtremes(scores, dto.user_type),
+    key_tension: computeKeyTension(scores, dto.user_type),
+    user_goal_summary: computeUserGoalSummary(dto, priorities),
 
     ...dto.user_inputs,
   };

@@ -223,10 +223,10 @@ Reference specific news items that strengthen or weaken the investment case.
 
 `
     : ''
-}Keep the analysis under 400 words and be specific with numbers.`;
+}Write a thorough analysis of 600-1000 words and be specific with numbers.`;
 
     try {
-      return await this.generateCompletion(prompt, 600);
+      return await this.generateCompletion(prompt, 2000);
     } catch (error) {
       this.logger.error('Investment analysis failed:', error);
       return 'Investment analysis is being processed. Please refresh shortly.';
@@ -278,7 +278,7 @@ Reference specific news items that strengthen or weaken the investment case.
 
     const response = await this.aiClient.chat.completions.create({
       model: this.aiModel,
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
     });
 
@@ -684,7 +684,7 @@ Return ONLY a JSON array of 3 strings, no other text. Example format:
 ["Reason 1", "Reason 2", "Reason 3"]`;
 
     try {
-      const response = await this.generateCompletion(prompt, 400);
+      const response = await this.generateCompletion(prompt, 800);
       const parsed = JSON.parse(response);
       if (Array.isArray(parsed) && parsed.length >= 3) {
         return parsed.slice(0, 3);
@@ -762,7 +762,7 @@ Write a personalized final recommendation in 2-3 paragraphs that:
 Be warm but professional. Use "you" to address the user directly.`;
 
     try {
-      return await this.generateCompletion(prompt, 500);
+      return await this.generateCompletion(prompt, 2000);
     } catch (error) {
       this.logger.error('Failed to generate final recommendation:', error);
       return `Based on your priorities of ${context.priorities.join(', ')}, ${context.winner_name} emerges as your recommended market. This market scores highest on the factors that matter most to you. As your next step, we recommend exploring specific neighborhoods within ${context.winner_name} and connecting with local real estate professionals who can provide on-the-ground insights.`;
