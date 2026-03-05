@@ -35,6 +35,19 @@ const nextConfig = {
   },
   transpilePackages: ['recharts'],
   turbopack: {},
+  // Custom response headers
+  async headers() {
+    return [
+      {
+        // Allow iframe embedding for /embed/* routes
+        source: '/embed/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors *" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
