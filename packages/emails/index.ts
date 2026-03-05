@@ -12,6 +12,7 @@ export { default as OnboardingDay3Compare } from "./emails/onboarding-day3-compa
 export { default as OnboardingDay7Profile } from "./emails/onboarding-day7-profile";
 export { default as OnboardingDay14Report } from "./emails/onboarding-day14-report";
 export { default as MonthlyDigest } from "./emails/monthly-digest";
+export { default as ThresholdAlert } from "./emails/threshold-alert";
 
 // Types
 export type { WelcomeEmailProps } from "./emails/welcome";
@@ -27,3 +28,4 @@ export type { OnboardingDay3CompareProps } from "./emails/onboarding-day3-compar
 export type { OnboardingDay7ProfileProps } from "./emails/onboarding-day7-profile";
 export type { OnboardingDay14ReportProps } from "./emails/onboarding-day14-report";
 export type { MonthlyDigestProps } from "./emails/monthly-digest";
+export type { ThresholdAlertProps } from "./emails/threshold-alert";
