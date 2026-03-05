@@ -223,7 +223,9 @@ export class ClaudeNewsService {
           return cached;
         }
       } catch (cacheError) {
-        this.logger.warn(`Cache lookup failed for ${geographyName} (table may not exist): ${cacheError?.message || cacheError}`);
+        this.logger.warn(
+          `Cache lookup failed for ${geographyName} (table may not exist): ${cacheError?.message || cacheError}`,
+        );
         // Continue to scout fresh data
       }
     }
@@ -240,11 +242,16 @@ export class ClaudeNewsService {
     );
 
     // Cache the result only if it has actual data (don't cache empty parse failures)
-    if (result && (result.local_news.length > 0 || result.economic_indicators.length > 0)) {
+    if (
+      result &&
+      (result.local_news.length > 0 || result.economic_indicators.length > 0)
+    ) {
       try {
         await this.cacheNewsResult(result);
       } catch (cacheError) {
-        this.logger.warn(`Failed to cache news result for ${geographyName}: ${cacheError?.message || cacheError}`);
+        this.logger.warn(
+          `Failed to cache news result for ${geographyName}: ${cacheError?.message || cacheError}`,
+        );
       }
     }
 
@@ -299,26 +306,37 @@ export class ClaudeNewsService {
 
       const nationalPromise = includeNationalContext
         ? this.fetchNationalContext().catch((err) => {
-            this.logger.warn(`National context fetch failed: ${err?.message || err}`);
+            this.logger.warn(
+              `National context fetch failed: ${err?.message || err}`,
+            );
             return null;
           })
         : Promise.resolve(null);
 
-      const [response, nationalContext] = await Promise.all([newsPromise, nationalPromise]);
+      const [response, nationalContext] = await Promise.all([
+        newsPromise,
+        nationalPromise,
+      ]);
 
       // Extract text from response (may have multiple content blocks due to tool use)
       const textBlocks = response.content.filter(
         (block): block is Anthropic.TextBlock => block.type === 'text',
       );
 
-      this.logger.log(`News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`);
+      this.logger.log(
+        `News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`,
+      );
 
       if (response.stop_reason === 'max_tokens') {
-        this.logger.warn(`News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`);
+        this.logger.warn(
+          `News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`,
+        );
       }
 
       if (textBlocks.length === 0) {
-        this.logger.warn(`Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}.`);
+        this.logger.warn(
+          `Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}.`,
+        );
       }
 
       // Strip <cite> tags from web search responses (they waste tokens and pollute JSON values)
@@ -330,20 +348,34 @@ export class ClaudeNewsService {
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const blockText = stripCitations(textBlocks[i].text);
         const result = this.parseResponse(blockText);
-        if (result.local_news?.length || result.economic_indicators?.length || result.market_signals?.length) {
-          this.logger.log(`Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`);
+        if (
+          result.local_news?.length ||
+          result.economic_indicators?.length ||
+          result.market_signals?.length
+        ) {
+          this.logger.log(
+            `Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`,
+          );
           parsed = result;
           break;
         }
       }
       // Fallback: join all text blocks and try once more
       if (!parsed) {
-        const allText = stripCitations(textBlocks.map((b) => b.text).join('\n'));
+        const allText = stripCitations(
+          textBlocks.map((b) => b.text).join('\n'),
+        );
         parsed = this.parseResponse(allText);
       }
 
-      if (!parsed.local_news?.length && !parsed.economic_indicators?.length && !parsed.market_signals?.length) {
-        this.logger.warn(`No news data parsed for ${geographyName}. Text blocks: ${textBlocks.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`);
+      if (
+        !parsed.local_news?.length &&
+        !parsed.economic_indicators?.length &&
+        !parsed.market_signals?.length
+      ) {
+        this.logger.warn(
+          `No news data parsed for ${geographyName}. Text blocks: ${textBlocks.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`,
+        );
       }
 
       const processingTime = Date.now() - startTime;
@@ -374,7 +406,9 @@ export class ClaudeNewsService {
         error?.stack,
       );
       if (error?.status) {
-        this.logger.error(`Anthropic API status: ${error.status}, type: ${error?.error?.type}`);
+        this.logger.error(
+          `Anthropic API status: ${error.status}, type: ${error?.error?.type}`,
+        );
       }
       return null;
     }
@@ -419,10 +453,15 @@ Return as JSON:
       const textBlocks = response.content.filter(
         (block): block is Anthropic.TextBlock => block.type === 'text',
       );
-      const strip = (t: string) => t.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
+      const strip = (t: string) =>
+        t.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
       for (let i = textBlocks.length - 1; i >= 0; i--) {
         const result = this.parseResponse(strip(textBlocks[i].text));
-        if (result.fed_rate_news || result.mortgage_rate_trend || result.national_housing_news?.length) {
+        if (
+          result.fed_rate_news ||
+          result.mortgage_rate_trend ||
+          result.national_housing_news?.length
+        ) {
           return result;
         }
       }
@@ -457,7 +496,9 @@ Return as JSON:
 
     return `You are a real estate market research analyst. Search for recent news and signals affecting the real estate market in ${locationContext}.
 
-Search for: "${geographyName} real estate housing market ${state}" and "${geographyName} jobs employers development ${state}"
+Search for: "${geographyName} real estate housing market ${state}" and "${geographyName} jobs employers development ${state}" and "${state} real estate market 2026"
+
+If results for "${geographyName}" are sparse, broaden your search to the surrounding region, county, or state level. There is ALWAYS relevant state-level and national real estate news — include it. For smaller markets, regional economic trends (university enrollment, major employers, agricultural economy, state policy changes) are especially important.
 
 Find the top ${maxItems} most impactful items from the last ${lookbackDays} days across: employer/jobs news, housing development, policy changes, infrastructure projects, climate/insurance events, and market reports.
 
@@ -529,11 +570,17 @@ Search and compile results for ${locationContext}:`;
    * Handles: code-fenced JSON, raw JSON, and JSON embedded in conversational text.
    */
   private parseResponse(text: string): any {
-    const empty = { local_news: [], economic_indicators: [], market_signals: [] };
+    const empty = {
+      local_news: [],
+      economic_indicators: [],
+      market_signals: [],
+    };
     if (!text || text.trim().length === 0) return empty;
 
     // Strategy 1: markdown code block
-    const jsonMatches = [...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/g)];
+    const jsonMatches = [
+      ...text.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/g),
+    ];
     for (const match of jsonMatches) {
       try {
         const parsed = JSON.parse(match[1].trim());
@@ -553,8 +600,14 @@ Search and compile results for ${locationContext}:`;
     // Strategy 3: Find JSON starting with { and containing our expected keys.
     // Locate the opening brace before "local_news" or other expected key,
     // then use string-aware brace matching to find the closing brace.
-    const keyPatterns = ['"local_news"', '"economic_indicators"', '"market_signals"',
-                         '"fed_rate_news"', '"mortgage_rate_trend"', '"national_housing_news"'];
+    const keyPatterns = [
+      '"local_news"',
+      '"economic_indicators"',
+      '"market_signals"',
+      '"fed_rate_news"',
+      '"mortgage_rate_trend"',
+      '"national_housing_news"',
+    ];
     for (const keyPattern of keyPatterns) {
       const keyIdx = text.indexOf(keyPattern);
       if (keyIdx < 0) continue;
@@ -562,7 +615,10 @@ Search and compile results for ${locationContext}:`;
       // Walk backwards from the key to find the opening {
       let openBrace = -1;
       for (let i = keyIdx - 1; i >= 0; i--) {
-        if (text[i] === '{') { openBrace = i; break; }
+        if (text[i] === '{') {
+          openBrace = i;
+          break;
+        }
         // If we hit something that can't be in JSON before the first key, stop
         if (text[i] === '\n' && i < keyIdx - 5) {
           // Check if what's between here and keyIdx could be valid JSON
@@ -580,15 +636,21 @@ Search and compile results for ${locationContext}:`;
       try {
         const parsed = JSON.parse(candidate);
         if (parsed && typeof parsed === 'object') {
-          this.logger.log(`parseResponse: parsed via key-search (key=${keyPattern}, length=${candidate.length})`);
+          this.logger.log(
+            `parseResponse: parsed via key-search (key=${keyPattern}, length=${candidate.length})`,
+          );
           return parsed;
         }
       } catch (e: any) {
-        this.logger.warn(`parseResponse: key-search candidate failed: ${e.message?.substring(0, 80)}`);
+        this.logger.warn(
+          `parseResponse: key-search candidate failed: ${e.message?.substring(0, 80)}`,
+        );
       }
     }
 
-    this.logger.warn(`Could not parse JSON from response (${text.length} chars). First 300 chars: ${text.substring(0, 300)}`);
+    this.logger.warn(
+      `Could not parse JSON from response (${text.length} chars). First 300 chars: ${text.substring(0, 300)}`,
+    );
     return empty;
   }
 
@@ -684,7 +746,9 @@ Search and compile results for ${locationContext}:`;
     );
 
     if (error) {
-      this.logger.warn(`Failed to cache news (${error.code}): ${error.message}`);
+      this.logger.warn(
+        `Failed to cache news (${error.code}): ${error.message}`,
+      );
     }
   }
 

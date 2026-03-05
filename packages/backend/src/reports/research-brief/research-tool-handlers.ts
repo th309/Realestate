@@ -206,10 +206,18 @@ export async function handleSearchNews(
       sentiment: n.sentiment,
       impact: n.impact_on_real_estate,
     })),
+    economic_indicators: result.economic_indicators.slice(0, 5).map((e) => ({
+      indicator: e.indicator_name,
+      level: e.geography_level,
+      value: e.current_value,
+      change: e.change_description,
+      housing_impact: `${e.impact_on_housing}: ${e.impact_explanation}`,
+    })),
     signals: result.market_signals.slice(0, 3).map((s) => ({
       type: s.signal_type,
       headline: s.headline,
       description: s.description,
     })),
+    national_context: result.national_context || null,
   });
 }
