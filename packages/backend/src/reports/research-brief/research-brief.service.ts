@@ -28,6 +28,10 @@ import {
   extractResearchData,
   extractJson,
 } from './research-narrative-generator';
+import {
+  enrichResearchWithNews,
+  extractAllRegionNames,
+} from './research-news-enricher';
 
 /** Maximum tool-use loop iterations to prevent runaway agents */
 const MAX_TOOL_ITERATIONS = 15;
@@ -222,7 +226,7 @@ export class ResearchBriefService {
       this.logger.log(
         'Claude skipped search_news — forcing news fetch for all analyzed regions',
       );
-      const regionNames = this.extractAllRegionNames(lastResearchData);
+      const regionNames = extractAllRegionNames(lastResearchData);
       if (regionNames.length > 0) {
         const newsResults = await Promise.all(
           regionNames.slice(0, 5).map(async (name) => {
@@ -253,15 +257,14 @@ export class ResearchBriefService {
     };
   }
 
-  /** Extract all region names from research data for forced news lookup. */
-  private extractAllRegionNames(data: Record<string, unknown>): string[] {
-    try {
-      const regions = data.regions_analyzed as string[] | undefined;
-      if (regions?.length) return regions;
-    } catch {
-      /* best-effort */
-    }
-    return [];
+  /**
+   * Enrich research data with direct news fetch (same pattern as HomeReady/InvestorEdge).
+   * Does NOT rely on the agent's search_news tool call — fetches news directly.
+   */
+  async enrichWithNews(
+    researchData: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    return enrichResearchWithNews(researchData, this.newsService);
   }
 
   /**

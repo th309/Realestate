@@ -95,7 +95,13 @@ export class ResearchBriefController {
         `Research execution done: ${research.toolCallCount} tool calls in ${research.durationMs}ms`,
       );
 
-      // Step 2: Generate narrative (DeepSeek)
+      // Step 2: Enrich with direct news fetch (same pattern as HomeReady/InvestorEdge)
+      this.logger.log('Enriching research data with news...');
+      const enrichedData = await this.researchBriefService.enrichWithNews(
+        research.researchData,
+      );
+
+      // Step 3: Generate narrative (DeepSeek)
       this.logger.log('Starting narrative generation...');
       const clarifyingContext = dto.clarifying_answers
         ? JSON.stringify(dto.clarifying_answers)
@@ -103,7 +109,7 @@ export class ResearchBriefController {
 
       const narrative = await this.researchBriefService.generateNarrative(
         dto.question,
-        research.researchData,
+        enrichedData,
         clarifyingContext,
       );
       this.logger.log(`Narrative generation done (${narrative.length} chars)`);

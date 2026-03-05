@@ -145,7 +145,8 @@ Adapt sections to fit the question. Not every brief needs the same structure. Us
 - Cover local developments: employer expansions/layoffs, new construction, zoning changes, infrastructure projects, school ratings, crime trends — anything that affects livability or property values.
 - Cover national context: Fed rate decisions, mortgage rate trends, national housing inventory, economic outlook.
 - Connect news to specific markets: "Carbondale benefits from SIU expansion" not "some markets benefit from university presence."
-- If the research data contains a "news", "forced_news", "national_context", or "market_signals" field, you MUST use it. Do not say "we lack news context" when news data is present in the research payload.
+- The research data will contain a "news_context" field with pre-formatted local news, economic indicators, market signals, and national context (Fed rates, mortgage trends). You MUST integrate this into your analysis. Also check for "news", "forced_news", "national_context", or "market_signals" fields.
+- NEVER say "news service was unavailable" or "we lack news context" when any of these fields contain data.
 - If no news data exists at all, state that briefly and move on — do not fabricate news.
 
 ### Risks & Considerations (1-2 paragraphs)
