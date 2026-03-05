@@ -5,8 +5,8 @@
  * to use for each (dataSource, geoLevel) pair. This was previously
  * hardcoded differently in every consumer (market-snapshot, reports, scoring).
  *
- * All table/column routing lives HERE. No other file should hardcode
- * table names like 'zillow_metro' or 'census_county'.
+ * Table routing is defined in table-routes.ts.
+ * Bulk fetch methods are in source-fetcher-bulk.service.ts.
  */
 
 import { Injectable, Inject, Logger } from '@nestjs/common';
@@ -19,11 +19,12 @@ import {
   normalizeCountyFips,
   normalizeCbsaCode,
 } from '../common/geo';
+import { GeoLevel, DataSource, TableRoute } from './metric-resolution.types';
 import {
-  GeoLevel,
-  DataSource,
-  TableRoute,
-} from './metric-resolution.types';
+  getWideTableRoute,
+  getZillowRoute,
+  getRedfinRoute,
+} from './table-routes';
 
 /** Result from a single-value fetch */
 export interface FetchedValue {
@@ -49,41 +50,36 @@ export class SourceFetcherService {
     geoLevel: GeoLevel,
     geoId: string,
   ): Promise<FetchedValue | null> {
-    // HUD FMR is special — requires a county crosswalk lookup from ZIP
-    if (source === 'hud_fmr') {
-      return this.fetchHudFmr(column, geoLevel, geoId);
-    }
-
-    // Zillow uses a long-format table (metric_name column)
-    if (source === 'zillow') {
+    if (source === 'hud_fmr') return this.fetchHudFmr(column, geoLevel, geoId);
+    if (source === 'zillow')
       return this.fetchZillowMetric(column, geoLevel, geoId);
-    }
-
-    // Calculated metrics use geography_id + geography_type pattern
-    if (source === 'calculated') {
+    if (source === 'calculated')
       return this.fetchCalculatedMetric(column, geoLevel, geoId);
-    }
-
-    // Redfin uses wide-format tables with property_type filter and period_end date
-    if (source === 'redfin') {
+    if (source === 'redfin')
       return this.fetchRedfinMetric(column, geoLevel, geoId);
-    }
-
-    // Standard wide-format tables (realtor, census, economic, permits)
     return this.fetchWideTableMetric(source, column, geoLevel, geoId);
   }
 
-  /**
-   * Fetch from wide-format tables (realtor_*, census_*, economic_*, permits_*).
-   * These have one column per metric and use geography-specific ID columns.
-   */
+  // Public route accessors for SourceFetcherBulkService
+  getWideTableRoute(source: DataSource, geoLevel: GeoLevel): TableRoute | null {
+    return getWideTableRoute(source, geoLevel);
+  }
+
+  getZillowRoute(geoLevel: GeoLevel): TableRoute | null {
+    return getZillowRoute(geoLevel);
+  }
+
+  // ==========================================================================
+  // Single-value fetch methods
+  // ==========================================================================
+
   private async fetchWideTableMetric(
     source: DataSource,
     column: string,
     geoLevel: GeoLevel,
     geoId: string,
   ): Promise<FetchedValue | null> {
-    const route = this.getWideTableRoute(source, geoLevel);
+    const route = getWideTableRoute(source, geoLevel);
     if (!route) return null;
 
     const normalizedId = this.normalizeGeoId(geoLevel, geoId, source);
@@ -101,7 +97,10 @@ export class SourceFetcherService {
     const row = data as Record<string, any>;
     const rawValue = row[column];
 
-    if (rawValue == null || (typeof rawValue === 'number' && rawValue === -666666666)) {
+    if (
+      rawValue == null ||
+      (typeof rawValue === 'number' && rawValue === -666666666)
+    ) {
       return null;
     }
 
@@ -111,16 +110,12 @@ export class SourceFetcherService {
     };
   }
 
-  /**
-   * Fetch from Zillow long-format tables (zillow_*).
-   * These store each metric as a separate row with metric_name, value, period_date.
-   */
   private async fetchZillowMetric(
     metricName: string,
     geoLevel: GeoLevel,
     geoId: string,
   ): Promise<FetchedValue | null> {
-    const route = this.getZillowRoute(geoLevel);
+    const route = getZillowRoute(geoLevel);
     if (!route) return null;
 
     const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'zillow');
@@ -135,7 +130,6 @@ export class SourceFetcherService {
 
     if (error || !data || data.length === 0) return null;
     const row = data[0] as Record<string, any>;
-
     if (row.value == null) return null;
 
     return {
@@ -144,11 +138,6 @@ export class SourceFetcherService {
     };
   }
 
-  /**
-   * Fetch from calculated_metrics table.
-   * Uses geography_id + geography_type pattern. Merges latest 3 rows
-   * (different batch jobs may write at different dates).
-   */
   private async fetchCalculatedMetric(
     column: string,
     geoLevel: GeoLevel,
@@ -166,7 +155,6 @@ export class SourceFetcherService {
 
     if (error || !data || data.length === 0) return null;
 
-    // Merge: latest non-null value wins (handles staggered batch writes)
     for (const row of data as Record<string, any>[]) {
       if (row[column] != null) {
         return {
@@ -175,14 +163,9 @@ export class SourceFetcherService {
         };
       }
     }
-
     return null;
   }
 
-  /**
-   * Fetch HUD Fair Market Rent for a ZIP code.
-   * Requires looking up the county FIPS first via the geographies table.
-   */
   private async fetchHudFmr(
     column: string,
     geoLevel: GeoLevel,
@@ -190,7 +173,6 @@ export class SourceFetcherService {
   ): Promise<FetchedValue | null> {
     if (geoLevel !== 'zip') return null;
 
-    // Step 1: Get county FIPS from geographies table
     const { data: geo } = await this.supabase
       .from('geographies')
       .select('fips_code')
@@ -203,7 +185,6 @@ export class SourceFetcherService {
     if (!geoRow?.fips_code) return null;
     const countyFips = String(geoRow.fips_code).padStart(5, '0');
 
-    // Step 2: Get latest HUD FMR for that county
     const { data: fmr } = await this.supabase
       .from('hud_fmr')
       .select(`${column}, year`)
@@ -222,17 +203,12 @@ export class SourceFetcherService {
     };
   }
 
-  /**
-   * Fetch from Redfin wide-format tables (redfin_*).
-   * These have one column per metric, use period_end as date column,
-   * and require filtering by property_type = 'All Residential'.
-   */
   private async fetchRedfinMetric(
     column: string,
     geoLevel: GeoLevel,
     geoId: string,
   ): Promise<FetchedValue | null> {
-    const route = this.getRedfinRoute(geoLevel);
+    const route = getRedfinRoute(geoLevel);
     if (!route) return null;
 
     const normalizedId = this.normalizeGeoId(geoLevel, geoId, 'redfin');
@@ -248,128 +224,23 @@ export class SourceFetcherService {
 
     if (error || !data) return null;
     const row = data as Record<string, any>;
-    const rawValue = row[column];
-
-    if (rawValue == null) return null;
+    if (row[column] == null) return null;
 
     return {
-      value: Number(rawValue),
+      value: Number(row[column]),
       date: row[route.dateColumn] ? String(row[route.dateColumn]) : null,
     };
-  }
-
-  // ==========================================================================
-  // Table Routing
-  // ==========================================================================
-
-  private getWideTableRoute(source: DataSource, geoLevel: GeoLevel): TableRoute | null {
-    switch (source) {
-      case 'realtor':
-        return this.getRealtorRoute(geoLevel);
-      case 'census':
-        return this.getCensusRoute(geoLevel);
-      case 'economic':
-        return this.getEconomicRoute(geoLevel);
-      case 'permits':
-        return this.getPermitsRoute(geoLevel);
-      default:
-        return null;
-    }
-  }
-
-  private getRealtorRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'metro':
-        return { table: 'realtor_metro', idColumn: 'cbsa_code', nameColumn: 'cbsa_title', dateColumn: 'period_date' };
-      case 'county':
-        return { table: 'realtor_county', idColumn: 'county_fips', nameColumn: 'county_name', dateColumn: 'period_date' };
-      case 'zip':
-        return { table: 'realtor_zip', idColumn: 'postal_code', nameColumn: 'zip_name', dateColumn: 'period_date' };
-      case 'state':
-        return { table: 'realtor_state', idColumn: 'state_id', nameColumn: 'state_name', dateColumn: 'period_date' };
-      default:
-        return null;
-    }
-  }
-
-  private getZillowRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'metro':
-        return { table: 'zillow_metro', idColumn: 'cbsa_code', dateColumn: 'period_date' };
-      case 'county':
-        return { table: 'zillow_county', idColumn: 'fips_code', dateColumn: 'period_date' };
-      case 'zip':
-        return { table: 'zillow_zip', idColumn: 'region_name', dateColumn: 'period_date' };
-      case 'state':
-        return { table: 'zillow_state', idColumn: 'state_code', dateColumn: 'period_date' };
-      default:
-        return null;
-    }
-  }
-
-  private getCensusRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'metro':
-        return { table: 'census_metro', idColumn: 'cbsa_code', nameColumn: 'cbsa_title', dateColumn: 'year' };
-      case 'county':
-        return { table: 'census_county', idColumn: 'fips_code', nameColumn: 'county_name', dateColumn: 'year' };
-      case 'zip':
-        return { table: 'census_zip', idColumn: 'zcta', dateColumn: 'year' };
-      case 'state':
-        return { table: 'census_state', idColumn: 'state_fips', nameColumn: 'state_name', dateColumn: 'year' };
-      default:
-        return null;
-    }
-  }
-
-  private getEconomicRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'metro':
-        return { table: 'economic_metro', idColumn: 'cbsa_code', nameColumn: 'cbsa_title', dateColumn: 'period_date' };
-      case 'county':
-        return { table: 'economic_county', idColumn: 'fips_code', nameColumn: 'county_name', dateColumn: 'period_date' };
-      case 'state':
-        return { table: 'economic_state', idColumn: 'state_fips', nameColumn: 'state_name', dateColumn: 'period_date' };
-      default:
-        return null;
-    }
-  }
-
-  private getRedfinRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'national':
-        return { table: 'redfin_national', idColumn: 'region_name', dateColumn: 'period_end' };
-      case 'state':
-        return { table: 'redfin_state', idColumn: 'state_code', dateColumn: 'period_end' };
-      case 'metro':
-        return { table: 'redfin_metro', idColumn: 'cbsa_code', dateColumn: 'period_end' };
-      case 'county':
-        return { table: 'redfin_county', idColumn: 'fips_code', dateColumn: 'period_end' };
-      case 'zip':
-        return { table: 'redfin_zip', idColumn: 'zip_code', dateColumn: 'period_end' };
-      default:
-        return null;
-    }
-  }
-
-  private getPermitsRoute(geoLevel: GeoLevel): TableRoute | null {
-    switch (geoLevel) {
-      case 'county':
-        return { table: 'permits_county', idColumn: 'fips_code', dateColumn: 'period_date' };
-      case 'state':
-        return { table: 'permits_state', idColumn: 'state_fips', dateColumn: 'period_date' };
-      case 'metro':
-        return { table: 'permits_metro', idColumn: 'cbsa_code', dateColumn: 'period_date' };
-      default:
-        return null;
-    }
   }
 
   // ==========================================================================
   // Geography ID Normalization
   // ==========================================================================
 
-  private normalizeGeoId(geoLevel: GeoLevel, geoId: string, source: DataSource): string {
+  private normalizeGeoId(
+    geoLevel: GeoLevel,
+    geoId: string,
+    source: DataSource,
+  ): string {
     switch (geoLevel) {
       case 'zip':
         return normalizeZipKey(geoId);
@@ -378,14 +249,16 @@ export class SourceFetcherService {
       case 'metro':
         return /^\d+$/.test(geoId.trim()) ? normalizeCbsaCode(geoId) : geoId;
       case 'state':
-        // Different tables use different state ID formats
-        if (source === 'census' || source === 'economic' || source === 'permits') {
+        if (
+          source === 'census' ||
+          source === 'economic' ||
+          source === 'permits'
+        ) {
           return normalizeStateToFips(geoId);
         }
         if (source === 'calculated') {
           return normalizeStateToCode(geoId);
         }
-        // Realtor uses state_id (2-letter), Zillow/Redfin use state_code (2-letter)
         return normalizeStateToCode(geoId);
       default:
         return geoId;

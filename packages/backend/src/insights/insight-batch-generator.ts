@@ -74,6 +74,7 @@ export async function generateBatchInsights(
               region_id: region,
               geo_level: geoLevel,
               insight_type: type,
+              archetype_id: '__none__',
               content,
               model: aiModel,
               generated_at: new Date().toISOString(),

@@ -91,9 +91,7 @@ export class InsightsService {
       .eq('insight_type', insightType)
       .gt('expires_at', new Date().toISOString());
 
-    query = archetypeId
-      ? query.eq('archetype_id', archetypeId)
-      : query.is('archetype_id', null);
+    query = query.eq('archetype_id', archetypeId || '__none__');
 
     const { data: cached } = await query.limit(1).single();
 
@@ -113,20 +111,26 @@ export class InsightsService {
       region_id: regionId,
       geo_level: geoLevel,
       insight_type: insightType,
-      archetype_id: archetypeId ?? null,
+      archetype_id: archetypeId || '__none__',
       content,
       model: this.aiModel,
       generated_at: now,
       expires_at: expiresAt,
     };
 
-    const { data: upserted } = await this.supabase
+    const { data: upserted, error: upsertError } = await this.supabase
       .from('market_insights')
       .upsert(row, {
         onConflict: 'region_id,geo_level,insight_type,archetype_id',
       })
       .select()
       .single();
+
+    if (upsertError) {
+      this.logger.error(
+        `Failed to persist insight for ${regionId}/${geoLevel}/${insightType}: ${upsertError.message}`,
+      );
+    }
 
     return (upserted as MarketInsight) ?? ({ ...row, id: '' } as MarketInsight);
   }

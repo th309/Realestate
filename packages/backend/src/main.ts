@@ -45,6 +45,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Increase HTTP server timeout for long-running AI pipelines
+  // (research brief: ~2-3 min for tool-use loop + narrative generation)
+  const server = app.getHttpServer();
+  server.setTimeout(300_000); // 5 minutes
+
   const port = process.env.PORT || 3001;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 API running on http://localhost:${port}`);

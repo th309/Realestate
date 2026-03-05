@@ -19,6 +19,7 @@ import {
 } from './metric-resolution.types';
 import { FALLBACK_REGISTRY } from './fallback-registry';
 import { SourceFetcherService } from './source-fetcher.service';
+import { SourceFetcherBulkService } from './source-fetcher-bulk.service';
 import { GeographyChainService } from './geography-chain.service';
 
 /** A null/empty resolved metric */
@@ -38,8 +39,9 @@ export class MetricResolutionService {
 
   constructor(
     private readonly sourceFetcher: SourceFetcherService,
+    private readonly sourceFetcherBulk: SourceFetcherBulkService,
     private readonly geoChain: GeographyChainService,
-  ) { }
+  ) {}
 
   /**
    * Resolve a single metric for a single geography.
@@ -101,15 +103,48 @@ export class MetricResolutionService {
       return new Map();
     }
 
-    // For now, resolve individually per metric.
-    // Future optimization: bulk-fetch from each source table in one query.
-    // This method exists to establish the API contract for scoring.
-    this.logger.debug(
-      `resolveMetricForAllGeos(${metricId}, ${geoLevel}) — ` +
-      `individual resolution (bulk optimization planned)`,
-    );
+    const result = new Map<string, ResolvedMetric>();
 
-    return new Map();
+    // Try each source in the fallback chain until we get data
+    for (let i = 0; i < chain.sources.length; i++) {
+      const source = chain.sources[i];
+      if (source.geoLevels && !source.geoLevels.includes(geoLevel)) continue;
+
+      const rows = await this.sourceFetcherBulk.fetchLatestForAllRegions(
+        source.source,
+        source.column,
+        geoLevel,
+      );
+
+      if (rows.length > 0) {
+        for (const row of rows) {
+          let value = source.transform
+            ? source.transform(row.value)
+            : row.value;
+          if (chain.sanityLimits) {
+            const { min, max } = chain.sanityLimits;
+            if (min !== undefined && value < min) value = min;
+            if (max !== undefined && value > max) value = max;
+          }
+          result.set(row.regionId, {
+            value,
+            date: row.date,
+            source: source.source,
+            sourceGeoId: row.regionId,
+            sourceGeoLevel: geoLevel,
+            isInherited: false,
+            isFallback: i > 0,
+          });
+        }
+        this.logger.debug(
+          `resolveMetricForAllGeos(${metricId}, ${geoLevel}) — ` +
+            `${rows.length} rows from ${source.source}.${source.column}`,
+        );
+        break; // Use first source that has data
+      }
+    }
+
+    return result;
   }
 
   // ==========================================================================
@@ -152,7 +187,9 @@ export class MetricResolutionService {
           );
 
           if (fetched && fetched.value != null) {
-            let value = source.transform ? source.transform(fetched.value) : fetched.value;
+            let value = source.transform
+              ? source.transform(fetched.value)
+              : fetched.value;
 
             // Apply sanity limits if defined
             if (chain.sanityLimits) {
@@ -174,7 +211,7 @@ export class MetricResolutionService {
         } catch (err) {
           this.logger.warn(
             `Failed to fetch ${chain.metricId} from ${source.source}.${source.column} ` +
-            `for ${geoStep.level}/${geoStep.id}: ${err}`,
+              `for ${geoStep.level}/${geoStep.id}: ${err}`,
           );
         }
       }

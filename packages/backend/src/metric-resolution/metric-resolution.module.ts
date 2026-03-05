@@ -15,6 +15,7 @@ import { Module } from '@nestjs/common';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { MetricResolutionService } from './metric-resolution.service';
 import { SourceFetcherService } from './source-fetcher.service';
+import { SourceFetcherBulkService } from './source-fetcher-bulk.service';
 import { GeographyChainService } from './geography-chain.service';
 
 @Module({
@@ -22,12 +23,14 @@ import { GeographyChainService } from './geography-chain.service';
   providers: [
     MetricResolutionService,
     SourceFetcherService,
+    SourceFetcherBulkService,
     GeographyChainService,
   ],
   exports: [
     MetricResolutionService,
     GeographyChainService,
     SourceFetcherService,
+    SourceFetcherBulkService,
   ],
 })
 export class MetricResolutionModule {}
