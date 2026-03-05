@@ -219,23 +219,30 @@ export class ResearchBriefService {
 
     // Force search_news if Claude skipped it — news context is essential
     if (!calledSearchNews && this.newsService) {
-      this.logger.log('Claude skipped search_news — forcing news fetch');
-      const topRegion = this.extractTopRegionName(lastResearchData);
-      if (topRegion) {
-        const newsResult = await executeToolCall(
-          'search_news',
-          { region_name: topRegion, geography_level: 'metro' },
-          this.scoringService,
-          this.metricResolution,
-          this.timeSeriesService,
-          this.newsService,
+      this.logger.log(
+        'Claude skipped search_news — forcing news fetch for all analyzed regions',
+      );
+      const regionNames = this.extractAllRegionNames(lastResearchData);
+      if (regionNames.length > 0) {
+        const newsResults = await Promise.all(
+          regionNames.slice(0, 5).map(async (name) => {
+            const result = await executeToolCall(
+              'search_news',
+              { region_name: name, geography_level: 'metro' },
+              this.scoringService,
+              this.metricResolution,
+              this.timeSeriesService,
+              this.newsService,
+            );
+            toolCallCount++;
+            try {
+              return { region: name, ...JSON.parse(result) };
+            } catch {
+              return { region: name, raw: result };
+            }
+          }),
         );
-        toolCallCount++;
-        try {
-          (lastResearchData as any).forced_news = JSON.parse(newsResult);
-        } catch {
-          (lastResearchData as any).forced_news = newsResult;
-        }
+        (lastResearchData as any).forced_news = newsResults;
       }
     }
 
@@ -246,20 +253,15 @@ export class ResearchBriefService {
     };
   }
 
-  /** Extract the top region name from research data for forced news lookup. */
-  private extractTopRegionName(data: Record<string, unknown>): string | null {
+  /** Extract all region names from research data for forced news lookup. */
+  private extractAllRegionNames(data: Record<string, unknown>): string[] {
     try {
       const regions = data.regions_analyzed as string[] | undefined;
-      if (regions?.length) return regions[0];
-      const findings = data.key_findings as string[] | undefined;
-      if (findings?.length)
-        return (
-          findings[0].match(/[A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*/)?.[0] ?? null
-        );
+      if (regions?.length) return regions;
     } catch {
       /* best-effort */
     }
-    return null;
+    return [];
   }
 
   /**
