@@ -42,6 +42,7 @@ import { PricingModule } from './pricing/pricing.module';
 import { UserAnalyticsModule } from './user-analytics/user-analytics.module';
 import { AuthHooksModule } from './auth-hooks/auth-hooks.module';
 import { InsightsModule } from './insights/insights.module';
+import { PreferencesModule } from './preferences/preferences.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -89,6 +90,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     UserAnalyticsModule,
     AuthHooksModule,
     InsightsModule,
+    PreferencesModule,
   ],
   controllers: [AppController],
   providers: [AppService, CacheRefreshJob],
