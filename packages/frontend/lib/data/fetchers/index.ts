@@ -177,6 +177,9 @@ export {
 } from "./onboarding";
 export type { OnboardingState } from "./onboarding";
 
+// Insights (AI-generated market narratives)
+export { fetchInsight, type InsightData } from "./insights";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

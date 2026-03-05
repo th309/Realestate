@@ -11,7 +11,7 @@ export {
   useSnapshotDataBatch,
   type UseSnapshotDataOptions,
   type UseSnapshotDataResult,
-} from './useSnapshotData';
+} from "./useSnapshotData";
 
 // Time series data hooks
 export {
@@ -19,7 +19,7 @@ export {
   useAvailableDates,
   type UseTimeSeriesDataOptions,
   type UseTimeSeriesDataResult,
-} from './useTimeSeriesData';
+} from "./useTimeSeriesData";
 
 // Trend data hooks
 export {
@@ -28,7 +28,7 @@ export {
   useMarketFactorsTrends,
   type UseTrendDataOptions,
   type UseTrendDataResult,
-} from './useTrendData';
+} from "./useTrendData";
 
 // Data card hooks (composite)
 export {
@@ -36,7 +36,7 @@ export {
   useDataCardBatch,
   type UseDataCardOptions,
   type UseDataCardResult,
-} from './useDataCard';
+} from "./useDataCard";
 
 // Score data hooks
 export {
@@ -45,7 +45,7 @@ export {
   type UseScoreDataOptions,
   type UseScoreDataResult,
   type ScoreGatingInfo,
-} from './useScoreData';
+} from "./useScoreData";
 
 // Market snapshot (batch - replaces useDataCardBatch for Markets page)
 export {
@@ -53,13 +53,10 @@ export {
   type MarketSnapshotCard,
   type UseMarketSnapshotOptions,
   type UseMarketSnapshotResult,
-} from './useMarketSnapshot';
+} from "./useMarketSnapshot";
 
 // Metric access (entitlements gating)
-export {
-  useMetricAccess,
-  type MetricAccessResult,
-} from './useMetricAccess';
+export { useMetricAccess, type MetricAccessResult } from "./useMetricAccess";
 
 // Data freshness / "as of" dates
 export {
@@ -67,14 +64,14 @@ export {
   useMetricFreshness,
   type UseDataFreshnessResult,
   type UseMetricFreshnessResult,
-} from './useDataFreshness';
+} from "./useDataFreshness";
 
 // Top markets (rankings)
 export {
   useTopMarkets,
   type UseTopMarketsOptions,
   type UseTopMarketsResult,
-} from './useTopMarkets';
+} from "./useTopMarkets";
 
 // Pricing tiers
 export {
@@ -82,7 +79,10 @@ export {
   buildPriceLookup,
   type UsePricingTiersResult,
   type TierPriceLookup,
-} from './usePricingTiers';
+} from "./usePricingTiers";
+
+// Insights (AI-generated market narratives)
+export { useInsight } from "./useInsight";
 
 // Validation data hooks
 export {
@@ -96,4 +96,4 @@ export {
   type UseValidationScatterOptions,
   type UseValidationTimeSeriesOptions,
   type UseValidationGeographyOptions,
-} from './useValidationData';
+} from "./useValidationData";

@@ -258,6 +258,10 @@ export {
   resetOnboarding,
   saveOnboardingPreferences,
   type OnboardingState,
+
+  // Insights
+  fetchInsight,
+  type InsightData,
 } from "./fetchers";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
@@ -319,6 +323,9 @@ export {
   buildPriceLookup,
   type UsePricingTiersResult,
   type TierPriceLookup,
+
+  // Insights
+  useInsight,
 
   // Validation data hooks
   useValidationSummary,
