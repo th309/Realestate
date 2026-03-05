@@ -14,6 +14,7 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { InsightsController } from './insights.controller';
 import { InsightsService } from './insights.service';
+import { BlogGeneratorService } from './blog-generator.service';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { InsightsService } from './insights.service';
     MetricResolutionModule,
   ],
   controllers: [InsightsController],
-  providers: [InsightsService],
-  exports: [InsightsService],
+  providers: [InsightsService, BlogGeneratorService],
+  exports: [InsightsService, BlogGeneratorService],
 })
 export class InsightsModule {}

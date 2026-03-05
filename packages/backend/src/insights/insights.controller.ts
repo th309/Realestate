@@ -1,12 +1,14 @@
 /**
  * Insights Controller
  *
- * Exposes endpoints for retrieving and batch-generating AI market insights.
+ * Exposes endpoints for retrieving and batch-generating AI market insights,
+ * and for generating monthly blog posts.
  *
  * GET  /api/insights/:geoLevel/:regionId  — Retrieve a single insight
  * POST /api/insights/generate-batch        — Trigger batch generation
+ * POST /api/insights/blog/generate         — Generate monthly blog posts (admin)
  *
- * Note: generate-batch will get an AdminGuard in Task 7 (entitlements).
+ * Note: generate-batch and blog/generate will get an AdminGuard in Task 7 (entitlements).
  */
 
 import {
@@ -20,10 +22,15 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { InsightsService } from './insights.service';
+import { BlogGeneratorService } from './blog-generator.service';
+import { BlogPostType } from './blog-prompts';
 
 @Controller('api/insights')
 export class InsightsController {
-  constructor(private readonly insightsService: InsightsService) {}
+  constructor(
+    private readonly insightsService: InsightsService,
+    private readonly blogGenerator: BlogGeneratorService,
+  ) {}
 
   @Get(':geoLevel/:regionId')
   async getInsight(
@@ -53,5 +60,34 @@ export class InsightsController {
   @Post('generate-batch')
   async generateBatch(@Body('geoLevel') geoLevel: string) {
     return this.insightsService.generateBatchInsights(geoLevel);
+  }
+
+  /**
+   * Generate monthly blog posts. Optionally pass a `type` in the body to
+   * generate a single post type instead of all three.
+   *
+   * Returns MDX content for admin review before publishing.
+   */
+  @Post('blog/generate')
+  async generateBlogPosts(@Body('type') type?: BlogPostType) {
+    if (type) {
+      const post = await this.blogGenerator.generatePostByType(type);
+      if (!post) {
+        throw new HttpException(
+          'Blog generation unavailable or unknown type',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      return { posts: [post] };
+    }
+
+    const posts = await this.blogGenerator.generateMonthlyPosts();
+    if (posts.length === 0) {
+      throw new HttpException(
+        'Blog generation unavailable — AI client not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    return { posts };
   }
 }
