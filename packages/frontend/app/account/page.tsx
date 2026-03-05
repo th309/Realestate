@@ -1,71 +1,72 @@
-'use client';
+"use client";
 
-import { Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { User, CreditCard, Bell, HelpCircle } from 'lucide-react';
-import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
-import { useAuth } from '@/lib/auth';
-import { useEntitlements } from '@/lib/entitlements';
-import { ProfileTab, SubscriptionTab, ActivityTab, SupportTab } from '@/components/account';
+import { Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { User, HelpCircle } from "lucide-react";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { useAuth } from "@/lib/auth";
+import { useEntitlements } from "@/lib/entitlements";
+import { useWatchlist } from "@/components/analytics-assistant/persistence/useWatchlist";
+import { useAlerts, useAlertHistory } from "@/lib/alerts/hooks";
+import { SupportTab } from "@/components/account";
+import {
+  HeroBanner,
+  PlanUsageSection,
+  PersonalInfoSection,
+  PreferencesSection,
+  SavedMarketsSection,
+  AlertHistorySection,
+  RecentReportsSection,
+  NotificationsSection,
+  AccountSecuritySection,
+} from "@/components/account/sections";
 
-type AccountTab = 'profile' | 'subscription' | 'activity' | 'support';
-
-const TABS: { id: AccountTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
-  { id: 'subscription', label: 'Subscription', icon: <CreditCard className="w-4 h-4" /> },
-  { id: 'activity', label: 'Activity', icon: <Bell className="w-4 h-4" /> },
-  { id: 'support', label: 'Support', icon: <HelpCircle className="w-4 h-4" /> },
-];
+// --- Tier badge styling ------------------------------------------------------
 
 const TIER_BADGE: Record<string, { label: string; className: string }> = {
-  free: { label: 'Free', className: 'bg-on-surface/10 text-on-surface-variant' },
-  pro: { label: 'Pro', className: 'bg-primary text-on-primary' },
-  enterprise: { label: 'Enterprise', className: 'bg-tertiary text-on-tertiary' },
-  admin: { label: 'Admin', className: 'bg-error text-on-error' },
+  free: {
+    label: "FREE",
+    className: "bg-white/20 text-white",
+  },
+  pro: {
+    label: "PRO",
+    className: "bg-white text-[#7C3AED]",
+  },
+  enterprise: {
+    label: "ENTERPRISE",
+    className: "bg-white text-[#6D28D9]",
+  },
+  admin: {
+    label: "ADMIN",
+    className: "bg-red-500 text-white",
+  },
 };
 
-function getInitials(displayName?: string | null, email?: string | null): string {
-  if (displayName) {
-    return displayName.charAt(0).toUpperCase();
-  }
-  if (email) {
-    return email.charAt(0).toUpperCase();
-  }
-  return '?';
-}
+// --- Loading skeleton --------------------------------------------------------
 
 function LoadingSkeleton() {
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Breadcrumb skeleton */}
         <div className="space-y-3">
           <div className="h-4 w-32 bg-surface-container-highest rounded animate-pulse" />
           <div className="h-8 w-48 bg-surface-container-highest rounded animate-pulse" />
         </div>
-
-        {/* Profile header skeleton */}
-        <div className="mt-8 bg-surface-container rounded-xl border border-outline-variant p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-surface-container-highest animate-pulse" />
-            <div className="space-y-2">
-              <div className="h-5 w-40 bg-surface-container-highest rounded animate-pulse" />
-              <div className="h-4 w-56 bg-surface-container-highest rounded animate-pulse" />
-              <div className="h-4 w-32 bg-surface-container-highest rounded animate-pulse" />
-            </div>
-          </div>
-        </div>
-
-        {/* Tab bar skeleton */}
-        <div className="mt-6 flex gap-6 border-b border-outline-variant">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-10 w-24 bg-surface-container-highest rounded animate-pulse mb-2" />
+        <div className="mt-8 h-32 bg-surface-container-highest rounded-2xl animate-pulse" />
+        <div className="mt-6 space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-48 bg-surface-container-highest rounded-xl animate-pulse"
+            />
           ))}
         </div>
       </div>
     </div>
   );
 }
+
+// --- Main page ---------------------------------------------------------------
 
 export default function AccountPage() {
   return (
@@ -79,116 +80,167 @@ function AccountPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { tier, loading: entitlementsLoading } = useEntitlements();
+  const { tier, trial, loading: entitlementsLoading } = useEntitlements();
 
-  const tabParam = searchParams.get('tab') as AccountTab | null;
-  const activeTab: AccountTab =
-    tabParam && TABS.some(t => t.id === tabParam) ? tabParam : 'profile';
+  const tabParam = searchParams.get("tab");
 
-  const handleTabChange = (tab: AccountTab) => {
-    router.replace(`/account?tab=${tab}`, { scroll: false });
-  };
+  // Redirect old tab URLs to unified page (except support)
+  if (
+    tabParam &&
+    tabParam !== "support" &&
+    ["profile", "subscription", "activity"].includes(tabParam)
+  ) {
+    router.replace("/account", { scroll: false });
+    return <LoadingSkeleton />;
+  }
+
+  const showSupport = tabParam === "support";
 
   if (authLoading || entitlementsLoading) {
     return <LoadingSkeleton />;
   }
 
-  const displayName = user?.user_metadata?.display_name || user?.email || 'User';
-  const email = user?.email || '';
-  const avatarUrl = user?.user_metadata?.avatar_url;
-  const initials = getInitials(user?.user_metadata?.display_name, user?.email);
-  const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    : '';
+  // In dev, create a mock user if no real session exists
+  const effectiveUser =
+    user ??
+    (process.env.NODE_ENV !== "production"
+      ? ({
+          id: "dev-mock-user",
+          email: "dev@propertyiq.app",
+          created_at: "2025-06-01T00:00:00Z",
+          user_metadata: { display_name: "Dev User" },
+          app_metadata: {},
+          aud: "authenticated",
+        } as any)
+      : null);
+
+  if (!effectiveUser) return null;
+
+  const displayName =
+    effectiveUser.user_metadata?.display_name || effectiveUser.email || "User";
+  const email = effectiveUser.email || "";
+  const avatarUrl = effectiveUser.user_metadata?.avatar_url || null;
+  const memberSince = effectiveUser.created_at
+    ? new Date(effectiveUser.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "";
   const badge = TIER_BADGE[tier] || TIER_BADGE.free;
+
+  // If support tab, show it in isolation
+  if (showSupport) {
+    return (
+      <div className="min-h-screen bg-surface">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <PageHeaderWithBreadcrumbs
+            breadcrumbs={[
+              { label: "Account", href: "/account" },
+              { label: "Support" },
+            ]}
+            title="Support"
+            icon={<HelpCircle className="w-5 h-5" />}
+          />
+          <div className="mt-8">
+            <SupportTab user={effectiveUser} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Page header with breadcrumbs */}
         <PageHeaderWithBreadcrumbs
-          breadcrumbs={[{ label: 'Account' }]}
+          breadcrumbs={[{ label: "Account" }]}
           title="Account"
           icon={<User className="w-5 h-5" />}
         />
 
-        {/* Profile header card */}
-        <div className="mt-8 bg-surface-container rounded-xl border border-outline-variant p-6">
-          <div className="flex items-center gap-4">
-            {/* Avatar */}
-            {avatarUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                <span className="text-xl font-semibold text-on-primary">{initials}</span>
-              </div>
-            )}
+        <div className="mt-8 space-y-6">
+          {/* 1. Hero Banner */}
+          <HeroBanner
+            displayName={displayName}
+            email={email}
+            avatarUrl={avatarUrl}
+            tierLabel={badge.label}
+            tierClassName={badge.className}
+            memberSince={memberSince}
+          />
 
-            {/* Info */}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-semibold text-on-surface truncate">{displayName}</h2>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
-                  {badge.label}
-                </span>
-              </div>
-              <p className="text-sm text-on-surface-variant truncate">{email}</p>
-              {memberSince && (
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  Member since {memberSince}
-                </p>
-              )}
-            </div>
-          </div>
+          {/* 2. Plan + Usage */}
+          <PlanUsageWrapper user={effectiveUser} tier={tier} trial={trial} />
+
+          {/* 3. Personal Information */}
+          <PersonalInfoSection user={effectiveUser} />
+
+          {/* 4. Preferences */}
+          <PreferencesSection user={effectiveUser} />
+
+          {/* 5. Saved Markets */}
+          <SavedMarketsWrapper userId={effectiveUser.id} tier={tier} />
+
+          {/* 6. Alerts */}
+          <AlertHistoryWrapper tier={tier} />
+
+          {/* 7. Recent Reports */}
+          <RecentReportsSection />
+
+          {/* 8. Notifications */}
+          <NotificationsSection />
+
+          {/* 9. Account & Security */}
+          <AccountSecuritySection user={effectiveUser} />
         </div>
-
-        {/* Tab bar */}
-        <div className="mt-6 overflow-x-auto -mx-6 px-6">
-          <div className="flex gap-1 border-b border-outline-variant min-w-max">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-primary text-primary font-medium'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab content */}
-        {(() => {
-          // In dev, create a mock user if no real session exists (for visual testing)
-          const effectiveUser = user ?? (process.env.NODE_ENV !== 'production' ? {
-            id: 'dev-mock-user',
-            email: 'dev@propertyiq.app',
-            created_at: '2025-06-01T00:00:00Z',
-            user_metadata: { display_name: 'Dev User' },
-            app_metadata: {},
-            aud: 'authenticated',
-          } as any : null);
-          if (!effectiveUser) return null;
-          return (
-            <>
-              {activeTab === 'profile' && <ProfileTab user={effectiveUser} />}
-              {activeTab === 'subscription' && <SubscriptionTab user={effectiveUser} />}
-              {activeTab === 'activity' && <ActivityTab user={effectiveUser} />}
-              {activeTab === 'support' && <SupportTab user={effectiveUser} />}
-            </>
-          );
-        })()}
       </div>
     </div>
+  );
+}
+
+// --- Wrapper components for data fetching ------------------------------------
+// These keep the hooks at a stable call position (not conditional).
+
+function PlanUsageWrapper({
+  user,
+  tier,
+  trial,
+}: {
+  user: any;
+  tier: any;
+  trial: any;
+}) {
+  const { items: watchlistItems } = useWatchlist({
+    userId: user.id,
+    autoLoad: true,
+  });
+  const { alerts } = useAlerts();
+
+  return (
+    <PlanUsageSection
+      tier={tier}
+      trial={trial}
+      watchlistCount={watchlistItems.length}
+      alertCount={alerts.length}
+    />
+  );
+}
+
+function SavedMarketsWrapper({ userId, tier }: { userId: string; tier: any }) {
+  const { items, isLoading } = useWatchlist({
+    userId,
+    autoLoad: true,
+  });
+
+  return (
+    <SavedMarketsSection items={items} isLoading={isLoading} tier={tier} />
+  );
+}
+
+function AlertHistoryWrapper({ tier }: { tier: any }) {
+  const { entries, isLoading } = useAlertHistory();
+
+  return (
+    <AlertHistorySection entries={entries} isLoading={isLoading} tier={tier} />
   );
 }

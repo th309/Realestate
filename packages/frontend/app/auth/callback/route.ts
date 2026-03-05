@@ -47,9 +47,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (type === "recovery") {
-        return NextResponse.redirect(
-          `${origin}/account?tab=profile&reset=true`,
-        );
+        return NextResponse.redirect(`${origin}/account?reset=true`);
       }
       return NextResponse.redirect(`${origin}${next}`);
     }

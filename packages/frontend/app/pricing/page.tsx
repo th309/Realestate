@@ -1156,7 +1156,7 @@ function PricingContent() {
                   account.
                 </p>
                 <a
-                  href="/account?tab=subscription"
+                  href="/account"
                   className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-on-primary rounded-full font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02]"
                 >
                   Manage Subscription <ArrowRight className="w-4 h-4" />
