@@ -20,6 +20,7 @@ import type { ViewMode, SelectedGeography, GeoLevel } from "../../types";
 import { useMarketFactorsData } from "../../hooks/useMarketFactorsData";
 import type { AllScoresResponse, ScoreType } from "../../hooks/useScoreData";
 import { InsightCarousel } from "./InsightCarousel";
+import { AmbientInsight } from "./AmbientInsight";
 import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
 import { QuickActions } from "./QuickActions";
@@ -169,6 +170,9 @@ export function RightDetailPanel({
             marketHealthScore={getScoreValue("market_health")}
             viewMode={viewMode === "investor" ? "investor" : "homebuyer"}
           />
+
+          {/* Ambient AI Insight (backend-generated) */}
+          <AmbientInsight geoLevel={geoLevel} regionId={geography.id} />
 
           {/* Market Factors Section */}
           <div
