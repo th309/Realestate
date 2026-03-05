@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useEntitlements, ResourceType } from "@/lib/entitlements";
 
 interface EntitlementGateProps {
@@ -24,8 +24,15 @@ export function EntitlementGate({
   const { getAccess, trackPaywallView, loading } = useEntitlements();
   const access = getAccess(type, id);
 
+  // Track whether we've completed an initial load. After the first load,
+  // background refreshes should NOT unmount children — doing so destroys
+  // client state in long-running flows (e.g. research brief generation).
+  const hasLoadedOnce = useRef(false);
+  if (!loading) {
+    hasLoadedOnce.current = true;
+  }
+
   useEffect(() => {
-    // Only track paywall views after entitlements have loaded to avoid false positives
     if (loading) return;
     if (
       access.level === "none" ||
@@ -35,10 +42,10 @@ export function EntitlementGate({
     }
   }, [access.level, type, id, showTeaser, trackPaywallView, loading]);
 
-  // While entitlements are loading, show the loading fallback instead of the
-  // upsell/paywall fallback. This prevents the "flash of paywall" that occurs
-  // when getAccess defaults to { level: 'none' } before data arrives.
-  if (loading) {
+  // On initial load, show the loading fallback to prevent "flash of paywall".
+  // On subsequent refreshes (hasLoadedOnce), keep showing whatever was last
+  // rendered so that children are never unmounted mid-interaction.
+  if (loading && !hasLoadedOnce.current) {
     return <>{loadingFallback}</>;
   }
 

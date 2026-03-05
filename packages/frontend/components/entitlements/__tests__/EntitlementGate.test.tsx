@@ -206,5 +206,42 @@ describe("EntitlementGate", () => {
 
       expect(mockTrackPaywallView).not.toHaveBeenCalled();
     });
+
+    it("keeps children mounted during background refresh after initial load", () => {
+      // Start loaded with full access
+      mockLoading = false;
+      mockGetAccess.mockReturnValue({ level: "full" });
+
+      const { rerender } = render(
+        <EntitlementGate
+          type="feature"
+          id="scores"
+          fallback={<div>Upgrade Required</div>}
+          loadingFallback={<div>Loading...</div>}
+        >
+          <div>Protected Content</div>
+        </EntitlementGate>,
+      );
+
+      expect(screen.getByText("Protected Content")).toBeInTheDocument();
+
+      // Simulate background entitlements refresh — loading goes back to true
+      mockLoading = true;
+
+      rerender(
+        <EntitlementGate
+          type="feature"
+          id="scores"
+          fallback={<div>Upgrade Required</div>}
+          loadingFallback={<div>Loading...</div>}
+        >
+          <div>Protected Content</div>
+        </EntitlementGate>,
+      );
+
+      // Children should STILL be mounted (not unmounted by the refresh)
+      expect(screen.getByText("Protected Content")).toBeInTheDocument();
+      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+    });
   });
 });
