@@ -11,6 +11,7 @@
 import { Module } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
+import { ResearchBriefController } from './research-brief/research-brief.controller';
 import { ClaudeService } from './claude.service';
 import { ClaudeNewsService } from './claude-news.service';
 import { ResearchBriefService } from './research-brief/research-brief.service';
@@ -42,7 +43,7 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
     ClaudeNewsService,
     ResearchBriefService,
   ],
-  controllers: [ReportsController],
+  controllers: [ReportsController, ResearchBriefController],
   exports: [
     ReportsService,
     ClaudeService,

@@ -102,7 +102,11 @@ export class ReportsController {
     @AuthUserId() userId: string,
     @Headers('x-user-tier') userTier?: string,
   ) {
-    const reportId = await this.reportsService.generateReport(userId, dto, userTier);
+    const reportId = await this.reportsService.generateReport(
+      userId,
+      dto,
+      userTier,
+    );
     return { report_id: reportId, status: 'generating' };
   }
 
@@ -132,10 +136,7 @@ export class ReportsController {
    */
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async getReport(
-    @Param('id') id: string,
-    @AuthUserId() userId: string,
-  ) {
+  async getReport(@Param('id') id: string, @AuthUserId() userId: string) {
     const report = await this.reportsService.getReport(id, userId);
     if (!report) {
       throw new HttpException('Report not found', HttpStatus.NOT_FOUND);
@@ -150,10 +151,7 @@ export class ReportsController {
    */
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async deleteReport(
-    @Param('id') id: string,
-    @AuthUserId() userId: string,
-  ) {
+  async deleteReport(@Param('id') id: string, @AuthUserId() userId: string) {
     const deleted = await this.reportsService.deleteReport(id, userId);
     if (!deleted) {
       throw new HttpException('Report not found', HttpStatus.NOT_FOUND);
@@ -174,7 +172,12 @@ export class ReportsController {
     @AuthUserId() userId: string,
     @Headers('x-user-tier') userTier?: string,
   ) {
-    return this.reportsService.regenerateNarratives(id, userId, body.user_inputs, userTier);
+    return this.reportsService.regenerateNarratives(
+      id,
+      userId,
+      body.user_inputs,
+      userTier,
+    );
   }
 
   /**

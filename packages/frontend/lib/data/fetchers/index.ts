@@ -198,6 +198,16 @@ export {
   type MetricBreakdownEntry,
 } from "./market-match";
 
+// Research brief
+export {
+  fetchClarifyingQuestions,
+  generateResearchBrief,
+  type ClarifyingQuestion,
+  type ClarifyingQuestionOption,
+  type ClarifyingQuestionsResponse,
+  type ResearchBriefResponse,
+} from "./research-brief";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

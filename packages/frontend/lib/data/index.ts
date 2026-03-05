@@ -276,6 +276,14 @@ export {
   fetchMarketMatch,
   type MatchScoreResult,
   type MetricBreakdownEntry,
+
+  // Research brief
+  fetchClarifyingQuestions,
+  generateResearchBrief,
+  type ClarifyingQuestion,
+  type ClarifyingQuestionOption,
+  type ClarifyingQuestionsResponse,
+  type ResearchBriefResponse,
 } from "./fetchers";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
