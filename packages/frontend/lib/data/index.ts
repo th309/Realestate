@@ -270,6 +270,12 @@ export {
   type UpsertPreferencesPayload,
   type UserGoal,
   type Timeline,
+
+  // Market match (personalized scores)
+  fetchTopMarketMatches,
+  fetchMarketMatch,
+  type MatchScoreResult,
+  type MetricBreakdownEntry,
 } from "./fetchers";
 
 // Admin analytics (separate export block — avoids collision with TimeSeriesPoint in types.ts)
@@ -338,6 +344,14 @@ export {
   // User quiz preferences
   usePreferences,
   type UsePreferencesResult,
+
+  // Market match (personalized scores)
+  useTopMarketMatches,
+  useMarketMatch,
+  type UseTopMarketMatchesOptions,
+  type UseTopMarketMatchesResult,
+  type UseMarketMatchOptions,
+  type UseMarketMatchResult,
 
   // Validation data hooks
   useValidationSummary,

@@ -190,6 +190,14 @@ export {
   type Timeline,
 } from "./preferences";
 
+// Market match (personalized scores)
+export {
+  fetchTopMarketMatches,
+  fetchMarketMatch,
+  type MatchScoreResult,
+  type MetricBreakdownEntry,
+} from "./market-match";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";

@@ -87,6 +87,16 @@ export { useInsight } from "./useInsight";
 // User quiz preferences
 export { usePreferences, type UsePreferencesResult } from "./usePreferences";
 
+// Market match (personalized scores)
+export {
+  useTopMarketMatches,
+  useMarketMatch,
+  type UseTopMarketMatchesOptions,
+  type UseTopMarketMatchesResult,
+  type UseMarketMatchOptions,
+  type UseMarketMatchResult,
+} from "./useMarketMatch";
+
 // Validation data hooks
 export {
   useValidationSummary,

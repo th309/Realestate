@@ -25,6 +25,11 @@ import { MetricSelectorModal } from "./MetricSelectorModal";
 import { MarketSnapshot } from "./MarketSnapshot";
 import { QuickActions } from "./QuickActions";
 
+interface MatchScoreInfo {
+  matchScore: number;
+  budgetMatch: boolean;
+}
+
 interface RightDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,6 +39,8 @@ interface RightDetailPanelProps {
   /** Score data passed through from page for InsightCarousel only */
   scoreData?: AllScoresResponse | null;
   scoresLoading?: boolean;
+  /** Personalized match score for the selected region */
+  matchScore?: MatchScoreInfo | null;
 }
 
 interface MarketFactor {
@@ -71,6 +78,7 @@ export function RightDetailPanel({
   geography,
   geoLevel,
   scoreData: scoreDataProp,
+  matchScore,
 }: RightDetailPanelProps) {
   const [marketFactors, setMarketFactors] =
     useState<MarketFactor[]>(loadMarketFactors);
@@ -158,6 +166,27 @@ export function RightDetailPanel({
             geographyId={geography.id}
             isOpen={isOpen}
           />
+
+          {/* Market Match Score (shown when user has quiz preferences) */}
+          {matchScore && (
+            <div className="bg-surface-container-low rounded-2xl p-4 border border-outline-variant flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center">
+                <span className="text-lg font-bold text-on-primary-container">
+                  {Math.round(matchScore.matchScore)}
+                </span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-on-surface">
+                  Your Match Score
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  {matchScore.budgetMatch
+                    ? "Within your budget"
+                    : "Outside your budget range"}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <QuickActions geography={geography} geoLevel={geoLevel} />

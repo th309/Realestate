@@ -1,21 +1,23 @@
-'use client';
+"use client";
 
-import type { GeoLevel, ForecastHorizon, MapData } from '../types';
+import type { GeoLevel, ForecastHorizon, MapData } from "../types";
 import {
   COLOR_SCALE,
   NO_DATA_COLOR,
   getMetricFormat,
   calculateValueRange,
   formatValue,
-} from '../utils';
-import { MetricTitle } from '@/app/components/MetricTitle';
-import { useMetricFreshness } from '@/lib/data/hooks';
+} from "../utils";
+import { MetricTitle } from "@/app/components/MetricTitle";
+import { useMetricFreshness } from "@/lib/data/hooks";
 
 interface LegendProps {
   selectedMetric: string;
   forecastHorizon: ForecastHorizon;
   geoLevel: GeoLevel;
   mapData: MapData;
+  /** Override the metric title shown in the legend (e.g. "Market Match Score") */
+  overrideTitle?: string;
 }
 
 export function Legend({
@@ -23,31 +25,59 @@ export function Legend({
   forecastHorizon,
   geoLevel,
   mapData,
+  overrideTitle,
 }: LegendProps) {
+  const titleElement = overrideTitle ? (
+    <span>{overrideTitle}</span>
+  ) : (
+    <MetricTitle metricId={selectedMetric} geoLevel={geoLevel} />
+  );
   const metricFormat = getMetricFormat(selectedMetric);
 
   // Use shared range calculation - ensures consistency with map layer colors
   // Pass selectedMetric and geoLevel (e.g., permits 0–200+ scale only at county)
-  const { min, max, maxLabelSuffix } = calculateValueRange(mapData, metricFormat, selectedMetric, geoLevel);
+  const { min, max, maxLabelSuffix } = calculateValueRange(
+    mapData,
+    metricFormat,
+    selectedMetric,
+    geoLevel,
+  );
 
   // Use shared formatValue for labels - ensures consistency with map (no "100+" for PropertyIQ 0–100 scores)
-  const minLabel = formatValue(min, metricFormat, 'min', selectedMetric);
-  const maxLabel = formatValue(max, metricFormat, 'max', selectedMetric) + (maxLabelSuffix ?? '');
+  const minLabel = formatValue(min, metricFormat, "min", selectedMetric);
+  const maxLabel =
+    formatValue(max, metricFormat, "max", selectedMetric) +
+    (maxLabelSuffix ?? "");
 
-  const { formattedDate: dataDate } = useMetricFreshness(selectedMetric, geoLevel);
+  const { formattedDate: dataDate } = useMetricFreshness(
+    selectedMetric,
+    geoLevel,
+  );
 
   // Check if single value (e.g., national level with only 1 data point)
   const isSingleValue = min === max || Math.abs(max - min) < 0.001;
 
   // Single value legend - show one color with the value
   if (isSingleValue) {
-    const singleValueLabel = formatValue(min, metricFormat, 'min', selectedMetric);
+    const singleValueLabel = formatValue(
+      min,
+      metricFormat,
+      "min",
+      selectedMetric,
+    );
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 md:w-8 h-4 md:h-5 rounded" style={{ backgroundColor: COLOR_SCALE[3] }} />
-          <span className="text-xs md:text-sm text-on-surface-variant">{singleValueLabel}</span>
+          <div
+            className="w-6 md:w-8 h-4 md:h-5 rounded"
+            style={{ backgroundColor: COLOR_SCALE[3] }}
+          />
+          <span className="text-xs md:text-sm text-on-surface-variant">
+            {singleValueLabel}
+          </span>
         </div>
         <NoDataIndicator dataDate={dataDate} />
       </div>
@@ -55,13 +85,19 @@ export function Legend({
   }
 
   // Percent legend (forecasts, growth rates)
-  if (metricFormat === 'percent') {
+  if (metricFormat === "percent") {
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
-            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+            <div
+              key={i}
+              className="w-4 md:w-6 h-3 md:h-4 rounded"
+              style={{ backgroundColor: color }}
+            />
           ))}
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -74,13 +110,19 @@ export function Legend({
   }
 
   // Absolute percent legend (affordability, rates - 0-100%)
-  if (metricFormat === 'percent_abs') {
+  if (metricFormat === "percent_abs") {
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
-            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+            <div
+              key={i}
+              className="w-4 md:w-6 h-3 md:h-4 rounded"
+              style={{ backgroundColor: color }}
+            />
           ))}
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -93,13 +135,19 @@ export function Legend({
   }
 
   // Index legend (renter demand, cost of living)
-  if (metricFormat === 'index') {
+  if (metricFormat === "index") {
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
-            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+            <div
+              key={i}
+              className="w-4 md:w-6 h-3 md:h-4 rounded"
+              style={{ backgroundColor: color }}
+            />
           ))}
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -112,13 +160,19 @@ export function Legend({
   }
 
   // Number legend (inventory, listings, population)
-  if (metricFormat === 'number') {
+  if (metricFormat === "number") {
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
-            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+            <div
+              key={i}
+              className="w-4 md:w-6 h-3 md:h-4 rounded"
+              style={{ backgroundColor: color }}
+            />
           ))}
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -131,13 +185,19 @@ export function Legend({
   }
 
   // Days legend (days on market, days to close)
-  if (metricFormat === 'days') {
+  if (metricFormat === "days") {
     return (
       <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+          {titleElement}
+        </div>
         <div className="flex items-center gap-0.5 md:gap-1">
           {COLOR_SCALE.map((color, i) => (
-            <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+            <div
+              key={i}
+              className="w-4 md:w-6 h-3 md:h-4 rounded"
+              style={{ backgroundColor: color }}
+            />
           ))}
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -153,10 +213,16 @@ export function Legend({
 
   return (
     <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2"><MetricTitle metricId={selectedMetric} geoLevel={geoLevel} /></div>
+      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
+        {titleElement}
+      </div>
       <div className="flex items-center gap-0.5 md:gap-1">
         {COLOR_SCALE.map((color, i) => (
-          <div key={i} className="w-4 md:w-6 h-3 md:h-4 rounded" style={{ backgroundColor: color }} />
+          <div
+            key={i}
+            className="w-4 md:w-6 h-3 md:h-4 rounded"
+            style={{ backgroundColor: color }}
+          />
         ))}
       </div>
       <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
@@ -172,11 +238,16 @@ function NoDataIndicator({ dataDate }: { dataDate: string }) {
   return (
     <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
       <div className="flex items-center gap-1.5 md:gap-2">
-        <div className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline" style={{ backgroundColor: NO_DATA_COLOR }} />
-        <span className="text-[10px] md:text-xs text-on-surface-variant">No data available</span>
+        <div
+          className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline"
+          style={{ backgroundColor: NO_DATA_COLOR }}
+        />
+        <span className="text-[10px] md:text-xs text-on-surface-variant">
+          No data available
+        </span>
       </div>
       <div className="text-[9px] md:text-[10px] text-outline mt-1.5">
-        {dataDate ? `as of ${dataDate}` : 'as of —'}
+        {dataDate ? `as of ${dataDate}` : "as of —"}
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ import type {
   ViewMode,
   SelectedGeography,
   SearchResult,
+  MapData,
 } from "./types";
 import { STATE_CENTERS, GEO_ZOOM_LEVELS } from "./types";
 
@@ -34,8 +35,11 @@ import {
   DataTableModal,
   RightDetailPanel,
   MapContextMenu,
+  ScoreTypeToggle,
+  type ScoreViewMode,
 } from "./components";
 import { Breadcrumbs } from "@/components/navigation";
+import { EntitlementGate } from "@/components/entitlements";
 
 // Import hooks
 import { useMapData, useMapSearch, useMapLayers } from "./hooks";
@@ -50,6 +54,11 @@ import {
 } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
 import { fetchGeographySearch } from "@/lib/data";
+import {
+  usePreferences,
+  useTopMarketMatches,
+  useMarketMatch,
+} from "@/lib/data";
 import { trackEvent } from "@/lib/analytics/tracker";
 
 const VIEW_MODE_STORAGE_KEY = "propertyiq-view-mode";
@@ -152,6 +161,26 @@ function MapPageInner() {
   } | null>(null);
   const isResizing = useRef(false);
 
+  // Market Match toggle state
+  const [scoreViewMode, setScoreViewMode] = useState<ScoreViewMode>("piq");
+  const { preferences } = usePreferences();
+  const quizCompleted = !!preferences?.quiz_completed_at;
+
+  // Fetch match scores for choropleth when "Your Match" is active
+  const { matches: topMatches, isLoading: matchesLoading } =
+    useTopMarketMatches({
+      geoLevel,
+      limit: 500,
+      enabled: scoreViewMode === "match" && quizCompleted,
+    });
+
+  // Fetch single region match for right panel
+  const { match: selectedMatch } = useMarketMatch({
+    geoLevel,
+    regionId: selectedGeography?.id ?? null,
+    enabled: scoreViewMode === "match" && quizCompleted,
+  });
+
   // Load view mode from localStorage on mount
   useEffect(() => {
     const savedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -204,6 +233,22 @@ function MapPageInner() {
 
   // Use extracted hooks
   const { mapData, dataLoading, fetchMapData } = useMapData();
+
+  // Convert match scores to MapData for choropleth overlay
+  const matchMapData = useMemo<MapData>(() => {
+    if (scoreViewMode !== "match" || topMatches.length === 0) return {};
+    const data: MapData = {};
+    for (const m of topMatches) {
+      data[m.regionId] = m.matchScore;
+    }
+    return data;
+  }, [scoreViewMode, topMatches]);
+
+  // Use match data or metric data for map layers depending on toggle
+  const activeMapData = scoreViewMode === "match" ? matchMapData : mapData;
+  const effectiveDataLoading =
+    scoreViewMode === "match" ? matchesLoading : dataLoading;
+
   const {
     searchQuery,
     searchResults,
@@ -259,16 +304,20 @@ function MapPageInner() {
     [],
   );
 
+  // When in match mode, override metric to "index" style (0-100 score)
+  const effectiveMetric =
+    scoreViewMode === "match" ? "market_health_score" : selectedMetric;
+
   const { updateMapLayers } = useMapLayers({
     map,
     popup,
     geoLevel,
     selectedState,
-    selectedMetric,
+    selectedMetric: effectiveMetric,
     forecastHorizon,
-    mapData,
+    mapData: activeMapData,
     mapLoaded,
-    dataLoading,
+    dataLoading: effectiveDataLoading,
     highlightedFeature,
     onFeatureClick: handleFeatureClick,
     onFeatureContextMenu: handleFeatureContextMenu,
@@ -659,8 +708,8 @@ function MapPageInner() {
             </div>
           </div>
 
-          {/* Desktop Geo Pills */}
-          <div className="hidden md:block flex-shrink-0">
+          {/* Desktop Geo Pills + Match Toggle */}
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
             <GeoLevelPills
               geoLevel={geoLevel}
               selectedMetric={selectedMetric}
@@ -668,11 +717,19 @@ function MapPageInner() {
               onGeoLevelChange={handleGeoLevelChange}
               onStateChange={setSelectedState}
             />
+            {quizCompleted && (
+              <EntitlementGate type="feature" id="market_match">
+                <ScoreTypeToggle
+                  activeMode={scoreViewMode}
+                  onChange={setScoreViewMode}
+                />
+              </EntitlementGate>
+            )}
           </div>
 
-          {/* Mobile Geo Pills (Stacked) */}
+          {/* Mobile Geo Pills + Match Toggle (Stacked) */}
           <div className="md:hidden w-full overflow-x-auto pb-1">
-            <div className="flex justify-center min-w-max px-2">
+            <div className="flex justify-center items-center gap-2 min-w-max px-2">
               <GeoLevelPills
                 geoLevel={geoLevel}
                 selectedMetric={selectedMetric}
@@ -680,6 +737,14 @@ function MapPageInner() {
                 onGeoLevelChange={handleGeoLevelChange}
                 onStateChange={setSelectedState}
               />
+              {quizCompleted && (
+                <EntitlementGate type="feature" id="market_match">
+                  <ScoreTypeToggle
+                    activeMode={scoreViewMode}
+                    onChange={setScoreViewMode}
+                  />
+                </EntitlementGate>
+              )}
             </div>
           </div>
         </div>
@@ -744,7 +809,7 @@ function MapPageInner() {
               <p className="text-on-error-container font-medium">{mapError}</p>
             </div>
           )}
-          {dataLoading && (
+          {effectiveDataLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-surface/80 z-10">
               <div className="flex flex-col items-center gap-3">
                 {/* M3 Circular Progress Indicator */}
@@ -762,10 +827,13 @@ function MapPageInner() {
           />
 
           <Legend
-            selectedMetric={selectedMetric}
+            selectedMetric={effectiveMetric}
             forecastHorizon={forecastHorizon}
             geoLevel={geoLevel}
-            mapData={mapData}
+            mapData={activeMapData}
+            overrideTitle={
+              scoreViewMode === "match" ? "Market Match Score" : undefined
+            }
           />
 
           {/* M3 Extended FAB */}
@@ -810,6 +878,14 @@ function MapPageInner() {
           geoLevel={geoLevel}
           scoreData={scoreResponse}
           scoresLoading={scoresLoading}
+          matchScore={
+            selectedMatch
+              ? {
+                  matchScore: selectedMatch.matchScore,
+                  budgetMatch: selectedMatch.budgetMatch,
+                }
+              : null
+          }
         />
       </div>
     </div>
