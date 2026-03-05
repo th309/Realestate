@@ -17,6 +17,7 @@ export async function generateMetadata({
   if (!metro) return {};
 
   const pageUrl = `https://www.propertyiq.app/markets/${metro.slug}`;
+  const ogImageUrl = `/api/og?title=${encodeURIComponent(metro.shortName)}`;
 
   return {
     title: `${metro.shortName} Housing Market 2026 | Prices, Scores & Forecast`,
@@ -32,7 +33,7 @@ export async function generateMetadata({
       siteName: "PropertyIQ",
       images: [
         {
-          url: "/og-image.png",
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: `${metro.shortName} Housing Market Analysis - PropertyIQ`,
@@ -43,7 +44,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: `${metro.shortName} Housing Market 2026 | PropertyIQ`,
       description: `AI scores, home prices, rental demand & forecasts for ${metro.shortName}. Free market intelligence.`,
-      images: ["/twitter-image.png"],
+      images: [ogImageUrl],
     },
   };
 }
