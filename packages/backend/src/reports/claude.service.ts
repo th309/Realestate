@@ -41,17 +41,20 @@ export class ClaudeService {
 
   constructor(private readonly configService: ConfigService) {
     const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
-    this.aiModel = this.configService.get<string>('AI_MODEL') || 'deepseek-chat';
+    this.aiModel =
+      this.configService.get<string>('AI_MODEL') || 'deepseek-reasoner';
     if (deepseekKey) {
       this.aiClient = new OpenAI({
         apiKey: deepseekKey,
-        baseURL: this.configService.get<string>('AI_BASE_URL') || 'https://api.deepseek.com/v1',
+        baseURL:
+          this.configService.get<string>('AI_BASE_URL') ||
+          'https://api.deepseek.com/v1',
       });
-      this.logger.log(`DeepSeek initialized for analysis and narratives (model: ${this.aiModel})`);
-    } else {
-      this.logger.warn(
-        'DEEPSEEK_API_KEY not configured - AI features limited',
+      this.logger.log(
+        `DeepSeek initialized for analysis and narratives (model: ${this.aiModel})`,
       );
+    } else {
+      this.logger.warn('DEEPSEEK_API_KEY not configured - AI features limited');
     }
   }
 
@@ -94,20 +97,29 @@ export class ClaudeService {
         ) {
           try {
             // Strip markdown code fences (```json ... ```) that some models wrap around JSON
-            const cleaned = response.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+            const cleaned = response
+              .replace(/^```(?:json)?\s*\n?/i, '')
+              .replace(/\n?```\s*$/i, '')
+              .trim();
             return { id: section.id, value: JSON.parse(cleaned) };
           } catch {
             // JSON may be truncated (token limit) - try to recover valid items from arrays
             try {
-              const cleaned = response.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+              const cleaned = response
+                .replace(/^```(?:json)?\s*\n?/i, '')
+                .replace(/\n?```\s*$/i, '')
+                .trim();
               if (cleaned.startsWith('[')) {
                 // Find the last complete object by looking for the last '}' followed by optional comma/whitespace
                 const lastCompleteObj = cleaned.lastIndexOf('}');
                 if (lastCompleteObj > 0) {
-                  const truncated = cleaned.substring(0, lastCompleteObj + 1) + ']';
+                  const truncated =
+                    cleaned.substring(0, lastCompleteObj + 1) + ']';
                   const parsed = JSON.parse(truncated);
                   if (Array.isArray(parsed) && parsed.length > 0) {
-                    this.logger.warn(`Recovered ${parsed.length} items from truncated JSON for ${section.id}`);
+                    this.logger.warn(
+                      `Recovered ${parsed.length} items from truncated JSON for ${section.id}`,
+                    );
                     return { id: section.id, value: parsed };
                   }
                 }
@@ -115,7 +127,9 @@ export class ClaudeService {
             } catch {
               // Recovery also failed
             }
-            this.logger.warn(`Failed to parse JSON for ${section.id}, storing as raw string`);
+            this.logger.warn(
+              `Failed to parse JSON for ${section.id}, storing as raw string`,
+            );
             return { id: section.id, value: response };
           }
         }
@@ -148,7 +162,10 @@ export class ClaudeService {
     report: any,
     newsContext?: string,
   ): Promise<string> {
-    const systemPrompt = this.buildConversationSystemPrompt(report, newsContext);
+    const systemPrompt = this.buildConversationSystemPrompt(
+      report,
+      newsContext,
+    );
     const messages = this.buildConversationMessages(history, userMessage);
 
     try {
@@ -177,7 +194,10 @@ User Investment Parameters:
 ${JSON.stringify(userInputs, null, 2)}`;
 
     // Add news context if available
-    if (newsContext && newsContext !== 'No recent news available for this market.') {
+    if (
+      newsContext &&
+      newsContext !== 'No recent news available for this market.'
+    ) {
       prompt += `
 
 Recent Local News & Market Intelligence:
@@ -193,13 +213,17 @@ Provide a concise investment analysis covering:
 4. Entry point assessment
 5. Recommendation
 
-${newsContext ? `When relevant, incorporate recent news into your analysis. For example:
+${
+  newsContext
+    ? `When relevant, incorporate recent news into your analysis. For example:
 - How might employer expansions/layoffs affect rental demand?
 - What impact could new development projects have on supply?
 - Are there policy changes that could affect investment returns?
 Reference specific news items that strengthen or weaken the investment case.
 
-` : ''}Keep the analysis under 400 words and be specific with numbers.`;
+`
+    : ''
+}Keep the analysis under 400 words and be specific with numbers.`;
 
     try {
       return await this.generateCompletion(prompt, 600);
@@ -255,14 +279,12 @@ Reference specific news items that strengthen or weaken the investment case.
     const response = await this.aiClient.chat.completions.create({
       model: this.aiModel,
       max_tokens: 1024,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages,
-      ],
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
     });
 
     return (
-      response.choices[0]?.message?.content || 'I apologize, but I was unable to generate a response.'
+      response.choices[0]?.message?.content ||
+      'I apologize, but I was unable to generate a response.'
     );
   }
 
@@ -278,7 +300,10 @@ Reference specific news items that strengthen or weaken the investment case.
     });
   }
 
-  private buildConversationSystemPrompt(report: any, newsContext?: string): string {
+  private buildConversationSystemPrompt(
+    report: any,
+    newsContext?: string,
+  ): string {
     const userType = report.user_type || 'homebuyer';
     const heroScore = userType === 'investor' ? 'InvestorEdge' : 'HomeReady';
     const geographyName =
@@ -298,7 +323,10 @@ Key Market Data:
 ${report.scores_snapshot ? `- Market Scores: ${JSON.stringify(report.scores_snapshot)}` : ''}`;
 
     // Add news context if available
-    if (newsContext && newsContext !== 'No recent news available for this market.') {
+    if (
+      newsContext &&
+      newsContext !== 'No recent news available for this market.'
+    ) {
       prompt += `
 
 Recent Local News & Market Intelligence:
@@ -360,25 +388,51 @@ When using news context:
    */
   private static readonly SECTION_NEWS_CATEGORIES: Record<string, string[]> = {
     hero_verdict: [], // Gets signal summary only, no full news
-    score_story: ['market_report', 'market_investment', 'employer_expansion', 'employer_layoffs'],
+    score_story: [
+      'market_report',
+      'market_investment',
+      'employer_expansion',
+      'employer_layoffs',
+    ],
     affordability_narrative: [
-      'employer_hiring', 'employer_expansion', 'employer_layoffs',
-      'policy_housing', 'policy_taxes', 'development_residential',
-      'demographic_migration', 'demographic_growth',
+      'employer_hiring',
+      'employer_expansion',
+      'employer_layoffs',
+      'policy_housing',
+      'policy_taxes',
+      'development_residential',
+      'demographic_migration',
+      'demographic_growth',
     ],
     market_timing_narrative: [
-      'market_report', 'market_investment', 'development_residential',
-      'development_commercial', 'policy_zoning', 'policy_housing',
+      'market_report',
+      'market_investment',
+      'development_residential',
+      'development_commercial',
+      'policy_zoning',
+      'policy_housing',
     ],
     stability_narrative: [
-      'climate_disaster', 'climate_risk', 'climate_insurance',
-      'policy_taxes', 'policy_zoning', 'market_report',
+      'climate_disaster',
+      'climate_risk',
+      'climate_insurance',
+      'policy_taxes',
+      'policy_zoning',
+      'market_report',
     ],
     growth_potential_narrative: [
-      'employer_expansion', 'employer_hiring', 'employer_new_facility',
-      'employer_relocation', 'infrastructure_transit', 'infrastructure_roads',
-      'infrastructure_airport', 'development_commercial', 'development_industrial',
-      'demographic_migration', 'demographic_growth', 'education_university',
+      'employer_expansion',
+      'employer_hiring',
+      'employer_new_facility',
+      'employer_relocation',
+      'infrastructure_transit',
+      'infrastructure_roads',
+      'infrastructure_airport',
+      'development_commercial',
+      'development_industrial',
+      'demographic_migration',
+      'demographic_growth',
+      'education_university',
     ],
     bottom_line_narrative: [], // Gets all high-relevance news
     bottom_line_actions: [], // Gets signal summary only
@@ -398,7 +452,11 @@ When using news context:
     const signalSummary: string | null = context.market_signal_summary || null;
     const nationalContext: any = context.raw_national_context || null;
 
-    if (newsItems.length === 0 && indicators.length === 0 && signals.length === 0) {
+    if (
+      newsItems.length === 0 &&
+      indicators.length === 0 &&
+      signals.length === 0
+    ) {
       return null;
     }
 
@@ -413,7 +471,9 @@ When using news context:
       // For hero_verdict/bottom_line_actions: just high-relevance items
       // For bottom_line_narrative: all high-relevance news
       if (sectionId === 'bottom_line_narrative') {
-        filteredNews = newsItems.filter((n: any) => n.relevance === 'high').slice(0, 5);
+        filteredNews = newsItems
+          .filter((n: any) => n.relevance === 'high')
+          .slice(0, 5);
       } else {
         filteredNews = []; // hero_verdict, bottom_line_actions just get signal summary
       }
@@ -423,7 +483,9 @@ When using news context:
         .slice(0, 4);
       // If no category matches, fall back to high-relevance items
       if (filteredNews.length === 0) {
-        filteredNews = newsItems.filter((n: any) => n.relevance === 'high').slice(0, 3);
+        filteredNews = newsItems
+          .filter((n: any) => n.relevance === 'high')
+          .slice(0, 3);
       }
     }
 
@@ -432,17 +494,28 @@ When using news context:
       for (const item of filteredNews) {
         parts.push(`**${item.headline}** (${item.source})`);
         parts.push(`${item.summary}`);
-        parts.push(`Impact: ${item.impact_on_real_estate} | Sentiment: ${item.sentiment}\n`);
+        parts.push(
+          `Impact: ${item.impact_on_real_estate} | Sentiment: ${item.sentiment}\n`,
+        );
       }
     }
 
     // Economic indicators - only for affordability, growth, bottom_line sections
-    const economicSections = ['affordability_narrative', 'growth_potential_narrative', 'bottom_line_narrative', 'score_story'];
+    const economicSections = [
+      'affordability_narrative',
+      'growth_potential_narrative',
+      'bottom_line_narrative',
+      'score_story',
+    ];
     if (economicSections.includes(sectionId) && indicators.length > 0) {
       parts.push('\n## ECONOMIC INDICATORS\n');
       for (const ind of indicators.slice(0, 4)) {
-        parts.push(`**${ind.indicator_name}** (${ind.geography_level}): ${ind.current_value}`);
-        parts.push(`${ind.change_description} — Housing impact: ${ind.impact_on_housing}\n`);
+        parts.push(
+          `**${ind.indicator_name}** (${ind.geography_level}): ${ind.current_value}`,
+        );
+        parts.push(
+          `${ind.change_description} — Housing impact: ${ind.impact_on_housing}\n`,
+        );
       }
     }
 
@@ -450,18 +523,30 @@ When using news context:
     if (signals.length > 0 && signalSummary) {
       parts.push(`\n## MARKET SIGNALS: ${signalSummary}\n`);
       for (const signal of signals.slice(0, 3)) {
-        const arrow = signal.signal_type === 'bullish' ? '↑' : signal.signal_type === 'bearish' ? '↓' : '→';
+        const arrow =
+          signal.signal_type === 'bullish'
+            ? '↑'
+            : signal.signal_type === 'bearish'
+              ? '↓'
+              : '→';
         parts.push(`${arrow} **${signal.headline}**: ${signal.description}`);
       }
     }
 
     // National context - only for stability, bottom_line, market_timing
-    const nationalSections = ['stability_narrative', 'bottom_line_narrative', 'market_timing_narrative'];
+    const nationalSections = [
+      'stability_narrative',
+      'bottom_line_narrative',
+      'market_timing_narrative',
+    ];
     if (nationalSections.includes(sectionId) && nationalContext) {
       parts.push('\n## NATIONAL CONTEXT\n');
-      if (nationalContext.fed_rate_news) parts.push(`Fed: ${nationalContext.fed_rate_news}`);
-      if (nationalContext.mortgage_rate_trend) parts.push(`Mortgages: ${nationalContext.mortgage_rate_trend}`);
-      if (nationalContext.economic_outlook) parts.push(`Outlook: ${nationalContext.economic_outlook}`);
+      if (nationalContext.fed_rate_news)
+        parts.push(`Fed: ${nationalContext.fed_rate_news}`);
+      if (nationalContext.mortgage_rate_trend)
+        parts.push(`Mortgages: ${nationalContext.mortgage_rate_trend}`);
+      if (nationalContext.economic_outlook)
+        parts.push(`Outlook: ${nationalContext.economic_outlook}`);
     }
 
     parts.push('\n---\n');
@@ -479,7 +564,10 @@ When using news context:
     context: Record<string, any>,
     sectionId: string,
   ): string {
-    const newsEnhancement = this.buildNewsEnhancementForSection(context, sectionId);
+    const newsEnhancement = this.buildNewsEnhancementForSection(
+      context,
+      sectionId,
+    );
     if (!newsEnhancement) {
       return basePrompt;
     }
@@ -557,15 +645,13 @@ IMPORTANT: If any of the market intelligence above is relevant, incorporate it n
   /**
    * Generate the "why winner won" narrative for comparison reports
    */
-  async generateWhyWinnerWon(
-    context: {
-      winner_name: string;
-      priorities: string[];
-      priority_weighted_winner: any;
-      comparison_markets: any[];
-      user_type: 'homebuyer' | 'investor';
-    },
-  ): Promise<string[]> {
+  async generateWhyWinnerWon(context: {
+    winner_name: string;
+    priorities: string[];
+    priority_weighted_winner: any;
+    comparison_markets: any[];
+    user_type: 'homebuyer' | 'investor';
+  }): Promise<string[]> {
     if (!this.aiClient || !context.priority_weighted_winner) {
       return [];
     }
@@ -582,7 +668,7 @@ IMPORTANT: If any of the market intelligence above is relevant, incorporate it n
       stability: 'Market Stability',
     };
 
-    const prompt = `You are analyzing a market comparison report. The user is a ${context.user_type} who prioritized: ${context.priorities.map(p => priorityLabels[p] || p).join(', ')}.
+    const prompt = `You are analyzing a market comparison report. The user is a ${context.user_type} who prioritized: ${context.priorities.map((p) => priorityLabels[p] || p).join(', ')}.
 
 The winner is ${context.winner_name}.
 
@@ -605,7 +691,10 @@ Return ONLY a JSON array of 3 strings, no other text. Example format:
       }
       return context.priority_weighted_winner.reasons.slice(0, 3);
     } catch (error) {
-      this.logger.warn('Failed to generate why_winner_won, using fallback:', error);
+      this.logger.warn(
+        'Failed to generate why_winner_won, using fallback:',
+        error,
+      );
       return context.priority_weighted_winner.reasons.slice(0, 3);
     }
   }
@@ -613,24 +702,23 @@ Return ONLY a JSON array of 3 strings, no other text. Example format:
   /**
    * Generate the final recommendation narrative for comparison reports
    */
-  async generateFinalRecommendation(
-    context: {
-      winner_name: string;
-      priorities: string[];
-      user_type: 'homebuyer' | 'investor';
-      user_inputs?: Record<string, any>;
-      priority_weighted_winner: any;
-      comparison_markets: any[];
-      news_context?: string;
-    },
-  ): Promise<string> {
+  async generateFinalRecommendation(context: {
+    winner_name: string;
+    priorities: string[];
+    user_type: 'homebuyer' | 'investor';
+    user_inputs?: Record<string, any>;
+    priority_weighted_winner: any;
+    comparison_markets: any[];
+    news_context?: string;
+  }): Promise<string> {
     if (!this.aiClient) {
       return `Based on your priorities, ${context.winner_name} is your recommended market.`;
     }
 
-    const userContext = context.user_type === 'homebuyer'
-      ? 'homebuyer looking for a place to live'
-      : 'real estate investor seeking returns';
+    const userContext =
+      context.user_type === 'homebuyer'
+        ? 'homebuyer looking for a place to live'
+        : 'real estate investor seeking returns';
 
     const priorityLabels: Record<string, string> = {
       affordability: 'Affordability',
@@ -646,7 +734,7 @@ Return ONLY a JSON array of 3 strings, no other text. Example format:
 
     let prompt = `You are a real estate expert providing a final recommendation to a ${userContext}.
 
-Their top priorities are: ${context.priorities.map(p => priorityLabels[p] || p).join(', ')}
+Their top priorities are: ${context.priorities.map((p) => priorityLabels[p] || p).join(', ')}
 
 Based on comprehensive analysis, ${context.winner_name} is the recommended market because:
 ${context.priority_weighted_winner.reasons.join('\n')}
@@ -654,7 +742,10 @@ ${context.priority_weighted_winner.reasons.join('\n')}
 ${context.user_inputs?.budget ? `Budget: ${context.user_inputs.budget}` : ''}
 ${context.user_inputs?.timeline ? `Timeline: ${context.user_inputs.timeline}` : ''}`;
 
-    if (context.news_context && context.news_context !== 'No recent news available for this market.') {
+    if (
+      context.news_context &&
+      context.news_context !== 'No recent news available for this market.'
+    ) {
       prompt += `
 
 Recent market developments to consider:

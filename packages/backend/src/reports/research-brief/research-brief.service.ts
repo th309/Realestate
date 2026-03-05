@@ -79,7 +79,7 @@ export class ResearchBriefService {
 
     const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
     this.deepseekModel =
-      this.configService.get<string>('AI_MODEL') || 'deepseek-chat';
+      this.configService.get<string>('AI_MODEL') || 'deepseek-reasoner';
     if (deepseekKey) {
       this.deepseek = new OpenAI({
         apiKey: deepseekKey,

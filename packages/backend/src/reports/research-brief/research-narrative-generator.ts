@@ -15,9 +15,9 @@ import { buildNarrativePrompt } from './research-prompts';
 const logger = new Logger('ResearchNarrativeGenerator');
 
 /** Max characters of research JSON to include in the prompt.
- * DeepSeek drops TCP connections on prompts above ~15K chars,
- * so we keep data compact. System prompt adds ~1.8K overhead. */
-const MAX_DATA_CHARS = 6_000;
+ * DeepSeek Reasoner supports 128K context. Keep data reasonably
+ * sized to avoid slow inference, but we have much more room than chat. */
+const MAX_DATA_CHARS = 24_000;
 
 /**
  * Truncate research data to stay within token limits.
@@ -68,7 +68,7 @@ export async function generateNarrative(
   try {
     const response = await deepseek.chat.completions.create({
       model,
-      max_tokens: 3000,
+      max_tokens: 16000,
       messages: [{ role: 'user', content: prompt }],
     });
 
