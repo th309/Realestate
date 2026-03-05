@@ -290,19 +290,27 @@ export class ClaudeNewsService {
     );
 
     try {
-      // Run local news scouting and national context in parallel
-      const newsPromise = this.anthropicClient.messages.create({
-        model: this.claudeModel,
-        max_tokens: 16384,
-        tools: [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 3,
-          },
-        ],
-        messages: [{ role: 'user', content: prompt }],
-      });
+      // Run local news scouting and national context in parallel.
+      // Each promise has its own catch so one failure doesn't kill both.
+      const newsPromise = this.anthropicClient.messages
+        .create({
+          model: this.claudeModel,
+          max_tokens: 16384,
+          tools: [
+            {
+              type: 'web_search_20250305',
+              name: 'web_search',
+              max_uses: 3,
+            },
+          ],
+          messages: [{ role: 'user', content: prompt }],
+        })
+        .catch((err) => {
+          this.logger.warn(
+            `Local news web search failed for ${geographyName}: ${err?.message || err}`,
+          );
+          return null;
+        });
 
       const nationalPromise = includeNationalContext
         ? this.fetchNationalContext().catch((err) => {
@@ -318,63 +326,70 @@ export class ClaudeNewsService {
         nationalPromise,
       ]);
 
-      // Extract text from response (may have multiple content blocks due to tool use)
-      const textBlocks = response.content.filter(
-        (block): block is Anthropic.TextBlock => block.type === 'text',
-      );
+      // Parse local news from web search response (if it succeeded)
+      let parsed: any = {
+        local_news: [],
+        economic_indicators: [],
+        market_signals: [],
+      };
 
-      this.logger.log(
-        `News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`,
-      );
-
-      if (response.stop_reason === 'max_tokens') {
-        this.logger.warn(
-          `News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`,
+      if (response) {
+        const textBlocks = response.content.filter(
+          (block): block is Anthropic.TextBlock => block.type === 'text',
         );
-      }
 
-      if (textBlocks.length === 0) {
-        this.logger.warn(
-          `Empty text response from Claude for ${geographyName}. Stop reason: ${response.stop_reason}.`,
+        this.logger.log(
+          `News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`,
         );
-      }
 
-      // Strip <cite> tags from web search responses (they waste tokens and pollute JSON values)
-      const stripCitations = (text: string) =>
-        text.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
-
-      // Try each text block individually, last first (final block has the JSON answer)
-      let parsed: any = null;
-      for (let i = textBlocks.length - 1; i >= 0; i--) {
-        const blockText = stripCitations(textBlocks[i].text);
-        const result = this.parseResponse(blockText);
-        if (
-          result.local_news?.length ||
-          result.economic_indicators?.length ||
-          result.market_signals?.length
-        ) {
-          this.logger.log(
-            `Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`,
+        if (response.stop_reason === 'max_tokens') {
+          this.logger.warn(
+            `News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`,
           );
-          parsed = result;
-          break;
         }
-      }
-      // Fallback: join all text blocks and try once more
-      if (!parsed) {
-        const allText = stripCitations(
-          textBlocks.map((b) => b.text).join('\n'),
+
+        // Strip <cite> tags from web search responses
+        const stripCitations = (text: string) =>
+          text.replace(/<cite[^>]*>/g, '').replace(/<\/cite>/g, '');
+
+        // Try each text block individually, last first (final block has the JSON answer)
+        for (let i = textBlocks.length - 1; i >= 0; i--) {
+          const blockText = stripCitations(textBlocks[i].text);
+          const result = this.parseResponse(blockText);
+          if (
+            result.local_news?.length ||
+            result.economic_indicators?.length ||
+            result.market_signals?.length
+          ) {
+            this.logger.log(
+              `Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`,
+            );
+            parsed = result;
+            break;
+          }
+        }
+        // Fallback: join all text blocks and try once more
+        if (!parsed.local_news?.length && !parsed.market_signals?.length) {
+          const allText = stripCitations(
+            textBlocks.map((b) => b.text).join('\n'),
+          );
+          parsed = this.parseResponse(allText);
+        }
+      } else {
+        this.logger.warn(
+          `Web search failed for ${geographyName} — returning national context only`,
         );
-        parsed = this.parseResponse(allText);
       }
 
+      // If we have no local news but DO have national context, still return a result
       if (
         !parsed.local_news?.length &&
         !parsed.economic_indicators?.length &&
-        !parsed.market_signals?.length
+        !parsed.market_signals?.length &&
+        !nationalContext
       ) {
         this.logger.warn(
-          `No news data parsed for ${geographyName}. Text blocks: ${textBlocks.length}. Parsed keys: ${Object.keys(parsed).join(', ')}`,
+          `No news data AND no national context for ${geographyName}.`,
         );
       }
 
