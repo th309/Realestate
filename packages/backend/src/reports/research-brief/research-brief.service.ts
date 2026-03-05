@@ -3,8 +3,10 @@
  *
  * Orchestrates the Custom Research report generation pipeline:
  * 1. generateClarifyingQuestions() — Claude generates scoping questions
- * 2. executeResearch() — Claude tool-use loop gathers data (max 5 iterations)
+ * 2. executeResearch() — Claude tool-use loop gathers data
  * 3. generateNarrative() — DeepSeek writes the final research brief
+ *
+ * Narrative generation delegated to research-narrative-generator.ts.
  */
 
 import { Injectable, Logger, Optional } from '@nestjs/common';
@@ -19,12 +21,16 @@ import { RESEARCH_TOOLS } from './research-tools';
 import {
   RESEARCH_AGENT_SYSTEM_PROMPT,
   CLARIFYING_QUESTIONS_PROMPT,
-  buildNarrativePrompt,
 } from './research-prompts';
 import { executeToolCall } from './research-tool-executor';
+import {
+  generateNarrative,
+  extractResearchData,
+  extractJson,
+} from './research-narrative-generator';
 
 /** Maximum tool-use loop iterations to prevent runaway agents */
-const MAX_TOOL_ITERATIONS = 5;
+const MAX_TOOL_ITERATIONS = 15;
 
 /** Claude model for research agent (tool-use) */
 const RESEARCH_MODEL = 'claude-sonnet-4-20250514';
@@ -80,6 +86,7 @@ export class ResearchBriefService {
         baseURL:
           this.configService.get<string>('AI_BASE_URL') ||
           'https://api.deepseek.com/v1',
+        timeout: 120_000,
       });
       this.logger.log('DeepSeek client initialized for narrative generation');
     } else {
@@ -88,10 +95,6 @@ export class ResearchBriefService {
       );
     }
   }
-
-  // ===========================================================================
-  // PUBLIC METHODS
-  // ===========================================================================
 
   /**
    * Generate 2-3 clarifying questions to scope the research.
@@ -121,7 +124,7 @@ export class ResearchBriefService {
       .join('');
 
     try {
-      const parsed = this.extractJson(text);
+      const parsed = extractJson(text);
       return parsed.questions || [];
     } catch {
       this.logger.warn('Failed to parse clarifying questions response');
@@ -155,6 +158,8 @@ export class ResearchBriefService {
       { role: 'user', content: prompt },
     ];
     let toolCallCount = 0;
+    let calledSearchNews = false;
+    let lastResearchData: Record<string, unknown> = {};
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
       const response = await this.anthropic.messages.create({
@@ -167,12 +172,8 @@ export class ResearchBriefService {
 
       // If the model is done (no more tool calls), extract the final answer
       if (response.stop_reason === 'end_turn') {
-        const researchData = this.extractResearchData(response.content);
-        return {
-          researchData,
-          toolCallCount,
-          durationMs: Date.now() - startTime,
-        };
+        lastResearchData = extractResearchData(response.content);
+        break;
       }
 
       // Process tool calls
@@ -181,18 +182,15 @@ export class ResearchBriefService {
       );
 
       if (toolUseBlocks.length === 0) {
-        const researchData = this.extractResearchData(response.content);
-        return {
-          researchData,
-          toolCallCount,
-          durationMs: Date.now() - startTime,
-        };
+        lastResearchData = extractResearchData(response.content);
+        break;
       }
 
       // Execute each tool call and build tool_result messages
       const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
       for (const toolUse of toolUseBlocks) {
         toolCallCount++;
+        if (toolUse.name === 'search_news') calledSearchNews = true;
         this.logger.log(`Tool call #${toolCallCount}: ${toolUse.name}`);
 
         const result = await executeToolCall(
@@ -219,18 +217,54 @@ export class ResearchBriefService {
       ];
     }
 
-    // If we hit max iterations, extract whatever we have
-    this.logger.warn(`Research hit max iterations (${MAX_TOOL_ITERATIONS})`);
+    // Force search_news if Claude skipped it — news context is essential
+    if (!calledSearchNews && this.newsService) {
+      this.logger.log('Claude skipped search_news — forcing news fetch');
+      const topRegion = this.extractTopRegionName(lastResearchData);
+      if (topRegion) {
+        const newsResult = await executeToolCall(
+          'search_news',
+          { region_name: topRegion, geography_level: 'metro' },
+          this.scoringService,
+          this.metricResolution,
+          this.timeSeriesService,
+          this.newsService,
+        );
+        toolCallCount++;
+        try {
+          (lastResearchData as any).forced_news = JSON.parse(newsResult);
+        } catch {
+          (lastResearchData as any).forced_news = newsResult;
+        }
+      }
+    }
+
     return {
-      researchData: { warning: 'Research reached maximum tool iterations' },
+      researchData: lastResearchData,
       toolCallCount,
       durationMs: Date.now() - startTime,
     };
   }
 
+  /** Extract the top region name from research data for forced news lookup. */
+  private extractTopRegionName(data: Record<string, unknown>): string | null {
+    try {
+      const regions = data.regions_analyzed as string[] | undefined;
+      if (regions?.length) return regions[0];
+      const findings = data.key_findings as string[] | undefined;
+      if (findings?.length)
+        return (
+          findings[0].match(/[A-Z][a-z]+(?:[\s-][A-Z][a-z]+)*/)?.[0] ?? null
+        );
+    } catch {
+      /* best-effort */
+    }
+    return null;
+  }
+
   /**
    * Generate the final narrative from structured research data.
-   * Uses DeepSeek for cost-effective long-form generation.
+   * Delegates to research-narrative-generator.
    */
   async generateNarrative(
     userQuestion: string,
@@ -240,72 +274,20 @@ export class ResearchBriefService {
     if (!this.deepseek) {
       throw new Error('DeepSeek client not configured');
     }
-
-    const prompt = buildNarrativePrompt(
+    return generateNarrative(
+      this.deepseek,
+      this.deepseekModel,
       userQuestion,
       researchData,
       clarifyingContext,
     );
-
-    const response = await this.deepseek.chat.completions.create({
-      model: this.deepseekModel,
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    return (
-      response.choices[0]?.message?.content ||
-      'Unable to generate research brief.'
-    );
   }
 
-  /**
-   * Check if the service is fully operational.
-   */
+  /** Check if the service is fully operational. */
   isAvailable(): { research: boolean; narrative: boolean } {
     return {
       research: !!this.anthropic,
       narrative: !!this.deepseek,
     };
-  }
-
-  // ===========================================================================
-  // PRIVATE HELPERS
-  // ===========================================================================
-
-  /**
-   * Extract structured research data from Claude's final response.
-   */
-  private extractResearchData(
-    content: Anthropic.Messages.ContentBlock[],
-  ): Record<string, unknown> {
-    const textBlocks = content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text);
-
-    const fullText = textBlocks.join('\n');
-    try {
-      return this.extractJson(fullText);
-    } catch {
-      return { raw_response: fullText };
-    }
-  }
-
-  /**
-   * Extract JSON from text that may contain markdown code fences.
-   */
-  private extractJson(text: string): Record<string, any> {
-    // Try code-fenced JSON first
-    const fenceMatch = text.match(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/);
-    if (fenceMatch) {
-      return JSON.parse(fenceMatch[1].trim());
-    }
-    // Try raw JSON
-    const jsonStart = text.indexOf('{');
-    const jsonEnd = text.lastIndexOf('}');
-    if (jsonStart >= 0 && jsonEnd > jsonStart) {
-      return JSON.parse(text.substring(jsonStart, jsonEnd + 1));
-    }
-    throw new Error('No JSON found in response');
   }
 }

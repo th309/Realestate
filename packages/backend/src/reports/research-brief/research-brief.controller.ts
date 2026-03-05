@@ -83,35 +83,52 @@ export class ResearchBriefController {
 
     const startTime = Date.now();
 
-    // Step 1: Execute research (Claude tool-use loop)
-    const research = await this.researchBriefService.executeResearch(
-      dto.question,
-      dto.clarifying_answers,
-      dto.context,
-    );
+    try {
+      // Step 1: Execute research (Claude tool-use loop)
+      this.logger.log('Starting research execution...');
+      const research = await this.researchBriefService.executeResearch(
+        dto.question,
+        dto.clarifying_answers,
+        dto.context,
+      );
+      this.logger.log(
+        `Research execution done: ${research.toolCallCount} tool calls in ${research.durationMs}ms`,
+      );
 
-    // Step 2: Generate narrative (DeepSeek)
-    const clarifyingContext = dto.clarifying_answers
-      ? JSON.stringify(dto.clarifying_answers)
-      : undefined;
+      // Step 2: Generate narrative (DeepSeek)
+      this.logger.log('Starting narrative generation...');
+      const clarifyingContext = dto.clarifying_answers
+        ? JSON.stringify(dto.clarifying_answers)
+        : undefined;
 
-    const narrative = await this.researchBriefService.generateNarrative(
-      dto.question,
-      research.researchData,
-      clarifyingContext,
-    );
+      const narrative = await this.researchBriefService.generateNarrative(
+        dto.question,
+        research.researchData,
+        clarifyingContext,
+      );
+      this.logger.log(`Narrative generation done (${narrative.length} chars)`);
 
-    const totalDurationMs = Date.now() - startTime;
-    this.logger.log(
-      `Research brief completed in ${totalDurationMs}ms ` +
-        `(${research.toolCallCount} tool calls)`,
-    );
+      const totalDurationMs = Date.now() - startTime;
+      this.logger.log(
+        `Research brief completed in ${totalDurationMs}ms ` +
+          `(${research.toolCallCount} tool calls)`,
+      );
 
-    return {
-      narrative,
-      research_data: research.researchData,
-      tool_call_count: research.toolCallCount,
-      duration_ms: totalDurationMs,
-    };
+      return {
+        narrative,
+        research_data: research.researchData,
+        tool_call_count: research.toolCallCount,
+        duration_ms: totalDurationMs,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Research brief generation failed: ${error.message}`,
+        error.stack,
+      );
+      throw new HttpException(
+        `Research brief generation failed: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

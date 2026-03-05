@@ -178,6 +178,43 @@ const SEARCH_NEWS: ResearchTool = {
 };
 
 /**
+ * Tool: rank_by_metric
+ * Ranks all markets at a geography level by any metric in the database.
+ * Uses MetricResolutionService (all sources via fallback registry).
+ */
+const RANK_BY_METRIC: ResearchTool = {
+  name: 'rank_by_metric',
+  description:
+    'Rank ALL markets at a geography level by any metric (not just scores). Returns top/bottom markets sorted by the metric value. Use this to find markets with highest appreciation, lowest inventory, best rental yield, etc. Pulls from ALL data sources (Zillow, Realtor, Redfin, Census, etc.) via the fallback registry.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      metric_id: {
+        type: 'string',
+        description:
+          'The metric to rank by. Common metrics: home_value, home_value_yoy, rent_index, days_on_market, for_sale_inventory, inventory_yoy, price_cut_pct, listing_price, home_price_forecast, home_sales, sale_to_list, market_heat, hotness_score, new_listings, pending_ratio, cap_rate, gross_yield, rent_to_price_ratio, population_growth, unemployment_rate, job_growth, median_income, sf_permits, mf_permits, permits_yoy, years_to_save, income_to_rent, overvalued_pct',
+      },
+      geography_level: {
+        type: 'string',
+        enum: ['metro', 'county', 'zip'],
+        description: 'Geography level to rank',
+      },
+      order: {
+        type: 'string',
+        enum: ['desc', 'asc'],
+        description:
+          'Sort order: "desc" for highest first (default), "asc" for lowest first',
+      },
+      limit: {
+        type: 'number',
+        description: 'Number of results to return (default: 10, max: 25)',
+      },
+    },
+    required: ['metric_id', 'geography_level'],
+  },
+};
+
+/**
  * All research tools available to the Claude research agent.
  */
 export const RESEARCH_TOOLS: ResearchTool[] = [
@@ -185,5 +222,6 @@ export const RESEARCH_TOOLS: ResearchTool[] = [
   COMPARE_MARKETS,
   GET_TIMESERIES,
   GET_RANKINGS,
+  RANK_BY_METRIC,
   SEARCH_NEWS,
 ];

@@ -76,7 +76,8 @@ function ReportCard({ type, onSelect }: ReportCardProps) {
       onClick={onSelect}
       className={`
         group relative overflow-hidden
-        w-full text-left rounded-3xl p-8 md:p-10
+        w-full h-full text-left rounded-3xl p-8 md:p-10
+        flex flex-col
         transition-all duration-500 ease-out
         ${
           isHomebuyer
@@ -117,18 +118,20 @@ function ReportCard({ type, onSelect }: ReportCardProps) {
       </div>
 
       {/* Content */}
-      <div className="relative">
+      <div className="relative flex-1">
         <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
           {isHomebuyer ? "Homebuyer Report" : "Investor Report"}
         </h2>
 
-        <p className="text-on-surface-variant text-base md:text-lg mb-6 leading-relaxed max-w-md">
+        <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
           {isHomebuyer
             ? "Discover if a market fits your budget and lifestyle. See affordability, competition, and buying conditions."
             : "Analyze cash flow, appreciation potential, and risk. Get pro forma projections for any market."}
         </p>
+      </div>
 
-        {/* Score badge */}
+      {/* Bottom row: badge + arrow */}
+      <div className="relative flex items-center justify-between mt-6">
         <div
           className={`
           inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
@@ -142,22 +145,19 @@ function ReportCard({ type, onSelect }: ReportCardProps) {
           <Sparkles className="w-4 h-4" />
           {isHomebuyer ? "HomeReady Score" : "InvestorEdge Score"}
         </div>
-      </div>
-
-      {/* Arrow */}
-      <div
-        className={`
-        absolute bottom-8 right-8 w-12 h-12 rounded-full
-        flex items-center justify-center
-        transition-all duration-300 group-hover:scale-110
-        ${
-          isHomebuyer
-            ? "bg-primary text-on-primary"
-            : "bg-tertiary text-on-tertiary"
-        }
-      `}
-      >
-        <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
+        <div
+          className={`
+          w-12 h-12 rounded-full flex items-center justify-center
+          transition-all duration-300 group-hover:scale-110
+          ${
+            isHomebuyer
+              ? "bg-primary text-on-primary"
+              : "bg-tertiary text-on-tertiary"
+          }
+        `}
+        >
+          <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
+        </div>
       </div>
     </motion.button>
   );
@@ -1010,6 +1010,7 @@ function ReportHistory() {
 // ============================================================================
 
 function ReportsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlType = searchParams.get("rtype") as "homebuyer" | "investor" | null;
   const [selectedType, setSelectedType] = useState<
@@ -1040,7 +1041,7 @@ function ReportsContent() {
         </div>
 
         {/* Report Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <ReportCard
             type="homebuyer"
             onSelect={() => setSelectedType("homebuyer")}
@@ -1049,6 +1050,44 @@ function ReportsContent() {
             type="investor"
             onSelect={() => setSelectedType("investor")}
           />
+          <motion.button
+            onClick={() => router.push("/reports/research")}
+            className="
+              group relative overflow-hidden
+              w-full h-full text-left rounded-3xl p-8 md:p-10
+              flex flex-col
+              transition-all duration-500 ease-out
+              bg-gradient-to-br from-secondary/5 via-secondary/10 to-secondary/5
+              hover:from-secondary/10 hover:via-secondary/15 hover:to-secondary/10
+              border border-outline-variant/30 hover:border-outline-variant/60
+              hover:shadow-xl hover:shadow-black/5
+            "
+            whileHover={{ y: -4 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 transition-opacity duration-500 group-hover:opacity-50 bg-secondary" />
+            <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-secondary/15 text-secondary">
+              <FileText className="w-7 h-7" />
+            </div>
+            <div className="relative flex-1">
+              <h2 className="text-2xl md:text-3xl font-semibold text-on-surface mb-2 tracking-tight">
+                Custom Research
+              </h2>
+              <p className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-md">
+                Ask any real estate question. Get an AI-powered research brief
+                backed by PropertyIQ data.
+              </p>
+            </div>
+            <div className="relative flex items-center justify-between mt-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-secondary/10 text-secondary">
+                <Sparkles className="w-4 h-4" />
+                AI Research Agent
+              </div>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 bg-secondary text-on-secondary">
+                <ChevronRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+          </motion.button>
         </div>
 
         {/* Recent Reports */}

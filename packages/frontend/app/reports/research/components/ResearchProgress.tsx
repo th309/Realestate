@@ -13,6 +13,7 @@ import {
   Loader2,
   Search,
   Database,
+  Newspaper,
   FileText,
   CheckCircle2,
   AlertCircle,
@@ -38,11 +39,18 @@ const PROGRESS_STEPS = [
     durationMs: 15000,
   },
   {
+    id: "news",
+    label: "Scouting market news",
+    description: "Finding recent developments and trends",
+    icon: Newspaper,
+    durationMs: 20000,
+  },
+  {
     id: "writing",
     label: "Writing report",
     description: "Generating your research brief",
     icon: FileText,
-    durationMs: 10000,
+    durationMs: 30000,
   },
 ] as const;
 
@@ -156,7 +164,7 @@ export function ResearchProgress({
       <p className="text-sm text-on-surface-variant mb-8">
         {isComplete
           ? "Your research brief is ready."
-          : "This usually takes 15-45 seconds."}
+          : "This usually takes 1-3 minutes."}
       </p>
 
       {/* Step list */}
