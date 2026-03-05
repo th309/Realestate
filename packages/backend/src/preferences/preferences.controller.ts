@@ -1,11 +1,15 @@
 /**
  * Preferences Controller
  *
- * REST endpoints for reading and writing user quiz preferences.
+ * REST endpoints for reading and writing user quiz preferences
+ * and personalized market match scores.
+ *
  * All routes require JWT authentication via JwtAuthGuard.
  *
- * GET  /api/preferences  — fetch current user's preferences
- * PUT  /api/preferences  — upsert preferences (partial or complete quiz)
+ * GET  /api/preferences                        — fetch current user's preferences
+ * PUT  /api/preferences                        — upsert preferences
+ * GET  /api/preferences/match/:geoLevel/:regionId — single region match score
+ * GET  /api/preferences/match/:geoLevel/top    — top N matches
  */
 
 import {
@@ -13,14 +17,19 @@ import {
   Get,
   Put,
   Body,
+  Param,
+  Query,
   UseGuards,
   Logger,
   HttpException,
   HttpStatus,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { PreferencesService } from './preferences.service';
+import { MarketMatchService } from './market-match.service';
 import { UpsertPreferencesDto } from './upsert-preferences.dto';
 
 @UseGuards(JwtAuthGuard)
@@ -28,7 +37,10 @@ import { UpsertPreferencesDto } from './upsert-preferences.dto';
 export class PreferencesController {
   private readonly logger = new Logger(PreferencesController.name);
 
-  constructor(private readonly preferencesService: PreferencesService) {}
+  constructor(
+    private readonly preferencesService: PreferencesService,
+    private readonly marketMatchService: MarketMatchService,
+  ) {}
 
   /**
    * Get the authenticated user's preferences.
@@ -78,6 +90,73 @@ export class PreferencesController {
       this.logger.error(`Failed to upsert preferences: ${error.message}`);
       throw new HttpException(
         'Failed to save preferences',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // ==========================================================================
+  // Market Match Endpoints
+  // ==========================================================================
+
+  /**
+   * Get the top N markets matching the user's preferences at a geo level.
+   * Must be registered BEFORE the :regionId route to avoid "top" being
+   * captured as a regionId parameter.
+   */
+  @Get('match/:geoLevel/top')
+  async getTopMatches(
+    @AuthUserId() userId: string,
+    @Param('geoLevel') geoLevel: string,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    try {
+      const matches = await this.marketMatchService.getTopMatches(
+        userId,
+        geoLevel,
+        Math.min(limit, 100),
+      );
+
+      return {
+        success: true,
+        data: matches,
+        meta: { geoLevel, limit, count: matches.length },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get top matches: ${error.message}`);
+      throw new HttpException(
+        'Failed to compute market matches',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get the match score for a single region against the user's preferences.
+   */
+  @Get('match/:geoLevel/:regionId')
+  async getMatchScore(
+    @AuthUserId() userId: string,
+    @Param('geoLevel') geoLevel: string,
+    @Param('regionId') regionId: string,
+  ) {
+    try {
+      const match = await this.marketMatchService.calculateMatchScore(
+        userId,
+        geoLevel,
+        regionId,
+      );
+
+      return {
+        success: true,
+        data: match,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to get match score: ${error.message}`);
+      throw new HttpException(
+        'Failed to compute match score',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
