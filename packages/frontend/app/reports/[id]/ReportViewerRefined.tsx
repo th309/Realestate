@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   Download,
@@ -9,8 +9,6 @@ import {
   MessageSquare,
   Loader2,
   FileText,
-  TrendingUp,
-  Newspaper,
   MapPin,
   Calendar,
   Printer,
@@ -20,14 +18,15 @@ import {
   Users,
   DollarSign,
   AlertTriangle,
-} from 'lucide-react';
-import { BrandingProvider } from './components/BrandingProvider';
-import { PageRenderer } from './components/SectionRenderer';
-import { ReportWithTemplate } from './components/types';
-import { ConversationPanel } from './ConversationPanel';
-import { fetchReport as fetchReportAPI } from '@/lib/data';
-import { useAuth } from '@/lib/auth';
-import '../styles/report-theme.css';
+} from "lucide-react";
+import { BrandingProvider } from "./components/BrandingProvider";
+import { PageRenderer } from "./components/SectionRenderer";
+import { ReportWithTemplate } from "./components/types";
+import { ConversationPanel } from "./ConversationPanel";
+import { fetchReport as fetchReportAPI } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { GeneratingState } from "./components/GeneratingState";
+import "../styles/report-theme.css";
 
 const POLL_INTERVAL = 2000;
 
@@ -35,24 +34,20 @@ interface ReportViewerRefinedProps {
   reportId: string;
 }
 
-async function fetchReport(reportId: string, userId: string): Promise<ReportWithTemplate | null> {
+async function fetchReport(
+  reportId: string,
+  userId: string,
+): Promise<ReportWithTemplate | null> {
   return fetchReportAPI<ReportWithTemplate>(reportId, { userId });
 }
 
-const GENERATION_STEPS = [
-  { id: 'scores', label: 'Calculating market scores', icon: TrendingUp, description: 'Analyzing market health indicators' },
-  { id: 'news', label: 'Gathering market signals', icon: Newspaper, description: 'Collecting recent market data' },
-  { id: 'ai', label: 'Generating AI analysis', icon: Sparkles, description: 'Creating personalized insights' },
-];
-
 export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
   const { user } = useAuth();
-  const userId = user?.id ?? '';
+  const userId = user?.id ?? "";
   const [report, setReport] = useState<ReportWithTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConversation, setShowConversation] = useState(false);
-  const [generationStep, setGenerationStep] = useState(0);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const pollReport = useCallback(async () => {
@@ -60,14 +55,13 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
       const data = await fetchReport(reportId, userId);
       if (data) {
         setReport(data);
-        if (data.status === 'generating') {
-          setGenerationStep((prev) => (prev + 1) % GENERATION_STEPS.length);
+        if (data.status === "generating") {
           return true;
         }
       }
       return false;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch report');
+      setError(e instanceof Error ? e.message : "Failed to fetch report");
       return false;
     }
   }, [reportId]);
@@ -81,7 +75,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
 
       if (data) {
         setReport(data);
-        if (data.status === 'generating') {
+        if (data.status === "generating") {
           const poll = async () => {
             const shouldContinue = await pollReport();
             if (shouldContinue) {
@@ -94,7 +88,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
     };
 
     startPolling().catch((e) => {
-      setError(e instanceof Error ? e.message : 'Failed to fetch report');
+      setError(e instanceof Error ? e.message : "Failed to fetch report");
       setLoading(false);
     });
 
@@ -126,7 +120,9 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
             <AlertTriangle className="w-8 h-8 text-[var(--report-error)]" />
           </div>
           <h2 className="report-heading-md mb-2">Report not found</h2>
-          <p className="report-body mb-6">{error || 'The requested report could not be loaded.'}</p>
+          <p className="report-body mb-6">
+            {error || "The requested report could not be loaded."}
+          </p>
           <Link href="/reports" className="report-btn-primary">
             <ArrowLeft className="w-4 h-4" />
             Back to Reports
@@ -137,12 +133,12 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
   }
 
   // Generating State
-  if (report.status === 'generating') {
-    return <GeneratingState report={report} step={generationStep} />;
+  if (report.status === "generating") {
+    return <GeneratingState report={report} />;
   }
 
   // Failed State
-  if (report.status === 'failed') {
+  if (report.status === "failed") {
     return (
       <div className="report-page min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md px-6">
@@ -151,7 +147,8 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
           </div>
           <h2 className="report-heading-md mb-2">Generation Failed</h2>
           <p className="report-body mb-6">
-            {report.error_message || 'An unexpected error occurred while generating your report.'}
+            {report.error_message ||
+              "An unexpected error occurred while generating your report."}
           </p>
           <Link href="/reports" className="report-btn-primary">
             <ArrowLeft className="w-4 h-4" />
@@ -170,10 +167,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
       <header className="sticky top-0 z-40 bg-[var(--report-cream)] border-b border-[rgba(27,46,74,0.08)] backdrop-blur-sm report-no-print">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link
-              href="/reports"
-              className="report-btn-ghost"
-            >
+            <Link href="/reports" className="report-btn-ghost">
               <ArrowLeft className="w-4 h-4" />
               Back to Reports
             </Link>
@@ -181,7 +175,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowConversation(!showConversation)}
-                className={`report-btn-ghost ${showConversation ? 'bg-[var(--report-navy)] text-white hover:bg-[var(--report-navy-light)]' : ''}`}
+                className={`report-btn-ghost ${showConversation ? "bg-[var(--report-navy)] text-white hover:bg-[var(--report-navy-light)]" : ""}`}
                 title="Ask AI about this report"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -204,7 +198,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
 
       {/* Main Content */}
       <div className="flex">
-        <main className={`flex-1 ${showConversation ? 'lg:pr-[400px]' : ''}`}>
+        <main className={`flex-1 ${showConversation ? "lg:pr-[400px]" : ""}`}>
           {/* Report Hero */}
           <div className="bg-white border-b border-[rgba(27,46,74,0.06)]">
             <div className="max-w-4xl mx-auto px-6 py-10">
@@ -212,7 +206,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
                 {/* Report Type Badge */}
                 <div className="flex items-center gap-2 mb-4">
                   <span className="report-badge report-badge-ready">
-                    {report.template?.name || 'Market Report'}
+                    {report.template?.name || "Market Report"}
                   </span>
                   <span className="text-xs text-[var(--report-stone-light)]">
                     Generated {new Date(report.created_at).toLocaleDateString()}
@@ -244,54 +238,68 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
               </div>
 
               {/* Limited Data Coverage Notice */}
-              {(report.populated_data as any)?.data_coverage?.is_limited && (() => {
-                const dc = (report.populated_data as any).data_coverage;
-                return (
-                  <div
-                    className="mt-6 rounded-xl p-4 report-animate-in"
-                    style={{
-                      backgroundColor: 'rgba(234, 179, 8, 0.08)',
-                      border: '1px solid rgba(234, 179, 8, 0.2)',
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-[var(--report-navy)] mb-1">
-                          Limited Data Coverage
-                        </p>
-                        <p className="text-sm text-[var(--report-stone)]">
-                          {report.primary_geography_name} is a smaller market with limited data from some sources.
-                          {' '}This report uses {dc.coverage_pct}% of our standard metrics
-                          {dc.missing_categories?.length > 0 && (
-                            <> &mdash; missing: {dc.missing_categories.join(', ')}</>
-                          )}.
-                          {' '}Some sections may use proxy data or Census estimates where primary sources are unavailable.
-                          {dc.parent_msa_name && (
-                            <> This area is part of the <strong>{dc.parent_msa_name}</strong> metro area, which has fuller data coverage.</>
-                          )}
-                        </p>
+              {(report.populated_data as any)?.data_coverage?.is_limited &&
+                (() => {
+                  const dc = (report.populated_data as any).data_coverage;
+                  return (
+                    <div
+                      className="mt-6 rounded-xl p-4 report-animate-in"
+                      style={{
+                        backgroundColor: "rgba(234, 179, 8, 0.08)",
+                        border: "1px solid rgba(234, 179, 8, 0.2)",
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-[var(--report-navy)] mb-1">
+                            Limited Data Coverage
+                          </p>
+                          <p className="text-sm text-[var(--report-stone)]">
+                            {report.primary_geography_name} is a smaller market
+                            with limited data from some sources. This report
+                            uses {dc.coverage_pct}% of our standard metrics
+                            {dc.missing_categories?.length > 0 && (
+                              <>
+                                {" "}
+                                &mdash; missing:{" "}
+                                {dc.missing_categories.join(", ")}
+                              </>
+                            )}
+                            . Some sections may use proxy data or Census
+                            estimates where primary sources are unavailable.
+                            {dc.parent_msa_name && (
+                              <>
+                                {" "}
+                                This area is part of the{" "}
+                                <strong>{dc.parent_msa_name}</strong> metro
+                                area, which has fuller data coverage.
+                              </>
+                            )}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
               {/* Table of Contents */}
               {pages.length > 1 && (
                 <nav className="mt-8 p-5 report-card report-animate-in report-animate-in-delay-1">
                   <h3 className="report-label mb-3">In this report</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {pages.filter(p => p.name && p.name !== 'Cover').map((page, i) => (
-                      <a
-                        key={page.id || i}
-                        href={`#${page.id || `section-${i}`}`}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
-                      >
-                        <PageIcon pageName={page.name || ''} />
-                        <span className="truncate">{page.name}</span>
-                      </a>
-                    ))}
+                    {pages
+                      .filter((p) => p.name && p.name !== "Cover")
+                      .map((page, i) => (
+                        <a
+                          key={page.id || i}
+                          href={`#${page.id || `section-${i}`}`}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--report-stone)] hover:bg-[var(--report-cream)] hover:text-[var(--report-navy)] transition-colors"
+                        >
+                          <PageIcon pageName={page.name || ""} />
+                          <span className="truncate">{page.name}</span>
+                        </a>
+                      ))}
                   </div>
                 </nav>
               )}
@@ -300,7 +308,6 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
 
           {/* Report Body */}
           <div className="max-w-4xl mx-auto px-6 py-10">
-
             {/* Dynamic Sections */}
             <BrandingProvider>
               {pages.map((page, pageIndex) => (
@@ -310,7 +317,7 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
                   className="mb-10 report-animate-in"
                   style={{ animationDelay: `${(pageIndex + 3) * 100}ms` }}
                 >
-                  {page.name && page.name !== 'Cover' && (
+                  {page.name && page.name !== "Cover" && (
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-xl bg-[var(--report-cream)] flex items-center justify-center">
                         <PageIcon pageName={page.name} />
@@ -334,14 +341,17 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
                   <div className="w-8 h-8 rounded-lg bg-[var(--report-navy)] flex items-center justify-center">
                     <FileText className="w-4 h-4 text-white" />
                   </div>
-                  <span className="font-semibold text-[var(--report-navy)]">PropertyIQ</span>
+                  <span className="font-semibold text-[var(--report-navy)]">
+                    PropertyIQ
+                  </span>
                 </div>
                 <p className="report-body-sm mb-2">
                   AI-powered real estate market intelligence
                 </p>
                 <p className="text-xs text-[var(--report-stone-light)]">
-                  Report generated on {new Date(report.created_at).toLocaleDateString()} ·
-                  Data as of {report.data_as_of_date}
+                  Report generated on{" "}
+                  {new Date(report.created_at).toLocaleDateString()} · Data as
+                  of {report.data_as_of_date}
                 </p>
               </div>
             </footer>
@@ -361,97 +371,19 @@ export function ReportViewerRefined({ reportId }: ReportViewerRefinedProps) {
   );
 }
 
-// Generating State Component
-function GeneratingState({ report, step }: { report: ReportWithTemplate; step: number }) {
-  const currentStep = GENERATION_STEPS[step];
-
-  return (
-    <div className="report-page min-h-screen flex items-center justify-center">
-      <div className="text-center max-w-lg px-6">
-        {/* Animated Loader */}
-        <div className="relative mb-10">
-          <div className="w-28 h-28 mx-auto rounded-full bg-[var(--report-cream-dark)] flex items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-inner">
-              <Loader2 className="w-10 h-10 text-[var(--report-navy)] animate-spin" />
-            </div>
-          </div>
-          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-full shadow-md border border-[rgba(27,46,74,0.08)]">
-            <span className="text-sm font-medium text-[var(--report-navy)]">
-              Step {step + 1} of {GENERATION_STEPS.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Title */}
-        <h2 className="report-heading-lg mb-2">Generating Your Report</h2>
-        <p className="report-body mb-8">{report.primary_geography_name}</p>
-
-        {/* Progress Steps */}
-        <div className="report-card p-5 text-left">
-          {GENERATION_STEPS.map((s, index) => {
-            const Icon = s.icon;
-            const isActive = index === step;
-            const isComplete = index < step;
-
-            return (
-              <div
-                key={s.id}
-                className={`flex items-center gap-4 p-3 rounded-xl transition-all ${
-                  isActive ? 'bg-[var(--report-cream)]' : ''
-                }`}
-              >
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                    isComplete
-                      ? 'bg-[var(--report-success)] text-white'
-                      : isActive
-                      ? 'bg-[var(--report-navy)] text-white'
-                      : 'bg-[var(--report-cream-dark)] text-[var(--report-stone-light)]'
-                  }`}
-                >
-                  {isComplete ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <Icon className="w-5 h-5" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      isActive ? 'text-[var(--report-navy)]' : 'text-[var(--report-stone)]'
-                    }`}
-                  >
-                    {s.label}
-                  </p>
-                  <p className="text-xs text-[var(--report-stone-light)]">{s.description}</p>
-                </div>
-                {isActive && (
-                  <Loader2 className="w-5 h-5 text-[var(--report-navy)] animate-spin" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="report-body-sm mt-6">This usually takes 10-30 seconds</p>
-      </div>
-    </div>
-  );
-}
-
 // Page Icon Helper
 function PageIcon({ pageName }: { pageName: string }) {
-  const iconClass = 'w-4 h-4 text-[var(--report-navy)]';
+  const iconClass = "w-4 h-4 text-[var(--report-navy)]";
   const name = pageName.toLowerCase();
 
-  if (name.includes('afford')) return <DollarSign className={iconClass} />;
-  if (name.includes('migrat')) return <Users className={iconClass} />;
-  if (name.includes('demo')) return <Users className={iconClass} />;
-  if (name.includes('economic')) return <BarChart3 className={iconClass} />;
-  if (name.includes('story') || name.includes('narrative')) return <FileText className={iconClass} />;
-  if (name.includes('home') || name.includes('personal')) return <Home className={iconClass} />;
+  if (name.includes("afford")) return <DollarSign className={iconClass} />;
+  if (name.includes("migrat")) return <Users className={iconClass} />;
+  if (name.includes("demo")) return <Users className={iconClass} />;
+  if (name.includes("economic")) return <BarChart3 className={iconClass} />;
+  if (name.includes("story") || name.includes("narrative"))
+    return <FileText className={iconClass} />;
+  if (name.includes("home") || name.includes("personal"))
+    return <Home className={iconClass} />;
 
   return <FileText className={iconClass} />;
 }

@@ -19,10 +19,7 @@ import { SectionErrorBoundary } from "./components/SectionErrorBoundary";
 import { getTemplate, ReportTemplateType } from "./components/templates";
 import { PersonalizationPanel } from "./components/PersonalizationPanel";
 import { usePersonalization } from "./hooks/usePersonalization";
-import {
-  GeneratingState,
-  GENERATION_STEPS,
-} from "./components/GeneratingState";
+import { GeneratingState } from "./components/GeneratingState";
 import {
   SectionIcon,
   formatSectionName,
@@ -60,7 +57,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConversation, setShowConversation] = useState(false);
-  const [generationStep, setGenerationStep] = useState(0);
+
   const [agentViewMode, setAgentViewMode] = useState<"client" | "prep">(
     "client",
   );
@@ -120,10 +117,6 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
       if (data) {
         setReport(data);
         if (data.status === "generating") {
-          // Progress through steps but stay on the last one (don't cycle back)
-          setGenerationStep((prev) =>
-            Math.min(prev + 1, GENERATION_STEPS.length - 1),
-          );
           return true;
         }
       }
@@ -202,7 +195,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
 
   // Generating State
   if (report.status === "generating") {
-    return <GeneratingState report={report} step={generationStep} />;
+    return <GeneratingState report={report} />;
   }
 
   // Failed State
