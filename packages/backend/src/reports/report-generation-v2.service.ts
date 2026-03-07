@@ -27,8 +27,12 @@ import {
   parseAiResponse,
   extractTitleAndSubtitle,
 } from './report-generation-v2-helpers';
+import {
+  buildCustomOutlinePrompt,
+  buildCustomSectionsFromOutline,
+} from './report-generation-v2-custom';
 
-type ReportType = 'homeready' | 'investoredge' | 'comparison';
+type ReportType = 'homeready' | 'investoredge' | 'comparison' | 'custom';
 
 @Injectable()
 export class ReportGenerationV2Service {
@@ -47,7 +51,6 @@ export class ReportGenerationV2Service {
     context: Record<string, any>,
   ): Promise<Record<string, string | any>> {
     const systemPrompt = getSystemPromptForReportType(reportType);
-    const { sectionIds, sectionsMap } = this.getSectionsConfig(reportType);
 
     // ── Pass 1: Generate outline ──────────────────────────────────────
     const outline = await this.generateOutline(
@@ -56,7 +59,12 @@ export class ReportGenerationV2Service {
       reportType,
     );
 
-    // ── Pass 2: Generate sections in parallel ─────────────────────────
+    // ── Pass 2: Build section config and generate in parallel ─────────
+    const { sectionIds, sectionsMap } =
+      reportType === 'custom'
+        ? buildCustomSectionsFromOutline(outline, context)
+        : this.getSectionsConfig(reportType);
+
     const results = await this.generateAllSections(
       sectionIds,
       sectionsMap,
@@ -103,6 +111,10 @@ export class ReportGenerationV2Service {
     context: Record<string, any>,
     reportType: ReportType,
   ): string {
+    if (reportType === 'custom') {
+      return buildCustomOutlinePrompt(context);
+    }
+
     const audienceLabel =
       reportType === 'investoredge' ? 'real estate investor' : 'homebuyer';
     const scoreKey =

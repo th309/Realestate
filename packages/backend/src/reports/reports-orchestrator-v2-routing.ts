@@ -11,17 +11,21 @@ import type { ReportTemplate } from './reports.service';
 import type { GenerateReportDto } from './dto/generate-report.dto';
 
 /**
- * Check ai_model_config for a prompt_version override on report_narrative purpose.
- * Returns 'v1' if no config exists or the column is absent.
+ * Check ai_model_config for a prompt_version override.
+ * Checks both 'report_narrative' and 'custom_report' purposes —
+ * returns 'v2' if either is set to v2 for the given report type.
  */
 export async function getPromptVersion(
   supabase: SupabaseClient,
+  reportType?: string | null,
 ): Promise<string> {
+  const purpose =
+    reportType === 'custom' ? 'custom_report' : 'report_narrative';
   try {
     const { data } = await supabase
       .from('ai_model_config')
       .select('prompt_version')
-      .eq('purpose', 'report_narrative')
+      .eq('purpose', purpose)
       .eq('is_active', true)
       .single();
     return data?.prompt_version || 'v1';
@@ -37,7 +41,7 @@ export async function getPromptVersion(
 export function resolveReportType(
   template: ReportTemplate,
   dto: GenerateReportDto,
-): 'homeready' | 'investoredge' | 'comparison' | null {
+): 'homeready' | 'investoredge' | 'comparison' | 'custom' | null {
   // Comparison reports are identified by having comparison geographies
   if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
     return 'comparison';
@@ -48,6 +52,9 @@ export function resolveReportType(
   }
   if (slug.includes('homeready') || slug.includes('homebuyer')) {
     return 'homeready';
+  }
+  if (slug.includes('custom') || dto.user_inputs?.custom_question) {
+    return 'custom';
   }
   // Fallback based on user_type
   if (dto.user_type === 'investor') return 'investoredge';

@@ -458,8 +458,8 @@ export async function generateReportAsync(
       );
 
       // Check prompt version: v2 uses two-pass pipeline, v1 uses legacy
-      const promptVersion = await getPromptVersion(supabase);
       const reportType = resolveReportType(template, dto);
+      const promptVersion = await getPromptVersion(supabase, reportType);
 
       if (promptVersion === 'v2' && reportType) {
         aiNarratives = await deps.reportGenerationV2.generateNarratives(
