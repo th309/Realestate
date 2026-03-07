@@ -38,6 +38,11 @@ import { buildNarrativeTemplateVars } from './reports-narrative-template-vars';
 import type { MarketSnapshotService } from '../market-snapshot/market-snapshot.service';
 import type { TimeSeriesService } from '../timeseries/timeseries.service';
 import type { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
+import type { ReportGenerationV2Service } from './report-generation-v2.service';
+import {
+  getPromptVersion,
+  resolveReportType,
+} from './reports-orchestrator-v2-routing';
 
 /** All service dependencies required by the orchestrator. */
 export interface ReportDeps {
@@ -51,6 +56,7 @@ export interface ReportDeps {
   marketSnapshotService: MarketSnapshotService;
   timeSeriesService: TimeSeriesService;
   metricResolutionService: MetricResolutionService;
+  reportGenerationV2: ReportGenerationV2Service;
 }
 
 /**
@@ -361,7 +367,7 @@ export async function generateReportAsync(
       );
     }
 
-    if (hasAiInsights && template.config.ai_config?.narrative_sections) {
+    if (hasAiInsights) {
       const newsContext = newsResult
         ? deps.claudeNewsService.formatNewsForPrompt(newsResult, {
             maxNewsItems: 5,
@@ -380,22 +386,35 @@ export async function generateReportAsync(
         .eq('id', userId)
         .single();
 
-      aiNarratives = await deps.claudeService.generateNarratives(
-        template.config.ai_config.narrative_sections,
-        buildNarrativeTemplateVars(
-          dto,
-          scores,
-          scoreContexts,
-          marketMetrics,
-          newsContext,
-          signalSummary,
-          priorities,
-          priorityWeightedWinner,
-          comparisons,
-          userProfile,
-          populatedData.benchmarks,
-        ),
+      const narrativeTemplateVars = buildNarrativeTemplateVars(
+        dto,
+        scores,
+        scoreContexts,
+        marketMetrics,
+        newsContext,
+        signalSummary,
+        priorities,
+        priorityWeightedWinner,
+        comparisons,
+        userProfile,
+        populatedData.benchmarks,
       );
+
+      // Check prompt version: v2 uses two-pass pipeline, v1 uses legacy
+      const promptVersion = await getPromptVersion(supabase);
+      const reportType = resolveReportType(template, dto);
+
+      if (promptVersion === 'v2' && reportType) {
+        aiNarratives = await deps.reportGenerationV2.generateNarratives(
+          reportType,
+          narrativeTemplateVars,
+        );
+      } else if (template.config.ai_config?.narrative_sections) {
+        aiNarratives = await deps.claudeService.generateNarratives(
+          template.config.ai_config.narrative_sections,
+          narrativeTemplateVars,
+        );
+      }
     }
 
     // ── 10. Persist completed report ───────────────────────────────────

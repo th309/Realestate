@@ -20,6 +20,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
 import { MarketSnapshotService } from '../market-snapshot/market-snapshot.service';
 import { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
+import { ReportGenerationV2Service } from './report-generation-v2.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { generateReportAsync, ReportDeps } from './reports-orchestrator';
 import {
@@ -28,9 +29,7 @@ import {
   createShareLink as createShareLinkFn,
   getSharedReport as getSharedReportFn,
 } from './reports-sharing';
-import {
-  regenerateNarratives as regenerateNarrativesFn,
-} from './reports-narratives';
+import { regenerateNarratives as regenerateNarrativesFn } from './reports-narratives';
 
 export interface ReportTemplate {
   id: string;
@@ -45,7 +44,10 @@ export interface ReportTemplate {
 
 // Re-export types for consumers
 export type { ScoreContext } from './reports-score-context';
-export type { HistoricalMetricData, HistoricalData } from './reports-data-fetcher';
+export type {
+  HistoricalMetricData,
+  HistoricalData,
+} from './reports-data-fetcher';
 
 @Injectable()
 export class ReportsService {
@@ -61,6 +63,7 @@ export class ReportsService {
     private readonly partnersService: PartnersService,
     private readonly marketSnapshotService: MarketSnapshotService,
     private readonly metricResolutionService: MetricResolutionService,
+    private readonly reportGenerationV2: ReportGenerationV2Service,
   ) {}
 
   // ============================================================================
@@ -117,7 +120,10 @@ export class ReportsService {
       throw new Error(`Template not found: ${dto.template_slug}`);
     }
 
-    const reportTitle = this.generateReportTitle(template.name, dto.primary_geography.name);
+    const reportTitle = this.generateReportTitle(
+      template.name,
+      dto.primary_geography.name,
+    );
 
     const { data: report, error: insertError } = await client
       .from('reports')
@@ -159,8 +165,17 @@ export class ReportsService {
       marketSnapshotService: this.marketSnapshotService,
       timeSeriesService: this.timeSeriesService,
       metricResolutionService: this.metricResolutionService,
+      reportGenerationV2: this.reportGenerationV2,
     };
-    generateReportAsync(deps, report.id, template, dto, startTime, userId, userTier);
+    generateReportAsync(
+      deps,
+      report.id,
+      template,
+      dto,
+      startTime,
+      userId,
+      userTier,
+    );
 
     return report.id;
   }
@@ -202,13 +217,15 @@ export class ReportsService {
     const client = this.supabase.getClient();
     const { data, error } = await client
       .from('reports')
-      .select(`
+      .select(
+        `
         id, title, report_type, user_type,
         primary_geography_name, primary_geography_type,
         homeready_score, investoredge_score,
         status, data_as_of_date, created_at,
         template:report_templates(slug, name, icon)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -235,9 +252,7 @@ export class ReportsService {
     return true;
   }
 
-  // ============================================================================
-  // Sharing & Conversations (delegates to reports-sharing.ts)
-  // ============================================================================
+  // ── Sharing & Conversations (delegates to reports-sharing.ts) ──────
 
   async sendConversationMessage(
     reportId: string,
@@ -270,16 +285,20 @@ export class ReportsService {
     accessLevel: 'view' | 'download',
     expiresInDays?: number,
   ): Promise<string> {
-    return createShareLinkFn(this.supabase.getClient(), reportId, userId, accessLevel, expiresInDays);
+    return createShareLinkFn(
+      this.supabase.getClient(),
+      reportId,
+      userId,
+      accessLevel,
+      expiresInDays,
+    );
   }
 
   async getSharedReport(token: string): Promise<any> {
     return getSharedReportFn(this.supabase.getClient(), token);
   }
 
-  // ============================================================================
-  // Narrative Regeneration (delegates to reports-narratives.ts)
-  // ============================================================================
+  // ── Narrative Regeneration (delegates to reports-narratives.ts) ───
 
   async regenerateNarratives(
     reportId: string,
@@ -297,12 +316,14 @@ export class ReportsService {
     );
   }
 
-  // ============================================================================
-  // Private Helpers
-  // ============================================================================
+  // ── Private Helpers ──────────────────────────────────────────────
 
-  private generateReportTitle(templateName: string, geographyName: string): string {
-    const shortGeoName = geographyName.length > 30 ? geographyName.split(',')[0] : geographyName;
+  private generateReportTitle(
+    templateName: string,
+    geographyName: string,
+  ): string {
+    const shortGeoName =
+      geographyName.length > 30 ? geographyName.split(',')[0] : geographyName;
     return `${shortGeoName} - ${templateName}`;
   }
 }
