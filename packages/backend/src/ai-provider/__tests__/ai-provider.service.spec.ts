@@ -122,7 +122,7 @@ describe('AiProviderService', () => {
       });
 
       expect(result.provider).toBe('openai');
-      expect(result.model).toBe('gpt-4o');
+      expect(result.model).toBe('gpt-5.4');
     });
   });
 
