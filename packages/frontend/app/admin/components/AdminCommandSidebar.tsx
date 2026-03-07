@@ -10,6 +10,7 @@ import {
   Target,
   Cpu,
   CheckCircle2,
+  BrainCircuit,
   Shield,
   MessageSquare,
   ArrowLeft,
@@ -48,6 +49,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/admin/score-validation",
         icon: CheckCircle2,
       },
+      { label: "AI Models", href: "/admin/ai-models", icon: BrainCircuit },
     ],
   },
   {
