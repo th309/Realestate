@@ -63,8 +63,10 @@ function addYoyAliases(report: any): void {
 
   // Convert ratios to percentages (e.g. 0.05 → 5.0)
   const yoyRatioKeys = [
-    'median_listing_price_yoy', 'inventory_yoy',
-    'zhvi_yoy', 'home_value_yoy',
+    "median_listing_price_yoy",
+    "inventory_yoy",
+    "zhvi_yoy",
+    "home_value_yoy",
   ];
   for (const key of yoyRatioKeys) {
     if (current[key] != null && Math.abs(current[key]) < 1) {
@@ -74,7 +76,7 @@ function addYoyAliases(report: any): void {
 
   // Copy to alias keys sections expect
   const yoyAliases: Record<string, string[]> = {
-    median_listing_price_yoy: ['zhvi_yoy', 'home_value_yoy'],
+    median_listing_price_yoy: ["zhvi_yoy", "home_value_yoy"],
   };
   for (const [source, targets] of Object.entries(yoyAliases)) {
     if (current[source] != null) {
@@ -115,9 +117,11 @@ function mapBackendNarrativeKeys(report: any): void {
     } else {
       // Fallback: first ~100 chars at a word boundary
       const truncated = text.substring(0, 120);
-      const lastSpace = truncated.lastIndexOf(' ');
+      const lastSpace = truncated.lastIndexOf(" ");
       n.hero_verdict =
-        lastSpace > 60 ? truncated.substring(0, lastSpace) + '.' : truncated + '…';
+        lastSpace > 60
+          ? truncated.substring(0, lastSpace) + "."
+          : truncated + "…";
     }
   }
 
@@ -140,21 +144,25 @@ function mapBackendNarrativeKeys(report: any): void {
     n.bottom_line_narrative = n.next_steps;
   }
   // bottom_line_actions: strip code fences and parse JSON array
-  if (n.bottom_line_actions && typeof n.bottom_line_actions === 'string') {
-    let actionsText = n.bottom_line_actions.trim()
-      .replace(/^```(?:json)?\s*\n?/i, '')
-      .replace(/\n?```\s*$/i, '')
+  if (n.bottom_line_actions && typeof n.bottom_line_actions === "string") {
+    const actionsText = n.bottom_line_actions
+      .trim()
+      .replace(/^```(?:json)?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "")
       .trim();
     try {
       const parsed = JSON.parse(actionsText);
       if (Array.isArray(parsed)) n.bottom_line_actions = parsed;
-    } catch { /* leave as string */ }
+    } catch {
+      /* leave as string */
+    }
   }
 
   if (n.next_steps && !n.bottom_line_actions) {
-    let text = String(n.next_steps).trim()
-      .replace(/^```(?:json)?\s*\n?/i, '')
-      .replace(/\n?```\s*$/i, '')
+    const text = String(n.next_steps)
+      .trim()
+      .replace(/^```(?:json)?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "")
       .trim();
     // Try to parse as JSON array first (in case the model returned JSON)
     try {
@@ -166,7 +174,9 @@ function mapBackendNarrativeKeys(report: any): void {
       // Extract numbered or bulleted items (e.g. "1. Do X", "- Do Y", "• Do Z")
       const items = text
         .split(/\n/)
-        .map((line: string) => line.replace(/^\s*(?:\d+[.)]\s*|[-•*]\s*)/, '').trim())
+        .map((line: string) =>
+          line.replace(/^\s*(?:\d+[.)]\s*|[-•*]\s*)/, "").trim(),
+        )
         .filter((line: string) => line.length > 10 && line.length < 200);
       if (items.length >= 2) {
         n.bottom_line_actions = items.slice(0, 5);
@@ -186,10 +196,13 @@ function generateNarrativeFallbacks(report: any): void {
   // Fill in any keys still empty after mapBackendNarrativeKeys.
   // Each block below guards on !narrative.<key> so existing values are preserved.
 
-  const scoreType = report.user_type === 'investor' ? 'investoredge' : 'homeready';
+  const scoreType =
+    report.user_type === "investor" ? "investoredge" : "homeready";
   const scoreCtx = report.populated_data?.scores?.[scoreType]?.context;
-  const score = report[`${scoreType}_score`] ?? report.scores_snapshot?.scores?.[scoreType]?.score;
-  const geoName = report.primary_geography_name || 'this market';
+  const score =
+    report[`${scoreType}_score`] ??
+    report.scores_snapshot?.scores?.[scoreType]?.score;
+  const geoName = report.primary_geography_name || "this market";
 
   // Hero verdict from score context interpretation
   if (!narrative.hero_verdict && scoreCtx?.interpretation) {
@@ -199,11 +212,11 @@ function generateNarrativeFallbacks(report: any): void {
   // Score story from score context comparison + percentile + dollar impact
   if (!narrative.score_story && scoreCtx) {
     const parts: string[] = [];
-    if (scoreCtx.comparison) parts.push(scoreCtx.comparison + '.');
-    if (scoreCtx.percentile_text) parts.push(scoreCtx.percentile_text + '.');
-    if (scoreCtx.dollar_impact) parts.push(scoreCtx.dollar_impact + '.');
+    if (scoreCtx.comparison) parts.push(scoreCtx.comparison + ".");
+    if (scoreCtx.percentile_text) parts.push(scoreCtx.percentile_text + ".");
+    if (scoreCtx.dollar_impact) parts.push(scoreCtx.dollar_impact + ".");
     if (parts.length > 0) {
-      narrative.score_story = parts.join(' ');
+      narrative.score_story = parts.join(" ");
     }
   }
 
@@ -212,15 +225,16 @@ function generateNarrativeFallbacks(report: any): void {
     if (score >= 65) {
       narrative.bottom_line_narrative =
         `${geoName} scores ${score}/100, indicating favorable conditions. ` +
-        (scoreCtx?.dollar_impact || 'This market shows solid fundamentals for buyers.');
+        (scoreCtx?.dollar_impact ||
+          "This market shows solid fundamentals for buyers.");
     } else if (score >= 45) {
       narrative.bottom_line_narrative =
         `${geoName} scores ${score}/100, suggesting moderate conditions. ` +
-        'Careful evaluation of your specific needs and timing is recommended.';
+        "Careful evaluation of your specific needs and timing is recommended.";
     } else {
       narrative.bottom_line_narrative =
         `${geoName} scores ${score}/100, indicating challenging conditions. ` +
-        'Consider waiting for improved conditions or exploring alternative markets.';
+        "Consider waiting for improved conditions or exploring alternative markets.";
     }
   }
 
@@ -243,13 +257,28 @@ function generateNarrativeFallbacks(report: any): void {
 }
 
 /**
+ * Check if the report uses v2 narrative format.
+ * V2 narratives have _meta.version === 'v2' and use different section IDs.
+ */
+function isV2NarrativeFormat(report: any): boolean {
+  const narrative = report.ai_narrative ?? report.ai_narratives;
+  return narrative?._meta?.version === "v2";
+}
+
+/**
  * Normalize a report from the API into the shape section components expect.
+ * Skips v1-specific narrative key mapping for v2 reports.
  */
 export function normalizeReport(report: any): any {
   normalizeScoresSnapshot(report);
   backfillCurrentFromHistorical(report);
   addYoyAliases(report);
-  mapBackendNarrativeKeys(report);
-  generateNarrativeFallbacks(report);
+
+  // V2 narratives use their own section IDs — don't remap to v1 keys
+  if (!isV2NarrativeFormat(report)) {
+    mapBackendNarrativeKeys(report);
+    generateNarrativeFallbacks(report);
+  }
+
   return report;
 }

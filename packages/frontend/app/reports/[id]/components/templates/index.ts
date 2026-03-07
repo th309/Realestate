@@ -37,8 +37,8 @@
  * - Allow the rest of the report to continue rendering
  */
 
-import type { ComponentType } from 'react';
-import type { ReportInstance } from '../../../types';
+import type { ComponentType } from "react";
+import type { ReportInstance } from "../../../types";
 
 // Homebuyer sections (redesigned)
 import {
@@ -50,7 +50,7 @@ import {
   GrowthPotentialDeepDive,
   YourPriorities,
   BottomLine,
-} from '../sections/homebuyer';
+} from "../sections/homebuyer";
 
 // Investor sections (redesigned)
 import {
@@ -64,7 +64,7 @@ import {
   InvestmentThesisSection,
   ProFormaSnapshot,
   InvestorBottomLine,
-} from '../sections/investor';
+} from "../sections/investor";
 
 // Agent sections (redesigned)
 import {
@@ -78,10 +78,10 @@ import {
   PrepObjectionHandlers,
   PrepCompetitiveContext,
   PrepNewsSignals,
-} from '../sections/agent';
+} from "../sections/agent";
 
 // Shared sections
-import { MarketPulse as SharedMarketPulse } from '../sections/shared';
+import { MarketPulse as SharedMarketPulse } from "../sections/shared";
 
 // Comparison sections (redesigned)
 import {
@@ -91,7 +91,10 @@ import {
   PriorityWeightedAnalysis,
   MarketStrengths,
   ComparisonVerdict,
-} from '../sections/comparison';
+} from "../sections/comparison";
+
+// V2 template definitions (report prompting v2 — kept in separate file for size)
+import { V2_REPORT_TEMPLATES } from "./v2Templates";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -120,79 +123,90 @@ export interface ReportTemplateDefinition {
   sections: TemplateSection[];
 }
 
-/** Available report template types */
-export type ReportTemplateType = 'homeready' | 'investoredge' | 'market_snapshot_client' | 'market_snapshot_prep' | 'comparison';
+/** Available report template types (includes v2 variants for new narrative format) */
+export type ReportTemplateType =
+  | "homeready"
+  | "investoredge"
+  | "market_snapshot_client"
+  | "market_snapshot_prep"
+  | "comparison"
+  | "homeready_v2"
+  | "investoredge_v2"
+  | "comparison_v2";
 
 // -----------------------------------------------------------------------------
 // Template Definitions
 // -----------------------------------------------------------------------------
 
-export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefinition> = {
+export const REPORT_TEMPLATES: Record<
+  ReportTemplateType,
+  ReportTemplateDefinition
+> = {
   homeready: {
-    name: 'HomeReady Report',
-    description: 'Comprehensive homebuyer analysis with score-driven narrative',
+    name: "HomeReady Report",
+    description: "Comprehensive homebuyer analysis with score-driven narrative",
     sections: [
-      { component: Hero, id: 'hero' },
-      { component: ScoreStory, id: 'score-story' },
-      { component: AffordabilityDeepDive, id: 'affordability-deep-dive' },
-      { component: MarketTimingDeepDive, id: 'market-timing-deep-dive' },
-      { component: StabilityDeepDive, id: 'stability-deep-dive' },
-      { component: GrowthPotentialDeepDive, id: 'growth-potential-deep-dive' },
-      { component: YourPriorities, id: 'your-priorities' },
-      { component: BottomLine, id: 'bottom-line' },
-      { component: SharedMarketPulse, id: 'market-pulse' },
+      { component: Hero, id: "hero" },
+      { component: ScoreStory, id: "score-story" },
+      { component: AffordabilityDeepDive, id: "affordability-deep-dive" },
+      { component: MarketTimingDeepDive, id: "market-timing-deep-dive" },
+      { component: StabilityDeepDive, id: "stability-deep-dive" },
+      { component: GrowthPotentialDeepDive, id: "growth-potential-deep-dive" },
+      { component: YourPriorities, id: "your-priorities" },
+      { component: BottomLine, id: "bottom-line" },
+      { component: SharedMarketPulse, id: "market-pulse" },
     ],
   },
   investoredge: {
-    name: 'InvestorEdge Report',
-    description: 'Score-driven investment opportunity analysis',
+    name: "InvestorEdge Report",
+    description: "Score-driven investment opportunity analysis",
     sections: [
-      { component: InvestorHero, id: 'investor-hero' },
-      { component: InvestorScoreStory, id: 'investor-score-story' },
-      { component: CashFlowDeepDive, id: 'cash-flow' },
-      { component: RentDemandDeepDive, id: 'rent-demand' },
-      { component: AppreciationDeepDive, id: 'appreciation' },
-      { component: EntryPointDeepDive, id: 'entry-point' },
-      { component: RiskDeepDive, id: 'risk' },
-      { component: InvestmentThesisSection, id: 'investment-thesis' },
-      { component: ProFormaSnapshot, id: 'pro-forma' },
-      { component: InvestorBottomLine, id: 'investor-bottom-line' },
-      { component: SharedMarketPulse, id: 'market-pulse' },
+      { component: InvestorHero, id: "investor-hero" },
+      { component: InvestorScoreStory, id: "investor-score-story" },
+      { component: CashFlowDeepDive, id: "cash-flow" },
+      { component: RentDemandDeepDive, id: "rent-demand" },
+      { component: AppreciationDeepDive, id: "appreciation" },
+      { component: EntryPointDeepDive, id: "entry-point" },
+      { component: RiskDeepDive, id: "risk" },
+      { component: InvestmentThesisSection, id: "investment-thesis" },
+      { component: ProFormaSnapshot, id: "pro-forma" },
+      { component: InvestorBottomLine, id: "investor-bottom-line" },
+      { component: SharedMarketPulse, id: "market-pulse" },
     ],
   },
   market_snapshot_client: {
-    name: 'Client Market Report',
-    description: 'Clean, shareable market overview for clients',
+    name: "Client Market Report",
+    description: "Clean, shareable market overview for clients",
     sections: [
-      { component: ClientOverview, id: 'client-overview' },
-      { component: ClientPriceValue, id: 'client-price' },
-      { component: ClientMarketConditions, id: 'client-conditions' },
-      { component: ClientMeaning, id: 'client-meaning' },
-      { component: AgentBranding, id: 'agent-branding' },
+      { component: ClientOverview, id: "client-overview" },
+      { component: ClientPriceValue, id: "client-price" },
+      { component: ClientMarketConditions, id: "client-conditions" },
+      { component: ClientMeaning, id: "client-meaning" },
+      { component: AgentBranding, id: "agent-branding" },
     ],
   },
   market_snapshot_prep: {
-    name: 'Agent Prep View',
-    description: 'Dense internal briefing for agent preparation',
+    name: "Agent Prep View",
+    description: "Dense internal briefing for agent preparation",
     sections: [
-      { component: PrepQuickStats, id: 'prep-stats' },
-      { component: PrepTalkingPoints, id: 'prep-talking-points' },
-      { component: PrepObjectionHandlers, id: 'prep-objections' },
-      { component: PrepCompetitiveContext, id: 'prep-competitive' },
-      { component: PrepNewsSignals, id: 'prep-signals' },
+      { component: PrepQuickStats, id: "prep-stats" },
+      { component: PrepTalkingPoints, id: "prep-talking-points" },
+      { component: PrepObjectionHandlers, id: "prep-objections" },
+      { component: PrepCompetitiveContext, id: "prep-competitive" },
+      { component: PrepNewsSignals, id: "prep-signals" },
     ],
   },
   comparison: {
-    name: 'Market Comparison',
-    description: 'Score-driven side-by-side market comparison',
+    name: "Market Comparison",
+    description: "Score-driven side-by-side market comparison",
     sections: [
-      { component: ComparisonHero, id: 'comparison-hero' },
-      { component: HeadToHeadScoreStory, id: 'head-to-head' },
-      { component: ComponentShowdown, id: 'component-showdown' },
-      { component: PriorityWeightedAnalysis, id: 'priority-analysis' },
-      { component: MarketStrengths, id: 'market-strengths' },
-      { component: ComparisonVerdict, id: 'comparison-verdict' },
-      { component: SharedMarketPulse, id: 'market-pulse' },
+      { component: ComparisonHero, id: "comparison-hero" },
+      { component: HeadToHeadScoreStory, id: "head-to-head" },
+      { component: ComponentShowdown, id: "component-showdown" },
+      { component: PriorityWeightedAnalysis, id: "priority-analysis" },
+      { component: MarketStrengths, id: "market-strengths" },
+      { component: ComparisonVerdict, id: "comparison-verdict" },
+      { component: SharedMarketPulse, id: "market-pulse" },
     ],
   },
 };
@@ -217,8 +231,13 @@ export const REPORT_TEMPLATES: Record<ReportTemplateType, ReportTemplateDefiniti
  * }
  * ```
  */
-export function getTemplate(reportType: string): ReportTemplateDefinition | undefined {
-  return REPORT_TEMPLATES[reportType as ReportTemplateType];
+export function getTemplate(
+  reportType: string,
+): ReportTemplateDefinition | undefined {
+  return (
+    REPORT_TEMPLATES[reportType as ReportTemplateType] ??
+    V2_REPORT_TEMPLATES[reportType]
+  );
 }
 
 /**
@@ -227,8 +246,10 @@ export function getTemplate(reportType: string): ReportTemplateDefinition | unde
  * @param reportType - The type to check
  * @returns True if the type is a valid template type
  */
-export function isValidTemplateType(reportType: string): reportType is ReportTemplateType {
-  return reportType in REPORT_TEMPLATES;
+export function isValidTemplateType(
+  reportType: string,
+): reportType is ReportTemplateType {
+  return reportType in REPORT_TEMPLATES || reportType in V2_REPORT_TEMPLATES;
 }
 
 /**

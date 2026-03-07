@@ -17,6 +17,7 @@ import { UserType, ReportInstance } from "../types";
 import { ConversationPanel } from "./ConversationPanel";
 import { SectionErrorBoundary } from "./components/SectionErrorBoundary";
 import { getTemplate, ReportTemplateType } from "./components/templates";
+import { isV2Narrative } from "./components/sections/v2";
 import { PersonalizationPanel } from "./components/PersonalizationPanel";
 import { usePersonalization } from "./hooks/usePersonalization";
 import { GeneratingState } from "./components/GeneratingState";
@@ -221,11 +222,13 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   }
 
   const userType = report.user_type as UserType;
+  const reportInstance = report as unknown as ReportInstance;
 
   // Determine template based on report type first, then user type
   const reportType = report.template?.config?.report_type;
   const isAgentReport =
     report.user_type === "agent" || reportType === "snapshot";
+  const useV2 = isV2Narrative(reportInstance);
   let templateType: ReportTemplateType;
 
   if (
@@ -233,23 +236,20 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
     report.comparison_geographies &&
     report.comparison_geographies.length > 0
   ) {
-    templateType = "comparison";
+    templateType = useV2 ? "comparison_v2" : "comparison";
   } else if (isAgentReport) {
     templateType =
       agentViewMode === "prep"
         ? "market_snapshot_prep"
         : "market_snapshot_client";
   } else if (userType === "investor") {
-    templateType = "investoredge";
+    templateType = useV2 ? "investoredge_v2" : "investoredge";
   } else {
-    templateType = "homeready";
+    templateType = useV2 ? "homeready_v2" : "homeready";
   }
 
   const template = getTemplate(templateType);
   const templateSections = template?.sections || [];
-
-  // Convert report to ReportInstance for new section components
-  const reportInstance = report as unknown as ReportInstance;
 
   return (
     <div className="report-page min-h-screen">
