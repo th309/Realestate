@@ -17,12 +17,21 @@ CREATE TABLE report_follow_up_alerts (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Grant table permissions to Supabase roles
+GRANT ALL ON report_follow_up_alerts TO service_role;
+GRANT ALL ON report_follow_up_alerts TO authenticated;
+
 ALTER TABLE report_follow_up_alerts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "users_own_alerts" ON report_follow_up_alerts
   FOR ALL
-  USING (auth.role() = 'service_role' OR auth.uid() = user_id)
-  WITH CHECK (auth.role() = 'service_role' OR auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "service_role_full_access" ON report_follow_up_alerts
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
 CREATE INDEX idx_follow_up_active ON report_follow_up_alerts (status, user_id)
   WHERE status = 'active';
