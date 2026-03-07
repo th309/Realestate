@@ -7,6 +7,7 @@
  */
 
 import type { NarrativePromptConfig } from '../narrative-prompt-shared';
+import { SCENARIO_ANALYSIS_INVESTOR } from './scenario-analysis-prompt';
 
 export const INVESTOR_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
   executive_verdict: {
@@ -150,6 +151,8 @@ Rules:
     output_format: 'text',
   },
 
+  scenario_analysis: SCENARIO_ANALYSIS_INVESTOR,
+
   investment_thesis: {
     prompt_template: `You are writing the investment thesis and strategy for a market brief on {{geography_name}}.
 
@@ -253,6 +256,7 @@ Rules:
 export const INVESTOR_V2_SECTION_ORDER = [
   'executive_verdict',
   'investment_deep_dive',
+  'scenario_analysis',
   'risk_and_resilience',
   'investment_thesis',
   'actions_and_monitoring',

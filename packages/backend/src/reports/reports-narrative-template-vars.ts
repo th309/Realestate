@@ -17,6 +17,8 @@ import {
   computeUserGoalSummary,
 } from './reports-narrative-cross-section';
 import { computeAnalyticalInsights } from './narrative-insights';
+import { computeScenarioInputs } from './scenario-computation';
+import { getValidationTemplateVars } from './validation-credibility';
 
 /**
  * Build the full template-variable map that Claude uses for AI narrative
@@ -234,6 +236,17 @@ export function buildNarrativeTemplateVars(
 
     // Pre-computed analytical insights (digested "so what" context)
     ...analyticalInsights,
+
+    // Pre-computed scenario analysis (rate/price/return scenarios)
+    ...computeScenarioInputs(
+      marketMetrics,
+      scores,
+      dto.user_type,
+      dto.user_inputs,
+    ),
+
+    // Validation credibility stats for AI to cite in narratives
+    ...getValidationTemplateVars(),
   };
 }
 

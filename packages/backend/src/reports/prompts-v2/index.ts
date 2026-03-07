@@ -33,6 +33,11 @@ export {
   type CustomSectionDefinition,
 } from './custom-report-sections';
 
+export {
+  SCENARIO_ANALYSIS_HOMEBUYER,
+  SCENARIO_ANALYSIS_INVESTOR,
+} from './scenario-analysis-prompt';
+
 import type { NarrativePromptConfig } from '../narrative-prompt-shared';
 
 import {

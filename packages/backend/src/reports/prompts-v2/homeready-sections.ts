@@ -10,6 +10,7 @@
  */
 
 import type { NarrativePromptConfig } from '../narrative-prompt-shared';
+import { SCENARIO_ANALYSIS_HOMEBUYER } from './scenario-analysis-prompt';
 
 export const HOMEREADY_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
   executive_verdict: {
@@ -240,6 +241,8 @@ Rules:
     output_format: 'text',
   },
 
+  scenario_analysis: SCENARIO_ANALYSIS_HOMEBUYER,
+
   what_to_watch: {
     prompt_template: `You are writing the monitoring section for a homebuyer market brief on {{geography_name}}.
 
@@ -281,6 +284,7 @@ Rules:
 export const HOMEREADY_V2_SECTION_ORDER = [
   'executive_verdict',
   'market_deep_dive',
+  'scenario_analysis',
   'your_situation',
   'verdict_and_actions',
   'what_to_watch',
