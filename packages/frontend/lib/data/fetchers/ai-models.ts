@@ -35,11 +35,15 @@ export interface AiModelConfig {
  * Fetch all AI model configurations.
  */
 export async function fetchAiModelConfigs(): Promise<AiModelConfig[]> {
-  const authHeaders = await getAuthHeaders();
-  const res = await fetchAPIRaw("/api/admin/ai-models", {
-    headers: authHeaders,
-  });
-  if (!res.ok) return [];
+  const res = await fetchAPIRaw("/api/admin/ai-models");
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(
+      `[AI Models] Failed to fetch configs: ${res.status} ${res.statusText}`,
+      body,
+    );
+    return [];
+  }
   const data = await res.json();
   return data.data || data || [];
 }

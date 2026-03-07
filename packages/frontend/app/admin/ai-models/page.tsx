@@ -146,9 +146,16 @@ export default function AiModelConfigPage() {
         {!loading && configs.length === 0 && !error && (
           <div className="text-center py-16">
             <p className="text-on-surface-variant text-sm">
-              No AI model configurations found. The backend may not have the
-              admin AI models endpoint configured yet.
+              No AI model configurations loaded. Check the browser console for
+              errors. If you see a 401, try refreshing the page — the session
+              may not have been ready yet.
             </p>
+            <button
+              onClick={loadConfigs}
+              className="mt-4 px-5 py-2 text-sm font-medium rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors duration-200"
+            >
+              Retry
+            </button>
           </div>
         )}
 
