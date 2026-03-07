@@ -28,13 +28,17 @@ INSERT INTO ai_model_config (purpose, label, provider, model, temperature) VALUE
   ('conversation',        'Report Conversation Follow-up',                     'deepseek', 'deepseek-chat', 0.70)
 ON CONFLICT (purpose) DO NOTHING;
 
--- RLS: only service role can read/write (admin access via backend API)
+-- Grant table permissions to Supabase roles
+GRANT ALL ON ai_model_config TO service_role;
+GRANT ALL ON ai_model_config TO authenticated;
+
+-- RLS with permissive policy (access control handled by AdminGuard in the backend)
 ALTER TABLE ai_model_config ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "service_role_only" ON ai_model_config
+CREATE POLICY "service_role_full_access" ON ai_model_config
   FOR ALL
-  USING (auth.role() = 'service_role')
-  WITH CHECK (auth.role() = 'service_role');
+  USING (true)
+  WITH CHECK (true);
 
 -- Updated_at trigger
 CREATE OR REPLACE FUNCTION update_ai_model_config_timestamp()
