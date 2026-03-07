@@ -52,6 +52,9 @@ export class AiConfigResolver {
       return dbConfig;
     }
 
+    this.logger.warn(
+      `[${purpose}] DB config not usable — falling back to env defaults`,
+    );
     const fallbackConfig = this.buildFallbackConfig();
     this.cache.set(purpose, {
       config: fallbackConfig,
@@ -74,13 +77,14 @@ export class AiConfigResolver {
 
   /**
    * Load config from the `ai_model_config` DB table for a given purpose.
+   * API keys are always resolved from environment variables (never stored in DB).
    */
   private async loadFromDb(purpose: string): Promise<AiProviderConfig | null> {
     try {
       const { data, error } = await this.supabase
         .getClient()
         .from('ai_model_config')
-        .select('provider, model, api_key, base_url, temperature, max_retries')
+        .select('provider, model, base_url, temperature')
         .eq('purpose', purpose)
         .eq('is_active', true)
         .single();
@@ -91,12 +95,11 @@ export class AiConfigResolver {
       const preset = PROVIDER_PRESETS[provider];
       if (!preset) return null;
 
-      // Resolve API key: DB value takes priority, then env var from preset
-      const apiKey =
-        data.api_key || this.configService.get<string>(preset.envKeyName);
+      // API keys come from environment variables, keyed by provider preset
+      const apiKey = this.configService.get<string>(preset.envKeyName);
       if (!apiKey) {
         this.logger.warn(
-          `[${purpose}] DB config found for ${provider} but no API key available`,
+          `[${purpose}] DB config found for ${provider} but no API key (${preset.envKeyName}) in env`,
         );
         return null;
       }
@@ -107,7 +110,7 @@ export class AiConfigResolver {
         apiKey,
         baseUrl: data.base_url || preset.baseUrl,
         temperature: data.temperature ?? preset.defaultTemperature,
-        maxRetries: data.max_retries ?? 2,
+        maxRetries: 2,
       };
     } catch (error: any) {
       this.logger.warn(

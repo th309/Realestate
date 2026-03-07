@@ -11,27 +11,14 @@ import type { ReportTemplate } from './reports.service';
 import type { GenerateReportDto } from './dto/generate-report.dto';
 
 /**
- * Check ai_model_config for a prompt_version override.
- * Checks both 'report_narrative' and 'custom_report' purposes —
- * returns 'v2' if either is set to v2 for the given report type.
+ * Determine the prompt pipeline version for report generation.
+ * All reports use the v2 two-pass pipeline (outline → parallel sections).
  */
-export async function getPromptVersion(
-  supabase: SupabaseClient,
-  reportType?: string | null,
-): Promise<string> {
-  const purpose =
-    reportType === 'custom' ? 'custom_report' : 'report_narrative';
-  try {
-    const { data } = await supabase
-      .from('ai_model_config')
-      .select('prompt_version')
-      .eq('purpose', purpose)
-      .eq('is_active', true)
-      .single();
-    return data?.prompt_version || 'v1';
-  } catch {
-    return 'v1';
-  }
+export function getPromptVersion(
+  _supabase: SupabaseClient,
+  _reportType?: string | null,
+): string {
+  return 'v2';
 }
 
 /**
