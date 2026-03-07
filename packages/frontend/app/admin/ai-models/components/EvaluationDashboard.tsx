@@ -8,7 +8,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type MutableRefObject } from "react";
 import {
   fetchUsageSummary,
   fetchEvaluationScores,
@@ -22,7 +22,11 @@ import { UsageSummaryTable } from "./UsageSummaryTable";
 import { ScoringForm } from "./ScoringForm";
 import { CompositeResults } from "./CompositeResults";
 
-export function EvaluationDashboard() {
+export function EvaluationDashboard({
+  onRefreshRef,
+}: {
+  onRefreshRef?: MutableRefObject<(() => void) | null>;
+}) {
   const [usage, setUsage] = useState<UsageSummary[]>([]);
   const [scores, setScores] = useState<EvaluationScore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +48,10 @@ export function EvaluationDashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (onRefreshRef) onRefreshRef.current = loadData;
+  }, [onRefreshRef, loadData]);
 
   const handleScoreSave = useCallback(
     async (

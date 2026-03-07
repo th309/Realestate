@@ -9,7 +9,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchAiModelConfigs,
   updateAiModelConfig,
@@ -31,6 +31,7 @@ export default function AiModelConfigPage() {
   } | null>(null);
   const [testRunId, setTestRunId] = useState("");
   const [testRunSaving, setTestRunSaving] = useState(false);
+  const dashboardRefreshRef = useRef<() => void>(null);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
@@ -220,10 +221,10 @@ export default function AiModelConfigPage() {
         )}
 
         {/* Test Runner */}
-        <TestRunner />
+        <TestRunner onBatchComplete={() => dashboardRefreshRef.current?.()} />
 
         {/* Evaluation Dashboard */}
-        <EvaluationDashboard />
+        <EvaluationDashboard onRefreshRef={dashboardRefreshRef} />
       </main>
 
       {/* Toast notification */}

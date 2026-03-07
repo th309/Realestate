@@ -26,7 +26,11 @@ import { StatusBadge } from "./StatusBadge";
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min max per report
 
-export function TestRunner() {
+export function TestRunner({
+  onBatchComplete,
+}: {
+  onBatchComplete?: () => void;
+}) {
   const { user } = useAuthState();
   const [phase, setPhase] = useState<1 | 2>(1);
   const [jobs, setJobs] = useState<TestJob[]>([]);
@@ -174,7 +178,8 @@ export function TestRunner() {
     await setTestRunId(null);
     setRunning(false);
     setCurrentIdx(-1);
-  }, [phase, selectedModels, user]);
+    onBatchComplete?.();
+  }, [phase, selectedModels, user, onBatchComplete]);
 
   const stopBatch = () => {
     abortRef.current = true;
