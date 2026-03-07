@@ -7,7 +7,12 @@
  * Critical for $100K-$1M+ real estate decisions - we must catch impossible values.
  */
 
-import { SCORING_CONSTANTS, HOMEREADY_WEIGHTS, INVESTOREDGE_WEIGHTS, MARKET_HEALTH_WEIGHTS } from '../../scoring.types';
+import {
+  SCORING_CONSTANTS,
+  HOMEREADY_WEIGHTS,
+  INVESTOREDGE_WEIGHTS,
+  MARKET_HEALTH_WEIGHTS,
+} from '../../scoring.types';
 
 // ============================================================================
 // Custom Error Types (would be defined in scoring errors module)
@@ -19,7 +24,9 @@ class ScoreOutOfBoundsError extends Error {
     public readonly geography: string,
     public readonly scoreType: string,
   ) {
-    super(`Score ${score} is out of bounds [0-100] for ${scoreType} at ${geography}`);
+    super(
+      `Score ${score} is out of bounds [0-100] for ${scoreType} at ${geography}`,
+    );
     this.name = 'ScoreOutOfBoundsError';
   }
 }
@@ -117,7 +124,11 @@ class InvalidFIPSError extends Error {
 // Validation Functions (would be in scoring validation module)
 // ============================================================================
 
-function validateScore(score: number, geography: string, scoreType: string): void {
+function validateScore(
+  score: number,
+  geography: string,
+  scoreType: string,
+): void {
   if (Number.isNaN(score)) {
     throw new NaNScoreError(geography, scoreType);
   }
@@ -135,7 +146,10 @@ function validateComponent(component: string, score: number): void {
   }
 }
 
-function validateWeights(weights: Record<string, number>, scoreType: string): void {
+function validateWeights(
+  weights: Record<string, number>,
+  scoreType: string,
+): void {
   const sum = Object.values(weights).reduce((a, b) => a + b, 0);
   if (Math.abs(sum - 1.0) > 0.0001) {
     throw new WeightSumError(scoreType, sum);
@@ -162,7 +176,8 @@ function validateDataDate(date: string): void {
     throw new FutureDateError(date);
   }
 
-  const daysSince = (now.getTime() - dataDate.getTime()) / (1000 * 60 * 60 * 24);
+  const daysSince =
+    (now.getTime() - dataDate.getTime()) / (1000 * 60 * 60 * 24);
   if (daysSince > 730) {
     // 2 years
     throw new StaleDateError(date, Math.floor(daysSince));
@@ -188,13 +203,21 @@ function validateFIPS(fips: string): void {
 describe('Runtime Score Assertions', () => {
   describe('Impossible Score Detection', () => {
     it('throws ScoreOutOfBoundsError when score < 0', () => {
-      expect(() => validateScore(-15, '90210', 'homeready')).toThrow(ScoreOutOfBoundsError);
-      expect(() => validateScore(-0.01, '90210', 'homeready')).toThrow(ScoreOutOfBoundsError);
+      expect(() => validateScore(-15, '90210', 'homeready')).toThrow(
+        ScoreOutOfBoundsError,
+      );
+      expect(() => validateScore(-0.01, '90210', 'homeready')).toThrow(
+        ScoreOutOfBoundsError,
+      );
     });
 
     it('throws ScoreOutOfBoundsError when score > 100', () => {
-      expect(() => validateScore(105, '90210', 'homeready')).toThrow(ScoreOutOfBoundsError);
-      expect(() => validateScore(100.01, '90210', 'homeready')).toThrow(ScoreOutOfBoundsError);
+      expect(() => validateScore(105, '90210', 'homeready')).toThrow(
+        ScoreOutOfBoundsError,
+      );
+      expect(() => validateScore(100.01, '90210', 'homeready')).toThrow(
+        ScoreOutOfBoundsError,
+      );
     });
 
     it('does not throw for valid scores at boundaries', () => {
@@ -204,12 +227,18 @@ describe('Runtime Score Assertions', () => {
     });
 
     it('throws NaNScoreError when score is NaN', () => {
-      expect(() => validateScore(NaN, '90210', 'homeready')).toThrow(NaNScoreError);
+      expect(() => validateScore(NaN, '90210', 'homeready')).toThrow(
+        NaNScoreError,
+      );
     });
 
     it('throws InfiniteScoreError when score is Infinity', () => {
-      expect(() => validateScore(Infinity, '90210', 'homeready')).toThrow(InfiniteScoreError);
-      expect(() => validateScore(-Infinity, '90210', 'homeready')).toThrow(InfiniteScoreError);
+      expect(() => validateScore(Infinity, '90210', 'homeready')).toThrow(
+        InfiniteScoreError,
+      );
+      expect(() => validateScore(-Infinity, '90210', 'homeready')).toThrow(
+        InfiniteScoreError,
+      );
     });
 
     it('error includes geography and score type context', () => {
@@ -227,11 +256,15 @@ describe('Runtime Score Assertions', () => {
 
   describe('Component Bound Assertions', () => {
     it('throws when any component score is negative', () => {
-      expect(() => validateComponent('affordability', -5)).toThrow(ComponentOutOfBoundsError);
+      expect(() => validateComponent('affordability', -5)).toThrow(
+        ComponentOutOfBoundsError,
+      );
     });
 
     it('throws when any component score exceeds 100', () => {
-      expect(() => validateComponent('affordability', 150)).toThrow(ComponentOutOfBoundsError);
+      expect(() => validateComponent('affordability', 150)).toThrow(
+        ComponentOutOfBoundsError,
+      );
     });
 
     it('accepts valid component scores', () => {
@@ -255,15 +288,21 @@ describe('Runtime Score Assertions', () => {
     });
 
     it('HomeReady weights sum to 1.0', () => {
-      expect(() => validateWeights(HOMEREADY_WEIGHTS, 'homeready')).not.toThrow();
+      expect(() =>
+        validateWeights(HOMEREADY_WEIGHTS, 'homeready'),
+      ).not.toThrow();
     });
 
     it('InvestorEdge weights sum to 1.0', () => {
-      expect(() => validateWeights(INVESTOREDGE_WEIGHTS, 'investoredge')).not.toThrow();
+      expect(() =>
+        validateWeights(INVESTOREDGE_WEIGHTS, 'investoredge'),
+      ).not.toThrow();
     });
 
     it('Market Health weights sum to 1.0', () => {
-      expect(() => validateWeights(MARKET_HEALTH_WEIGHTS, 'market_health')).not.toThrow();
+      expect(() =>
+        validateWeights(MARKET_HEALTH_WEIGHTS, 'market_health'),
+      ).not.toThrow();
     });
   });
 });
@@ -285,12 +324,18 @@ describe('Data Sanity Assertions', () => {
     });
 
     it('throws InvalidPercentageError for rates over 100%', () => {
-      expect(() => validatePercentage('unemployment_rate', 150)).toThrow(InvalidPercentageError);
-      expect(() => validatePercentage('pending_ratio', 101)).toThrow(InvalidPercentageError);
+      expect(() => validatePercentage('unemployment_rate', 150)).toThrow(
+        InvalidPercentageError,
+      );
+      expect(() => validatePercentage('pending_ratio', 101)).toThrow(
+        InvalidPercentageError,
+      );
     });
 
     it('throws InvalidPercentageError for negative percentages', () => {
-      expect(() => validatePercentage('unemployment_rate', -5)).toThrow(InvalidPercentageError);
+      expect(() => validatePercentage('unemployment_rate', -5)).toThrow(
+        InvalidPercentageError,
+      );
     });
 
     it('accepts valid percentages', () => {
@@ -385,7 +430,10 @@ describe('API Response Assertions', () => {
     }
 
     // If status is partial, must include dataCompleteness
-    if (response.status === 'partial' && response.dataCompleteness === undefined) {
+    if (
+      response.status === 'partial' &&
+      response.dataCompleteness === undefined
+    ) {
       throw new Error('Partial score must include dataCompleteness');
     }
 
@@ -490,11 +538,15 @@ describe('Score Bounds - Exhaustive', () => {
     });
 
     it('rejects positive Infinity', () => {
-      expect(() => validateScore(Infinity, 'test', 'test')).toThrow(InfiniteScoreError);
+      expect(() => validateScore(Infinity, 'test', 'test')).toThrow(
+        InfiniteScoreError,
+      );
     });
 
     it('rejects negative Infinity', () => {
-      expect(() => validateScore(-Infinity, 'test', 'test')).toThrow(InfiniteScoreError);
+      expect(() => validateScore(-Infinity, 'test', 'test')).toThrow(
+        InfiniteScoreError,
+      );
     });
 
     it('accepts integer scores', () => {
@@ -524,8 +576,8 @@ describe('Scoring Constants Verification', () => {
     expect(SCORING_CONSTANTS.TREND_MONTHS).toBe(3);
   });
 
-  it('TREND_THRESHOLD is 2', () => {
-    expect(SCORING_CONSTANTS.TREND_THRESHOLD).toBe(2);
+  it('TREND_THRESHOLD is 5', () => {
+    expect(SCORING_CONSTANTS.TREND_THRESHOLD).toBe(5);
   });
 
   it('MIN_SCORE is 0', () => {

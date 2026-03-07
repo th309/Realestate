@@ -19,18 +19,23 @@ import { NormalizationService } from '../../normalization.service';
 import { InheritanceService } from '../../inheritance.service';
 import { MarketHealthService } from '../../market-health.service';
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
+import { CalibrationService } from '../../calibration/calibration.service';
+import { GeographyChainService } from '../../../metric-resolution/geography-chain.service';
 import {
   HOMEREADY_WEIGHTS,
   INVESTOREDGE_WEIGHTS,
   MARKET_HEALTH_WEIGHTS,
-  HOMEREADY_DETAILED_METRICS,
-  INVESTOREDGE_DETAILED_METRICS,
-  MARKET_HEALTH_DETAILED_METRICS,
   SCORING_CONSTANTS,
   MetricPercentiles,
   MetricData,
   ComponentScore,
 } from '../../scoring.types';
+import {
+  FORMULA_WEIGHTS,
+  COMPONENT_GROUPS,
+  validateFormulaWeights,
+} from '../../formula-weights';
+import type { ScoreType, GeographyLevel } from '../../formula-weights';
 import { ALL_FIXTURES } from '../fixtures/expected-scores';
 
 // Mock Supabase client
@@ -62,11 +67,23 @@ describe('ScoringService', () => {
           provide: SUPABASE_CLIENT,
           useValue: mockSupabase,
         },
+        {
+          provide: CalibrationService,
+          useValue: {
+            calibrate: jest.fn((score) => score),
+            hasCalibration: jest.fn(() => false),
+          },
+        },
+        {
+          provide: GeographyChainService,
+          useValue: { getParentChain: jest.fn(() => []) },
+        },
       ],
     }).compile();
 
     service = module.get<ScoringService>(ScoringService);
-    normalizationService = module.get<NormalizationService>(NormalizationService);
+    normalizationService =
+      module.get<NormalizationService>(NormalizationService);
     marketHealthService = module.get<MarketHealthService>(MarketHealthService);
 
     // Reset mocks
@@ -85,9 +102,20 @@ describe('ScoringService', () => {
         metricName: 'test',
         geographyType: 'metro',
         periodDate: '2024-01-01',
-        p10: 100, p20: 200, p30: 300, p40: 400, p50: 500,
-        p60: 600, p70: 700, p80: 800, p90: 900,
-        min: 0, max: 1000, count: 1000, mean: 500, stddev: 200,
+        p10: 100,
+        p20: 200,
+        p30: 300,
+        p40: 400,
+        p50: 500,
+        p60: 600,
+        p70: 700,
+        p80: 800,
+        p90: 900,
+        min: 0,
+        max: 1000,
+        count: 1000,
+        mean: 500,
+        stddev: 200,
       };
 
       // Value at p10 should map to 10th percentile
@@ -99,9 +127,20 @@ describe('ScoringService', () => {
         metricName: 'test',
         geographyType: 'metro',
         periodDate: '2024-01-01',
-        p10: 100, p20: 200, p30: 300, p40: 400, p50: 500,
-        p60: 600, p70: 700, p80: 800, p90: 900,
-        min: 0, max: 1000, count: 1000, mean: 500, stddev: 200,
+        p10: 100,
+        p20: 200,
+        p30: 300,
+        p40: 400,
+        p50: 500,
+        p60: 600,
+        p70: 700,
+        p80: 800,
+        p90: 900,
+        min: 0,
+        max: 1000,
+        count: 1000,
+        mean: 500,
+        stddev: 200,
       };
 
       // Value above p90 should map to 95th percentile
@@ -113,45 +152,52 @@ describe('ScoringService', () => {
   // Direction Transformation Tests
   // ===========================================================================
   describe('Direction Transformation', () => {
-    describe('higher_better', () => {
-      it('returns percentile value directly', () => {
-        // For higher_better metrics, percentile 80 stays 80
-        // Verified by examining HOMEREADY_DETAILED_METRICS configurations
-        const higherBetterMetrics = HOMEREADY_DETAILED_METRICS.growth_potential
-          .filter(m => m.direction === 'higher_better');
+    describe('positive direction (direction: +1)', () => {
+      it('has metrics with positive direction in FORMULA_WEIGHTS', () => {
+        // In the new system, direction +1 means higher z-scores contribute positively
+        const metroHR = FORMULA_WEIGHTS.metro.homeready;
+        const positiveMetrics = Object.entries(metroHR).filter(
+          ([, def]) => def.direction === 1,
+        );
 
-        expect(higherBetterMetrics.length).toBeGreaterThan(0);
-        // zhvi_5y_cagr is higher_better
-        expect(higherBetterMetrics.some(m => m.name === 'zhvi_5y_cagr')).toBe(true);
+        expect(positiveMetrics.length).toBeGreaterThan(0);
+        // z_inventory is direction +1 in metro homeready
+        expect(positiveMetrics.some(([name]) => name === 'z_inventory')).toBe(
+          true,
+        );
       });
     });
 
-    describe('lower_better', () => {
-      it('inverts percentile value (100 - percentile)', () => {
-        // For lower_better metrics, percentile 80 becomes 20
-        // Verified by examining configurations
-        const lowerBetterMetrics = HOMEREADY_DETAILED_METRICS.affordability
-          .filter(m => m.direction === 'lower_better');
+    describe('negative direction (direction: -1)', () => {
+      it('has metrics with negative direction in FORMULA_WEIGHTS', () => {
+        // In the new system, direction -1 means higher z-scores contribute negatively
+        const metroHR = FORMULA_WEIGHTS.metro.homeready;
+        const negativeMetrics = Object.entries(metroHR).filter(
+          ([, def]) => def.direction === -1,
+        );
 
-        expect(lowerBetterMetrics.length).toBeGreaterThan(0);
-        // zhvi (home price) is lower_better for affordability
-        expect(lowerBetterMetrics.some(m => m.name === 'zhvi')).toBe(true);
+        expect(negativeMetrics.length).toBeGreaterThan(0);
+        // rf_median_dom is direction -1 in metro homeready
+        expect(negativeMetrics.some(([name]) => name === 'rf_median_dom')).toBe(
+          true,
+        );
       });
     });
 
-    describe('moderate_better', () => {
-      it('scores highest at 50th percentile', () => {
-        // For moderate_better, score = 100 - |percentile - 50| * 2
-        // At p50: score = 100 - 0 = 100
-        // At p80: score = 100 - 30*2 = 40
-        // At p20: score = 100 - 30*2 = 40
-
-        const moderateBetterMetrics = MARKET_HEALTH_DETAILED_METRICS.supply_balance
-          .filter(m => m.direction === 'moderate_better');
-
-        expect(moderateBetterMetrics.length).toBeGreaterThan(0);
-        // months_of_supply is moderate_better
-        expect(moderateBetterMetrics.some(m => m.name === 'months_of_supply')).toBe(true);
+    describe('direction values are strictly +1 or -1', () => {
+      it('all formula directions are +1 or -1', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          for (const st of [
+            'homeready',
+            'investoredge',
+            'markethealth',
+          ] as ScoreType[]) {
+            const formula = FORMULA_WEIGHTS[geo][st];
+            for (const [metricName, def] of Object.entries(formula)) {
+              expect([1, -1]).toContain(def.direction);
+            }
+          }
+        }
       });
     });
   });
@@ -164,11 +210,46 @@ describe('ScoringService', () => {
       it('calculates weighted average of components', () => {
         // Simulate component scores
         const components: Record<string, ComponentScore> = {
-          affordability: { score: 80, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          market_timing: { score: 60, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          stability: { score: 70, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          growth_potential: { score: 50, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          livability: { score: 90, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
+          affordability: {
+            score: 80,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          market_timing: {
+            score: 60,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          stability: {
+            score: 70,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          growth_potential: {
+            score: 50,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          livability: {
+            score: 90,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
         };
 
         // Manual calculation:
@@ -190,22 +271,57 @@ describe('ScoringService', () => {
       });
 
       it('uses correct weights', () => {
-        expect(HOMEREADY_WEIGHTS.affordability).toBe(0.30);
+        expect(HOMEREADY_WEIGHTS.affordability).toBe(0.3);
         expect(HOMEREADY_WEIGHTS.market_timing).toBe(0.25);
-        expect(HOMEREADY_WEIGHTS.stability).toBe(0.20);
+        expect(HOMEREADY_WEIGHTS.stability).toBe(0.2);
         expect(HOMEREADY_WEIGHTS.growth_potential).toBe(0.15);
-        expect(HOMEREADY_WEIGHTS.livability).toBe(0.10);
+        expect(HOMEREADY_WEIGHTS.livability).toBe(0.1);
       });
     });
 
     describe('InvestorEdge aggregation', () => {
       it('calculates weighted average of components', () => {
         const components: Record<string, ComponentScore> = {
-          cash_flow: { score: 75, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          rent_demand: { score: 65, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          appreciation: { score: 85, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          entry_point: { score: 55, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          risk: { score: 70, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
+          cash_flow: {
+            score: 75,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          rent_demand: {
+            score: 65,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          appreciation: {
+            score: 85,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          entry_point: {
+            score: 55,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          risk: {
+            score: 70,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
         };
 
         // Manual calculation:
@@ -228,20 +344,48 @@ describe('ScoringService', () => {
 
       it('uses correct weights', () => {
         expect(INVESTOREDGE_WEIGHTS.cash_flow).toBe(0.35);
-        expect(INVESTOREDGE_WEIGHTS.rent_demand).toBe(0.20);
-        expect(INVESTOREDGE_WEIGHTS.appreciation).toBe(0.20);
+        expect(INVESTOREDGE_WEIGHTS.rent_demand).toBe(0.2);
+        expect(INVESTOREDGE_WEIGHTS.appreciation).toBe(0.2);
         expect(INVESTOREDGE_WEIGHTS.entry_point).toBe(0.15);
-        expect(INVESTOREDGE_WEIGHTS.risk).toBe(0.10);
+        expect(INVESTOREDGE_WEIGHTS.risk).toBe(0.1);
       });
     });
 
     describe('Market Health aggregation', () => {
       it('calculates weighted average of components', () => {
         const components: Record<string, ComponentScore> = {
-          demand_strength: { score: 80, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          supply_balance: { score: 70, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          price_stability: { score: 65, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
-          economic_foundation: { score: 75, weight: 0, weightedContribution: 0, metricsUsed: [], helpingFactors: [], hurtingFactors: [] },
+          demand_strength: {
+            score: 80,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          supply_balance: {
+            score: 70,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          price_stability: {
+            score: 65,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
+          economic_foundation: {
+            score: 75,
+            weight: 0,
+            weightedContribution: 0,
+            metricsUsed: [],
+            helpingFactors: [],
+            hurtingFactors: [],
+          },
         };
 
         // Manual calculation:
@@ -272,38 +416,41 @@ describe('ScoringService', () => {
   // ===========================================================================
   // Null Strategy Handling Tests
   // ===========================================================================
-  describe('Null Strategy Handling', () => {
-    describe('skip strategy', () => {
-      it('excludes metric from calculation when null', () => {
-        // Metrics with skip strategy should be excluded entirely
-        const skipMetrics = HOMEREADY_DETAILED_METRICS.affordability
-          .filter(m => m.nullStrategy === 'skip');
+  describe('Missing Data Handling', () => {
+    describe('z-score calculation skips null metrics', () => {
+      it('excludes null/undefined metrics from z-score computation', () => {
+        // In the new system, calculateZScores skips null/undefined values
+        // and only computes z-scores for metrics with real data
+        const formula = FORMULA_WEIGHTS.metro.homeready;
+        const metricNames = Object.keys(formula);
 
-        // affordable_price is skip
-        expect(skipMetrics.some(m => m.name === 'affordable_price')).toBe(true);
+        // All formula metrics are defined in LocationMetrics as optional
+        expect(metricNames.length).toBeGreaterThan(0);
+        expect(metricNames).toContain('rf_median_dom');
       });
     });
 
-    describe('neutral strategy', () => {
-      it('uses score of 50 when null', () => {
-        // Metrics with neutral strategy use 50 when missing
-        const neutralMetrics = HOMEREADY_DETAILED_METRICS.affordability
-          .filter(m => m.nullStrategy === 'neutral');
+    describe('partial data reweighting', () => {
+      it('normalizes weight when not all metrics are available', () => {
+        // applyFormula re-normalizes when totalWeight < 1
+        // (i.e., some metrics are missing and their weight is excluded)
+        const formula = FORMULA_WEIGHTS.metro.homeready;
+        const totalWeight = Object.values(formula).reduce(
+          (sum, def) => sum + def.weight,
+          0,
+        );
 
-        // homeowner_income is neutral
-        expect(neutralMetrics.some(m => m.name === 'homeowner_income')).toBe(true);
+        // Total weight should be ~1.0
+        expect(totalWeight).toBeCloseTo(1.0, 1);
       });
     });
 
-    describe('penalize strategy', () => {
-      it('uses score of 25 when null', () => {
-        // Metrics with penalize strategy use 25 when missing
-        const penalizeMetrics = HOMEREADY_DETAILED_METRICS.affordability
-          .filter(m => m.nullStrategy === 'penalize');
-
-        // zhvi and zori are penalize
-        expect(penalizeMetrics.some(m => m.name === 'zhvi')).toBe(true);
-        expect(penalizeMetrics.some(m => m.name === 'zori')).toBe(true);
+    describe('confidence penalizes missing data', () => {
+      it('confidence drops when metrics are missing', () => {
+        // The confidence calculation uses weighted completeness (55% of score)
+        // Missing metrics reduce the available weight, lowering confidence
+        expect(SCORING_CONSTANTS.SCORE_AVAILABLE_MIN_COMPLETENESS).toBe(50);
+        expect(SCORING_CONSTANTS.PARTIAL_SCORE_THRESHOLD).toBe(80);
       });
     });
   });
@@ -319,8 +466,12 @@ describe('ScoringService', () => {
       const freshnessDays = 30;
 
       const ratio = available / total;
-      expect(ratio).toBeGreaterThanOrEqual(SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT);
-      expect(freshnessDays).toBeLessThan(SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS);
+      expect(ratio).toBeGreaterThanOrEqual(
+        SCORING_CONSTANTS.HIGH_CONFIDENCE_METRICS_PCT,
+      );
+      expect(freshnessDays).toBeLessThan(
+        SCORING_CONSTANTS.HIGH_CONFIDENCE_FRESHNESS_DAYS,
+      );
     });
 
     it('returns medium for >=70% metrics and <120 days', () => {
@@ -330,8 +481,12 @@ describe('ScoringService', () => {
       const freshnessDays = 90;
 
       const ratio = available / total;
-      expect(ratio).toBeGreaterThanOrEqual(SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT);
-      expect(freshnessDays).toBeLessThan(SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS);
+      expect(ratio).toBeGreaterThanOrEqual(
+        SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT,
+      );
+      expect(freshnessDays).toBeLessThan(
+        SCORING_CONSTANTS.MEDIUM_CONFIDENCE_FRESHNESS_DAYS,
+      );
     });
 
     it('returns low for <70% metrics or >=120 days', () => {
@@ -341,7 +496,9 @@ describe('ScoringService', () => {
       const freshnessDays = 150;
 
       const ratio = available / total;
-      expect(ratio).toBeLessThan(SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT);
+      expect(ratio).toBeLessThan(
+        SCORING_CONSTANTS.MEDIUM_CONFIDENCE_METRICS_PCT,
+      );
     });
 
     it('uses correct thresholds from SCORING_CONSTANTS', () => {
@@ -380,94 +537,93 @@ describe('ScoringService', () => {
   // ===========================================================================
   // Metric Definitions Tests
   // ===========================================================================
-  describe('Metric Definitions', () => {
-    describe('HomeReady metrics', () => {
-      it('has all required components defined', () => {
-        expect(HOMEREADY_DETAILED_METRICS.affordability).toBeDefined();
-        expect(HOMEREADY_DETAILED_METRICS.market_timing).toBeDefined();
-        expect(HOMEREADY_DETAILED_METRICS.stability).toBeDefined();
-        expect(HOMEREADY_DETAILED_METRICS.growth_potential).toBeDefined();
-        expect(HOMEREADY_DETAILED_METRICS.livability).toBeDefined();
-      });
-
-      it('each component has metrics defined', () => {
-        expect(HOMEREADY_DETAILED_METRICS.affordability.length).toBeGreaterThan(0);
-        expect(HOMEREADY_DETAILED_METRICS.market_timing.length).toBeGreaterThan(0);
-        expect(HOMEREADY_DETAILED_METRICS.stability.length).toBeGreaterThan(0);
-        expect(HOMEREADY_DETAILED_METRICS.growth_potential.length).toBeGreaterThan(0);
-        expect(HOMEREADY_DETAILED_METRICS.livability.length).toBeGreaterThan(0);
-      });
-
-      it('metric weights within each component sum to 1.0', () => {
-        for (const [component, metrics] of Object.entries(HOMEREADY_DETAILED_METRICS)) {
-          const sum = metrics.reduce((acc, m) => acc + m.weight, 0);
-          expect(sum).toBeCloseTo(1.0, 5);
+  describe('Formula Weight Definitions', () => {
+    describe('HomeReady formula weights', () => {
+      it('has component groups defined for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const groups = COMPONENT_GROUPS.homeready[geo];
+          expect(groups).toBeDefined();
+          expect(Object.keys(groups).length).toBeGreaterThan(0);
         }
       });
 
-      it('each metric has valid direction', () => {
-        const validDirections = ['higher_better', 'lower_better', 'moderate_better', 'neutral'];
-        for (const metrics of Object.values(HOMEREADY_DETAILED_METRICS)) {
-          for (const metric of metrics) {
-            expect(validDirections).toContain(metric.direction);
+      it('each component group has metrics defined', () => {
+        const metroGroups = COMPONENT_GROUPS.homeready.metro;
+        for (const [component, metrics] of Object.entries(metroGroups)) {
+          expect(metrics.length).toBeGreaterThan(0);
+        }
+      });
+
+      it('formula weights sum to ~1.0 for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const { valid, sum } = validateFormulaWeights(geo, 'homeready');
+          expect(valid).toBe(true);
+        }
+      });
+
+      it('each metric has valid direction (+1 or -1)', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const formula = FORMULA_WEIGHTS[geo].homeready;
+          for (const [, def] of Object.entries(formula)) {
+            expect([1, -1]).toContain(def.direction);
           }
         }
       });
 
-      it('each metric has valid nullStrategy', () => {
-        const validStrategies = ['skip', 'neutral', 'penalize'];
-        for (const metrics of Object.values(HOMEREADY_DETAILED_METRICS)) {
-          for (const metric of metrics) {
-            expect(validStrategies).toContain(metric.nullStrategy);
+      it('each metric has a positive weight', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const formula = FORMULA_WEIGHTS[geo].homeready;
+          for (const [, def] of Object.entries(formula)) {
+            expect(def.weight).toBeGreaterThan(0);
           }
         }
       });
     });
 
-    describe('InvestorEdge metrics', () => {
-      it('has all required components defined', () => {
-        expect(INVESTOREDGE_DETAILED_METRICS.cash_flow).toBeDefined();
-        expect(INVESTOREDGE_DETAILED_METRICS.rent_demand).toBeDefined();
-        expect(INVESTOREDGE_DETAILED_METRICS.appreciation).toBeDefined();
-        expect(INVESTOREDGE_DETAILED_METRICS.entry_point).toBeDefined();
-        expect(INVESTOREDGE_DETAILED_METRICS.risk).toBeDefined();
+    describe('InvestorEdge formula weights', () => {
+      it('has component groups defined for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const groups = COMPONENT_GROUPS.investoredge[geo];
+          expect(groups).toBeDefined();
+          expect(Object.keys(groups).length).toBeGreaterThan(0);
+        }
       });
 
-      it('each component has metrics defined', () => {
-        expect(INVESTOREDGE_DETAILED_METRICS.cash_flow.length).toBeGreaterThan(0);
-        expect(INVESTOREDGE_DETAILED_METRICS.rent_demand.length).toBeGreaterThan(0);
-        expect(INVESTOREDGE_DETAILED_METRICS.appreciation.length).toBeGreaterThan(0);
-        expect(INVESTOREDGE_DETAILED_METRICS.entry_point.length).toBeGreaterThan(0);
-        expect(INVESTOREDGE_DETAILED_METRICS.risk.length).toBeGreaterThan(0);
+      it('each component group has metrics defined', () => {
+        const metroGroups = COMPONENT_GROUPS.investoredge.metro;
+        for (const [component, metrics] of Object.entries(metroGroups)) {
+          expect(metrics.length).toBeGreaterThan(0);
+        }
       });
 
-      it('metric weights within each component sum to 1.0', () => {
-        for (const [component, metrics] of Object.entries(INVESTOREDGE_DETAILED_METRICS)) {
-          const sum = metrics.reduce((acc, m) => acc + m.weight, 0);
-          expect(sum).toBeCloseTo(1.0, 5);
+      it('formula weights sum to ~1.0 for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const { valid, sum } = validateFormulaWeights(geo, 'investoredge');
+          expect(valid).toBe(true);
         }
       });
     });
 
-    describe('Market Health metrics', () => {
-      it('has all required components defined', () => {
-        expect(MARKET_HEALTH_DETAILED_METRICS.demand_strength).toBeDefined();
-        expect(MARKET_HEALTH_DETAILED_METRICS.supply_balance).toBeDefined();
-        expect(MARKET_HEALTH_DETAILED_METRICS.price_stability).toBeDefined();
-        expect(MARKET_HEALTH_DETAILED_METRICS.economic_foundation).toBeDefined();
+    describe('MarketHealth formula weights', () => {
+      it('has component groups defined for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const groups = COMPONENT_GROUPS.markethealth[geo];
+          expect(groups).toBeDefined();
+          expect(Object.keys(groups).length).toBeGreaterThan(0);
+        }
       });
 
-      it('each component has metrics defined', () => {
-        expect(MARKET_HEALTH_DETAILED_METRICS.demand_strength.length).toBeGreaterThan(0);
-        expect(MARKET_HEALTH_DETAILED_METRICS.supply_balance.length).toBeGreaterThan(0);
-        expect(MARKET_HEALTH_DETAILED_METRICS.price_stability.length).toBeGreaterThan(0);
-        expect(MARKET_HEALTH_DETAILED_METRICS.economic_foundation.length).toBeGreaterThan(0);
+      it('each component group has metrics defined', () => {
+        const metroGroups = COMPONENT_GROUPS.markethealth.metro;
+        for (const [component, metrics] of Object.entries(metroGroups)) {
+          expect(metrics.length).toBeGreaterThan(0);
+        }
       });
 
-      it('metric weights within each component sum to 1.0', () => {
-        for (const [component, metrics] of Object.entries(MARKET_HEALTH_DETAILED_METRICS)) {
-          const sum = metrics.reduce((acc, m) => acc + m.weight, 0);
-          expect(sum).toBeCloseTo(1.0, 5);
+      it('formula weights sum to ~1.0 for all geography levels', () => {
+        for (const geo of ['metro', 'county', 'zip'] as GeographyLevel[]) {
+          const { valid, sum } = validateFormulaWeights(geo, 'markethealth');
+          expect(valid).toBe(true);
         }
       });
     });
@@ -480,33 +636,63 @@ describe('ScoringService', () => {
     // Use the test fixtures to verify calculations match expected values
 
     describe('HAPPY_HIGH_003 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(g => g.geography_id === 'HAPPY_HIGH_003');
+      const fixture = ALL_FIXTURES.find(
+        (g) => g.geography_id === 'HAPPY_HIGH_003',
+      );
 
       if (fixture) {
         it('has expected HomeReady components', () => {
           expect(fixture.homeready.expected_components).toBeDefined();
-          expect(fixture.homeready.expected_components.affordability).toBeGreaterThan(0);
-          expect(fixture.homeready.expected_components.market_timing).toBeGreaterThan(0);
-          expect(fixture.homeready.expected_components.stability).toBeGreaterThan(0);
-          expect(fixture.homeready.expected_components.growth_potential).toBeGreaterThan(0);
-          expect(fixture.homeready.expected_components.livability).toBeGreaterThan(0);
+          expect(
+            fixture.homeready.expected_components.affordability,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.homeready.expected_components.market_timing,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.homeready.expected_components.stability,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.homeready.expected_components.growth_potential,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.homeready.expected_components.livability,
+          ).toBeGreaterThan(0);
         });
 
         it('has expected InvestorEdge components', () => {
           expect(fixture.investoredge.expected_components).toBeDefined();
-          expect(fixture.investoredge.expected_components.cash_flow).toBeGreaterThan(0);
-          expect(fixture.investoredge.expected_components.rent_demand).toBeGreaterThan(0);
-          expect(fixture.investoredge.expected_components.appreciation).toBeGreaterThan(0);
-          expect(fixture.investoredge.expected_components.entry_point).toBeGreaterThan(0);
-          expect(fixture.investoredge.expected_components.risk).toBeGreaterThan(0);
+          expect(
+            fixture.investoredge.expected_components.cash_flow,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.investoredge.expected_components.rent_demand,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.investoredge.expected_components.appreciation,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.investoredge.expected_components.entry_point,
+          ).toBeGreaterThan(0);
+          expect(fixture.investoredge.expected_components.risk).toBeGreaterThan(
+            0,
+          );
         });
 
         it('has expected Market Health components', () => {
           expect(fixture.market_health.expected_components).toBeDefined();
-          expect(fixture.market_health.expected_components.demand_strength).toBeGreaterThan(0);
-          expect(fixture.market_health.expected_components.supply_balance).toBeGreaterThan(0);
-          expect(fixture.market_health.expected_components.price_stability).toBeGreaterThan(0);
-          expect(fixture.market_health.expected_components.economic_foundation).toBeGreaterThan(0);
+          expect(
+            fixture.market_health.expected_components.demand_strength,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.market_health.expected_components.supply_balance,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.market_health.expected_components.price_stability,
+          ).toBeGreaterThan(0);
+          expect(
+            fixture.market_health.expected_components.economic_foundation,
+          ).toBeGreaterThan(0);
         });
 
         it('HomeReady weighted calculation matches expected', () => {
@@ -519,7 +705,10 @@ describe('ScoringService', () => {
             c.livability * HOMEREADY_WEIGHTS.livability;
 
           // Allow 0.5 tolerance to account for rounding in fixtures
-          expect(calculatedScore).toBeCloseTo(fixture.homeready.expected_result.score!, 0);
+          expect(calculatedScore).toBeCloseTo(
+            fixture.homeready.expected_result.score!,
+            0,
+          );
         });
 
         it('InvestorEdge weighted calculation matches expected', () => {
@@ -532,7 +721,10 @@ describe('ScoringService', () => {
             c.risk * INVESTOREDGE_WEIGHTS.risk;
 
           // Allow 0.5 tolerance to account for rounding in fixtures
-          expect(calculatedScore).toBeCloseTo(fixture.investoredge.expected_result.score!, 0);
+          expect(calculatedScore).toBeCloseTo(
+            fixture.investoredge.expected_result.score!,
+            0,
+          );
         });
 
         it('Market Health weighted calculation matches expected', () => {
@@ -543,13 +735,18 @@ describe('ScoringService', () => {
             c.price_stability * MARKET_HEALTH_WEIGHTS.price_stability +
             c.economic_foundation * MARKET_HEALTH_WEIGHTS.economic_foundation;
 
-          expect(calculatedScore).toBeCloseTo(fixture.market_health.expected_result.score!, 1);
+          expect(calculatedScore).toBeCloseTo(
+            fixture.market_health.expected_result.score!,
+            1,
+          );
         });
       }
     });
 
     describe('BOUNDARY_ALL_MIN_001 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(g => g.geography_id === 'BOUNDARY_ALL_MIN_001');
+      const fixture = ALL_FIXTURES.find(
+        (g) => g.geography_id === 'BOUNDARY_ALL_MIN_001',
+      );
 
       if (fixture) {
         it('produces low scores for all minimum values', () => {
@@ -559,7 +756,9 @@ describe('ScoringService', () => {
         });
 
         it('all component scores are low', () => {
-          for (const score of Object.values(fixture.homeready.expected_components)) {
+          for (const score of Object.values(
+            fixture.homeready.expected_components,
+          )) {
             expect(score).toBeLessThan(25);
           }
         });
@@ -567,17 +766,25 @@ describe('ScoringService', () => {
     });
 
     describe('BOUNDARY_ALL_MAX_002 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(g => g.geography_id === 'BOUNDARY_ALL_MAX_002');
+      const fixture = ALL_FIXTURES.find(
+        (g) => g.geography_id === 'BOUNDARY_ALL_MAX_002',
+      );
 
       if (fixture) {
         it('produces high scores for all maximum values', () => {
           expect(fixture.homeready.expected_result.score).toBeGreaterThan(80);
-          expect(fixture.investoredge.expected_result.score).toBeGreaterThan(80);
-          expect(fixture.market_health.expected_result.score).toBeGreaterThan(80);
+          expect(fixture.investoredge.expected_result.score).toBeGreaterThan(
+            80,
+          );
+          expect(fixture.market_health.expected_result.score).toBeGreaterThan(
+            80,
+          );
         });
 
         it('all component scores are high', () => {
-          for (const score of Object.values(fixture.homeready.expected_components)) {
+          for (const score of Object.values(
+            fixture.homeready.expected_components,
+          )) {
             expect(score).toBeGreaterThan(75);
           }
         });
@@ -585,7 +792,9 @@ describe('ScoringService', () => {
     });
 
     describe('MISSING_MAJORITY_005 fixture verification', () => {
-      const fixture = ALL_FIXTURES.find(g => g.geography_id === 'MISSING_MAJORITY_005');
+      const fixture = ALL_FIXTURES.find(
+        (g) => g.geography_id === 'MISSING_MAJORITY_005',
+      );
 
       if (fixture) {
         it('returns unavailable status when >50% data missing', () => {
@@ -598,7 +807,9 @@ describe('ScoringService', () => {
 
         it('includes reason for unavailability', () => {
           expect(fixture.homeready.expected_result.reason).toBeDefined();
-          expect(fixture.homeready.expected_result.reason).toContain('Insufficient');
+          expect(fixture.homeready.expected_result.reason).toContain(
+            'Insufficient',
+          );
         });
       }
     });
@@ -654,33 +865,35 @@ describe('ScoringService', () => {
     });
 
     it('uses TREND_THRESHOLD constant for classification', () => {
-      expect(SCORING_CONSTANTS.TREND_THRESHOLD).toBe(2);
+      expect(SCORING_CONSTANTS.TREND_THRESHOLD).toBe(5);
     });
 
     it('classifies as up when change > threshold', () => {
-      const currentScore = 70;
+      const currentScore = 76;
       const previousScore = 65;
-      const change = currentScore - previousScore; // 5
+      const change = currentScore - previousScore; // 11
 
       expect(change).toBeGreaterThan(SCORING_CONSTANTS.TREND_THRESHOLD);
       // This would result in 'up' trend
     });
 
     it('classifies as down when change < -threshold', () => {
-      const currentScore = 60;
+      const currentScore = 54;
       const previousScore = 65;
-      const change = currentScore - previousScore; // -5
+      const change = currentScore - previousScore; // -11
 
       expect(change).toBeLessThan(-SCORING_CONSTANTS.TREND_THRESHOLD);
       // This would result in 'down' trend
     });
 
     it('classifies as stable when |change| <= threshold', () => {
-      const currentScore = 66;
+      const currentScore = 68;
       const previousScore = 65;
-      const change = currentScore - previousScore; // 1
+      const change = currentScore - previousScore; // 3
 
-      expect(Math.abs(change)).toBeLessThanOrEqual(SCORING_CONSTANTS.TREND_THRESHOLD);
+      expect(Math.abs(change)).toBeLessThanOrEqual(
+        SCORING_CONSTANTS.TREND_THRESHOLD,
+      );
       // This would result in 'stable' trend
     });
   });

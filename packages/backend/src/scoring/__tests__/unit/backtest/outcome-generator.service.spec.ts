@@ -3,48 +3,47 @@
  *
  * Tests outcome generation for backtesting - comparing what scores
  * predicted vs what actually happened.
+ *
+ * Updated to match the refactored service which delegates data access
+ * to OutcomeDataSourceService, OutcomeBenchmarkService, and others.
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { OutcomeGeneratorService } from '../../../backtest/outcome-generator.service';
 import { OutcomeDataSourceService } from '../../../backtest/outcome-data-source.service';
 import { OutcomeBenchmarkService } from '../../../backtest/outcome-benchmark.service';
-import { OutcomeCacheService } from '../../../backtest/outcome-cache.service';
-import { OutcomeDbFallbackService } from '../../../backtest/outcome-db-fallback.service';
-import type {
-  OutcomeRecord,
-  OutcomeMetrics,
-} from '../../../backtest/outcome-generator.types';
+import type { OutcomeRecord } from '../../../backtest/outcome-generator.types';
 import { SupabaseService } from '../../../../supabase/supabase.service';
 
 describe('OutcomeGeneratorService', () => {
   let service: OutcomeGeneratorService;
+  let mockDataSource: jest.Mocked<OutcomeDataSourceService>;
+  let mockBenchmarkService: jest.Mocked<OutcomeBenchmarkService>;
   let mockSupabaseService: jest.Mocked<SupabaseService>;
 
   beforeEach(async () => {
+    mockDataSource = {
+      getHistoricalScore: jest.fn().mockResolvedValue(null),
+      getHistoricalData: jest.fn().mockResolvedValue(null),
+      getGeographiesWithScores: jest.fn().mockResolvedValue([]),
+      getStateCode: jest.fn().mockResolvedValue(null),
+      getBenchmarkData: jest.fn().mockResolvedValue(null),
+    } as unknown as jest.Mocked<OutcomeDataSourceService>;
+
+    mockBenchmarkService = {
+      calculateBenchmarkReturns: jest.fn().mockResolvedValue({}),
+    } as unknown as jest.Mocked<OutcomeBenchmarkService>;
+
     mockSupabaseService = {
       getClient: jest.fn(),
     } as unknown as jest.Mocked<SupabaseService>;
 
-    // Mock cache: all lookups return undefined (not preloaded) to exercise DB paths
-    const mockCache = {
-      lookupHistorical: jest.fn().mockReturnValue(undefined),
-      lookupBenchmark: jest.fn().mockReturnValue(undefined),
-      lookupRedfin: jest.fn().mockReturnValue(undefined),
-      lookupRealtor: jest.fn().mockReturnValue(undefined),
-      historicalCache: new Map(),
-      benchmarkCache: new Map(),
-      stateCodeCache: new Map(),
-    } as unknown as jest.Mocked<OutcomeCacheService>;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OutcomeGeneratorService,
-        OutcomeDataSourceService,
-        OutcomeBenchmarkService,
-        OutcomeDbFallbackService,
+        { provide: OutcomeDataSourceService, useValue: mockDataSource },
+        { provide: OutcomeBenchmarkService, useValue: mockBenchmarkService },
         { provide: SupabaseService, useValue: mockSupabaseService },
-        { provide: OutcomeCacheService, useValue: mockCache },
       ],
     }).compile();
 
@@ -52,82 +51,15 @@ describe('OutcomeGeneratorService', () => {
   });
 
   // ============================================================================
-  // Helper Functions
-  // ============================================================================
-
-  function setupMockSupabase(config: {
-    score?: number | null;
-    startZhvi?: number;
-    endZhvi?: Record<string, number>;
-    geographies?: Array<{ id: string }>;
-  }) {
-    const mockClient = {
-      from: jest.fn().mockImplementation((table: string) => {
-        if (table === 'propertyiq_scores') {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            single: jest.fn().mockResolvedValue({
-              data:
-                config.score !== undefined
-                  ? { homeready_score: config.score }
-                  : null,
-              error: null,
-            }),
-            not: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({
-              data: config.geographies || [],
-              error: null,
-            }),
-          };
-        }
-        if (table.startsWith('zillow_')) {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockImplementation(() => ({
-              then: jest.fn().mockImplementation((cb) => {
-                // Return different values based on date
-                return Promise.resolve(
-                  cb({
-                    data: config.startZhvi
-                      ? [{ period_date: '2022-01-01', value: config.startZhvi }]
-                      : [],
-                    error: null,
-                  }),
-                );
-              }),
-            })),
-          };
-        }
-        if (table === 'propertyiq_backtest_outcomes') {
-          return {
-            upsert: jest.fn().mockResolvedValue({ error: null }),
-          };
-        }
-        return {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: null, error: null }),
-        };
-      }),
-    };
-    mockSupabaseService.getClient.mockReturnValue(mockClient as any);
-    return mockClient;
-  }
-
-  // ============================================================================
   // generateOutcomes Tests
   // ============================================================================
 
   describe('generateOutcomes', () => {
     it('returns complete outcome record structure', async () => {
-      setupMockSupabase({
-        score: 75,
-        startZhvi: 400000,
-      });
+      mockDataSource.getHistoricalScore.mockResolvedValue(75);
+      mockDataSource.getHistoricalData.mockResolvedValue([
+        { date: '2022-01-01', zhvi: 400000 },
+      ]);
 
       const result = await service.generateOutcomes(
         'geo-123',
@@ -144,10 +76,10 @@ describe('OutcomeGeneratorService', () => {
     });
 
     it('fetches historical score at scoreDate', async () => {
-      setupMockSupabase({
-        score: 82.5,
-        startZhvi: 350000,
-      });
+      mockDataSource.getHistoricalScore.mockResolvedValue(82.5);
+      mockDataSource.getHistoricalData.mockResolvedValue([
+        { date: '2022-06-15', zhvi: 350000 },
+      ]);
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -160,10 +92,10 @@ describe('OutcomeGeneratorService', () => {
     });
 
     it('handles null score gracefully', async () => {
-      setupMockSupabase({
-        score: null,
-        startZhvi: 350000,
-      });
+      mockDataSource.getHistoricalScore.mockResolvedValue(null);
+      mockDataSource.getHistoricalData.mockResolvedValue([
+        { date: '2022-06-15', zhvi: 350000 },
+      ]);
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -176,10 +108,8 @@ describe('OutcomeGeneratorService', () => {
     });
 
     it('returns empty outcome when no historical data', async () => {
-      setupMockSupabase({
-        score: 75,
-        startZhvi: undefined, // No data
-      });
+      mockDataSource.getHistoricalScore.mockResolvedValue(75);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -192,44 +122,15 @@ describe('OutcomeGeneratorService', () => {
       expect(result.outcome1y).toBeUndefined();
     });
 
-    it('calculates outcomes for all requested horizons', async () => {
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 75 },
-                error: null,
-              }),
-            };
-          }
-          if (table.startsWith('zillow_')) {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              lte: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockImplementation(() => ({
-                then: jest.fn().mockImplementation((cb) =>
-                  Promise.resolve(
-                    cb({
-                      data: [{ period_date: '2022-01-01', value: 400000 }],
-                      error: null,
-                    }),
-                  ),
-                ),
-              })),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('calculates outcomes when start and future data available', async () => {
+      // Start data for the first call, then future data for subsequent calls
+      mockDataSource.getHistoricalData
+        .mockResolvedValueOnce([{ date: '2022-01-01', zhvi: 400000 }]) // start
+        .mockResolvedValueOnce([{ date: '2022-07-01', zhvi: 420000 }]) // 6m
+        .mockResolvedValueOnce([{ date: '2023-01-01', zhvi: 440000 }]) // 1y
+        .mockResolvedValueOnce([{ date: '2025-01-01', zhvi: 532400 }]) // 3y
+        .mockResolvedValueOnce([{ date: '2027-01-01', zhvi: 644204 }]); // 5y
+      mockDataSource.getHistoricalScore.mockResolvedValue(75);
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -239,56 +140,19 @@ describe('OutcomeGeneratorService', () => {
         ['6m', '1y', '3y', '5y'],
       );
 
-      // Service attempts to calculate for all horizons
-      // (actual values depend on future data availability)
       expect(result.geographyId).toBe('metro-123');
+      expect(result.outcome6m).toBeDefined();
+      expect(result.outcome1y).toBeDefined();
+      expect(result.outcome3y).toBeDefined();
+      expect(result.outcome5y).toBeDefined();
     });
 
     it('handles partial horizon data', async () => {
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 70 },
-                error: null,
-              }),
-            };
-          }
-          if (table.startsWith('zillow_')) {
-            // Only return data for some dates
-            let callCount = 0;
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              lte: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockImplementation(() => ({
-                then: jest.fn().mockImplementation((cb) => {
-                  callCount++;
-                  // First call (start date) returns data, others may not
-                  return Promise.resolve(
-                    cb({
-                      data:
-                        callCount <= 2
-                          ? [{ period_date: '2022-01-01', value: 400000 }]
-                          : [],
-                      error: null,
-                    }),
-                  );
-                }),
-              })),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      // Start data available, but only some future horizons
+      mockDataSource.getHistoricalData
+        .mockResolvedValueOnce([{ date: '2022-01-01', zhvi: 400000 }]) // start
+        .mockResolvedValueOnce([{ date: '2023-01-01', zhvi: 440000 }]); // 1y
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -299,6 +163,8 @@ describe('OutcomeGeneratorService', () => {
       );
 
       expect(result.geographyId).toBe('metro-123');
+      expect(result.outcome1y).toBeDefined();
+      expect(result.outcome1y!.priceChange).toBeCloseTo(10, 1);
     });
   });
 
@@ -308,41 +174,23 @@ describe('OutcomeGeneratorService', () => {
 
   describe('Outcome Date Calculation', () => {
     it('calculates 6m outcome date correctly', () => {
-      // Testing via the service
-      const scoreDate = '2022-01-15';
-      const expected6mDate = '2022-07-15';
-
-      // We can't test private methods directly, but we verify
-      // the behavior through generateOutcomes
-      expect(true).toBe(true); // Placeholder - date calculation tested via integration
+      // Testing via the service - date calculation tested via integration
+      expect(true).toBe(true);
     });
 
     it('calculates 1y outcome date correctly', () => {
-      const scoreDate = '2022-06-15';
-      const expected1yDate = '2023-06-15';
-
-      // Date calculation verified via integration tests
       expect(true).toBe(true);
     });
 
     it('calculates 3y outcome date correctly', () => {
-      const scoreDate = '2020-01-01';
-      const expected3yDate = '2023-01-01';
-
       expect(true).toBe(true);
     });
 
     it('calculates 5y outcome date correctly', () => {
-      const scoreDate = '2019-06-15';
-      const expected5yDate = '2024-06-15';
-
       expect(true).toBe(true);
     });
 
     it('handles leap year dates', () => {
-      // Feb 29 in leap year should roll to Feb 28 or Mar 1
-      const leapYearDate = '2020-02-29';
-
       expect(true).toBe(true);
     });
   });
@@ -354,7 +202,6 @@ describe('OutcomeGeneratorService', () => {
   describe('Outcome Metrics Calculation', () => {
     describe('Price Change', () => {
       it('calculates positive price change correctly', () => {
-        // Start: $400,000, End: $440,000 = +10%
         const startData = { date: '2022-01-01', zhvi: 400000 };
         const endData = { date: '2023-01-01', zhvi: 440000 };
 
@@ -363,7 +210,6 @@ describe('OutcomeGeneratorService', () => {
       });
 
       it('calculates negative price change correctly', () => {
-        // Start: $400,000, End: $360,000 = -10%
         const startData = { date: '2022-01-01', zhvi: 400000 };
         const endData = { date: '2023-01-01', zhvi: 360000 };
 
@@ -382,7 +228,6 @@ describe('OutcomeGeneratorService', () => {
 
     describe('CAGR Calculation', () => {
       it('calculates 1-year CAGR correctly', () => {
-        // 1-year: 10% growth = 10% CAGR
         const startValue = 400000;
         const endValue = 440000;
         const years = 1;
@@ -392,7 +237,6 @@ describe('OutcomeGeneratorService', () => {
       });
 
       it('calculates 3-year CAGR correctly', () => {
-        // 3-year: 33.1% total growth ≈ 10% CAGR
         const startValue = 400000;
         const endValue = 532400; // 400000 * 1.1^3
         const years = 3;
@@ -402,7 +246,6 @@ describe('OutcomeGeneratorService', () => {
       });
 
       it('calculates 5-year CAGR correctly', () => {
-        // 5-year: 61.05% total growth ≈ 10% CAGR
         const startValue = 400000;
         const endValue = 644204; // 400000 * 1.1^5
         const years = 5;
@@ -412,7 +255,6 @@ describe('OutcomeGeneratorService', () => {
       });
 
       it('handles negative CAGR', () => {
-        // 3-year: -27.1% total decline ≈ -10% CAGR
         const startValue = 400000;
         const endValue = 291600; // 400000 * 0.9^3
         const years = 3;
@@ -462,39 +304,13 @@ describe('OutcomeGeneratorService', () => {
   });
 
   // ============================================================================
-  // Score Column Mapping Tests
+  // Score lookup via DataSourceService Tests
   // ============================================================================
 
-  describe('Score Column Mapping', () => {
-    it('uses market_health_score for market_health type', async () => {
-      const selectCalls: string[] = [];
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockImplementation((col: string) => {
-                selectCalls.push(col);
-                return {
-                  eq: jest.fn().mockReturnThis(),
-                  single: jest.fn().mockResolvedValue({
-                    data: { market_health_score: 65 },
-                    error: null,
-                  }),
-                };
-              }),
-            };
-          }
-          // Zillow tables - return empty data to stop processing
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+  describe('Score lookup delegation', () => {
+    it('calls dataSource.getHistoricalScore with correct params', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(65);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'metro-123',
@@ -503,37 +319,17 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(selectCalls).toContain('market_health_score');
+      expect(mockDataSource.getHistoricalScore).toHaveBeenCalledWith(
+        'metro-123',
+        'metro',
+        'markethealth',
+        '2022-01-01',
+      );
     });
 
-    it('uses homeready_score for homeready type', async () => {
-      const selectCalls: string[] = [];
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockImplementation((col: string) => {
-                selectCalls.push(col);
-                return {
-                  eq: jest.fn().mockReturnThis(),
-                  single: jest.fn().mockResolvedValue({
-                    data: { homeready_score: 72 },
-                    error: null,
-                  }),
-                };
-              }),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('calls dataSource for homeready score type', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(72);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'metro-123',
@@ -542,37 +338,17 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(selectCalls).toContain('homeready_score');
+      expect(mockDataSource.getHistoricalScore).toHaveBeenCalledWith(
+        'metro-123',
+        'metro',
+        'homeready',
+        '2022-01-01',
+      );
     });
 
-    it('uses investoredge_score for investoredge type', async () => {
-      const selectCalls: string[] = [];
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockImplementation((col: string) => {
-                selectCalls.push(col);
-                return {
-                  eq: jest.fn().mockReturnThis(),
-                  single: jest.fn().mockResolvedValue({
-                    data: { investoredge_score: 68 },
-                    error: null,
-                  }),
-                };
-              }),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('calls dataSource for investoredge score type', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(68);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'metro-123',
@@ -581,47 +357,23 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(selectCalls).toContain('investoredge_score');
+      expect(mockDataSource.getHistoricalScore).toHaveBeenCalledWith(
+        'metro-123',
+        'metro',
+        'investoredge',
+        '2022-01-01',
+      );
     });
   });
 
   // ============================================================================
-  // Geography Table Mapping Tests
+  // Geography Table Mapping Tests (via DataSourceService)
   // ============================================================================
 
   describe('Geography Table Mapping', () => {
-    function createGeoMappingMock(expectedTable: string) {
-      const tablesQueried: string[] = [];
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          tablesQueried.push(table);
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 70 },
-                error: null,
-              }),
-            };
-          }
-          // Zillow tables - return empty to stop processing
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      return { mockClient, tablesQueried };
-    }
-
-    it('uses zillow_state for state geography', async () => {
-      const { mockClient, tablesQueried } =
-        createGeoMappingMock('zillow_state');
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('passes state geography type to dataSource', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'state-123',
@@ -630,13 +382,16 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(tablesQueried).toContain('zillow_state');
+      expect(mockDataSource.getHistoricalData).toHaveBeenCalledWith(
+        'state-123',
+        'state',
+        '2022-01-01',
+      );
     });
 
-    it('uses zillow_metro for metro geography', async () => {
-      const { mockClient, tablesQueried } =
-        createGeoMappingMock('zillow_metro');
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('passes metro geography type to dataSource', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'metro-123',
@@ -645,13 +400,16 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(tablesQueried).toContain('zillow_metro');
+      expect(mockDataSource.getHistoricalData).toHaveBeenCalledWith(
+        'metro-123',
+        'metro',
+        '2022-01-01',
+      );
     });
 
-    it('uses zillow_county for county geography', async () => {
-      const { mockClient, tablesQueried } =
-        createGeoMappingMock('zillow_county');
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('passes county geography type to dataSource', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'county-123',
@@ -660,12 +418,16 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(tablesQueried).toContain('zillow_county');
+      expect(mockDataSource.getHistoricalData).toHaveBeenCalledWith(
+        'county-123',
+        'county',
+        '2022-01-01',
+      );
     });
 
-    it('uses zillow_zip for zip geography', async () => {
-      const { mockClient, tablesQueried } = createGeoMappingMock('zillow_zip');
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+    it('passes zip geography type to dataSource', async () => {
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateOutcomes(
         'zip-123',
@@ -674,7 +436,11 @@ describe('OutcomeGeneratorService', () => {
         '2022-01-01',
       );
 
-      expect(tablesQueried).toContain('zillow_zip');
+      expect(mockDataSource.getHistoricalData).toHaveBeenCalledWith(
+        'zip-123',
+        'zip',
+        '2022-01-01',
+      );
     });
   });
 
@@ -683,44 +449,14 @@ describe('OutcomeGeneratorService', () => {
   // ============================================================================
 
   describe('generateBatchOutcomes', () => {
-    // Helper to create complete batch mock
-    function createBatchMock(geographies: Array<{ id: string }>) {
-      return {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              not: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({
-                data: geographies.map((g) => ({ geography_id: g.id })),
-                error: null,
-              }),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 70 },
-                error: null,
-              }),
-            };
-          }
-          // Zillow tables - return empty to complete quickly
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-    }
-
     it('processes multiple geographies', async () => {
-      const mockClient = createBatchMock([
+      mockDataSource.getGeographiesWithScores.mockResolvedValue([
         { id: 'geo-1' },
         { id: 'geo-2' },
         { id: 'geo-3' },
       ]);
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       const results = await service.generateBatchOutcomes(
         'metro',
@@ -733,48 +469,17 @@ describe('OutcomeGeneratorService', () => {
     });
 
     it('continues processing on individual errors', async () => {
-      let geoCallCount = 0;
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              not: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockResolvedValue({
-                data: [
-                  { geography_id: 'geo-1' },
-                  { geography_id: 'geo-2' },
-                  { geography_id: 'geo-3' },
-                ],
-                error: null,
-              }),
-              single: jest.fn().mockImplementation(() => {
-                geoCallCount++;
-                // Fail on second geography
-                if (geoCallCount === 2) {
-                  return Promise.resolve({
-                    data: null,
-                    error: { message: 'Database error' },
-                  });
-                }
-                return Promise.resolve({
-                  data: { homeready_score: 70 },
-                  error: null,
-                });
-              }),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      mockDataSource.getGeographiesWithScores.mockResolvedValue([
+        { id: 'geo-1' },
+        { id: 'geo-2' },
+        { id: 'geo-3' },
+      ]);
+      // First call succeeds, second throws, third succeeds
+      mockDataSource.getHistoricalScore
+        .mockResolvedValueOnce(70)
+        .mockRejectedValueOnce(new Error('Database error'))
+        .mockResolvedValueOnce(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       const results = await service.generateBatchOutcomes(
         'metro',
@@ -783,42 +488,16 @@ describe('OutcomeGeneratorService', () => {
         10,
       );
 
-      // Should have 3 results (errors are caught, empty results still returned)
-      expect(results.length).toBe(3);
+      // Error is caught, so only 2 successful results
+      expect(results.length).toBe(2);
     });
 
     it('respects limit parameter', async () => {
-      const limitCalled: number[] = [];
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              not: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockImplementation((limit: number) => {
-                limitCalled.push(limit);
-                return Promise.resolve({
-                  data: [{ geography_id: 'geo-1' }],
-                  error: null,
-                });
-              }),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 70 },
-                error: null,
-              }),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      mockDataSource.getGeographiesWithScores.mockResolvedValue([
+        { id: 'geo-1' },
+      ]);
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       await service.generateBatchOutcomes(
         'metro',
@@ -827,8 +506,12 @@ describe('OutcomeGeneratorService', () => {
         50,
       );
 
-      // Verify limit was called with 50
-      expect(limitCalled).toContain(50);
+      expect(mockDataSource.getGeographiesWithScores).toHaveBeenCalledWith(
+        'metro',
+        'homeready',
+        '2022-01-01',
+        50,
+      );
     });
   });
 
@@ -837,7 +520,7 @@ describe('OutcomeGeneratorService', () => {
   // ============================================================================
 
   describe('saveOutcomes', () => {
-    it('calls upsert for each outcome', async () => {
+    it('calls upsert on the backtest outcomes table', async () => {
       const mockUpsert = jest.fn().mockResolvedValue({ error: null });
       const mockClient = {
         from: jest.fn().mockReturnValue({
@@ -867,7 +550,8 @@ describe('OutcomeGeneratorService', () => {
 
       await service.saveOutcomes(outcomes);
 
-      expect(mockUpsert).toHaveBeenCalledTimes(2);
+      // saveOutcomes now does batch upsert (one call for up to 200 records)
+      expect(mockUpsert).toHaveBeenCalledTimes(1);
     });
 
     it('includes all outcome horizons in upsert', async () => {
@@ -893,15 +577,18 @@ describe('OutcomeGeneratorService', () => {
 
       await service.saveOutcomes([outcome]);
 
+      // Batch upsert: called with array of rows
       expect(mockUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          geography_id: 'geo-1',
-          score_value: 75,
-          outcome_6m_value: 3,
-          outcome_1y_value: 8,
-          outcome_3y_value: 6,
-          outcome_5y_value: 7,
-        }),
+        expect.arrayContaining([
+          expect.objectContaining({
+            geography_id: 'geo-1',
+            score_value: 75,
+            outcome_6m_value: 3,
+            outcome_1y_value: 8,
+            outcome_3y_value: 6,
+            outcome_5y_value: 7,
+          }),
+        ]),
         expect.any(Object),
       );
     });
@@ -938,49 +625,11 @@ describe('OutcomeGeneratorService', () => {
 
   describe('Edge Cases', () => {
     it('handles missing future data gracefully', async () => {
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 70 },
-                error: null,
-              }),
-            };
-          }
-          if (table.startsWith('zillow_')) {
-            let callCount = 0;
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              lte: jest.fn().mockReturnThis(),
-              order: jest.fn().mockReturnThis(),
-              limit: jest.fn().mockImplementation(() => ({
-                then: jest.fn().mockImplementation((cb) => {
-                  callCount++;
-                  // First call (start) has data, future calls don't
-                  return Promise.resolve(
-                    cb({
-                      data:
-                        callCount === 1
-                          ? [{ period_date: '2022-01-01', value: 400000 }]
-                          : [],
-                      error: null,
-                    }),
-                  );
-                }),
-              })),
-            };
-          }
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      mockDataSource.getHistoricalScore.mockResolvedValue(70);
+      // Start data present, but future data missing
+      mockDataSource.getHistoricalData
+        .mockResolvedValueOnce([{ date: '2022-01-01', zhvi: 400000 }]) // start
+        .mockResolvedValueOnce(null); // 1y future: no data
 
       const result = await service.generateOutcomes(
         'metro-123',
@@ -990,55 +639,30 @@ describe('OutcomeGeneratorService', () => {
         ['1y'],
       );
 
-      // Should return record even without outcome data
       expect(result.geographyId).toBe('metro-123');
+      // No future data means no outcome calculated
+      expect(result.outcome1y).toBeUndefined();
     });
 
     it('handles very old score dates', async () => {
-      setupMockSupabase({
-        score: 60,
-        startZhvi: 200000,
-      });
+      mockDataSource.getHistoricalScore.mockResolvedValue(60);
+      mockDataSource.getHistoricalData.mockResolvedValue([
+        { date: '2010-01-01', zhvi: 200000 },
+      ]);
 
       const result = await service.generateOutcomes(
         'metro-123',
         'metro',
         'homeready',
-        '2010-01-01', // 14+ years ago
+        '2010-01-01',
       );
 
       expect(result.scoreDate).toBe('2010-01-01');
     });
 
     it('handles recent score dates with no future data yet', async () => {
-      // Mock that returns no future data
-      const mockClient = {
-        from: jest.fn().mockImplementation((table: string) => {
-          if (table === 'propertyiq_scores') {
-            return {
-              select: jest.fn().mockReturnThis(),
-              eq: jest.fn().mockReturnThis(),
-              single: jest.fn().mockResolvedValue({
-                data: { homeready_score: 80 },
-                error: null,
-              }),
-            };
-          }
-          // For zillow tables, return data only for base date
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockResolvedValue({
-              // Return empty for future dates (no data yet)
-              data: [],
-              error: null,
-            }),
-          };
-        }),
-      };
-      mockSupabaseService.getClient.mockReturnValue(mockClient as any);
+      mockDataSource.getHistoricalScore.mockResolvedValue(80);
+      mockDataSource.getHistoricalData.mockResolvedValue(null);
 
       const today = new Date().toISOString().split('T')[0];
       const result = await service.generateOutcomes(
@@ -1049,7 +673,6 @@ describe('OutcomeGeneratorService', () => {
       );
 
       expect(result.scoreDate).toBe(today);
-      // No historical data means no outcomes can be calculated
       expect(result.outcome1y).toBeUndefined();
     });
   });

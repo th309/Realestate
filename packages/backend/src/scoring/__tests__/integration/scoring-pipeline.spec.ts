@@ -12,6 +12,8 @@ import { InheritanceService } from '../../inheritance.service';
 import { MarketHealthService } from '../../market-health.service';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { SUPABASE_CLIENT } from '../../../supabase/supabase.service';
+import { CalibrationService } from '../../calibration/calibration.service';
+import { GeographyChainService } from '../../../metric-resolution/geography-chain.service';
 import type { PropertyIQScore } from '../../scoring.types';
 
 describe('Scoring Pipeline Integration', () => {
@@ -54,7 +56,7 @@ describe('Scoring Pipeline Integration', () => {
   };
 
   const mockPercentiles = {
-    metric_name: 'zhvi',  // Column is metric_name per migration 030
+    metric_name: 'zhvi', // Column is metric_name per migration 030
     geography_type: 'zip',
     period_date: '2024-01-01',
     p10: 150000,
@@ -98,7 +100,11 @@ describe('Scoring Pipeline Integration', () => {
       order: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       single: jest.fn().mockResolvedValue({ data, error: null }),
-      then: jest.fn().mockImplementation((cb) => Promise.resolve(cb({ data: data ? [data] : [], error: null }))),
+      then: jest
+        .fn()
+        .mockImplementation((cb) =>
+          Promise.resolve(cb({ data: data ? [data] : [], error: null })),
+        ),
     });
 
     mockSupabaseClient = {
@@ -135,6 +141,17 @@ describe('Scoring Pipeline Integration', () => {
         MarketHealthService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: SUPABASE_CLIENT, useValue: mockSupabaseClient },
+        {
+          provide: CalibrationService,
+          useValue: {
+            calibrate: jest.fn((score) => score),
+            hasCalibration: jest.fn(() => false),
+          },
+        },
+        {
+          provide: GeographyChainService,
+          useValue: { getParentChain: jest.fn(() => []) },
+        },
       ],
     }).compile();
 
@@ -192,7 +209,7 @@ describe('Scoring Pipeline Integration', () => {
         zori: 2000,
         median_days_on_market: 30,
         pending_ratio: 0.35,
-        price_reduced_share: 0.20,
+        price_reduced_share: 0.2,
         months_of_supply: 3.5,
         volatility_36m: 0.05,
         unemployment_rate: 4.0,
@@ -299,20 +316,37 @@ describe('Scoring Pipeline Integration', () => {
 
   describe('Component Score Integration', () => {
     it('calculates all HomeReady components', async () => {
-      const components = ['affordability', 'market_timing', 'stability', 'growth_potential', 'livability'];
+      const components = [
+        'affordability',
+        'market_timing',
+        'stability',
+        'growth_potential',
+        'livability',
+      ];
 
       // Verify all components are calculated
       expect(components.length).toBe(5);
     });
 
     it('calculates all InvestorEdge components', async () => {
-      const components = ['cash_flow', 'rent_demand', 'appreciation', 'entry_point', 'risk'];
+      const components = [
+        'cash_flow',
+        'rent_demand',
+        'appreciation',
+        'entry_point',
+        'risk',
+      ];
 
       expect(components.length).toBe(5);
     });
 
     it('calculates all Market Health components', async () => {
-      const components = ['demand_strength', 'supply_balance', 'price_stability', 'economic_foundation'];
+      const components = [
+        'demand_strength',
+        'supply_balance',
+        'price_stability',
+        'economic_foundation',
+      ];
 
       expect(components.length).toBe(4);
     });
@@ -374,7 +408,10 @@ describe('Scoring Pipeline Integration', () => {
         from: jest.fn().mockImplementation(() => ({
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Connection failed' } }),
+          single: jest.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'Connection failed' },
+          }),
         })),
       };
 
@@ -404,7 +441,7 @@ describe('Scoring Pipeline Integration', () => {
       const startTime = Date.now();
 
       // Simulate score calculation time
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -434,11 +471,11 @@ describe('Scoring Pipeline Integration', () => {
 
     it('validates weights sum to 1.0', async () => {
       const HOMEREADY_WEIGHTS = {
-        affordability: 0.30,
+        affordability: 0.3,
         market_timing: 0.25,
-        stability: 0.20,
+        stability: 0.2,
         growth_potential: 0.15,
-        livability: 0.10,
+        livability: 0.1,
       };
 
       const sum = Object.values(HOMEREADY_WEIGHTS).reduce((a, b) => a + b, 0);
