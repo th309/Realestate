@@ -66,6 +66,8 @@ export {
   fetchReportList,
   generateReport,
   regenerateNarratives,
+  sendReportMessage,
+  fetchReportConversation,
   type GenerateReportRequest,
   type GenerateReportResponse,
 } from "./reports";

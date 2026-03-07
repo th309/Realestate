@@ -222,6 +222,95 @@ export async function createReportShareLink(
   return data.share_token;
 }
 
+// ---------------------------------------------------------------------------
+// Conversation
+// ---------------------------------------------------------------------------
+
+interface ConversationMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+interface SendConversationResponse {
+  response: string;
+  exchange_count: number;
+  limit_reached: boolean;
+}
+
+interface GetConversationResponse {
+  messages: ConversationMessage[];
+  exchange_count: number;
+}
+
+/**
+ * Send a message in a report conversation. Returns the AI response.
+ */
+export async function sendReportMessage(
+  reportId: string,
+  content: string,
+  options: { userId: string; userTier?: string },
+): Promise<SendConversationResponse> {
+  const authHeaders = await getAuthHeaders();
+  const headers: Record<string, string> = {
+    ...authHeaders,
+    "Content-Type": "application/json",
+    "x-user-id": options.userId,
+  };
+  if (options.userTier) {
+    headers["x-user-tier"] = options.userTier;
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/reports/${reportId}/conversation`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ content }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || `Failed to send message: ${response.status}`,
+    );
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch conversation history for a report.
+ */
+export async function fetchReportConversation(
+  reportId: string,
+  options: { userId: string },
+): Promise<GetConversationResponse> {
+  const authHeaders = await getAuthHeaders();
+  const response = await fetch(
+    `${API_URL}/api/reports/${reportId}/conversation`,
+    {
+      headers: {
+        ...authHeaders,
+        "x-user-id": options.userId,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) return { messages: [], exchange_count: 0 };
+    throw new Error(`Failed to fetch conversation: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Narratives
+// ---------------------------------------------------------------------------
+
 /**
  * Request narrative regeneration for a report based on updated user inputs.
  */

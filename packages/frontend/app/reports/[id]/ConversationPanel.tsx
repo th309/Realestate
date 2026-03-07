@@ -1,11 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { X, Send, Loader2, AlertCircle } from "lucide-react";
+import { sendReportMessage, fetchReportConversation } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: string;
 }
@@ -17,75 +20,81 @@ interface ConversationPanelProps {
 }
 
 const STARTER_PROMPTS = [
-  'What does this score mean for me?',
-  'Is now a good time to buy?',
-  'What are the main risks?',
-  'How does this compare to national averages?',
+  "What does this score mean for me?",
+  "Is now a good time to buy?",
+  "What are the main risks?",
+  "How does this compare to national averages?",
 ];
 
-export function ConversationPanel({ reportId, reportTitle, onClose }: ConversationPanelProps) {
+export function ConversationPanel({
+  reportId,
+  reportTitle,
+  onClose,
+}: ConversationPanelProps) {
+  const { user } = useAuth();
+  const { tier } = useEntitlements();
+  const userId = user?.id ?? "";
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Load existing conversation on mount
+  useEffect(() => {
+    if (!userId) return;
+    fetchReportConversation(reportId, { userId })
+      .then((data) => {
+        if (data.messages?.length) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(() => {
+        // No existing conversation — that's fine
+      });
+  }, [reportId, userId]);
+
   const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if (!content.trim() || isLoading || !userId) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: content.trim(),
       timestamp: new Date().toISOString(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
+    setInput("");
     setIsLoading(true);
+    setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/reports/${reportId}/conversation`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ content: content.trim() }),
-      // });
-      // const data = await response.json();
-
-      // Mock AI response
-      await new Promise((r) => setTimeout(r, 1500));
-
-      const mockResponses: Record<string, string> = {
-        'What does this score mean for me?':
-          'Your HomeReady Score of 72 indicates favorable market conditions for homebuyers. The score reflects a balance of affordability (65/100), market stability (78/100), value proposition (70/100), and competition levels (75/100). This suggests a market where buyers have reasonable negotiating power and prices are relatively stable.',
-        'Is now a good time to buy?':
-          'Based on current market indicators, this is a moderately favorable time to buy. Inventory levels are up 15% year-over-year, which reduces competition and provides more options. Price growth has moderated to 3-4% annually, meaning you are less likely to overpay. However, mortgage rates remain elevated, so factor that into your affordability calculations.',
-        'What are the main risks?':
-          'Key risks to consider: (1) Interest rate sensitivity - if rates rise further, affordability could decrease, (2) Employment concentration - the market relies heavily on a few major employers, (3) Water concerns - long-term drought conditions could affect property values in some areas. The overall risk profile is moderate.',
-        'How does this compare to national averages?':
-          'Phoenix ranks in the 68th percentile nationally for homebuyer conditions. Affordability is slightly below the national median, but market stability and inventory levels are above average. Compared to other Sun Belt metros, Phoenix offers better value than Austin or Miami but is less affordable than markets like Tampa or San Antonio.',
-      };
+      const data = await sendReportMessage(reportId, content.trim(), {
+        userId,
+        userTier: tier ?? undefined,
+      });
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          mockResponses[content.trim()] ||
-          'I can help you understand this market better. Based on the report data, I see strong fundamentals in this geography. Could you be more specific about what aspect you would like me to analyze?',
+        role: "assistant",
+        content: data.response,
         timestamp: new Date().toISOString(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to get AI response",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +111,9 @@ export function ConversationPanel({ reportId, reportTitle, onClose }: Conversati
       <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
         <div>
           <h3 className="font-semibold text-on-surface">Ask AI</h3>
-          <p className="text-xs text-on-surface-variant truncate max-w-64">{reportTitle}</p>
+          <p className="text-xs text-on-surface-variant truncate max-w-64">
+            {reportTitle}
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -135,13 +146,13 @@ export function ConversationPanel({ reportId, reportTitle, onClose }: Conversati
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-on-primary rounded-br-sm'
-                    : 'bg-surface-container-high text-on-surface rounded-bl-sm'
+                  msg.role === "user"
+                    ? "bg-primary text-on-primary rounded-br-sm"
+                    : "bg-surface-container-high text-on-surface rounded-bl-sm"
                 }`}
               >
                 {msg.content}
@@ -158,11 +169,23 @@ export function ConversationPanel({ reportId, reportTitle, onClose }: Conversati
           </div>
         )}
 
+        {error && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] px-4 py-3 rounded-2xl rounded-bl-sm bg-red-50 text-red-700 text-sm flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-outline-variant">
+      <form
+        onSubmit={handleSubmit}
+        className="p-4 border-t border-outline-variant"
+      >
         <div className="flex items-center gap-2">
           <input
             type="text"
