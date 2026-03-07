@@ -20,7 +20,7 @@ export interface ReportSummary {
 
 export async function fetchRecentReports(limit = 5): Promise<ReportSummary[]> {
   const authHeaders = await getAuthHeaders();
-  const res = await fetchAPIRaw(`/api/reports?limit=${limit}`, {
+  const res = await fetchAPIRaw(`/api/reports/history?limit=${limit}`, {
     headers: authHeaders,
   });
 
@@ -29,9 +29,7 @@ export async function fetchRecentReports(limit = 5): Promise<ReportSummary[]> {
     throw new Error(`API error: ${res.status}`);
   }
 
-  const body = (await res.json()) as {
-    success: boolean;
-    data: ReportSummary[];
-  };
-  return body.data ?? [];
+  const body = await res.json();
+  // Backend returns array directly from getReportHistory
+  return Array.isArray(body) ? body : (body.data ?? []);
 }
