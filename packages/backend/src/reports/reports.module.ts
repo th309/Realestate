@@ -16,6 +16,8 @@ import { ClaudeService } from './claude.service';
 import { ClaudeNewsService } from './claude-news.service';
 import { ResearchBriefService } from './research-brief/research-brief.service';
 import { ReportGenerationV2Service } from './report-generation-v2.service';
+import { ReportFollowUpService } from './report-follow-up.service';
+import { ReportFollowUpController } from './report-follow-up.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { MetricsModule } from '../metrics/metrics.module';
@@ -44,14 +46,20 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
     ClaudeNewsService,
     ResearchBriefService,
     ReportGenerationV2Service,
+    ReportFollowUpService,
   ],
-  controllers: [ReportsController, ResearchBriefController],
+  controllers: [
+    ReportsController,
+    ResearchBriefController,
+    ReportFollowUpController,
+  ],
   exports: [
     ReportsService,
     ClaudeService,
     ClaudeNewsService,
     ResearchBriefService,
     ReportGenerationV2Service,
+    ReportFollowUpService,
   ],
 })
 export class ReportsModule {}

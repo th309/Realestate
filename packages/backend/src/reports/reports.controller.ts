@@ -17,7 +17,9 @@ import {
   HttpException,
   HttpStatus,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { ReportsService } from './reports.service';
@@ -127,6 +129,50 @@ export class ReportsController {
       limit ? parseInt(limit, 10) : 20,
       offset ? parseInt(offset, 10) : 0,
     );
+  }
+
+  /**
+   * Stream generation progress via Server-Sent Events
+   *
+   * GET /reports/:id/progress
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/progress')
+  async getProgress(
+    @Param('id') id: string,
+    @AuthUserId() userId: string,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const interval = setInterval(async () => {
+      try {
+        const report = await this.reportsService.getReport(id, userId);
+        if (report) {
+          const payload = {
+            status: report.status,
+            generation_stage: report.generation_stage ?? null,
+            generation_stage_detail: report.generation_stage_detail ?? null,
+          };
+          res.write(`data: ${JSON.stringify(payload)}\n\n`);
+          if (report.status === 'ready' || report.status === 'failed') {
+            clearInterval(interval);
+            res.end();
+          }
+        }
+      } catch {
+        clearInterval(interval);
+        res.end();
+      }
+    }, 2000);
+
+    res.on('close', () => {
+      clearInterval(interval);
+      res.end();
+    });
   }
 
   /**

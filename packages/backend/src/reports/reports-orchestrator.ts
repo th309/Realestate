@@ -44,6 +44,25 @@ import {
   resolveReportType,
 } from './reports-orchestrator-v2-routing';
 
+/**
+ * Update the report row with a generation stage for real-time progress tracking.
+ * The frontend connects via SSE to poll these values and show pipeline progress.
+ */
+async function updateGenerationStage(
+  supabase: SupabaseClient,
+  reportId: string,
+  stage: string,
+  detail?: string,
+): Promise<void> {
+  await supabase
+    .from('reports')
+    .update({
+      generation_stage: stage,
+      generation_stage_detail: detail ?? null,
+    })
+    .eq('id', reportId);
+}
+
 /** All service dependencies required by the orchestrator. */
 export interface ReportDeps {
   supabase: SupabaseClient;
@@ -90,6 +109,12 @@ export async function generateReportAsync(
     ];
 
     // ── 1. Parallel data fetch: scores, metrics, historical, news ──────
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'fetching_data',
+      'Fetching market data from 6 sources...',
+    );
     const newsTimeout = (promise: Promise<any>, ms: number) =>
       Promise.race([
         promise,
@@ -144,6 +169,13 @@ export async function generateReportAsync(
     const metricProvenance = marketMetricsResult.provenance;
     const newsResult = newsSettled;
 
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'scouting_news',
+      'Scouting recent news and economic signals...',
+    );
+
     // ── 2. Fetch comparison geography data (parallel per-geography) ────
     const comparisons: Record<string, any> = {};
     if (dto.comparison_geographies && dto.comparison_geographies.length > 0) {
@@ -195,6 +227,12 @@ export async function generateReportAsync(
       : null;
 
     // ── 3. Score contexts ──────────────────────────────────────────────
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'computing_insights',
+      'Calculating affordability percentile across 400+ metros...',
+    );
     const scoreContexts = scores
       ? generateAllScoreContexts(
           {
@@ -237,6 +275,12 @@ export async function generateReportAsync(
     }
 
     // ── 6. Fetch benchmarks ────────────────────────────────────────────
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'comparing_benchmarks',
+      'Identifying historical market parallels...',
+    );
     try {
       const benchmarks: Record<string, any> = {};
       if (dto.primary_geography.state) {
@@ -352,6 +396,12 @@ export async function generateReportAsync(
     }
 
     // ── 9. AI narratives ───────────────────────────────────────────────
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'generating_analysis',
+      'Generating deep market analysis...',
+    );
     let aiNarratives = {};
     const aiAccess = await deps.entitlementsService.checkAccess(
       userId,
@@ -400,6 +450,13 @@ export async function generateReportAsync(
         populatedData.benchmarks,
       );
 
+      await updateGenerationStage(
+        supabase,
+        reportId,
+        'building_outline',
+        'Building analytical outline...',
+      );
+
       // Check prompt version: v2 uses two-pass pipeline, v1 uses legacy
       const promptVersion = await getPromptVersion(supabase);
       const reportType = resolveReportType(template, dto);
@@ -418,6 +475,12 @@ export async function generateReportAsync(
     }
 
     // ── 10. Persist completed report ───────────────────────────────────
+    await updateGenerationStage(
+      supabase,
+      reportId,
+      'finalizing',
+      'Finalizing your personalized report...',
+    );
     const generationTime = Date.now() - startTime;
     // Extract model name from narratives metadata (set by ClaudeService/v2)
     const aiModelUsed = (aiNarratives as any).__model_used || 'unknown';
