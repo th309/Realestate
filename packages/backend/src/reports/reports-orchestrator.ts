@@ -393,6 +393,7 @@ export async function generateReportAsync(
           priorityWeightedWinner,
           comparisons,
           userProfile,
+          populatedData.benchmarks,
         ),
       );
     }

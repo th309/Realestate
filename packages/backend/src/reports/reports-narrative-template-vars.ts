@@ -16,6 +16,7 @@ import {
   computeKeyTension,
   computeUserGoalSummary,
 } from './reports-narrative-cross-section';
+import { computeAnalyticalInsights } from './narrative-insights';
 
 /**
  * Build the full template-variable map that Claude uses for AI narrative
@@ -38,7 +39,16 @@ export function buildNarrativeTemplateVars(
     preferred_markets?: any[] | null;
     full_name?: string | null;
   } | null,
+  benchmarks?: Record<string, any>,
 ): Record<string, any> {
+  // Pre-compute analytical insights ("so what" context for the AI)
+  const analyticalInsights = computeAnalyticalInsights(
+    marketMetrics,
+    scores,
+    benchmarks || {},
+    dto.user_type,
+    dto.user_inputs,
+  );
   return {
     geography_name: dto.primary_geography.name,
     primary_geography_name: dto.primary_geography.name,
@@ -221,6 +231,9 @@ export function buildNarrativeTemplateVars(
     user_goal_summary: computeUserGoalSummary(dto, priorities),
 
     ...dto.user_inputs,
+
+    // Pre-computed analytical insights (digested "so what" context)
+    ...analyticalInsights,
   };
 }
 
