@@ -419,13 +419,18 @@ export async function generateReportAsync(
 
     // ── 10. Persist completed report ───────────────────────────────────
     const generationTime = Date.now() - startTime;
+    // Extract model name from narratives metadata (set by ClaudeService/v2)
+    const aiModelUsed = (aiNarratives as any).__model_used || 'unknown';
+    // Clean metadata key before persisting to DB
+    delete (aiNarratives as any).__model_used;
+
     const { error: updateError } = await supabase
       .from('reports')
       .update({
         status: 'ready',
         populated_data: populatedData,
         ai_narrative: aiNarratives,
-        ai_model_used: 'claude-sonnet-4-20250514',
+        ai_model_used: aiModelUsed,
         homeready_score:
           scores?.scores.homeready?.score != null
             ? Math.round(scores.scores.homeready.score)

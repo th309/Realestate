@@ -32,6 +32,7 @@ type ReportType = 'homeready' | 'investoredge' | 'comparison';
 @Injectable()
 export class ReportGenerationV2Service {
   private readonly logger = new Logger(ReportGenerationV2Service.name);
+  private lastModelUsed = 'unknown';
 
   constructor(private readonly aiProvider: AiProviderService) {}
 
@@ -64,6 +65,7 @@ export class ReportGenerationV2Service {
     );
 
     results._meta = { version: 'v2', outline };
+    (results as any).__model_used = this.lastModelUsed;
     return results;
   }
 
@@ -195,6 +197,9 @@ This outline will be shared with each section writer to ensure narrative coheren
       responseFormat:
         config.output_format === 'json_object' ? 'json' : undefined,
     });
+
+    // Track last model used for provenance metadata
+    this.lastModelUsed = response.model;
 
     return parseAiResponse(response.content, config.output_format, sectionId);
   }

@@ -1,9 +1,8 @@
 /**
  * AI Provider Service
  *
- * Model-agnostic AI completion service that resolves provider config from:
- * 1. Database table `ai_model_config` (cached 5 min, keyed by purpose)
- * 2. Environment variable fallback (AI_PROVIDER, AI_MODEL, etc.)
+ * Model-agnostic AI completion service. Resolves provider config via
+ * AiConfigResolver (DB -> env fallback, cached 5 min).
  *
  * Uses OpenAI SDK for all providers (OpenAI-compatible API format).
  * Handles system prompt nuances per model (e.g. deepseek-reasoner).
@@ -15,29 +14,21 @@ import OpenAI from 'openai';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   AiProviderConfig,
-  AiProviderType,
   AiCompletionRequest,
   AiCompletionResponse,
   PROVIDER_PRESETS,
 } from './ai-provider.types';
-
-interface CachedConfig {
-  config: AiProviderConfig;
-  expiresAt: number;
-}
-
-const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+import { AiConfigResolver } from './ai-config-resolver';
 
 @Injectable()
 export class AiProviderService {
   private readonly logger = new Logger(AiProviderService.name);
-  private readonly configCache = new Map<string, CachedConfig>();
   private readonly clientCache = new Map<string, OpenAI>();
+  private readonly configResolver: AiConfigResolver;
 
-  constructor(
-    private readonly supabase: SupabaseService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(supabase: SupabaseService, configService: ConfigService) {
+    this.configResolver = new AiConfigResolver(supabase, configService);
+  }
 
   /**
    * Execute an AI completion request for a given purpose.
@@ -47,13 +38,73 @@ export class AiProviderService {
     purpose: string,
     request: AiCompletionRequest,
   ): Promise<AiCompletionResponse> {
-    const config = await this.resolveConfig(purpose);
-    const client = this.getOrCreateClient(config);
-    const startTime = Date.now();
-
+    const config = await this.configResolver.resolve(purpose);
     const messages = this.buildMessages(config, request);
     const temperature =
       request.temperature ??
+      config.temperature ??
+      PROVIDER_PRESETS[config.provider].defaultTemperature;
+
+    return this.executeCompletion(purpose, config, messages, {
+      maxTokens: request.maxTokens,
+      temperature,
+      responseFormat: request.responseFormat,
+    });
+  }
+
+  /**
+   * Execute an AI completion with a raw messages array (for multi-turn conversations).
+   * Purpose maps to a config row in `ai_model_config` (e.g. "conversation").
+   */
+  async completeWithMessages(
+    purpose: string,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    maxTokens: number,
+  ): Promise<AiCompletionResponse> {
+    const config = await this.configResolver.resolve(purpose);
+    return this.executeCompletion(purpose, config, messages, { maxTokens });
+  }
+
+  /**
+   * Get a configured OpenAI client for a given purpose.
+   * Use this when you need direct client access (e.g. tool-use loops)
+   * instead of the simpler `complete()` method.
+   */
+  async getClientForPurpose(
+    purpose: string,
+  ): Promise<{ client: OpenAI; model: string; systemPrompt?: string }> {
+    const config = await this.configResolver.resolve(purpose);
+    return { client: this.getOrCreateClient(config), model: config.model };
+  }
+
+  /**
+   * Invalidate cached config. Call after admin updates ai_model_config.
+   * Pass a purpose to invalidate a single entry, or omit to clear all.
+   */
+  invalidateCache(purpose?: string): void {
+    this.configResolver.invalidate(purpose);
+    // Always clear client cache — API keys or base URLs may have changed.
+    this.clientCache.clear();
+    this.logger.log(`Cache invalidated: ${purpose || 'all'}`);
+  }
+
+  /**
+   * Shared completion executor used by both complete() and completeWithMessages().
+   */
+  private async executeCompletion(
+    purpose: string,
+    config: AiProviderConfig,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    options: {
+      maxTokens: number;
+      temperature?: number;
+      responseFormat?: 'text' | 'json';
+    },
+  ): Promise<AiCompletionResponse> {
+    const client = this.getOrCreateClient(config);
+    const startTime = Date.now();
+    const temperature =
+      options.temperature ??
       config.temperature ??
       PROVIDER_PRESETS[config.provider].defaultTemperature;
 
@@ -61,16 +112,15 @@ export class AiProviderService {
       const response = await client.chat.completions.create({
         model: config.model,
         messages,
-        max_tokens: request.maxTokens,
+        max_tokens: options.maxTokens,
         temperature,
-        ...(request.responseFormat === 'json' && {
+        ...(options.responseFormat === 'json' && {
           response_format: { type: 'json_object' },
         }),
       });
 
       const durationMs = Date.now() - startTime;
-      const choice = response.choices[0];
-      const content = choice?.message?.content || '';
+      const content = response.choices[0]?.message?.content || '';
 
       this.logger.log(
         `[${purpose}] ${config.provider}/${config.model} completed in ${durationMs}ms` +
@@ -100,22 +150,6 @@ export class AiProviderService {
   }
 
   /**
-   * Invalidate cached config. Call after admin updates ai_model_config.
-   * Pass a purpose to invalidate a single entry, or omit to clear all.
-   */
-  invalidateCache(purpose?: string): void {
-    if (purpose) {
-      this.configCache.delete(purpose);
-    } else {
-      this.configCache.clear();
-    }
-    // Always clear client cache — API keys or base URLs may have changed.
-    // Client creation is cheap so this is safe.
-    this.clientCache.clear();
-    this.logger.log(`Cache invalidated: ${purpose || 'all'}`);
-  }
-
-  /**
    * Build the messages array, handling system prompt support per model.
    * deepseek-reasoner doesn't support system role — prepend to user message.
    */
@@ -138,108 +172,6 @@ export class AiProviderService {
     }
 
     return [{ role: 'user', content: request.userPrompt }];
-  }
-
-  /**
-   * Resolve config: check cache -> DB -> env fallback.
-   */
-  private async resolveConfig(purpose: string): Promise<AiProviderConfig> {
-    const cached = this.configCache.get(purpose);
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.config;
-    }
-
-    const dbConfig = await this.loadConfigFromDb(purpose);
-    if (dbConfig) {
-      this.configCache.set(purpose, {
-        config: dbConfig,
-        expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
-      });
-      return dbConfig;
-    }
-
-    const fallbackConfig = this.buildFallbackConfig();
-    this.configCache.set(purpose, {
-      config: fallbackConfig,
-      expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
-    });
-    return fallbackConfig;
-  }
-
-  /**
-   * Load config from the `ai_model_config` DB table for a given purpose.
-   */
-  private async loadConfigFromDb(
-    purpose: string,
-  ): Promise<AiProviderConfig | null> {
-    try {
-      const { data, error } = await this.supabase
-        .getClient()
-        .from('ai_model_config')
-        .select('provider, model, api_key, base_url, temperature, max_retries')
-        .eq('purpose', purpose)
-        .eq('is_active', true)
-        .single();
-
-      if (error || !data) return null;
-
-      const provider = data.provider as AiProviderType;
-      const preset = PROVIDER_PRESETS[provider];
-      if (!preset) return null;
-
-      // Resolve API key: DB value takes priority, then env var from preset
-      const apiKey =
-        data.api_key || this.configService.get<string>(preset.envKeyName);
-      if (!apiKey) {
-        this.logger.warn(
-          `[${purpose}] DB config found for ${provider} but no API key available`,
-        );
-        return null;
-      }
-
-      return {
-        provider,
-        model: data.model || preset.defaultModel,
-        apiKey,
-        baseUrl: data.base_url || preset.baseUrl,
-        temperature: data.temperature ?? preset.defaultTemperature,
-        maxRetries: data.max_retries ?? 2,
-      };
-    } catch (error: any) {
-      this.logger.warn(
-        `Failed to load AI config from DB for "${purpose}": ${error.message}`,
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Build config from environment variables as a last resort.
-   */
-  private buildFallbackConfig(): AiProviderConfig {
-    const providerName =
-      (this.configService.get<string>('AI_PROVIDER') as AiProviderType) ||
-      'deepseek';
-    const preset = PROVIDER_PRESETS[providerName] || PROVIDER_PRESETS.deepseek;
-
-    const apiKey = this.configService.get<string>(preset.envKeyName);
-    if (!apiKey) {
-      throw new Error(
-        `No API key found for AI provider "${providerName}". ` +
-          `Set ${preset.envKeyName} environment variable.`,
-      );
-    }
-
-    return {
-      provider: providerName,
-      model: this.configService.get<string>('AI_MODEL') || preset.defaultModel,
-      apiKey,
-      baseUrl: this.configService.get<string>('AI_BASE_URL') || preset.baseUrl,
-      temperature:
-        parseFloat(this.configService.get<string>('AI_TEMPERATURE') || '') ||
-        preset.defaultTemperature,
-      maxRetries: 2,
-    };
   }
 
   /**
