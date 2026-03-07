@@ -50,8 +50,8 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-SCORE_TYPES = ["homeready", "investoredge"]
-GEO_LEVELS = ["metro", "county"]
+SCORE_TYPES = ["homeready", "investoredge", "markethealth"]
+GEO_LEVELS = ["metro", "county", "zip"]
 
 # Percentile grid for the lookup table (0, 5, 10, ..., 100)
 LOOKUP_GRID = list(range(0, 101, 5))
@@ -205,13 +205,16 @@ def compute_excess_returns(df: pd.DataFrame) -> pd.DataFrame:
 def target_col_for_score(score_type: str) -> str:
     """Return the primary excess-return column for a given score type.
 
-    HomeReady   -> 3Y appreciation CAGR excess vs division median
+    HomeReady    -> 3Y appreciation CAGR excess vs division median
     InvestorEdge -> 3Y total return CAGR excess vs division median
+    MarketHealth -> 3Y appreciation CAGR excess vs division median
     """
     if score_type == "homeready":
         return "excess_div_3y"
     elif score_type == "investoredge":
         return "excess_total_div_3y"
+    elif score_type == "markethealth":
+        return "excess_div_3y"
     else:
         raise ValueError(f"Unknown score type: {score_type}")
 
@@ -517,15 +520,15 @@ Examples:
     )
     parser.add_argument(
         "--score-type",
-        choices=["homeready", "investoredge", "both"],
-        default="both",
-        help="Which score type(s) to train (default: both)",
+        choices=["homeready", "investoredge", "markethealth", "all"],
+        default="all",
+        help="Which score type(s) to train (default: all)",
     )
     parser.add_argument(
         "--geo-level",
-        choices=["metro", "county", "all"],
+        choices=["metro", "county", "zip", "all"],
         default="all",
-        help="Geography level to train (default: all = metro + county)",
+        help="Geography level to train (default: all = metro + county + zip)",
     )
     parser.add_argument(
         "--output-dir",
@@ -562,7 +565,7 @@ Examples:
         backend_dir = repo_root / "packages" / "backend" / "src" / "scoring" / "calibration"
 
     # Determine score types and geo levels
-    if args.score_type == "both":
+    if args.score_type == "all":
         score_types = SCORE_TYPES
     else:
         score_types = [args.score_type]

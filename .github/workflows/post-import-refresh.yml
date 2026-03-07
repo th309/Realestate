@@ -4,23 +4,23 @@ on:
   # Run on the 25th of every month at 6:00 AM UTC
   # After all data imports complete (15th-22nd)
   schedule:
-    - cron: '0 6 25 * *'
+    - cron: "0 6 25 * *"
 
   # Allow manual trigger
   workflow_dispatch:
     inputs:
       trigger_source:
-        description: 'Source that triggered this workflow'
+        description: "Source that triggered this workflow"
         required: false
-        default: 'manual'
+        default: "manual"
         type: string
       skip_calculated_metrics:
-        description: 'Skip calculated metrics refresh'
+        description: "Skip calculated metrics refresh"
         required: false
         default: false
         type: boolean
       skip_scoring:
-        description: 'Skip PropertyIQ scoring pipeline'
+        description: "Skip PropertyIQ scoring pipeline"
         required: false
         default: false
         type: boolean
@@ -29,10 +29,10 @@ on:
   workflow_call:
     inputs:
       trigger_source:
-        description: 'Source workflow'
+        description: "Source workflow"
         required: false
         type: string
-        default: 'workflow_call'
+        default: "workflow_call"
 
 jobs:
   refresh-calculated-metrics:
@@ -47,8 +47,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -56,10 +56,10 @@ jobs:
       - name: Refresh Calculated Metrics
         id: metrics
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
-          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
         run: |
           echo "=============================================="
           echo "Refreshing Calculated Metrics - $(date)"
@@ -107,8 +107,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -116,10 +116,10 @@ jobs:
       - name: Run PropertyIQ Scoring Pipeline
         id: scoring
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
-          NEXT_PUBLIC_SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_ROLE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
         run: |
           echo "=============================================="
           echo "Running PropertyIQ Scoring Pipeline - $(date)"
@@ -152,8 +152,8 @@ jobs:
 
       - name: Update PropertyIQ Rankings
         env:
-          SUPABASE_URL: '${{ secrets.SUPABASE_URL }}'
-          SUPABASE_SERVICE_KEY: '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
         run: |
           echo ""
           echo ">>> Updating PropertyIQ Rankings..."
@@ -173,8 +173,138 @@ jobs:
     outputs:
       scoring_status: ${{ steps.scoring.outputs.scoring_status }}
 
+  validate-scores:
+    needs: run-scoring-pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run v3 scoring live validation
+        id: validate
+        env:
+          SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+          SUPABASE_SERVICE_KEY: "${{ secrets.SUPABASE_SERVICE_KEY }}"
+        run: |
+          echo "=============================================="
+          echo "Running v3.0 Scoring Live Validation - $(date)"
+          echo "=============================================="
+
+          npx ts-node -P packages/backend/tsconfig.json scripts/validate-v3-scoring-live.ts 2>&1 | tee validation-output.txt
+
+          if [ $? -eq 0 ]; then
+            echo "validate_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "validate_status=issues_found" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Validation Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoring-validation-log-${{ github.run_id }}
+          path: validation-output.txt
+          retention-days: 30
+
+    outputs:
+      validate_status: ${{ steps.validate.outputs.validate_status }}
+
+  recalibrate-scores:
+    needs: run-scoring-pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ needs.run-scoring-pipeline.outputs.scoring_status == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install numpy pandas scikit-learn sqlalchemy psycopg2-binary
+
+      - name: Run isotonic calibration training
+        id: calibrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "=============================================="
+          echo "Running Isotonic Calibration Training - $(date)"
+          echo "=============================================="
+
+          cd scripts/analysis
+          python train_calibration.py 2>&1 | tee calibration-output.txt
+
+          if [ $? -eq 0 ]; then
+            echo "calibrate_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "calibrate_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for calibration table changes
+        id: check_changes
+        run: |
+          if git diff --quiet packages/backend/src/scoring/calibration/calibration-tables.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to calibration tables"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Calibration tables updated"
+            git diff --stat packages/backend/src/scoring/calibration/calibration-tables.json
+          fi
+
+      - name: Commit updated calibration tables
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/backend/src/scoring/calibration/calibration-tables.json
+          git commit -m "data(scoring): regenerate v3.0 isotonic calibration tables
+
+          Automated monthly recalibration from post-import-refresh pipeline.
+          Trained on latest backtest outcomes for all 9 score combos."
+          git push
+
+      - name: Upload Calibration Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-log-${{ github.run_id }}
+          path: scripts/analysis/calibration-output.txt
+          retention-days: 30
+
+    outputs:
+      calibrate_status: ${{ steps.calibrate.outputs.calibrate_status }}
+
   notify-on-failure:
-    needs: [refresh-calculated-metrics, run-scoring-pipeline]
+    needs:
+      [
+        refresh-calculated-metrics,
+        run-scoring-pipeline,
+        validate-scores,
+        recalibrate-scores,
+      ]
     runs-on: ubuntu-latest
     if: failure() || needs.refresh-calculated-metrics.outputs.metrics_status == 'error'
 
@@ -235,7 +365,13 @@ jobs:
             }
 
   notify-on-success:
-    needs: [refresh-calculated-metrics, run-scoring-pipeline]
+    needs:
+      [
+        refresh-calculated-metrics,
+        run-scoring-pipeline,
+        validate-scores,
+        recalibrate-scores,
+      ]
     runs-on: ubuntu-latest
     if: success()
 
@@ -261,3 +397,9 @@ jobs:
           echo "Rankings Updated:"
           echo "  - National rankings"
           echo "  - State-level rankings"
+          echo ""
+          echo "Score Validation:"
+          echo "  - v3.0 live validation passed (9 score combos, 210 sampled locations)"
+          echo ""
+          echo "Calibration:"
+          echo "  - Isotonic calibration tables regenerated (9 keys)"

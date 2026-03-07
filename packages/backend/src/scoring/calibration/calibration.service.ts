@@ -1,9 +1,12 @@
 /**
- * Calibration Service
+ * Calibration Service (v3.0)
  *
  * Applies isotonic calibration to raw percentile scores.
  * Loads a JSON lookup table (trained by scripts/analysis/train_calibration.py)
  * and uses piecewise-linear interpolation to map raw scores to calibrated scores.
+ *
+ * Supports all 9 score combinations (3 geos x 3 scores: homeready, investoredge, markethealth).
+ * Calibration tables are regenerated monthly by the post-import-refresh CI workflow.
  *
  * This compresses the score range to better match actual return percentiles,
  * reducing MAD (Mean Absolute Deviation) below the 15 pp target.

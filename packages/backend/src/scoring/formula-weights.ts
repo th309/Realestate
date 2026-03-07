@@ -459,7 +459,7 @@ export const COMPONENT_GROUPS: Record<
 
 /**
  * Calibration table: maps score quintiles to average historical excess return.
- * PROVISIONAL: Built from v2.0 backtest data — needs recalibration for v3.0 weights.
+ * v3.0: Generated from get_quintile_performance() RPC on v3.0 backtest outcomes.
  * Used for frontend tooltips, dollar impact calculations, and interpretation.
  *
  * Score semantics (percentile rank normalization):
@@ -468,7 +468,6 @@ export const COMPONENT_GROUPS: Record<
  *   Score 20 = bottom 20%, predicted to significantly underperform
  *
  * avgExcessReturn: 3-year annualized excess return vs regional benchmark (percentage points)
- * Generated from get_quintile_performance() RPC on v2.0 backtest outcomes.
  */
 export interface CalibrationEntry {
   quintile: number;
@@ -483,31 +482,31 @@ export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
       quintile: 1,
       scoreRange: [0, 20],
       label: 'Bottom 20%',
-      avgExcessReturn: -1.74,
+      avgExcessReturn: -1.35,
     },
     {
       quintile: 2,
       scoreRange: [20, 40],
       label: 'Below Average',
-      avgExcessReturn: -0.41,
+      avgExcessReturn: -0.0,
     },
     {
       quintile: 3,
       scoreRange: [40, 60],
       label: 'Average',
-      avgExcessReturn: 0.06,
+      avgExcessReturn: 0.28,
     },
     {
       quintile: 4,
       scoreRange: [60, 80],
       label: 'Above Average',
-      avgExcessReturn: 0.32,
+      avgExcessReturn: 0.5,
     },
     {
       quintile: 5,
       scoreRange: [80, 100],
       label: 'Top 20%',
-      avgExcessReturn: 1.11,
+      avgExcessReturn: 0.74,
     },
   ],
   investoredge: [
@@ -515,31 +514,31 @@ export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
       quintile: 1,
       scoreRange: [0, 20],
       label: 'Bottom 20%',
-      avgExcessReturn: -1.76,
+      avgExcessReturn: -1.16,
     },
     {
       quintile: 2,
       scoreRange: [20, 40],
       label: 'Below Average',
-      avgExcessReturn: -0.12,
+      avgExcessReturn: -0.05,
     },
     {
       quintile: 3,
       scoreRange: [40, 60],
       label: 'Average',
-      avgExcessReturn: 0.02,
+      avgExcessReturn: 0.43,
     },
     {
       quintile: 4,
       scoreRange: [60, 80],
       label: 'Above Average',
-      avgExcessReturn: 0.55,
+      avgExcessReturn: 0.48,
     },
     {
       quintile: 5,
       scoreRange: [80, 100],
       label: 'Top 20%',
-      avgExcessReturn: 0.69,
+      avgExcessReturn: 0.46,
     },
   ],
   markethealth: [
@@ -547,21 +546,26 @@ export const SCORE_CALIBRATION: Record<ScoreType, CalibrationEntry[]> = {
       quintile: 1,
       scoreRange: [0, 20],
       label: 'Coldest 20%',
-      avgExcessReturn: -1.5,
+      avgExcessReturn: -0.91,
     },
-    { quintile: 2, scoreRange: [20, 40], label: 'Cool', avgExcessReturn: -0.3 },
+    {
+      quintile: 2,
+      scoreRange: [20, 40],
+      label: 'Cool',
+      avgExcessReturn: -0.07,
+    },
     {
       quintile: 3,
       scoreRange: [40, 60],
       label: 'Neutral',
-      avgExcessReturn: 0.0,
+      avgExcessReturn: 0.32,
     },
-    { quintile: 4, scoreRange: [60, 80], label: 'Warm', avgExcessReturn: 0.4 },
+    { quintile: 4, scoreRange: [60, 80], label: 'Warm', avgExcessReturn: 0.41 },
     {
       quintile: 5,
       scoreRange: [80, 100],
       label: 'Hottest 20%',
-      avgExcessReturn: 0.8,
+      avgExcessReturn: 0.66,
     },
   ],
 };
