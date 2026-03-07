@@ -11,8 +11,9 @@ import React, { useEffect, useState, useRef } from "react";
 import {
   Loader2,
   TrendingUp,
+  Database,
   Newspaper,
-  Sparkles,
+  FileText,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
@@ -28,20 +29,27 @@ export const GENERATION_STEPS = [
     label: "Calculating market scores",
     description: "Analyzing market health indicators",
     icon: TrendingUp,
-    durationMs: 4000,
+    durationMs: 3000,
   },
   {
-    id: "news",
-    label: "Gathering market signals",
-    description: "Collecting recent market data",
-    icon: Newspaper,
+    id: "data",
+    label: "Gathering data",
+    description: "Querying PropertyIQ market data",
+    icon: Database,
     durationMs: 10000,
   },
   {
-    id: "ai",
-    label: "Generating AI analysis",
-    description: "Creating personalized insights",
-    icon: Sparkles,
+    id: "news",
+    label: "Scouting market news",
+    description: "Finding recent developments and trends",
+    icon: Newspaper,
+    durationMs: 15000,
+  },
+  {
+    id: "writing",
+    label: "Writing report",
+    description: "Generating your personalized report",
+    icon: FileText,
     durationMs: 30000,
   },
 ];
@@ -154,12 +162,12 @@ export function GeneratingState({
         </div>
 
         <h2 className="text-xl font-medium text-on-surface mb-1">
-          {isComplete ? "Report complete" : "Generating Your Report"}
+          {isComplete ? "Report complete" : "Generating your report"}
         </h2>
         <p className="text-sm text-on-surface-variant mb-8">
           {isComplete
             ? "Your report is ready."
-            : "This usually takes 10-30 seconds."}
+            : "This usually takes 1-3 minutes."}
         </p>
 
         {/* Step list */}
