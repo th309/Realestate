@@ -25,6 +25,7 @@ import {
   interpolateTemplate,
   appendNewsContext,
   parseAiResponse,
+  extractTitleAndSubtitle,
 } from './report-generation-v2-helpers';
 
 type ReportType = 'homeready' | 'investoredge' | 'comparison';
@@ -64,7 +65,8 @@ export class ReportGenerationV2Service {
       outline,
     );
 
-    results._meta = { version: 'v2', outline };
+    const { title, subtitle } = extractTitleAndSubtitle(outline);
+    results._meta = { version: 'v2', outline, title, subtitle };
     (results as any).__model_used = this.lastModelUsed;
     return results;
   }
@@ -119,7 +121,11 @@ Key inputs:
 - Median price: ${context.median_listing_price || context.zhvi || 'N/A'}
 - Market signal summary: ${context.market_signal_summary || 'None available'}
 
-Produce a 150-200 word analytical outline for this report. Include:
+Also generate the following (place these BEFORE the outline body):
+TITLE: A compelling, insight-driven report title (max 20 words) that captures the key finding. Not "HomeReady Report: Tampa, FL" — something that tells the reader what they'll learn.
+SUBTITLE: One sentence expanding on the title.
+
+Then produce a 150-200 word analytical outline for this report. Include:
 1. The headline story arc (what is the ONE thing this report should make the reader understand?)
 2. Which sections should receive the most emphasis and why
 3. Key cross-references between sections (e.g., "affordability section should reference the growth tension")

@@ -71,6 +71,25 @@ The Data section above is AUTHORITATIVE for Realtor.com and Zillow metrics. News
 }
 
 /**
+ * Extract TITLE and SUBTITLE lines from an outline response.
+ *
+ * Expected format in the outline text:
+ *   TITLE: Some compelling title here
+ *   SUBTITLE: One sentence expanding on the title.
+ */
+export function extractTitleAndSubtitle(outline: string): {
+  title: string | null;
+  subtitle: string | null;
+} {
+  const titleMatch = outline.match(/^TITLE:\s*(.+)$/m);
+  const subtitleMatch = outline.match(/^SUBTITLE:\s*(.+)$/m);
+  return {
+    title: titleMatch?.[1]?.trim() || null,
+    subtitle: subtitleMatch?.[1]?.trim() || null,
+  };
+}
+
+/**
  * Parse an AI response, handling JSON output formats with truncation recovery.
  */
 export function parseAiResponse(
