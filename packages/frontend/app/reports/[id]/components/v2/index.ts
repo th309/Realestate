@@ -18,3 +18,6 @@ export type {
 
 export { MethodologyFooter } from "./MethodologyFooter";
 export { ScoreCredibilityBadge } from "./ScoreCredibilityBadge";
+
+export { MarketUpdateBanner } from "./MarketUpdateBanner";
+export type { MarketUpdateBannerProps } from "./MarketUpdateBanner";

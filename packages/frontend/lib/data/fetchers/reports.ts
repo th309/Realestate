@@ -4,8 +4,8 @@
  * API functions for report-specific operations.
  */
 
-import { API_URL } from './base';
-import { getAuthHeaders } from './auth-headers';
+import { API_URL } from "./base";
+import { getAuthHeaders } from "./auth-headers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +42,7 @@ export interface GenerateReportRequest {
 
 export interface GenerateReportResponse {
   report_id: string;
-  status: 'generating';
+  status: "generating";
 }
 
 interface FetchReportOptions {
@@ -69,8 +69,8 @@ export async function fetchReport<T = unknown>(
   const response = await fetch(`${API_URL}/api/reports/${reportId}`, {
     headers: {
       ...authHeaders,
-      'x-user-id': options.userId,
-      'Content-Type': 'application/json',
+      "x-user-id": options.userId,
+      "Content-Type": "application/json",
     },
   });
 
@@ -92,13 +92,13 @@ export async function fetchReportHistory<T = unknown>(
   const response = await fetch(`${API_URL}/api/reports/history`, {
     headers: {
       ...authHeaders,
-      'x-user-id': options.userId,
-      'Content-Type': 'application/json',
+      "x-user-id": options.userId,
+      "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch reports');
+    throw new Error("Failed to fetch reports");
   }
 
   const data = await response.json();
@@ -113,14 +113,14 @@ export async function fetchReportList<T = unknown>(
 ): Promise<T[]> {
   const authHeaders = await getAuthHeaders();
   const params = new URLSearchParams();
-  if (options.limit) params.set('limit', String(options.limit));
+  if (options.limit) params.set("limit", String(options.limit));
 
   const response = await fetch(`${API_URL}/api/reports?${params}`, {
-    headers: { ...authHeaders, 'x-user-id': options.userId },
+    headers: { ...authHeaders, "x-user-id": options.userId },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch reports');
+    throw new Error("Failed to fetch reports");
   }
 
   const data = await response.json();
@@ -137,22 +137,24 @@ export async function generateReport(
   const authHeaders = await getAuthHeaders();
   const headers: Record<string, string> = {
     ...authHeaders,
-    'Content-Type': 'application/json',
-    'x-user-id': options.userId,
+    "Content-Type": "application/json",
+    "x-user-id": options.userId,
   };
   if (options.userTier) {
-    headers['x-user-tier'] = options.userTier;
+    headers["x-user-tier"] = options.userTier;
   }
 
   const response = await fetch(`${API_URL}/api/reports/generate`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Failed to generate report: ${response.status}`);
+    throw new Error(
+      errorData.message || `Failed to generate report: ${response.status}`,
+    );
   }
 
   return response.json();
@@ -166,7 +168,7 @@ export async function fetchSampleReport<T = unknown>(): Promise<T | null> {
 
   if (!response.ok) {
     if (response.status === 404) return null;
-    throw new Error('Failed to fetch sample report');
+    throw new Error("Failed to fetch sample report");
   }
 
   return response.json();
@@ -178,7 +180,9 @@ export async function fetchSampleReport<T = unknown>(): Promise<T | null> {
 export async function fetchSharedReport<T = unknown>(
   token: string,
 ): Promise<T | null> {
-  const response = await fetch(`${API_URL}/api/reports/shared/${encodeURIComponent(token)}`);
+  const response = await fetch(
+    `${API_URL}/api/reports/shared/${encodeURIComponent(token)}`,
+  );
 
   if (!response.ok) {
     if (response.status === 404) return null;
@@ -194,18 +198,18 @@ export async function fetchSharedReport<T = unknown>(
 export async function createReportShareLink(
   reportId: string,
   userId: string,
-  options?: { accessLevel?: 'view' | 'download'; expiresInDays?: number },
+  options?: { accessLevel?: "view" | "download"; expiresInDays?: number },
 ): Promise<string> {
   const authHeaders = await getAuthHeaders();
   const response = await fetch(`${API_URL}/api/reports/${reportId}/share`, {
-    method: 'POST',
+    method: "POST",
     headers: {
       ...authHeaders,
-      'Content-Type': 'application/json',
-      'x-user-id': userId,
+      "Content-Type": "application/json",
+      "x-user-id": userId,
     },
     body: JSON.stringify({
-      access_level: options?.accessLevel || 'view',
+      access_level: options?.accessLevel || "view",
       expires_in_days: options?.expiresInDays,
     }),
   });
@@ -227,12 +231,17 @@ export async function regenerateNarratives(
   signal?: AbortSignal,
 ): Promise<RegenerateNarrativesResponse> {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/api/reports/${reportId}/regenerate-narratives`, {
-    method: 'POST',
-    headers: { ...authHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_inputs: userInputs } satisfies RegenerateNarrativesRequest),
-    signal,
-  });
+  const response = await fetch(
+    `${API_URL}/api/reports/${reportId}/regenerate-narratives`,
+    {
+      method: "POST",
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_inputs: userInputs,
+      } satisfies RegenerateNarrativesRequest),
+      signal,
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to regenerate narratives: ${response.status}`);

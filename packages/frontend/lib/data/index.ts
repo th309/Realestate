@@ -175,6 +175,13 @@ export {
   type GenerateReportRequest,
   type GenerateReportResponse,
 
+  // Report follow-up (alerts + market changes)
+  fetchReportFollowUp,
+  dismissReportAlert,
+  type FollowUpAlert,
+  type MarketChange,
+  type ReportFollowUpData,
+
   // Benchmarks
   fetchBenchmarks,
   fetchMetricBenchmarks,

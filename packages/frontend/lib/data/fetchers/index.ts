@@ -70,6 +70,15 @@ export {
   type GenerateReportResponse,
 } from "./reports";
 
+// Report follow-up (alerts + market changes)
+export {
+  fetchReportFollowUp,
+  dismissReportAlert,
+  type FollowUpAlert,
+  type MarketChange,
+  type ReportFollowUpData,
+} from "./report-follow-up";
+
 // Benchmarks
 export {
   fetchBenchmarks,
