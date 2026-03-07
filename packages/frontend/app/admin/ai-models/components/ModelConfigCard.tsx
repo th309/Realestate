@@ -26,12 +26,66 @@ const PROVIDERS = [
   { value: "custom", label: "Custom" },
 ] as const;
 
+/** Available models per provider — shown as dropdown options in admin UI. */
+const PROVIDER_MODELS: Record<
+  string,
+  Array<{ id: string; label: string; context?: string }>
+> = {
+  deepseek: [
+    { id: "deepseek-chat", label: "DeepSeek Chat (V3)", context: "64K" },
+    {
+      id: "deepseek-reasoner",
+      label: "DeepSeek Reasoner (R1)",
+      context: "64K",
+    },
+  ],
+  anthropic: [
+    { id: "claude-opus-4-20250514", label: "Claude Opus 4", context: "200K" },
+    {
+      id: "claude-sonnet-4-20250514",
+      label: "Claude Sonnet 4",
+      context: "200K",
+    },
+    { id: "claude-haiku-4-20250414", label: "Claude Haiku 4", context: "200K" },
+  ],
+  openai: [
+    { id: "gpt-4o", label: "GPT-4o", context: "128K" },
+    { id: "gpt-4o-mini", label: "GPT-4o Mini", context: "128K" },
+    { id: "gpt-4-turbo", label: "GPT-4 Turbo", context: "128K" },
+    { id: "o3", label: "o3 (Reasoning)", context: "200K" },
+    { id: "o3-mini", label: "o3-mini (Reasoning)", context: "200K" },
+    { id: "o4-mini", label: "o4-mini (Reasoning)", context: "200K" },
+  ],
+  google: [
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", context: "1M" },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", context: "1M" },
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", context: "1M" },
+  ],
+  openrouter: [
+    { id: "anthropic/claude-opus-4", label: "Claude Opus 4", context: "200K" },
+    {
+      id: "anthropic/claude-sonnet-4",
+      label: "Claude Sonnet 4",
+      context: "200K",
+    },
+    { id: "openai/gpt-4o", label: "GPT-4o", context: "128K" },
+    { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", context: "1M" },
+    { id: "deepseek/deepseek-chat", label: "DeepSeek Chat", context: "64K" },
+    {
+      id: "deepseek/deepseek-reasoner",
+      label: "DeepSeek Reasoner",
+      context: "64K",
+    },
+  ],
+  custom: [],
+};
+
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
   deepseek: "deepseek-chat",
   anthropic: "claude-sonnet-4-20250514",
   openai: "gpt-4o",
-  google: "gemini-2.0-flash",
-  openrouter: "anthropic/claude-sonnet-4-20250514",
+  google: "gemini-2.5-flash",
+  openrouter: "anthropic/claude-sonnet-4",
   custom: "",
 };
 
@@ -157,16 +211,58 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
           <label className="block text-sm font-medium text-on-surface mb-1.5">
             Model
           </label>
-          <input
-            type="text"
-            value={model}
-            onChange={(e) => {
-              setModel(e.target.value);
-              setSaveStatus("idle");
-            }}
-            placeholder={PROVIDER_DEFAULT_MODELS[provider] || "model-name"}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+          {(PROVIDER_MODELS[provider]?.length ?? 0) > 0 ? (
+            <>
+              <select
+                value={
+                  PROVIDER_MODELS[provider]?.some((m) => m.id === model)
+                    ? model
+                    : "__custom__"
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== "__custom__") {
+                    setModel(val);
+                  } else {
+                    setModel("");
+                  }
+                  setSaveStatus("idle");
+                }}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {PROVIDER_MODELS[provider].map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                    {m.context ? ` (${m.context})` : ""}
+                  </option>
+                ))}
+                <option value="__custom__">Custom model ID...</option>
+              </select>
+              {!PROVIDER_MODELS[provider]?.some((m) => m.id === model) && (
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    setSaveStatus("idle");
+                  }}
+                  placeholder="Enter custom model ID"
+                  className="w-full mt-2 px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              )}
+            </>
+          ) : (
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => {
+                setModel(e.target.value);
+                setSaveStatus("idle");
+              }}
+              placeholder="Enter model ID"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant bg-surface text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          )}
         </div>
 
         {/* Temperature */}
