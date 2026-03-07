@@ -11,11 +11,11 @@
 
 /** Shape of a metric entry from what_to_watch / actions_and_monitoring JSON */
 export interface WatchMetricEntry {
-  name: string;
-  current_value: string;
-  watch_threshold: string;
+  metric: string;
+  current: string;
+  threshold: string;
   direction: string;
-  implication: string;
+  rationale: string;
 }
 
 /** Alert row from report_follow_up_alerts table */
@@ -88,8 +88,8 @@ export function isValidWatchMetric(entry: unknown): entry is WatchMetricEntry {
   if (typeof entry !== 'object' || entry === null) return false;
   const e = entry as Record<string, unknown>;
   return (
-    typeof e.name === 'string' &&
-    typeof e.watch_threshold === 'string' &&
+    typeof e.metric === 'string' &&
+    typeof e.threshold === 'string' &&
     typeof e.direction === 'string'
   );
 }

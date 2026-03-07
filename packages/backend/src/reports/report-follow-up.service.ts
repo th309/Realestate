@@ -68,14 +68,14 @@ export class ReportFollowUpService {
     const metrics = extractWatchMetrics(watchSection);
     if (metrics.length === 0) return;
 
-    const alertRows = metrics.map((metric) => ({
+    const alertRows = metrics.map((m) => ({
       report_id: reportId,
       user_id: userId,
-      metric_name: metric.name,
-      current_value: parseNumericValue(metric.current_value),
-      threshold_value: parseNumericValue(metric.watch_threshold),
-      direction: metric.direction === 'above' ? 'up' : 'down',
-      rationale: metric.implication,
+      metric_name: m.metric,
+      current_value: parseNumericValue(m.current),
+      threshold_value: parseNumericValue(m.threshold),
+      direction: m.direction === 'up' ? 'up' : 'down',
+      rationale: m.rationale,
       status: 'active',
     }));
 

@@ -19,15 +19,32 @@ import {
   PROVIDER_PRESETS,
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
+import { logUsage } from './ai-usage-logger';
 
 @Injectable()
 export class AiProviderService {
   private readonly logger = new Logger(AiProviderService.name);
   private readonly clientCache = new Map<string, OpenAI>();
   private readonly configResolver: AiConfigResolver;
+  private readonly supabase: SupabaseService;
+  /** Global test run ID applied to all usage logs. Set via admin API. */
+  private activeTestRunId: string | null = null;
 
   constructor(supabase: SupabaseService, configService: ConfigService) {
+    this.supabase = supabase;
     this.configResolver = new AiConfigResolver(supabase, configService);
+
+    // Log which provider API keys are available at startup
+    const keys = [
+      'DEEPSEEK_API_KEY',
+      'ANTHROPIC_API_KEY',
+      'OPENAI_API_KEY',
+      'GOOGLE_AI_API_KEY',
+    ];
+    const status = keys
+      .map((k) => `${k}: ${configService.get(k) ? 'SET' : 'MISSING'}`)
+      .join(', ');
+    this.logger.log(`API keys at startup: ${status}`);
   }
 
   /**
@@ -49,6 +66,9 @@ export class AiProviderService {
       maxTokens: request.maxTokens,
       temperature,
       responseFormat: request.responseFormat,
+      testRunId: request.testRunId,
+      reportId: request.reportId,
+      sectionId: request.sectionId,
     });
   }
 
@@ -81,6 +101,15 @@ export class AiProviderService {
    * Invalidate cached config. Call after admin updates ai_model_config.
    * Pass a purpose to invalidate a single entry, or omit to clear all.
    */
+  setTestRunId(id: string | null): void {
+    this.activeTestRunId = id;
+    this.logger.log(`Test run ID set: ${id || '(cleared)'}`);
+  }
+
+  getTestRunId(): string | null {
+    return this.activeTestRunId;
+  }
+
   invalidateCache(purpose?: string): void {
     this.configResolver.invalidate(purpose);
     // Always clear client cache — API keys or base URLs may have changed.
@@ -99,6 +128,9 @@ export class AiProviderService {
       maxTokens: number;
       temperature?: number;
       responseFormat?: 'text' | 'json';
+      testRunId?: string;
+      reportId?: string;
+      sectionId?: string;
     },
   ): Promise<AiCompletionResponse> {
     const client = this.getOrCreateClient(config);
@@ -127,6 +159,20 @@ export class AiProviderService {
           (response.usage ? ` (${response.usage.total_tokens} tokens)` : ''),
       );
 
+      logUsage(this.supabase, {
+        purpose,
+        provider: config.provider,
+        model: config.model,
+        promptTokens: response.usage?.prompt_tokens,
+        completionTokens: response.usage?.completion_tokens,
+        totalTokens: response.usage?.total_tokens,
+        durationMs,
+        success: true,
+        testRunId: options.testRunId || this.activeTestRunId || undefined,
+        reportId: options.reportId,
+        sectionId: options.sectionId,
+      });
+
       return {
         content,
         model: config.model,
@@ -145,6 +191,17 @@ export class AiProviderService {
       this.logger.error(
         `[${purpose}] ${config.provider}/${config.model} failed after ${durationMs}ms: ${error.message}`,
       );
+      logUsage(this.supabase, {
+        purpose,
+        provider: config.provider,
+        model: config.model,
+        durationMs,
+        success: false,
+        errorMessage: error.message,
+        testRunId: options.testRunId || this.activeTestRunId || undefined,
+        reportId: options.reportId,
+        sectionId: options.sectionId,
+      });
       throw error;
     }
   }

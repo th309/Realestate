@@ -232,11 +232,11 @@ Output a JSON object with this exact structure:
 {
   "metrics": [
     {
-      "name": "descriptive metric name",
-      "current_value": "current value with unit",
-      "watch_threshold": "specific threshold that signals action",
-      "direction": "above|below",
-      "implication": "what crossing this threshold means for an investor"
+      "metric": "descriptive metric name",
+      "current": "current value with unit",
+      "threshold": "specific threshold that signals action",
+      "direction": "up|down|stable",
+      "rationale": "what crossing this threshold means for an investor"
     }
   ],
   "scenario": "A 2-3 sentence forward-looking paragraph describing the most likely investment scenario for this market over the next 6-12 months, with specific return implications."
@@ -246,6 +246,7 @@ Rules:
 - Include 2-3 monitoring metrics focused on investment returns
 - Thresholds must be specific numbers tied to investment math (e.g., "cap rate below 4.0% makes this market cash-flow negative at current rates")
 - Choose metrics that would change a buy/hold/sell decision
+- direction must be "up" (metric rising is bad), "down" (metric falling is bad), or "stable"
 - Scenario must reference current yield and appreciation trends`,
     max_tokens: 800,
     output_format: 'json_object',

@@ -13,9 +13,13 @@ import { useState, useEffect, useCallback } from "react";
 import {
   fetchAiModelConfigs,
   updateAiModelConfig,
+  fetchTestRunId,
+  setTestRunId as setTestRunIdApi,
   type AiModelConfig,
 } from "@/lib/data/fetchers/ai-models";
 import { ModelConfigCard } from "./components/ModelConfigCard";
+import { TestRunner } from "./components/TestRunner";
+import { EvaluationDashboard } from "./components/EvaluationDashboard";
 
 export default function AiModelConfigPage() {
   const [configs, setConfigs] = useState<AiModelConfig[]>([]);
@@ -25,13 +29,19 @@ export default function AiModelConfigPage() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [testRunId, setTestRunId] = useState("");
+  const [testRunSaving, setTestRunSaving] = useState(false);
 
   const loadConfigs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAiModelConfigs();
+      const [data, runId] = await Promise.all([
+        fetchAiModelConfigs(),
+        fetchTestRunId(),
+      ]);
       setConfigs(data);
+      setTestRunId(runId || "");
     } catch (err) {
       setError("Failed to load AI model configurations.");
       console.error("Error loading AI model configs:", err);
@@ -115,6 +125,43 @@ export default function AiModelConfigPage() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Test Run ID */}
+        <div className="mb-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant flex items-center gap-4">
+          <label
+            htmlFor="test-run-id"
+            className="text-sm font-medium text-on-surface whitespace-nowrap"
+          >
+            Test Run ID
+          </label>
+          <input
+            id="test-run-id"
+            type="text"
+            value={testRunId}
+            onChange={(e) => setTestRunId(e.target.value)}
+            placeholder="e.g. p1-sonnet46-tampa (empty = no tagging)"
+            className="flex-1 px-3 py-2 text-sm rounded-lg bg-surface border border-outline-variant text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <button
+            onClick={async () => {
+              setTestRunSaving(true);
+              const result = await setTestRunIdApi(testRunId || null);
+              setTestRunId(result || "");
+              setToast({
+                message: testRunId
+                  ? `Test run ID set: ${testRunId}`
+                  : "Test run ID cleared.",
+                type: "success",
+              });
+              setTimeout(() => setToast(null), 4000);
+              setTestRunSaving(false);
+            }}
+            disabled={testRunSaving}
+            className="px-4 py-2 text-sm font-medium rounded-full bg-tertiary text-on-tertiary hover:bg-tertiary/90 disabled:opacity-50 transition-colors duration-200"
+          >
+            {testRunSaving ? "Saving..." : testRunId ? "Set" : "Clear"}
+          </button>
+        </div>
+
         {/* Error state */}
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-error-container text-on-error-container text-sm">
@@ -171,6 +218,12 @@ export default function AiModelConfigPage() {
             ))}
           </div>
         )}
+
+        {/* Test Runner */}
+        <TestRunner />
+
+        {/* Evaluation Dashboard */}
+        <EvaluationDashboard />
       </main>
 
       {/* Toast notification */}

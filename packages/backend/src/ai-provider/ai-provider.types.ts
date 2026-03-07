@@ -28,6 +28,12 @@ export interface AiCompletionRequest {
   maxTokens: number;
   temperature?: number;
   responseFormat?: 'text' | 'json';
+  /** Tag for grouping usage logs during model evaluation runs. */
+  testRunId?: string;
+  /** Section identifier for granular usage tracking (e.g., "executive_verdict"). */
+  sectionId?: string;
+  /** Associated report ID for linking usage to a specific report. */
+  reportId?: string;
 }
 
 export interface AiCompletionResponse {
@@ -51,6 +57,40 @@ export interface ProviderPreset {
   /** Available models for this provider, shown in admin UI dropdown. */
   availableModels: Array<{ id: string; label: string; context?: string }>;
 }
+
+/**
+ * Per-model pricing in USD per 1M tokens.
+ * Used by AiUsageLogger to estimate cost from token counts.
+ * Update when providers change pricing.
+ */
+export const MODEL_PRICING: Record<string, { input: number; output: number }> =
+  {
+    // DeepSeek
+    'deepseek-chat': { input: 0.27, output: 1.1 },
+    'deepseek-reasoner': { input: 0.55, output: 2.19 },
+    // Anthropic
+    'claude-opus-4-6': { input: 15.0, output: 75.0 },
+    'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
+    'claude-sonnet-4-5': { input: 3.0, output: 15.0 },
+    'claude-haiku-4-5': { input: 0.8, output: 4.0 },
+    // OpenAI
+    'gpt-5.4': { input: 2.5, output: 10.0 },
+    'gpt-5.4-pro': { input: 5.0, output: 20.0 },
+    'gpt-4.1': { input: 2.0, output: 8.0 },
+    'gpt-4.1-mini': { input: 0.4, output: 1.6 },
+    'gpt-4.1-nano': { input: 0.1, output: 0.4 },
+    o3: { input: 2.0, output: 8.0 },
+    'o3-pro': { input: 20.0, output: 80.0 },
+    'o4-mini': { input: 1.1, output: 4.4 },
+    'gpt-4o': { input: 2.5, output: 10.0 },
+    // Google
+    'gemini-3.1-pro-preview': { input: 1.25, output: 10.0 },
+    'gemini-3.1-flash-lite-preview': { input: 0.02, output: 0.1 },
+    'gemini-3-flash': { input: 0.1, output: 0.4 },
+    'gemini-2.5-pro': { input: 1.25, output: 10.0 },
+    'gemini-2.5-flash': { input: 0.15, output: 0.6 },
+    'gemini-2.5-flash-lite': { input: 0.02, output: 0.1 },
+  };
 
 export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
   deepseek: {

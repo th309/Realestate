@@ -27,10 +27,10 @@ Data snapshot:
 
 Write 2-3 sentences that a homebuyer would remember and quote to their partner. Capture:
 1. The score and what it means in plain English
-2. The market phase and its implication (buyer/seller leverage)
+2. A clear market classification — state explicitly whether this is a **Buyer's Market**, **Seller's Market**, or **Balanced/Neutral Market** based on the market phase data, and what that means for negotiation leverage
 3. The monthly payment reality and whether local incomes support it
 
-This is a VERDICT, not a summary. Take a position. Reference specific numbers.
+This is a VERDICT, not a summary. Take a position. The market classification (buyer/seller/neutral) must appear in the first or second sentence — readers need this immediately.
 
 BAD: "The market shows mixed signals with moderate growth and reasonable prices."
 GOOD: "At {{homeready_score}}/100, {{geography_name}} is a market where the math works — barely. Your {{monthly_payment_estimate}} payment is {{dti_at_median_income}}, but {{key_tension}} means timing your entry matters more than usual."
@@ -259,11 +259,11 @@ Output a JSON object with this exact structure:
 {
   "metrics": [
     {
-      "name": "descriptive metric name",
-      "current_value": "current value with unit",
-      "watch_threshold": "specific threshold that signals action",
-      "direction": "above|below",
-      "implication": "what crossing this threshold means for a buyer"
+      "metric": "descriptive metric name",
+      "current": "current value with unit",
+      "threshold": "specific threshold that signals action",
+      "direction": "up|down|stable",
+      "rationale": "what crossing this threshold means for a buyer"
     }
   ],
   "scenario": "A 2-3 sentence forward-looking paragraph describing the most likely scenario for this market over the next 6 months, grounded in current trend data."
@@ -273,6 +273,7 @@ Rules:
 - Include 2-3 monitoring metrics (not more)
 - Thresholds must be SPECIFIC numbers, not "significantly higher"
 - Choose metrics that would actually change a buy/wait decision
+- direction must be "up" (metric rising is bad), "down" (metric falling is bad), or "stable"
 - The scenario paragraph must reference current trend data
 - Do NOT speculate beyond what trends support`,
     max_tokens: 800,
