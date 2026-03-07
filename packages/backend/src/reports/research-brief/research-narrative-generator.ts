@@ -3,13 +3,13 @@
  *
  * Handles the final step of the research brief pipeline:
  * takes structured research data and generates a prose narrative
- * via DeepSeek (OpenAI-compatible API).
+ * via AiProviderService (purpose: 'research_narrative').
  *
  * Extracted from ResearchBriefService to keep file sizes under limit.
  */
 
 import { Logger } from '@nestjs/common';
-import OpenAI from 'openai';
+import { AiProviderService } from '../../ai-provider/ai-provider.service';
 import { buildNarrativePrompt } from './research-prompts';
 
 const logger = new Logger('ResearchNarrativeGenerator');
@@ -45,11 +45,10 @@ function truncateResearchData(
 
 /**
  * Generate the final narrative from structured research data.
- * Uses DeepSeek for cost-effective long-form generation.
+ * Uses AiProviderService with purpose 'research_narrative'.
  */
 export async function generateNarrative(
-  deepseek: OpenAI,
-  model: string,
+  aiProvider: AiProviderService,
   userQuestion: string,
   researchData: Record<string, unknown>,
   clarifyingContext?: string,
@@ -61,29 +60,23 @@ export async function generateNarrative(
     clarifyingContext,
   );
 
-  logger.log(`Narrative prompt: ${prompt.length} chars, model: ${model}`);
+  logger.log(`Narrative prompt: ${prompt.length} chars`);
   logger.log(`Research data keys: ${Object.keys(researchData).join(', ')}`);
 
-  const startTime = Date.now();
   try {
-    const response = await deepseek.chat.completions.create({
-      model,
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: prompt }],
+    const response = await aiProvider.complete('research_narrative', {
+      userPrompt: prompt,
+      maxTokens: 8192,
     });
 
-    logger.log(`Narrative generated in ${Date.now() - startTime}ms`);
+    logger.log(
+      `Narrative generated in ${response.durationMs}ms via ${response.provider}/${response.model}`,
+    );
 
-    const raw =
-      response.choices[0]?.message?.content ||
-      'Unable to generate research brief.';
+    const raw = response.content || 'Unable to generate research brief.';
     return stripInlineMarkdown(raw);
   } catch (error: any) {
-    logger.error(
-      `Narrative generation failed after ${Date.now() - startTime}ms: ${error.message}`,
-    );
-    logger.error(`Error cause: ${error.cause?.message || 'none'}`);
-    logger.error(`Error code: ${error.code || 'none'}`);
+    logger.error(`Narrative generation failed: ${error.message}`);
     throw error;
   }
 }
