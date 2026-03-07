@@ -24,7 +24,7 @@ INSERT INTO ai_model_config (purpose, label, provider, model, temperature) VALUE
   ('custom_report',       'Custom Report Generation',                          'deepseek', 'deepseek-reasoner', 0.70),
   ('research_agent',      'Research Brief - Data Gathering',                   'deepseek', 'deepseek-chat', 0.30),
   ('research_narrative',  'Research Brief - Narrative Writing',                'deepseek', 'deepseek-reasoner', 0.70),
-  ('news_scout',          'News Scouting (Web Search)',                        'anthropic', 'claude-sonnet-4-20250514', 0.30),
+  ('news_scout',          'News Scouting (Web Search)',                        'anthropic', 'claude-sonnet-4-6', 0.30),
   ('conversation',        'Report Conversation Follow-up',                     'deepseek', 'deepseek-chat', 0.70)
 ON CONFLICT (purpose) DO NOTHING;
 
