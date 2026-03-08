@@ -132,7 +132,8 @@ export type ReportTemplateType =
   | "comparison"
   | "homeready_v2"
   | "investoredge_v2"
-  | "comparison_v2";
+  | "comparison_v2"
+  | "custom_research_v2";
 
 // -----------------------------------------------------------------------------
 // Template Definitions

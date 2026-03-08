@@ -231,6 +231,11 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
   const useV2 = isV2Narrative(reportInstance);
   let templateType: ReportTemplateType;
 
+  const isCustomReport =
+    reportType === "custom" ||
+    report.template_slug === "custom_research" ||
+    report.template?.slug === "custom_research";
+
   if (
     reportType === "comparison" &&
     report.comparison_geographies &&
@@ -242,6 +247,8 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
       agentViewMode === "prep"
         ? "market_snapshot_prep"
         : "market_snapshot_client";
+  } else if (isCustomReport && useV2) {
+    templateType = "custom_research_v2";
   } else if (userType === "investor") {
     templateType = useV2 ? "investoredge_v2" : "investoredge";
   } else {

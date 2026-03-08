@@ -23,6 +23,11 @@ import {
   V2ComparisonScenarioAnalysis,
   V2ComparisonVerdictAndActions,
 } from "../sections/v2/v2TemplateSections";
+import {
+  V2CustomExecutiveSummary,
+  V2CustomDynamicSections,
+  V2CustomScenarioAnalysis,
+} from "../sections/v2/V2CustomSections";
 import type { ReportTemplateDefinition } from "./index";
 
 // ---------------------------------------------------------------------------
@@ -65,6 +70,16 @@ export const V2_REPORT_TEMPLATES: Record<string, ReportTemplateDefinition> = {
       { component: V2ComparisonHeadToHead, id: "head-to-head" },
       { component: V2ComparisonScenarioAnalysis, id: "scenario-analysis" },
       { component: V2ComparisonVerdictAndActions, id: "verdict-and-actions" },
+      { component: SharedMarketPulse, id: "market-pulse" },
+    ],
+  },
+  custom_research_v2: {
+    name: "Custom Research Brief",
+    description: "V2 custom analysis with dynamic AI-generated sections",
+    sections: [
+      { component: V2CustomExecutiveSummary, id: "executive-summary" },
+      { component: V2CustomDynamicSections, id: "dynamic-sections" },
+      { component: V2CustomScenarioAnalysis, id: "scenario-analysis" },
       { component: SharedMarketPulse, id: "market-pulse" },
     ],
   },
