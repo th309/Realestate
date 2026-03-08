@@ -90,6 +90,65 @@ export function extractTitleAndSubtitle(outline: string): {
 }
 
 /**
+ * Extract ACTION_ITEMS_JSON from a text AI response.
+ *
+ * Some text-format sections (investment_thesis, verdict_and_actions) include
+ * an ACTION_ITEMS_JSON: [...] block after the prose. This function splits the
+ * response into narrative text and parsed action items.
+ *
+ * Returns { narrative, action_items } if the marker is found, or
+ * { narrative: text, action_items: null } if not.
+ */
+export function extractActionItems(text: string): {
+  narrative: string;
+  action_items: any[] | null;
+} {
+  const markerPattern = /\n?\s*ACTION_ITEMS_JSON:\s*\n?/i;
+  const match = text.match(markerPattern);
+
+  if (!match || match.index === undefined) {
+    return { narrative: text.trim(), action_items: null };
+  }
+
+  const narrative = text.substring(0, match.index).trim();
+  const jsonPart = text.substring(match.index + match[0].length).trim();
+
+  try {
+    const cleaned = jsonPart
+      .replace(/^```(?:json)?\s*\n?/i, '')
+      .replace(/\n?```\s*$/i, '')
+      .trim();
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) {
+      return { narrative, action_items: parsed };
+    }
+    logger.warn('[v2] ACTION_ITEMS_JSON parsed but is not an array');
+    return { narrative, action_items: null };
+  } catch {
+    // Try truncated recovery (same pattern as parseAiResponse)
+    const lastBrace = jsonPart.lastIndexOf('}');
+    if (lastBrace > 0) {
+      try {
+        const truncated = jsonPart.substring(0, lastBrace + 1).trimStart();
+        const recovered = JSON.parse(
+          truncated.startsWith('[') ? truncated + ']' : '[' + truncated + ']',
+        );
+        if (Array.isArray(recovered) && recovered.length > 0) {
+          logger.warn(
+            `[v2] Recovered ${recovered.length} action items from truncated JSON`,
+          );
+          return { narrative, action_items: recovered };
+        }
+      } catch {
+        // Recovery also failed
+      }
+    }
+    logger.warn('[v2] Failed to parse ACTION_ITEMS_JSON, discarding block');
+    return { narrative, action_items: null };
+  }
+}
+
+/**
  * Parse an AI response, handling JSON output formats with truncation recovery.
  */
 export function parseAiResponse(

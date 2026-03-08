@@ -45,6 +45,12 @@ export interface V2ActionsAndMonitoring {
   metrics: V2WatchMetric[];
 }
 
+/** V2 investment_thesis structured shape (narrative + action items) */
+export interface V2InvestmentThesis {
+  narrative: string;
+  action_items: Array<{ title: string; detail: string; urgency: string }>;
+}
+
 // ---------------------------------------------------------------------------
 // Detection
 // ---------------------------------------------------------------------------
@@ -81,6 +87,7 @@ export function getV2Section(
 
 /**
  * Get a v2 text section (string content).
+ * Handles structured objects with a `narrative` field (e.g. investment_thesis).
  */
 export function getV2TextSection(
   report: ReportInstance,
@@ -88,6 +95,29 @@ export function getV2TextSection(
 ): string | null {
   const value = getV2Section(report, sectionId);
   if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "narrative" in value) {
+    return (value as { narrative: string }).narrative;
+  }
+  return null;
+}
+
+/**
+ * Get action items from a v2 section that embeds them (investment_thesis, verdict_and_actions).
+ * Returns null if the section doesn't have structured action items.
+ */
+export function getV2ActionItems(
+  report: ReportInstance,
+  sectionId: string,
+): V2InvestmentThesis["action_items"] | null {
+  const value = getV2Section(report, sectionId);
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "action_items" in value &&
+    Array.isArray((value as V2InvestmentThesis).action_items)
+  ) {
+    return (value as V2InvestmentThesis).action_items;
+  }
   return null;
 }
 

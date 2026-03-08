@@ -15,8 +15,8 @@ import {
   getScoreGrade,
   getScoreLabel,
   deriveConfidence,
-  formatComponentLabel,
 } from "../../utils/scoreHelpers";
+import { ComponentQuickGlance } from "./ComponentQuickGlance";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -331,43 +331,10 @@ export function InvestorHero({
         )}
 
         {/* ----------------------------------------------------------------- */}
-        {/* Component Quick Glance (top 3 components as compact pills)         */}
+        {/* Component Quick Glance (all components)                            */}
         {/* ----------------------------------------------------------------- */}
         {components && components.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-3 mb-[var(--report-space-lg)] report-animate-in report-animate-in-delay-2">
-            {[...components]
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 3)
-              .map((comp) => (
-                <div
-                  key={comp.component}
-                  className="flex items-center gap-2 px-4 py-2 rounded-[var(--report-radius-md)]"
-                  style={{
-                    backgroundColor: "white",
-                    border: "1px solid rgba(27, 46, 74, 0.06)",
-                  }}
-                >
-                  <span
-                    className="text-sm font-semibold"
-                    style={{
-                      color: getScoreStrokeColor(comp.score),
-                      fontFamily: "var(--report-font-display)",
-                    }}
-                  >
-                    {comp.score}
-                  </span>
-                  <span
-                    className="text-xs font-medium"
-                    style={{
-                      color: "var(--report-stone)",
-                      fontFamily: "var(--report-font-body)",
-                    }}
-                  >
-                    {formatComponentLabel(comp.component)}
-                  </span>
-                </div>
-              ))}
-          </div>
+          <ComponentQuickGlance components={components} />
         )}
 
         {/* ----------------------------------------------------------------- */}

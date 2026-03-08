@@ -21,6 +21,7 @@ Data snapshot:
 - Market phase: {{market_phase}}
 - Break-even occupancy: {{break_even_occupancy}}
 - Appreciation trajectory: {{appreciation_trajectory}}
+{{#if key_tension}}- KEY TENSION: {{key_tension}}{{/if}}
 
 Write ONE sentence that an investor would use to decide whether to keep reading. This is a signal — BUY, HOLD, WATCH, or AVOID — with the single most compelling number behind it.
 
@@ -61,6 +62,7 @@ Rules:
 - Appreciation: {{appreciation_score}}/100 ({{appreciation_status}})
 - Entry Point: {{entry_point_score}}/100 ({{entry_point_status}})
 - Risk: {{risk_score}}/100 ({{risk_status}})
+{{#if key_tension}}- KEY TENSION: {{key_tension}} — Address this contradiction directly. Do not let the overall score mask component weaknesses that matter for investors.{{/if}}
 
 ## Raw Metrics
 - ZHVI: {{zhvi}} | YoY: {{zhvi_yoy}}% | 3Y CAGR: {{zhvi_3y_cagr}}% | 5Y CAGR: {{zhvi_5y_cagr}}%
@@ -117,6 +119,7 @@ Rules:
 - Downside scenario: {{downside_scenario}}
 - Equity at risk: {{equity_at_risk}}
 - Risk score: {{risk_score}}/100 ({{risk_status}})
+{{#if key_tension}}- KEY TENSION: {{key_tension}}{{/if}}
 - Unemployment: {{unemployment_rate}}%
 - ZHVI vs 2007 peak: {{zhvi_vs_2007_peak}}%
 - ZHVI vs pre-COVID: {{zhvi_vs_pre_covid}}%
@@ -170,6 +173,7 @@ Rules:
 - Appreciation trajectory: {{appreciation_trajectory}}
 - Downside scenario: {{downside_scenario}}
 - Break-even occupancy: {{break_even_occupancy}}
+{{#if key_tension}}- KEY TENSION: {{key_tension}}{{/if}}
 
 ## Reader Context
 {{#if user_investment_goal}}- Goal: {{user_investment_goal}}{{/if}}

@@ -67,13 +67,14 @@ const REALTOR_COLUMN_MAP: Record<string, string> = {
 };
 
 // Realtor percent columns (stored as decimals, need *100)
+// NOTE: price_reduced_share and price_increased_share are NOT included here
+// because Realtor provides them as percentages already (e.g. 24.11 = 24.11%),
+// not as decimals that need conversion.
 const REALTOR_PERCENT_COLS = new Set([
   'median_listing_price_yy',
   'median_listing_price_mm',
   'active_listing_count_yy',
   'new_listing_count_yy',
-  'price_reduced_share',
-  'price_increased_share',
 ]);
 
 // Zillow metric_name -> metric ID mapping

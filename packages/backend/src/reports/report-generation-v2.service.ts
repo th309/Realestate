@@ -26,6 +26,7 @@ import {
   appendNewsContext,
   parseAiResponse,
   extractTitleAndSubtitle,
+  extractActionItems,
 } from './report-generation-v2-helpers';
 import {
   buildCustomOutlinePrompt,
@@ -232,7 +233,25 @@ This outline will be shared with each section writer to ensure narrative coheren
     // Track last model used for provenance metadata
     this.lastModelUsed = response.model;
 
-    return parseAiResponse(response.content, config.output_format, sectionId);
+    const parsed = parseAiResponse(
+      response.content,
+      config.output_format,
+      sectionId,
+    );
+
+    // Extract ACTION_ITEMS_JSON from text sections that embed it
+    if (
+      typeof parsed === 'string' &&
+      (sectionId === 'investment_thesis' || sectionId === 'verdict_and_actions')
+    ) {
+      const { narrative, action_items } = extractActionItems(parsed);
+      if (action_items) {
+        return { narrative, action_items };
+      }
+      return narrative;
+    }
+
+    return parsed;
   }
 
   // ════════════════════════════════════════════════════════════════════════

@@ -110,7 +110,7 @@ export const PROVIDER_PRESETS: Record<AiProviderType, ProviderPreset> = {
   },
   anthropic: {
     baseUrl: 'https://api.anthropic.com/v1',
-    defaultModel: 'claude-sonnet-4-6',
+    defaultModel: 'claude-haiku-4-5',
     defaultTemperature: 0.7,
     envKeyName: 'ANTHROPIC_API_KEY',
     supportsSystemPrompt: true,

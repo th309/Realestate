@@ -134,7 +134,7 @@ export function classifyMarketPhase(
 
   const mos = monthsOfSupply;
   const yoy = zhviYoy ?? 0;
-  const cuts = priceCutPct !== null ? priceCutPct * 100 : null;
+  const cuts = priceCutPct;
   const marketType = classifyMarketType(mos);
 
   if (mos < 3 && yoy > 5)
@@ -167,20 +167,19 @@ function computeMarketPosition(
   result.market_type = classifyMarketType(mos);
 
   if (priceCutPct !== null) {
-    const cutsPct = priceCutPct * 100;
+    // priceCutPct is already a percentage (e.g. 24.11 means 24.11%)
     const leverage =
-      cutsPct > 25
+      priceCutPct > 25
         ? 'Strong buyer leverage'
-        : cutsPct > 15
+        : priceCutPct > 15
           ? 'Slight buyer leverage'
           : 'Seller-favored market';
-    result.buyer_leverage_assessment = `${leverage}: 1 in ${Math.round(100 / cutsPct)} sellers cutting prices`;
+    result.buyer_leverage_assessment = `${leverage}: 1 in ${Math.round(100 / priceCutPct)} sellers cutting prices`;
   }
 
   if (saleToList !== null && priceCutPct !== null) {
-    const cutsPct = priceCutPct * 100;
     const startPct = Math.round(saleToList * 100) / 100;
-    result.offer_strategy = `Start at ${fmtPct(startPct, 0)} of list; ${fmtPct(cutsPct, 0)} of listings see price cuts`;
+    result.offer_strategy = `Start at ${fmtPct(startPct, 0)} of list; ${fmtPct(priceCutPct, 0)} of listings see price cuts`;
   }
 
   if (price && zhviYoy !== null) {

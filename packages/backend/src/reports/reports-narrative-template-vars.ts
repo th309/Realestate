@@ -114,11 +114,11 @@ export function buildNarrativeTemplateVars(
       ? (marketMetrics.pending_ratio * 100).toFixed(1)
       : 'N/A',
     price_cut_pct:
-      (marketMetrics.price_cut_pct ?? marketMetrics.price_reduced_share)
+      (marketMetrics.price_cut_pct ?? marketMetrics.price_reduced_share) != null
         ? (
-            (marketMetrics.price_cut_pct ??
-              marketMetrics.price_reduced_share ??
-              0) * 100
+            marketMetrics.price_cut_pct ??
+            marketMetrics.price_reduced_share ??
+            0
           ).toFixed(1)
         : 'N/A',
     sale_to_list_ratio: marketMetrics.sale_to_list_ratio?.toFixed(1) ?? 'N/A',
