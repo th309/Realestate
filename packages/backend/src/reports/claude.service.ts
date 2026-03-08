@@ -21,6 +21,12 @@ import {
   buildWhyWinnerWonPrompt,
   buildFinalRecommendationPrompt,
 } from './claude-prompt-builders';
+import {
+  interpolateTemplate,
+  parseJsonResponse,
+  sanitizeNarrativeText,
+  getFallbackNarrative,
+} from './claude-text-helpers';
 
 interface NarrativeSection {
   id: string;
@@ -81,7 +87,10 @@ export class ClaudeService {
             value: parseJsonResponse(response.content, section.id, this.logger),
           };
         }
-        return { id: section.id, value: response.content };
+        return {
+          id: section.id,
+          value: sanitizeNarrativeText(response.content),
+        };
       } catch (error) {
         this.logger.error(
           `Failed to generate narrative for ${section.id}:`,
@@ -219,68 +228,4 @@ export class ClaudeService {
       return `Based on your priorities of ${context.priorities.join(', ')}, ${context.winner_name} emerges as your recommended market. This market scores highest on the factors that matter most to you. As your next step, we recommend exploring specific neighborhoods within ${context.winner_name} and connecting with local real estate professionals who can provide on-the-ground insights.`;
     }
   }
-}
-
-// ============================================================================
-// Module-level helpers (pure functions, no class dependency)
-// ============================================================================
-
-function interpolateTemplate(
-  template: string,
-  context: Record<string, any>,
-): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    const value = context[key];
-    if (value === undefined || value === null) return match;
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
-  });
-}
-
-function parseJsonResponse(
-  raw: string,
-  sectionId: string,
-  logger: Logger,
-): any {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    if (cleaned.startsWith('[')) {
-      try {
-        const lastObj = cleaned.lastIndexOf('}');
-        if (lastObj > 0) {
-          const truncated = cleaned.substring(0, lastObj + 1) + ']';
-          const parsed = JSON.parse(truncated);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            logger.warn(
-              `Recovered ${parsed.length} items from truncated JSON for ${sectionId}`,
-            );
-            return parsed;
-          }
-        }
-      } catch {
-        // Recovery also failed
-      }
-    }
-    logger.warn(`Failed to parse JSON for ${sectionId}, storing as raw string`);
-    return raw;
-  }
-}
-
-function getFallbackNarrative(sectionId: string): string {
-  const fallbacks: Record<string, string> = {
-    market_summary:
-      'Market analysis is being processed. Please check back shortly.',
-    trend_observations: 'Trend analysis is being compiled from market data.',
-    investment_assessment: 'Investment potential is being calculated.',
-    affordability_analysis: 'Affordability metrics are being processed.',
-  };
-  return (
-    fallbacks[sectionId] ||
-    'Analysis pending. Please refresh to see updated insights.'
-  );
 }

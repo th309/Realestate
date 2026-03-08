@@ -48,13 +48,20 @@ Rules for news:
 // Template with {{placeholder}} tokens — consumers replace these at runtime.
 export const CROSS_SECTION_CONTEXT_BLOCK = `## Report Context (for cross-referencing with other sections)
 - Geography: {{geography_name}} ({{geography_type}})
+- Market type: {{market_type}} (based on months of supply)
 - Overall Score: {{overall_score}}/100 ({{overall_grade}})
 - Strongest component: {{strongest_component}} ({{strongest_score}}/100)
 - Weakest component: {{weakest_component}} ({{weakest_score}}/100)
 - Key market tension: {{key_tension}}
 - User profile: {{user_goal_summary}}
 {{#if user_experience_level}}- Experience level: {{user_experience_level}}{{/if}}
-{{#if user_investment_goal}}- Investment goal: {{user_investment_goal}}{{/if}}`;
+{{#if user_investment_goal}}- Investment goal: {{user_investment_goal}}{{/if}}
+
+## Scoring System Reference
+Scores are PERCENTILE RANKS (0-100): 50 = median market, 80 = top 20%, 20 = bottom 20%.
+Your narrative tone MUST match the score: 80+ = clearly positive; 60-79 = positive with trade-offs; 40-59 = balanced/mixed; below 40 = cautionary.
+Component statuses: "excellent" (80+), "strong" (65-79), "moderate" (50-64), "watch" (35-49), "concern" (<35).
+Market type ({{market_type}}) MUST be stated explicitly — Buyer's Market, Seller's Market, or Balanced Market.`;
 
 export const QUALITY_STANDARDS = `## Quality Standards
 - Every claim must include a specific number from the data. Say "$425,329" not "around $425K."
@@ -84,4 +91,10 @@ export const WRITING_RULES = `## Writing Rules
 - Be direct and confident. State your assessment, then support it with data.
 - Use "you" when addressing the reader. This is a personal brief, not a generic report.
 - Avoid hedging language ("it could be argued," "one might consider"). Take a position.
-- When discussing trade-offs, be specific: "The trade-off is X — you gain [specific benefit] but accept [specific cost]."`;
+- When discussing trade-offs, be specific: "The trade-off is X - you gain [specific benefit] but accept [specific cost]."
+
+## Output Formatting (STRICT)
+- Write PLAIN TEXT only. No markdown: no headers (#), no bold (**), no italic (*), no bullet lists, no code blocks.
+- NEVER use em dashes or en dashes. Use regular hyphens (-) or commas instead.
+- NEVER output raw JSON in text sections.
+- Use natural paragraph breaks. Write flowing prose, not a markdown document.`;

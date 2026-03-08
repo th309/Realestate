@@ -113,6 +113,17 @@ function computeAffordability(
 
 // ── Market Position ──────────────────────────────────────────────────────
 
+/**
+ * Classify the simple market type: Buyer's, Seller's, or Balanced.
+ * Based on months of supply thresholds used industry-wide.
+ */
+export function classifyMarketType(monthsOfSupply: number | null): string {
+  if (monthsOfSupply === null) return 'Insufficient data';
+  if (monthsOfSupply < 4) return "Seller's Market";
+  if (monthsOfSupply <= 6) return 'Balanced Market';
+  return "Buyer's Market";
+}
+
 export function classifyMarketPhase(
   monthsOfSupply: number | null,
   priceCutPct: number | null,
@@ -124,18 +135,20 @@ export function classifyMarketPhase(
   const mos = monthsOfSupply;
   const yoy = zhviYoy ?? 0;
   const cuts = priceCutPct !== null ? priceCutPct * 100 : null;
+  const marketType = classifyMarketType(mos);
 
   if (mos < 3 && yoy > 5)
-    return 'Peak Expansion — strong demand, rapid price growth';
+    return `${marketType} (Peak Expansion) — strong demand, rapid price growth, limited buyer leverage`;
   if (mos < 4 && yoy > 0)
-    return 'Late Expansion — prices rising but momentum slowing';
+    return `${marketType} (Late Expansion) — prices still rising but momentum slowing, sellers retain advantage`;
   if (mos >= 4 && mos <= 6)
-    return 'Balanced — supply and demand roughly in equilibrium';
+    return `${marketType} — supply and demand roughly in equilibrium, neither buyers nor sellers have clear advantage`;
   if (mos > 6 && (cuts === null || cuts > 20))
-    return 'Early Contraction — inventory building, sellers adjusting';
-  if (mos > 6) return "Buyer's Market — elevated supply, negotiation leverage";
+    return `${marketType} (Early Contraction) — inventory building, sellers adjusting prices, buyer leverage increasing`;
+  if (mos > 6)
+    return `${marketType} — elevated supply gives buyers negotiation leverage and time to be selective`;
 
-  return 'Transitional — mixed signals across indicators';
+  return `${marketType} (Transitional) — mixed signals across indicators`;
 }
 
 function computeMarketPosition(
@@ -151,6 +164,7 @@ function computeMarketPosition(
   const price = num(metrics.zhvi) ?? num(metrics.median_listing_price);
 
   result.market_phase = classifyMarketPhase(mos, priceCutPct, zhviYoy);
+  result.market_type = classifyMarketType(mos);
 
   if (priceCutPct !== null) {
     const cutsPct = priceCutPct * 100;

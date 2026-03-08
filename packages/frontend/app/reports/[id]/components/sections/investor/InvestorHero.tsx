@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { TrendingUp, TrendingDown, MapPin, Calendar, Shield } from 'lucide-react';
+import React from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  MapPin,
+  Calendar,
+  Shield,
+} from "lucide-react";
 
-import type { ReportInstance } from '../../../../types';
+import type { ReportInstance } from "../../../../types";
 import {
   getScoreStrokeColor,
   getScoreGrade,
   getScoreLabel,
   deriveConfidence,
   formatComponentLabel,
-} from '../../utils/scoreHelpers';
+} from "../../utils/scoreHelpers";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -26,36 +32,39 @@ export interface InvestorHeroProps {
 
 /** Score-to-text-color tailwind class */
 function getScoreColorClass(score: number): string {
-  if (score >= 70) return 'text-[var(--report-success)]';
-  if (score >= 50) return 'text-[var(--report-warning)]';
-  return 'text-[var(--report-error)]';
+  if (score >= 70) return "text-[var(--report-success)]";
+  if (score >= 50) return "text-[var(--report-warning)]";
+  return "text-[var(--report-error)]";
 }
 
 /** Confidence badge color mapping */
-function getConfidenceColors(level: 'A' | 'B' | 'C' | 'F'): { bg: string; text: string } {
+function getConfidenceColors(level: "A" | "B" | "C" | "F"): {
+  bg: string;
+  text: string;
+} {
   switch (level) {
-    case 'A':
-      return { bg: 'var(--report-success-bg)', text: 'var(--report-success)' };
-    case 'B':
-      return { bg: 'var(--report-warning-bg)', text: 'var(--report-warning)' };
-    case 'C':
-      return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
-    case 'F':
-      return { bg: 'var(--report-error-bg)', text: 'var(--report-error)' };
+    case "A":
+      return { bg: "var(--report-success-bg)", text: "var(--report-success)" };
+    case "B":
+      return { bg: "var(--report-warning-bg)", text: "var(--report-warning)" };
+    case "C":
+      return { bg: "var(--report-error-bg)", text: "var(--report-error)" };
+    case "F":
+      return { bg: "var(--report-error-bg)", text: "var(--report-error)" };
     default:
-      return { bg: 'var(--report-warning-bg)', text: 'var(--report-warning)' };
+      return { bg: "var(--report-warning-bg)", text: "var(--report-warning)" };
   }
 }
 
 /** Format a geography type for display */
 function formatGeoType(geoType: string): string {
   const map: Record<string, string> = {
-    metro: 'Metro Area',
-    county: 'County',
-    zip: 'ZIP Code',
-    city: 'City',
-    state: 'State',
-    national: 'National',
+    metro: "Metro Area",
+    county: "County",
+    zip: "ZIP Code",
+    city: "City",
+    state: "State",
+    national: "National",
   };
   return map[geoType] || geoType;
 }
@@ -63,20 +72,20 @@ function formatGeoType(geoType: string): string {
 /** Format the report date for display */
 function formatDate(dateStr: string | null): string {
   if (!dateStr) {
-    return new Date().toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   }
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) {
     return dateStr;
   }
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -119,20 +128,23 @@ function ScoreRing({ score }: { score: number }) {
           strokeWidth={strokeWidth}
           strokeDasharray={`${progress} ${circumference}`}
           strokeLinecap="round"
-          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
         />
       </svg>
       {/* Score number and label inside the ring */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
           className={`text-4xl font-bold ${getScoreColorClass(score)}`}
-          style={{ fontFamily: 'var(--report-font-display)' }}
+          style={{ fontFamily: "var(--report-font-display)" }}
         >
           {score}
         </span>
         <span
           className="text-[10px] font-medium uppercase tracking-wide mt-0.5"
-          style={{ color: 'var(--report-stone-light)', fontFamily: 'var(--report-font-body)' }}
+          style={{
+            color: "var(--report-stone-light)",
+            fontFamily: "var(--report-font-body)",
+          }}
         >
           InvestorEdge
         </span>
@@ -145,19 +157,28 @@ function ScoreRing({ score }: { score: number }) {
 // InvestorHero Component
 // ---------------------------------------------------------------------------
 
-export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement {
-  const score = report.investoredge_score ?? report.scores_snapshot?.investoredge_score ?? null;
-  const grade = (report.scores_snapshot as any)?.investoredge_grade as string | undefined;
+export function InvestorHero({
+  report,
+}: InvestorHeroProps): React.ReactElement {
+  const score =
+    report.investoredge_score ??
+    report.scores_snapshot?.investoredge_score ??
+    null;
+  const grade = (report.scores_snapshot as any)?.investoredge_grade as
+    | string
+    | undefined;
   const components = report.scores_snapshot?.investoredge_components;
   const heroVerdict = (report.ai_narrative as any)?.investor_hero_verdict;
-  const investmentStrategy = report.user_inputs?.investment_strategy as string | undefined;
+  const investmentStrategy = report.user_inputs?.investment_strategy as
+    | string
+    | undefined;
   const trendChange =
     (report.scores_snapshot as any)?.investoredge_trend ??
     (report.scores_snapshot as any)?.trend_change ??
     null;
 
   const hasScore = score !== null && score !== undefined;
-  const computedGrade = hasScore ? (grade || getScoreGrade(score)) : null;
+  const computedGrade = hasScore ? grade || getScoreGrade(score) : null;
   const computedLabel = hasScore ? getScoreLabel(score) : null;
 
   const confidence = hasScore
@@ -169,11 +190,17 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
     return (
       <section
         className="report-animate-in rounded-[var(--report-radius-xl)] p-[var(--report-space-xl)] md:p-[var(--report-space-2xl)] text-center"
-        style={{ backgroundColor: 'white', border: '1px solid rgba(27, 46, 74, 0.04)' }}
+        style={{
+          backgroundColor: "white",
+          border: "1px solid rgba(27, 46, 74, 0.04)",
+        }}
       >
         <p
           className="text-[0.9375rem]"
-          style={{ color: 'var(--report-stone-light)', fontFamily: 'var(--report-font-body)' }}
+          style={{
+            color: "var(--report-stone-light)",
+            fontFamily: "var(--report-font-body)",
+          }}
         >
           Your InvestorEdge report is being prepared. Check back shortly.
         </p>
@@ -185,9 +212,10 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
     <section
       className="report-animate-in rounded-[var(--report-radius-xl)] overflow-hidden"
       style={{
-        background: 'linear-gradient(180deg, white 0%, var(--report-cream) 100%)',
-        border: '1px solid rgba(27, 46, 74, 0.06)',
-        boxShadow: 'var(--report-shadow-md)',
+        background:
+          "linear-gradient(180deg, white 0%, var(--report-cream) 100%)",
+        border: "1px solid rgba(27, 46, 74, 0.06)",
+        boxShadow: "var(--report-shadow-md)",
       }}
       aria-label="InvestorEdge Score Hero"
     >
@@ -206,15 +234,15 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
                 style={{
                   backgroundColor:
                     score >= 70
-                      ? 'var(--report-success-bg)'
+                      ? "var(--report-success-bg)"
                       : score >= 50
-                        ? 'var(--report-warning-bg)'
-                        : 'var(--report-error-bg)',
+                        ? "var(--report-warning-bg)"
+                        : "var(--report-error-bg)",
                   color: getScoreStrokeColor(score),
-                  fontFamily: 'var(--report-font-body)',
+                  fontFamily: "var(--report-font-body)",
                 }}
               >
-                {computedGrade} {'\u00B7'} {computedLabel}
+                Score: {computedGrade} {"\u00B7"} {computedLabel}
               </span>
 
               {/* Confidence badge */}
@@ -224,38 +252,43 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
                   style={{
                     backgroundColor: getConfidenceColors(confidence).bg,
                     color: getConfidenceColors(confidence).text,
-                    fontFamily: 'var(--report-font-body)',
+                    fontFamily: "var(--report-font-body)",
                   }}
+                  title="Data confidence — how complete and fresh the underlying data is"
                 >
                   <Shield className="w-3 h-3" aria-hidden="true" />
-                  {confidence}
+                  Data: {confidence}
                 </span>
               )}
             </div>
 
             {/* Trend change */}
-            {trendChange !== null && trendChange !== undefined && trendChange !== 0 && (
-              <div
-                className="flex items-center gap-1 mt-2 text-xs font-medium"
-                style={{
-                  color:
-                    trendChange > 0
-                      ? 'var(--report-success)'
-                      : 'var(--report-error)',
-                }}
-              >
-                {trendChange > 0 ? (
-                  <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
-                ) : (
-                  <TrendingDown className="w-3.5 h-3.5" aria-hidden="true" />
-                )}
-                <span>
-                  {trendChange > 0 ? '+' : ''}
-                  {typeof trendChange === 'number' ? trendChange.toFixed(1) : trendChange} from last
-                  period
-                </span>
-              </div>
-            )}
+            {trendChange !== null &&
+              trendChange !== undefined &&
+              trendChange !== 0 && (
+                <div
+                  className="flex items-center gap-1 mt-2 text-xs font-medium"
+                  style={{
+                    color:
+                      trendChange > 0
+                        ? "var(--report-success)"
+                        : "var(--report-error)",
+                  }}
+                >
+                  {trendChange > 0 ? (
+                    <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
+                  ) : (
+                    <TrendingDown className="w-3.5 h-3.5" aria-hidden="true" />
+                  )}
+                  <span>
+                    {trendChange > 0 ? "+" : ""}
+                    {typeof trendChange === "number"
+                      ? trendChange.toFixed(1)
+                      : trendChange}{" "}
+                    from last period
+                  </span>
+                </div>
+              )}
           </div>
         )}
 
@@ -263,18 +296,18 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
         {/* AI Verdict                                                         */}
         {/* ----------------------------------------------------------------- */}
         {heroVerdict && (
-          <blockquote
-            className="text-center mx-auto max-w-2xl mb-[var(--report-space-xl)] report-animate-in report-animate-in-delay-1"
-          >
+          <blockquote className="text-center mx-auto max-w-2xl mb-[var(--report-space-xl)] report-animate-in report-animate-in-delay-1">
             <p
               className="text-lg md:text-xl leading-relaxed italic"
               style={{
-                color: 'var(--report-navy)',
-                fontFamily: 'var(--report-font-display)',
+                color: "var(--report-navy)",
+                fontFamily: "var(--report-font-display)",
                 fontWeight: 500,
               }}
             >
-              {'\u201C'}{heroVerdict}{'\u201D'}
+              {"\u201C"}
+              {heroVerdict}
+              {"\u201D"}
             </p>
           </blockquote>
         )}
@@ -287,9 +320,9 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
             <span
               className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               style={{
-                backgroundColor: 'var(--report-cream-dark)',
-                color: 'var(--report-stone)',
-                fontFamily: 'var(--report-font-body)',
+                backgroundColor: "var(--report-cream-dark)",
+                color: "var(--report-stone)",
+                fontFamily: "var(--report-font-body)",
               }}
             >
               {formatComponentLabel(investmentStrategy)}
@@ -310,15 +343,15 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
                   key={comp.component}
                   className="flex items-center gap-2 px-4 py-2 rounded-[var(--report-radius-md)]"
                   style={{
-                    backgroundColor: 'white',
-                    border: '1px solid rgba(27, 46, 74, 0.06)',
+                    backgroundColor: "white",
+                    border: "1px solid rgba(27, 46, 74, 0.06)",
                   }}
                 >
                   <span
                     className="text-sm font-semibold"
                     style={{
                       color: getScoreStrokeColor(comp.score),
-                      fontFamily: 'var(--report-font-display)',
+                      fontFamily: "var(--report-font-display)",
                     }}
                   >
                     {comp.score}
@@ -326,8 +359,8 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
                   <span
                     className="text-xs font-medium"
                     style={{
-                      color: 'var(--report-stone)',
-                      fontFamily: 'var(--report-font-body)',
+                      color: "var(--report-stone)",
+                      fontFamily: "var(--report-font-body)",
                     }}
                   >
                     {formatComponentLabel(comp.component)}
@@ -340,16 +373,20 @@ export function InvestorHero({ report }: InvestorHeroProps): React.ReactElement 
         {/* ----------------------------------------------------------------- */}
         {/* Meta Line: Market, Geo Type, Date                                  */}
         {/* ----------------------------------------------------------------- */}
-        <div className="flex items-center justify-center gap-3 text-xs report-animate-in report-animate-in-delay-3"
-          style={{ color: 'var(--report-stone-light)', fontFamily: 'var(--report-font-body)' }}
+        <div
+          className="flex items-center justify-center gap-3 text-xs report-animate-in report-animate-in-delay-3"
+          style={{
+            color: "var(--report-stone-light)",
+            fontFamily: "var(--report-font-body)",
+          }}
         >
           <span className="inline-flex items-center gap-1">
             <MapPin className="w-3 h-3" aria-hidden="true" />
             {report.primary_geography_name}
           </span>
-          <span aria-hidden="true">{'\u00B7'}</span>
+          <span aria-hidden="true">{"\u00B7"}</span>
           <span>{formatGeoType(report.primary_geography_type)}</span>
-          <span aria-hidden="true">{'\u00B7'}</span>
+          <span aria-hidden="true">{"\u00B7"}</span>
           <span className="inline-flex items-center gap-1">
             <Calendar className="w-3 h-3" aria-hidden="true" />
             {formatDate(report.data_as_of_date)}

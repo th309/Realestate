@@ -17,6 +17,7 @@ export interface AnalyticalInsights {
 
   // Market Position
   market_phase: string;
+  market_type: string; // Simple classification: "Buyer's Market" | "Seller's Market" | "Balanced Market"
   buyer_leverage_assessment: string;
   offer_strategy: string;
   waiting_cost_per_month: string;

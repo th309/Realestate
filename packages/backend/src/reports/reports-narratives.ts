@@ -14,9 +14,13 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { ClaudeService } from './claude.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
-import { NARRATIVE_PROMPTS, SECTIONS_BY_REPORT_TYPE } from './narrative-prompts';
+import {
+  NARRATIVE_PROMPTS,
+  SECTIONS_BY_REPORT_TYPE,
+} from './narrative-prompts';
 import { ScoreComponentBreakdown } from '../scoring/scoring.types';
 import { HistoricalData } from './reports.service';
+import { classifyMarketType } from './narrative-insights';
 
 // ============================================================================
 // Formatting Helpers (pure functions)
@@ -232,10 +236,10 @@ export function buildNarrativeContext(
     : 'N/A';
   context.price_cut_pct = current.price_reduced_share
     ? (current.price_reduced_share * 100).toFixed(1)
-    : current.price_cut_pct?.toFixed(1) ?? 'N/A';
-  context.sale_to_list_ratio =
-    current.sale_to_list_ratio?.toFixed(2) ?? 'N/A';
+    : (current.price_cut_pct?.toFixed(1) ?? 'N/A');
+  context.sale_to_list_ratio = current.sale_to_list_ratio?.toFixed(2) ?? 'N/A';
   context.months_of_supply = current.months_of_supply?.toFixed(1) ?? 'N/A';
+  context.market_type = classifyMarketType(current.months_of_supply ?? null);
 
   // Investment metrics
   context.cap_rate = current.cap_rate?.toFixed(2) ?? 'N/A';
@@ -261,24 +265,19 @@ export function buildNarrativeContext(
   context.population = current.population?.toLocaleString() ?? 'N/A';
   context.population_growth_yoy =
     current.population_growth_yoy?.toFixed(1) ?? 'N/A';
-  context.unemployment_rate =
-    current.unemployment_rate?.toFixed(1) ?? 'N/A';
+  context.unemployment_rate = current.unemployment_rate?.toFixed(1) ?? 'N/A';
   context.job_growth_yoy = current.job_growth_yoy?.toFixed(1) ?? 'N/A';
-  context.income_growth_yoy =
-    current.income_growth_yoy?.toFixed(1) ?? 'N/A';
+  context.income_growth_yoy = current.income_growth_yoy?.toFixed(1) ?? 'N/A';
   context.net_migration = current.net_migration?.toLocaleString() ?? 'N/A';
   context.median_age = current.median_age ?? 'N/A';
-  context.homeownership_rate =
-    current.homeownership_rate?.toFixed(1) ?? 'N/A';
+  context.homeownership_rate = current.homeownership_rate?.toFixed(1) ?? 'N/A';
   context.remote_work_pct = current.remote_work_pct?.toFixed(1) ?? 'N/A';
 
   // Historical comparisons
-  context.zhvi_vs_2007_peak =
-    current.zhvi_vs_2007_peak?.toFixed(1) ?? 'N/A';
+  context.zhvi_vs_2007_peak = current.zhvi_vs_2007_peak?.toFixed(1) ?? 'N/A';
   context.zhvi_vs_2012_trough =
     current.zhvi_vs_2012_trough?.toFixed(1) ?? 'N/A';
-  context.zhvi_vs_pre_covid =
-    current.zhvi_vs_pre_covid?.toFixed(1) ?? 'N/A';
+  context.zhvi_vs_pre_covid = current.zhvi_vs_pre_covid?.toFixed(1) ?? 'N/A';
 
   // -------------------------------------------------------------------------
   // Benchmarks (National and State medians)
@@ -299,8 +298,7 @@ export function buildNarrativeContext(
   // ZHVI trend
   if (historical.zhvi) {
     context.zhvi_trend = historical.zhvi.trend;
-    context.zhvi_change_pct =
-      historical.zhvi.change_pct?.toFixed(1) ?? '0';
+    context.zhvi_change_pct = historical.zhvi.change_pct?.toFixed(1) ?? '0';
   } else {
     context.zhvi_trend = 'N/A';
     context.zhvi_change_pct = 'N/A';
@@ -319,8 +317,7 @@ export function buildNarrativeContext(
   // ZORI (rent) trend
   if (historical.zori) {
     context.zori_trend = historical.zori.trend;
-    context.zori_change_pct =
-      historical.zori.change_pct?.toFixed(1) ?? '0';
+    context.zori_change_pct = historical.zori.change_pct?.toFixed(1) ?? '0';
   } else {
     context.zori_trend = 'N/A';
     context.zori_change_pct = 'N/A';
@@ -350,8 +347,7 @@ export function buildNarrativeContext(
 
   // Financial inputs (formatted with $ for display in prompts)
   const userInputs = dto.user_inputs || {};
-  const rawIncome =
-    userInputs.income || userInputs.household_income || null;
+  const rawIncome = userInputs.income || userInputs.household_income || null;
   const rawDownPayment = userInputs.down_payment || null;
   const rawBudget = userInputs.budget || userInputs.price_range || null;
 
@@ -396,8 +392,8 @@ export function buildNarrativeContext(
     }
 
     for (const [compId, compData] of compEntries) {
-      const compGeo = (compData as any).geography;
-      const compScores = (compData as any).scores;
+      const compGeo = compData.geography;
+      const compScores = compData.scores;
       compSummaryParts.push(`- ${compGeo?.name || compId}`);
 
       if (compScores?.scores) {
@@ -418,19 +414,8 @@ export function buildNarrativeContext(
       dto.user_type === 'investor' ? 'investoredge' : 'homeready';
     const componentNames =
       dto.user_type === 'investor'
-        ? [
-            'cash_flow',
-            'rent_demand',
-            'appreciation',
-            'entry_point',
-            'risk',
-          ]
-        : [
-            'affordability',
-            'market_timing',
-            'stability',
-            'growth_potential',
-          ];
+        ? ['cash_flow', 'rent_demand', 'appreciation', 'entry_point', 'risk']
+        : ['affordability', 'market_timing', 'stability', 'growth_potential'];
 
     const compComponentLines: string[] = [];
     for (const compName of componentNames) {
@@ -441,8 +426,8 @@ export function buildNarrativeContext(
 
       let line = `${compName}: ${dto.primary_geography.name}=${primaryVal}`;
       for (const [compId, compData] of compEntries) {
-        const compGeo = (compData as any).geography;
-        const compScores = (compData as any).scores;
+        const compGeo = compData.geography;
+        const compScores = compData.scores;
         const compComponents =
           compScores?.scores?.[scoreType]?.components || [];
         const matchComp = compComponents.find(
@@ -632,9 +617,7 @@ export async function regenerateNarratives(
   }
 
   // Investment strategy changed (investor)
-  if (
-    userInputs.investment_strategy !== existingInputs.investment_strategy
-  ) {
+  if (userInputs.investment_strategy !== existingInputs.investment_strategy) {
     keysToRegenerate.push(
       'investment_thesis_narrative',
       'cash_flow_personalized',

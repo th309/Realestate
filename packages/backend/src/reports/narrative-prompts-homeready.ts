@@ -170,6 +170,7 @@ Data:
 - Key market tension: {{key_tension}}
 - User profile: {{user_goal_summary}}
 
+Market Classification: {{market_type}}
 Market Balance Context:
 - Buyer's market threshold: >6 months supply, >15% price cuts
 - Balanced market: 4-6 months supply, 10-15% price cuts
@@ -177,7 +178,7 @@ Market Balance Context:
 
 Write 4 paragraphs analyzing market timing.
 
-Paragraph 1 (Buyer's vs Seller's Market): Don't just classify — quantify. With {{months_of_supply}} months of supply and {{price_cut_pct}}% price cuts, tell the buyer exactly what they'll face: "Expect to compete with X other offers" or "You have room to negotiate — one in five sellers is already cutting prices." Connect demand score, pending ratio, and days on market into a cohesive picture.
+Paragraph 1 (Market Type): This is a {{market_type}}. State this classification clearly in the opening sentence. Then quantify what it means: with {{months_of_supply}} months of supply and {{price_cut_pct}}% price cuts, tell the buyer exactly what they'll face: "Expect to compete with X other offers" or "You have room to negotiate — one in five sellers is already cutting prices." Connect demand score, pending ratio, and days on market into a cohesive picture.
 
 Paragraph 2 (The Timing Window): This is where you earn the $500. Use the inventory trend ({{inventory_yoy}}%), forecast ({{zhvf_1yr_pct}}%), and current momentum to assess: Is the window opening, closing, or stable? "Inventory is rising {{inventory_yoy}}% year-over-year, which means the competitive pressure you'd face today will likely ease by [timeframe]. But the forecast of {{zhvf_1yr_pct}}% appreciation means waiting costs approximately $X per month in price appreciation."
 
