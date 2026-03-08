@@ -9,7 +9,7 @@ import { Logger } from '@nestjs/common';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { TimeSeriesService } from '../../timeseries/timeseries.service';
-import { ClaudeNewsService } from '../claude-news.service';
+import { NewsScoutService } from '../news-scout.service';
 import type { GeographyLevel } from '../../scoring/formula-weights';
 import type { GeoLevel } from '../../metric-resolution/metric-resolution.types';
 
@@ -170,54 +170,56 @@ export async function handleGetTimeseries(
 
 export async function handleSearchNews(
   input: Record<string, unknown>,
-  newsService: ClaudeNewsService | null,
+  newsService: NewsScoutService | null,
 ): Promise<string> {
-  if (!newsService || !newsService.isAvailable()) {
-    return JSON.stringify({
-      available: false,
-      message: 'News scouting service is not configured. Skipping news data.',
-    });
-  }
-
   const regionName = input.region_name as string;
   const geoLevel = input.geography_level as string;
   const state = (input.state as string) || '';
 
-  const syntheticId = regionName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-
-  const result = await newsService.getOrScoutNews(
-    syntheticId,
-    geoLevel as any,
-    regionName,
-    state,
-    { maxNewsItems: 5, lookbackDays: 60 },
-  );
-
-  if (!result) {
-    return JSON.stringify({ available: true, news: [], signals: [] });
+  if (!newsService) {
+    logger.warn('NewsScoutService not available — returning empty news result');
+    return JSON.stringify({ news: [], economic_indicators: [], signals: [] });
   }
 
-  return JSON.stringify({
-    available: true,
-    news: result.local_news.slice(0, 5).map((n) => ({
-      headline: n.headline,
-      summary: n.summary,
-      category: n.category,
-      sentiment: n.sentiment,
-      impact: n.impact_on_real_estate,
-    })),
-    economic_indicators: result.economic_indicators.slice(0, 5).map((e) => ({
-      indicator: e.indicator_name,
-      level: e.geography_level,
-      value: e.current_value,
-      change: e.change_description,
-      housing_impact: `${e.impact_on_housing}: ${e.impact_explanation}`,
-    })),
-    signals: result.market_signals.slice(0, 3).map((s) => ({
-      type: s.signal_type,
-      headline: s.headline,
-      description: s.description,
-    })),
-    national_context: result.national_context || null,
-  });
+  const syntheticId = regionName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+  try {
+    const result = await newsService.getOrScoutNews(
+      syntheticId,
+      geoLevel as any,
+      regionName,
+      state,
+      { maxNewsItems: 5, lookbackDays: 60 },
+    );
+
+    if (!result) {
+      return JSON.stringify({ news: [], economic_indicators: [], signals: [] });
+    }
+
+    return JSON.stringify({
+      news: result.local_news.slice(0, 5).map((n) => ({
+        headline: n.headline,
+        summary: n.summary,
+        category: n.category,
+        sentiment: n.sentiment,
+        impact: n.impact_on_real_estate,
+      })),
+      economic_indicators: result.economic_indicators.slice(0, 5).map((e) => ({
+        indicator: e.indicator_name,
+        level: e.geography_level,
+        value: e.current_value,
+        change: e.change_description,
+        housing_impact: `${e.impact_on_housing}: ${e.impact_explanation}`,
+      })),
+      signals: result.market_signals.slice(0, 3).map((s) => ({
+        type: s.signal_type,
+        headline: s.headline,
+        description: s.description,
+      })),
+      national_context: result.national_context || null,
+    });
+  } catch (err: any) {
+    logger.warn(`News fetch failed for ${regionName}: ${err.message}`);
+    return JSON.stringify({ news: [], economic_indicators: [], signals: [] });
+  }
 }

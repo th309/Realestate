@@ -10,13 +10,13 @@
  * Narrative generation delegated to research-narrative-generator.ts.
  */
 
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { AiProviderService } from '../../ai-provider/ai-provider.service';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { TimeSeriesService } from '../../timeseries/timeseries.service';
-import { ClaudeNewsService } from '../claude-news.service';
+import { NewsScoutService } from '../news-scout.service';
 import { RESEARCH_TOOLS } from './research-tools';
 import {
   RESEARCH_AGENT_SYSTEM_PROMPT,
@@ -63,7 +63,7 @@ export class ResearchBriefService {
     private readonly scoringService: ScoringService,
     private readonly metricResolution: MetricResolutionService,
     private readonly timeSeriesService: TimeSeriesService,
-    @Optional() private readonly newsService: ClaudeNewsService | null,
+    private readonly newsService: NewsScoutService,
   ) {}
 
   /**
@@ -172,7 +172,7 @@ export class ResearchBriefService {
     }
 
     // Force search_news if the model skipped it — news context is essential
-    if (!calledSearchNews && this.newsService) {
+    if (!calledSearchNews) {
       this.logger.log(
         'Model skipped search_news — forcing news fetch for all analyzed regions',
       );
