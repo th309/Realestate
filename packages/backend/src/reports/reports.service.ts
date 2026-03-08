@@ -29,7 +29,7 @@ import {
   createShareLink as createShareLinkFn,
   getSharedReport as getSharedReportFn,
 } from './reports-sharing';
-import { regenerateNarratives as regenerateNarrativesFn } from './reports-narratives';
+import { regenerateNarratives as regenerateNarrativesFn } from './reports-narrative-regeneration';
 
 export interface ReportTemplate {
   id: string;
@@ -158,7 +158,6 @@ export class ReportsService {
       supabase: client,
       logger: this.logger,
       scoringService: this.scoringService,
-      claudeService: this.claudeService,
       claudeNewsService: this.claudeNewsService,
       entitlementsService: this.entitlementsService,
       partnersService: this.partnersService,

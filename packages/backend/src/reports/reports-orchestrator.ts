@@ -13,7 +13,6 @@
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { ScoringService } from '../scoring/scoring.service';
-import type { ClaudeService } from './claude.service';
 import type { ClaudeNewsService } from './claude-news.service';
 import type { EntitlementsService } from '../entitlements/entitlements.service';
 import type { PartnersService } from '../partners/partners.service';
@@ -39,10 +38,7 @@ import type { MarketSnapshotService } from '../market-snapshot/market-snapshot.s
 import type { TimeSeriesService } from '../timeseries/timeseries.service';
 import type { MetricResolutionService } from '../metric-resolution/metric-resolution.service';
 import type { ReportGenerationV2Service } from './report-generation-v2.service';
-import {
-  getPromptVersion,
-  resolveReportType,
-} from './reports-orchestrator-v2-routing';
+import { resolveReportType } from './reports-orchestrator-v2-routing';
 
 /**
  * Update the report row with a generation stage for real-time progress tracking.
@@ -68,7 +64,6 @@ export interface ReportDeps {
   supabase: SupabaseClient;
   logger: Logger;
   scoringService: ScoringService;
-  claudeService: ClaudeService;
   claudeNewsService: ClaudeNewsService;
   entitlementsService: EntitlementsService;
   partnersService: PartnersService;
@@ -457,18 +452,11 @@ export async function generateReportAsync(
         'Building analytical outline...',
       );
 
-      // Check prompt version: v2 uses two-pass pipeline, v1 uses legacy
       const reportType = resolveReportType(template, dto);
-      const promptVersion = await getPromptVersion(supabase, reportType);
 
-      if (promptVersion === 'v2' && reportType) {
+      if (reportType) {
         aiNarratives = await deps.reportGenerationV2.generateNarratives(
           reportType,
-          narrativeTemplateVars,
-        );
-      } else if (template.config.ai_config?.narrative_sections) {
-        aiNarratives = await deps.claudeService.generateNarratives(
-          template.config.ai_config.narrative_sections,
           narrativeTemplateVars,
         );
       }

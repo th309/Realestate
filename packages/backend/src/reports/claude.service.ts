@@ -1,19 +1,18 @@
 /**
  * Claude Service for PropertyIQ Reports
  *
- * Handles AI functionality for report generation (v1 pipeline):
- * - Narrative generation for report sections
+ * Handles AI functionality beyond narrative generation:
  * - Conversation responses with report context
  * - Investment analysis and comparison narratives
  *
  * Delegates all AI calls to AiProviderService (model-agnostic).
- * News enhancement logic lives in claude-news-enhancement.ts.
  * Prompt construction lives in claude-prompt-builders.ts.
+ *
+ * Note: Narrative generation is handled by ReportGenerationV2Service.
  */
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AiProviderService } from '../ai-provider/ai-provider.service';
-import { enhancePromptWithNews } from './claude-news-enhancement';
 import {
   buildConversationSystemPrompt,
   buildConversationMessages,
@@ -21,21 +20,6 @@ import {
   buildWhyWinnerWonPrompt,
   buildFinalRecommendationPrompt,
 } from './claude-prompt-builders';
-import {
-  interpolateTemplate,
-  parseJsonResponse,
-  sanitizeNarrativeText,
-  getFallbackNarrative,
-  retryWithBackoff,
-} from './claude-text-helpers';
-
-interface NarrativeSection {
-  id: string;
-  name?: string;
-  prompt_template: string;
-  max_tokens: number;
-  output_format?: 'text' | 'json_array' | 'json_object';
-}
 
 interface ConversationMessage {
   id: string;
@@ -49,73 +33,6 @@ export class ClaudeService {
   private readonly logger = new Logger(ClaudeService.name);
 
   constructor(private readonly aiProvider: AiProviderService) {}
-
-  /**
-   * Generate AI narratives for report sections.
-   * Attaches __model_used metadata for the orchestrator to persist.
-   */
-  async generateNarratives(
-    sections: NarrativeSection[],
-    context: Record<string, any>,
-  ): Promise<Record<string, string | string[] | Record<string, any>>> {
-    const results: Record<string, string | string[] | Record<string, any>> = {};
-    let lastModelUsed = 'unknown';
-
-    const sectionPromises = sections.map(async (section) => {
-      try {
-        const basePrompt = interpolateTemplate(
-          section.prompt_template,
-          context,
-        );
-        const enhancedPrompt = enhancePromptWithNews(
-          basePrompt,
-          context,
-          section.id,
-        );
-
-        const response = await retryWithBackoff(
-          () =>
-            this.aiProvider.complete('report_narrative', {
-              userPrompt: enhancedPrompt,
-              maxTokens: section.max_tokens,
-            }),
-          `v1:${section.id}`,
-          this.logger,
-        );
-        lastModelUsed = response.model;
-
-        if (
-          section.output_format === 'json_array' ||
-          section.output_format === 'json_object'
-        ) {
-          return {
-            id: section.id,
-            value: parseJsonResponse(response.content, section.id, this.logger),
-          };
-        }
-        return {
-          id: section.id,
-          value: sanitizeNarrativeText(response.content),
-        };
-      } catch (error) {
-        this.logger.error(
-          `Failed to generate narrative for ${section.id} after all retries:`,
-          error,
-        );
-        return { id: section.id, value: getFallbackNarrative(section.id) };
-      }
-    });
-
-    const settled = await Promise.allSettled(sectionPromises);
-    for (const result of settled) {
-      if (result.status === 'fulfilled') {
-        results[result.value.id] = result.value.value;
-      }
-    }
-
-    (results as any).__model_used = lastModelUsed;
-    return results;
-  }
 
   /** Generate conversation response with report context */
   async generateConversationResponse(
