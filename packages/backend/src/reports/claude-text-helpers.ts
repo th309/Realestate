@@ -82,6 +82,50 @@ export function sanitizeNarrativeText(text: string): string {
 }
 
 /**
+ * Retry an async function with exponential backoff.
+ *
+ * Retries on any error up to maxRetries times. Waits 1s, 2s, 4s between
+ * attempts (exponential backoff with jitter). Logs each retry attempt.
+ *
+ * @param fn - Async function to retry
+ * @param label - Human-readable label for log messages (e.g., section ID)
+ * @param logger - Logger instance
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns The result of fn() on success
+ * @throws The last error if all retries are exhausted
+ */
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  label: string,
+  logger: Logger,
+  maxRetries = 3,
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const baseDelay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        const jitter = Math.random() * 500; // 0-500ms jitter
+        const delay = baseDelay + jitter;
+        logger.warn(
+          `[retry] ${label} attempt ${attempt + 1}/${maxRetries + 1} failed: ${error.message}. Retrying in ${Math.round(delay)}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  logger.error(
+    `[retry] ${label} failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
+  );
+  throw lastError;
+}
+
+/**
  * Return a safe fallback string when AI generation fails.
  */
 export function getFallbackNarrative(sectionId: string): string {

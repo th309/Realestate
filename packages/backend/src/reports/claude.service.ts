@@ -26,6 +26,7 @@ import {
   parseJsonResponse,
   sanitizeNarrativeText,
   getFallbackNarrative,
+  retryWithBackoff,
 } from './claude-text-helpers';
 
 interface NarrativeSection {
@@ -72,10 +73,15 @@ export class ClaudeService {
           section.id,
         );
 
-        const response = await this.aiProvider.complete('report_narrative', {
-          userPrompt: enhancedPrompt,
-          maxTokens: section.max_tokens,
-        });
+        const response = await retryWithBackoff(
+          () =>
+            this.aiProvider.complete('report_narrative', {
+              userPrompt: enhancedPrompt,
+              maxTokens: section.max_tokens,
+            }),
+          `v1:${section.id}`,
+          this.logger,
+        );
         lastModelUsed = response.model;
 
         if (
@@ -93,7 +99,7 @@ export class ClaudeService {
         };
       } catch (error) {
         this.logger.error(
-          `Failed to generate narrative for ${section.id}:`,
+          `Failed to generate narrative for ${section.id} after all retries:`,
           error,
         );
         return { id: section.id, value: getFallbackNarrative(section.id) };

@@ -31,6 +31,7 @@ import {
   buildCustomOutlinePrompt,
   buildCustomSectionsFromOutline,
 } from './report-generation-v2-custom';
+import { retryWithBackoff } from './claude-text-helpers';
 
 type ReportType = 'homeready' | 'investoredge' | 'comparison' | 'custom';
 
@@ -91,12 +92,17 @@ export class ReportGenerationV2Service {
     const userPrompt = this.buildOutlinePrompt(context, reportType);
 
     try {
-      const response = await this.aiProvider.complete('report_outline', {
-        systemPrompt,
-        userPrompt,
-        maxTokens: 500,
-        temperature: 0.4,
-      });
+      const response = await retryWithBackoff(
+        () =>
+          this.aiProvider.complete('report_outline', {
+            systemPrompt,
+            userPrompt,
+            maxTokens: 500,
+            temperature: 0.4,
+          }),
+        'v2:outline',
+        this.logger,
+      );
       this.logger.log(
         `[v2] Outline generated for ${reportType} in ${response.durationMs}ms`,
       );
@@ -167,16 +173,23 @@ This outline will be shared with each section writer to ensure narrative coheren
       }
 
       try {
-        const value = await this.generateSection(
-          sectionId,
-          config,
-          systemPrompt,
-          context,
-          outline,
+        const value = await retryWithBackoff(
+          () =>
+            this.generateSection(
+              sectionId,
+              config,
+              systemPrompt,
+              context,
+              outline,
+            ),
+          `v2:${sectionId}`,
+          this.logger,
         );
         return { id: sectionId, value };
       } catch (error: any) {
-        this.logger.error(`[v2] Section ${sectionId} failed: ${error.message}`);
+        this.logger.error(
+          `[v2] Section ${sectionId} failed after all retries: ${error.message}`,
+        );
         return { id: sectionId, value: null };
       }
     });
