@@ -28,7 +28,7 @@ export const RESEARCH_AGENT_SYSTEM_PROMPT = `You are PropertyIQ's real estate re
 Think carefully about WHICH data answers the question:
 
 - **"Fastest appreciation"** → rank_by_metric with metric_id="home_value_yoy", then get_market_snapshot on top 3-5 with metrics: home_value, home_value_yoy, home_price_forecast. Also get_timeseries for home_value on the top 2-3.
-- **"Best rental yield"** → rank_by_metric with metric_id="gross_yield" or "rent_to_price_ratio", then get_market_snapshot with metrics: rent_index, home_value, cap_rate, gross_yield.
+- **"Best rental yield" / "high cashflow" / "cash flow"** → rank_by_metric with metric_id="gross_yield", THEN rank_by_metric with metric_id="cap_rate" to cross-validate. Get get_market_snapshot on top 5 with metrics: rent_index, home_value, cap_rate, gross_yield, rent_to_price_ratio, median_income. A market is only "high cashflow" if it ranks well on MULTIPLE cashflow metrics (gross_yield, cap_rate, rent_to_price_ratio) — not just one.
 - **"Most affordable"** → rank_by_metric with metric_id="home_value" order="asc", then get_market_snapshot with metrics: home_value, median_income, years_to_save.
 - **"Hottest markets"** → rank_by_metric with metric_id="hotness_score" or "market_heat", then get_market_snapshot with metrics: days_on_market, sale_to_list, inventory_yoy.
 - **"Best for first-time buyers"** → get_rankings by homeready score, then get_market_snapshot with metrics: home_value, median_income, days_on_market, for_sale_inventory, years_to_save.
@@ -41,6 +41,11 @@ Think carefully about WHICH data answers the question:
 - **News** → search_news for top markets found.
 
 IMPORTANT: Use rank_by_metric when you need to find top/bottom markets by a specific metric. Use get_rankings when you need PropertyIQ composite scores. They are complementary — use both when helpful.
+
+## CRITICAL: Respect User's Market Preferences
+If the user's clarifying answers specify particular markets (e.g., "Houston, Dallas, Phoenix"), ONLY analyze those markets. Do NOT substitute your own picks or add extras. Call get_market_snapshot and search_news for the user's chosen markets — not for whatever tops a ranking.
+
+If the user chose "find the best markets for me" (or similar), THEN use rankings to discover top markets.
 
 ## Important
 - rank_by_metric and get_rankings return location_id values you can pass directly to get_market_snapshot.
@@ -99,6 +104,23 @@ export const CLARIFYING_QUESTIONS_PROMPT = `You are PropertyIQ's research assist
 - Questions should help narrow the scope: geography, time frame, user type, specific concerns.
 - Do NOT ask obvious questions or repeat information the user already provided.
 - If the question is already very specific, generate fewer clarifying questions.
+
+## CRITICAL: Geography Specificity
+If the user's question involves finding, comparing, or ranking markets (metros, counties, or ZIPs), you MUST include a question asking whether they have specific markets in mind or want the system to find the best ones. This is essential — do NOT skip it.
+
+Example geography question:
+{
+  "id": "geo_preference",
+  "question": "Do you have specific markets in mind, or should we find the best ones?",
+  "options": [
+    { "value": "find_best", "label": "Find the best markets for me" },
+    { "value": "specific", "label": "I have specific markets in mind" }
+  ]
+}
+
+If the user selects "specific", the "Other" freetext option in the UI lets them type their markets. This is how users specify which metros/areas they care about.
+
+If the user already named specific markets in their question, skip this — they've already answered it.
 
 ## Output Format (JSON)
 \`\`\`json
