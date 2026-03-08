@@ -35,7 +35,7 @@ export const SCENARIO_ANALYSIS_HOMEBUYER: NarrativePromptConfig = {
 - Downside scenario: {{downside_scenario}}
 - 1Y price forecast: {{zhvf_1yr_pct}}%
 
-Write 3-4 paragraphs that answer the question: "What happens to MY financial position under different futures?"
+Write 3-4 paragraphs (MINIMUM 350 words) that answer the question: "What happens to MY financial position under different futures?"
 
 Structure your analysis around these three scenarios:
 
@@ -89,7 +89,7 @@ export const SCENARIO_ANALYSIS_INVESTOR: NarrativePromptConfig = {
 - Market phase: {{market_phase}}
 - Appreciation trajectory: {{appreciation_trajectory}}
 
-Write 3-4 paragraphs that answer: "What are the risk-adjusted return scenarios for deploying capital here?"
+Write 3-4 paragraphs (MINIMUM 350 words) that answer: "What are the risk-adjusted return scenarios for deploying capital here?"
 
 Structure your analysis:
 

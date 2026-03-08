@@ -94,7 +94,7 @@ Rules:
 
 4. **Entry Point Assessment** — Is NOW a good time to enter? Use market phase, buyer leverage, days on market, and price cuts to assess negotiation opportunity. What discount could a patient investor extract?
 
-Write 6-8 paragraphs of flowing analysis. Do NOT use headers or bullet points. Cross-reference metrics to build compound insights. Weave in news/intelligence where it supports a data point.
+Write 6-8 paragraphs of flowing analysis (MINIMUM 600 words). Do NOT use headers or bullet points. Cross-reference metrics to build compound insights. Weave in news/intelligence where it supports a data point. Each paragraph should be 4-6 sentences with analysis, not a brief summary.
 
 {{#if user_experience_level}}Adapt depth for {{user_experience_level}} experience level.{{/if}}
 
@@ -134,7 +134,7 @@ Rules:
 {{news_context}}
 {{/if}}
 
-Write 4-5 paragraphs covering:
+Write 4-5 paragraphs (MINIMUM 400 words) covering:
 
 1. **Quantified Downside** — Use the pre-computed downside scenario and equity at risk. What does a 10% correction mean in dollars? A 20% correction? How long to recover based on historical patterns?
 
@@ -183,7 +183,7 @@ Rules:
 Write in TWO parts:
 
 **PART 1: Investment Thesis (3-4 paragraphs)**
-Classify this market into ONE primary strategy:
+Classify this market into ONE primary strategy (MINIMUM 300 words for the thesis paragraphs):
 - **Cash Flow Play** — positive monthly cash flow, buy-and-hold
 - **Appreciation Play** — negative/breakeven cash flow, equity growth thesis
 - **Value-Add Opportunity** — below-market rents or distressed inventory

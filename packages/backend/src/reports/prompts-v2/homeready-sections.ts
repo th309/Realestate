@@ -105,6 +105,8 @@ Rules:
 
 Write 6-8 paragraphs that WEAVE these priorities together — do NOT use numbered sections or headers. The analysis should flow naturally, with each paragraph building on the previous one. Cross-reference metrics to create insights (e.g., "prices are rising {{zhvi_yoy}}% while inventory is {{inventory_yoy}}%, which means...").
 
+MINIMUM LENGTH: 600 words. Each paragraph should be 4-6 sentences with analysis, not a brief summary.
+
 If news/market intelligence is provided, weave relevant items naturally into the analysis as supporting evidence. Never create a separate "news" paragraph.
 
 {{#if user_experience_level}}Adapt depth for {{user_experience_level}} experience level.{{/if}}
@@ -152,7 +154,7 @@ Rules:
 - Affordability index: {{affordability_index}}
 {{#if income_needed_to_buy}}- Income needed to buy: {{income_needed_to_buy}}{{/if}}
 
-Write 4-6 paragraphs showing how this market's dynamics interact with the reader's specific constraints. This is NOT a repeat of the deep dive — it's about THEIR situation specifically.
+Write 4-6 paragraphs (MINIMUM 400 words) showing how this market's dynamics interact with the reader's specific constraints. This is NOT a repeat of the deep dive — it's about THEIR situation specifically.
 
 If user profile data is available, address:
 1. How their budget/income maps to this market (can they afford median? What tier?)
@@ -209,7 +211,7 @@ Rules:
 Write in TWO parts:
 
 **PART 1: The Verdict (2-3 paragraphs)**
-Give a clear recommendation — one of:
+Give a clear recommendation (MINIMUM 300 words for the verdict paragraphs) — one of:
 - **BUY NOW** — market conditions favor acting within 1-3 months
 - **BUY SELECTIVELY** — good market but be strategic about timing/property
 - **WAIT** — conditions likely to improve for buyers in 3-6 months
