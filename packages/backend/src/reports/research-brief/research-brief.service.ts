@@ -179,7 +179,7 @@ export class ResearchBriefService {
       const regionNames = extractAllRegionNames(lastResearchData);
       if (regionNames.length > 0) {
         const newsResults = await Promise.all(
-          regionNames.slice(0, 5).map(async (name) => {
+          regionNames.slice(0, 2).map(async (name) => {
             const result = await executeToolCall(
               'search_news',
               { region_name: name, geography_level: 'metro' },

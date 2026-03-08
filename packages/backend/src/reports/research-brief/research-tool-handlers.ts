@@ -189,7 +189,7 @@ export async function handleSearchNews(
       geoLevel as any,
       regionName,
       state,
-      { maxNewsItems: 5, lookbackDays: 60 },
+      { maxNewsItems: 5, lookbackDays: 60, includeNationalContext: false },
     );
 
     if (!result) {

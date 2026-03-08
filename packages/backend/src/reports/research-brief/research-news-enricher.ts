@@ -2,7 +2,7 @@
  * Research News Enricher
  *
  * Enriches research data with direct news fetching, using the same
- * pattern as HomeReady/InvestorEdge reports (ClaudeNewsService.getOrScoutNews
+ * pattern as HomeReady/InvestorEdge reports (NewsScoutService.getOrScoutNews
  * + formatNewsForPrompt). This does NOT rely on the agent's search_news
  * tool call — it guarantees news context in the research data.
  *
@@ -10,7 +10,7 @@
  */
 
 import { Logger } from '@nestjs/common';
-import { ClaudeNewsService } from '../claude-news.service';
+import { NewsScoutService } from '../news-scout.service';
 
 const logger = new Logger('ResearchNewsEnricher');
 
@@ -35,9 +35,18 @@ export function extractAllRegionNames(data: Record<string, unknown>): string[] {
  */
 export async function enrichResearchWithNews(
   researchData: Record<string, unknown>,
-  newsService: ClaudeNewsService | null,
+  newsService: NewsScoutService | null,
 ): Promise<Record<string, unknown>> {
   if (!newsService) return researchData;
+
+  // Skip if the agent already collected news via search_news tool calls
+  const hasNews =
+    (researchData as any).news_context ||
+    (researchData as any).forced_news?.length > 0;
+  if (hasNews) {
+    logger.log('Skipping direct news fetch — agent already collected news');
+    return researchData;
+  }
 
   const regionNames = extractAllRegionNames(researchData);
   const topRegion = regionNames[0];
