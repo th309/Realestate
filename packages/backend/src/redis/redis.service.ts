@@ -1,16 +1,12 @@
 /**
- * Redis Service - v1.0.0
- *
- * Provides Redis caching for Quinn with:
- * - Cache key normalization (fixes JSON order issues)
- * - Tool-specific TTL strategy
- * - Geography name canonicalization
- * - Graceful degradation when Redis unavailable
+ * Redis Service — caching with graceful degradation when Redis unavailable.
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { buildCacheKey } from './redis-cache-key';
+import { TTL_MAP } from './redis-ttl-config';
 
 export interface CacheStats {
   hits: number;
@@ -32,60 +28,15 @@ export class RedisService implements OnModuleInit {
     sets: 0,
   };
 
-  // TTL strategy by domain / tool (in seconds)
-  private readonly TTL_MAP: Record<string, number> = {
-    // ── Domain-level TTLs (Phase 12 targets) ──
-    metric_snapshot: 21600, // 6 hours
-    time_series: 21600, // 6 hours
-    scores: 21600, // 6 hours
-    geojson: 86400, // 24 hours
-    market_lists: 43200, // 12 hours
-    benchmarks: 21600, // 6 hours
-    entitlements: 1800, // 30 minutes (per-tier)
-    watchlist: 300, // 5 minutes
-    recommendations: 3600, // 1 hour
-
-    // ── Quinn tool-level TTLs ──
-    get_rankings: 3600, // 1 hour
-    analyze_data: 1800, // 30 minutes
-    filter_geographies: 7200, // 2 hours
-    compare_to_benchmark: 1800, // 30 minutes
-    get_time_series: 3600, // 1 hour
-    query_database_table: 1800, // 30 minutes
-    default: 1800, // 30 minutes
-  };
-
-  // State abbreviation mappings for canonicalization
-  private readonly STATE_ABBREV_MAP: Record<string, string> = {
-    texas: 'TX',
-    california: 'CA',
-    florida: 'FL',
-    'new york': 'NY',
-    arizona: 'AZ',
-    'north carolina': 'NC',
-    georgia: 'GA',
-    tennessee: 'TN',
-    colorado: 'CO',
-    washington: 'WA',
-    ohio: 'OH',
-    illinois: 'IL',
-    michigan: 'MI',
-    virginia: 'VA',
-    massachusetts: 'MA',
-    pennsylvania: 'PA',
-    oregon: 'OR',
-    nevada: 'NV',
-    utah: 'UT',
-    minnesota: 'MN',
-  };
-
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     const redisUrl = this.configService.get<string>('REDIS_URL');
 
     if (!redisUrl || redisUrl.trim() === '') {
-      this.logger.warn('[Redis] REDIS_URL not configured - falling back to in-memory cache');
+      this.logger.warn(
+        '[Redis] REDIS_URL not configured - falling back to in-memory cache',
+      );
       this.available = false;
       return;
     }
@@ -100,7 +51,9 @@ export class RedisService implements OnModuleInit {
             return null;
           }
           const delay = Math.min(times * 100, 2000);
-          this.logger.warn(`[Redis] Retry attempt ${times}, waiting ${delay}ms`);
+          this.logger.warn(
+            `[Redis] Retry attempt ${times}, waiting ${delay}ms`,
+          );
           return delay;
         },
       });
@@ -152,7 +105,9 @@ export class RedisService implements OnModuleInit {
 
       if (cached) {
         this.stats.hits++;
-        this.logger.log(`[Redis Cache] HIT for ${toolName} (hit rate: ${this.getHitRate()}%)`);
+        this.logger.log(
+          `[Redis Cache] HIT for ${toolName} (hit rate: ${this.getHitRate()}%)`,
+        );
         return JSON.parse(cached);
       }
 
@@ -168,14 +123,18 @@ export class RedisService implements OnModuleInit {
   /**
    * Set cached value for a tool call with appropriate TTL
    */
-  async set(toolName: string, args: Record<string, any>, value: any): Promise<void> {
+  async set(
+    toolName: string,
+    args: Record<string, any>,
+    value: any,
+  ): Promise<void> {
     if (!this.isAvailable() || !this.client) {
       return;
     }
 
     try {
       const key = this.buildCacheKey(toolName, args);
-      const ttl = this.TTL_MAP[toolName] || this.TTL_MAP.default;
+      const ttl = TTL_MAP[toolName] || TTL_MAP.default;
 
       await this.client.setex(key, ttl, JSON.stringify(value));
       this.stats.sets++;
@@ -186,89 +145,10 @@ export class RedisService implements OnModuleInit {
   }
 
   /**
-   * Build normalized cache key from tool name and parameters
-   * Fixes JSON order-dependent issues by sorting keys and canonicalizing values
+   * Build normalized cache key (delegates to redis-cache-key utility).
    */
   buildCacheKey(toolName: string, args: Record<string, any>): string {
-    const normalized = this.normalizeParams(args);
-    const paramStr = JSON.stringify(normalized);
-    return `quinn:v1:tool:${toolName}:${paramStr}`;
-  }
-
-  /**
-   * Normalize parameters for consistent cache keys
-   * - Sort object keys
-   * - Canonicalize geography names (TX = Texas)
-   * - Sort arrays
-   * - Omit undefined/null defaults
-   */
-  private normalizeParams(params: Record<string, any>): any {
-    if (params === null || params === undefined) {
-      return {};
-    }
-
-    if (Array.isArray(params)) {
-      return params.map((p) => this.normalizeParams(p)).sort();
-    }
-
-    if (typeof params === 'object') {
-      const normalized: Record<string, any> = {};
-      const sortedKeys = Object.keys(params).sort();
-
-      for (const key of sortedKeys) {
-        const value = params[key];
-
-        // Skip undefined, null, empty strings, and default values
-        if (value === undefined || value === null || value === '') {
-          continue;
-        }
-
-        // Skip default boolean values
-        if (key === 'ascending' && value === false) continue;
-        if (key === 'limit' && value === 10) continue;
-
-        // Canonicalize state names/abbreviations
-        if (key === 'states' && Array.isArray(value)) {
-          normalized[key] = value.map((s) => this.canonicalizeState(s)).sort();
-        } else if (typeof value === 'object') {
-          normalized[key] = this.normalizeParams(value);
-        } else if (typeof value === 'string' && this.isStateName(value)) {
-          normalized[key] = this.canonicalizeState(value);
-        } else {
-          normalized[key] = value;
-        }
-      }
-
-      return normalized;
-    }
-
-    return params;
-  }
-
-  /**
-   * Canonicalize state name to abbreviation (Texas -> TX)
-   */
-  private canonicalizeState(state: string): string {
-    if (!state || typeof state !== 'string') return state;
-
-    const lower = state.toLowerCase().trim();
-
-    // Already an abbreviation
-    if (state.length === 2 && state === state.toUpperCase()) {
-      return state;
-    }
-
-    // Look up full name
-    return this.STATE_ABBREV_MAP[lower] || state;
-  }
-
-  /**
-   * Check if a string looks like a state name
-   */
-  private isStateName(str: string): boolean {
-    if (!str || typeof str !== 'string') return false;
-    const lower = str.toLowerCase().trim();
-    return lower in this.STATE_ABBREV_MAP || (str.length === 2 && str === str.toUpperCase());
+    return buildCacheKey(toolName, args);
   }
 
   /**
@@ -337,7 +217,7 @@ export class RedisService implements OnModuleInit {
    * Get domain-level TTL (seconds). Falls back to default if domain not found.
    */
   getTTL(domain: string): number {
-    return this.TTL_MAP[domain] ?? this.TTL_MAP.default;
+    return TTL_MAP[domain] ?? TTL_MAP.default;
   }
 
   /**
@@ -352,7 +232,9 @@ export class RedisService implements OnModuleInit {
       const keys = await this.client.keys(`${prefix}*`);
       if (keys.length > 0) {
         await this.client.del(...keys);
-        this.logger.log(`[Redis Cache] Deleted ${keys.length} keys with prefix "${prefix}"`);
+        this.logger.log(
+          `[Redis Cache] Deleted ${keys.length} keys with prefix "${prefix}"`,
+        );
       }
       return keys.length;
     } catch (error) {
@@ -379,6 +261,27 @@ export class RedisService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`[Redis Cache] Flush error: ${error.message}`);
     }
+  }
+
+  /**
+   * Atomic SET if not exists with TTL. Used by RedisLockService.
+   */
+  async setNx(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    if (!this.isAvailable() || !this.client) return false;
+    const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
+  /**
+   * Delete a single key. Used by RedisLockService.
+   */
+  async deleteKey(key: string): Promise<void> {
+    if (!this.isAvailable() || !this.client) return;
+    await this.client.del(key);
   }
 
   /**

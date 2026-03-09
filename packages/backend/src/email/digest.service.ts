@@ -5,6 +5,7 @@ import { WeeklyDigest } from '@propertyiq/emails';
 import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 @Injectable()
 export class DigestService {
@@ -13,10 +14,25 @@ export class DigestService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
+    private readonly redis: RedisLockService,
   ) {}
 
   @Cron('0 8 * * MON')
   async sendWeeklyDigests() {
+    const locked = await this.redis.acquireLock('cron:weekly-digest', 600);
+    if (!locked) {
+      this.logger.log('Another instance is processing weekly digest, skipping');
+      return;
+    }
+
+    try {
+      await this.sendWeeklyDigestsInner();
+    } finally {
+      await this.redis.releaseLock('cron:weekly-digest');
+    }
+  }
+
+  private async sendWeeklyDigestsInner() {
     this.logger.log('Starting weekly digest processing...');
 
     // 1. Get all pro/enterprise users with active subscriptions

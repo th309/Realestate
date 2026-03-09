@@ -27,6 +27,7 @@ import { MonthlyDigestDataService } from './monthly-digest-data.service';
 import { PreferencesService } from '../preferences/preferences.service';
 import { MarketMatchService } from '../preferences/market-match.service';
 import { formatBudgetRange } from './monthly-digest.types';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 @Injectable()
 export class MonthlyDigestService {
@@ -40,6 +41,7 @@ export class MonthlyDigestService {
     private readonly preferencesService: PreferencesService,
     private readonly marketMatchService: MarketMatchService,
     private readonly config: ConfigService,
+    private readonly redis: RedisLockService,
   ) {
     this.appUrl =
       this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
@@ -47,6 +49,22 @@ export class MonthlyDigestService {
 
   @Cron('0 12 1 * *')
   async sendMonthlyDigests() {
+    const locked = await this.redis.acquireLock('cron:monthly-digest', 600);
+    if (!locked) {
+      this.logger.log(
+        'Another instance is processing monthly digest, skipping',
+      );
+      return;
+    }
+
+    try {
+      await this.sendMonthlyDigestsInner();
+    } finally {
+      await this.redis.releaseLock('cron:monthly-digest');
+    }
+  }
+
+  private async sendMonthlyDigestsInner() {
     this.logger.log('Starting monthly digest processing...');
 
     const eligibleUsers = await this.digestData.getEligibleUsers();

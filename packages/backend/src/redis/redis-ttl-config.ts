@@ -1,0 +1,27 @@
+/**
+ * Redis TTL Configuration
+ *
+ * TTL strategy by domain and tool name (in seconds).
+ */
+
+export const TTL_MAP: Record<string, number> = {
+  // ── Domain-level TTLs ──
+  metric_snapshot: 21600, // 6 hours
+  time_series: 21600, // 6 hours
+  scores: 21600, // 6 hours
+  geojson: 86400, // 24 hours
+  market_lists: 43200, // 12 hours
+  benchmarks: 21600, // 6 hours
+  entitlements: 1800, // 30 minutes (per-tier)
+  watchlist: 300, // 5 minutes
+  recommendations: 3600, // 1 hour
+
+  // ── Quinn tool-level TTLs ──
+  get_rankings: 3600, // 1 hour
+  analyze_data: 1800, // 30 minutes
+  filter_geographies: 7200, // 2 hours
+  compare_to_benchmark: 1800, // 30 minutes
+  get_time_series: 3600, // 1 hour
+  query_database_table: 1800, // 30 minutes
+  default: 1800, // 30 minutes
+};

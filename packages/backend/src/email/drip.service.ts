@@ -12,6 +12,7 @@ import {
 import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 
 interface DripDayConfig {
   day: number;
@@ -67,6 +68,7 @@ export class DripService {
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
+    private readonly redis: RedisLockService,
   ) {
     this.appUrl =
       this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
@@ -74,22 +76,34 @@ export class DripService {
 
   @Cron('0 9 * * *')
   async processOnboardingDrip() {
-    this.logger.log('Starting onboarding drip processing...');
-
-    let totalSent = 0;
-    let totalSkipped = 0;
-    let totalFailed = 0;
-
-    for (const dayConfig of DRIP_DAY_CONFIGS) {
-      const { sent, skipped, failed } = await this.processDripDay(dayConfig);
-      totalSent += sent;
-      totalSkipped += skipped;
-      totalFailed += failed;
+    const locked = await this.redis.acquireLock('cron:onboarding-drip', 300);
+    if (!locked) {
+      this.logger.log(
+        'Another instance is processing onboarding drip, skipping',
+      );
+      return;
     }
 
-    this.logger.log(
-      `Onboarding drip complete. Sent: ${totalSent}, Skipped: ${totalSkipped}, Failed: ${totalFailed}`,
-    );
+    try {
+      this.logger.log('Starting onboarding drip processing...');
+
+      let totalSent = 0;
+      let totalSkipped = 0;
+      let totalFailed = 0;
+
+      for (const dayConfig of DRIP_DAY_CONFIGS) {
+        const { sent, skipped, failed } = await this.processDripDay(dayConfig);
+        totalSent += sent;
+        totalSkipped += skipped;
+        totalFailed += failed;
+      }
+
+      this.logger.log(
+        `Onboarding drip complete. Sent: ${totalSent}, Skipped: ${totalSkipped}, Failed: ${totalFailed}`,
+      );
+    } finally {
+      await this.redis.releaseLock('cron:onboarding-drip');
+    }
   }
 
   private async processDripDay(

@@ -19,6 +19,7 @@ import { ThresholdAlert } from '@propertyiq/emails';
 import React from 'react';
 import { EmailService } from '../email/email.service';
 import { ThresholdAlertDataService } from './threshold-alert-data.service';
+import { RedisLockService } from '../redis/redis-lock.service';
 import {
   ActiveAlert,
   ScoreRow,
@@ -36,6 +37,7 @@ export class ThresholdAlertService {
     private readonly alertData: ThresholdAlertDataService,
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
+    private readonly redis: RedisLockService,
   ) {
     this.appUrl =
       this.config.get<string>('FRONTEND_URL') || 'https://propertyiq.app';
@@ -46,6 +48,22 @@ export class ThresholdAlertService {
    */
   @Cron('0 14 1 * *')
   async processThresholdAlerts(): Promise<void> {
+    const locked = await this.redis.acquireLock('cron:threshold-alerts', 600);
+    if (!locked) {
+      this.logger.log(
+        'Another instance is processing threshold alerts, skipping',
+      );
+      return;
+    }
+
+    try {
+      await this.processThresholdAlertsInner();
+    } finally {
+      await this.redis.releaseLock('cron:threshold-alerts');
+    }
+  }
+
+  private async processThresholdAlertsInner(): Promise<void> {
     this.logger.log('Starting monthly threshold alert processing...');
 
     const alerts = await this.alertData.fetchActiveScoreAlerts();

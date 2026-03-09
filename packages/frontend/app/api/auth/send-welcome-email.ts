@@ -12,8 +12,10 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const EMAIL_FROM =
-  process.env.EMAIL_FROM || "PropertyIQ <noreply@propertyiq.app>";
+const rawFrom = process.env.EMAIL_FROM || "PropertyIQ <noreply@propertyiq.app>";
+const EMAIL_FROM = rawFrom.includes("<")
+  ? rawFrom
+  : `PropertyIQ <${rawFrom.trim()}>`;
 
 interface WelcomeEmailParams {
   to: string;

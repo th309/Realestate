@@ -5,6 +5,16 @@ import { Resend } from 'resend';
 import React from 'react';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 
+/**
+ * Ensures the from address includes a display name.
+ * Bare emails like "info@propertyiq.app" → "PropertyIQ <info@propertyiq.app>"
+ * Already formatted like "PropertyIQ <noreply@...>" passes through unchanged.
+ */
+function normalizeFromEmail(from: string): string {
+  if (from.includes('<')) return from;
+  return `PropertyIQ <${from.trim()}>`;
+}
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -27,8 +37,9 @@ export class EmailService {
     private readonly config: ConfigService,
   ) {
     this.resendApiKey = this.config.get('RESEND_API_KEY');
-    this.fromEmail =
-      this.config.get('EMAIL_FROM') || 'PropertyIQ <noreply@propertyiq.io>';
+    this.fromEmail = normalizeFromEmail(
+      this.config.get('EMAIL_FROM') || 'PropertyIQ <noreply@propertyiq.app>',
+    );
     this.resend = this.resendApiKey ? new Resend(this.resendApiKey) : null;
   }
 
