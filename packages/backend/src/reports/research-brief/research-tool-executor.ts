@@ -10,7 +10,7 @@ import { Logger } from '@nestjs/common';
 import { ScoringService } from '../../scoring/scoring.service';
 import { MetricResolutionService } from '../../metric-resolution/metric-resolution.service';
 import { TimeSeriesService } from '../../timeseries/timeseries.service';
-import { ClaudeNewsService } from '../claude-news.service';
+import { NewsScoutService } from '../news-scout.service';
 import {
   handleGetMarketSnapshot,
   handleCompareMarkets,
@@ -31,7 +31,7 @@ export async function executeToolCall(
   scoring: ScoringService,
   metricResolution: MetricResolutionService,
   timeSeries: TimeSeriesService,
-  newsService: ClaudeNewsService | null,
+  newsService: NewsScoutService | null,
 ): Promise<string> {
   try {
     switch (toolName) {

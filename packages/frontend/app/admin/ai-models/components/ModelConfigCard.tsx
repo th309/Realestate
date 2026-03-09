@@ -101,6 +101,22 @@ const PROVIDER_MODELS: Record<
   custom: [],
 };
 
+/** Human-readable description of what each purpose does in the pipeline. */
+const PURPOSE_DESCRIPTIONS: Record<string, string> = {
+  report_outline:
+    "Pass 1 of report generation. Creates a short outline (~200 words) with title and subtitle to guide all sections. 1 call per report.",
+  report_narrative:
+    "Pass 2 of report generation. Writes each section's prose (executive verdict, market deep dive, scenarios, etc.). Runs 4-6 calls in parallel per report.",
+  research_agent:
+    "Custom research data gathering. When a user asks a free-form question, this agent uses tool calls to search data and scores. 1 call per research brief.",
+  research_narrative:
+    "Second step of custom research. Takes the structured data gathered by research_agent and writes it up as a readable prose narrative. 1 call per research brief.",
+  conversation:
+    "Report follow-up chat. Handles multi-turn conversations when users ask questions about their generated report. 1 call per chat message.",
+  news_scout:
+    "Fetches local news, economic indicators, and market signals for a geography. Results are cached 24 hours. 2 calls per report (local + national).",
+};
+
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
   deepseek: "deepseek-chat",
   anthropic: "claude-sonnet-4-6",
@@ -196,6 +212,11 @@ export function ModelConfigCard({ config, onSave }: ModelConfigCardProps) {
               {config.purpose}
             </code>
           </p>
+          {PURPOSE_DESCRIPTIONS[config.purpose] && (
+            <p className="text-xs text-on-surface-variant/70 mt-1.5 leading-relaxed">
+              {PURPOSE_DESCRIPTIONS[config.purpose]}
+            </p>
+          )}
         </div>
         <span
           className={`px-2.5 py-1 text-xs font-medium rounded-full ${

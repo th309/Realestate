@@ -1,11 +1,11 @@
 /**
- * Claude News Formatting Utilities
+ * News Scout Formatting Utilities
  *
  * Pure functions for summarizing and formatting news results
  * for use in prompts and display. No service dependencies.
  */
 
-import type { NewsScoutResult, SignalSummary } from './claude-news.types';
+import type { NewsScoutResult, SignalSummary } from './news-scout.types';
 
 /**
  * Summarize market signals from a news result.
@@ -37,7 +37,7 @@ export function summarizeSignals(result: NewsScoutResult): SignalSummary {
 }
 
 /**
- * Format news result for inclusion in a Claude prompt context.
+ * Format news result for inclusion in an AI prompt context.
  */
 export function formatNewsForPrompt(
   result: NewsScoutResult,

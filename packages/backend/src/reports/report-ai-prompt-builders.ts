@@ -1,12 +1,12 @@
 /**
- * Prompt Builders for ClaudeService
+ * Prompt Builders for ReportAiService
  *
  * Pure functions that construct prompts for various AI generation tasks:
  * - Conversation system prompts
  * - Investment analysis prompts
  * - Comparison report prompts (why winner won, final recommendation)
  *
- * Extracted from ClaudeService to keep file sizes under the 300-line limit.
+ * Extracted from ReportAiService to keep file sizes under the 300-line limit.
  */
 
 interface ConversationMessage {

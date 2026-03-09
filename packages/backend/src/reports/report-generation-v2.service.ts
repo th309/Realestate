@@ -5,7 +5,7 @@
  *   Pass 1: Generate a structural outline (low temperature) for narrative coherence
  *   Pass 2: Generate all sections in parallel, each receiving the outline as context
  *
- * Uses AiProviderService (model-agnostic) instead of the legacy ClaudeService.
+ * Uses AiProviderService (model-agnostic) instead of the legacy ReportAiService.
  * Section configs come from prompts-v2/ (per-report-type prompt definitions).
  */
 
@@ -32,7 +32,7 @@ import {
   buildCustomOutlinePrompt,
   buildCustomSectionsFromOutline,
 } from './report-generation-v2-custom';
-import { retryWithBackoff } from './claude-text-helpers';
+import { retryWithBackoff } from './report-ai-text-helpers';
 
 type ReportType = 'homeready' | 'investoredge' | 'comparison' | 'custom';
 

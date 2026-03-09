@@ -1,12 +1,12 @@
 /**
- * Claude Service for PropertyIQ Reports
+ * Report AI Service for PropertyIQ Reports
  *
  * Handles AI functionality beyond narrative generation:
  * - Conversation responses with report context
  * - Investment analysis and comparison narratives
  *
  * Delegates all AI calls to AiProviderService (model-agnostic).
- * Prompt construction lives in claude-prompt-builders.ts.
+ * Prompt construction lives in report-ai-prompt-builders.ts.
  *
  * Note: Narrative generation is handled by ReportGenerationV2Service.
  */
@@ -19,7 +19,7 @@ import {
   buildInvestmentPrompt,
   buildWhyWinnerWonPrompt,
   buildFinalRecommendationPrompt,
-} from './claude-prompt-builders';
+} from './report-ai-prompt-builders';
 
 interface ConversationMessage {
   id: string;
@@ -29,8 +29,8 @@ interface ConversationMessage {
 }
 
 @Injectable()
-export class ClaudeService {
-  private readonly logger = new Logger(ClaudeService.name);
+export class ReportAiService {
+  private readonly logger = new Logger(ReportAiService.name);
 
   constructor(private readonly aiProvider: AiProviderService) {}
 

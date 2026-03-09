@@ -1,6 +1,7 @@
 /**
- * Claude News Scout - Prompt templates for news scouting API calls.
+ * News Scout - Prompt templates for news scouting API calls.
  *
+ * Provider-agnostic prompts that work with any AI model.
  * Extracted to keep file sizes under 300 lines per CLAUDE.md Section 1.3.
  */
 
@@ -25,13 +26,13 @@ export function buildScoutPrompt(
         ? `${geographyName} County, ${state}`
         : `the ${geographyName} metropolitan area`;
 
-  return `You are a real estate market research analyst. Search for recent news and signals affecting the real estate market in ${locationContext}.
+  return `You are a real estate market research analyst. Provide the most recent and impactful news, economic indicators, and market signals affecting the real estate market in ${locationContext}.
 
-Search for: "${geographyName} real estate housing market ${state}" and "${geographyName} jobs employers development ${state}" and "${state} real estate market 2026"
+Focus on the last ${lookbackDays} days across: employer/jobs news, housing development, policy changes, infrastructure projects, climate/insurance events, and market reports.
 
-If results for "${geographyName}" are sparse, broaden your search to the surrounding region, county, or state level. There is ALWAYS relevant state-level and national real estate news — include it. For smaller markets, regional economic trends (university enrollment, major employers, agricultural economy, state policy changes) are especially important.
+If information specific to "${geographyName}" is limited, broaden to the surrounding region, county, or state level. There is ALWAYS relevant state-level and national real estate news — include it. For smaller markets, regional economic trends (university enrollment, major employers, agricultural economy, state policy changes) are especially important.
 
-Find the top ${maxItems} most impactful items from the last ${lookbackDays} days across: employer/jobs news, housing development, policy changes, infrastructure projects, climate/insurance events, and market reports.
+Provide the top ${maxItems} most impactful items.
 
 ## OUTPUT FORMAT (JSON)
 
@@ -39,11 +40,11 @@ Find the top ${maxItems} most impactful items from the last ${lookbackDays} days
 {
   "local_news": [
     {
-      "headline": "Exact headline",
+      "headline": "Headline text",
       "summary": "2-3 sentence summary",
       "source": "Publication name",
-      "url": "https://...",
-      "published_date": "2025-01-15",
+      "url": null,
+      "published_date": "2026-01-15",
       "relevance": "high|medium|low",
       "category": "employer_expansion|employer_layoffs|development_residential|etc",
       "sentiment": "positive|negative|neutral",
@@ -57,9 +58,9 @@ Find the top ${maxItems} most impactful items from the last ${lookbackDays} days
       "current_value": "3.2%",
       "previous_value": "3.5%",
       "change_description": "Decreased 0.3 points",
-      "release_date": "2025-01-10",
+      "release_date": "2026-01-10",
       "source": "BLS",
-      "source_url": "https://...",
+      "source_url": null,
       "impact_on_housing": "positive|negative|neutral",
       "impact_explanation": "Lower unemployment supports housing demand"
     }
@@ -70,7 +71,7 @@ Find the top ${maxItems} most impactful items from the last ${lookbackDays} days
       "headline": "Signal headline",
       "description": "What this signal means",
       "source": "Source name",
-      "source_url": "https://...",
+      "source_url": null,
       "confidence": "high|medium|low"
     }
   ]
@@ -88,12 +89,12 @@ Find the top ${maxItems} most impactful items from the last ${lookbackDays} days
 
 ## GUIDELINES
 1. Quality over quantity - max ${maxItems} news items
-2. Include source URLs when available
-3. Use actual publication dates
-4. Only report factual news, no speculation
-5. CRITICAL: JSON string values must be plain text only — do NOT include <cite>, HTML tags, or any markup inside JSON values. Summaries should be 2-3 sentences of clean prose.
+2. Use actual publication dates when known
+3. Only report factual news and trends, no speculation
+4. JSON string values must be plain text only — no HTML tags or markup
+5. Return ONLY the JSON object, no additional text
 
-Search and compile results for ${locationContext}:`;
+Compile results for ${locationContext}:`;
 }
 
 // -----------------------------------------------------------------------------
@@ -104,14 +105,14 @@ Search and compile results for ${locationContext}:`;
  * Build the prompt for fetching national economic context.
  */
 export function buildNationalContextPrompt(): string {
-  return `Search for the most recent national economic and housing news affecting US real estate:
+  return `Provide the most recent national economic and housing data affecting US real estate:
 
-1. Federal Reserve interest rate decisions or commentary (last 30 days)
-2. Current mortgage rate trends
-3. National housing market news (inventory, prices, sales)
+1. Federal Reserve interest rate decisions or commentary (most recent)
+2. Current mortgage rate trends (30-year fixed)
+3. National housing market conditions (inventory, prices, sales)
 4. Overall economic outlook
 
-Return as JSON:
+Return as JSON only:
 {
   "fed_rate_news": "Summary of most recent Fed decision or commentary",
   "mortgage_rate_trend": "Current 30-year rate and recent trend",

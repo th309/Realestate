@@ -1,32 +1,33 @@
 /**
- * Claude News Scout - API-driven news scouting functions.
+ * News Scout - API-driven news scouting functions.
  *
- * Extracted from ClaudeNewsService to keep file sizes under 300 lines.
- * These are standalone functions that accept an Anthropic client and logger.
+ * Uses AiProviderService (provider-agnostic) to generate market news
+ * and economic context. Any configured AI provider can be used.
  */
 
 import { Logger } from '@nestjs/common';
-import Anthropic from '@anthropic-ai/sdk';
-import type { NationalContext, NewsScoutResult } from './claude-news.types';
-import { parseResponse, stripCitations } from './claude-news-parser';
+import type { AiProviderService } from '../ai-provider/ai-provider.service';
+import type { NationalContext, NewsScoutResult } from './news-scout.types';
+import { parseResponse } from './news-scout-parser';
 import {
   buildScoutPrompt,
   buildNationalContextPrompt,
-} from './claude-news-prompts';
+} from './news-scout-prompts';
 
 // Re-export prompt builders so existing consumers can import from one place
 export { buildScoutPrompt, buildNationalContextPrompt };
+
+const NEWS_SCOUT_PURPOSE = 'news_scout';
 
 // -----------------------------------------------------------------------------
 // SCOUTING
 // -----------------------------------------------------------------------------
 
 /**
- * Scout news for a specific geography using Claude web search.
+ * Scout news for a specific geography using the configured AI provider.
  */
 export async function scoutNewsForGeography(
-  client: Anthropic,
-  model: string,
+  aiProvider: AiProviderService,
   logger: Logger,
   geographyId: string,
   geographyType: 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip',
@@ -55,28 +56,21 @@ export async function scoutNewsForGeography(
 
   try {
     // Run local news scouting and national context in parallel.
-    const newsPromise = client.messages
-      .create({
-        model,
-        max_tokens: 16384,
-        tools: [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 3,
-          },
-        ],
-        messages: [{ role: 'user', content: prompt }],
+    const newsPromise = aiProvider
+      .complete(NEWS_SCOUT_PURPOSE, {
+        userPrompt: prompt,
+        maxTokens: 4096,
+        responseFormat: 'json',
       })
       .catch((err) => {
         logger.warn(
-          `Local news web search failed for ${geographyName}: ${err?.message || err}`,
+          `News scout failed for ${geographyName}: ${err?.message || err}`,
         );
         return null;
       });
 
     const nationalPromise = includeNationalContext
-      ? fetchNationalContext(client, model, logger).catch((err) => {
+      ? fetchNationalContext(aiProvider, logger).catch((err) => {
           logger.warn(`National context fetch failed: ${err?.message || err}`);
           return null;
         })
@@ -87,7 +81,7 @@ export async function scoutNewsForGeography(
       nationalPromise,
     ]);
 
-    // Parse local news from web search response
+    // Parse local news from response
     let parsed: any = {
       local_news: [],
       economic_indicators: [],
@@ -95,46 +89,14 @@ export async function scoutNewsForGeography(
     };
 
     if (response) {
-      const textBlocks = response.content.filter(
-        (block): block is Anthropic.TextBlock => block.type === 'text',
-      );
+      parsed = parseResponse(response.content, logger);
 
       logger.log(
-        `News response for ${geographyName}: ${response.content.length} blocks, ${textBlocks.length} text, stop=${response.stop_reason}`,
+        `News response for ${geographyName}: ${response.provider}/${response.model}, ${response.durationMs}ms`,
       );
-
-      if (response.stop_reason === 'max_tokens') {
-        logger.warn(
-          `News response TRUNCATED (max_tokens) for ${geographyName}. JSON may be incomplete.`,
-        );
-      }
-
-      // Try each text block individually, last first
-      for (let i = textBlocks.length - 1; i >= 0; i--) {
-        const blockText = stripCitations(textBlocks[i].text);
-        const result = parseResponse(blockText, logger);
-        if (
-          result.local_news?.length ||
-          result.economic_indicators?.length ||
-          result.market_signals?.length
-        ) {
-          logger.log(
-            `Parsed news from text block ${i + 1}/${textBlocks.length} (${blockText.length} chars)`,
-          );
-          parsed = result;
-          break;
-        }
-      }
-      // Fallback: join all text blocks and try once more
-      if (!parsed.local_news?.length && !parsed.market_signals?.length) {
-        const allText = stripCitations(
-          textBlocks.map((b) => b.text).join('\n'),
-        );
-        parsed = parseResponse(allText, logger);
-      }
     } else {
       logger.warn(
-        `Web search failed for ${geographyName} — returning national context only`,
+        `News scout failed for ${geographyName} — returning national context only`,
       );
     }
 
@@ -160,7 +122,7 @@ export async function scoutNewsForGeography(
       national_context: nationalContext,
       scout_metadata: {
         search_timestamp: new Date().toISOString(),
-        model_used: model,
+        model_used: response?.model || 'unknown',
         search_queries_used: [],
         total_sources_found:
           (parsed.local_news?.length || 0) +
@@ -174,55 +136,36 @@ export async function scoutNewsForGeography(
       `Failed to scout news for ${geographyName}: ${error?.message || error}`,
       error?.stack,
     );
-    if (error?.status) {
-      logger.error(
-        `Anthropic API status: ${error.status}, type: ${error?.error?.type}`,
-      );
-    }
     return null;
   }
 }
 
 /**
- * Fetch national economic context using Claude web search.
+ * Fetch national economic context using the configured AI provider.
  */
 export async function fetchNationalContext(
-  client: Anthropic,
-  model: string,
+  aiProvider: AiProviderService,
   logger: Logger,
 ): Promise<NationalContext | null> {
   const prompt = buildNationalContextPrompt();
 
   try {
-    const response = await client.messages.create({
-      model,
-      max_tokens: 4096,
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 3,
-        },
-      ],
-      messages: [{ role: 'user', content: prompt }],
+    const response = await aiProvider.complete(NEWS_SCOUT_PURPOSE, {
+      userPrompt: prompt,
+      maxTokens: 1024,
+      responseFormat: 'json',
     });
 
-    const textBlocks = response.content.filter(
-      (block): block is Anthropic.TextBlock => block.type === 'text',
-    );
-    for (let i = textBlocks.length - 1; i >= 0; i--) {
-      const result = parseResponse(stripCitations(textBlocks[i].text), logger);
-      if (
-        result.fed_rate_news ||
-        result.mortgage_rate_trend ||
-        result.national_housing_news?.length
-      ) {
-        return result;
-      }
+    const parsed = parseResponse(response.content, logger);
+    if (
+      parsed.fed_rate_news ||
+      parsed.mortgage_rate_trend ||
+      parsed.national_housing_news?.length
+    ) {
+      return parsed;
     }
-    // Fallback: join all
-    const allText = stripCitations(textBlocks.map((b) => b.text).join('\n'));
-    return parseResponse(allText, logger);
+
+    return parsed;
   } catch (error: any) {
     logger.error(
       `Failed to fetch national context: ${error?.message || error}`,

@@ -1,7 +1,7 @@
 /**
- * Pure helper functions for Claude narrative text processing.
+ * Pure helper functions for AI narrative text processing.
  *
- * Extracted from claude.service.ts to keep file sizes under limits.
+ * Extracted from report-ai.service.ts to keep file sizes under limits.
  * Handles template interpolation, JSON parsing, text sanitization,
  * and fallback narratives.
  */

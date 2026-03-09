@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ClaudeService } from '../reports/claude.service';
+import { ReportAiService } from '../reports/report-ai.service';
 import { RedisService } from '../redis/redis.service';
 
 interface MetricValue {
@@ -38,7 +38,7 @@ export class MarketAnalysisService {
   private readonly logger = new Logger(MarketAnalysisService.name);
 
   constructor(
-    private readonly claudeService: ClaudeService,
+    private readonly reportAiService: ReportAiService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -50,23 +50,21 @@ export class MarketAnalysisService {
     // Check cache
     const cached = await this.redisService.get(cacheKey, {});
     if (cached) {
-      this.logger.log(
-        `[MarketAnalysis] Cache hit for ${request.geoName}`,
-      );
+      this.logger.log(`[MarketAnalysis] Cache hit for ${request.geoName}`);
       return { ...cached, cached: true };
     }
 
-    // Generate with Claude or fallback
+    // Generate with AI or fallback
     let homebuyer: AnalysisSection[];
     let investor: AnalysisSection[];
 
-    if (this.claudeService.isAvailable()) {
-      const result = await this.generateWithClaude(request);
+    if (this.reportAiService.isAvailable()) {
+      const result = await this.generateWithAi(request);
       homebuyer = result.homebuyer;
       investor = result.investor;
     } else {
       this.logger.warn(
-        '[MarketAnalysis] Claude unavailable, using template fallback',
+        '[MarketAnalysis] AI unavailable, using template fallback',
       );
       homebuyer = this.generateFallback(request, 'homebuyer');
       investor = this.generateFallback(request, 'investor');
@@ -85,17 +83,17 @@ export class MarketAnalysisService {
     return result;
   }
 
-  private async generateWithClaude(
+  private async generateWithAi(
     request: AnalysisRequest,
   ): Promise<{ homebuyer: AnalysisSection[]; investor: AnalysisSection[] }> {
     const prompt = this.buildPrompt(request);
 
     try {
-      const response = await this.claudeService.complete(prompt, 1400);
+      const response = await this.reportAiService.complete(prompt, 1400);
       return this.parseResponse(response);
     } catch (error) {
       this.logger.error(
-        `[MarketAnalysis] Claude generation failed: ${error.message}`,
+        `[MarketAnalysis] AI generation failed: ${error.message}`,
       );
       return {
         homebuyer: this.generateFallback(request, 'homebuyer'),
@@ -111,7 +109,9 @@ export class MarketAnalysisService {
       .filter(([, v]) => v.value != null)
       .map(([key, v]) => {
         const changePart =
-          v.change != null ? ` (${v.change >= 0 ? '+' : ''}${v.change.toFixed(1)}% YoY)` : '';
+          v.change != null
+            ? ` (${v.change >= 0 ? '+' : ''}${v.change.toFixed(1)}% YoY)`
+            : '';
         return `- ${key}: ${v.formatted}${changePart}`;
       })
       .join('\n');
@@ -149,11 +149,20 @@ Respond in this exact JSON format:
 {"homebuyer":[{"title":"...","analysis":"..."},{"title":"...","analysis":"..."},{"title":"...","analysis":"..."}],"investor":[{"title":"...","analysis":"..."},{"title":"...","analysis":"..."},{"title":"...","analysis":"..."}]}`;
   }
 
-  private parseResponse(
-    response: string,
-  ): { homebuyer: AnalysisSection[]; investor: AnalysisSection[] } {
-    const defaultHomebuyer = ['Affordability', 'Market Pace', 'Price Direction'];
-    const defaultInvestor = ['Cash Flow Potential', 'Value Growth', 'Liquidity & Demand'];
+  private parseResponse(response: string): {
+    homebuyer: AnalysisSection[];
+    investor: AnalysisSection[];
+  } {
+    const defaultHomebuyer = [
+      'Affordability',
+      'Market Pace',
+      'Price Direction',
+    ];
+    const defaultInvestor = [
+      'Cash Flow Potential',
+      'Value Growth',
+      'Liquidity & Demand',
+    ];
 
     // Try JSON parse first
     try {
@@ -161,8 +170,10 @@ Respond in this exact JSON format:
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         if (
-          parsed.homebuyer && Array.isArray(parsed.homebuyer) &&
-          parsed.investor && Array.isArray(parsed.investor)
+          parsed.homebuyer &&
+          Array.isArray(parsed.homebuyer) &&
+          parsed.investor &&
+          Array.isArray(parsed.investor)
         ) {
           return {
             homebuyer: parsed.homebuyer.slice(0, 3),
@@ -170,7 +181,11 @@ Respond in this exact JSON format:
           };
         }
         // Maybe it's the old flat format — try to split
-        if (parsed.sections && Array.isArray(parsed.sections) && parsed.sections.length >= 6) {
+        if (
+          parsed.sections &&
+          Array.isArray(parsed.sections) &&
+          parsed.sections.length >= 6
+        ) {
           return {
             homebuyer: parsed.sections.slice(0, 3),
             investor: parsed.sections.slice(3, 6),
@@ -203,8 +218,14 @@ Respond in this exact JSON format:
 
     // Last resort: return empty so fallback kicks in at caller
     return {
-      homebuyer: defaultHomebuyer.map(t => ({ title: t, analysis: 'Analysis unavailable.' })),
-      investor: defaultInvestor.map(t => ({ title: t, analysis: 'Analysis unavailable.' })),
+      homebuyer: defaultHomebuyer.map((t) => ({
+        title: t,
+        analysis: 'Analysis unavailable.',
+      })),
+      investor: defaultInvestor.map((t) => ({
+        title: t,
+        analysis: 'Analysis unavailable.',
+      })),
     };
   }
 
@@ -220,32 +241,73 @@ Respond in this exact JSON format:
 
     if (viewType === 'homebuyer') {
       const hs = scores.homeready;
-      const scoreDesc = hs.score >= 70 ? 'favorable' : hs.score >= 50 ? 'moderate' : 'challenging';
+      const scoreDesc =
+        hs.score >= 70
+          ? 'favorable'
+          : hs.score >= 50
+            ? 'moderate'
+            : 'challenging';
 
-      const affordParts = [`${geoName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`];
-      if (fmt('listing_price')) affordParts.push(`The median listing price is ${fmt('listing_price')}.`);
-      if (fmt('income_to_buy')) affordParts.push(`You'd need roughly ${fmt('income_to_buy')} in annual income to afford a home here.`);
+      const affordParts = [
+        `${geoName} shows ${scoreDesc} conditions for homebuyers (HomeReady score: ${hs.score}).`,
+      ];
+      if (fmt('listing_price'))
+        affordParts.push(
+          `The median listing price is ${fmt('listing_price')}.`,
+        );
+      if (fmt('income_to_buy'))
+        affordParts.push(
+          `You'd need roughly ${fmt('income_to_buy')} in annual income to afford a home here.`,
+        );
       const yts = val('years_to_save');
-      if (yts != null) affordParts.push(`At current savings rates, expect about ${yts.toFixed(1)} years to save for a down payment.`);
+      if (yts != null)
+        affordParts.push(
+          `At current savings rates, expect about ${yts.toFixed(1)} years to save for a down payment.`,
+        );
 
       const speedParts: string[] = [];
       const dom = val('days_on_market');
-      if (dom != null) speedParts.push(`Homes in ${geoName} average ${Math.round(dom)} days on market.`);
+      if (dom != null)
+        speedParts.push(
+          `Homes in ${geoName} average ${Math.round(dom)} days on market.`,
+        );
       const invChg = chg('for_sale_inventory');
-      if (invChg != null) speedParts.push(`Inventory is ${invChg > 0 ? 'up' : 'down'} ${Math.abs(invChg).toFixed(1)}% year-over-year.`);
+      if (invChg != null)
+        speedParts.push(
+          `Inventory is ${invChg > 0 ? 'up' : 'down'} ${Math.abs(invChg).toFixed(1)}% year-over-year.`,
+        );
       const pr = val('pending_ratio');
-      if (pr != null) speedParts.push(`The pending ratio sits at ${(pr * 100).toFixed(0)}%, indicating ${pr > 0.4 ? 'strong' : 'moderate'} buyer activity.`);
-      if (speedParts.length === 0) speedParts.push(`Market pace data for ${geoName} is currently limited.`);
+      if (pr != null)
+        speedParts.push(
+          `The pending ratio sits at ${(pr * 100).toFixed(0)}%, indicating ${pr > 0.4 ? 'strong' : 'moderate'} buyer activity.`,
+        );
+      if (speedParts.length === 0)
+        speedParts.push(
+          `Market pace data for ${geoName} is currently limited.`,
+        );
 
       const priceParts: string[] = [];
-      if (fmt('home_value')) priceParts.push(`Current median home value: ${fmt('home_value')}.`);
+      if (fmt('home_value'))
+        priceParts.push(`Current median home value: ${fmt('home_value')}.`);
       const hvYoy = val('home_value_yoy');
-      if (hvYoy != null) priceParts.push(`Values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`);
+      if (hvYoy != null)
+        priceParts.push(
+          `Values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
+        );
       const hv5yr = val('home_value_5yr');
-      if (hv5yr != null) priceParts.push(`The 5-year annualized growth rate is ${hv5yr.toFixed(1)}%.`);
+      if (hv5yr != null)
+        priceParts.push(
+          `The 5-year annualized growth rate is ${hv5yr.toFixed(1)}%.`,
+        );
       const pcPct = val('price_cut_pct');
-      if (pcPct != null) priceParts.push(`${pcPct.toFixed(0)}% of listings have price reductions.`);
-      if (priceParts.length === 0) priceParts.push(`Price trend data for ${geoName} is currently limited.`);
+      if (pcPct != null)
+        priceParts.push(
+          `${pcPct.toFixed(0)}% of listings have price reductions.`,
+        );
+      if (priceParts.length === 0)
+        priceParts.push(
+          `Price trend data for ${geoName} is currently limited.`,
+        );
 
       return [
         { title: 'Affordability', analysis: affordParts.join(' ') },
@@ -256,33 +318,55 @@ Respond in this exact JSON format:
 
     // Investor fallback
     const is = scores.investoredge;
-    const scoreDesc = is.score >= 70 ? 'strong' : is.score >= 50 ? 'moderate' : 'limited';
+    const scoreDesc =
+      is.score >= 70 ? 'strong' : is.score >= 50 ? 'moderate' : 'limited';
 
-    const cfParts = [`${geoName} shows ${scoreDesc} investment potential (InvestorEdge score: ${is.score}).`];
+    const cfParts = [
+      `${geoName} shows ${scoreDesc} investment potential (InvestorEdge score: ${is.score}).`,
+    ];
     const cr = val('cap_rate');
-    if (cr != null) cfParts.push(`Cap rates are around ${cr.toFixed(1)}%, indicating ${cr >= 6 ? 'solid cash flow' : cr >= 4 ? 'moderate returns' : 'appreciation-focused'} potential.`);
-    if (fmt('rent_index')) cfParts.push(`Median rents at ${fmt('rent_index')}/month.`);
+    if (cr != null)
+      cfParts.push(
+        `Cap rates are around ${cr.toFixed(1)}%, indicating ${cr >= 6 ? 'solid cash flow' : cr >= 4 ? 'moderate returns' : 'appreciation-focused'} potential.`,
+      );
+    if (fmt('rent_index'))
+      cfParts.push(`Median rents at ${fmt('rent_index')}/month.`);
     const gy = val('gross_yield');
     if (gy != null) cfParts.push(`Gross yield: ${gy.toFixed(1)}%.`);
 
     const growParts: string[] = [];
     const hvYoy = val('home_value_yoy');
-    if (hvYoy != null) growParts.push(`Property values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`);
+    if (hvYoy != null)
+      growParts.push(
+        `Property values are ${hvYoy >= 0 ? 'up' : 'down'} ${Math.abs(hvYoy).toFixed(1)}% year-over-year.`,
+      );
     const hv5yr = val('home_value_5yr');
-    if (hv5yr != null) growParts.push(`5-year annualized growth: ${hv5yr.toFixed(1)}%.`);
+    if (hv5yr != null)
+      growParts.push(`5-year annualized growth: ${hv5yr.toFixed(1)}%.`);
     const popG = val('population_growth');
-    if (popG != null) growParts.push(`Population growth of ${popG.toFixed(1)}% supports demand.`);
+    if (popG != null)
+      growParts.push(
+        `Population growth of ${popG.toFixed(1)}% supports demand.`,
+      );
     const jobG = val('job_growth');
     if (jobG != null) growParts.push(`Job growth: ${jobG.toFixed(1)}%.`);
-    if (growParts.length === 0) growParts.push(`Growth data for ${geoName} is currently limited.`);
+    if (growParts.length === 0)
+      growParts.push(`Growth data for ${geoName} is currently limited.`);
 
     const liqParts: string[] = [];
     const dom = val('days_on_market');
-    if (dom != null) liqParts.push(`Homes sell in an average of ${Math.round(dom)} days.`);
+    if (dom != null)
+      liqParts.push(`Homes sell in an average of ${Math.round(dom)} days.`);
     const invChg = chg('for_sale_inventory');
-    if (invChg != null) liqParts.push(`Inventory ${invChg > 0 ? 'rising' : 'falling'} at ${Math.abs(invChg).toFixed(1)}% YoY.`);
+    if (invChg != null)
+      liqParts.push(
+        `Inventory ${invChg > 0 ? 'rising' : 'falling'} at ${Math.abs(invChg).toFixed(1)}% YoY.`,
+      );
     const pr = val('pending_ratio');
-    if (pr != null) liqParts.push(`Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? 'healthy' : 'softer'} demand.`);
+    if (pr != null)
+      liqParts.push(
+        `Pending ratio of ${(pr * 100).toFixed(0)}% suggests ${pr > 0.4 ? 'healthy' : 'softer'} demand.`,
+      );
     liqParts.push(`Market Health score: ${scores.markethealth.score}/100.`);
 
     return [

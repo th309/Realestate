@@ -13,7 +13,7 @@
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { ScoringService } from '../scoring/scoring.service';
-import type { ClaudeNewsService } from './claude-news.service';
+import type { NewsScoutService } from './news-scout.service';
 import type { EntitlementsService } from '../entitlements/entitlements.service';
 import type { PartnersService } from '../partners/partners.service';
 import type { GenerateReportDto } from './dto/generate-report.dto';
@@ -64,7 +64,7 @@ export interface ReportDeps {
   supabase: SupabaseClient;
   logger: Logger;
   scoringService: ScoringService;
-  claudeNewsService: ClaudeNewsService;
+  newsScoutService: NewsScoutService;
   entitlementsService: EntitlementsService;
   partnersService: PartnersService;
   marketSnapshotService: MarketSnapshotService;
@@ -140,7 +140,7 @@ export async function generateReportAsync(
           geoType,
         ),
         newsTimeout(
-          deps.claudeNewsService.getOrScoutNews(
+          deps.newsScoutService.getOrScoutNews(
             dto.primary_geography.id,
             geoType,
             dto.primary_geography.name,
@@ -218,7 +218,7 @@ export async function generateReportAsync(
     }
 
     const signalSummary = newsResult
-      ? deps.claudeNewsService.summarizeSignals(newsResult)
+      ? deps.newsScoutService.summarizeSignals(newsResult)
       : null;
 
     // ── 3. Score contexts ──────────────────────────────────────────────
@@ -414,7 +414,7 @@ export async function generateReportAsync(
 
     if (hasAiInsights) {
       const newsContext = newsResult
-        ? deps.claudeNewsService.formatNewsForPrompt(newsResult, {
+        ? deps.newsScoutService.formatNewsForPrompt(newsResult, {
             maxNewsItems: 5,
             includeIndicators: true,
             includeSignals: true,
@@ -470,7 +470,7 @@ export async function generateReportAsync(
       'Finalizing your personalized report...',
     );
     const generationTime = Date.now() - startTime;
-    // Extract model name from narratives metadata (set by ClaudeService/v2)
+    // Extract model name from narratives metadata (set by ReportAiService/v2)
     const aiModelUsed = (aiNarratives as any).__model_used || 'unknown';
     // Clean metadata key before persisting to DB
     delete (aiNarratives as any).__model_used;

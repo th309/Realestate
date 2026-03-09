@@ -13,8 +13,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ScoringService } from '../scoring/scoring.service';
-import { ClaudeService } from './claude.service';
-import { ClaudeNewsService } from './claude-news.service';
+import { ReportAiService } from './report-ai.service';
+import { NewsScoutService } from './news-scout.service';
 import { TimeSeriesService } from '../timeseries/timeseries.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 import { PartnersService } from '../partners/partners.service';
@@ -56,8 +56,8 @@ export class ReportsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly scoringService: ScoringService,
-    private readonly claudeService: ClaudeService,
-    private readonly claudeNewsService: ClaudeNewsService,
+    private readonly reportAiService: ReportAiService,
+    private readonly newsScoutService: NewsScoutService,
     private readonly timeSeriesService: TimeSeriesService,
     private readonly entitlementsService: EntitlementsService,
     private readonly partnersService: PartnersService,
@@ -158,7 +158,7 @@ export class ReportsService {
       supabase: client,
       logger: this.logger,
       scoringService: this.scoringService,
-      claudeNewsService: this.claudeNewsService,
+      newsScoutService: this.newsScoutService,
       entitlementsService: this.entitlementsService,
       partnersService: this.partnersService,
       marketSnapshotService: this.marketSnapshotService,
@@ -262,8 +262,8 @@ export class ReportsService {
     return sendConversationMessageFn(
       this.supabase.getClient(),
       {
-        claudeService: this.claudeService,
-        claudeNewsService: this.claudeNewsService,
+        reportAiService: this.reportAiService,
+        newsScoutService: this.newsScoutService,
         entitlementsService: this.entitlementsService,
         getReport: (rid, uid) => this.getReport(rid, uid),
       },

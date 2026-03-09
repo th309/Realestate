@@ -3,8 +3,8 @@
  *
  * Provides services for AI-powered report generation:
  * - ReportsService: Report CRUD and generation pipeline
- * - ClaudeService: Anthropic Claude API for analysis & narratives
- * - ClaudeNewsService: Claude with web search for real-time news scouting
+ * - ReportAiService: AI-powered analysis & narratives (model-agnostic)
+ * - NewsScoutService: Provider-agnostic real-time news scouting
  * - ResearchBriefService: Custom research brief generation (Claude tool-use + DeepSeek narrative)
  */
 
@@ -12,8 +12,8 @@ import { Module } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
 import { ResearchBriefController } from './research-brief/research-brief.controller';
-import { ClaudeService } from './claude.service';
-import { ClaudeNewsService } from './claude-news.service';
+import { ReportAiService } from './report-ai.service';
+import { NewsScoutService } from './news-scout.service';
 import { ResearchBriefService } from './research-brief/research-brief.service';
 import { ReportGenerationV2Service } from './report-generation-v2.service';
 import { ReportFollowUpService } from './report-follow-up.service';
@@ -42,8 +42,8 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
   ],
   providers: [
     ReportsService,
-    ClaudeService,
-    ClaudeNewsService,
+    ReportAiService,
+    NewsScoutService,
     ResearchBriefService,
     ReportGenerationV2Service,
     ReportFollowUpService,
@@ -55,8 +55,8 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
   ],
   exports: [
     ReportsService,
-    ClaudeService,
-    ClaudeNewsService,
+    ReportAiService,
+    NewsScoutService,
     ResearchBriefService,
     ReportGenerationV2Service,
     ReportFollowUpService,

@@ -161,7 +161,7 @@ const GET_RANKINGS: ResearchTool = {
 /**
  * Tool: search_news
  * Searches for recent real estate news for a region.
- * Delegates to ClaudeNewsService if available, otherwise returns a stub.
+ * Delegates to NewsScoutService if available, otherwise returns a stub.
  */
 const SEARCH_NEWS: ResearchTool = {
   type: 'function',

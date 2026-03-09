@@ -1,28 +1,29 @@
 /**
- * Claude News Scout Service
+ * News Scout Service
  *
- * Uses Claude (Anthropic) with web search tool to find news and
+ * Uses AiProviderService (provider-agnostic) to find news and
  * economic indicators that could impact real estate markets.
+ * The AI model is configured via the `news_scout` purpose in
+ * the `ai_model_config` table — any supported provider works.
  *
  * Split into modules:
- * - claude-news.types.ts      — All type definitions and constants
- * - claude-news-prompts.ts    — Prompt templates
- * - claude-news-parser.ts     — JSON response parsing utilities
- * - claude-news-scout.ts      — Standalone scouting functions
- * - claude-news.service.ts    — NestJS service (this file)
+ * - news-scout.types.ts        — All type definitions and constants
+ * - news-scout-prompts.ts      — Prompt templates
+ * - news-scout-parser.ts       — JSON response parsing utilities
+ * - news-scout-functions.ts    — Standalone scouting functions
+ * - news-scout.service.ts      — NestJS service (this file)
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import Anthropic from '@anthropic-ai/sdk';
+import { AiProviderService } from '../ai-provider/ai-provider.service';
 
-import type { NewsScoutResult, SignalSummary } from './claude-news.types';
-import { scoutNewsForGeography } from './claude-news-scout';
+import type { NewsScoutResult, SignalSummary } from './news-scout.types';
+import { scoutNewsForGeography } from './news-scout-functions';
 import {
   summarizeSignals as summarizeSignalsFn,
   formatNewsForPrompt as formatNewsForPromptFn,
-} from './claude-news-formatting';
+} from './news-scout-formatting';
 
 // Re-export all types and constants so existing consumers keep working
 export type {
@@ -34,35 +35,23 @@ export type {
   ScoutMetadata,
   NewsScoutResult,
   SignalSummary,
-} from './claude-news.types';
-export { CATEGORY_GROUPS } from './claude-news.types';
+} from './news-scout.types';
+export { CATEGORY_GROUPS } from './news-scout.types';
 
 // -----------------------------------------------------------------------------
 // SERVICE
 // -----------------------------------------------------------------------------
 
 @Injectable()
-export class ClaudeNewsService {
-  private readonly logger = new Logger(ClaudeNewsService.name);
-  private readonly anthropicClient: Anthropic | null = null;
-  private readonly anthropicApiKey: string | null;
-  private readonly claudeModel = 'claude-haiku-4-5-20251001';
+export class NewsScoutService {
+  private readonly logger = new Logger(NewsScoutService.name);
   private readonly cacheTtlHours = 24;
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly supabase: SupabaseService,
+    private readonly aiProvider: AiProviderService,
   ) {
-    this.anthropicApiKey =
-      this.configService.get<string>('ANTHROPIC_API_KEY') || null;
-    if (this.anthropicApiKey) {
-      this.anthropicClient = new Anthropic({ apiKey: this.anthropicApiKey });
-      this.logger.log('Claude News Service initialized');
-    } else {
-      this.logger.warn(
-        'ANTHROPIC_API_KEY not configured - news scouting disabled',
-      );
-    }
+    this.logger.log('News Scout Service initialized (provider-agnostic)');
   }
 
   /**
@@ -80,11 +69,6 @@ export class ClaudeNewsService {
       lookbackDays?: number;
     } = {},
   ): Promise<NewsScoutResult | null> {
-    if (!this.anthropicClient) {
-      this.logger.warn('Anthropic not configured - returning null');
-      return null;
-    }
-
     const { forceRefresh = false, ...scoutOptions } = options;
 
     // Check cache first
@@ -106,8 +90,7 @@ export class ClaudeNewsService {
 
     // Delegate to extracted scouting function
     const result = await scoutNewsForGeography(
-      this.anthropicClient,
-      this.claudeModel,
+      this.aiProvider,
       this.logger,
       geographyId,
       geographyType,
@@ -191,7 +174,7 @@ export class ClaudeNewsService {
   }
 
   // ---------------------------------------------------------------------------
-  // UTILITY FUNCTIONS (delegated to claude-news-formatting.ts)
+  // UTILITY FUNCTIONS (delegated to news-scout-formatting.ts)
   // ---------------------------------------------------------------------------
 
   /** Summarize market signals */
@@ -199,7 +182,7 @@ export class ClaudeNewsService {
     return summarizeSignalsFn(result);
   }
 
-  /** Format news for Claude prompt context */
+  /** Format news for prompt context */
   formatNewsForPrompt(
     result: NewsScoutResult,
     options: {
@@ -213,9 +196,11 @@ export class ClaudeNewsService {
   }
 
   /**
-   * Check if service is available
+   * Check if service is available.
+   * AiProviderService handles config resolution — if news_scout purpose
+   * is configured in ai_model_config, the service is available.
    */
   isAvailable(): boolean {
-    return !!this.anthropicApiKey;
+    return true;
   }
 }

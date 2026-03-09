@@ -11,8 +11,8 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
-import { ClaudeService } from './claude.service';
-import { ClaudeNewsService } from './claude-news.service';
+import { ReportAiService } from './report-ai.service';
+import { NewsScoutService } from './news-scout.service';
 import { EntitlementsService } from '../entitlements/entitlements.service';
 
 // ---------------------------------------------------------------------------
@@ -21,8 +21,8 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 
 /** Dependencies required only by `sendConversationMessage`. */
 export interface ConversationDeps {
-  claudeService: ClaudeService;
-  claudeNewsService: ClaudeNewsService;
+  reportAiService: ReportAiService;
+  newsScoutService: NewsScoutService;
   entitlementsService: EntitlementsService;
   /** Callback that fetches a full report record (populated_data, etc.). */
   getReport: (reportId: string, userId: string) => Promise<any>;
@@ -36,7 +36,7 @@ export interface ConversationDeps {
  * Send a user message in a report conversation and generate an AI response.
  *
  * Creates the conversation row if it does not exist yet, checks the user's AI
- * entitlement, asks Claude for a response, then persists the new exchange.
+ * entitlement, asks the AI for a response, then persists the new exchange.
  */
 export async function sendConversationMessage(
   supabase: SupabaseClient,
@@ -83,15 +83,12 @@ export async function sendConversationMessage(
       market_signals: realtimeData.signals || [],
       national_context: realtimeData.national_context,
     };
-    newsContext = deps.claudeNewsService.formatNewsForPrompt(
-      newsResult as any,
-      {
-        maxNewsItems: 5,
-        includeIndicators: true,
-        includeSignals: true,
-        includeNational: true,
-      },
-    );
+    newsContext = deps.newsScoutService.formatNewsForPrompt(newsResult as any, {
+      maxNewsItems: 5,
+      includeIndicators: true,
+      includeSignals: true,
+      includeNational: true,
+    });
   }
 
   // Check AI entitlement before generating conversation response
@@ -122,7 +119,7 @@ export async function sendConversationMessage(
   }
 
   // Generate AI response
-  const response = await deps.claudeService.generateConversationResponse(
+  const response = await deps.reportAiService.generateConversationResponse(
     content,
     conversation.messages || [],
     report,
@@ -203,9 +200,7 @@ export async function createShareLink(
 ): Promise<string> {
   const shareToken = randomBytes(32).toString('hex');
   const expiresAt = expiresInDays
-    ? new Date(
-        Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
-      ).toISOString()
+    ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
     : null;
 
   const { error } = await supabase

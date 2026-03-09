@@ -1,5 +1,5 @@
 /**
- * Type definitions for the Claude News Scout Service.
+ * Type definitions for the News Scout Service.
  *
  * All types, interfaces, and constants related to news scouting
  * are centralized here as the single source of truth.

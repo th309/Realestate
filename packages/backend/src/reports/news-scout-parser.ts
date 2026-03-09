@@ -1,7 +1,7 @@
 /**
- * Claude News Response Parser
+ * News Scout Response Parser
  *
- * Handles parsing JSON from Claude API responses, including:
+ * Handles parsing JSON from AI API responses, including:
  * - Code-fenced JSON extraction
  * - Raw JSON parsing
  * - Key-search with string-aware brace matching
@@ -58,7 +58,7 @@ export function findMatchingBrace(text: string, openIndex: number): number {
 // -----------------------------------------------------------------------------
 
 /**
- * Parse JSON from Claude response text.
+ * Parse JSON from AI response text.
  * Handles: code-fenced JSON, raw JSON, and JSON embedded in conversational text.
  */
 export function parseResponse(text: string, logger: Logger): any {
