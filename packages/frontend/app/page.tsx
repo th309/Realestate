@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
 import {
   HeroSection,
   StatsSection,
@@ -9,12 +9,28 @@ import {
   CTASection,
   Footer,
   JsonLd,
-} from './components/home';
+} from "./components/home";
 
 export const metadata: Metadata = {
-  title: 'PropertyIQ: AI Housing Market Data & Forecasts by ZIP Code',
+  title: "PropertyIQ: AI Housing Market Data & Forecasts by ZIP Code",
   description:
-    'PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find markets that outperform. Free interactive maps, market scores, and AI-generated reports.',
+    "PropertyIQ ranks 925 US metros and 33,000+ ZIP codes with AI to find markets that outperform. Free interactive maps, market scores, and AI-generated reports.",
+  alternates: { canonical: "https://www.propertyiq.app" },
+  openGraph: {
+    title: "PropertyIQ: AI Housing Market Data & Forecasts",
+    description:
+      "Rank 925 US metros and 33,000+ ZIP codes with AI. Free maps, scores, and reports.",
+    url: "https://www.propertyiq.app",
+    siteName: "PropertyIQ",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PropertyIQ - AI Real Estate Intelligence",
+      },
+    ],
+  },
 };
 
 /**

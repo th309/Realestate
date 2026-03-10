@@ -5,6 +5,7 @@ const nextConfig = {
   // Usage: NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002
   distDir: process.env.NEXT_DIST_DIR || '.next',
   output: 'standalone',
+  poweredByHeader: false,
   // Generate unique build ID to bust cache
   generateBuildId: async () => {
     return `build-${Date.now()}`;
@@ -39,11 +40,22 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Allow iframe embedding for /embed/* routes
+        // Security headers for all routes
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+      {
+        // Override for embed routes — allow iframes
         source: '/embed/:path*',
         headers: [
           { key: 'X-Frame-Options', value: 'ALLOWALL' },
-          { key: 'Content-Security-Policy', value: "frame-ancestors *" },
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
         ],
       },
     ];

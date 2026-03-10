@@ -1,16 +1,17 @@
-import type { Metadata } from 'next';
-import { Scale } from 'lucide-react';
-import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
-import { TermsSidebar } from './TermsSidebar';
-import { IntroSections } from './TermsSectionsIntro';
-import { RightsSections } from './TermsSectionsRights';
-import { BillingSections } from './TermsSectionsBilling';
-import { LegalSections } from './TermsSectionsLegal';
+import type { Metadata } from "next";
+import { Scale } from "lucide-react";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { TermsSidebar } from "./TermsSidebar";
+import { IntroSections } from "./TermsSectionsIntro";
+import { RightsSections } from "./TermsSectionsRights";
+import { BillingSections } from "./TermsSectionsBilling";
+import { LegalSections } from "./TermsSectionsLegal";
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | PropertyIQ',
+  title: "Terms of Service | PropertyIQ",
   description:
-    'Terms of Service for PropertyIQ, operated by Federal Contracting Services LLC. Read our terms for using AI-powered real estate analytics.',
+    "Terms of Service for PropertyIQ, operated by Federal Contracting Services LLC. Read our terms for using AI-powered real estate analytics.",
+  alternates: { canonical: "https://www.propertyiq.app/about/terms" },
 };
 
 export default function TermsOfServicePage() {
@@ -19,8 +20,8 @@ export default function TermsOfServicePage() {
       <div className="max-w-6xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[
-            { label: 'About', href: '/about' },
-            { label: 'Terms of Service' },
+            { label: "About", href: "/about" },
+            { label: "Terms of Service" },
           ]}
           title="Terms of Service"
           description="PropertyIQ — Operated by Federal Contracting Services LLC"
@@ -44,8 +45,8 @@ export default function TermsOfServicePage() {
 
             <div className="mt-12 pt-8 border-t border-outline-variant">
               <p className="text-center text-sm text-on-surface-variant">
-                By using PropertyIQ, you acknowledge that you have read, understood, and agree to be
-                bound by these Terms of Service.
+                By using PropertyIQ, you acknowledge that you have read,
+                understood, and agree to be bound by these Terms of Service.
               </p>
             </div>
           </main>

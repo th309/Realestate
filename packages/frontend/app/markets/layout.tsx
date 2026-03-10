@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Housing Markets - Browse 925+ US Metro Areas',
+  title: "Housing Markets - Browse 925+ US Metro Areas",
   description:
-    'Browse housing market data, scores, and analysis for 925+ US metro areas. Compare home values, trends, and AI-powered market scores by city and state.',
+    "Browse AI-powered housing market analysis for 925+ US metro areas. PropertyIQ scores, median home prices, rental demand, trends, and forecasts.",
+  alternates: { canonical: "https://www.propertyiq.app/markets" },
 };
 
 export default function MarketsLayout({
@@ -11,5 +12,5 @@ export default function MarketsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <>{children}</>;
 }

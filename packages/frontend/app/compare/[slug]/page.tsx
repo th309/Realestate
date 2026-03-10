@@ -35,9 +35,12 @@ export async function generateMetadata({
   return {
     title: comparison.title,
     description: comparison.description,
+    alternates: { canonical: `https://www.propertyiq.app/compare/${slug}` },
     openGraph: {
       title: comparison.title,
       description: comparison.description,
+      url: `https://www.propertyiq.app/compare/${slug}`,
+      siteName: "PropertyIQ",
     },
   };
 }

@@ -60,5 +60,38 @@ export default async function MetroPage({
   const metro = SLUG_TO_METRO.get(slug);
   if (!metro) notFound();
 
-  return <MetroPageContent metro={metro} />;
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://www.propertyiq.app",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Markets",
+        item: "https://www.propertyiq.app/markets",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: metro.shortName,
+        item: `https://www.propertyiq.app/markets/${metro.slug}`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <MetroPageContent metro={metro} />
+    </>
+  );
 }

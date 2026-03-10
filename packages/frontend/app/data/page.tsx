@@ -1,7 +1,13 @@
-import { Database, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
-import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
-import { METRICS, DATA_SOURCE_ANCHORS, METRIC_DEFINITIONS, getDataSourceAnchor } from '@/lib/data';
+import { Database, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import {
+  METRICS,
+  DATA_SOURCE_ANCHORS,
+  METRIC_DEFINITIONS,
+  getDataSourceAnchor,
+} from "@/lib/data";
+import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,68 +27,68 @@ interface DataProvider {
 
 const DATA_PROVIDERS: DataProvider[] = [
   {
-    id: 'realtor-com',
-    name: 'Realtor.com',
+    id: "realtor-com",
+    name: "Realtor.com",
     description:
-      'Realtor.com is operated by Move, Inc. and provides comprehensive real estate listing data. As one of the largest real estate marketplaces in the United States, their research division publishes monthly housing market data covering listing prices, inventory levels, days on market, and market competitiveness indicators across metropolitan and county areas.',
-    url: 'https://www.realtor.com/research/data/',
-    updateFrequency: 'Monthly',
+      "Realtor.com is operated by Move, Inc. and provides comprehensive real estate listing data. As one of the largest real estate marketplaces in the United States, their research division publishes monthly housing market data covering listing prices, inventory levels, days on market, and market competitiveness indicators across metropolitan and county areas.",
+    url: "https://www.realtor.com/research/data/",
+    updateFrequency: "Monthly",
   },
   {
-    id: 'zillow',
-    name: 'Zillow',
+    id: "zillow",
+    name: "Zillow",
     description:
-      'Zillow Group publishes a suite of housing market indices through their research division. The Zillow Home Value Index (ZHVI) tracks typical home values using a repeat-sales methodology. The Zillow Observed Rent Index (ZORI) measures typical market rents. Zillow also provides home price forecasts (ZHVF), sale-to-list ratios, and affordability metrics covering hundreds of metropolitan areas and thousands of ZIP codes.',
-    url: 'https://www.zillow.com/research/data/',
-    updateFrequency: 'Monthly',
+      "Zillow Group publishes a suite of housing market indices through their research division. The Zillow Home Value Index (ZHVI) tracks typical home values using a repeat-sales methodology. The Zillow Observed Rent Index (ZORI) measures typical market rents. Zillow also provides home price forecasts (ZHVF), sale-to-list ratios, and affordability metrics covering hundreds of metropolitan areas and thousands of ZIP codes.",
+    url: "https://www.zillow.com/research/data/",
+    updateFrequency: "Monthly",
   },
   {
-    id: 'redfin',
-    name: 'Redfin',
+    id: "redfin",
+    name: "Redfin",
     description:
-      'Redfin is a technology-powered real estate brokerage that publishes weekly housing market data through their Data Center. Their market tracker provides median sale price, homes sold, pending sales, new listings, inventory, days on market, sale-to-list ratio, and price drop metrics across national, state, metro, county, city, ZIP code, and neighborhood levels.',
-    url: 'https://www.redfin.com/news/data-center/',
-    updateFrequency: 'Weekly',
+      "Redfin is a technology-powered real estate brokerage that publishes weekly housing market data through their Data Center. Their market tracker provides median sale price, homes sold, pending sales, new listings, inventory, days on market, sale-to-list ratio, and price drop metrics across national, state, metro, county, city, ZIP code, and neighborhood levels.",
+    url: "https://www.redfin.com/news/data-center/",
+    updateFrequency: "Weekly",
   },
   {
-    id: 'census',
-    name: 'U.S. Census Bureau',
+    id: "census",
+    name: "U.S. Census Bureau",
     description:
-      'The U.S. Census Bureau conducts the American Community Survey (ACS) annually, providing detailed demographic and economic data at the national, state, county, and ZIP code level. We use Census data for population estimates, median household income, median age, homeownership rates, and vacancy rates -- key inputs for affordability and demographic analysis.',
-    url: 'https://data.census.gov/',
-    updateFrequency: 'Annual',
+      "The U.S. Census Bureau conducts the American Community Survey (ACS) annually, providing detailed demographic and economic data at the national, state, county, and ZIP code level. We use Census data for population estimates, median household income, median age, homeownership rates, and vacancy rates -- key inputs for affordability and demographic analysis.",
+    url: "https://data.census.gov/",
+    updateFrequency: "Annual",
   },
   {
-    id: 'fred',
-    name: 'FRED (Federal Reserve Economic Data)',
+    id: "fred",
+    name: "FRED (Federal Reserve Economic Data)",
     description:
-      'FRED is maintained by the Federal Reserve Bank of St. Louis and aggregates economic data from dozens of government agencies. We source mortgage interest rates (Freddie Mac Primary Mortgage Market Survey) and unemployment rates at the national, state, and county level. These economic indicators drive our affordability calculations and market health assessments.',
-    url: 'https://fred.stlouisfed.org/',
-    updateFrequency: 'Monthly',
+      "FRED is maintained by the Federal Reserve Bank of St. Louis and aggregates economic data from dozens of government agencies. We source mortgage interest rates (Freddie Mac Primary Mortgage Market Survey) and unemployment rates at the national, state, and county level. These economic indicators drive our affordability calculations and market health assessments.",
+    url: "https://fred.stlouisfed.org/",
+    updateFrequency: "Monthly",
   },
   {
-    id: 'bls',
-    name: 'Bureau of Labor Statistics (BLS)',
+    id: "bls",
+    name: "Bureau of Labor Statistics (BLS)",
     description:
-      'The Bureau of Labor Statistics publishes the Quarterly Census of Employment and Wages (QCEW), which provides comprehensive employment data at the metro and county level. We use BLS data for job growth calculations and metro-level unemployment rates -- key indicators of local economic health and housing demand.',
-    url: 'https://www.bls.gov/data/',
-    updateFrequency: 'Quarterly (QCEW) / Monthly (LAUS)',
+      "The Bureau of Labor Statistics publishes the Quarterly Census of Employment and Wages (QCEW), which provides comprehensive employment data at the metro and county level. We use BLS data for job growth calculations and metro-level unemployment rates -- key indicators of local economic health and housing demand.",
+    url: "https://www.bls.gov/data/",
+    updateFrequency: "Quarterly (QCEW) / Monthly (LAUS)",
   },
   {
-    id: 'bea',
-    name: 'Bureau of Economic Analysis (BEA)',
+    id: "bea",
+    name: "Bureau of Economic Analysis (BEA)",
     description:
-      'The Bureau of Economic Analysis provides GDP estimates at the state, metro, and county level, along with Regional Price Parities (RPPs) that measure cost-of-living differences across geographies. We use BEA data for GDP growth metrics and cost-of-living indices that contextualize housing costs relative to local economic output.',
-    url: 'https://www.bea.gov/data',
-    updateFrequency: 'Annual',
+      "The Bureau of Economic Analysis provides GDP estimates at the state, metro, and county level, along with Regional Price Parities (RPPs) that measure cost-of-living differences across geographies. We use BEA data for GDP growth metrics and cost-of-living indices that contextualize housing costs relative to local economic output.",
+    url: "https://www.bea.gov/data",
+    updateFrequency: "Annual",
   },
   {
-    id: 'propertyiq',
-    name: 'PropertyIQ (Calculated)',
+    id: "propertyiq",
+    name: "PropertyIQ (Calculated)",
     description:
-      'PropertyIQ generates proprietary calculated metrics and scores by combining data from multiple sources. Our scoring engine produces HomeReady, InvestorEdge, and MarketHealth scores validated across 1.1M+ observations. We also calculate derived metrics like cap rates, gross yields, affordability indices, inventory surplus/deficit, and months of supply by combining inputs from Zillow, Realtor.com, Census, and FRED data.',
-    url: '/scores/methodology',
-    updateFrequency: 'Monthly',
+      "PropertyIQ generates proprietary calculated metrics and scores by combining data from multiple sources. Our scoring engine produces HomeReady, InvestorEdge, and MarketHealth scores validated across 1.1M+ observations. We also calculate derived metrics like cap rates, gross yields, affordability indices, inventory surplus/deficit, and months of supply by combining inputs from Zillow, Realtor.com, Census, and FRED data.",
+    url: "/scores/methodology",
+    updateFrequency: "Monthly",
   },
 ];
 
@@ -133,22 +139,32 @@ function getMetricsForProvider(providerId: string): string[] {
 export default function DataPage() {
   return (
     <>
+      <WebPageJsonLd
+        url="https://www.propertyiq.app/data"
+        name="Data Sources"
+        description="Data sources powering PropertyIQ market analytics"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.propertyiq.app" },
+          { name: "Data Sources", url: "https://www.propertyiq.app/data" },
+        ]}
+      />
       <PageHeaderWithBreadcrumbs
-        breadcrumbs={[{ label: 'Data Sources' }]}
+        breadcrumbs={[{ label: "Data Sources" }]}
         title="Data Sources"
         icon={<Database className="w-5 h-5" />}
       />
 
       <p className="text-on-surface-variant mt-6 mb-8 max-w-3xl">
-        PropertyIQ aggregates data from trusted federal agencies and leading real estate
-        data providers. Below are the sources powering our analytics, the metrics we derive
-        from each, and links to their original data portals.
+        PropertyIQ aggregates data from trusted federal agencies and leading
+        real estate data providers. Below are the sources powering our
+        analytics, the metrics we derive from each, and links to their original
+        data portals.
       </p>
 
       <div className="space-y-10">
         {DATA_PROVIDERS.map((provider) => {
           const metrics = getMetricsForProvider(provider.id);
-          const isExternal = provider.url.startsWith('http');
+          const isExternal = provider.url.startsWith("http");
 
           return (
             <section

@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "Forecast Accuracy — PropertyIQ Scores Beat the Competition",
   description:
     "OOS IC = 0.37, walk-forward validated across 4 windows, 924 metros, 23,000+ locations. See how PropertyIQ Scores predict real-world returns.",
+  alternates: { canonical: "https://www.propertyiq.app/scores/accuracy" },
   openGraph: {
     title: "Forecast Accuracy — PropertyIQ",
     description:

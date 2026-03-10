@@ -108,10 +108,14 @@ export const metadata: Metadata = {
     images: ["/twitter-image.png"],
     creator: "@propertyiq",
   },
-  alternates: {
-    canonical: "https://www.propertyiq.app",
-  },
+  // Canonical URLs are set per-page in each route's metadata/layout.
+  // Do NOT set a global canonical here — it overrides all child routes.
   category: "Real Estate Technology",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "16x16" }],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -130,9 +134,38 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://api.mapbox.com" />
+        <link
+          rel="preconnect"
+          href="https://backend-production-ee4d.up.railway.app"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body
         className={`${roboto.variable} ${robotoMono.variable} ${sourceSerif.variable} ${dmSans.variable} antialiased min-h-screen flex flex-col`}
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-primary focus:text-on-primary focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium"
+        >
+          Skip to main content
+        </a>
+        <noscript>
+          <div
+            style={{
+              padding: "2rem",
+              textAlign: "center",
+              fontFamily: "sans-serif",
+            }}
+          >
+            <h1>JavaScript Required</h1>
+            <p>
+              PropertyIQ requires JavaScript to function. Please enable
+              JavaScript in your browser settings.
+            </p>
+          </div>
+        </noscript>
         <GoogleAnalytics />
         <Providers>
           <Header />
@@ -157,14 +190,75 @@ export default function RootLayout({
             </p>
           </div>
           <AnalyticsProvider>
-            <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+            <main id="main-content" className="flex-1 min-h-0 flex flex-col">
+              {children}
+            </main>
           </AnalyticsProvider>
-          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-3 px-4 pb-12">
-            <p className="text-center text-xs text-on-surface-variant">
-              Data is provided for informational purposes only. While we strive
-              for accuracy, we do not guarantee the completeness or correctness
-              of the information and accept no liability for its use.
-            </p>
+          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-6 px-4 pb-12">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4 text-xs text-on-surface-variant">
+                <a
+                  href="/about"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  About
+                </a>
+                <a
+                  href="/data"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  Data Sources
+                </a>
+                <a
+                  href="/scores/methodology"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  Methodology
+                </a>
+                <a
+                  href="/scores/accuracy"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  Accuracy
+                </a>
+                <a
+                  href="/compare/propertyiq-vs-mashvisor"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  vs Mashvisor
+                </a>
+                <a
+                  href="/compare/propertyiq-vs-neighborhoodscout"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  vs NeighborhoodScout
+                </a>
+                <a
+                  href="/compare/propertyiq-vs-reventure"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  vs Reventure
+                </a>
+                <a
+                  href="/contact"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  Contact
+                </a>
+                <a
+                  href="/about/terms"
+                  className="hover:text-on-surface transition-colors"
+                >
+                  Terms
+                </a>
+              </div>
+              <p className="text-center text-xs text-on-surface-variant">
+                Data is provided for informational purposes only. While we
+                strive for accuracy, we do not guarantee the completeness or
+                correctness of the information and accept no liability for its
+                use.
+              </p>
+            </div>
           </footer>
           <DevToolbarLoader />
           {/* <QuinnFloatingButton /> */}{" "}

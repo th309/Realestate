@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "Methodology — How PropertyIQ Scores Predict Market Performance",
   description:
     "Walk-forward validated across 6 years of market data. See the statistical proof behind PropertyIQ Scores.",
+  alternates: { canonical: "https://www.propertyiq.app/scores/methodology" },
 };
 
 const STATS = [

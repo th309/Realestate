@@ -1,11 +1,13 @@
-import type { Metadata } from 'next';
-import { Mail, Building2, MapPin, Globe, Send } from 'lucide-react';
-import { PageHeaderWithBreadcrumbs } from '@/components/navigation';
-import { ContactForm } from './ContactForm';
+import type { Metadata } from "next";
+import { Mail, Building2, MapPin, Globe, Send } from "lucide-react";
+import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { ContactForm } from "./ContactForm";
 
 export const metadata: Metadata = {
-  title: 'Contact PropertyIQ',
-  description: 'Get in touch with the PropertyIQ team. Questions about AI-powered real estate market analysis, pricing, or partnerships.',
+  title: "Contact PropertyIQ",
+  description:
+    "Get in touch with the PropertyIQ team. Questions about AI-powered real estate market analysis, pricing, or partnerships.",
+  alternates: { canonical: "https://www.propertyiq.app/contact" },
 };
 
 export default function ContactPage() {
@@ -13,7 +15,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-surface">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
-          breadcrumbs={[{ label: 'Contact' }]}
+          breadcrumbs={[{ label: "Contact" }]}
           title="Contact Us"
           description="Get in touch with the PropertyIQ team"
           icon={<Mail className="w-5 h-5" />}
@@ -27,7 +29,9 @@ export default function ContactPage() {
                 <Building2 className="w-4 h-4 text-primary" />
                 Company
               </h2>
-              <p className="text-on-surface font-medium">Federal Contracting Services LLC</p>
+              <p className="text-on-surface font-medium">
+                Federal Contracting Services LLC
+              </p>
             </div>
             <div>
               <h2 className="text-sm font-semibold text-on-surface-variant uppercase tracking-wide mb-2 flex items-center gap-2">

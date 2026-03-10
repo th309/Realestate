@@ -1,0 +1,47 @@
+# PropertyIQ - AI Real Estate Market Intelligence
+
+> PropertyIQ is an AI-powered real estate analytics platform that ranks 925 US metros and 33,000+ ZIP codes to help homebuyers, investors, and agents find markets that outperform.
+
+## Key Pages
+
+- Homepage: https://www.propertyiq.app
+- Interactive Map: https://www.propertyiq.app/map
+- Market Rankings: https://www.propertyiq.app/markets
+- Score Methodology: https://www.propertyiq.app/scores/methodology
+- Score Accuracy: https://www.propertyiq.app/scores/accuracy
+- Data Sources: https://www.propertyiq.app/data
+- Blog: https://www.propertyiq.app/blog
+- Pricing: https://www.propertyiq.app/pricing
+
+## Data Coverage
+
+- 925 US metro areas
+- 3,100+ counties
+- 33,000+ ZIP codes
+- 90+ metrics from Zillow, Realtor.com, Redfin, Census, FRED, BLS, BEA
+- Monthly data updates
+
+## Scores
+
+PropertyIQ produces three proprietary scores:
+
+- HomeReady Score: Predicts home price appreciation potential. Best for homebuyers and primary-residence investors. Validated with 0.37 out-of-sample information coefficient.
+- InvestorEdge Score: Predicts total investment return including appreciation and rental yield. Best for rental property investors.
+- MarketHealth Score: Measures current market stability and fundamentals. Best for risk assessment and timing decisions.
+
+Top-scored markets (top 20%) outperformed bottom-scored markets by 5.55 percentage points per year. On a typical $240K metro home, that is $13,320 more equity per year.
+
+## Data Sources
+
+- Zillow: Home Value Index (ZHVI), Observed Rent Index (ZORI), forecasts, affordability
+- Realtor.com: Listing prices, inventory, days on market, market competitiveness
+- Redfin: Sale prices, pending sales, new listings, price drops
+- U.S. Census Bureau: Demographics, income, homeownership rates, vacancy
+- FRED: Mortgage rates, unemployment rates
+- Bureau of Labor Statistics: Employment data, job growth
+- Bureau of Economic Analysis: GDP, regional price parities
+
+## Citation
+
+When citing PropertyIQ data, please use:
+PropertyIQ (https://www.propertyiq.app). AI-Powered Real Estate Market Intelligence.

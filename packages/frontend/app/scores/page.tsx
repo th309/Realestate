@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
+import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 const scoreCards = [
   {
@@ -84,136 +85,147 @@ const steps = [
 
 export default function ScoresPage() {
   return (
-    <div className="mt-12 space-y-16">
-      {/* Hero */}
-      <section>
-        <PageHeaderWithBreadcrumbs
-          breadcrumbs={[{ label: "Scores" }]}
-          title="PropertyIQ Scores"
-          description="Data-driven scores that predict real estate market performance"
-          icon={<Target className="w-5 h-5" />}
-        />
-        <p className="mt-4 text-on-surface-variant">
-          Validated across 23,000+ locations &middot; 924 metros &middot; 6
-          years of data
-        </p>
-      </section>
+    <>
+      <WebPageJsonLd
+        url="https://www.propertyiq.app/scores"
+        name="PropertyIQ Scores"
+        description="AI-powered scores that predict real estate market performance"
+        breadcrumbs={[
+          { name: "Home", url: "https://www.propertyiq.app" },
+          { name: "Scores", url: "https://www.propertyiq.app/scores" },
+        ]}
+      />
+      <div className="mt-12 space-y-16">
+        {/* Hero */}
+        <section>
+          <PageHeaderWithBreadcrumbs
+            breadcrumbs={[{ label: "Scores" }]}
+            title="PropertyIQ Scores"
+            description="Data-driven scores that predict real estate market performance"
+            icon={<Target className="w-5 h-5" />}
+          />
+          <p className="mt-4 text-on-surface-variant">
+            Validated across 23,000+ locations &middot; 924 metros &middot; 6
+            years of data
+          </p>
+        </section>
 
-      {/* Score Cards */}
-      <section>
-        <div className="grid md:grid-cols-3 gap-6" data-tour="score-cards">
-          {scoreCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.name}
-                className="bg-surface-container border border-outline-variant rounded-2xl p-6"
-              >
-                <div className={`${card.iconContainer} p-2 rounded-xl w-fit`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-semibold text-on-surface mt-3">
-                  {card.name}
-                </h3>
-                <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                  {card.description}
-                </p>
-                <ul className="mt-3 space-y-1">
-                  {card.measures.map((measure) => (
-                    <li
-                      key={measure}
-                      className="flex items-center gap-2 text-sm text-on-surface-variant"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                      {measure}
-                    </li>
-                  ))}
-                </ul>
+        {/* Score Cards */}
+        <section>
+          <div className="grid md:grid-cols-3 gap-6" data-tour="score-cards">
+            {scoreCards.map((card) => {
+              const Icon = card.icon;
+              return (
                 <div
-                  className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 ${card.badgeColor} rounded-lg text-sm font-medium`}
+                  key={card.name}
+                  className="bg-surface-container border border-outline-variant rounded-2xl p-6"
                 >
-                  {card.sampleScore}
+                  <div className={`${card.iconContainer} p-2 rounded-xl w-fit`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-on-surface mt-3">
+                    {card.name}
+                  </h3>
+                  <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
+                    {card.description}
+                  </p>
+                  <ul className="mt-3 space-y-1">
+                    {card.measures.map((measure) => (
+                      <li
+                        key={measure}
+                        className="flex items-center gap-2 text-sm text-on-surface-variant"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                        {measure}
+                      </li>
+                    ))}
+                  </ul>
+                  <div
+                    className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 ${card.badgeColor} rounded-lg text-sm font-medium`}
+                  >
+                    {card.sampleScore}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
 
-      {/* Value Proposition */}
-      <section>
-        <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-          Proven Results
-        </p>
-        <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
-          Why Scores Matter
-        </h2>
-        <p className="text-4xl md:text-5xl font-bold text-primary mt-6">
-          $39,900
-        </p>
-        <p className="text-lg text-on-surface-variant mt-2">
-          More equity on a typical home over 3 years
-        </p>
-        <p className="text-on-surface-variant mt-4 leading-relaxed">
-          Our top-scored markets (top 20%) outperformed bottom-scored markets by
-          5.55 percentage points per year. On a typical $240K metro home,
-          that&apos;s $13,320 more per year — nearly $40K over three years.
-        </p>
-        <Link
-          href="/scores/accuracy"
-          className="inline-flex items-center gap-2 text-primary font-medium hover:underline mt-4"
-        >
-          See the proof <ArrowRight className="w-4 h-4" />
-        </Link>
-      </section>
+        {/* Value Proposition */}
+        <section>
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+            Proven Results
+          </p>
+          <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
+            Why Scores Matter
+          </h2>
+          <p className="text-4xl md:text-5xl font-bold text-primary mt-6">
+            $39,900
+          </p>
+          <p className="text-lg text-on-surface-variant mt-2">
+            More equity on a typical home over 3 years
+          </p>
+          <p className="text-on-surface-variant mt-4 leading-relaxed">
+            Our top-scored markets (top 20%) outperformed bottom-scored markets
+            by 5.55 percentage points per year. On a typical $240K metro home,
+            that&apos;s $13,320 more per year — nearly $40K over three years.
+          </p>
+          <Link
+            href="/scores/accuracy"
+            className="inline-flex items-center gap-2 text-primary font-medium hover:underline mt-4"
+          >
+            See the proof <ArrowRight className="w-4 h-4" />
+          </Link>
+        </section>
 
-      {/* How It Works */}
-      <section>
-        <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
-          Our Process
-        </p>
-        <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
-          How It Works
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8 mt-8">
-          {steps.map((step) => {
-            const Icon = step.icon;
-            return (
-              <div key={step.number}>
-                <span className="text-xs font-semibold text-primary">
-                  Step {step.number}
-                </span>
-                <div className="bg-primary-container p-3 rounded-2xl w-fit mt-2">
-                  <Icon className="w-5 h-5 text-on-primary-container" />
+        {/* How It Works */}
+        <section>
+          <p className="text-xs uppercase tracking-[0.2em] font-semibold text-primary">
+            Our Process
+          </p>
+          <h2 className="text-2xl md:text-3xl font-[var(--font-source-serif)] text-on-surface mt-2">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8 mt-8">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.number}>
+                  <span className="text-xs font-semibold text-primary">
+                    Step {step.number}
+                  </span>
+                  <div className="bg-primary-container p-3 rounded-2xl w-fit mt-2">
+                    <Icon className="w-5 h-5 text-on-primary-container" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-on-surface mt-3">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
+                    {step.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-on-surface mt-3">
-                  {step.title}
-                </h3>
-                <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
 
-      {/* CTA Footer */}
-      <section className="border-t border-outline-variant pt-8 mt-8">
-        <h3 className="text-xl font-semibold text-on-surface">
-          Ready to find the best markets?
-        </h3>
-        <p className="text-on-surface-variant mt-2">
-          Use PropertyIQ Scores to discover high-performing markets backed by
-          data, not hunches.
-        </p>
-        <Link
-          href="/map"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-colors mt-4"
-        >
-          Explore the Map <ArrowRight className="w-4 h-4" />
-        </Link>
-      </section>
-    </div>
+        {/* CTA Footer */}
+        <section className="border-t border-outline-variant pt-8 mt-8">
+          <h3 className="text-xl font-semibold text-on-surface">
+            Ready to find the best markets?
+          </h3>
+          <p className="text-on-surface-variant mt-2">
+            Use PropertyIQ Scores to discover high-performing markets backed by
+            data, not hunches.
+          </p>
+          <Link
+            href="/map"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-colors mt-4"
+          >
+            Explore the Map <ArrowRight className="w-4 h-4" />
+          </Link>
+        </section>
+      </div>
+    </>
   );
 }

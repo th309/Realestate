@@ -3,7 +3,28 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Blog - Housing Market Insights & Analysis",
   description:
-    "Data-driven housing market analysis, forecasts, and investment insights from PropertyIQ Research.",
+    "Data-driven housing market analysis, investment insights, and AI-powered forecasts from the PropertyIQ research team. Updated weekly.",
+  alternates: {
+    canonical: "https://www.propertyiq.app/blog",
+    types: {
+      "application/rss+xml": "https://www.propertyiq.app/blog/rss.xml",
+    },
+  },
+  openGraph: {
+    title: "PropertyIQ Blog | Housing Market Insights",
+    description:
+      "Data-driven housing market analysis, investment insights, and AI-powered forecasts from PropertyIQ.",
+    url: "https://www.propertyiq.app/blog",
+    siteName: "PropertyIQ",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PropertyIQ Blog",
+      },
+    ],
+  },
 };
 
 export default function BlogLayout({
