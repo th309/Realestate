@@ -6,11 +6,11 @@
  * Displays a tooltip with the source geography name.
  */
 
-'use client';
+"use client";
 
-import { memo, useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect } from "react";
 
-type GeographyLevel = 'county' | 'metro' | 'state' | 'national';
+type GeographyLevel = "county" | "metro" | "state" | "national";
 
 interface InheritedBadgeProps {
   sourceType: GeographyLevel;
@@ -23,16 +23,16 @@ interface InheritedBadgeProps {
  */
 function getSourceLabel(type: GeographyLevel): string {
   switch (type) {
-    case 'county':
-      return 'County';
-    case 'metro':
-      return 'Metro';
-    case 'state':
-      return 'State';
-    case 'national':
-      return 'National';
+    case "county":
+      return "County";
+    case "metro":
+      return "Metro";
+    case "state":
+      return "State";
+    case "national":
+      return "National";
     default:
-      return 'Parent';
+      return "Parent";
   }
 }
 
@@ -41,23 +41,23 @@ function getSourceLabel(type: GeographyLevel): string {
  */
 function getBadgeColor(type: GeographyLevel): string {
   switch (type) {
-    case 'county':
-      return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'metro':
-      return 'bg-indigo-100 text-indigo-700 border-indigo-200';
-    case 'state':
-      return 'bg-purple-100 text-purple-700 border-purple-200';
-    case 'national':
-      return 'bg-gray-100 text-gray-700 border-gray-200';
+    case "county":
+      return "bg-blue-100 text-blue-700 border-blue-200";
+    case "metro":
+      return "bg-indigo-100 text-indigo-700 border-indigo-200";
+    case "state":
+      return "bg-purple-100 text-purple-700 border-purple-200";
+    case "national":
+      return "bg-gray-100 text-gray-700 border-gray-200";
     default:
-      return 'bg-surface-container text-on-surface-variant border-outline-variant';
+      return "bg-surface-container text-on-surface-variant border-outline-variant";
   }
 }
 
 /**
  * Inheritance icon (arrow pointing up)
  */
-function InheritanceIcon({ className = '' }: { className?: string }) {
+function InheritanceIcon({ className = "" }: { className?: string }) {
   return (
     <svg
       className={`w-3 h-3 ${className}`}
@@ -65,6 +65,7 @@ function InheritanceIcon({ className = '' }: { className?: string }) {
       viewBox="0 0 24 24"
       stroke="currentColor"
       strokeWidth={2}
+      aria-hidden="true"
     >
       <path
         strokeLinecap="round"
@@ -78,18 +79,20 @@ function InheritanceIcon({ className = '' }: { className?: string }) {
 export const InheritedBadge = memo(function InheritedBadge({
   sourceType,
   sourceName,
-  className = '',
+  className = "",
 }: InheritedBadgeProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const badgeRef = useRef<HTMLSpanElement>(null);
-  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top');
+  const [tooltipPosition, setTooltipPosition] = useState<"top" | "bottom">(
+    "top",
+  );
 
   // Calculate tooltip position based on available space
   useEffect(() => {
     if (showTooltip && badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
       const spaceAbove = rect.top;
-      setTooltipPosition(spaceAbove < 60 ? 'bottom' : 'top');
+      setTooltipPosition(spaceAbove < 60 ? "bottom" : "top");
     }
   }, [showTooltip]);
 
@@ -124,7 +127,7 @@ export const InheritedBadge = memo(function InheritedBadge({
           className={`
             absolute left-1/2 -translate-x-1/2 z-50
             px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg whitespace-nowrap
-            ${tooltipPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'}
+            ${tooltipPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"}
           `}
           role="tooltip"
         >
@@ -133,7 +136,7 @@ export const InheritedBadge = memo(function InheritedBadge({
           <span
             className={`
               absolute left-1/2 -translate-x-1/2 border-4 border-transparent
-              ${tooltipPosition === 'top' ? 'top-full border-t-gray-900' : 'bottom-full border-b-gray-900'}
+              ${tooltipPosition === "top" ? "top-full border-t-gray-900" : "bottom-full border-b-gray-900"}
             `}
           />
         </span>

@@ -8,10 +8,17 @@ import { BillingSections } from "./TermsSectionsBilling";
 import { LegalSections } from "./TermsSectionsLegal";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | PropertyIQ",
+  title: "Terms of Service",
   description:
-    "Terms of Service for PropertyIQ, operated by Federal Contracting Services LLC. Read our terms for using AI-powered real estate analytics.",
+    "Read PropertyIQ's Terms of Service covering data usage, intellectual property, user responsibilities, billing, and legal disclaimers.",
   alternates: { canonical: "https://www.propertyiq.app/about/terms" },
+  openGraph: {
+    title: "Terms of Service | PropertyIQ",
+    description:
+      "Read PropertyIQ's Terms of Service covering data usage, intellectual property, user responsibilities, billing, and legal disclaimers.",
+    url: "https://www.propertyiq.app/about/terms",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function TermsOfServicePage() {

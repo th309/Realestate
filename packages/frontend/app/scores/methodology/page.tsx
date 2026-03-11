@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   description:
     "Walk-forward validated across 6 years of market data. See the statistical proof behind PropertyIQ Scores.",
   alternates: { canonical: "https://www.propertyiq.app/scores/methodology" },
+  openGraph: {
+    title: "Methodology — How PropertyIQ Scores Predict Market Performance",
+    description:
+      "Walk-forward validated across 6 years of market data. See the statistical proof behind PropertyIQ Scores.",
+    url: "https://www.propertyiq.app/scores/methodology",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 const STATS = [
@@ -108,6 +115,57 @@ export default function MethodologyPage() {
 
   return (
     <div className="mt-12 space-y-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "Article",
+                headline: "How PropertyIQ Scores Predict Market Performance",
+                description:
+                  "Walk-forward validated across 6 years of market data. Technical methodology behind PropertyIQ's AI-powered real estate scores.",
+                datePublished: "2026-02-10",
+                dateModified: new Date().toISOString().split("T")[0],
+                author: {
+                  "@type": "Organization",
+                  name: "PropertyIQ",
+                  url: "https://www.propertyiq.app",
+                },
+                publisher: {
+                  "@id": "https://www.propertyiq.app/#organization",
+                },
+                mainEntityOfPage:
+                  "https://www.propertyiq.app/scores/methodology",
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: "https://www.propertyiq.app",
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Scores",
+                    item: "https://www.propertyiq.app/scores",
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 3,
+                    name: "Methodology",
+                    item: "https://www.propertyiq.app/scores/methodology",
+                  },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       {/* Header */}
       <section>
         <PageHeaderWithBreadcrumbs

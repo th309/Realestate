@@ -134,6 +134,7 @@ export function LeadMagnetModal({ metroName, onClose }: LeadMagnetModalProps) {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -177,6 +178,7 @@ function SuccessContent({ onClose }: { onClose: () => void }) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -325,6 +327,7 @@ function LoadingSpinner() {
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
+      aria-hidden="true"
     >
       <circle
         className="opacity-25"

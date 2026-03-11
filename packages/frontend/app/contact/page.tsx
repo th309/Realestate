@@ -8,11 +8,56 @@ export const metadata: Metadata = {
   description:
     "Get in touch with the PropertyIQ team. Questions about AI-powered real estate market analysis, pricing, or partnerships.",
   alternates: { canonical: "https://www.propertyiq.app/contact" },
+  openGraph: {
+    title: "Contact PropertyIQ",
+    description:
+      "Get in touch with the PropertyIQ team. Questions about AI-powered real estate market analysis, pricing, or partnerships.",
+    url: "https://www.propertyiq.app/contact",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-surface">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "ContactPage",
+                name: "Contact PropertyIQ",
+                url: "https://www.propertyiq.app/contact",
+                mainEntity: {
+                  "@type": "Organization",
+                  name: "PropertyIQ",
+                  email: "info@propertyiq.app",
+                  url: "https://www.propertyiq.app",
+                },
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: "https://www.propertyiq.app",
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Contact",
+                    item: "https://www.propertyiq.app/contact",
+                  },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       <div className="max-w-4xl mx-auto px-6 py-8">
         <PageHeaderWithBreadcrumbs
           breadcrumbs={[{ label: "Contact" }]}

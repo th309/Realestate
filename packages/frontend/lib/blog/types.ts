@@ -3,7 +3,8 @@ export interface BlogFrontmatter {
   description: string;
   date: string;
   author: string;
-  category: 'market-analysis' | 'investment' | 'methodology' | 'news';
+  authorTitle?: string;
+  category: "market-analysis" | "investment" | "methodology" | "news";
   tags: string[];
   targetKeyword: string;
   image?: string;

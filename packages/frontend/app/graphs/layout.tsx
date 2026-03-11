@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
   title: "Housing Market Graphs & Trends",
@@ -27,5 +28,18 @@ export default function GraphsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <WebPageJsonLd
+        url="https://www.propertyiq.app/graphs"
+        name="Housing Market Graphs & Trends"
+        description="Interactive charts and graphs showing housing market trends across US metros."
+        breadcrumbs={[
+          { name: "Home", url: "https://www.propertyiq.app" },
+          { name: "Graphs", url: "https://www.propertyiq.app/graphs" },
+        ]}
+      />
+      {children}
+    </>
+  );
 }

@@ -1,36 +1,36 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Map, BarChart3, FileText } from 'lucide-react';
-import { MapPreview } from './demos/MapPreview';
-import { ChartPreview } from './demos/ChartPreview';
-import { BuilderPreview } from './demos/BuilderPreview';
+import { useState } from "react";
+import { Map, BarChart3, FileText } from "lucide-react";
+import { MapPreview } from "./demos/MapPreview";
+import { ChartPreview } from "./demos/ChartPreview";
+import { BuilderPreview } from "./demos/BuilderPreview";
 
 const DEMO_TABS = [
   {
-    id: 'map',
-    label: 'Explore Map',
+    id: "map",
+    label: "Explore Map",
     icon: Map,
-    description: 'Interactive market heat maps with real-time data',
+    description: "Interactive market heat maps with real-time data",
   },
   {
-    id: 'charts',
-    label: 'Analyze Data',
+    id: "charts",
+    label: "Analyze Data",
     icon: BarChart3,
-    description: 'Price trends and market analytics',
+    description: "Price trends and market analytics",
   },
   {
-    id: 'reports',
-    label: 'Build Reports',
+    id: "reports",
+    label: "Build Reports",
     icon: FileText,
-    description: 'Drag-and-drop report builder',
+    description: "Drag-and-drop report builder",
   },
 ];
 
 export function DemoSection() {
-  const [activeTab, setActiveTab] = useState('map');
+  const [activeTab, setActiveTab] = useState("map");
 
-  const currentTab = DEMO_TABS.find(t => t.id === activeTab) || DEMO_TABS[0];
+  const currentTab = DEMO_TABS.find((t) => t.id === activeTab) || DEMO_TABS[0];
 
   return (
     <section
@@ -51,8 +51,8 @@ export function DemoSection() {
             See PropertyIQ in Action
           </h2>
           <p className="text-on-surface-variant">
-            Explore real features with live data. Click around, interact, and see how PropertyIQ
-            helps you make smarter real estate decisions.
+            Explore real features with live data. Click around, interact, and
+            see how PropertyIQ helps you make smarter real estate decisions.
           </p>
         </header>
 
@@ -69,9 +69,10 @@ export function DemoSection() {
                   className={`
                     flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium
                     transition-all duration-200
-                    ${isActive
-                      ? 'bg-primary text-on-primary shadow-md'
-                      : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
+                    ${
+                      isActive
+                        ? "bg-primary text-on-primary shadow-md"
+                        : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
                     }
                   `}
                   aria-selected={isActive}
@@ -101,12 +102,24 @@ export function DemoSection() {
             </div>
             <div className="flex-1 max-w-sm">
               <div className="h-6 bg-surface-container rounded-full flex items-center px-3 gap-2">
-                <svg className="w-3 h-3 text-on-surface-variant/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  className="w-3 h-3 text-on-surface-variant/50"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
                   <circle cx="11" cy="11" r="8" />
                   <path d="M21 21l-4.35-4.35" />
                 </svg>
                 <span className="text-xs text-on-surface-variant">
-                  propertyiq.app/{activeTab === 'map' ? 'map' : activeTab === 'charts' ? 'graphs' : 'reports'}
+                  propertyiq.app/
+                  {activeTab === "map"
+                    ? "map"
+                    : activeTab === "charts"
+                      ? "graphs"
+                      : "reports"}
                 </span>
               </div>
             </div>
@@ -114,15 +127,16 @@ export function DemoSection() {
 
           {/* Demo content */}
           <div className="h-[380px] md:h-[420px]">
-            {activeTab === 'map' && <MapPreview />}
-            {activeTab === 'charts' && <ChartPreview />}
-            {activeTab === 'reports' && <BuilderPreview />}
+            {activeTab === "map" && <MapPreview />}
+            {activeTab === "charts" && <ChartPreview />}
+            {activeTab === "reports" && <BuilderPreview />}
           </div>
         </div>
 
         {/* Bottom note */}
         <p className="text-center text-xs text-on-surface-variant mt-4">
-          This is a live preview with sample data. Sign up free to access full features and real market data.
+          This is a live preview with sample data. Sign up free to access full
+          features and real market data.
         </p>
       </div>
     </section>

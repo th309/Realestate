@@ -56,7 +56,13 @@ export function HistorySparkline({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <svg width={width} height={height} className="overflow-visible">
+      <svg
+        width={width}
+        height={height}
+        className="overflow-visible"
+        role="img"
+        aria-label="Score trend"
+      >
         <polyline
           points={points}
           fill="none"
@@ -84,6 +90,7 @@ export function CloseIcon({ className = "" }: { className?: string }) {
       viewBox="0 0 24 24"
       stroke="currentColor"
       strokeWidth={2}
+      aria-hidden="true"
     >
       <path
         strokeLinecap="round"

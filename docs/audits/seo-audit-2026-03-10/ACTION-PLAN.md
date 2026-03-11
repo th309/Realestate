@@ -1,309 +1,260 @@
 # PropertyIQ SEO Action Plan
 
-**Based on:** Full SEO Audit (2026-03-10)
-**Current Score:** 36/100
-**Target Score:** 75/100 (after completing Critical + High fixes)
+**Generated:** 2026-03-10 | **SEO Health Score:** 72/100 | **Target:** 85+/100
 
 ---
 
-## Week 1: Critical Fixes (Score impact: +20-25 points)
+## CRITICAL (Fix Immediately — Blocks Indexing or Rankings)
 
-### 1. Fix canonical URLs across all pages
+### 1. Fix Market Page Slug Mismatches
 
-**Issue:** T1, CQ2 | **Impact:** Highest single-impact fix
-**Root cause:** `packages/frontend/app/layout.tsx` line ~112 sets global canonical to homepage
+**Impact:** Internal links point to 404 pages, wasting crawl budget and link equity
+**Pages affected:** At least Austin TX, Miami FL — likely more
+**Action:**
+
+- Audit `METRO_SLUG_DATA` in `lib/data/metro-slug-data.ts` against all internal link references
+- Either update internal links to match sitemap slugs OR add redirects for old slugs
+- Verify: `curl -s -o /dev/null -w "%{http_code}" https://www.propertyiq.app/markets/[slug]` for all 935 entries
+  **File:** `packages/frontend/app/sitemap.ts` (line 92-97), homepage link references
+
+### 2. Add Server-Rendered Content to Market Pages
+
+**Impact:** 935 pages at risk of thin content penalty — this is the bulk of indexed pages
+**Action:**
+
+- Generate 200-300 words of unique market narrative per page using existing data
+- Render server-side (not behind JS) — use Next.js `generateStaticParams` + SSG
+- Include: market summary, key metrics text, score interpretation, trend description
+- Add "Last updated: [date]" visible on each page
+  **Files:** `packages/frontend/app/markets/[slug]/page.tsx`, `MetroPageContent.tsx`
+
+### 3. Add Content-Security-Policy Header
+
+**Impact:** XSS vulnerability without CSP; also a technical SEO trust signal
+**Action:**
+
+```javascript
+// In next.config.mjs headers()
+{ key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://backend-production-ee4d.up.railway.app https://*.supabase.co; font-src 'self' https://fonts.gstatic.com;" }
+```
+
+**File:** `packages/frontend/next.config.mjs` (line 45-51)
+
+### 3b. Fix Louisville Sitemap Slug (Forward Slash in Path)
+
+**Impact:** Sitemap advertises a URL with embedded `/` that returns 404
+**Action:**
+
+- Fix slug in `METRO_SLUG_DATA` from `louisville/jefferson-county-ky-in` to `louisville-jefferson-county-ky-in`
+- Add redirect from old URL to new URL
+  **File:** `packages/frontend/lib/data/metro-slug-data.ts`
+
+### 3c. Create Public Landing Page for /reports
+
+**Impact:** `/reports` returns 307 redirect to sign-in — completely invisible to search engines
+**Action:**
+
+- Create a public landing page at `/reports` describing report features
+- Gate actual report content at `/reports/[id]` behind auth
+- Add `/reports/sample` or `/reports/shared` to showcase
+- `/reports/sample` and `/reports/shared` already whitelisted in middleware — verify they have content
+  **File:** `packages/frontend/middleware.ts` (line 13-21)
+
+### 3d. Fix /about/terms Meta + Title
+
+**Impact:** 9,000-word page with no meta description and duplicate "PropertyIQ | PropertyIQ" in title
+**Action:**
+
+- Add meta description: "Read PropertyIQ's Terms of Service. Covers data usage, intellectual property, disclaimers, and user responsibilities."
+- Fix title to: "Terms of Service | PropertyIQ"
+  **File:** `packages/frontend/app/about/terms/page.tsx` or layout
+
+---
+
+## HIGH (Fix Within 1 Week — Significant Rankings Impact)
+
+### 4. Add Author Attribution to All Content
+
+**Impact:** E-E-A-T is a primary ranking factor — no authorship kills credibility
+**Action:**
+
+- Add founder/team author info to all blog posts (name, bio, photo, credentials)
+- Add `author` field to blog frontmatter
+- Add author bio section to methodology and accuracy pages
+- Update Article JSON-LD to include full author details
+  **Files:** Blog post MDX files, `app/blog/[slug]/page.tsx`
+
+### 5. Improve Scores Page Content Depth
+
+**Impact:** Key landing page with only ~500 words — too thin for a competitive keyword
+**Action:**
+
+- Expand to 1,500+ words: add FAQ section, use case examples, detailed score explanations
+- Add interactive score demo or sample score breakdown
+- Include "How to use PropertyIQ Scores" section
+- Add FAQ schema
+  **File:** `packages/frontend/app/scores/page.tsx`
+
+### 6. Fix Title Tags
+
+**Impact:** Weak titles hurt CTR and keyword targeting
+**Action:**
+
+- `/scores`: Change to "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth | PropertyIQ"
+- `/about`: Change to "About PropertyIQ — Our Mission, Team & Data Sources"
+- `/data`: Change to "90+ Real Estate Data Sources — Zillow, Census, FRED & More | PropertyIQ"
+  **Files:** Respective `page.tsx` files' `generateMetadata` or `metadata` exports
+
+### 7. Add JSON-LD Schema to Key Pages
+
+**Impact:** Missing schema = missing rich results opportunities
+**Action:**
+
+- `/pricing`: Add `Product` with `Offer` schema (SSR, not JS-dependent)
+- `/methodology`: Add `Article` + `HowTo` schema
+- `/accuracy`: Add `Article` schema with `datePublished`
+- `/compare/*`: Add `Product` comparison schema
+- All: Add `FAQPage` schema where FAQ sections exist
+  **Files:** Create schema components per page or extend `WebPageJsonLd.tsx`
+
+### 8. Add Alt Text to All Images
+
+**Impact:** Accessibility + image SEO — currently many images lack alt text
+**Action:**
+
+- Audit all `<img>`, `<svg>`, and Next.js `<Image>` components
+- Add descriptive alt text or `role="presentation"` for decorative icons
+- Priority: blog post images, market page charts, scores page icons
+  **Files:** Various component files across the app
+
+---
+
+## MEDIUM (Fix Within 1 Month — Optimization Opportunities)
+
+### 9. Expand Comparison Pages
+
+**Action:** Expand each from ~400 to 1,000+ words with:
+
+- Detailed feature comparison tables
+- Pricing comparison with current data
+- Use case recommendations ("Best for...")
+- FAQ schema
+- Add "Best Real Estate Analytics Platforms 2026" hub page
+
+### 10. Improve Internal Cross-Linking
 
 **Action:**
 
-- Remove global `alternates.canonical` from root `layout.tsx`
-- Add self-referencing canonical to every route's `generateMetadata()`:
-  - `/map` → `https://www.propertyiq.app/map`
-  - `/pricing` → `https://www.propertyiq.app/pricing`
-  - `/about` → `https://www.propertyiq.app/about`
-  - `/blog` → `https://www.propertyiq.app/blog`
-  - `/blog/[slug]` → `https://www.propertyiq.app/blog/${slug}`
-  - `/scores` → `https://www.propertyiq.app/scores`
-  - `/data` → `https://www.propertyiq.app/data`
-  - `/markets/[slug]` → `https://www.propertyiq.app/markets/${slug}`
-  - All other routes
+- Blog posts → link to relevant market pages
+- Market pages → link to relevant blog posts
+- Scores page → link to methodology + accuracy
+- Add breadcrumbs to /map, /graphs, /pricing
+- Vary CTA anchor text (not always "Explore the Map")
 
-**Files to modify:**
+### 11. Add Search to Markets Directory
 
-- `packages/frontend/app/layout.tsx`
-- Every route's `page.tsx` that has or needs `generateMetadata()`
+**Action:** Add search/filter functionality to `/markets` page:
+
+- Search by city name
+- Filter by state
+- Sort by score or metric value
+
+### 12. Expand About Page
+
+**Action:** Add to ~1,500 words:
+
+- Founder bio with credentials and photo
+- Company history/timeline
+- Team section (if applicable)
+- Mission statement expansion
+- Media mentions or partnerships
+
+### 13. Reduce Font Count
+
+**Action:** Evaluate if all 4 Google Fonts are needed:
+
+- Roboto (primary) — keep
+- Roboto Mono (code) — keep if used
+- Source Serif 4 (reports) — consider loading only on report pages
+- DM Sans — evaluate if used; remove if redundant
+
+### 14. Expand llms.txt
+
+**Action:** Add sections for:
+
+- Methodology summary (how scores work)
+- Pricing tiers and what's included
+- Key differentiators vs competitors
+- Sample data points and coverage stats
+- Create `llms-full.txt` with deeper content
+
+### 15. Create security.txt
+
+**Action:** Add `/.well-known/security.txt` with:
+
+- Contact email for security reports
+- Preferred languages
+- Expiry date
+- CSAF/acknowledgments links
 
 ---
 
-### 2. Add security headers
+## LOW (Backlog — Nice to Have)
 
-**Issue:** T3 | **Impact:** Security + trust signal
+### 16. Diversify Blog Publication Dates
 
-**Action:** Add to `next.config.js` (or `next.config.ts`):
+All 4 posts dated Feb 25, 2026 — looks artificial. Space out dates.
 
-```javascript
-async headers() {
-  return [{
-    source: '/(.*)',
-    headers: [
-      { key: 'X-Frame-Options', value: 'DENY' },
-      { key: 'X-Content-Type-Options', value: 'nosniff' },
-      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-      { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-    ],
-  }];
-},
-poweredByHeader: false,
+### 17. Add Related Posts to Blog
+
+Show 2-3 related posts at the bottom of each blog post.
+
+### 18. Remove Server Header
+
+Railway exposes `server: railway-edge` — consider suppressing.
+
+### 19. Add `aggregateRating` to SoftwareApplication Schema
+
+Collect and display user ratings to enable star rating rich results.
+
+### 20. Add Dataset Schema to Data Sources Page
+
+Use `schema.org/Dataset` for each data source to enhance visibility in dataset searches.
+
+### 21. Market Page Schema Enhancement
+
+Add `StatisticalPopulation` or enhanced `Place` schema with quantitative data.
+
+### 22. Pricing Page — Server-Render Content
+
+Ensure pricing tiers render server-side for crawlers, not just via client JS.
+
+---
+
+## Effort vs. Impact Matrix
+
+```
+                        HIGH IMPACT
+                            │
+         ┌──────────────────┼──────────────────┐
+         │  #1 Fix slugs    │  #2 Market       │
+         │  #3 CSP header   │     content      │
+         │  #6 Title tags   │  #4 Author       │
+         │                  │     attribution   │
+   LOW   │                  │                   │  HIGH
+  EFFORT ├──────────────────┼───────────────────┤ EFFORT
+         │  #8 Alt text     │  #5 Scores page   │
+         │  #14 llms.txt    │  #9 Comparisons   │
+         │  #15 security.txt│  #11 Markets      │
+         │  #16 Blog dates  │      search       │
+         │                  │  #10 Cross-links  │
+         └──────────────────┼───────────────────┘
+                            │
+                        LOW IMPACT
 ```
 
----
-
-### 3. Dynamic metadata for market pages
-
-**Issue:** OP1 | **Impact:** 935 pages become indexable
-
-**Action:** Update `/markets/[slug]/page.tsx` `generateMetadata()`:
-
-```typescript
-export async function generateMetadata({ params }): Promise<Metadata> {
-  const market = await getMarketBySlug(params.slug);
-  return {
-    title: `${market.shortName} Housing Market Analysis & Scores | PropertyIQ`,
-    description: `${market.shortName} real estate market data, PropertyIQ scores, and AI forecasts. Explore home prices, trends, and investment potential.`,
-    alternates: {
-      canonical: `https://www.propertyiq.app/markets/${params.slug}`,
-    },
-    openGraph: {
-      title: `${market.shortName} Housing Market | PropertyIQ`,
-      description: `...`,
-      url: `https://www.propertyiq.app/markets/${params.slug}`,
-    },
-  };
-}
-```
+**Recommended execution order:** 1 → 3 → 6 → 4 → 7 → 2 → 5 → 8 → 10 → 9
 
 ---
 
-### 4. Fix FAQ schema mismatch
-
-**Issue:** SD1 | **Impact:** Avoid structured data penalty
-
-**Action:** Either:
-
-- (A) Add a visible FAQ section to the homepage that matches the schema content, OR
-- (B) Remove FAQPage schema from homepage and move it to a dedicated `/faq` page
-
----
-
-### 5. Fix non-www redirect
-
-**Issue:** T2 | **Impact:** Consolidate link equity
-
-**Action:** In Railway dashboard, configure `propertyiq.app` to 301 redirect to `www.propertyiq.app`. Or add a DNS CNAME/A record that routes to the same Railway service.
-
----
-
-## Week 2: High-Priority Fixes (Score impact: +10-15 points)
-
-### 6. Add H1 tags to pages missing them
-
-**Issue:** OP2
-**Pages:** `/map`, `/pricing`, `/market/[id]` dashboard pages
-
-### 7. Trim title tags to ≤60 characters
-
-**Issue:** OP3
-
-- `/pricing`: "PropertyIQ Pricing & Plans" (26 chars)
-- `/about`: "About PropertyIQ | AI Real Estate Intel" (40 chars)
-- Blog posts: Shorten per post
-
-### 8. Fix meta descriptions (150-160 chars)
-
-**Issue:** OP4
-
-- `/blog`: Expand to ~155 chars
-- `/about`: Trim to ~155 chars
-- Blog posts: Trim to ~155 chars
-- Market pages: Use shorter template with `shortName`
-
-### 9. Make OG/Twitter tags page-specific
-
-**Issue:** CQ6, H2
-
-- Each route should override OG title, description, URL, and image
-- Blog posts: Add `og:url` and `og:image` (generate dynamic OG images or add featured images to frontmatter)
-
-### 10. Add JSON-LD to key pages
-
-**Issue:** SD table
-
-- `/pricing`: `SoftwareApplication` with `Offer` entries
-- `/blog`: `Blog` or `CollectionPage` schema
-- `/scores`: `WebPage` with `BreadcrumbList`
-- `/data`: `WebPage` with `Dataset` entries
-- `/about`: `Organization` + `Person` (founder)
-
-### 11. Add BreadcrumbList schema site-wide
-
-**Issue:** SD4
-
-- Add to all pages that have visual breadcrumbs
-- Use JSON-LD format
-
-### 12. Add author/team info to About page
-
-**Issue:** CQ4
-
-- Add founder name, photo, professional background
-- Explain "Federal Contracting Services LLC" relationship
-- Add any data team or advisory credentials
-
----
-
-## Month 1: Content & Performance (Score impact: +10-15 points)
-
-### 13. Server-render market page data
-
-**Issue:** CQ1, CQ2 | **Most complex fix**
-
-- Convert `ScoreWidget` to support server-side initial data
-- Pre-fetch 3-5 key metrics (median price, YoY change, scores) in `page.tsx`
-- Server-render `MarketOverviewSection` initial content
-- Add "Data as of [date]" timestamp in HTML
-
-### 14. Add images to blog posts
-
-**Issue:** CQ5
-
-- Add data visualizations, market charts, and maps
-- Include descriptive alt text
-- Use Next.js `<Image>` component for optimization
-
-### 15. Add blog author attribution
-
-**Issue:** CQ3
-
-- Add real author names to frontmatter
-- Create author pages (`/blog/author/[name]`)
-- Update Article schema with `Person` author type
-
-### 16. Preload hero image
-
-**Issue:** P2
-
-- Add `priority` prop to hero `<Image>` component on homepage
-
-### 17. Add preconnect hints
-
-**Issue:** T6
-
-```html
-<link rel="preconnect" href="https://api.mapbox.com" />
-<link rel="preconnect" href="https://backend-production-ee4d.up.railway.app" />
-```
-
-### 18. Fix sitemap `lastmod` dates
-
-**Issue:** T7
-
-- Generate `lastmod` dynamically based on actual content update timestamps
-- Blog posts: use frontmatter `date` or `dateModified`
-- Market pages: use data refresh date
-
-### 19. Consolidate `/market/` vs `/markets/` URL patterns
-
-**Issue:** T4
-
-- Make `/markets/[slug]` the canonical pattern
-- Either 301 redirect `/market/[id]` or add `noindex` meta tag
-
-### 20. Add RSS feed discovery tag
-
-```html
-<link
-  rel="alternate"
-  type="application/rss+xml"
-  title="PropertyIQ Blog"
-  href="/blog/rss.xml"
-/>
-```
-
----
-
-## Month 2: Polish & AI Readiness (Score impact: +5-10 points)
-
-### 21. Create `llms.txt` file
-
-Provide AI crawler guidance on site structure and content.
-
-### 22. Add AI bot directives to robots.txt
-
-Explicit allow rules for GPTBot, ClaudeBot, PerplexityBot.
-
-### 23. Add "How to cite" section
-
-On `/data` or `/about` page.
-
-### 24. Link comparison pages from navigation
-
-Add to footer or pricing page.
-
-### 25. Enhance market page internal linking
-
-- Include cross-state economically related metros
-- Increase from 5 to 8-10 nearby market links
-
-### 26. Add `dateModified` to all schema
-
-Blog posts, market pages, data-driven content pages.
-
-### 27. Create PWA manifest
-
-`manifest.webmanifest` with proper icons, theme colors, display mode.
-
-### 28. Add skip-to-content link
-
-WCAG 2.1 Level A compliance.
-
-### 29. Add `<noscript>` fallback
-
-"JavaScript is required to use PropertyIQ."
-
-### 30. Expand favicon set
-
-Add 32x32, 192x192, 512x512 PNG icons and apple-touch-icon.
-
----
-
-## Projected Score After Completion
-
-| Phase                   | Actions | Projected Score |
-| ----------------------- | ------- | --------------- |
-| Current state           | —       | 36/100          |
-| After Week 1 (Critical) | #1-5    | 50-55/100       |
-| After Week 2 (High)     | #6-12   | 60-65/100       |
-| After Month 1 (Content) | #13-20  | 70-80/100       |
-| After Month 2 (Polish)  | #21-30  | 80-85/100       |
-
----
-
-## Key Files to Modify (Summary)
-
-| File                                                | Changes Needed                                         |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| `packages/frontend/app/layout.tsx`                  | Remove global canonical, add security-related metadata |
-| `packages/frontend/next.config.ts`                  | Security headers, `poweredByHeader: false`, preconnect |
-| `packages/frontend/app/map/page.tsx`                | Add canonical, H1, heading structure                   |
-| `packages/frontend/app/pricing/page.tsx`            | Add canonical, H1, JSON-LD, SSR content                |
-| `packages/frontend/app/about/page.tsx`              | Add canonical, team info, JSON-LD                      |
-| `packages/frontend/app/blog/page.tsx`               | Add canonical, JSON-LD                                 |
-| `packages/frontend/app/blog/[slug]/page.tsx`        | Add canonical, og:url, og:image, author                |
-| `packages/frontend/app/blog/layout.tsx`             | Add canonical                                          |
-| `packages/frontend/app/scores/page.tsx`             | Add canonical, JSON-LD, expand content                 |
-| `packages/frontend/app/data/page.tsx`               | Add canonical, Dataset JSON-LD                         |
-| `packages/frontend/app/markets/[slug]/page.tsx`     | Dynamic metadata, SSR data, JSON-LD                    |
-| `packages/frontend/app/sitemap.ts`                  | Dynamic lastmod dates                                  |
-| `packages/frontend/public/robots.txt`               | AI bot directives                                      |
-| `packages/frontend/public/llms.txt`                 | New file                                               |
-| `packages/frontend/public/.well-known/security.txt` | New file                                               |
+_Generated by Claude Code SEO Audit — March 10, 2026_

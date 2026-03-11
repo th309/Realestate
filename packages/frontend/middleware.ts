@@ -22,6 +22,15 @@ const PUBLIC_PATHS = ["/reports/sample", "/reports/shared"];
 const AUTH_ROUTES = ["/auth/sign-in", "/auth/sign-up", "/auth/forgot-password"];
 
 export async function middleware(request: NextRequest) {
+  // Non-www → www redirect (301 permanent)
+  const host = request.headers.get("host") || "";
+  if (host === "propertyiq.app") {
+    const url = request.nextUrl.clone();
+    url.host = "www.propertyiq.app";
+    url.port = "";
+    return NextResponse.redirect(url, 301);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -75,9 +84,9 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = PROTECTED_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix),
   );
-  const isPublicPath = PUBLIC_PATHS.some((publicPath) =>
-    pathname.startsWith(publicPath),
-  );
+  const isPublicPath =
+    PUBLIC_PATHS.some((publicPath) => pathname.startsWith(publicPath)) ||
+    pathname === "/reports";
   const isProtected = isProtectedPath && !isPublicPath;
 
   if (isProtected && !user && !bypassAuth) {
@@ -109,5 +118,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/(account|dashboard|alerts|reports|admin|auth|upgrade|_dev)(.*)"],
+  matcher: [
+    /*
+     * Match all request paths except static files and images.
+     * This ensures the non-www → www redirect fires on every page,
+     * while auth/admin checks only apply to their specific prefixes.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|xml|txt|json|geojson)$).*)",
+  ],
 };

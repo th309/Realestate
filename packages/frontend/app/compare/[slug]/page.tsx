@@ -230,6 +230,45 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebPage",
+                name: `PropertyIQ vs ${comparison.competitorName}`,
+                description: comparison.description,
+                url: `https://www.propertyiq.app/compare/${slug}`,
+              },
+              {
+                "@type": "BreadcrumbList",
+                itemListElement: [
+                  {
+                    "@type": "ListItem",
+                    position: 1,
+                    name: "Home",
+                    item: "https://www.propertyiq.app",
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 2,
+                    name: "Compare",
+                    item: "https://www.propertyiq.app/compare",
+                  },
+                  {
+                    "@type": "ListItem",
+                    position: 3,
+                    name: `vs ${comparison.competitorName}`,
+                    item: `https://www.propertyiq.app/compare/${slug}`,
+                  },
+                ],
+              },
+            ],
+          }),
+        }}
+      />
       <Breadcrumb comparison={comparison} />
 
       <h1 className="text-3xl font-medium text-on-surface tracking-tight">

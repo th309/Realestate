@@ -1,8 +1,8 @@
-import { MDXRemote } from 'next-mdx-remote/rsc';
-import Link from 'next/link';
-import type { BlogPost } from '@/lib/blog/types';
-import { mdxComponents } from './mdx-components';
-import { NewsletterSignup } from '@/components/newsletter/NewsletterSignup';
+import { MDXRemote } from "next-mdx-remote/rsc";
+import Link from "next/link";
+import type { BlogPost } from "@/lib/blog/types";
+import { mdxComponents } from "./mdx-components";
+import { NewsletterSignup } from "@/components/newsletter/NewsletterSignup";
 
 interface BlogPostContentProps {
   post: BlogPost;
@@ -36,16 +36,24 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
         </h1>
         <div className="flex items-center gap-3 text-sm text-on-surface-variant">
           <time dateTime={post.frontmatter.date}>
-            {new Date(post.frontmatter.date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+            {new Date(post.frontmatter.date).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </time>
           <span>·</span>
           <span>{post.readingTime}</span>
           <span>·</span>
-          <span>{post.frontmatter.author}</span>
+          <span className="font-medium text-on-surface">
+            By {post.frontmatter.author}
+          </span>
+          {post.frontmatter.authorTitle && (
+            <>
+              <span>·</span>
+              <span>{post.frontmatter.authorTitle}</span>
+            </>
+          )}
         </div>
       </header>
 

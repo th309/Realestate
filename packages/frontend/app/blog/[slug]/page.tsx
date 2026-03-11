@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPostBySlug, getAllSlugs } from "@/lib/blog";
 import { BlogPostContent } from "./BlogPostContent";
+import { RelatedPosts } from "./RelatedPosts";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -66,6 +67,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         author: {
           "@type": "Organization",
           name: frontmatter.author,
+          url: "https://www.propertyiq.app/about",
         },
         publisher: {
           "@type": "Organization",
@@ -113,6 +115,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <BlogPostContent post={post} />
+      <RelatedPosts currentSlug={slug} />
     </div>
   );
 }

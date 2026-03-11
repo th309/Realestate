@@ -1,0 +1,4 @@
+Contact: mailto:security@propertyiq.app
+Preferred-Languages: en
+Canonical: https://www.propertyiq.app/.well-known/security.txt
+Expires: 2027-03-10T00:00:00.000Z

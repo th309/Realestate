@@ -134,6 +134,7 @@ export function ScoreWidget({
       <div
         className={`flex items-center justify-center ${className}`}
         style={{ width: size, height: size }}
+        aria-label="Loading score"
       >
         <Loader2 className="w-8 h-8 animate-spin text-on-surface-variant" />
       </div>
@@ -146,6 +147,7 @@ export function ScoreWidget({
       <div
         className={`flex items-center justify-center rounded-full border-4 border-surface-container-highest ${className}`}
         style={{ width: size, height: size }}
+        aria-label="Score unavailable"
       >
         <span className="text-lg text-on-surface-variant">{"\u2014"}</span>
       </div>

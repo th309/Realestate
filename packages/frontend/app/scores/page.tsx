@@ -1,15 +1,35 @@
+import type { Metadata } from "next";
 import {
   Target,
   TrendingUp,
   Shield,
-  ArrowRight,
   Database,
   Brain,
   Award,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
+import { ScoresFaqJsonLd, ScoresFaqSection } from "./ScoresFaqSection";
+import {
+  HowToUseScoresSection,
+  MethodologyOverviewSection,
+} from "./ScoresContentSections";
+
+export const metadata: Metadata = {
+  title: "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth",
+  description:
+    "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations with 5.55 pp/year excess returns. See HomeReady, InvestorEdge, and MarketHealth scores.",
+  alternates: { canonical: "https://www.propertyiq.app/scores" },
+  openGraph: {
+    title: "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth",
+    description:
+      "PropertyIQ Scores predict real estate market performance using machine learning. Validated across 23,000+ locations.",
+    url: "https://www.propertyiq.app/scores",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+};
 
 const scoreCards = [
   {
@@ -95,6 +115,7 @@ export default function ScoresPage() {
           { name: "Scores", url: "https://www.propertyiq.app/scores" },
         ]}
       />
+      <ScoresFaqJsonLd />
       <div className="mt-12 space-y-16">
         {/* Hero */}
         <section>
@@ -209,6 +230,40 @@ export default function ScoresPage() {
           </div>
         </section>
 
+        <HowToUseScoresSection />
+        <MethodologyOverviewSection />
+        <ScoresFaqSection />
+
+        {/* Cross-links */}
+        <section className="py-8">
+          <div className="flex flex-wrap gap-4 justify-center">
+            <a
+              href="/scores/methodology"
+              className="text-primary hover:underline text-sm font-medium"
+            >
+              Read Our Methodology
+            </a>
+            <a
+              href="/scores/accuracy"
+              className="text-primary hover:underline text-sm font-medium"
+            >
+              View Accuracy Results
+            </a>
+            <a
+              href="/data"
+              className="text-primary hover:underline text-sm font-medium"
+            >
+              Explore Data Sources
+            </a>
+            <a
+              href="/map"
+              className="text-primary hover:underline text-sm font-medium"
+            >
+              Try the Interactive Map
+            </a>
+          </div>
+        </section>
+
         {/* CTA Footer */}
         <section className="border-t border-outline-variant pt-8 mt-8">
           <h3 className="text-xl font-semibold text-on-surface">
@@ -222,7 +277,7 @@ export default function ScoresPage() {
             href="/map"
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl font-medium hover:bg-primary/90 transition-colors mt-4"
           >
-            Explore the Map <ArrowRight className="w-4 h-4" />
+            Start Analyzing Markets <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
       </div>

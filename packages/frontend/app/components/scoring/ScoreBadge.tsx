@@ -226,6 +226,8 @@ export const ScoreBadge = memo(function ScoreBadge({
         <svg
           className={config.svg}
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
+          role="img"
+          aria-label={`${label} score: ${score ?? "unavailable"}`}
         >
           {/* Rotated group for circles (clockwise from top) */}
           <g style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}>

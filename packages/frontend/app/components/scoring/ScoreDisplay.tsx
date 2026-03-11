@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 /**
  * Standardized Score Display Component
@@ -17,8 +17,8 @@ import React from 'react';
 
 /** Market threshold positions (as percentages 0-100) */
 export const MARKET_THRESHOLDS = {
-  sellersMax: 33,   // 0-33 = Sellers Market
-  balancedMax: 66,  // 34-66 = Balanced Market
+  sellersMax: 33, // 0-33 = Sellers Market
+  balancedMax: 66, // 34-66 = Balanced Market
   // 67-100 = Buyers Market
 } as const;
 
@@ -47,7 +47,10 @@ export interface ScoreDisplayProps {
  * 100 = Green (Hue 120)
  * Smooth gradient transition through the full color spectrum
  */
-export const getScoreColor = (value: number, maxValue: number = 100): string => {
+export const getScoreColor = (
+  value: number,
+  maxValue: number = 100,
+): string => {
   const percentage = Math.min(Math.max(value / maxValue, 0), 1);
   const hue = percentage * 120; // 0 = red, 120 = green (smooth transition)
   return `hsl(${hue}, 100%, 50%)`;
@@ -57,19 +60,19 @@ export const getScoreColor = (value: number, maxValue: number = 100): string => 
  * Get letter grade from score (0-100)
  */
 export const getLetterGrade = (score: number): string => {
-  if (score >= 97) return 'A+';
-  if (score >= 93) return 'A';
-  if (score >= 90) return 'A-';
-  if (score >= 87) return 'B+';
-  if (score >= 83) return 'B';
-  if (score >= 80) return 'B-';
-  if (score >= 77) return 'C+';
-  if (score >= 73) return 'C';
-  if (score >= 70) return 'C-';
-  if (score >= 67) return 'D+';
-  if (score >= 63) return 'D';
-  if (score >= 60) return 'D-';
-  return 'F';
+  if (score >= 97) return "A+";
+  if (score >= 93) return "A";
+  if (score >= 90) return "A-";
+  if (score >= 87) return "B+";
+  if (score >= 83) return "B";
+  if (score >= 80) return "B-";
+  if (score >= 77) return "C+";
+  if (score >= 73) return "C";
+  if (score >= 70) return "C-";
+  if (score >= 67) return "D+";
+  if (score >= 63) return "D";
+  if (score >= 60) return "D-";
+  return "F";
 };
 
 /**
@@ -78,11 +81,16 @@ export const getLetterGrade = (score: number): string => {
 export const getGradeColor = (grade: string): { bg: string; text: string } => {
   const letter = grade.charAt(0);
   switch (letter) {
-    case 'A': return { bg: 'bg-green-500', text: 'text-white' };
-    case 'B': return { bg: 'bg-emerald-500', text: 'text-white' };
-    case 'C': return { bg: 'bg-yellow-500', text: 'text-white' };
-    case 'D': return { bg: 'bg-orange-500', text: 'text-white' };
-    default: return { bg: 'bg-red-500', text: 'text-white' };
+    case "A":
+      return { bg: "bg-green-500", text: "text-white" };
+    case "B":
+      return { bg: "bg-emerald-500", text: "text-white" };
+    case "C":
+      return { bg: "bg-yellow-500", text: "text-white" };
+    case "D":
+      return { bg: "bg-orange-500", text: "text-white" };
+    default:
+      return { bg: "bg-red-500", text: "text-white" };
   }
 };
 
@@ -90,14 +98,14 @@ export const getGradeColor = (grade: string): { bg: string; text: string } => {
  * Get descriptive label for score
  */
 export const getScoreLabel = (score: number): string => {
-  if (score >= 90) return 'EXCELLENT';
-  if (score >= 80) return 'GREAT';
-  if (score >= 70) return 'GOOD';
-  if (score >= 60) return 'FAIR';
-  if (score >= 50) return 'AVERAGE';
-  if (score >= 40) return 'BELOW AVG';
-  if (score >= 20) return 'POOR';
-  return 'VERY POOR';
+  if (score >= 90) return "EXCELLENT";
+  if (score >= 80) return "GREAT";
+  if (score >= 70) return "GOOD";
+  if (score >= 60) return "FAIR";
+  if (score >= 50) return "AVERAGE";
+  if (score >= 40) return "BELOW AVG";
+  if (score >= 20) return "POOR";
+  return "VERY POOR";
 };
 
 /**
@@ -124,7 +132,7 @@ const getTickMarkPoints = (
   cx: number,
   cy: number,
   radius: number,
-  tickLength: number
+  tickLength: number,
 ): { x1: number; y1: number; x2: number; y2: number } => {
   // Convert percentage to angle (clockwise from top)
   const angle = (percentage / 100) * 2 * Math.PI;
@@ -150,10 +158,10 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   maxValue = 100,
   size = 100,
   strokeWidth = 6,
-  backgroundColor = 'var(--color-gray-200, #e5e7eb)',
+  backgroundColor = "var(--color-gray-200, #e5e7eb)",
   showGrade = true,
   showLabel = true,
-  className = '',
+  className = "",
 }) => {
   const cx = size / 2;
   const cy = size / 2;
@@ -165,17 +173,22 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const segmentCount = 72;
   const segmentLength = circumference / segmentCount;
   const fullSegments = Math.floor(percentage * segmentCount);
-  const partialLength = (percentage * segmentCount - fullSegments) * segmentLength;
+  const partialLength =
+    (percentage * segmentCount - fullSegments) * segmentLength;
 
   const grade = getLetterGrade(value);
   const gradeColors = getGradeColor(grade);
   const label = getScoreLabel(value);
 
   // Scale font sizes based on component size
-  const scoreFontSize = size >= 100 ? 'text-2xl' : size >= 60 ? 'text-lg' : 'text-sm';
-  const gradeFontSize = size >= 100 ? 'text-[9px]' : size >= 60 ? 'text-[8px]' : 'text-[6px]';
-  const labelFontSize = size >= 100 ? 'text-[8px]' : size >= 60 ? 'text-[7px]' : 'text-[5px]';
-  const gradePadding = size >= 100 ? 'px-1.5 py-0.5' : size >= 60 ? 'px-1 py-0.5' : 'px-0.5 py-0';
+  const scoreFontSize =
+    size >= 100 ? "text-2xl" : size >= 60 ? "text-lg" : "text-sm";
+  const gradeFontSize =
+    size >= 100 ? "text-[9px]" : size >= 60 ? "text-[8px]" : "text-[6px]";
+  const labelFontSize =
+    size >= 100 ? "text-[8px]" : size >= 60 ? "text-[7px]" : "text-[5px]";
+  const gradePadding =
+    size >= 100 ? "px-1.5 py-0.5" : size >= 60 ? "px-1 py-0.5" : "px-0.5 py-0";
 
   // Calculate tick mark properties - stay WITHIN the ring
   const tickLength = strokeWidth; // Match stroke width exactly
@@ -201,8 +214,17 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   const tick66 = getPoints(MARKET_THRESHOLDS.balancedMax);
 
   return (
-    <div className={`relative flex-shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <div
+      className={`relative flex-shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        role="img"
+        aria-label={`Score: ${Math.round(value)} out of ${maxValue}`}
+      >
         <defs>
           {/* Glow filter for premium look */}
           <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -222,7 +244,11 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         />
 
         {/* The Animated Score Ring - Gradient along the arc (red → yellow → green by score) */}
-        <g style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} className="transition-all duration-700 ease-in-out" filter="url(#glow)">
+        <g
+          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+          className="transition-all duration-700 ease-in-out"
+          filter="url(#glow)"
+        >
           {Array.from({ length: fullSegments }, (_, i) => (
             <circle
               key={i}
@@ -230,7 +256,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
               cy={cy}
               r={radius}
               fill="none"
-              stroke={getScoreColor((i + 0.5) / segmentCount * 100, 100)}
+              stroke={getScoreColor(((i + 0.5) / segmentCount) * 100, 100)}
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeDasharray={`${segmentLength} ${circumference - segmentLength}`}
@@ -275,16 +301,22 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`${scoreFontSize} font-bold text-on-surface leading-none`}>
+        <span
+          className={`${scoreFontSize} font-bold text-on-surface leading-none`}
+        >
           {Math.round(value)}
         </span>
         {showGrade && (
-          <span className={`mt-1 ${gradePadding} ${gradeFontSize} font-bold rounded ${gradeColors.bg} ${gradeColors.text}`}>
+          <span
+            className={`mt-1 ${gradePadding} ${gradeFontSize} font-bold rounded ${gradeColors.bg} ${gradeColors.text}`}
+          >
             {grade}
           </span>
         )}
         {showLabel && (
-          <span className={`mt-0.5 ${labelFontSize} text-on-surface-variant uppercase tracking-wider`}>
+          <span
+            className={`mt-0.5 ${labelFontSize} text-on-surface-variant uppercase tracking-wider`}
+          >
             {label}
           </span>
         )}

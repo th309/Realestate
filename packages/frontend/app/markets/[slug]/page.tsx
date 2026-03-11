@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { METRO_SLUG_DATA, SLUG_TO_METRO } from "@/lib/data/metro-slug-data";
 import { MetroPageContent } from "./MetroPageContent";
+import { generateMarketSeoContent } from "./generate-seo-content";
 
 export function generateStaticParams() {
   return METRO_SLUG_DATA.map((metro) => ({ slug: metro.slug }));
@@ -85,6 +86,9 @@ export default async function MetroPage({
     ],
   };
 
+  const seoContent = generateMarketSeoContent(metro);
+  const today = new Date().toISOString().split("T")[0];
+
   return (
     <>
       <script
@@ -92,6 +96,26 @@ export default async function MetroPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <MetroPageContent metro={metro} />
+
+      {/* Server-rendered SEO content — visible to crawlers without JS */}
+      <section className="max-w-4xl mx-auto px-4 py-12">
+        <h2 className="text-xl font-medium text-on-surface mb-6">
+          {metro.shortName} Housing Market Overview
+        </h2>
+
+        <div className="space-y-4 text-sm text-on-surface-variant leading-relaxed">
+          <p>{seoContent.opening}</p>
+          <p>{seoContent.regional}</p>
+          {seoContent.stateContext && <p>{seoContent.stateContext}</p>}
+          <p>{seoContent.middle}</p>
+          <p>{seoContent.closing}</p>
+        </div>
+
+        <p className="mt-8 text-xs text-on-surface-variant/60">
+          Last updated: {today}. Data from Zillow, Realtor.com, Redfin, U.S.
+          Census Bureau, FRED, BLS, and BEA.
+        </p>
+      </section>
     </>
   );
 }

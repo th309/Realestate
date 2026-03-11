@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 
 export const metadata: Metadata = {
   title: "Interactive Housing Market Map",
@@ -23,5 +24,18 @@ export const metadata: Metadata = {
 };
 
 export default function MapLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <WebPageJsonLd
+        url="https://www.propertyiq.app/map"
+        name="Interactive Housing Market Map"
+        description="Visualize home values, rent prices, inventory, and 40+ metrics across 925 US metros and 33,000+ ZIP codes."
+        breadcrumbs={[
+          { name: "Home", url: "https://www.propertyiq.app" },
+          { name: "Map", url: "https://www.propertyiq.app/map" },
+        ]}
+      />
+      {children}
+    </>
+  );
 }

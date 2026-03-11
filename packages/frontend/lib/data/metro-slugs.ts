@@ -13,10 +13,10 @@ export interface MetroSlugEntry {
 export function generateMetroSlug(metroName: string): string {
   return metroName
     .toLowerCase()
-    .replace(/[,.'()]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[,.'()/]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /**
@@ -24,14 +24,14 @@ export function generateMetroSlug(metroName: string): string {
  * "Austin-Round Rock-Georgetown, TX" → "Austin, TX"
  */
 export function getMetroShortName(fullName: string): string {
-  const commaIndex = fullName.indexOf(',');
+  const commaIndex = fullName.indexOf(",");
   if (commaIndex === -1) return fullName;
 
   const cityPart = fullName.substring(0, commaIndex);
   const statePart = fullName.substring(commaIndex + 1).trim();
 
-  const firstCity = cityPart.split('-')[0].trim();
-  const firstState = statePart.split('-')[0].trim();
+  const firstCity = cityPart.split("-")[0].trim();
+  const firstState = statePart.split("-")[0].trim();
 
   return `${firstCity}, ${firstState}`;
 }
@@ -41,8 +41,8 @@ export function getMetroShortName(fullName: string): string {
  * "Austin-Round Rock-Georgetown, TX" → "TX"
  */
 export function getMetroState(fullName: string): string {
-  const commaIndex = fullName.indexOf(',');
-  if (commaIndex === -1) return '';
+  const commaIndex = fullName.indexOf(",");
+  if (commaIndex === -1) return "";
   const statePart = fullName.substring(commaIndex + 1).trim();
-  return statePart.split('-')[0].trim();
+  return statePart.split("-")[0].trim();
 }

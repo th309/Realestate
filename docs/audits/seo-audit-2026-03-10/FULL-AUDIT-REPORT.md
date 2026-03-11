@@ -1,428 +1,495 @@
-# PropertyIQ Full Website SEO Audit
+# PropertyIQ Full SEO Audit Report
 
-**Site:** https://www.propertyiq.app
 **Date:** 2026-03-10
-**Pages Crawled:** ~50 (sampled from 935+ in sitemap)
-**Business Type Detected:** SaaS / Real Estate Analytics Platform
-**Stack:** Next.js 16 (App Router) on Railway + Fastly CDN
+**URL:** https://www.propertyiq.app
+**Business Type:** SaaS — Real Estate Analytics Platform (B2C + B2B)
+**Pages Analyzed:** 24 (homepage, 10 core pages, 4 content pages, 3 market pages, 3 comparison/data pages, sitemap + robots.txt, 30 sampled market URLs)
 
 ---
 
 ## Executive Summary
 
-**Overall SEO Health Score: 36/100**
+### SEO Health Score: 72 / 100
 
-PropertyIQ has a **strong homepage** with excellent structured data and compelling content, but the site suffers from **three critical systemic failures** that undermine the SEO value of its largest content assets:
+| Category                 | Score  | Weight | Weighted |
+| ------------------------ | ------ | ------ | -------- |
+| Technical SEO            | 78/100 | 25%    | 19.5     |
+| Content Quality          | 74/100 | 25%    | 18.5     |
+| On-Page SEO              | 76/100 | 20%    | 15.2     |
+| Schema / Structured Data | 68/100 | 10%    | 6.8      |
+| Performance (CWV)        | 65/100 | 10%    | 6.5      |
+| Images                   | 50/100 | 5%     | 2.5      |
+| AI Search Readiness      | 60/100 | 5%     | 3.0      |
+| **Total**                |        |        | **72.0** |
 
-1. **Every page's canonical URL points to the homepage** — Google is being told that all 935+ pages are duplicates of the homepage
-2. **935 market pages are thin content shells** — only ~200 words of template text; all scores, prices, and AI analysis are client-rendered and invisible to crawlers
-3. **Zero security headers** — no CSP, HSTS, X-Frame-Options, or any standard security headers
+### Top 5 Critical Issues
 
-The site's best content (methodology, accuracy, data sources pages) is buried and under-linked, while its most numerous content (market pages) is effectively invisible to search engines.
+1. **JavaScript-dependent rendering** — /map, /pricing, and other interactive pages render "JavaScript Required" for crawlers that don't execute JS, risking content invisibility to Googlebot in some scenarios
+2. **Market page 404s from internal links** — Homepage links to `/markets/austin-round-rock-georgetown-tx` (404) while sitemap correctly uses `/markets/austin-round-rock-san-marcos-tx` (200). Slug mismatch between internal links and sitemap
+3. **Missing Content-Security-Policy header** — No CSP header detected; only basic security headers are present
+4. **Thin market pages** — 935 programmatic market pages have minimal unique content beyond template framework, risking thin content penalties
+5. **No author attribution** — Zero author bylines, credentials, or team bios across all content pages (blog, methodology, accuracy)
 
-**Top 5 Quick Wins:**
+### Top 5 Quick Wins
 
-1. Fix canonical URLs across all pages (Next.js metadata config issue)
-2. Add security headers via `next.config.js`
-3. Server-render market page data (scores, prices, AI summaries)
-4. Add author/team credentials to About page
-5. Add BreadcrumbList schema site-wide
-
----
-
-## Score Breakdown
-
-| Category                 | Weight   | Score  | Weighted |
-| ------------------------ | -------- | ------ | -------- |
-| Technical SEO            | 25%      | 25/100 | 6.3      |
-| Content Quality          | 25%      | 35/100 | 8.8      |
-| On-Page SEO              | 20%      | 40/100 | 8.0      |
-| Schema / Structured Data | 10%      | 35/100 | 3.5      |
-| Performance (CWV)        | 10%      | 60/100 | 6.0      |
-| Images                   | 5%       | 40/100 | 2.0      |
-| AI Search Readiness      | 5%       | 30/100 | 1.5      |
-| **TOTAL**                | **100%** |        | **36.1** |
+1. Add `Content-Security-Policy` header to `next.config.mjs`
+2. Fix Austin/Miami market slug mismatches in internal linking
+3. Add author names and bios to blog posts and methodology page
+4. Add `FAQPage` schema to pricing, methodology, and accuracy pages
+5. Add alt text to all images across the site
 
 ---
 
-## 1. Technical SEO (25/100)
+## 1. Technical SEO (78/100)
 
-### CRITICAL
+### Crawlability
 
-#### T1. All canonical URLs point to homepage
+| Check                  | Status  | Notes                                                                                                              |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| robots.txt             | PASS    | Well-configured with AI bot rules for GPTBot, ClaudeBot, PerplexityBot                                             |
+| Sitemap                | PASS    | Dynamic Next.js sitemap at `/sitemap.xml` with 1000+ URLs, proper priorities                                       |
+| Non-www → www redirect | PASS    | 301 redirect in middleware.ts                                                                                      |
+| HTTPS                  | PASS    | Enforced via HSTS with preload                                                                                     |
+| Canonical tags         | PASS    | Per-page canonicals correctly implemented                                                                          |
+| Mobile viewport        | PASS    | Proper viewport meta tag                                                                                           |
+| lang attribute         | PASS    | `<html lang="en">` set                                                                                             |
+| Sitemap 404s           | WARNING | Internal links point to market slugs that differ from sitemap URLs (e.g., "georgetown" vs "san-marcos" for Austin) |
 
-**Affected:** Every page except `/markets/[city]` pages
-**Root cause:** `packages/frontend/app/layout.tsx` (line ~112) sets `alternates.canonical: "https://www.propertyiq.app"` and no child route overrides it.
+### Indexability
 
-Pages verified broken: `/map`, `/pricing`, `/about`, `/blog`, `/blog/*`, `/scores`, `/data`, `/graphs`
+| Check                | Status   | Notes                                                                                                                                                                                                         |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| robots meta          | PASS     | `index, follow` on all public pages                                                                                                                                                                           |
+| Googlebot directives | PASS     | `max-image-preview: large`, `max-snippet: -1`                                                                                                                                                                 |
+| JavaScript rendering | CRITICAL | `/map`, `/pricing`, and interactive pages show "JavaScript Required" fallback. While Googlebot renders JS, this affects: (1) non-JS crawlers, (2) initial crawl before rendering, (3) crawl budget efficiency |
+| noindex leaks        | PASS     | No accidental noindex tags found                                                                                                                                                                              |
+| Orphan pages         | WARNING  | `/scores/accuracy` linked only from footer of scores page — low internal link equity                                                                                                                          |
 
-**Impact:** Google may treat all pages as duplicates of the homepage, effectively de-indexing the entire site except the homepage. This is the single most damaging SEO bug.
+### Security Headers
 
-**Fix:** Each route's `page.tsx` or `layout.tsx` must set its own canonical:
+| Header                    | Status  | Value                                          |
+| ------------------------- | ------- | ---------------------------------------------- |
+| Strict-Transport-Security | PASS    | `max-age=63072000; includeSubDomains; preload` |
+| X-Content-Type-Options    | PASS    | `nosniff`                                      |
+| X-Frame-Options           | PASS    | `SAMEORIGIN`                                   |
+| Referrer-Policy           | PASS    | `strict-origin-when-cross-origin`              |
+| Permissions-Policy        | PASS    | `camera=(), microphone=(), geolocation=()`     |
+| Content-Security-Policy   | MISSING | No CSP header — vulnerability to XSS           |
+| X-XSS-Protection          | MISSING | Deprecated but still useful for older browsers |
 
-```typescript
-// In each page.tsx generateMetadata()
-alternates: {
-  canonical: `https://www.propertyiq.app/${slug}`;
-}
-```
+### URL Structure
 
-#### T2. Non-www domain SSL failure
+| Check                       | Status  | Notes                                                                                       |
+| --------------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| Clean URLs                  | PASS    | Semantic, lowercase, hyphenated slugs                                                       |
+| Consistent trailing slashes | PASS    | No trailing slashes                                                                         |
+| URL depth                   | PASS    | Max 3 levels (`/scores/methodology`)                                                        |
+| Query parameters            | PASS    | No unnecessary parameters in indexed URLs                                                   |
+| Market page slugs           | WARNING | Long slugs like `/markets/phoenix-mesa-chandler-az` are fine but some contain 5+ city names |
 
-`https://propertyiq.app` (without www) returns HTTP 405 and fails SSL handshake. No redirect to `www.propertyiq.app`.
+### Server & Infrastructure
 
-**Impact:** Backlinks pointing to `propertyiq.app` are dead. Search engines may split link equity between www and non-www.
-
-**Fix:** Configure DNS/Railway to 301 redirect `propertyiq.app` → `www.propertyiq.app`.
-
-#### T3. Zero security headers
-
-| Header                           | Status  |
-| -------------------------------- | ------- |
-| Content-Security-Policy          | MISSING |
-| X-Frame-Options                  | MISSING |
-| X-Content-Type-Options           | MISSING |
-| Strict-Transport-Security (HSTS) | MISSING |
-| Referrer-Policy                  | MISSING |
-| Permissions-Policy               | MISSING |
-
-Additionally, `X-Powered-By: Next.js` is exposed, leaking framework info.
-
-**Fix:** Add headers via `next.config.js` `headers()` function. Set `poweredByHeader: false`.
-
-### HIGH
-
-#### T4. Dual URL patterns for market content
-
-- Sitemap uses: `/markets/austin-round-rock-san-marcos-tx` (SEO-friendly slug)
-- Market index links to: `/market/12420?type=metro&view=investor` (internal ID)
-
-Link equity is split between two URL structures for the same content.
-
-**Fix:** Consolidate to `/markets/[slug]` as canonical. Either 301 redirect `/market/[id]` or add `noindex` to it.
-
-#### T5. Missing sitemap pages
-
-- `/reports/sample` — public page, not in sitemap
-- Comparison pages (`/compare/*`) — in sitemap but zero internal links from navigation
-
-#### T6. No preconnect hints
-
-Missing `<link rel="preconnect">` for critical third-party domains (Mapbox API, backend API).
-
-### MEDIUM
-
-#### T7. Sitemap `lastmod` all identical (2026-02-25)
-
-Google treats uniform `lastmod` as unreliable and may ignore it.
-
-#### T8. No `<noscript>` fallback
-
-If JS fails, users see a blank white page.
-
-#### T9. No PWA manifest
-
-Both `/manifest.json` and `/manifest.webmanifest` return 404.
-
-### LOW
-
-#### T10. No `llms.txt` file
-
-Emerging standard for AI crawler guidance. Not yet required but forward-looking.
-
-#### T11. No `security.txt`
-
-RFC 9116 best practice for responsible disclosure.
-
-#### T12. `keywords` meta tag present
-
-Google ignores this since 2009. Not harmful but provides zero value.
+| Check             | Status  | Notes                                                                    |
+| ----------------- | ------- | ------------------------------------------------------------------------ |
+| Hosting           | INFO    | Railway (us-east4) with Fastly CDN edge                                  |
+| Cache headers     | PASS    | `s-maxage=31536000` with `X-Nextjs-Cache: HIT`                           |
+| Server header     | WARNING | Exposes `railway-edge` — consider removing for security                  |
+| `poweredByHeader` | PASS    | Disabled in next.config.mjs                                              |
+| SSL certificate   | WARNING | Certificate revocation check failed during testing (may be intermittent) |
 
 ---
 
-## 2. Content Quality (35/100)
+## 2. Content Quality (74/100)
 
-### CRITICAL
+### E-E-A-T Assessment
 
-#### CQ1. 935 market pages are thin content shells (~200 words each)
+| Dimension             | Score | Evidence                                                                                                                                                        |
+| --------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Experience**        | 6/10  | 6 years of backtested data, but no personal experience narratives. "Coming Soon" banner undermines perceived experience                                         |
+| **Expertise**         | 8/10  | Strong technical methodology page (~8,000 words), specific ML model names (XGBoost, LightGBM, ElasticNet), SHAP feature importance. Missing: author credentials |
+| **Authoritativeness** | 6/10  | No external citations, no media mentions, no third-party reviews or certifications. Comparison pages help but are self-published                                |
+| **Trustworthiness**   | 7/10  | Transparent data sources page, methodology disclosure, accuracy validation. Missing: privacy policy link, security.txt file, team bios                          |
 
-Server-rendered HTML contains only:
+### Content Depth by Page
 
-- City name in H1
-- Template text (identical across all pages)
-- CTAs and navigation
-- "Loading market data..." placeholders
+| Page                 | Word Count | Assessment                                               |
+| -------------------- | ---------- | -------------------------------------------------------- |
+| Homepage             | ~1,800     | GOOD — Clear value prop, specific stats                  |
+| Methodology          | ~8,000     | EXCELLENT — Deep technical content, validation tables    |
+| Accuracy             | ~3,000     | GOOD — Quantified claims, competitive comparison         |
+| Blog posts (4)       | ~2,800 avg | GOOD — Data-driven, specific rankings                    |
+| Scores               | ~500       | THIN — Too lean for a key landing page                   |
+| Pricing              | ~300       | THIN — JS-dependent, no visible content for crawlers     |
+| About                | ~500       | THIN — Missing founder bio, team info, company history   |
+| Markets (individual) | ~200       | CRITICAL — Template-only, no unique market analysis text |
+| Comparison pages     | ~400       | THIN — Needs expanded feature analysis                   |
+| Data Sources         | ~900       | GOOD — Transparent sourcing                              |
 
-All differentiated content (scores, prices, AI analysis, charts) is client-rendered via JavaScript. Googlebot may or may not execute this JavaScript.
+### Thin Content Risk
 
-**Impact:** Google sees 935 near-identical thin pages. Risk of doorway page classification or algorithmic suppression.
+**935 market pages** with minimal unique content beyond the template framework. These pages promise "Housing Market 2026 | Prices, Scores & Forecast" in their title tags but deliver primarily JS-rendered widgets with no server-side text content. This creates a significant thin content risk at scale.
 
-**Fix:** Server-side render (SSR) at minimum:
+**Recommendation:** Add 200-300 words of unique, server-rendered market narrative per page (auto-generated from data is acceptable if varied and substantive).
 
-- 3-5 key metrics (median home price, YoY change, score values)
-- 2-3 sentence AI-generated market summary
-- Data freshness timestamp
+### Duplicate Content
 
-#### CQ2. Market page AI overview is entirely client-rendered
-
-`MarketOverviewSection.tsx` is a `"use client"` component using `useInsight()`. The only substantial unique text per market page may be completely invisible to crawlers.
-
-### HIGH
-
-#### CQ3. Blog has no author attribution
-
-- 4 blog posts, all by "PropertyIQ Research + AI"
-- No named person, photo, bio, or credentials
-- No author pages
-
-**Impact:** Severely undermines E-E-A-T for financial/real estate content (YMYL-adjacent).
-
-#### CQ4. About page lacks team credentials
-
-- References a founder but provides no name, photo, or professional background
-- Footer shows "Federal Contracting Services LLC" with no explanation of relationship
-- No advisory board, data team, or expertise signals
-
-#### CQ5. Blog posts have zero images
-
-All 4 posts are 2,000-3,200 words of text-only content. No charts, maps, or visualizations despite being data analysis content.
-
-#### CQ6. Blog OG tags inherit homepage values
-
-Social shares of blog posts show homepage title, URL, and generic image instead of post-specific content.
-
-### MEDIUM
-
-#### CQ7. Scores page is thin (~450 words)
-
-Excellent methodology and accuracy subpages exist but are poorly linked (1 link each).
-
-#### CQ8. All 4 blog posts share the same publication date
-
-Every post has `date: "2026-02-25"`. Looks unnatural.
-
-#### CQ9. Pricing page renders empty
-
-Client-side only rendering. Shows "Coming Soon" with no actual pricing despite schema claiming $29/mo and $99/mo tiers.
-
-#### CQ10. No external outbound links in blog content
-
-All blog posts link exclusively to internal pages. Authoritative outbound links (Census.gov, FRED, Zillow) improve trust signals.
+| Check                 | Status  | Notes                                                                      |
+| --------------------- | ------- | -------------------------------------------------------------------------- |
+| Canonical consistency | PASS    | Per-page canonicals correctly set                                          |
+| www/non-www           | PASS    | 301 redirect from non-www                                                  |
+| HTTP/HTTPS            | PASS    | HSTS enforced                                                              |
+| Near-duplicate pages  | WARNING | 935 market pages share identical template structure with only data varying |
 
 ---
 
-## 3. On-Page SEO (40/100)
+## 3. On-Page SEO (76/100)
 
-### CRITICAL
+### Title Tags
 
-#### OP1. Market pages have completely generic metadata
+| Page         | Title                                                            | Length   | Issues                                   |
+| ------------ | ---------------------------------------------------------------- | -------- | ---------------------------------------- |
+| Homepage     | "PropertyIQ: AI Housing Market Data & Forecasts by ZIP Code"     | 60 chars | PASS                                     |
+| /map         | "Interactive Housing Market Map \| PropertyIQ"                   | 45 chars | PASS                                     |
+| /scores      | "PropertyIQ Scores \| PropertyIQ"                                | 31 chars | WARNING — Generic, "PropertyIQ" repeated |
+| /pricing     | "Pricing & Plans \| PropertyIQ"                                  | 29 chars | PASS but short                           |
+| /blog        | "Blog - Housing Market Insights & Analysis \| PropertyIQ"        | 55 chars | PASS                                     |
+| /markets     | Not visible (JS-dependent)                                       | —        | WARNING                                  |
+| /about       | "About PropertyIQ \| PropertyIQ"                                 | 30 chars | WARNING — "PropertyIQ" repeated          |
+| /methodology | "Methodology — How PropertyIQ Scores Predict Market Performance" | 63 chars | PASS                                     |
+| /accuracy    | "Forecast Accuracy — PropertyIQ Scores Beat the Competition"     | 59 chars | PASS — compelling                        |
+| Market pages | "Phoenix, AZ Housing Market 2026 \| Prices, Scores & Forecast"   | 62 chars | PASS                                     |
 
-All 935 market pages share:
+**Issues found:**
 
-- Same title: "Market Intelligence - Housing Market Rankings | PropertyIQ"
-- Same meta description (generic platform copy)
-- Same OG tags (homepage defaults)
+- `/scores` title is generic — should be "AI Real Estate Scores: HomeReady, InvestorEdge & MarketHealth | PropertyIQ"
+- `/about` duplicates brand name — should be "About Us — Our Mission & Data Sources | PropertyIQ"
 
-Google sees 935 pages with identical titles and descriptions.
+### Meta Descriptions
 
-**Fix:** Dynamic metadata per market:
+| Page         | Length    | Issues                             |
+| ------------ | --------- | ---------------------------------- |
+| Homepage     | 87 chars  | PASS                               |
+| /scores      | 97 chars  | PASS — includes validation metrics |
+| /pricing     | 119 chars | PASS                               |
+| /methodology | 107 chars | PASS                               |
+| /accuracy    | 143 chars | PASS                               |
+| /data        | 135 chars | PASS                               |
+| /about       | 110 chars | PASS                               |
 
-```
-Title: "Austin, TX Housing Market Analysis & Scores | PropertyIQ"
-Description: "Austin metro home prices, market health score, and AI-powered forecasts. Median home value: $XXX,XXX. PropertyIQ Score: XX/100."
-```
+All meta descriptions are present and within optimal range. Good keyword inclusion.
 
-### HIGH
+### Heading Structure
 
-#### OP2. Missing H1 tags on key pages
+| Page         | H1                                            | H2 Count                  | Issues                                     |
+| ------------ | --------------------------------------------- | ------------------------- | ------------------------------------------ |
+| Homepage     | "Find housing markets that outperform"        | 7                         | PASS                                       |
+| /map         | "JavaScript Required" (noscript)              | 0                         | CRITICAL — No semantic headings for non-JS |
+| /scores      | "PropertyIQ Scores"                           | 2                         | PASS                                       |
+| /pricing     | Not rendered (JS)                             | 0                         | CRITICAL                                   |
+| /blog        | Present                                       | 4 posts                   | PASS                                       |
+| /markets     | "US Housing Markets"                          | ~50 (state abbrevs as H2) | WARNING — Overuse of H2 for state codes    |
+| /about       | "About PropertyIQ"                            | 5                         | PASS                                       |
+| /methodology | "The Proof Behind PropertyIQ Scores"          | Multiple                  | PASS                                       |
+| /accuracy    | "0.37 OOS Correlation. 4 Windows. Real Data." | Multiple                  | PASS — compelling H1                       |
 
-Pages without H1: `/map`, `/pricing`, all `/market/[id]` dashboard pages
+### Internal Linking
 
-#### OP3. Title tags exceed 60 characters
-
-- `/pricing`: 74 chars (truncated in SERPs)
-- `/about`: 76 chars (truncated)
-- Blog posts: ~74 chars (truncated)
-
-#### OP4. Meta descriptions out of range
-
-- `/blog`: 98 chars (too short — wastes SERP real estate)
-- `/about`: 172 chars (too long — truncated)
-- Blog post: 201 chars (severely truncated)
-- Market pages: up to 248 chars (heavily truncated)
-
-#### OP5. No heading structure on `/map` and `/pricing`
-
-Zero H1/H2/H3 tags. Search engines cannot parse content structure.
-
-### MEDIUM
-
-#### OP6. Blog H1 appears twice
-
-`BlogPostContent.tsx` renders `<h1>` from frontmatter, and MDX content starts with `# Title`. Duplicate H1.
-
-#### OP7. Comparison pages not linked from navigation
-
-3 comparison pages exist in sitemap but have zero internal link equity.
-
-#### OP8. Market nearby links only show same-state metros
-
-Misses economically relevant cross-state metros (e.g., NYC should link to Newark NJ).
-
----
-
-## 4. Schema / Structured Data (35/100)
-
-### What's Working
-
-The **homepage** has excellent schema:
-
-- `Organization` with social profiles
-- `SoftwareApplication` with pricing tiers
-- `WebSite` with `SearchAction` (sitelinks search box)
-- `FAQPage` with 5 Q&A pairs
-- `WebPage` with `speakable`
-
-### CRITICAL
-
-#### SD1. FAQPage schema doesn't match visible content
-
-Homepage has FAQ schema but no visible FAQ section. Google guidelines require schema to match visible content. Risk of structured data penalty.
-
-### HIGH
-
-| Page                  | Current Schema      | Missing Schema                                                                        |
-| --------------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| `/markets/[city]`     | `Place` (minimal)   | `WebPage`, `BreadcrumbList`, `Place` with `additionalProperty` for metrics, `Dataset` |
-| `/market` (index)     | None                | `WebPage`, `ItemList`                                                                 |
-| `/scores`             | None                | `WebPage`, `BreadcrumbList`                                                           |
-| `/scores/accuracy`    | None                | `WebPage`, `TechArticle`                                                              |
-| `/scores/methodology` | None                | `WebPage`, `TechArticle`                                                              |
-| `/data`               | None                | `WebPage`, `Dataset` (multiple)                                                       |
-| `/blog`               | None                | `Blog`, `CollectionPage`                                                              |
-| `/blog/[slug]`        | `Article` (partial) | Add `dateModified`, `image`, `wordCount`, `BreadcrumbList`                            |
-| `/pricing`            | None                | `WebPage`, `SoftwareApplication` with `Offer`                                         |
-| `/about`              | None                | `WebPage`, `Organization`, `Person` (founder)                                         |
-
-### MEDIUM
-
-#### SD2. Pricing inconsistency in schema
-
-Homepage schema: Free ($0), Pro ($29/mo), Team ($99/mo)
-Visible homepage: Free, Pro, Enterprise (prices hidden)
-Scores/accuracy page: mentions $39/month
-
-#### SD3. Blog Article schema missing key fields
-
-Missing: `dateModified`, `image`, `wordCount`, `articleSection`, `inLanguage`
-
-#### SD4. No BreadcrumbList schema anywhere
-
-Visual breadcrumbs exist on several pages but no JSON-LD to earn SERP breadcrumb trails.
+| Check               | Status  | Notes                                                                                          |
+| ------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| Navigation coverage | PASS    | All major pages in header nav                                                                  |
+| Footer links        | PASS    | 9 links covering About, Data, Methodology, Accuracy, Comparisons, Contact, Terms               |
+| Cross-page linking  | WARNING | Blog posts don't link to relevant market pages. Market pages don't link to relevant blog posts |
+| Breadcrumbs         | PARTIAL | Present on scores, blog, markets. Missing on /map, /graphs, /pricing                           |
+| Anchor text variety | WARNING | Many CTA links use generic "Explore the Map" or "Get Started" — should vary                    |
 
 ---
 
-## 5. Performance (60/100)
+## 4. Schema / Structured Data (68/100)
 
-### What's Working
+### Current Implementation
 
-- **Fonts:** Self-hosted woff2, properly preloaded (4 files)
-- **Images:** Next.js Image optimization with AVIF/WebP, responsive srcset
-- **Code splitting:** Next.js automatic code splitting active
-- **CDN:** Fastly edge caching via Railway
+| Page             | Schema Types                                        | Quality                                    |
+| ---------------- | --------------------------------------------------- | ------------------------------------------ |
+| Homepage         | Organization, SoftwareApplication, WebSite, WebPage | EXCELLENT — Full graph with @id references |
+| /scores          | WebPage, BreadcrumbList                             | GOOD                                       |
+| /blog listing    | CollectionPage, BreadcrumbList                      | GOOD                                       |
+| Blog posts       | Article (with datePublished, author, publisher)     | GOOD                                       |
+| /about           | WebPage, BreadcrumbList                             | GOOD                                       |
+| /data            | WebPage, BreadcrumbList                             | GOOD                                       |
+| Market pages     | BreadcrumbList, Place                               | GOOD                                       |
+| /pricing         | None detected                                       | CRITICAL                                   |
+| /map             | None detected                                       | CRITICAL                                   |
+| /methodology     | None detected                                       | WARNING                                    |
+| /accuracy        | None detected                                       | WARNING                                    |
+| Comparison pages | None detected                                       | WARNING                                    |
 
-### HIGH
+### Missing Schema Opportunities
 
-#### P1. Render-blocking CSS
+| Schema Type                | Recommended For                      | Impact                               |
+| -------------------------- | ------------------------------------ | ------------------------------------ |
+| `FAQPage`                  | Pricing, Methodology, Accuracy       | Rich results with expandable Q&A     |
+| `Product` with `Review`    | Comparison pages                     | Enhanced product comparison snippets |
+| `HowTo`                    | Methodology page                     | Step-by-step methodology in SERPs    |
+| `Dataset`                  | Data Sources page                    | Dataset rich results                 |
+| `Article`                  | Methodology & Accuracy               | Article-style rich results           |
+| `LocalBusiness` or `Place` | Market pages (enhanced)              | Location-aware search features       |
+| `SpeakableSpecification`   | Already on homepage — extend to blog | Voice search optimization            |
 
-Two CSS files loaded synchronously in `<head>` with no critical CSS inlining.
+### Validation Issues
 
-**Fix:** Extract critical above-the-fold CSS and inline it. Or verify `optimizeCss` is enabled in next.config.
-
-#### P2. Hero image not preloaded
-
-Four font files are preloaded but the hero image (`market-map-hero-v4.png` at `w=3840&q=75`) — the likely LCP element — is not.
-
-**Fix:** Add `priority` prop to the hero `<Image>` component.
-
-### MEDIUM
-
-#### P3. Map page loads ~16 JS chunks
-
-High chunk count for initial load. Analyze with `next/bundle-analyzer`.
-
-#### P4. No skip-to-content link
-
-WCAG 2.1 Level A failure. Keyboard users must tab through entire navigation.
-
----
-
-## 6. Images (40/100)
-
-### HIGH
-
-#### I1. Zero images in blog content
-
-4 blog posts averaging 2,600 words with zero images, charts, or visualizations.
-
-#### I2. Zero content images on market pages
-
-Market pages have no server-rendered images showing market data or trends.
-
-### MEDIUM
-
-#### I3. Favicon only 16x16 ICO
-
-Missing larger icons (32x32, 192x192, 512x512) for modern devices.
-
-#### I4. No apple-touch-icon
-
-Mobile bookmark icons will use generic fallback.
+| Issue                                | Severity | Details                                                                                   |
+| ------------------------------------ | -------- | ----------------------------------------------------------------------------------------- |
+| SoftwareApplication pricing mismatch | MEDIUM   | Schema shows $29/mo Pro, but homepage mentions $39/mo in some places — verify consistency |
+| Missing `aggregateRating`            | LOW      | No review/rating data in SoftwareApplication schema                                       |
+| Organization `logo` path             | LOW      | References `/logo.png` — verify file exists and is 512x512+                               |
 
 ---
 
-## 7. AI Search Readiness (30/100)
+## 5. Performance (65/100)
 
-### Strengths
+### Server-Side Performance
 
-- Homepage has clear, quotable claims with specific numbers
-- Scores/accuracy page is highly citable (IC = 0.37, hit rate = 69.5%)
-- Data sources page clearly lists all inputs with links
-- Methodology page is transparent about limitations
+| Metric            | Value                                         | Assessment           |
+| ----------------- | --------------------------------------------- | -------------------- |
+| CDN               | Fastly via Railway                            | GOOD                 |
+| Cache strategy    | `s-maxage=31536000`, ISR with 300s stale time | GOOD                 |
+| Next.js prerender | Yes (`X-Nextjs-Prerender: 1`)                 | GOOD                 |
+| Server response   | Railway us-east4                              | PASS — single region |
 
-### Weaknesses
+### Client-Side Concerns
 
-#### AI1. No `llms.txt` file
+| Issue               | Severity | Details                                                                                  |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| JavaScript bundle   | HIGH     | Heavy JS dependency — entire pages fail without JS                                       |
+| Font loading        | MEDIUM   | 4 Google Fonts loaded (Roboto, Roboto Mono, Source Serif 4, DM Sans) — consider reducing |
+| Preconnect hints    | PASS     | `api.mapbox.com` and backend API preconnected                                            |
+| Third-party scripts | MEDIUM   | Google Analytics, Mapbox GL, backend API — each adds load time                           |
+| GeoJSON files       | INFO     | Excluded from serverless bundles correctly via `outputFileTracingExcludes`               |
 
-No guidance for AI crawlers on how to index the site.
+### Estimated Core Web Vitals Impact
 
-#### AI2. No AI bot directives in robots.txt
+| Metric | Risk Level | Cause                                                               |
+| ------ | ---------- | ------------------------------------------------------------------- |
+| LCP    | MEDIUM     | Map/chart components are heavy; hero images may defer               |
+| INP    | HIGH       | Interactive map with Mapbox GL has complex event handling           |
+| CLS    | MEDIUM     | Dynamic data loading without skeleton placeholders may cause shifts |
 
-No specific rules for GPTBot, ClaudeBot, PerplexityBot.
-
-#### AI3. Market data invisible to AI scrapers
-
-All market-specific data is client-rendered. AI models cannot extract market statistics.
-
-#### AI4. No "How to cite" guidance
-
-No explicit citation format for AI models or researchers.
-
-#### AI5. Claims lack inline source attribution
-
-Numbers like "2,400,000+ Properties Analyzed" and "1.1 million observations" are stated without source links.
+**Note:** Actual CWV measurements require Lighthouse/PageSpeed Insights — these are estimates based on architecture analysis.
 
 ---
 
-## What's Working Well
+## 6. Images (50/100)
 
-1. **Homepage JSON-LD** — Comprehensive schema (Organization, SoftwareApplication, WebSite, FAQPage, WebPage) with SearchAction
-2. **Blog content quality** — 2,000-3,200 word data-driven articles with good heading structure
-3. **Methodology transparency** — Scores/accuracy and scores/methodology pages are genuinely excellent
-4. **robots.txt** — Well-configured, blocking appropriate paths (/api, /admin, /auth)
-5. **Sitemap** — Exists with 935+ URLs and differentiated priorities
-6. **Image optimization** — Next.js Image with AVIF/WebP and responsive srcset
-7. **Font loading** — Self-hosted woff2 with preload
-8. **Market page slugs** — SEO-friendly URL pattern (`/markets/austin-round-rock-san-marcos-tx`)
-9. **Blog categorization** — Category system in place (investment, market-analysis, methodology, news)
-10. **RSS feed exists** — Available at `/blog/rss.xml` (though not discoverable via `<link>` tag)
+### Issues Found
+
+| Issue             | Severity | Details                                                                          |
+| ----------------- | -------- | -------------------------------------------------------------------------------- |
+| Missing alt text  | HIGH     | SVG icons on /scores page lack alt text. Blog images not confirmed with alt text |
+| OG image          | PASS     | `/og-image.png` at 1200x630 — correct dimensions                                 |
+| Twitter image     | PASS     | `/twitter-image.png` specified                                                   |
+| Favicon           | PASS     | favicon.ico + apple-touch-icon present                                           |
+| Image format      | WARNING  | No evidence of WebP/AVIF modern format usage                                     |
+| Lazy loading      | UNKNOWN  | Not confirmed in static HTML analysis                                            |
+| Responsive images | UNKNOWN  | `srcset` usage not confirmed                                                     |
+
+### Recommendations
+
+1. Audit all `<img>` tags for alt text — particularly market page screenshots and blog post images
+2. Implement WebP with fallback for all content images
+3. Use Next.js `<Image>` component for automatic optimization (width, height, srcset, lazy loading)
+4. Add structured `ImageObject` schema for key images
+
+---
+
+## 7. AI Search Readiness (60/100)
+
+### AI Crawler Access
+
+| Crawler          | Status  | Notes                                        |
+| ---------------- | ------- | -------------------------------------------- |
+| GPTBot           | ALLOWED | robots.txt grants access to all public pages |
+| ClaudeBot        | ALLOWED | robots.txt grants access to all public pages |
+| PerplexityBot    | ALLOWED | robots.txt grants access to all public pages |
+| General crawlers | ALLOWED | `/` allowed, sensitive paths blocked         |
+
+### llms.txt
+
+| Check        | Status  | Notes                                                                                         |
+| ------------ | ------- | --------------------------------------------------------------------------------------------- |
+| Exists       | PASS    | `/llms.txt` returns structured content                                                        |
+| Quality      | MEDIUM  | Covers overview, data sources, scoring system, access points                                  |
+| Completeness | WARNING | Missing: methodology summary, pricing tiers, comparison with competitors, data coverage depth |
+
+### Citability Assessment
+
+| Factor             | Score | Notes                                                                     |
+| ------------------ | ----- | ------------------------------------------------------------------------- |
+| Factual density    | 8/10  | Strong quantified claims ("5.55 pp/year", "23,000+ locations")            |
+| Source attribution | 6/10  | Data sources named but not always linked in context                       |
+| Passage structure  | 6/10  | Some pages have clear, extractable passages; others are too fragmented    |
+| Unique data        | 9/10  | Proprietary scores and validation data create unique citeable content     |
+| Authority signals  | 5/10  | No external backlinks visible, no media citations, no expert endorsements |
+
+### Recommendations for AI Visibility
+
+1. **Expand llms.txt** with methodology summary, pricing details, and key data points
+2. **Add structured passages** with clear topic sentences and supporting data — ideal for AI extraction
+3. **Create a llms-full.txt** with deeper content for AI models that consume long-form
+4. **Build entity consistency** — ensure "PropertyIQ" is described consistently across all pages
+5. **Add schema.org `speakable`** to blog posts and key content pages (already on homepage)
+
+---
+
+## 8. Blog & Content Strategy (Bonus Section)
+
+### Current State
+
+- **4 blog posts** — all dated February 25, 2026
+- **Categories:** Investment, Market Analysis, Methodology
+- **Missing:** Author bylines, publication frequency signals, related posts, comments/engagement
+
+### Issues
+
+| Issue                 | Severity | Details                                                          |
+| --------------------- | -------- | ---------------------------------------------------------------- |
+| No author attribution | HIGH     | Zero author info across all blog posts — critical for E-E-A-T    |
+| Low post count        | MEDIUM   | 4 posts is insufficient for topical authority                    |
+| Same publication date | LOW      | All posts dated Feb 25, 2026 — looks artificial                  |
+| No pagination         | LOW      | Only 4 posts, but no infrastructure for scaling                  |
+| No related posts      | MEDIUM   | Each post is isolated — no cross-linking between related content |
+| "Coming Soon" banner  | MEDIUM   | Undermines authority signals for all pages                       |
+
+### Content Gap Opportunities
+
+1. **City/market analysis posts** — "Is [City] a Good Investment in 2026?" for top 20 metros
+2. **Data methodology explainers** — "How We Score Rental Demand" deep dives
+3. **Market update posts** — Monthly or quarterly data summaries
+4. **Glossary/educational content** — "What is an Information Coefficient?" for long-tail
+5. **Case studies** — Even hypothetical: "If you followed our 2023 top picks..."
+
+---
+
+## 9. Programmatic SEO — Market Pages (Critical Section)
+
+### Scale
+
+- **935 metro area pages** in sitemap
+- **URL pattern:** `/markets/[city-state-abbreviation]`
+- **Template:** Same structure for all, data-driven via PropertyIQ scores
+
+### Issues
+
+| Issue                     | Severity | Details                                                                                                                                |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Thin content              | CRITICAL | Pages are template-only with no unique text content. Title promises "Prices, Scores & Forecast" but body is mostly JS-rendered widgets |
+| Internal link mismatches  | HIGH     | Homepage/navigation links use different slugs than sitemap (e.g., "georgetown" vs "san-marcos" for Austin)                             |
+| Missing search/filter     | MEDIUM   | `/markets` directory page has no search or filtering — only alphabetical browsing                                                      |
+| No cross-linking          | MEDIUM   | Market pages link to 5 "More Markets in [State]" but not to related blog posts or comparison content                                   |
+| No data freshness signals | MEDIUM   | No "Last updated" dates visible on market pages                                                                                        |
+| Schema limited            | LOW      | Has BreadcrumbList + Place but could add StatisticalPopulation, Dataset                                                                |
+
+### Recommendations
+
+1. **Add 200-300 words of unique server-rendered content per market page** — AI-generated market summaries from data
+2. **Fix slug mismatches** — Audit `METRO_SLUG_DATA` against internal link references
+3. **Add search functionality** to `/markets` directory
+4. **Show "Last updated" date** on each market page
+5. **Cross-link** to relevant blog posts and comparison pages
+6. **Add FAQ section** per market ("Is [City] a good place to invest?")
+
+---
+
+## 10. Comparison Pages
+
+### Current State
+
+3 comparison pages identified:
+
+- `/compare/propertyiq-vs-mashvisor`
+- `/compare/propertyiq-vs-neighborhoodscout`
+- `/compare/propertyiq-vs-reventure`
+
+### Issues
+
+| Issue                     | Severity | Details                                                                     |
+| ------------------------- | -------- | --------------------------------------------------------------------------- |
+| Thin content              | MEDIUM   | ~400 words each — needs expansion for competitive keywords                  |
+| No JSON-LD schema         | LOW      | Could add `Product` comparison schema                                       |
+| Limited internal linking  | LOW      | No links from comparison pages back to specific features                    |
+| Missing alternatives page | MEDIUM   | No "PropertyIQ alternatives" or "Best real estate analytics tools" hub page |
+
+### Recommendations
+
+1. Expand each comparison to 1,000+ words with detailed feature breakdowns
+2. Add a "Best Real Estate Analytics Platforms 2026" hub page linking to all comparisons
+3. Add FAQ schema to each comparison page
+4. Include pricing comparison tables with structured data
+
+---
+
+## Appendix A: Page-by-Page Status
+
+| Page                          | HTTP | Title OK | Meta OK | JSON-LD    | H1 OK   | Content Depth |
+| ----------------------------- | ---- | -------- | ------- | ---------- | ------- | ------------- |
+| /                             | 200  | YES      | YES     | Full graph | YES     | GOOD          |
+| /map                          | 200  | YES      | YES     | NO         | NO (JS) | THIN (JS)     |
+| /scores                       | 200  | WEAK     | YES     | WebPage    | YES     | THIN          |
+| /pricing                      | 200  | YES      | YES     | NO         | NO (JS) | THIN          |
+| /blog                         | 200  | YES      | YES     | Collection | YES     | GOOD          |
+| /blog/best-cities-2026        | 200  | YES      | YES     | Article    | YES     | GOOD          |
+| /markets                      | 200  | UNKNOWN  | UNKNOWN | NO         | YES     | DIRECTORY     |
+| /markets/phoenix...           | 200  | YES      | YES     | Place+BC   | YES     | THIN          |
+| /markets/austin... (old slug) | 404  | N/A      | N/A     | N/A        | N/A     | BROKEN        |
+| /about                        | 200  | WEAK     | YES     | WebPage    | YES     | THIN          |
+| /data                         | 200  | SHORT    | YES     | WebPage+BC | YES     | GOOD          |
+| /scores/methodology           | 200  | YES      | YES     | NO         | YES     | EXCELLENT     |
+| /scores/accuracy              | 200  | YES      | YES     | NO         | YES     | GOOD          |
+| /compare/vs-mashvisor         | 200  | YES      | YES     | NO         | YES     | THIN          |
+| /contact                      | 200  | YES      | YES     | NO         | NO      | THIN (~200w)  |
+| /reports                      | 307  | N/A      | N/A     | N/A        | N/A     | GATED         |
+| /graphs                       | 200  | YES      | YES     | NO         | NO (JS) | THIN (~50w)   |
+| /market                       | 200  | YES      | YES     | NO         | NO (JS) | THIN (~200w)  |
+| /auth/sign-up                 | 200  | GENERIC  | GENERIC | NO         | NO      | THIN (~100w)  |
+| /about/terms                  | 200  | DUPE     | MISSING | NO         | NO      | GOOD (~9000w) |
+| /markets/louisville/...       | 404  | N/A      | N/A     | N/A        | N/A     | BROKEN        |
+
+## Appendix B: Additional Findings (Background Agents)
+
+### Sitemap Health Check (30 sampled market URLs)
+
+- **916 total market URLs** in sitemap
+- **29/30 sampled returned 200** — sitemap URLs are generally healthy
+- **1 broken sitemap URL:** `/markets/louisville/jefferson-county-ky-in` — has a forward slash in the slug causing Next.js to interpret it as nested route. This is the only market with a slash in its slug
+- The earlier Austin/Miami 404s were from **internal links using wrong slugs**, not from sitemap errors
+
+### Internal Link Audit (6 additional pages)
+
+| Page            | Critical Issues                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/reports`      | **307 redirect to sign-in** — crawlers can't see content. Key feature invisible to search. Needs public landing page |
+| `/graphs`       | ~50 words, no H1, entirely JS-dependent. "Loading Market Explorer..." is all crawlers see                            |
+| `/market`       | ~200 words, no H1, JS-dependent. "Loading markets..." placeholder only                                               |
+| `/contact`      | No H1 (uses H2), no schema, thin. Missing `Organization` or `ContactPage` schema                                     |
+| `/auth/sign-up` | **Generic homepage title/description** — not customized. Should be "Create Your Free Account"                        |
+| `/about/terms`  | **No meta description**, title has duplicate "PropertyIQ \| PropertyIQ", ~9,000 words of content but no schema       |
+
+### Key Patterns
+
+1. **Missing H1 tags** across all JS-dependent pages in server-rendered HTML
+2. **No JSON-LD** on any of these 6 pages despite the SEO overhaul commit
+3. **`/reports` completely gated** — 307 redirect means zero search visibility for a key feature
+
+## Appendix B: Competitor Comparison (SEO Positioning)
+
+| Feature             | PropertyIQ    | Mashvisor   | NeighborhoodScout | Reventure               |
+| ------------------- | ------------- | ----------- | ----------------- | ----------------------- |
+| Market coverage     | 925 metros    | ~200 metros | —                 | —                       |
+| Blog content        | 4 posts       | Extensive   | Extensive         | YouTube-focused         |
+| Schema markup       | Partial       | —           | —                 | —                       |
+| AI search readiness | Moderate      | Low         | Low               | Low                     |
+| E-E-A-T signals     | Moderate      | Strong      | Strong            | Strong (founder-driven) |
+| Backlink profile    | Unknown (new) | Established | Established       | Growing                 |
+
+---
+
+_Report generated by Claude Code SEO Audit — March 10, 2026_

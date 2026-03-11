@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   FileText,
@@ -10,18 +10,18 @@ import {
   BarChart3,
   TrendingUp,
   Plus,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Sample sections for the preview
 const AVAILABLE_SECTIONS = [
-  { id: 'score', icon: Target, label: 'Score Gauge', color: 'primary' },
-  { id: 'metrics', icon: BarChart3, label: 'Key Metrics', color: 'tertiary' },
-  { id: 'trends', icon: TrendingUp, label: 'Price Trends', color: 'secondary' },
+  { id: "score", icon: Target, label: "Score Gauge", color: "primary" },
+  { id: "metrics", icon: BarChart3, label: "Key Metrics", color: "tertiary" },
+  { id: "trends", icon: TrendingUp, label: "Price Trends", color: "secondary" },
 ];
 
 const INITIAL_SECTIONS = [
-  { id: 'sec-1', type: 'score', label: 'HomeReady Score' },
-  { id: 'sec-2', type: 'metrics', label: 'Market Metrics' },
+  { id: "sec-1", type: "score", label: "HomeReady Score" },
+  { id: "sec-2", type: "metrics", label: "Market Metrics" },
 ];
 
 export function BuilderPreview() {
@@ -29,22 +29,25 @@ export function BuilderPreview() {
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
 
   const addSection = (type: string) => {
-    const template = AVAILABLE_SECTIONS.find(s => s.id === type);
+    const template = AVAILABLE_SECTIONS.find((s) => s.id === type);
     if (template && sections.length < 4) {
-      setSections([...sections, {
-        id: `sec-${Date.now()}`,
-        type,
-        label: template.label,
-      }]);
+      setSections([
+        ...sections,
+        {
+          id: `sec-${Date.now()}`,
+          type,
+          label: template.label,
+        },
+      ]);
     }
   };
 
   const removeSection = (id: string) => {
-    setSections(sections.filter(s => s.id !== id));
+    setSections(sections.filter((s) => s.id !== id));
   };
 
   const getIcon = (type: string) => {
-    const template = AVAILABLE_SECTIONS.find(s => s.id === type);
+    const template = AVAILABLE_SECTIONS.find((s) => s.id === type);
     return template?.icon || FileText;
   };
 
@@ -74,7 +77,7 @@ export function BuilderPreview() {
           <div className="space-y-1">
             {AVAILABLE_SECTIONS.map((section) => {
               const Icon = section.icon;
-              const isAdded = sections.some(s => s.type === section.id);
+              const isAdded = sections.some((s) => s.type === section.id);
               return (
                 <button
                   key={section.id}
@@ -82,9 +85,9 @@ export function BuilderPreview() {
                   disabled={sections.length >= 4}
                   className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-left transition-colors ${
                     isAdded
-                      ? 'bg-primary-container/30 text-on-surface-variant'
-                      : 'hover:bg-surface-container-high text-on-surface'
-                  } ${sections.length >= 4 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? "bg-primary-container/30 text-on-surface-variant"
+                      : "hover:bg-surface-container-high text-on-surface"
+                  } ${sections.length >= 4 ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   <Icon className="w-3 h-3 text-primary shrink-0" />
                   <span className="text-[10px] truncate">{section.label}</span>
@@ -109,7 +112,7 @@ export function BuilderPreview() {
                     group bg-surface rounded-lg border border-outline-variant/50 p-2.5
                     cursor-grab active:cursor-grabbing transition-all
                     hover:border-primary/30 hover:shadow-sm
-                    ${draggedSection === section.id ? 'opacity-50 scale-[0.98]' : ''}
+                    ${draggedSection === section.id ? "opacity-50 scale-[0.98]" : ""}
                   `}
                 >
                   <div className="flex items-center gap-2">
@@ -130,26 +133,41 @@ export function BuilderPreview() {
 
                   {/* Section preview placeholder */}
                   <div className="mt-2 h-8 bg-surface-container-low rounded flex items-center justify-center">
-                    {section.type === 'score' && (
+                    {section.type === "score" && (
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-primary">87</span>
+                          <span className="text-[10px] font-bold text-primary">
+                            87
+                          </span>
                         </div>
-                        <div className="text-[9px] text-on-surface-variant">Great for families</div>
+                        <div className="text-[9px] text-on-surface-variant">
+                          Great for families
+                        </div>
                       </div>
                     )}
-                    {section.type === 'metrics' && (
+                    {section.type === "metrics" && (
                       <div className="flex gap-3">
-                        {[{ v: '$485K', l: 'Price' }, { v: '+5.2%', l: 'Growth' }].map((m) => (
+                        {[
+                          { v: "$485K", l: "Price" },
+                          { v: "+5.2%", l: "Growth" },
+                        ].map((m) => (
                           <div key={m.l} className="text-center">
-                            <div className="text-[10px] font-bold text-on-surface">{m.v}</div>
-                            <div className="text-[8px] text-on-surface-variant">{m.l}</div>
+                            <div className="text-[10px] font-bold text-on-surface">
+                              {m.v}
+                            </div>
+                            <div className="text-[8px] text-on-surface-variant">
+                              {m.l}
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                    {section.type === 'trends' && (
-                      <svg viewBox="0 0 60 20" className="w-14 h-5">
+                    {section.type === "trends" && (
+                      <svg
+                        viewBox="0 0 60 20"
+                        className="w-14 h-5"
+                        aria-hidden="true"
+                      >
                         <path
                           d="M0,15 Q15,12 25,10 T50,5 T60,3"
                           fill="none"

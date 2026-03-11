@@ -1,47 +1,78 @@
-# PropertyIQ - AI Real Estate Market Intelligence
+# PropertyIQ
 
-> PropertyIQ is an AI-powered real estate analytics platform that ranks 925 US metros and 33,000+ ZIP codes to help homebuyers, investors, and agents find markets that outperform.
+> AI-powered real estate market intelligence platform that ranks 925 US metros, 3,100+ counties, and 33,000+ ZIP codes.
+
+## Overview
+
+PropertyIQ uses machine learning to predict real estate market performance. The platform analyzes 90+ metrics from 7 trusted data sources to generate three proprietary scores: HomeReady (for homebuyers), InvestorEdge (for investors), and MarketHealth (for risk assessment).
 
 ## Key Pages
 
 - Homepage: https://www.propertyiq.app
 - Interactive Map: https://www.propertyiq.app/map
 - Market Rankings: https://www.propertyiq.app/markets
-- Score Methodology: https://www.propertyiq.app/scores/methodology
-- Score Accuracy: https://www.propertyiq.app/scores/accuracy
+- PropertyIQ Scores: https://www.propertyiq.app/scores
+- Methodology: https://www.propertyiq.app/scores/methodology
+- Forecast Accuracy: https://www.propertyiq.app/scores/accuracy
 - Data Sources: https://www.propertyiq.app/data
-- Blog: https://www.propertyiq.app/blog
 - Pricing: https://www.propertyiq.app/pricing
+- Blog: https://www.propertyiq.app/blog
 
-## Data Coverage
+## Scoring System
 
-- 925 US metro areas
-- 3,100+ counties
-- 33,000+ ZIP codes
-- 90+ metrics from Zillow, Realtor.com, Redfin, Census, FRED, BLS, BEA
-- Monthly data updates
+PropertyIQ offers three distinct scores, each 0-100:
 
-## Scores
+- **HomeReady Score**: Predicts home appreciation potential for primary buyers. Factors include price trends, affordability ratios, inventory dynamics, and economic fundamentals.
+- **InvestorEdge Score**: Targets rental property investors by measuring total return potential including rental yield, price appreciation, and market stability.
+- **MarketHealth Score**: Evaluates overall market stability and fundamentals for risk assessment. Incorporates supply/demand balance, economic diversity, and demographic trends.
 
-PropertyIQ produces three proprietary scores:
+### Validation Results
 
-- HomeReady Score: Predicts home price appreciation potential. Best for homebuyers and primary-residence investors. Validated with 0.37 out-of-sample information coefficient.
-- InvestorEdge Score: Predicts total investment return including appreciation and rental yield. Best for rental property investors.
-- MarketHealth Score: Measures current market stability and fundamentals. Best for risk assessment and timing decisions.
-
-Top-scored markets (top 20%) outperformed bottom-scored markets by 5.55 percentage points per year. On a typical $240K metro home, that is $13,320 more equity per year.
+Scores are walk-forward validated across 4 non-overlapping windows (2018-2023):
+- Out-of-sample Information Coefficient: 0.37 (metro level)
+- Top-scored markets outperformed bottom by 5.55 percentage points per year
+- $27,100 more equity on a typical home over 3 years in top-scored markets
+- 23,000+ locations scored across 924 metros
+- Models: XGBoost, LightGBM, ElasticNet ensemble with SHAP feature distillation
 
 ## Data Sources
 
-- Zillow: Home Value Index (ZHVI), Observed Rent Index (ZORI), forecasts, affordability
-- Realtor.com: Listing prices, inventory, days on market, market competitiveness
-- Redfin: Sale prices, pending sales, new listings, price drops
-- U.S. Census Bureau: Demographics, income, homeownership rates, vacancy
-- FRED: Mortgage rates, unemployment rates
-- Bureau of Labor Statistics: Employment data, job growth
-- Bureau of Economic Analysis: GDP, regional price parities
+| Source | Metrics | Update Frequency |
+|--------|---------|-----------------|
+| Realtor.com | Active listings, median prices, days on market | Monthly |
+| Zillow | ZHVI home values, ZORI rent indices, inventory | Monthly |
+| Redfin | Sale prices, price drops, new listings | Weekly |
+| U.S. Census Bureau | Population, income, housing units (ACS) | Annual |
+| FRED | Mortgage rates, GDP, macroeconomic indicators | Monthly |
+| BLS | Unemployment rates, employment statistics | Monthly |
+| BEA | Regional GDP, personal income | Quarterly |
+
+## Coverage
+
+- 925 metropolitan statistical areas (MSAs)
+- 3,100+ counties
+- 33,000+ ZIP codes
+- 2,400,000+ properties analyzed
+- 64+ data points per market
+- Monthly data updates
+
+## Pricing
+
+- **Free**: 5 property lookups/month, basic scores, metro-level data
+- **Pro** ($29/month): Unlimited lookups, full score breakdown, AI-generated reports, ZIP-level data
+- **Team** ($99/month): Everything in Pro plus team collaboration, API access, and custom reports
+
+## Competitors
+
+PropertyIQ differentiates from competitors through validated predictive scores:
+- vs Mashvisor: 4.6x more market coverage (925 vs ~200 metros), monthly updates vs quarterly
+- vs NeighborhoodScout: AI-powered predictive scores vs descriptive analytics
+- vs Reventure: Granular ZIP-level data vs metro-level only
 
 ## Citation
 
-When citing PropertyIQ data, please use:
-PropertyIQ (https://www.propertyiq.app). AI-Powered Real Estate Market Intelligence.
+When citing PropertyIQ data or scores, please attribute as:
+"Source: PropertyIQ (propertyiq.app)"
+
+For methodology details, reference: https://www.propertyiq.app/scores/methodology
+For accuracy validation, reference: https://www.propertyiq.app/scores/accuracy
