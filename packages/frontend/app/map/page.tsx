@@ -798,11 +798,7 @@ function MapPageInner() {
         </div>
 
         {/* Map */}
-        <main
-          className="flex-1 relative"
-          data-tour="map-area"
-          style={{ minHeight: "100%" }}
-        >
+        <main className="flex-1 relative min-h-0" data-tour="map-area">
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
               <p className="text-on-error-container font-medium">{mapError}</p>
