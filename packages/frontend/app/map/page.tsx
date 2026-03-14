@@ -664,7 +664,7 @@ function MapPageInner() {
 
   return (
     <div
-      className="flex flex-col bg-surface h-full"
+      className="flex flex-col bg-surface h-full overflow-hidden"
       style={{
         fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
       }}
