@@ -759,7 +759,7 @@ function MapPageInner() {
           />
         )}
 
-        <div data-tour="metric-sidebar">
+        <div data-tour="metric-sidebar" className="h-full">
           <Sidebar
             pathname={pathname}
             navItems={NAV_ITEMS}
