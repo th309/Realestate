@@ -664,10 +664,9 @@ function MapPageInner() {
 
   return (
     <div
-      className="flex flex-col bg-surface"
+      className="flex flex-col bg-surface h-full"
       style={{
         fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
-        height: "calc(100dvh - 64px - 44px)",
       }}
     >
       {/* Map Controls Toolbar */}
