@@ -6,6 +6,7 @@ import { Providers } from "./providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
 import { GoogleAnalytics } from "./components/analytics/GoogleAnalytics";
 import { AnalyticsProvider } from "@/lib/analytics/AnalyticsProvider";
+import { AppFooter } from "./components/AppFooter";
 // import { QuinnFloatingButton } from "./components/quinn/QuinnFloatingButton"; // PAUSED: Quinn development on hold
 
 // M3 Typography: Roboto is the standard Material Design typeface
@@ -194,72 +195,7 @@ export default function RootLayout({
               {children}
             </main>
           </AnalyticsProvider>
-          <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-6 px-4 pb-12">
-            <div className="max-w-5xl mx-auto">
-              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4 text-xs text-on-surface-variant">
-                <a
-                  href="/about"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  About
-                </a>
-                <a
-                  href="/data"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  Data Sources
-                </a>
-                <a
-                  href="/scores/methodology"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  Methodology
-                </a>
-                <a
-                  href="/scores/accuracy"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  Accuracy
-                </a>
-                <a
-                  href="/compare/propertyiq-vs-mashvisor"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  vs Mashvisor
-                </a>
-                <a
-                  href="/compare/propertyiq-vs-neighborhoodscout"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  vs NeighborhoodScout
-                </a>
-                <a
-                  href="/compare/propertyiq-vs-reventure"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  vs Reventure
-                </a>
-                <a
-                  href="/contact"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  Contact
-                </a>
-                <a
-                  href="/about/terms"
-                  className="hover:text-on-surface transition-colors"
-                >
-                  Terms
-                </a>
-              </div>
-              <p className="text-center text-xs text-on-surface-variant">
-                Data is provided for informational purposes only. While we
-                strive for accuracy, we do not guarantee the completeness or
-                correctness of the information and accept no liability for its
-                use.
-              </p>
-            </div>
-          </footer>
+          <AppFooter />
           <DevToolbarLoader />
           {/* <QuinnFloatingButton /> */}{" "}
           {/* PAUSED: Quinn development on hold */}
