@@ -1,12 +1,5 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-
-/** Compact disclaimer footer — hidden on the map page. */
+/** Compact disclaimer-only footer for all pages. */
 export function AppFooter() {
-  const pathname = usePathname();
-  if (pathname === "/map" || pathname.startsWith("/map/")) return null;
-
   return (
     <footer className="flex-shrink-0 bg-surface-container border-t border-outline-variant py-2 px-4">
       <p className="text-center text-[10px] text-on-surface-variant">
