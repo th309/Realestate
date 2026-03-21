@@ -120,9 +120,15 @@ export function EntitlementsProvider({
   const userIdRef = useRef<string | null>(user?.id ?? null);
   userIdRef.current = user?.id ?? null;
 
+  // Request sequence counter to prevent stale responses from overwriting fresh ones.
+  // Each refresh() increments the counter; when a response arrives, it's only applied
+  // if no newer request has been launched since.
+  const refreshSeqRef = useRef(0);
+
   const refresh = useCallback(async () => {
     const currentTier = simulatedTierRef.current;
     const currentUserId = userIdRef.current;
+    const seq = ++refreshSeqRef.current;
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const data = await fetchEntitlements(
@@ -130,13 +136,18 @@ export function EntitlementsProvider({
         currentTier,
         currentUserId,
       );
-      setState(data);
+      // Only apply if this is still the latest request
+      if (seq === refreshSeqRef.current) {
+        setState(data);
+      }
     } catch (error) {
       console.warn(
         "[Entitlements] fetch failed, preserving previous state:",
         error,
       );
-      setState((prev) => ({ ...prev, loading: false, error: null }));
+      if (seq === refreshSeqRef.current) {
+        setState((prev) => ({ ...prev, loading: false, error: null }));
+      }
     }
   }, [resources]);
 

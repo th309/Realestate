@@ -52,15 +52,27 @@ export class EntitlementsService {
         needsPerUserQuery = true;
       } else {
         // Check subscription tier from Stripe sync
-        const { data: profile } = await this.supabase.getClient()
+        const { data: profile } = await this.supabase
+          .getClient()
           .from('user_profiles')
           .select('subscription_tier, subscription_status')
           .eq('id', userId)
           .single();
 
-        if (profile?.subscription_tier && profile.subscription_tier !== 'free' &&
-            (profile.subscription_status === 'active' || !profile.subscription_status)) {
-          tier = profile.subscription_tier;
+        if (
+          profile?.subscription_tier &&
+          profile.subscription_tier !== 'free'
+        ) {
+          // Admin is a manually-set role, not a Stripe subscription —
+          // skip subscription_status check so it always resolves.
+          const isAdmin = profile.subscription_tier === 'admin';
+          if (
+            isAdmin ||
+            profile.subscription_status === 'active' ||
+            !profile.subscription_status
+          ) {
+            tier = profile.subscription_tier;
+          }
         }
       }
     }
@@ -79,7 +91,10 @@ export class EntitlementsService {
     }
 
     // Get user features (tier-based for cache, user-specific for trial users)
-    const resolved = await this.userFeatures.getUserFeatures(userId || '', tier);
+    const resolved = await this.userFeatures.getUserFeatures(
+      userId || '',
+      tier,
+    );
 
     // Build access map
     const access: Record<string, AccessCheck> = {};
@@ -89,8 +104,10 @@ export class EntitlementsService {
       // DB slugs are inconsistent: some have type prefix (metric_home_value, geo_state,
       // feature_reports) and some don't (watchlist_limit, alerts_limit). Try prefixed first.
       const prefixedSlug = `${type}_${id}`;
-      const hasAccess = resolved.features[prefixedSlug] ?? resolved.features[id];
-      const effectiveSlug = (resolved.features[prefixedSlug] !== undefined) ? prefixedSlug : id;
+      const hasAccess =
+        resolved.features[prefixedSlug] ?? resolved.features[id];
+      const effectiveSlug =
+        resolved.features[prefixedSlug] !== undefined ? prefixedSlug : id;
 
       if (hasAccess === true || hasAccess === -1) {
         access[resource] = { level: 'full' };
@@ -157,7 +174,8 @@ export class EntitlementsService {
     if (!data) return null;
 
     const daysRemaining = Math.ceil(
-      (new Date(data.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      (new Date(data.expires_at).getTime() - Date.now()) /
+        (1000 * 60 * 60 * 24),
     );
 
     return { tier: data.tier, daysRemaining };
