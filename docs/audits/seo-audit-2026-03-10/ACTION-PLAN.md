@@ -1,165 +1,260 @@
 # PropertyIQ SEO Action Plan
 
-**Generated:** 2026-03-10 | **SEO Health Score:** 72/100 | **Target:** 85+/100
+**Generated:** 2026-03-10 | **SEO Health Score:** 70/100 | **Target:** 85+/100
+
+**Method:** Live production fetch + codebase analysis + PageSpeed Insights (Lighthouse 13.0.1)
 
 ---
 
 ## CRITICAL (Fix Immediately — Blocks Indexing or Rankings)
 
-### 1. Fix Market Page Slug Mismatches
+### 1. Add Metadata to /markets Index Page
 
-**Impact:** Internal links point to 404 pages, wasting crawl budget and link equity
-**Pages affected:** At least Austin TX, Miami FL — likely more
+**Impact:** Gateway to 935 market pages has ZERO metadata — completely invisible to search engines. Live fetch confirmed: no title, no meta description, no canonical, no OG tags, no JSON-LD, no robots directive.
+**Estimated lift:** +3-5 points on On-Page SEO score
 **Action:**
 
-- Audit `METRO_SLUG_DATA` in `lib/data/metro-slug-data.ts` against all internal link references
-- Either update internal links to match sitemap slugs OR add redirects for old slugs
-- Verify: `curl -s -o /dev/null -w "%{http_code}" https://www.propertyiq.app/markets/[slug]` for all 935 entries
-  **File:** `packages/frontend/app/sitemap.ts` (line 92-97), homepage link references
-
-### 2. Add Server-Rendered Content to Market Pages
-
-**Impact:** 935 pages at risk of thin content penalty — this is the bulk of indexed pages
-**Action:**
-
-- Generate 200-300 words of unique market narrative per page using existing data
-- Render server-side (not behind JS) — use Next.js `generateStaticParams` + SSG
-- Include: market summary, key metrics text, score interpretation, trend description
-- Add "Last updated: [date]" visible on each page
-  **Files:** `packages/frontend/app/markets/[slug]/page.tsx`, `MetroPageContent.tsx`
-
-### 3. Add Content-Security-Policy Header
-
-**Impact:** XSS vulnerability without CSP; also a technical SEO trust signal
-**Action:**
-
-```javascript
-// In next.config.mjs headers()
-{ key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://backend-production-ee4d.up.railway.app https://*.supabase.co; font-src 'self' https://fonts.gstatic.com;" }
+```typescript
+// packages/frontend/app/markets/page.tsx
+export const metadata: Metadata = {
+  title: "Housing Markets — Browse 925+ US Metro Areas",
+  description:
+    "Explore AI-powered housing market scores for 925+ US metros. Compare HomeReady, InvestorEdge, and Market Health scores to find markets that outperform.",
+  alternates: { canonical: "https://www.propertyiq.app/markets" },
+  openGraph: {
+    title: "Housing Markets — Browse 925+ US Metro Areas",
+    description: "Explore AI-powered housing market scores for 925+ US metros.",
+    url: "https://www.propertyiq.app/markets",
+    siteName: "PropertyIQ",
+    images: ["/og-image.png"],
+  },
+};
 ```
 
-**File:** `packages/frontend/next.config.mjs` (line 45-51)
+Add `CollectionPage` + `BreadcrumbList` JSON-LD.
 
-### 3b. Fix Louisville Sitemap Slug (Forward Slash in Path)
+**File:** `packages/frontend/app/markets/page.tsx`
 
-**Impact:** Sitemap advertises a URL with embedded `/` that returns 404
+### 2. Fix Wrong OG Tags on Multiple Pages
+
+**Impact:** Social shares and link previews show wrong content. Crawlers get confused by mismatched URLs.
+**Pages affected:** `/scores/methodology`, `/scores/accuracy`, `/contact`
+
 **Action:**
 
-- Fix slug in `METRO_SLUG_DATA` from `louisville/jefferson-county-ky-in` to `louisville-jefferson-county-ky-in`
-- Add redirect from old URL to new URL
-  **File:** `packages/frontend/lib/data/metro-slug-data.ts`
+| Page                  | Issue                                                          | Fix                                                            |
+| --------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `/scores/methodology` | og:url, og:title, og:description all point to `/scores` parent | Add explicit `openGraph` to methodology page's metadata export |
+| `/scores/accuracy`    | og:url and og:image missing entirely                           | Add full `openGraph` block to accuracy page's metadata export  |
+| `/contact`            | All OG tags show homepage defaults                             | Add explicit `openGraph` with contact-specific values          |
 
-### 3c. Create Public Landing Page for /reports
+**Files:**
 
-**Impact:** `/reports` returns 307 redirect to sign-in — completely invisible to search engines
+- `packages/frontend/app/scores/methodology/page.tsx`
+- `packages/frontend/app/scores/accuracy/page.tsx`
+- `packages/frontend/app/contact/page.tsx`
+
+### 3. Fix /reports Indexing of Login Page
+
+**Impact:** `/reports` returns HTTP 200 with `index, follow` but renders the sign-in page. Crawlers index auth UI as reports content.
+**Action (choose one):**
+
+- **Option A (recommended):** Create a public landing page at `/reports` describing the Reports feature, screenshots, CTA to sign up. Gate actual reports at `/reports/[id]`.
+- **Option B (quick fix):** Add `robots: { index: false, follow: false }` to the reports layout metadata, so the login redirect page isn't indexed.
+
+**File:** `packages/frontend/app/reports/layout.tsx` or `page.tsx`
+
+### 4. Fix Market Page Slug Mismatches
+
+**Impact:** Internal links point to 404 pages, wasting crawl budget and link equity.
 **Action:**
 
-- Create a public landing page at `/reports` describing report features
-- Gate actual report content at `/reports/[id]` behind auth
-- Add `/reports/sample` or `/reports/shared` to showcase
-- `/reports/sample` and `/reports/shared` already whitelisted in middleware — verify they have content
-  **File:** `packages/frontend/middleware.ts` (line 13-21)
+| Slug Issue                                          | Fix                                                                                |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `austin-round-rock-georgetown-tx` → 404             | Add redirect to `austin-round-rock-san-marcos-tx` in middleware or next.config.mjs |
+| `louisville/jefferson-county-ky-in` (forward slash) | Fix slug in `METRO_SLUG_DATA` to `louisville-jefferson-county-ky-in`               |
 
-### 3d. Fix /about/terms Meta + Title
+- Audit all internal link references against `METRO_SLUG_DATA` for other mismatches
+- Verify fix: `curl -s -o /dev/null -w "%{http_code}" https://www.propertyiq.app/markets/[slug]`
 
-**Impact:** 9,000-word page with no meta description and duplicate "PropertyIQ | PropertyIQ" in title
+**Files:**
+
+- `packages/frontend/lib/data/metro-slug-data.json`
+- `packages/frontend/lib/data/metro-slugs.ts`
+- `packages/frontend/middleware.ts` or `next.config.mjs` (redirects)
+
+### 5. Deploy llms.txt to Production
+
+**Impact:** `llms.txt` and `llms-full.txt` return 404 in production. Files exist on `develop` branch but haven't been merged to `main`.
 **Action:**
 
-- Add meta description: "Read PropertyIQ's Terms of Service. Covers data usage, intellectual property, disclaimers, and user responsibilities."
-- Fix title to: "Terms of Service | PropertyIQ"
-  **File:** `packages/frontend/app/about/terms/page.tsx` or layout
+- Merge the llms.txt changes from `develop` to `main`, or deploy develop branch
+- Verify accessibility: `curl -I https://www.propertyiq.app/llms.txt`
+
+### 6. Add /scores/accuracy to Sitemap
+
+**Impact:** Page exists with good content but is not in the sitemap, reducing crawl priority.
+**Action:**
+
+```typescript
+// packages/frontend/app/sitemap.ts — add to staticRoutes array
+{ url: '/scores/accuracy', changeFrequency: 'monthly', priority: 0.6 },
+```
+
+**File:** `packages/frontend/app/sitemap.ts`
 
 ---
 
 ## HIGH (Fix Within 1 Week — Significant Rankings Impact)
 
-### 4. Add Author Attribution to All Content
+### 7. Add JSON-LD Schema to Key Pages
 
-**Impact:** E-E-A-T is a primary ranking factor — no authorship kills credibility
+**Impact:** 7 pages missing JSON-LD = 7 missed rich result opportunities.
+**Estimated lift:** +2-3 points on Schema score
+**Action:**
+
+| Page                  | Schema to Add                                              |
+| --------------------- | ---------------------------------------------------------- |
+| `/scores/methodology` | `Article` + `BreadcrumbList` (Home > Scores > Methodology) |
+| `/scores/accuracy`    | `Article` + `BreadcrumbList` (Home > Scores > Accuracy)    |
+| `/pricing`            | `Product` with 3 `Offer`s + `BreadcrumbList`               |
+| `/contact`            | `ContactPage` + `BreadcrumbList`                           |
+| `/compare/[slug]`     | `BreadcrumbList` (Home > Compare > [Title])                |
+| `/markets` (index)    | `CollectionPage` + `BreadcrumbList`                        |
+
+Use existing `WebPageJsonLd` component pattern or create page-specific schema components.
+
+**Files:** Respective `page.tsx` or `layout.tsx` files
+
+### 8. Add Author Attribution to All Content
+
+**Impact:** E-E-A-T is a primary ranking factor — no authorship significantly hurts credibility.
 **Action:**
 
 - Add founder/team author info to all blog posts (name, bio, photo, credentials)
-- Add `author` field to blog frontmatter
+- Add `author` field to blog frontmatter (currently hardcoded as "PropertyIQ" organization)
 - Add author bio section to methodology and accuracy pages
-- Update Article JSON-LD to include full author details
-  **Files:** Blog post MDX files, `app/blog/[slug]/page.tsx`
+- Update Article JSON-LD to include `Person` as author (not just Organization)
 
-### 5. Improve Scores Page Content Depth
+**Files:** Blog post MDX files, `app/blog/[slug]/page.tsx`, `app/blog/[slug]/BlogPostContent.tsx`
 
-**Impact:** Key landing page with only ~500 words — too thin for a competitive keyword
+### 9. Fix Noscript H1 Pattern
+
+**Impact:** 9 of 15 pages have multiple H1 tags because the `noscript` fallback renders "JavaScript Required" as `<h1>`.
 **Action:**
 
-- Expand to 1,500+ words: add FAQ section, use case examples, detailed score explanations
-- Add interactive score demo or sample score breakdown
-- Include "How to use PropertyIQ Scores" section
-- Add FAQ schema
-  **File:** `packages/frontend/app/scores/page.tsx`
+- Change the noscript fallback from `<h1>` to `<p>` or `<div>` with appropriate styling
+- This single change fixes the multiple-H1 issue across all pages at once
 
-### 6. Fix Title Tags
+**File:** Root layout or the noscript component (likely in `app/layout.tsx` or a shared component)
 
-**Impact:** Weak titles hurt CTR and keyword targeting
+### 10. Fix Title Tag Redundancy
+
+**Impact:** Weak titles hurt CTR and keyword targeting.
 **Action:**
 
-- `/scores`: Change to "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth | PropertyIQ"
-- `/about`: Change to "About PropertyIQ — Our Mission, Team & Data Sources"
-- `/data`: Change to "90+ Real Estate Data Sources — Zillow, Census, FRED & More | PropertyIQ"
-  **Files:** Respective `page.tsx` files' `generateMetadata` or `metadata` exports
+| Page       | Current                            | Recommended                                                                    |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| `/scores`  | "PropertyIQ Scores \| PropertyIQ"  | "AI Real Estate Scores — HomeReady, InvestorEdge & MarketHealth \| PropertyIQ" |
+| `/about`   | "About PropertyIQ \| PropertyIQ"   | "About Us — Our Mission, Team & Data Sources \| PropertyIQ"                    |
+| `/contact` | "Contact PropertyIQ \| PropertyIQ" | "Contact Us — Get in Touch \| PropertyIQ"                                      |
+| `/data`    | "Data Sources \| PropertyIQ"       | "90+ Real Estate Data Sources — Zillow, Census, FRED & More \| PropertyIQ"     |
 
-### 7. Add JSON-LD Schema to Key Pages
+**Files:** Respective `page.tsx` metadata exports
 
-**Impact:** Missing schema = missing rich results opportunities
+### 11. Server-Render Pricing Content
+
+**Impact:** `/pricing` page shows only "JavaScript Required" to crawlers. Title promises plans comparison but body is empty for non-JS.
 **Action:**
 
-- `/pricing`: Add `Product` with `Offer` schema (SSR, not JS-dependent)
-- `/methodology`: Add `Article` + `HowTo` schema
-- `/accuracy`: Add `Article` schema with `datePublished`
-- `/compare/*`: Add `Product` comparison schema
-- All: Add `FAQPage` schema where FAQ sections exist
-  **Files:** Create schema components per page or extend `WebPageJsonLd.tsx`
+- Ensure pricing tiers, feature lists, and plan comparison are server-rendered (RSC)
+- The Product/Offer JSON-LD (item 7) will also help, but the actual content must be in the HTML
 
-### 8. Add Alt Text to All Images
-
-**Impact:** Accessibility + image SEO — currently many images lack alt text
-**Action:**
-
-- Audit all `<img>`, `<svg>`, and Next.js `<Image>` components
-- Add descriptive alt text or `role="presentation"` for decorative icons
-- Priority: blog post images, market page charts, scores page icons
-  **Files:** Various component files across the app
+**File:** `packages/frontend/app/pricing/` components
 
 ---
 
 ## MEDIUM (Fix Within 1 Month — Optimization Opportunities)
 
-### 9. Expand Comparison Pages
+### 12. Add Server-Rendered Content to Market Pages
+
+**Impact:** 935 pages at risk of thin content penalty — this is the bulk of indexed pages.
+**Action:**
+
+- The `generate-seo-content.ts` file already exists — verify its output is server-rendered
+- Target: 200-300 words of unique market narrative per page
+- Include: market summary, key metrics text, score interpretation, trend description
+- Add "Last updated: [date]" visible on each page
+
+**Files:** `packages/frontend/app/markets/[slug]/page.tsx`, `generate-seo-content.ts`
+
+### 13. Fix LCP on Inner Pages
+
+**Impact:** `/scores` LCP is 4.2s (target < 2.5s), `/markets/dallas` LCP is 3.8s. Both fail Core Web Vitals.
+**Action:**
+
+- Investigate what the LCP element is on these pages — likely text rendered after JS execution
+- The `a3319169-*.js` bundle (448 KB, 80% unused) is the primary bottleneck — code-split it
+- Consider lazy-loading heavy chart/widget libraries
+- Inline critical CSS (630-920ms savings possible)
+
+### 14. Convert Images to WebP/AVIF
+
+**Impact:** ~286 KB savings on homepage from format conversion.
+**Action:**
+
+- Convert `market-map-hero-v4.png`, `graphs-poster.png`, `ai-report-narrative-v2.png`, `top-ranked-markets-v2.png` to WebP
+- Use Next.js `<Image>` component for automatic format negotiation
+- Add descriptive alt text to any images currently missing it
+
+### 15. Expand Comparison Pages
 
 **Action:** Expand each from ~400 to 1,000+ words with:
 
 - Detailed feature comparison tables
 - Pricing comparison with current data
 - Use case recommendations ("Best for...")
-- FAQ schema
-- Add "Best Real Estate Analytics Platforms 2026" hub page
+- Add BreadcrumbList + FAQ schema
+- Add og:image to each comparison page
+- Create "Best Real Estate Analytics Platforms 2026" hub page
 
-### 10. Improve Internal Cross-Linking
+### 16. Improve Internal Cross-Linking
 
 **Action:**
 
 - Blog posts → link to relevant market pages
 - Market pages → link to relevant blog posts
-- Scores page → link to methodology + accuracy
+- Scores page → link to methodology + accuracy more prominently
 - Add breadcrumbs to /map, /graphs, /pricing
 - Vary CTA anchor text (not always "Explore the Map")
 
-### 11. Add Search to Markets Directory
+### 17. Use Sitemap Index Instead of Flat Sitemap
 
-**Action:** Add search/filter functionality to `/markets` page:
+**Action:** Split the 955-URL flat sitemap into a sitemap index:
 
-- Search by city name
-- Filter by state
-- Sort by score or metric value
+```
+sitemap-index.xml
+├── sitemap-static.xml (13 pages)
+├── sitemap-markets.xml (935 pages)
+├── sitemap-blog.xml (4+ pages)
+└── sitemap-compare.xml (3 pages)
+```
 
-### 12. Expand About Page
+Next.js supports `generateSitemaps()` for this natively.
+
+**File:** `packages/frontend/app/sitemap.ts`
+
+### 18. Fix Sitemap lastmod Inconsistency
+
+**Action:**
+
+- Use consistent date format: `YYYY-MM-DD` for all entries (not full ISO for blog)
+- Consider using fixed dates (not `new Date()`) to prevent SEO churn on every build
+- Use actual content modification dates where possible
+
+**File:** `packages/frontend/app/sitemap.ts`
+
+### 19. Expand About Page
 
 **Action:** Add to ~1,500 words:
 
@@ -167,67 +262,51 @@
 - Company history/timeline
 - Team section (if applicable)
 - Mission statement expansion
-- Media mentions or partnerships
 
-### 13. Reduce Font Count
+### 20. Reduce Font Count
 
-**Action:** Evaluate if all 4 Google Fonts are needed:
+**Action:** Currently loading 4 Google Fonts (216 KB):
 
-- Roboto (primary) — keep
+- Roboto (M3 standard) — keep
 - Roboto Mono (code) — keep if used
-- Source Serif 4 (reports) — consider loading only on report pages
-- DM Sans — evaluate if used; remove if redundant
-
-### 14. Expand llms.txt
-
-**Action:** Add sections for:
-
-- Methodology summary (how scores work)
-- Pricing tiers and what's included
-- Key differentiators vs competitors
-- Sample data points and coverage stats
-- Create `llms-full.txt` with deeper content
-
-### 15. Create security.txt
-
-**Action:** Add `/.well-known/security.txt` with:
-
-- Contact email for security reports
-- Preferred languages
-- Expiry date
-- CSAF/acknowledgments links
+- Source Serif 4 (editorial) — load only on blog/report pages
+- DM Sans — evaluate if actually used; remove if redundant
 
 ---
 
 ## LOW (Backlog — Nice to Have)
 
-### 16. Diversify Blog Publication Dates
+### 21. Add Accessibility Fixes
 
-All 4 posts dated Feb 25, 2026 — looks artificial. Space out dates.
+- Add `aria-label` to icon-only buttons across all pages
+- Add `<track kind="captions">` to homepage autoplay video
+- Fix heading order on /scores page
+- Fix color contrast on market pages
 
-### 17. Add Related Posts to Blog
+### 22. Add /about/terms Metadata
 
-Show 2-3 related posts at the bottom of each blog post.
+- Add meta description: "Read PropertyIQ's Terms of Service covering data usage, IP, disclaimers, and user responsibilities."
+- Fix title from "PropertyIQ | PropertyIQ" to "Terms of Service | PropertyIQ"
 
-### 18. Remove Server Header
+### 23. Add Related Posts to Blog (if not already rendering)
 
-Railway exposes `server: railway-edge` — consider suppressing.
+- `RelatedPosts.tsx` component exists — verify it renders server-side
 
-### 19. Add `aggregateRating` to SoftwareApplication Schema
+### 24. Add aggregateRating to SoftwareApplication Schema
 
-Collect and display user ratings to enable star rating rich results.
+- Collect and display user ratings to enable star rating rich results
 
-### 20. Add Dataset Schema to Data Sources Page
+### 25. Add Dataset Schema to Data Sources Page
 
-Use `schema.org/Dataset` for each data source to enhance visibility in dataset searches.
+- Use `schema.org/Dataset` for each data source
 
-### 21. Market Page Schema Enhancement
+### 26. Remove /market (singular) from Sitemap
 
-Add `StatisticalPopulation` or enhanced `Place` schema with quantitative data.
+- Auth-gated dashboard page wastes crawl budget in sitemap
 
-### 22. Pricing Page — Server-Render Content
+### 27. Add Cross-Origin-Opener-Policy Header
 
-Ensure pricing tiers render server-side for crawlers, not just via client JS.
+- Add `Cross-Origin-Opener-Policy: same-origin` for XSS mitigation
 
 ---
 
@@ -235,26 +314,57 @@ Ensure pricing tiers render server-side for crawlers, not just via client JS.
 
 ```
                         HIGH IMPACT
-                            │
-         ┌──────────────────┼──────────────────┐
-         │  #1 Fix slugs    │  #2 Market       │
-         │  #3 CSP header   │     content      │
-         │  #6 Title tags   │  #4 Author       │
-         │                  │     attribution   │
-   LOW   │                  │                   │  HIGH
-  EFFORT ├──────────────────┼───────────────────┤ EFFORT
-         │  #8 Alt text     │  #5 Scores page   │
-         │  #14 llms.txt    │  #9 Comparisons   │
-         │  #15 security.txt│  #11 Markets      │
-         │  #16 Blog dates  │      search       │
-         │                  │  #10 Cross-links  │
-         └──────────────────┼───────────────────┘
-                            │
+                            |
+         +------------------+------------------+
+         |  #1 /markets     |  #12 Market      |
+         |     metadata     |     content      |
+         |  #2 Fix OG tags  |  #8  Author      |
+         |  #4 Fix slugs    |     attribution  |
+         |  #5 Deploy llms  |  #13 Fix LCP     |
+         |  #9 Fix noscript |                  |
+   LOW   |                  |                  |  HIGH
+  EFFORT +------------------+------------------+ EFFORT
+         |  #6 Sitemap fix  |  #15 Comparisons |
+         |  #10 Title tags  |  #17 Sitemap     |
+         |  #22 Terms meta  |     index        |
+         |  #27 COOP header |  #19 About page  |
+         |                  |  #16 Cross-links |
+         +------------------+------------------+
+                            |
                         LOW IMPACT
 ```
 
-**Recommended execution order:** 1 → 3 → 6 → 4 → 7 → 2 → 5 → 8 → 10 → 9
+**Recommended execution order:**
+
+1. **#1** Add /markets metadata (5 min fix, biggest SEO gap)
+2. **#2** Fix OG tags on methodology/accuracy/contact (15 min)
+3. **#4** Fix market slug mismatches + Louisville (30 min)
+4. **#5** Deploy llms.txt to production (merge to main)
+5. **#3** Fix /reports indexing (add noindex or create landing page)
+6. **#6** Add /scores/accuracy to sitemap (2 min)
+7. **#9** Fix noscript H1 → p/div (5 min, fixes 9 pages at once)
+8. **#7** Add JSON-LD to 6 pages (1-2 hours)
+9. **#10** Fix title tags (15 min)
+10. **#11** Server-render pricing content (30 min - 1 hour)
+11. **#8** Add author attribution (1-2 hours)
+12. **#13** Fix LCP on inner pages (investigation + code-split)
+13. **#12** Add server-rendered market page content
+
+**Quick wins (items 1-6):** ~1 hour of work for an estimated +5-8 points on SEO Health Score.
+
+---
+
+## Score Improvement Projections
+
+| After completing...    | Estimated Score | Key improvements            |
+| ---------------------- | :-------------: | --------------------------- |
+| Current state          |       70        | —                           |
+| Critical items (1-6)   |       76        | On-Page +8, AI Readiness +5 |
+| + High items (7-11)    |       82        | Schema +12, On-Page +4      |
+| + Medium items (12-20) |       88        | Content +8, Performance +5  |
+| All items complete     |       90+       | Full optimization           |
 
 ---
 
 _Generated by Claude Code SEO Audit — March 10, 2026_
+_Lighthouse 13.0.1 | No CrUX field data (insufficient real-user traffic)_

@@ -1,3 +1,4 @@
+
 # PropertyIQ v2.0 Score Validation Report
 
 **Generated:** 2026-02-13
