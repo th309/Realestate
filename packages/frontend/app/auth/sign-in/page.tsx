@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Building2, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -48,7 +48,6 @@ export default function SignInPage() {
 }
 
 function SignInPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "/map";
   const callbackError = searchParams.get("error");
@@ -80,8 +79,9 @@ function SignInPageContent() {
       setError(authError.message);
       setLoading(false);
     } else {
-      router.refresh();
-      router.push(redirectTo);
+      // Full-page redirect after sign-in to avoid race condition between
+      // router.refresh() and router.push() that leaves map data unfetched
+      window.location.href = redirectTo;
     }
   };
 

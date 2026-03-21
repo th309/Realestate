@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 // Build cache buster: 2026-02-10-001
+
+// In development, allow fetch to the local backend (port 3001).
+// In production the backend is on *.railway.app which is already listed.
+const devConnectSrc = process.env.NODE_ENV === 'development'
+  ? ' http://localhost:3001'
+  : '';
+
 const nextConfig = {
   // Allow parallel dev instances (e.g., beta testing on port 3002)
   // Usage: NEXT_DIST_DIR=.next-test npx next dev --webpack -p 3002
@@ -48,7 +55,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com https://*.google-analytics.com; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.railway.app https://*.supabase.co wss://*.supabase.co https://*.google-analytics.com https://www.googletagmanager.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" },
+          { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com https://*.google-analytics.com; connect-src 'self'${devConnectSrc} https://api.mapbox.com https://events.mapbox.com https://*.tiles.mapbox.com https://*.railway.app https://*.supabase.co wss://*.supabase.co https://*.google-analytics.com https://www.googletagmanager.com; worker-src 'self' blob:; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';` },
         ],
       },
       {
