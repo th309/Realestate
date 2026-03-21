@@ -185,6 +185,47 @@ function SummarySection({ summary }: { summary: string }) {
   );
 }
 
+function FAQSection({ faqs }: { faqs: ComparisonData["faqs"] }) {
+  if (!faqs || faqs.length === 0) return null;
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  };
+
+  return (
+    <section className="mt-10">
+      <h2 className="text-2xl font-medium text-on-surface mb-6">
+        Frequently Asked Questions
+      </h2>
+      <dl className="space-y-4">
+        {faqs.map((faq) => (
+          <div
+            key={faq.question}
+            className="rounded-xl border border-outline-variant p-5"
+          >
+            <dt className="text-base font-medium text-on-surface">
+              {faq.question}
+            </dt>
+            <dd className="mt-2 text-sm text-on-surface-variant leading-relaxed">
+              {faq.answer}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+    </section>
+  );
+}
+
 function CallToAction() {
   return (
     <section className="mt-12 text-center">
@@ -282,6 +323,7 @@ export default async function ComparisonPage({ params }: ComparisonPageProps) {
       <FeatureComparisonTable comparison={comparison} />
       <PricingComparisonTable comparison={comparison} />
       <SummarySection summary={comparison.summary} />
+      <FAQSection faqs={comparison.faqs} />
       <CallToAction />
     </>
   );

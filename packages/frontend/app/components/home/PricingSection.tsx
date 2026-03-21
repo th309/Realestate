@@ -15,6 +15,7 @@ interface PricingTierProps {
   slug: string;
   name: string;
   price: string;
+  priceLoading?: boolean;
   period?: string;
   features: string[];
   highlighted?: boolean;
@@ -26,6 +27,7 @@ function PricingTier({
   slug,
   name,
   price,
+  priceLoading,
   period,
   features,
   highlighted,
@@ -70,9 +72,15 @@ function PricingTier({
       </h3>
 
       <div className="mb-6">
-        <span className="text-4xl font-bold text-on-surface">{price}</span>
-        {period && (
-          <span className="text-on-surface-variant ml-1">/{period}</span>
+        {priceLoading ? (
+          <span className="inline-block h-10 w-20 rounded-lg bg-on-surface/10 animate-pulse" />
+        ) : (
+          <>
+            <span className="text-4xl font-bold text-on-surface">{price}</span>
+            {period && (
+              <span className="text-on-surface-variant ml-1">/{period}</span>
+            )}
+          </>
         )}
       </div>
 
@@ -167,7 +175,7 @@ const TIER_META: Record<
 };
 
 export function PricingSection() {
-  const { tiers } = usePricingTiers();
+  const { tiers, isLoading } = usePricingTiers();
 
   const pricingTiers = useMemo(() => {
     if (tiers.length === 0) {
@@ -177,7 +185,8 @@ export function PricingSection() {
         .map(([slug, meta]) => ({
           slug,
           name: slug.charAt(0).toUpperCase() + slug.slice(1),
-          price: slug === "free" ? "$0" : "...",
+          price: slug === "free" ? "$0" : "",
+          priceLoading: slug !== "free" && isLoading,
           period: slug === "free" ? undefined : "mo",
           ...meta,
         }));
@@ -195,11 +204,12 @@ export function PricingSection() {
           slug: t.slug,
           name: t.name,
           price: monthly === 0 ? "$0" : `$${Math.round(monthly)}`,
+          priceLoading: false,
           period: monthly === 0 ? undefined : "mo",
           ...meta,
         };
       });
-  }, [tiers]);
+  }, [tiers, isLoading]);
 
   return (
     <section
