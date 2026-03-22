@@ -136,7 +136,7 @@ export function Sidebar({
 
       {/* Metric Panel - fixed 256px on mobile, dynamic sidebarWidth on desktop via CSS variable */}
       <div
-        className="sidebar-panel overflow-y-auto p-3 md:p-4"
+        className="sidebar-panel overflow-y-auto p-3 md:p-4 h-full"
         style={
           { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
         }
