@@ -173,7 +173,10 @@ export default function RootLayout({
           <Header />
           <BetaBanner />
           <AnalyticsProvider>
-            <main id="main-content" className="flex-1 min-h-0 flex flex-col">
+            <main
+              id="main-content"
+              className="flex-1 min-h-0 flex flex-col relative"
+            >
               {children}
             </main>
           </AnalyticsProvider>

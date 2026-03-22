@@ -670,7 +670,7 @@ function MapPageInner() {
 
   return (
     <div
-      className="flex flex-col bg-surface flex-1 min-h-0 overflow-hidden"
+      className="absolute inset-0 flex flex-col bg-surface overflow-hidden"
       style={{
         fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
       }}
@@ -755,7 +755,7 @@ function MapPageInner() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex h-0 overflow-hidden relative">
         {/* M3 Scrim - Mobile overlay backdrop */}
         {mobileMenuOpen && (
           <div
@@ -765,7 +765,7 @@ function MapPageInner() {
           />
         )}
 
-        <div data-tour="metric-sidebar" className="h-full">
+        <div data-tour="metric-sidebar" className="min-h-0 overflow-hidden">
           <Sidebar
             pathname={pathname}
             navItems={NAV_ITEMS}
