@@ -521,7 +521,13 @@ function MapPageInner() {
       },
     );
 
+    // Resize map when container dimensions change (handles client-side
+    // navigation where flex layout settles after the map initializes)
+    const ro = new ResizeObserver(() => map.current?.resize());
+    ro.observe(mapContainer.current);
+
     return () => {
+      ro.disconnect();
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -664,7 +670,7 @@ function MapPageInner() {
 
   return (
     <div
-      className="flex flex-col bg-surface h-full overflow-hidden"
+      className="flex flex-col bg-surface flex-1 min-h-0 overflow-hidden"
       style={{
         fontFamily: "var(--font-roboto), 'Roboto', system-ui, sans-serif",
       }}
@@ -798,7 +804,7 @@ function MapPageInner() {
         </div>
 
         {/* Map */}
-        <main className="flex-1 relative min-h-0 bg-white" data-tour="map-area">
+        <main className="flex-1 relative min-h-0" data-tour="map-area">
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
               <p className="text-on-error-container font-medium">{mapError}</p>

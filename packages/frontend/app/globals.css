@@ -1,4 +1,4 @@
-@import 'mapbox-gl/dist/mapbox-gl.css';
+@import "mapbox-gl/dist/mapbox-gl.css";
 @import "tailwindcss";
 
 /* =============================================================================
@@ -172,7 +172,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-roboto), 'Roboto', system-ui, sans-serif;
+  font-family: var(--font-roboto), "Roboto", system-ui, sans-serif;
 }
 
 /* Sidebar width utility - fixed on mobile, dynamic on desktop */
@@ -199,28 +199,39 @@ body {
 }
 
 .animate-slideIn {
-  animation: slideIn 0.4s var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1)) forwards;
+  animation: slideIn 0.4s
+    var(--ease-emphasized-decelerate, cubic-bezier(0.05, 0.7, 0.1, 1)) forwards;
 }
 
 /* M3 Elevation Utilities */
 .elevation-1 {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 3px 1px rgba(0, 0, 0, 0.15);
 }
 
 .elevation-2 {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 6px 2px rgba(0, 0, 0, 0.15);
 }
 
 .elevation-3 {
-  box-shadow: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 8px 3px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .elevation-4 {
-  box-shadow: 0 6px 10px 4px rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 6px 10px 4px rgba(0, 0, 0, 0.15),
+    0 2px 3px rgba(0, 0, 0, 0.3);
 }
 
 .elevation-5 {
-  box-shadow: 0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 8px 12px 6px rgba(0, 0, 0, 0.15),
+    0 4px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Mapbox Popup Overrides - Remove default white background */
