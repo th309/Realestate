@@ -34,11 +34,12 @@ const pricingJsonLd = {
         "Compare PropertyIQ plans: Free, Pro, and Enterprise tiers for AI-powered real estate market analysis.",
     },
     {
-      "@type": "Product",
-      name: "PropertyIQ Pro",
+      "@type": "SoftwareApplication",
+      name: "PropertyIQ",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
       description:
-        "Unlimited market lookups, full score breakdowns, AI-generated reports, and ZIP-level data.",
-      brand: { "@type": "Brand", name: "PropertyIQ" },
+        "AI-powered real estate market intelligence platform with market scores, reports, and interactive maps.",
       offers: [
         {
           "@type": "Offer",
