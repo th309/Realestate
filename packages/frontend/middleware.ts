@@ -59,6 +59,20 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Set a lightweight cookie the client can read synchronously to know
+  // auth status without waiting for the async getSession() call.
+  if (user) {
+    supabaseResponse.cookies.set("piq-uid", user.id, {
+      path: "/",
+      httpOnly: false, // Must be readable by client JS
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 1 day — middleware refreshes on every request anyway
+    });
+  } else {
+    supabaseResponse.cookies.delete("piq-uid");
+  }
+
   const { pathname } = request.nextUrl;
 
   // Block /_dev routes in production
