@@ -81,8 +81,9 @@ export function SearchWidget({
     (filteredFavorites.length > 0 || favoritesLoading || !user);
   const hasSearchResults = searchResults.length > 0;
 
-  // Show dropdown when search results exist OR when focused with favorites
-  const dropdownVisible = showSearchResults || (focused && hasFavoritesToShow);
+  // Show dropdown when search results exist OR when focused with favorites enabled
+  // (FavoritesInDropdown always renders content: sign-in CTA, skeleton, empty state, or list)
+  const dropdownVisible = showSearchResults || (focused && showFavorites);
 
   return (
     <div
@@ -102,10 +103,7 @@ export function SearchWidget({
             setFocused(true);
             onFocus();
           }}
-          onBlur={() => {
-            // Delay to allow click events on dropdown items to fire first
-            setTimeout(() => setFocused(false), 200);
-          }}
+          onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && searchResults.length > 0) {
               trackEvent("feature.search", {
@@ -122,7 +120,10 @@ export function SearchWidget({
         />
         {/* Search Results Dropdown - M3 Menu styling */}
         {dropdownVisible && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-xl elevation-2 border border-outline-variant overflow-hidden z-50 max-h-80 overflow-y-auto">
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-xl elevation-2 border border-outline-variant overflow-hidden z-50 max-h-80 overflow-y-auto"
+          >
             {/* Favorites Section */}
             {showFavorites && (
               <FavoritesInDropdown
