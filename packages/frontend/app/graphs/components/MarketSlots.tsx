@@ -134,10 +134,8 @@ function AddSlot({
   } | null>(null);
 
   const { user } = useAuth();
-  const { items: watchlistItems, isLoading: favoritesLoading } = useWatchlist({
-    userId: user?.id ?? "",
-    autoLoad: !!user?.id,
-  });
+  const { favorites: watchlistItems, isLoading: favoritesLoading } =
+    useWatchlist();
 
   const {
     searchQuery,

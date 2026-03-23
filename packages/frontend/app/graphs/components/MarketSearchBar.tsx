@@ -33,10 +33,7 @@ export function MarketSearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { user } = useAuth();
-  const { items: favorites, isLoading: favoritesLoading } = useWatchlist({
-    userId: user?.id ?? "",
-    autoLoad: !!user,
-  });
+  const { favorites, isLoading: favoritesLoading } = useWatchlist();
 
   // Universal search across all geo types (metros, counties, ZIPs, cities)
   const {
