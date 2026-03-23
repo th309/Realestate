@@ -227,14 +227,8 @@ function FavoritesInDropdown({
   searchQuery: string;
   onSelect: (item: WatchlistItem) => void;
 }) {
-  // Auth still loading — don't show "Sign in" or content yet
-  if (authLoading) {
-    return (
-      <div className="px-4 py-3 border-b border-outline-variant/20">
-        <div className="h-4 w-48 rounded bg-outline-variant/30 animate-pulse" />
-      </div>
-    );
-  }
+  // Auth still loading — render nothing to avoid skeleton flash
+  if (authLoading) return null;
 
   // Not logged in — sign-in CTA
   if (!user) {
