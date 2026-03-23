@@ -28,6 +28,7 @@ import {
   SendMessageDto,
   CreateShareDto,
 } from './dto/generate-report.dto';
+import { STATIC_SAMPLE_REPORT } from './static-sample-report';
 
 @Controller('api/reports')
 export class ReportsController {
@@ -69,10 +70,7 @@ export class ReportsController {
   async getSampleReport() {
     const SAMPLE_REPORT_ID = 'f4b04e7c-34cc-4e38-bdac-541fff06de1e';
     const report = await this.reportsService.getReport(SAMPLE_REPORT_ID);
-    if (!report) {
-      throw new HttpException('Sample report not found', HttpStatus.NOT_FOUND);
-    }
-    return report;
+    return report ?? STATIC_SAMPLE_REPORT;
   }
 
   /**
