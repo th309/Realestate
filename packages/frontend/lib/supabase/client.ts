@@ -1,15 +1,24 @@
-import { createBrowserClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 /**
- * Browser client for Supabase
- * Use this in client components and browser-side code
+ * Browser client for Supabase — SINGLETON.
+ *
+ * createBrowserClient() returns a new instance each time, so we cache
+ * at module level. This ensures getSession() shares its internal cache
+ * across all callers (useAuthState, getAuthHeaders, etc.), so the slow
+ * token-refresh network call only happens once instead of per-caller.
  */
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+
 export function createSupabaseBrowserClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  if (!browserClient) {
+    browserClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+  }
+  return browserClient;
 }
 
 /**
@@ -24,9 +33,8 @@ export function createSupabaseServerClient() {
     {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  )
+        persistSession: false,
+      },
+    },
+  );
 }
-
