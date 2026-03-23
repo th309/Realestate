@@ -4,7 +4,6 @@
  * API functions for managing the user's geography watchlist.
  */
 
-import { API_URL } from "./base";
 import { getAuthHeaders } from "./auth-headers";
 
 // ---------------------------------------------------------------------------
@@ -41,7 +40,7 @@ export interface AddToWatchlistDto {
  */
 export async function fetchWatchlist(): Promise<WatchlistItem[]> {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/api/analytics/watchlist`, {
+  const response = await fetch(`/api/analytics/persistence/watchlist`, {
     headers: {
       ...authHeaders,
       "Content-Type": "application/json",
@@ -65,7 +64,7 @@ export async function addToWatchlist(
   dto: AddToWatchlistDto,
 ): Promise<WatchlistItem> {
   const authHeaders = await getAuthHeaders();
-  const response = await fetch(`${API_URL}/api/analytics/watchlist`, {
+  const response = await fetch(`/api/analytics/persistence/watchlist`, {
     method: "POST",
     headers: {
       ...authHeaders,
@@ -87,13 +86,10 @@ export async function addToWatchlist(
 /**
  * Remove a geography from the user's watchlist.
  */
-export async function removeFromWatchlist(
-  geographyType: string,
-  geographyId: string,
-): Promise<void> {
+export async function removeFromWatchlist(itemId: string): Promise<void> {
   const authHeaders = await getAuthHeaders();
   const response = await fetch(
-    `${API_URL}/api/analytics/watchlist/geography/${encodeURIComponent(geographyType)}/${encodeURIComponent(geographyId)}`,
+    `/api/analytics/persistence/watchlist/${encodeURIComponent(itemId)}`,
     {
       method: "DELETE",
       headers: {
