@@ -128,7 +128,8 @@ export function SearchWidget({
             {showFavorites && (
               <FavoritesInDropdown
                 user={user}
-                loading={authLoading || favoritesLoading}
+                authLoading={authLoading}
+                favoritesLoading={favoritesLoading}
                 favorites={filteredFavorites}
                 searchQuery={searchQuery}
                 onSelect={(item) => {
@@ -213,19 +214,21 @@ export function SearchWidget({
 
 function FavoritesInDropdown({
   user,
-  loading,
+  authLoading,
+  favoritesLoading,
   favorites,
   searchQuery,
   onSelect,
 }: {
   user: { id: string } | null;
-  loading: boolean;
+  authLoading: boolean;
+  favoritesLoading: boolean;
   favorites: WatchlistItem[];
   searchQuery: string;
   onSelect: (item: WatchlistItem) => void;
 }) {
-  // Show skeleton while auth or watchlist is loading (avoids flashing "Sign in" for logged-in users)
-  if (loading) {
+  // Auth still loading — don't show "Sign in" or content yet
+  if (authLoading) {
     return (
       <div className="px-4 py-3 border-b border-outline-variant/20">
         <div className="h-4 w-48 rounded bg-outline-variant/30 animate-pulse" />
@@ -233,6 +236,7 @@ function FavoritesInDropdown({
     );
   }
 
+  // Not logged in — sign-in CTA
   if (!user) {
     return (
       <div className="px-4 py-2.5 border-b border-outline-variant/20">
@@ -243,6 +247,15 @@ function FavoritesInDropdown({
           <span>Save your favorite markets</span>
           <span className="text-primary font-medium">Sign in</span>
         </Link>
+      </div>
+    );
+  }
+
+  // Logged in, watchlist still loading
+  if (favoritesLoading) {
+    return (
+      <div className="px-4 py-3 border-b border-outline-variant/20">
+        <div className="h-4 w-48 rounded bg-outline-variant/30 animate-pulse" />
       </div>
     );
   }
