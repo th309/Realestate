@@ -62,7 +62,7 @@ export function SearchWidget({
   showFavorites = true,
 }: SearchWidgetProps) {
   const [focused, setFocused] = useState(false);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { favorites, isLoading: favoritesLoading } = useWatchlist();
 
   // Filter favorites to supported geo types + search query
@@ -128,7 +128,7 @@ export function SearchWidget({
             {showFavorites && (
               <FavoritesInDropdown
                 user={user}
-                loading={favoritesLoading}
+                loading={authLoading || favoritesLoading}
                 favorites={filteredFavorites}
                 searchQuery={searchQuery}
                 onSelect={(item) => {
@@ -224,6 +224,15 @@ function FavoritesInDropdown({
   searchQuery: string;
   onSelect: (item: WatchlistItem) => void;
 }) {
+  // Show skeleton while auth or watchlist is loading (avoids flashing "Sign in" for logged-in users)
+  if (loading) {
+    return (
+      <div className="px-4 py-3 border-b border-outline-variant/20">
+        <div className="h-4 w-48 rounded bg-outline-variant/30 animate-pulse" />
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="px-4 py-2.5 border-b border-outline-variant/20">
@@ -234,14 +243,6 @@ function FavoritesInDropdown({
           <span>Save your favorite markets</span>
           <span className="text-primary font-medium">Sign in</span>
         </Link>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="px-4 py-3 border-b border-outline-variant/20">
-        <div className="h-4 w-48 rounded bg-surface-container animate-pulse" />
       </div>
     );
   }
