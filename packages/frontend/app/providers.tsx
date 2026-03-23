@@ -102,12 +102,18 @@ function getQueryClient() {
   }
 }
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialUserId,
+}: {
+  children: React.ReactNode;
+  initialUserId: string | null;
+}) {
   const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthProvider initialUserId={initialUserId}>
         <TourProvider>
           <EntitlementsProvider>
             <PaywallProvider>{children}</PaywallProvider>

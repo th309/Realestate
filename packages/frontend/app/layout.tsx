@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Roboto, Roboto_Mono, Source_Serif_4, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/src/components/layout/Header";
@@ -129,11 +130,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const initialUserId = cookieStore.get("piq-uid")?.value ?? null;
   return (
     <html lang="en">
       <head>
@@ -169,7 +172,7 @@ export default function RootLayout({
           </div>
         </noscript>
         <GoogleAnalytics />
-        <Providers>
+        <Providers initialUserId={initialUserId}>
           <Header />
           <BetaBanner />
           <AnalyticsProvider>
