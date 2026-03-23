@@ -13,10 +13,10 @@ export interface AuthState {
 // Module-level session cache so subsequent mounts resolve instantly.
 let cachedSession: Session | null | undefined; // undefined = not yet resolved
 
-/**
- * Read the piq-uid cookie set by middleware to determine auth status
- * synchronously — no async getSession() needed on initial render.
- */
+// Module-level cookie snapshot — set once on first client-side mount,
+// then available synchronously for all subsequent component mounts.
+let cookieUid: string | null | undefined; // undefined = not checked yet
+
 function readUidCookie(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(/(?:^|;\s*)piq-uid=([^;]*)/);
@@ -25,7 +25,7 @@ function readUidCookie(): string | null {
 
 export function useAuthState() {
   const [state, setState] = useState<AuthState>(() => {
-    // 1. Module-level cache (fastest — already resolved in this JS session)
+    // Module-level cache from a previous getSession() call (instant)
     if (cachedSession !== undefined) {
       return {
         user: cachedSession?.user ?? null,
@@ -34,28 +34,43 @@ export function useAuthState() {
       };
     }
 
-    // 2. Cookie from middleware (synchronous — avoids loading flash on first page load)
-    const uid = readUidCookie();
-    if (uid) {
-      // We know the user is logged in but don't have the full User object yet.
-      // Create a minimal placeholder — enough for !!user checks and user.id.
+    // Module-level cookie snapshot from a previous mount (instant, no hydration mismatch)
+    if (cookieUid !== undefined) {
       return {
-        user: { id: uid } as User,
+        user: cookieUid ? ({ id: cookieUid } as User) : null,
         session: null,
         loading: false,
       };
     }
 
-    // 3. No cookie — user is not logged in (or very first visit before middleware ran)
-    return { user: null, session: null, loading: false };
+    // First mount — return null to match SSR, then useEffect resolves immediately
+    return { user: null, session: null, loading: true };
   });
 
   useEffect(() => {
+    // On first client mount, check the middleware cookie for instant auth.
+    // This runs synchronously within the effect before getSession() fires,
+    // so the "loading" flash is a single frame at most.
+    if (cachedSession === undefined && cookieUid === undefined) {
+      const uid = readUidCookie();
+      cookieUid = uid;
+      if (uid) {
+        setState({
+          user: { id: uid } as User,
+          session: null,
+          loading: false,
+        });
+      } else {
+        setState({ user: null, session: null, loading: false });
+      }
+    }
+
     const supabase = createSupabaseBrowserClient();
 
     // Hydrate with full session (gets access token for API calls)
     supabase.auth.getSession().then(({ data: { session } }) => {
       cachedSession = session;
+      cookieUid = session?.user?.id ?? null;
       setState({ user: session?.user ?? null, session, loading: false });
     });
 
@@ -64,6 +79,7 @@ export function useAuthState() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       cachedSession = session;
+      cookieUid = session?.user?.id ?? null;
       setState({ user: session?.user ?? null, session, loading: false });
     });
 
