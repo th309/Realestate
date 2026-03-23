@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   SearchIcon,
@@ -60,6 +61,7 @@ export function SearchWidget({
   placeholder = "Search city, zip, or county",
   showFavorites = true,
 }: SearchWidgetProps) {
+  const [focused, setFocused] = useState(false);
   const { user } = useAuth();
   const { favorites, isLoading: favoritesLoading } = useWatchlist();
 
@@ -79,6 +81,9 @@ export function SearchWidget({
     (filteredFavorites.length > 0 || favoritesLoading || !user);
   const hasSearchResults = searchResults.length > 0;
 
+  // Show dropdown when search results exist OR when focused with favorites
+  const dropdownVisible = showSearchResults || (focused && hasFavoritesToShow);
+
   return (
     <div
       className={className ?? "flex-1 max-w-2xl mx-0 md:mx-8"}
@@ -93,7 +98,14 @@ export function SearchWidget({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
-          onFocus={onFocus}
+          onFocus={() => {
+            setFocused(true);
+            onFocus();
+          }}
+          onBlur={() => {
+            // Delay to allow click events on dropdown items to fire first
+            setTimeout(() => setFocused(false), 200);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && searchResults.length > 0) {
               trackEvent("feature.search", {
@@ -109,7 +121,7 @@ export function SearchWidget({
           className="w-full h-14 pl-10 md:pl-12 pr-3 md:pr-4 bg-surface-container-high rounded-full text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all duration-200"
         />
         {/* Search Results Dropdown - M3 Menu styling */}
-        {showSearchResults && (
+        {dropdownVisible && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-xl elevation-2 border border-outline-variant overflow-hidden z-50 max-h-80 overflow-y-auto">
             {/* Favorites Section */}
             {showFavorites && (
