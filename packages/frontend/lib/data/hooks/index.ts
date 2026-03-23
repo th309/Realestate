@@ -97,6 +97,9 @@ export {
   type UseMarketMatchResult,
 } from "./useMarketMatch";
 
+// Watchlist
+export { useWatchlist } from "./useWatchlist";
+
 // Validation data hooks
 export {
   useValidationSummary,

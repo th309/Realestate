@@ -286,6 +286,13 @@ export {
   type MatchScoreResult,
   type MetricBreakdownEntry,
 
+  // Watchlist
+  fetchWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  type WatchlistItem,
+  type AddToWatchlistDto,
+
   // Research brief
   fetchClarifyingQuestions,
   generateResearchBrief,
@@ -377,6 +384,9 @@ export {
   type UseTopMarketMatchesResult,
   type UseMarketMatchOptions,
   type UseMarketMatchResult,
+
+  // Watchlist
+  useWatchlist,
 
   // Validation data hooks
   useValidationSummary,

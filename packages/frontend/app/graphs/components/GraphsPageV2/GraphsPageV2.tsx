@@ -209,6 +209,7 @@ export function GraphsPageV2() {
     raceMode,
     // Setters
     setPrimaryMarket,
+    setComparisonMarket,
     setChartType,
     setTimeFrame,
     setActiveMetric,
@@ -502,6 +503,8 @@ export function GraphsPageV2() {
             primaryMarket={primaryMarket}
             comparisonMarket={comparisonMarket}
             onSelectMarket={selectMarket}
+            onSelectAsPrimary={setPrimaryMarket}
+            onSelectAsComparison={setComparisonMarket}
             onClearComparison={clearComparison}
             onSwapMarkets={swapMarkets}
           />

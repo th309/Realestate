@@ -1,13 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Plus, Search } from 'lucide-react';
-import { MyMarket } from '../hooks/useMyMarkets';
-import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { createPortal } from "react-dom";
+import { X, Plus, Search } from "lucide-react";
+import { MyMarket } from "../hooks/useMyMarkets";
+import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
+import { useWatchlist } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { SlotFavoritesSection } from "./SlotFavoritesSection";
 
 /** Chart line colors — slots use these to indicate which line belongs to which market */
-const SLOT_COLORS = ['#0891b2', '#3b82f6', '#ea580c'] as const;
+const SLOT_COLORS = ["#0891b2", "#3b82f6", "#ea580c"] as const;
+
+/** Geography types the graphs page can handle */
+const SUPPORTED_GEO_TYPES = new Set(["metro", "county", "zip"]);
 
 interface MarketSlotsProps {
   markets: MyMarket[];
@@ -22,7 +34,7 @@ export function MarketSlots({
   maxSlots,
   onAdd,
   onRemove,
-  className = '',
+  className = "",
 }: MarketSlotsProps) {
   const [searchingSlot, setSearchingSlot] = useState<number | null>(null);
 
@@ -69,9 +81,7 @@ function FilledSlot({
   onRemove: () => void;
 }) {
   return (
-    <div
-      className="group flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-container text-on-surface transition-colors hover:bg-surface-container-high"
-    >
+    <div className="group flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-container text-on-surface transition-colors hover:bg-surface-container-high">
       {/* Color dot matching chart line */}
       <span
         className="w-2 h-2 rounded-full flex-shrink-0"
@@ -118,7 +128,16 @@ function AddSlot({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+
+  const { user } = useAuth();
+  const { items: watchlistItems, isLoading: favoritesLoading } = useWatchlist({
+    userId: user?.id ?? "",
+    autoLoad: !!user?.id,
+  });
 
   const {
     searchQuery,
@@ -128,6 +147,21 @@ function AddSlot({
     handleSearch,
     clearSearch,
   } = useUniversalSearch({});
+
+  // Favorites filtered to supported geo types, excluding already-selected markets,
+  // and optionally narrowed by the current search query
+  const filteredFavorites = useMemo(() => {
+    return watchlistItems
+      .filter((f) => SUPPORTED_GEO_TYPES.has(f.geography_type))
+      .filter((f) => !existingIds.includes(f.geography_id))
+      .filter(
+        (f) =>
+          !searchQuery ||
+          (f.geography_name ?? "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()),
+      );
+  }, [watchlistItems, existingIds, searchQuery]);
 
   // Compute dropdown position from the input container
   const updateDropdownPos = useCallback(() => {
@@ -148,11 +182,11 @@ function AddSlot({
   useEffect(() => {
     if (!isSearching) return;
     const handler = () => updateDropdownPos();
-    window.addEventListener('scroll', handler, true);
-    window.addEventListener('resize', handler);
+    window.addEventListener("scroll", handler, true);
+    window.addEventListener("resize", handler);
     return () => {
-      window.removeEventListener('scroll', handler, true);
-      window.removeEventListener('resize', handler);
+      window.removeEventListener("scroll", handler, true);
+      window.removeEventListener("resize", handler);
     };
   }, [isSearching, updateDropdownPos]);
 
@@ -168,15 +202,15 @@ function AddSlot({
         clearSearch();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSearching, onCloseSearch, clearSearch]);
 
   const handleSelectResult = (result: any) => {
     const market: MyMarket = {
       id: result.id,
       name: result.name,
-      type: result.type as 'metro' | 'county' | 'zip',
+      type: result.type as "metro" | "county" | "zip",
       state: result.state,
       score: null,
     };
@@ -188,9 +222,9 @@ function AddSlot({
   // Filter out markets that are already selected AND unsupported types.
   // Graphs page only supports metro, county, zip — cities/states can't be
   // used because they don't have corresponding API data keyed properly.
-  const SUPPORTED_TYPES = new Set(['metro', 'county', 'zip']);
+  const SUPPORTED_TYPES = new Set(["metro", "county", "zip"]);
   const filteredResults = searchResults.filter(
-    (r) => !existingIds.includes(r.id) && SUPPORTED_TYPES.has(r.type)
+    (r) => !existingIds.includes(r.id) && SUPPORTED_TYPES.has(r.type),
   );
 
   if (!isSearching) {
@@ -205,7 +239,9 @@ function AddSlot({
     );
   }
 
-  const showDropdown = showSearchResults || searchLoading;
+  // Show dropdown whenever search is active — favorites section always has
+  // something to display (sign-in prompt, loading, empty state, or items)
+  const showDropdown = true;
 
   return (
     <>
@@ -237,53 +273,83 @@ function AddSlot({
       </div>
 
       {/* Search results dropdown — rendered via portal to escape sidebar overflow */}
-      {showDropdown && dropdownPos && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed min-w-[320px] w-max max-w-[420px] bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 z-[9999] overflow-hidden"
-          style={{ top: dropdownPos.top, left: dropdownPos.left }}
-        >
-          <div className="max-h-52 overflow-y-auto">
-            {searchLoading && (
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-[11px] text-on-surface-variant">Searching...</span>
-              </div>
-            )}
+      {showDropdown &&
+        dropdownPos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed min-w-[320px] w-max max-w-[420px] bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 z-[9999] overflow-hidden"
+            style={{ top: dropdownPos.top, left: dropdownPos.left }}
+          >
+            <div className="max-h-64 overflow-y-auto">
+              {/* ── Favorites section ── */}
+              <SlotFavoritesSection
+                user={user}
+                favoritesLoading={favoritesLoading}
+                filteredFavorites={filteredFavorites}
+                searchQuery={searchQuery}
+                onSelect={onSelect}
+              />
 
-            {!searchLoading && filteredResults.length === 0 && searchQuery.length >= 2 && (
-              <p className="px-3 py-2.5 text-[11px] text-on-surface-variant text-center">
-                No markets found
-              </p>
-            )}
-
-            {filteredResults.map((result) => (
-              <button
-                key={result.id}
-                onClick={() => handleSelectResult(result)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-container transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-on-surface whitespace-nowrap">{result.name}</div>
-                  {result.subtitle && (
-                    <div className="text-[9px] text-on-surface-variant whitespace-nowrap">{result.subtitle}</div>
-                  )}
+              {/* Divider when both sections have content */}
+              {filteredFavorites.length > 0 && filteredResults.length > 0 && (
+                <div className="px-3 py-1.5 text-[9px] font-medium text-on-surface-variant/50 uppercase tracking-wider border-t border-outline-variant/20">
+                  Search Results
                 </div>
-                <span className="text-[9px] text-on-surface-variant uppercase tracking-wider flex-shrink-0">
-                  {result.type}
-                </span>
-              </button>
-            ))}
+              )}
 
-            {searchQuery.length < 2 && !searchLoading && (
-              <p className="px-3 py-2.5 text-[11px] text-on-surface-variant text-center">
-                Type 2+ characters to search
-              </p>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+              {/* ── Search results section ── */}
+              {searchLoading && (
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[11px] text-on-surface-variant">
+                    Searching...
+                  </span>
+                </div>
+              )}
+
+              {!searchLoading &&
+                filteredResults.length === 0 &&
+                searchQuery.length >= 2 && (
+                  <p className="px-3 py-2.5 text-[11px] text-on-surface-variant text-center">
+                    No markets found
+                  </p>
+                )}
+
+              {filteredResults.map((result) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleSelectResult(result)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-container transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-on-surface whitespace-nowrap">
+                      {result.name}
+                    </div>
+                    {result.subtitle && (
+                      <div className="text-[9px] text-on-surface-variant whitespace-nowrap">
+                        {result.subtitle}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[9px] text-on-surface-variant uppercase tracking-wider flex-shrink-0">
+                    {result.type}
+                  </span>
+                </button>
+              ))}
+
+              {searchQuery.length < 2 &&
+                !searchLoading &&
+                filteredFavorites.length === 0 && (
+                  <p className="px-3 py-2.5 text-[11px] text-on-surface-variant text-center">
+                    Type 2+ characters to search
+                  </p>
+                )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

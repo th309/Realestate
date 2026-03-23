@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, ArrowLeftRight } from 'lucide-react';
-import { MyMarket } from '../hooks/useMyMarkets';
-import { useUniversalSearch } from '@/app/shared/hooks/useUniversalSearch';
+import React, { useState, useEffect, useRef } from "react";
+import { Search, X, ArrowLeftRight } from "lucide-react";
+import { MyMarket } from "../hooks/useMyMarkets";
+import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
+import { useWatchlist } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
+import { FavoritesSection } from "./FavoritesDropdownSection";
+
+const SUPPORTED_GEO_TYPES = ["metro", "county", "zip"];
 
 interface MarketSearchBarProps {
   primaryMarket: MyMarket | null;
   comparisonMarket: MyMarket | null;
   onSelectMarket: (market: MyMarket) => void;
+  onSelectAsPrimary?: (market: MyMarket) => void;
+  onSelectAsComparison?: (market: MyMarket) => void;
   onClearComparison: () => void;
   onSwapMarkets: () => void;
 }
@@ -17,11 +24,19 @@ export function MarketSearchBar({
   primaryMarket,
   comparisonMarket,
   onSelectMarket,
+  onSelectAsPrimary,
+  onSelectAsComparison,
   onClearComparison,
   onSwapMarkets,
 }: MarketSearchBarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { user } = useAuth();
+  const { items: favorites, isLoading: favoritesLoading } = useWatchlist({
+    userId: user?.id ?? "",
+    autoLoad: !!user,
+  });
 
   // Universal search across all geo types (metros, counties, ZIPs, cities)
   const {
@@ -48,7 +63,7 @@ export function MarketSearchBar({
     const market: MyMarket = {
       id: result.id,
       name: result.name,
-      type: result.type as 'metro' | 'county' | 'zip',
+      type: result.type as "metro" | "county" | "zip",
       state: result.state,
       score: null,
     };
@@ -60,11 +75,28 @@ export function MarketSearchBar({
 
   // Graphs page only supports metro, county, zip — filter out states/national/city
   const supportedResults = searchResults.filter(
-    (r) => r.type === 'metro' || r.type === 'county' || r.type === 'zip'
+    (r) => r.type === "metro" || r.type === "county" || r.type === "zip",
   );
 
+  const filteredFavorites = favorites
+    .filter((f) => SUPPORTED_GEO_TYPES.includes(f.geography_type))
+    .filter(
+      (f) =>
+        !searchQuery ||
+        (f.geography_name ?? "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    );
+
+  const hasSearchResults =
+    searchQuery.length >= 2 && supportedResults.length > 0;
+  const showFavoritesSection = searchOpen;
+
   return (
-    <div ref={searchRef as React.RefObject<HTMLDivElement>} className="flex items-center gap-2 relative">
+    <div
+      ref={searchRef as React.RefObject<HTMLDivElement>}
+      className="flex items-center gap-2 relative"
+    >
       {/* Market chips */}
       <div className="flex items-center gap-2">
         {primaryMarket ? (
@@ -136,7 +168,10 @@ export function MarketSearchBar({
               className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none"
             />
             <button
-              onClick={() => { setSearchOpen(false); clearSearch(); }}
+              onClick={() => {
+                setSearchOpen(false);
+                clearSearch();
+              }}
               className="p-0.5 rounded text-on-surface-variant hover:text-on-surface"
             >
               <X className="w-3.5 h-3.5" />
@@ -144,18 +179,65 @@ export function MarketSearchBar({
           </div>
 
           <div className="max-h-64 overflow-y-auto">
-            {searchLoading && (
-              <div className="flex items-center gap-2 px-4 py-3">
-                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs text-on-surface-variant">Searching...</span>
+            {/* Favorites section */}
+            {showFavoritesSection && (
+              <FavoritesSection
+                user={user}
+                favoritesLoading={favoritesLoading}
+                filteredFavorites={filteredFavorites}
+                searchQuery={searchQuery}
+                onSelectMarket={(market) => {
+                  onSelectMarket(market);
+                  setSearchOpen(false);
+                  clearSearch();
+                }}
+                onSelectAsPrimary={
+                  onSelectAsPrimary
+                    ? (market) => {
+                        onSelectAsPrimary(market);
+                        setSearchOpen(false);
+                        clearSearch();
+                      }
+                    : undefined
+                }
+                onSelectAsComparison={
+                  onSelectAsComparison
+                    ? (market) => {
+                        onSelectAsComparison(market);
+                        setSearchOpen(false);
+                        clearSearch();
+                      }
+                    : undefined
+                }
+              />
+            )}
+
+            {/* Search Results divider */}
+            {hasSearchResults && filteredFavorites.length > 0 && (
+              <div className="px-4 pt-2 pb-1">
+                <span className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider">
+                  Search Results
+                </span>
               </div>
             )}
 
-            {!searchLoading && showSearchResults && supportedResults.length === 0 && searchQuery.length >= 2 && (
-              <p className="px-4 py-3 text-xs text-on-surface-variant text-center">
-                No markets found
-              </p>
+            {searchLoading && (
+              <div className="flex items-center gap-2 px-4 py-3">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-on-surface-variant">
+                  Searching...
+                </span>
+              </div>
             )}
+
+            {!searchLoading &&
+              showSearchResults &&
+              supportedResults.length === 0 &&
+              searchQuery.length >= 2 && (
+                <p className="px-4 py-3 text-xs text-on-surface-variant text-center">
+                  No markets found
+                </p>
+              )}
 
             {supportedResults.map((result) => (
               <button
@@ -164,9 +246,13 @@ export function MarketSearchBar({
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-container transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-on-surface whitespace-nowrap">{result.name}</div>
+                  <div className="text-sm text-on-surface whitespace-nowrap">
+                    {result.name}
+                  </div>
                   {result.subtitle && (
-                    <div className="text-[10px] text-on-surface-variant whitespace-nowrap">{result.subtitle}</div>
+                    <div className="text-[10px] text-on-surface-variant whitespace-nowrap">
+                      {result.subtitle}
+                    </div>
                   )}
                 </div>
                 <span className="text-[10px] text-on-surface-variant uppercase tracking-wider flex-shrink-0">
@@ -175,11 +261,13 @@ export function MarketSearchBar({
               </button>
             ))}
 
-            {searchQuery.length < 2 && !searchLoading && (
-              <p className="px-4 py-3 text-xs text-on-surface-variant text-center">
-                Type 2+ characters to search
-              </p>
-            )}
+            {searchQuery.length < 2 &&
+              !searchLoading &&
+              filteredFavorites.length === 0 && (
+                <p className="px-4 py-3 text-xs text-on-surface-variant text-center">
+                  Type 2+ characters to search
+                </p>
+              )}
           </div>
         </div>
       )}
@@ -193,15 +281,18 @@ function MarketChip({
   onRemove,
 }: {
   market: MyMarket;
-  color: 'primary' | 'comparison';
+  color: "primary" | "comparison";
   onRemove: () => void;
 }) {
-  const colors = color === 'primary'
-    ? 'bg-primary-container text-on-primary-container'
-    : 'bg-secondary-container text-on-secondary-container';
+  const colors =
+    color === "primary"
+      ? "bg-primary-container text-on-primary-container"
+      : "bg-secondary-container text-on-secondary-container";
 
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm ${colors}`}>
+    <div
+      className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm ${colors}`}
+    >
       <span className="font-medium truncate max-w-[140px]">{market.name}</span>
       <button
         onClick={onRemove}

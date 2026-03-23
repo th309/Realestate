@@ -227,6 +227,15 @@ export {
   type AiModelConfig,
 } from "./ai-models";
 
+// Watchlist
+export {
+  fetchWatchlist,
+  addToWatchlist,
+  removeFromWatchlist,
+  type WatchlistItem,
+  type AddToWatchlistDto,
+} from "./watchlist";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";
