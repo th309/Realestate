@@ -3,7 +3,7 @@
  *
  * Handles member lifecycle: listing, inviting, removing, and role changes.
  * Uses the `invite_org_member` Postgres RPC for atomic seat enforcement.
- * Delegates email delivery to the shared EmailService.
+ * Delegates email delivery to InviteEmailService.
  */
 
 import {
@@ -12,12 +12,11 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import { OrgAuditService } from '../org-audit/org-audit.service';
-import { EmailService } from '../email/email.service';
+import { InviteEmailService } from './invite-email.service';
 
 @Injectable()
 export class MembersService {
@@ -26,8 +25,7 @@ export class MembersService {
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
     private readonly auditService: OrgAuditService,
-    private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
+    private readonly inviteEmailService: InviteEmailService,
   ) {}
 
   /**
@@ -112,7 +110,16 @@ export class MembersService {
       .single();
 
     const orgName = org?.name ?? 'your organization';
-    await this.sendInviteEmail(email, orgName, token);
+
+    let emailSent = true;
+    try {
+      await this.inviteEmailService.sendInviteEmail(email, orgName, token);
+    } catch (err) {
+      this.logger.error(
+        `Failed to send invite email to ${email}: ${(err as Error).message}`,
+      );
+      emailSent = false;
+    }
 
     await this.auditService.log({
       organizationId: orgId,
@@ -123,7 +130,7 @@ export class MembersService {
       details: { email, role },
     });
 
-    return { id: data, email, role, token, expiresAt };
+    return { id: data, email, role, expiresAt, emailSent };
   }
 
   /**
@@ -269,31 +276,5 @@ export class MembersService {
           'Cannot remove or demote the last admin. Promote another member to admin first.',
       });
     }
-  }
-
-  /**
-   * Send the invite email via the shared EmailService.
-   */
-  private async sendInviteEmail(
-    email: string,
-    orgName: string,
-    token: string,
-  ): Promise<void> {
-    const appUrl =
-      this.configService.get<string>('FRONTEND_URL') ||
-      this.configService.get<string>('NEXT_PUBLIC_APP_URL');
-    const inviteUrl = `${appUrl}/org/invite/${token}`;
-
-    await this.emailService.sendEmail({
-      to: email,
-      subject: `You're invited to join ${orgName} on PropertyIQ`,
-      html: [
-        `<p>You've been invited to join <strong>${orgName}</strong> on PropertyIQ.</p>`,
-        `<p><a href="${inviteUrl}">Accept Invitation</a></p>`,
-        `<p>This invite expires in 7 days.</p>`,
-      ].join(''),
-      emailType: 'org_invite',
-      metadata: { orgName, token },
-    });
   }
 }

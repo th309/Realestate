@@ -255,4 +255,38 @@ export class StripeService {
     const stripe = this.getStripeClient();
     await stripe.prices.update(priceId, { active: false });
   }
+
+  /**
+   * Update subscription line items: add, update quantity, or remove items.
+   * Used by org billing for per-seat add-on management.
+   */
+  async updateSubscriptionItems(
+    subscriptionId: string,
+    params: {
+      addItems?: { priceId: string; quantity: number }[];
+      updateItems?: { id: string; quantity: number }[];
+      removeItemIds?: string[];
+    },
+  ): Promise<Stripe.Subscription> {
+    const stripe = this.getStripeClient();
+    const items: Stripe.SubscriptionUpdateParams.Item[] = [];
+
+    for (const add of params.addItems ?? []) {
+      items.push({ price: add.priceId, quantity: add.quantity });
+    }
+    for (const update of params.updateItems ?? []) {
+      items.push({ id: update.id, quantity: update.quantity });
+    }
+    for (const removeId of params.removeItemIds ?? []) {
+      items.push({ id: removeId, deleted: true });
+    }
+
+    return stripe.subscriptions.update(subscriptionId, { items });
+  }
+
+  /** Fetch the upcoming invoice preview for a customer (next charge). */
+  async getUpcomingInvoice(customerId: string): Promise<Stripe.Invoice> {
+    const stripe = this.getStripeClient();
+    return stripe.invoices.createPreview({ customer: customerId });
+  }
 }

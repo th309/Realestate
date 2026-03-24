@@ -1,21 +1,34 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { OrgBillingWebhookService } from '../org-billing/org-billing-webhook.service';
 import Stripe from 'stripe';
 
 /**
  * Handles Stripe webhook events and syncs subscription state to user_profiles.
  *
- * Separated from BillingService to keep each file under the 300-line limit
- * and give webhook processing a clear single responsibility.
+ * Org-specific events (identified by metadata.org_slug) are routed to
+ * OrgBillingWebhookService. All other events are handled here for
+ * individual user subscriptions.
  */
 @Injectable()
 export class BillingWebhookService {
   private readonly logger = new Logger(BillingWebhookService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    @Optional()
+    @Inject(OrgBillingWebhookService)
+    private readonly orgWebhook?: OrgBillingWebhookService,
+  ) {}
 
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
     this.logger.log(`Processing webhook event: ${event.type}`);
+
+    // Route org-specific events to OrgBillingWebhookService
+    const eventData = event.data.object as Record<string, any>;
+    if (eventData?.metadata?.org_slug && this.orgWebhook) {
+      return this.orgWebhook.handleWebhookEvent(event);
+    }
 
     switch (event.type) {
       case 'checkout.session.completed': {

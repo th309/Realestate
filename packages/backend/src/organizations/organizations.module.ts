@@ -8,6 +8,7 @@ import { InvitesController } from './invites.controller';
 import { OrganizationsService } from './organizations.service';
 import { MembersService } from './members.service';
 import { InvitesService } from './invites.service';
+import { InviteEmailService } from './invite-email.service';
 import { OrgContextGuard } from './guards/org-context.guard';
 import { OrgAdminGuard } from './guards/org-admin.guard';
 import { OrgMemberGuard } from './guards/org-member.guard';
@@ -19,6 +20,7 @@ import { OrgMemberGuard } from './guards/org-member.guard';
     OrganizationsService,
     MembersService,
     InvitesService,
+    InviteEmailService,
     OrgContextGuard,
     OrgAdminGuard,
     OrgMemberGuard,

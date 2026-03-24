@@ -77,6 +77,23 @@ export class InvitesService {
       });
     }
 
+    // Verify the accepting user's email matches the invite email
+    const { data: userProfile } = await this.supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (
+      !userProfile?.email ||
+      userProfile.email.toLowerCase() !== invite.email.toLowerCase()
+    ) {
+      throw new BadRequestException({
+        code: 'EMAIL_MISMATCH',
+        message: 'This invite was sent to a different email address.',
+      });
+    }
+
     // Check user is not already in another organization
     const { data: existingMembership } = await this.supabase
       .from('organization_members')
@@ -108,23 +125,36 @@ export class InvitesService {
       this.logger.error(
         `Failed to create membership for invite ${invite.id}: ${memberError.message}`,
       );
-      throw new Error('Failed to accept invite');
+      throw new BadRequestException('Failed to join organization');
     }
 
-    // Mark invite as accepted
-    await this.supabase
-      .from('organization_invites')
-      .update({
-        status: 'accepted',
-        accepted_at: new Date().toISOString(),
-      })
-      .eq('id', invite.id);
+    try {
+      // Mark invite as accepted
+      await this.supabase
+        .from('organization_invites')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', invite.id);
 
-    // Link user profile to the organization
-    await this.supabase
-      .from('user_profiles')
-      .update({ organization_id: invite.organizationId })
-      .eq('id', userId);
+      // Link user profile to the organization
+      await this.supabase
+        .from('user_profiles')
+        .update({ organization_id: invite.organizationId })
+        .eq('id', userId);
+    } catch (err) {
+      // Rollback: delete the member row to maintain consistency
+      this.logger.error(
+        `Partial failure accepting invite ${invite.id}, rolling back membership: ${err}`,
+      );
+      await this.supabase
+        .from('organization_members')
+        .delete()
+        .eq('organization_id', invite.organizationId)
+        .eq('user_id', userId);
+      throw new BadRequestException('Failed to complete invite acceptance');
+    }
 
     await this.auditService.log({
       organizationId: invite.organizationId,
