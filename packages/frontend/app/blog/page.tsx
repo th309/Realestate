@@ -5,7 +5,7 @@ import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { BlogFilterableList } from "./BlogFilterableList";
 
 export const metadata: Metadata = {
-  title: "Blog | PropertyIQ",
+  title: "Blog",
   description:
     "Data-driven housing market analysis, forecasts, and investment insights from PropertyIQ Research.",
   alternates: { canonical: "https://www.propertyiq.app/blog" },

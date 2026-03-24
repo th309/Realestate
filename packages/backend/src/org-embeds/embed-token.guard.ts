@@ -27,8 +27,8 @@ export class EmbedTokenGuard implements CanActivate {
     const token = request.query?.token as string;
 
     if (!token) {
-      // No token = public embed (backwards compatibility)
-      return true;
+      this.logger.warn('Embed request rejected: no token provided');
+      return false;
     }
 
     const origin = request.headers?.origin || request.headers?.referer || '';

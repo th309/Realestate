@@ -78,7 +78,7 @@ export function EmbedMetricCard({
       {/* Value + trend row */}
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold text-on-surface leading-none">
-          {value !== null ? formattedValue : "--"}
+          {value !== null ? formattedValue : "\u2014"}
         </span>
 
         {trend && trendStyle && (

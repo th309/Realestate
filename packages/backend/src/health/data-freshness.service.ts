@@ -1,13 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-type GeoFreshnessKey = 'national' | 'state' | 'metro' | 'county' | 'city' | 'zip';
-type EconomicMetricKey = 'unemployment_rate' | 'employment_yoy' | 'gdp_yoy' | 'rpp_all_items';
+type GeoFreshnessKey =
+  | 'national'
+  | 'state'
+  | 'metro'
+  | 'county'
+  | 'city'
+  | 'zip';
+type EconomicMetricKey =
+  | 'unemployment_rate'
+  | 'employment_yoy'
+  | 'gdp_yoy'
+  | 'rpp_all_items';
 
 interface TableProbeConfig {
   tableName: string;
   dateColumn: string;
-  filters?: Array<{ column: string; op: 'eq' | 'neq' | 'notNull'; value?: string }>;
+  filters?: Array<{
+    column: string;
+    op: 'eq' | 'neq' | 'notLike' | 'notNull';
+    value?: string;
+  }>;
 }
 
 export interface DataFreshnessResponse {
@@ -15,10 +29,18 @@ export interface DataFreshnessResponse {
   tableDates: Record<string, string | null>;
   sourceDates: Record<string, string | null>;
   zillowDates: {
-    historicalByGeo: Record<Exclude<GeoFreshnessKey, 'national'>, string | null>;
-    forecastByGeo: Partial<Record<Exclude<GeoFreshnessKey, 'national'>, string | null>>;
+    historicalByGeo: Record<
+      Exclude<GeoFreshnessKey, 'national'>,
+      string | null
+    >;
+    forecastByGeo: Partial<
+      Record<Exclude<GeoFreshnessKey, 'national'>, string | null>
+    >;
   };
-  economicMetricDates: Record<EconomicMetricKey, Partial<Record<GeoFreshnessKey, string | null>>>;
+  economicMetricDates: Record<
+    EconomicMetricKey,
+    Partial<Record<GeoFreshnessKey, string | null>>
+  >;
 }
 
 @Injectable()
@@ -34,7 +56,11 @@ export class DataFreshnessService {
 
   async getFreshness(forceRefresh = false): Promise<DataFreshnessResponse> {
     const now = Date.now();
-    if (!forceRefresh && this.cachedResponse && now - this.cachedAt < DataFreshnessService.CACHE_TTL_MS) {
+    if (
+      !forceRefresh &&
+      this.cachedResponse &&
+      now - this.cachedAt < DataFreshnessService.CACHE_TTL_MS
+    ) {
       return this.cachedResponse;
     }
     const tableProbeConfigs: TableProbeConfig[] = [
@@ -42,8 +68,16 @@ export class DataFreshnessService {
       { tableName: 'zillow_state', dateColumn: 'period_date' },
       { tableName: 'zillow_county', dateColumn: 'period_date' },
       { tableName: 'zillow_city', dateColumn: 'period_date' },
-      { tableName: 'zillow_metro', dateColumn: 'period_date' },
-      { tableName: 'zillow_zip', dateColumn: 'period_date' },
+      {
+        tableName: 'zillow_metro',
+        dateColumn: 'period_date',
+        filters: [{ column: 'metric_name', op: 'notLike', value: 'zhvf%' }],
+      },
+      {
+        tableName: 'zillow_zip',
+        dateColumn: 'period_date',
+        filters: [{ column: 'metric_name', op: 'notLike', value: 'zhvf%' }],
+      },
       // Realtor
       { tableName: 'realtor_national', dateColumn: 'period_date' },
       { tableName: 'realtor_state', dateColumn: 'period_date' },
@@ -83,7 +117,10 @@ export class DataFreshnessService {
     ];
 
     const tableEntries = await Promise.all(
-      tableProbeConfigs.map(async (config) => [config.tableName, await this.getLatestDate(config)] as const),
+      tableProbeConfigs.map(
+        async (config) =>
+          [config.tableName, await this.getLatestDate(config)] as const,
+      ),
     );
     const tableDates = Object.fromEntries(tableEntries);
 
@@ -123,7 +160,10 @@ export class DataFreshnessService {
         tableDates.census_city,
         tableDates.census_zip,
       ]),
-      permits: this.pickMostRecent([tableDates.permits_state, tableDates.permits_county]),
+      permits: this.pickMostRecent([
+        tableDates.permits_state,
+        tableDates.permits_county,
+      ]),
       census: this.pickMostRecent([
         tableDates.census_national,
         tableDates.census_state,
@@ -137,12 +177,22 @@ export class DataFreshnessService {
       calculated: tableDates.calculated_metrics ?? null,
       propertyiq: tableDates.propertyiq_scores ?? null,
       economic: this.pickMostRecent(
-        Object.values(economicMetricDates).flatMap((byGeo) => Object.values(byGeo)),
+        Object.values(economicMetricDates).flatMap((byGeo) =>
+          Object.values(byGeo),
+        ),
       ),
-      economic_unemployment: this.pickMostRecent(Object.values(economicMetricDates.unemployment_rate)),
-      economic_job_growth: this.pickMostRecent(Object.values(economicMetricDates.employment_yoy)),
-      economic_gdp_growth: this.pickMostRecent(Object.values(economicMetricDates.gdp_yoy)),
-      economic_cost_of_living: this.pickMostRecent(Object.values(economicMetricDates.rpp_all_items)),
+      economic_unemployment: this.pickMostRecent(
+        Object.values(economicMetricDates.unemployment_rate),
+      ),
+      economic_job_growth: this.pickMostRecent(
+        Object.values(economicMetricDates.employment_yoy),
+      ),
+      economic_gdp_growth: this.pickMostRecent(
+        Object.values(economicMetricDates.gdp_yoy),
+      ),
+      economic_cost_of_living: this.pickMostRecent(
+        Object.values(economicMetricDates.rpp_all_items),
+      ),
     };
 
     this.cachedResponse = {
@@ -164,30 +214,45 @@ export class DataFreshnessService {
   private async getZillowDatesByGeo(
     mode: 'historical' | 'forecast',
   ): Promise<Record<Exclude<GeoFreshnessKey, 'national'>, string | null>> {
-    const geos: Array<Exclude<GeoFreshnessKey, 'national'>> = ['state', 'metro', 'county', 'city', 'zip'];
+    const geos: Array<Exclude<GeoFreshnessKey, 'national'>> = [
+      'state',
+      'metro',
+      'county',
+      'city',
+      'zip',
+    ];
     const entries = await Promise.all(
       geos.map(async (geo) => {
         const value = await this.getLatestDate({
           tableName: `zillow_${geo}`,
           dateColumn: 'period_date',
-          filters: mode === 'forecast'
-            ? [{ column: 'metric_name', op: 'eq', value: 'zhvf' }]
-            : [{ column: 'metric_name', op: 'neq', value: 'zhvf' }],
+          filters:
+            mode === 'forecast'
+              ? [{ column: 'metric_name', op: 'eq', value: 'zhvf' }]
+              : [{ column: 'metric_name', op: 'notLike', value: 'zhvf%' }],
         });
         return [geo, value] as const;
       }),
     );
-    return Object.fromEntries(entries) as Record<Exclude<GeoFreshnessKey, 'national'>, string | null>;
+    return Object.fromEntries(entries) as Record<
+      Exclude<GeoFreshnessKey, 'national'>,
+      string | null
+    >;
   }
 
-  private async getEconomicMetricDates(): Promise<DataFreshnessResponse['economicMetricDates']> {
+  private async getEconomicMetricDates(): Promise<
+    DataFreshnessResponse['economicMetricDates']
+  > {
     const metricColumns: EconomicMetricKey[] = [
       'unemployment_rate',
       'employment_yoy',
       'gdp_yoy',
       'rpp_all_items',
     ];
-    const tableByGeo: Record<'national' | 'state' | 'metro' | 'county', string> = {
+    const tableByGeo: Record<
+      'national' | 'state' | 'metro' | 'county',
+      string
+    > = {
       national: 'economic_national',
       state: 'economic_state',
       metro: 'economic_metro',
@@ -198,7 +263,9 @@ export class DataFreshnessService {
 
     for (const metric of metricColumns) {
       const geoEntries = await Promise.all(
-        (Object.entries(tableByGeo) as Array<[keyof typeof tableByGeo, string]>).map(async ([geo, tableName]) => {
+        (
+          Object.entries(tableByGeo) as Array<[keyof typeof tableByGeo, string]>
+        ).map(async ([geo, tableName]) => {
           const value = await this.getLatestDate({
             tableName,
             dateColumn: 'period_date',
@@ -213,7 +280,9 @@ export class DataFreshnessService {
     return result;
   }
 
-  private async getLatestDate(config: TableProbeConfig): Promise<string | null> {
+  private async getLatestDate(
+    config: TableProbeConfig,
+  ): Promise<string | null> {
     const client = this.supabase.getClient();
     try {
       let query = client
@@ -227,6 +296,8 @@ export class DataFreshnessService {
           query = query.eq(filter.column, filter.value as string);
         } else if (filter.op === 'neq') {
           query = query.neq(filter.column, filter.value as string);
+        } else if (filter.op === 'notLike') {
+          query = query.not(filter.column, 'like', filter.value as string);
         } else if (filter.op === 'notNull') {
           query = query.not(filter.column, 'is', null);
         }
@@ -234,14 +305,18 @@ export class DataFreshnessService {
 
       const { data, error } = await query;
       if (error) {
-        this.logger.warn(`Freshness probe failed for ${config.tableName}: ${error.message}`);
+        this.logger.warn(
+          `Freshness probe failed for ${config.tableName}: ${error.message}`,
+        );
         return null;
       }
 
       const rawValue = data?.[0]?.[config.dateColumn];
       return this.normalizeDateValue(rawValue);
     } catch (error) {
-      this.logger.warn(`Freshness probe exception for ${config.tableName}: ${String(error)}`);
+      this.logger.warn(
+        `Freshness probe exception for ${config.tableName}: ${String(error)}`,
+      );
       return null;
     }
   }
@@ -263,7 +338,9 @@ export class DataFreshnessService {
     return str;
   }
 
-  private pickMostRecent(values: Array<string | null | undefined>): string | null {
+  private pickMostRecent(
+    values: Array<string | null | undefined>,
+  ): string | null {
     let best: { raw: string; ts: number } | null = null;
     for (const value of values) {
       if (!value) continue;
