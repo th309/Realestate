@@ -7,6 +7,7 @@ import { useTopMarkets } from "@/lib/data/hooks/useTopMarkets";
 import { US_STATES } from "@/app/map/types";
 import type { TopMarketsGeo, TopMarketsScoreType } from "@/lib/data";
 import { addRecentMarket } from "./recent-markets";
+import { ExportTopMarketsButton } from "./components/ExportTopMarketsButton";
 
 const GEO_TABS: { value: TopMarketsGeo; label: string }[] = [
   { value: "metro", label: "Metros" },
@@ -65,9 +66,17 @@ export function TopMarketsSection() {
   return (
     <div className="mb-8">
       {/* Header */}
-      <div className="flex items-center gap-2 text-on-surface-variant mb-4">
-        <Trophy className="w-5 h-5" />
-        <h2 className="text-lg font-medium text-on-surface">Top Markets</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-on-surface-variant">
+          <Trophy className="w-5 h-5" />
+          <h2 className="text-lg font-medium text-on-surface">Top Markets</h2>
+        </div>
+        <ExportTopMarketsButton
+          data={data}
+          geography={geo}
+          scoreType={scoreType}
+          stateFilter={stateFilter}
+        />
       </div>
 
       {/* Controls */}
