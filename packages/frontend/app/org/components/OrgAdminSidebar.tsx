@@ -7,6 +7,8 @@ import {
   LayoutDashboard,
   Users,
   CreditCard,
+  Palette,
+  Code,
   ScrollText,
   ArrowLeft,
   Menu,
@@ -51,6 +53,16 @@ export function OrgAdminSidebar({ slug }: OrgAdminSidebarProps) {
       label: "Billing",
       href: `/org/${slug}/admin/billing`,
       icon: CreditCard,
+    },
+    {
+      label: "Branding",
+      href: `/org/${slug}/admin/branding`,
+      icon: Palette,
+    },
+    {
+      label: "Embeds",
+      href: `/org/${slug}/admin/embeds`,
+      icon: Code,
     },
     {
       label: "Audit Log",
