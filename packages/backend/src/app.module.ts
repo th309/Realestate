@@ -47,6 +47,7 @@ import { InsightsModule } from './insights/insights.module';
 import { PreferencesModule } from './preferences/preferences.module';
 import { AiProviderModule } from './ai-provider/ai-provider.module';
 import { OrgAuditModule } from './org-audit/org-audit.module';
+import { OrganizationsModule } from './organizations/organizations.module';
 import { CacheRefreshJob } from './jobs/cache-refresh.job';
 
 @Module({
@@ -114,6 +115,7 @@ import { CacheRefreshJob } from './jobs/cache-refresh.job';
     InsightsModule,
     PreferencesModule,
     OrgAuditModule,
+    OrganizationsModule,
   ],
   controllers: [AppController],
   providers: [
