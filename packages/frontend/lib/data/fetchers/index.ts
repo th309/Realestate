@@ -268,6 +268,28 @@ export {
   type OrgBillingPortalResult,
 } from "./org-billing";
 
+// Organization branding
+export {
+  fetchOrgBranding,
+  updateOrgBranding,
+  uploadOrgLogo,
+  deleteOrgLogo,
+  fetchPublicBranding,
+  type OrgBranding,
+} from "./org-branding";
+
+// Organization embed tokens
+export {
+  fetchOrgEmbedTokens,
+  createOrgEmbedToken,
+  updateOrgEmbedToken,
+  revokeOrgEmbedToken,
+  fetchEmbedBranding,
+  type EmbedToken,
+  type EmbedTokenListItem,
+  type EmbedBranding,
+} from "./org-embeds";
+
 // Admin analytics
 export * from "./admin-analytics";
 export type * from "./admin-analytics.types";
