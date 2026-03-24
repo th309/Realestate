@@ -3,13 +3,16 @@
  * Callout positioning, leader line geometry, and crossing prevention.
  * Screen-space detection is in screen-space-detection.ts.
  */
+import mapboxgl from "mapbox-gl";
 
 /** Offset distance (degrees) from state bbox edge to callout label. */
 const CALLOUT_OFFSET = 2;
 
-/** Minimum gap between callout pills (degrees) to prevent overlap. */
-const MIN_CALLOUT_GAP_LAT = 1.2;
-const MIN_CALLOUT_GAP_LNG = 2.5;
+/** Minimum gap between callout pills in screen pixels. */
+const MIN_CALLOUT_GAP_PX = 35;
+
+/** Reference latitude for computing degrees-per-pixel (mid-US). */
+const REF_LAT = 40;
 
 /** Contiguous US bounding box — used to filter out territories. */
 const CONUS_LNG_MIN = -130;
@@ -70,6 +73,7 @@ function getCalloutOffset(feature: LabelFeature): [number, number] {
  */
 export function computeCalloutPositions(
   features: LabelFeature[],
+  map: mapboxgl.Map,
 ): CalloutPosition[] {
   // Filter to contiguous US states that need callouts (exclude AK, HI, territories)
   const needsCallout = features.filter(
@@ -101,7 +105,7 @@ export function computeCalloutPositions(
   // Step 2: Prevent leader line crossings and pill overlaps.
   // Group callouts by offset direction, then within each group
   // ensure callout latitude order matches anchor latitude order.
-  preventCrossingsAndOverlaps(callouts);
+  preventCrossingsAndOverlaps(callouts, map);
 
   return callouts;
 }
@@ -119,7 +123,18 @@ export function computeCalloutPositions(
  * 4. Stack callout latitudes top-to-bottom with minimum gap
  * 5. Center the stack around the group's mean anchor latitude
  */
-function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
+function preventCrossingsAndOverlaps(
+  callouts: CalloutPosition[],
+  map: mapboxgl.Map,
+): void {
+  // Compute dynamic gap in degrees based on current zoom.
+  // At low zoom (zoomed out), degrees/pixel is large → bigger gap in degrees.
+  // At high zoom (zoomed in), degrees/pixel is small → smaller gap.
+  const p1 = map.project([0, REF_LAT]);
+  const p2 = map.project([0, REF_LAT + 1]);
+  const pxPerDegLat = Math.abs(p2.y - p1.y);
+  const minGapLat = pxPerDegLat > 0 ? MIN_CALLOUT_GAP_PX / pxPerDegLat : 1.2;
+  const minGapLng = minGapLat * 2;
   // Classify: east-offset = callout is east of anchor, south-offset = callout is south
   const eastGroup: CalloutPosition[] = [];
   const southGroup: CalloutPosition[] = [];
@@ -160,7 +175,7 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
 
       // Enforce minimum gap below previous callout
       if (i > 0) {
-        const maxAllowed = latitudes[i - 1] - MIN_CALLOUT_GAP_LAT;
+        const maxAllowed = latitudes[i - 1] - minGapLat;
         targetLat = Math.min(targetLat, maxAllowed);
       }
 
@@ -177,14 +192,11 @@ function preventCrossingsAndOverlaps(callouts: CalloutPosition[]): void {
     const meanAnchorLng =
       southGroup.reduce((sum, c) => sum + c.anchorLngLat[0], 0) /
       southGroup.length;
-    const totalWidth = (southGroup.length - 1) * MIN_CALLOUT_GAP_LNG;
+    const totalWidth = (southGroup.length - 1) * minGapLng;
     const leftLng = meanAnchorLng - totalWidth / 2;
 
     for (let i = 0; i < southGroup.length; i++) {
-      southGroup[i].calloutLngLat = [
-        leftLng + i * MIN_CALLOUT_GAP_LNG,
-        sharedLat,
-      ];
+      southGroup[i].calloutLngLat = [leftLng + i * minGapLng, sharedLat];
     }
   }
 }

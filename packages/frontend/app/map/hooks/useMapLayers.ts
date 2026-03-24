@@ -218,7 +218,7 @@ export function useMapLayers({
             source.setData(updatedData);
           }
 
-          const callouts = computeCalloutPositions(labelFeatures);
+          const callouts = computeCalloutPositions(labelFeatures, map.current);
           const lineGeojson = buildLeaderLineGeojson(callouts);
 
           addLeaderLineLayers(map.current, lineGeojson);
